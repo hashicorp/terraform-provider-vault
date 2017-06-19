@@ -9,6 +9,32 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: `
+				resource "vault_mount" "zero_ttl" {
+					path = "example"
+					type = "generic"
+				}
+				`,
+			},
+			{
+				PlanOnly: true,
+				Config: `
+				resource "vault_mount" "zero_ttl" {
+					path = "example"
+					type = "generic"
+				}
+				`,
+			},
+		},
+	})
+}
+
 func TestResourceMount(t *testing.T) {
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
