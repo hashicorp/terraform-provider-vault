@@ -22,3 +22,40 @@ func jsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
 	}
 	return reflect.DeepEqual(oldJSON, newJSON)
 }
+
+func onlyInFirstList(first, second []string) (output []string) {
+OUTER:
+	for _, f := range first {
+
+		for _, s := range second {
+			if f == s {
+				continue OUTER
+			}
+		}
+
+		output = append(output, f)
+	}
+	return
+}
+
+func toStringList(input interface{}, field string) []string {
+	list := input.(*schema.Set).List()
+
+	output := make([]string, len(list))
+
+	for i, v := range list {
+		output[i] = v.(map[string]interface{})[field].(string)
+	}
+
+	return output
+}
+
+func toStringArray(input []interface{}) []string {
+	output := make([]string, len(input))
+
+	for i, item := range input {
+		output[i] = item.(string)
+	}
+
+	return output
+}
