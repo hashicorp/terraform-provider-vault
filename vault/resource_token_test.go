@@ -140,7 +140,7 @@ func test2Check(s *terraform.State) error {
 	}
 
 	if got, want := wToken.Data["num_uses"].(json.Number).String(), "1"; got != want {
-		fmt.Errorf("wrapped token has wrong num of uses, got: %v wanted %v", got, want)
+		return fmt.Errorf("wrapped token has wrong num of uses, got: %v wanted %v", got, want)
 	}
 
 	token, err := client.Auth().Token().LookupAccessor(instanceState.ID)
