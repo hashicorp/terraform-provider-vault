@@ -4,16 +4,17 @@ import (
 	"fmt"
 	"testing"
 
-	r "github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform/helper/acctest"
+	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
 func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
-	r.Test(t, r.TestCase{
+	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []r.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config: `
 				resource "vault_mount" "zero_ttl" {
@@ -36,13 +37,14 @@ func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
 }
 
 func TestResourceMount(t *testing.T) {
-	r.Test(t, r.TestCase{
+	path := "example-" + acctest.RandString(10)
+	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []r.TestStep{
+		Steps: []resource.TestStep{
 			{
-				Config: testResourceMount_initialConfig,
-				Check:  testResourceMount_initialCheck,
+				Config: testResourceMount_initialConfig(path),
+				Check:  testResourceMount_initialCheck(path),
 			},
 			{
 				Config: testResourceMount_updateConfig,
@@ -52,61 +54,63 @@ func TestResourceMount(t *testing.T) {
 	})
 }
 
-var testResourceMount_initialConfig = `
-
+func testResourceMount_initialConfig(path string) string {
+	return fmt.Sprintf(`
 resource "vault_mount" "test" {
-	path = "example"
+	path = "%s"
 	type = "generic"
 	description = "Example mount for testing"
 	default_lease_ttl_seconds = 3600
 	max_lease_ttl_seconds = 36000
 }
+`, path)
+}
 
-`
+func testResourceMount_initialCheck(expectedPath string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["vault_mount.test"]
+		if resourceState == nil {
+			return fmt.Errorf("resource not found in state")
+		}
 
-func testResourceMount_initialCheck(s *terraform.State) error {
-	resourceState := s.Modules[0].Resources["vault_mount.test"]
-	if resourceState == nil {
-		return fmt.Errorf("resource not found in state")
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return fmt.Errorf("resource has no primary instance")
+		}
+
+		path := instanceState.ID
+
+		if path != instanceState.Attributes["path"] {
+			return fmt.Errorf("id %q doesn't match path %q", path, instanceState.Attributes["path"])
+		}
+
+		if path != expectedPath {
+			return fmt.Errorf("unexpected path %q, expected %q", path, expectedPath)
+		}
+
+		mount, err := findMount(path)
+		if err != nil {
+			return fmt.Errorf("error reading back mount %q: %s", path, err)
+		}
+
+		if wanted := "Example mount for testing"; mount.Description != wanted {
+			return fmt.Errorf("description is %v; wanted %v", mount.Description, wanted)
+		}
+
+		if wanted := "generic"; mount.Type != wanted {
+			return fmt.Errorf("type is %v; wanted %v", mount.Description, wanted)
+		}
+
+		if wanted := 3600; mount.Config.DefaultLeaseTTL != wanted {
+			return fmt.Errorf("default lease ttl is %v; wanted %v", mount.Description, wanted)
+		}
+
+		if wanted := 36000; mount.Config.MaxLeaseTTL != wanted {
+			return fmt.Errorf("max lease ttl is %v; wanted %v", mount.Description, wanted)
+		}
+
+		return nil
 	}
-
-	instanceState := resourceState.Primary
-	if instanceState == nil {
-		return fmt.Errorf("resource has no primary instance")
-	}
-
-	path := instanceState.ID
-
-	if path != instanceState.Attributes["path"] {
-		return fmt.Errorf("id doesn't match path")
-	}
-
-	if path != "example" {
-		return fmt.Errorf("unexpected path value")
-	}
-
-	mount, err := findMount(path)
-	if err != nil {
-		return fmt.Errorf("error reading back mount: %s", err)
-	}
-
-	if wanted := "Example mount for testing"; mount.Description != wanted {
-		return fmt.Errorf("description is %v; wanted %v", mount.Description, wanted)
-	}
-
-	if wanted := "generic"; mount.Type != wanted {
-		return fmt.Errorf("type is %v; wanted %v", mount.Description, wanted)
-	}
-
-	if wanted := 3600; mount.Config.DefaultLeaseTTL != wanted {
-		return fmt.Errorf("default lease ttl is %v; wanted %v", mount.Description, wanted)
-	}
-
-	if wanted := 36000; mount.Config.MaxLeaseTTL != wanted {
-		return fmt.Errorf("max lease ttl is %v; wanted %v", mount.Description, wanted)
-	}
-
-	return nil
 }
 
 var testResourceMount_updateConfig = `

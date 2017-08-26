@@ -15,6 +15,9 @@ func mountResource() *schema.Resource {
 		Update: mountUpdate,
 		Delete: mountDelete,
 		Read:   mountRead,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"path": {
