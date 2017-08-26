@@ -4,21 +4,23 @@ import (
 	"fmt"
 	"testing"
 
-	r "github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform/helper/acctest"
+	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
 func TestResourcePolicy(t *testing.T) {
-	r.Test(t, r.TestCase{
+	name := "test-" + acctest.RandString(10)
+	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []r.TestStep{
-			r.TestStep{
-				Config: testResourcePolicy_initialConfig,
-				Check:  testResourcePolicy_initialCheck,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testResourcePolicy_initialConfig(name),
+				Check:  testResourcePolicy_initialCheck(name),
 			},
-			r.TestStep{
+			resource.TestStep{
 				Config: testResourcePolicy_updateConfig,
 				Check:  testResourcePolicy_updateCheck,
 			},
@@ -26,51 +28,53 @@ func TestResourcePolicy(t *testing.T) {
 	})
 }
 
-var testResourcePolicy_initialConfig = `
-
+func testResourcePolicy_initialConfig(name string) string {
+	return fmt.Sprintf(`
 resource "vault_policy" "test" {
-	name = "dev-team"
+	name = "%s"
 	policy = <<EOT
 path "secret/*" {
 	policy = "read"
 }
 EOT
 }
+`, name)
+}
 
-`
+func testResourcePolicy_initialCheck(expectedName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["vault_policy.test"]
+		if resourceState == nil {
+			return fmt.Errorf("resource not found in state")
+		}
 
-func testResourcePolicy_initialCheck(s *terraform.State) error {
-	resourceState := s.Modules[0].Resources["vault_policy.test"]
-	if resourceState == nil {
-		return fmt.Errorf("resource not found in state")
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return fmt.Errorf("resource has no primary instance")
+		}
+
+		name := instanceState.ID
+
+		if name != instanceState.Attributes["name"] {
+			return fmt.Errorf("id %q doesn't match name %q", name, instanceState.Attributes["name"])
+		}
+
+		if name != expectedName {
+			return fmt.Errorf("unexpected policy name %q, expected %q", name, expectedName)
+		}
+
+		client := testProvider.Meta().(*api.Client)
+		policy, err := client.Sys().GetPolicy(name)
+		if err != nil {
+			return fmt.Errorf("error reading back policy: %s", err)
+		}
+
+		if got, want := policy, "path \"secret/*\" {\n\tpolicy = \"read\"\n}\n"; got != want {
+			return fmt.Errorf("policy data is %q; want %q", got, want)
+		}
+
+		return nil
 	}
-
-	instanceState := resourceState.Primary
-	if instanceState == nil {
-		return fmt.Errorf("resource has no primary instance")
-	}
-
-	name := instanceState.ID
-
-	if name != instanceState.Attributes["name"] {
-		return fmt.Errorf("id doesn't match name")
-	}
-
-	if name != "dev-team" {
-		return fmt.Errorf("unexpected policy name")
-	}
-
-	client := testProvider.Meta().(*api.Client)
-	policy, err := client.Sys().GetPolicy(name)
-	if err != nil {
-		return fmt.Errorf("error reading back policy: %s", err)
-	}
-
-	if got, want := policy, "path \"secret/*\" {\n\tpolicy = \"read\"\n}\n"; got != want {
-		return fmt.Errorf("policy data is %q; want %q", got, want)
-	}
-
-	return nil
 }
 
 var testResourcePolicy_updateConfig = `
