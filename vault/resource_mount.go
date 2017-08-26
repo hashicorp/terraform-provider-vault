@@ -2,9 +2,11 @@ package vault
 
 import (
 	"fmt"
+	"log"
+	"strings"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
-	"log"
 )
 
 func mountResource() *schema.Resource {
@@ -137,13 +139,23 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Reading mount %s from Vault", path)
 
-	mount, err := client.Sys().MountConfig(path)
+	mounts, err := client.Sys().ListMounts()
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
-	d.Set("default_lease_ttl_seconds", mount.DefaultLeaseTTL)
-	d.Set("max_lease_ttl_seconds", mount.MaxLeaseTTL)
+	mount, ok := mounts[strings.Trim(path, "/")+"/"]
+	if !ok {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
+		d.SetId("")
+		return nil
+	}
+
+	d.Set("path", path)
+	d.Set("type", mount.Type)
+	d.Set("description", mount.Description)
+	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
+	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
 
 	return nil
 }
