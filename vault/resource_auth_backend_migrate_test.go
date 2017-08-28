@@ -38,7 +38,7 @@ func TestAuthBackendMigrateState(t *testing.T) {
 			tc.StateVersion, is, nil)
 
 		if err != nil {
-			t.Fatalf("Unexpected error for migration %q: %+v", err)
+			t.Fatalf("Unexpected error for migration %q: %+v", tn, err)
 		}
 
 		if is.ID != tc.ExpectedID {
