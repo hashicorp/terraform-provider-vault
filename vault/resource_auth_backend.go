@@ -12,12 +12,15 @@ import (
 
 func authBackendResource() *schema.Resource {
 	return &schema.Resource{
+		SchemaVersion: 1,
+
 		Create: authBackendWrite,
 		Delete: authBackendDelete,
 		Read:   authBackendRead,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		MigrateState: resourceAuthBackendMigrateState,
 
 		Schema: map[string]*schema.Schema{
 			"type": &schema.Schema{
