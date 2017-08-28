@@ -66,12 +66,14 @@ func NormalizeDataJSON(configI interface{}) string {
 	err := json.Unmarshal([]byte(dataJSON), &dataMap)
 	if err != nil {
 		// The validate function should've taken care of this.
+		log.Printf("[ERROR] Invalid JSON data in vault_generic_secret: %s", err)
 		return ""
 	}
 
 	ret, err := json.Marshal(dataMap)
 	if err != nil {
 		// Should never happen.
+		log.Printf("[ERROR] Problem normalizing JSON for vault_generic_secret: %s", err)
 		return dataJSON
 	}
 
@@ -105,10 +107,10 @@ func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error
 
 	path := d.Id()
 
-	log.Printf("[DEBUG] Deleting generic Vault from %s", path)
+	log.Printf("[DEBUG] Deleting vault_generic_secret from %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("error deleting from Vault: %s", err)
+		return fmt.Errorf("error deleting %q from Vault: %q", path, err)
 	}
 
 	return nil
@@ -127,13 +129,15 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error reading from Vault: %s", err)
 		}
 
-		// Ignoring error because this value came from JSON in the
-		// first place so no reason why it should fail to re-encode.
-		jsonDataBytes, _ := json.Marshal(secret.Data)
+		jsonDataBytes, err := json.Marshal(secret.Data)
+		if err != nil {
+			return fmt.Errorf("Error marshaling JSON for %q: %s", path, err)
+		}
 		d.Set("data_json", string(jsonDataBytes))
+	} else {
+		log.Printf("[WARN] vault_generic_secret does not automatically refresh if allow_read is set to false")
 	}
 
 	d.SetId(path)
-	log.Printf("[WARN] vault_generic_secret does not automatically refresh if allow_read is set to false")
 	return nil
 }
