@@ -147,6 +147,9 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
+	// path can have a trailing slash, but doesn't need to have one
+	// this standardises on having a trailing slash, which is how the
+	// API always responds.
 	mount, ok := mounts[strings.Trim(path, "/")+"/"]
 	if !ok {
 		log.Printf("[WARN] Mount %q not found, removing from state.", path)
