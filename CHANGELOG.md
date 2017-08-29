@@ -1,4 +1,17 @@
 ## 0.1.1 (Unreleased)
+
+BACKWARDS INCOMPATIBILITIES / NOTES:
+* `vault_auth_backend`'s ID has changed from the `type` to the `path` of the auth backend.
+  Interpolations referring to the `.id` of a `vault_auth_backend` should be updated to use
+  its `.type` property. [GH-12]
+
+FEATURES:
+
+IMPROVEMENTS:
+* `vault_auth_backend`s are now importable. [GH-12]
+
+BUG FIXES:
+
 ## 0.1.0 (June 21, 2017)
 
 NOTES:

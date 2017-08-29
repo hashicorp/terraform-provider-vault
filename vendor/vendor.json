@@ -420,6 +420,12 @@
 			"versionExact": "v0.10.0"
 		},
 		{
+			"checksumSHA1": "zx5DLo5aV0xDqxGTzSibXg7HHAA=",
+			"path": "github.com/hashicorp/terraform/helper/acctest",
+			"revision": "b6a464c5214d1378b74cf683c51feb876791e155",
+			"revisionTime": "2017-08-22T18:47:30Z"
+		},
+		{
 			"checksumSHA1": "uT6Q9RdSRAkDjyUgQlJ2XKJRab4=",
 			"path": "github.com/hashicorp/terraform/helper/config",
 			"revision": "2041053ee9444fa8175a298093b55a89586a1823",
@@ -610,6 +616,27 @@
 			"revisionTime": "2017-07-23T04:49:35Z"
 		},
 		{
+			"checksumSHA1": "5fWrCoK7RIYvC3bLuins/Y/NZfU=",
+			"origin": "github.com/hashicorp/terraform/vendor/golang.org/x/crypto/curve25519",
+			"path": "golang.org/x/crypto/curve25519",
+			"revision": "b6a464c5214d1378b74cf683c51feb876791e155",
+			"revisionTime": "2017-08-22T18:47:30Z"
+		},
+		{
+			"checksumSHA1": "wGb//LjBPNxYHqk+dcLo7BjPXK8=",
+			"origin": "github.com/hashicorp/terraform/vendor/golang.org/x/crypto/ed25519",
+			"path": "golang.org/x/crypto/ed25519",
+			"revision": "b6a464c5214d1378b74cf683c51feb876791e155",
+			"revisionTime": "2017-08-22T18:47:30Z"
+		},
+		{
+			"checksumSHA1": "LXFcVx8I587SnWmKycSDEq9yvK8=",
+			"origin": "github.com/hashicorp/terraform/vendor/golang.org/x/crypto/ed25519/internal/edwards25519",
+			"path": "golang.org/x/crypto/ed25519/internal/edwards25519",
+			"revision": "b6a464c5214d1378b74cf683c51feb876791e155",
+			"revisionTime": "2017-08-22T18:47:30Z"
+		},
+		{
 			"checksumSHA1": "IIhFTrLlmlc6lEFSitqi4aw2lw0=",
 			"path": "golang.org/x/crypto/openpgp",
 			"revision": "b176d7def5d71bdd214203491f89843ed217f420",
@@ -644,6 +671,13 @@
 			"path": "golang.org/x/crypto/openpgp/s2k",
 			"revision": "b176d7def5d71bdd214203491f89843ed217f420",
 			"revisionTime": "2017-07-23T04:49:35Z"
+		},
+		{
+			"checksumSHA1": "fsrFs762jlaILyqqQImS1GfvIvw=",
+			"origin": "github.com/hashicorp/terraform/vendor/golang.org/x/crypto/ssh",
+			"path": "golang.org/x/crypto/ssh",
+			"revision": "b6a464c5214d1378b74cf683c51feb876791e155",
+			"revisionTime": "2017-08-22T18:47:30Z"
 		},
 		{
 			"checksumSHA1": "vqc3a+oTUGX8PmD0TS+qQ7gmN8I=",
