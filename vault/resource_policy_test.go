@@ -11,7 +11,7 @@ import (
 )
 
 func TestResourcePolicy(t *testing.T) {
-	name := "test-" + acctest.RandString(10)
+	name := acctest.RandomWithPrefix("test-")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
