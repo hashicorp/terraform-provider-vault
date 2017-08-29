@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform/helper/logging"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
@@ -123,6 +124,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure TLS for Vault API: %s", err)
 	}
+
+	config.HttpClient.Transport = logging.NewTransport("Vault", config.HttpClient.Transport)
 
 	client, err := api.NewClient(config)
 	if err != nil {

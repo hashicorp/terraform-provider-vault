@@ -12,9 +12,15 @@ import (
 
 func authBackendResource() *schema.Resource {
 	return &schema.Resource{
+		SchemaVersion: 1,
+
 		Create: authBackendWrite,
 		Delete: authBackendDelete,
 		Read:   authBackendRead,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
+		MigrateState: resourceAuthBackendMigrateState,
 
 		Schema: map[string]*schema.Schema{
 			"type": &schema.Schema{
@@ -37,6 +43,9 @@ func authBackendResource() *schema.Resource {
 					}
 					return
 				},
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					return old+"/" == new || new+"/" == old
+				},
 			},
 
 			"description": &schema.Schema{
@@ -56,37 +65,31 @@ func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	desc := d.Get("description").(string)
 	path := d.Get("path").(string)
 
-	log.Printf("[DEBUG] Writing auth %s to Vault", name)
-
-	var err error
-
 	if path == "" {
 		path = name
-		err = d.Set("path", name)
-		if err != nil {
-			return fmt.Errorf("unable to set state: %s", err)
-		}
 	}
 
-	err = client.Sys().EnableAuth(path, name, desc)
+	log.Printf("[DEBUG] Writing auth %q to Vault", path)
+
+	err := client.Sys().EnableAuth(path, name, desc)
 
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
 
-	d.SetId(name)
+	d.SetId(path)
 
-	return nil
+	return authBackendRead(d, meta)
 }
 
 func authBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	name := d.Id()
+	path := d.Id()
 
-	log.Printf("[DEBUG] Deleting auth %s from Vault", name)
+	log.Printf("[DEBUG] Deleting auth %s from Vault", path)
 
-	err := client.Sys().DisableAuth(name)
+	err := client.Sys().DisableAuth(path)
 
 	if err != nil {
 		return fmt.Errorf("error disabling auth from Vault: %s", err)
@@ -98,7 +101,7 @@ func authBackendDelete(d *schema.ResourceData, meta interface{}) error {
 func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	name := d.Id()
+	targetPath := d.Id() + "/"
 
 	auths, err := client.Sys().ListAuth()
 
@@ -107,10 +110,10 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	for path, auth := range auths {
-		configuredPath := d.Get("path").(string)
-
-		vaultPath := configuredPath + "/"
-		if auth.Type == name && path == vaultPath {
+		if path == targetPath {
+			d.Set("type", auth.Type)
+			d.Set("path", path)
+			d.Set("description", auth.Description)
 			return nil
 		}
 	}
