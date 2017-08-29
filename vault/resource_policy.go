@@ -50,7 +50,7 @@ func policyWrite(d *schema.ResourceData, meta interface{}) error {
 
 	d.SetId(name)
 
-	return nil
+	return policyRead(d, meta)
 }
 
 func policyDelete(d *schema.ResourceData, meta interface{}) error {
