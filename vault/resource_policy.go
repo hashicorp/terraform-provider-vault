@@ -14,6 +14,9 @@ func policyResource() *schema.Resource {
 		Update: policyWrite,
 		Delete: policyDelete,
 		Read:   policyRead,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
@@ -47,7 +50,7 @@ func policyWrite(d *schema.ResourceData, meta interface{}) error {
 
 	d.SetId(name)
 
-	return nil
+	return policyRead(d, meta)
 }
 
 func policyDelete(d *schema.ResourceData, meta interface{}) error {
@@ -77,6 +80,7 @@ func policyRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Set("policy", policy)
+	d.Set("name", name)
 
 	return nil
 }
