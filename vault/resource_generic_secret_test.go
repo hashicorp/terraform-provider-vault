@@ -4,22 +4,24 @@ import (
 	"fmt"
 	"testing"
 
-	r "github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform/helper/acctest"
+	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 
 	"github.com/hashicorp/vault/api"
 )
 
 func TestResourceGenericSecret(t *testing.T) {
-	r.Test(t, r.TestCase{
+	path := acctest.RandomWithPrefix("secret/test")
+	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []r.TestStep{
-			r.TestStep{
-				Config: testResourceGenericSecret_initialConfig,
-				Check:  testResourceGenericSecret_initialCheck,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testResourceGenericSecret_initialConfig(path),
+				Check:  testResourceGenericSecret_initialCheck(path),
 			},
-			r.TestStep{
+			resource.TestStep{
 				Config: testResourceGenericSecret_updateConfig,
 				Check:  testResourceGenericSecret_updateCheck,
 			},
@@ -27,58 +29,58 @@ func TestResourceGenericSecret(t *testing.T) {
 	})
 }
 
-var testResourceGenericSecret_initialConfig = `
-
+func testResourceGenericSecret_initialConfig(path string) string {
+	return fmt.Sprintf(`
 resource "vault_generic_secret" "test" {
-    path = "secret/foo"
-    allow_read = true
+    path = "%s"
     data_json = <<EOT
 {
     "zip": "zap"
 }
 EOT
+}`, path)
 }
 
-`
+func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["vault_generic_secret.test"]
+		if resourceState == nil {
+			return fmt.Errorf("resource not found in state")
+		}
 
-func testResourceGenericSecret_initialCheck(s *terraform.State) error {
-	resourceState := s.Modules[0].Resources["vault_generic_secret.test"]
-	if resourceState == nil {
-		return fmt.Errorf("resource not found in state")
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return fmt.Errorf("resource has no primary instance")
+		}
+
+		path := instanceState.ID
+
+		if path != instanceState.Attributes["path"] {
+			return fmt.Errorf("id doesn't match path")
+		}
+		if path != expectedPath {
+			return fmt.Errorf("unexpected secret path")
+		}
+
+		client := testProvider.Meta().(*api.Client)
+		secret, err := client.Logical().Read(path)
+		if err != nil {
+			return fmt.Errorf("error reading back secret: %s", err)
+		}
+
+		if got, want := secret.Data["zip"], "zap"; got != want {
+			return fmt.Errorf("'zip' data is %q; want %q", got, want)
+		}
+
+		return nil
 	}
-
-	instanceState := resourceState.Primary
-	if instanceState == nil {
-		return fmt.Errorf("resource has no primary instance")
-	}
-
-	path := instanceState.ID
-
-	if path != instanceState.Attributes["path"] {
-		return fmt.Errorf("id doesn't match path")
-	}
-	if path != "secret/foo" {
-		return fmt.Errorf("unexpected secret path")
-	}
-
-	client := testProvider.Meta().(*api.Client)
-	secret, err := client.Logical().Read(path)
-	if err != nil {
-		return fmt.Errorf("error reading back secret: %s", err)
-	}
-
-	if got, want := secret.Data["zip"], "zap"; got != want {
-		return fmt.Errorf("'zip' data is %q; want %q", got, want)
-	}
-
-	return nil
 }
 
 var testResourceGenericSecret_updateConfig = `
 
 resource "vault_generic_secret" "test" {
     path = "secret/foo"
-    allow_read = true
+    disable_read = false
     data_json = <<EOT
 {
     "zip": "zoop"
