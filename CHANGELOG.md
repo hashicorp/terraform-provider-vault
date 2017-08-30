@@ -9,8 +9,8 @@ FEATURES:
 
 IMPROVEMENTS:
 * `vault_auth_backend`s are now importable. [GH-12]
-* `vault_mount`s are now importable [GH-15]
-* `vault_policy`s are now importable [GH-16]
+* `vault_policy`s are now importable [GH-15]
+* `vault_mount`s are now importable [GH-16]
 
 BUG FIXES:
 
