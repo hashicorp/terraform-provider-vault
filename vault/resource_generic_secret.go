@@ -45,6 +45,13 @@ func genericSecretResource() *schema.Resource {
 				ValidateFunc: ValidateDataJSON,
 			},
 
+			"allow_read": &schema.Schema{
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Attempt to read the token from Vault if true; if false, drift won't be detected.",
+				Deprecated:  "Please use disable_read instead.",
+			},
+
 			"disable_read": &schema.Schema{
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -124,6 +131,12 @@ func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error
 
 func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 	shouldRead := !d.Get("disable_read").(bool)
+	if !shouldRead {
+		// if disable_read is set to false or unset (we can't know which)
+		// and allow_read is set to true, go with allow_read.
+		shouldRead = d.Get("allow_read").(bool)
+	}
+
 	path := d.Id()
 
 	if shouldRead {

@@ -30,7 +30,6 @@ func migrateGenericSecretStateV0toV1(s *terraform.InstanceState) (*terraform.Ins
 	if disabledRead {
 		s.Attributes["disable_read"] = "true"
 	}
-	delete(s.Attributes, "allow_read")
 
 	log.Printf("[DEBUG] Attributes after migration: %#v:", s.Attributes)
 	return s, nil
