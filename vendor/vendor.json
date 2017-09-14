@@ -199,6 +199,12 @@
 			"versionExact": "v1.8.34"
 		},
 		{
+			"checksumSHA1": "a+tKLYUEM3ZftY52P2ywtIxlCxE=",
+			"path": "github.com/aws/aws-sdk-go/service/iam",
+			"revision": "4c984c1f412ef5c5cdbb1a3f1c6ce5e3155ca9ab",
+			"revisionTime": "2017-09-22T21:25:34Z"
+		},
+		{
 			"checksumSHA1": "krqUUMDYRN2ohYcumxZl8BTR5EQ=",
 			"path": "github.com/aws/aws-sdk-go/service/s3",
 			"revision": "be4fa13e47938e4801fada8c8ca3d1867ad3dcb3",

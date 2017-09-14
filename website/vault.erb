@@ -14,6 +14,10 @@
                 <a href="#">Data Sources</a>
                     <ul class="nav nav-visible">
 
+                        <li<%= sidebar_current("docs-vault-datasource-aws-secret") %>>
+                            <a href="/docs/providers/vault/d/aws_secret.html">vault_aws_secret</a>
+                        </li>
+
                         <li<%= sidebar_current("docs-vault-datasource-generic-secret") %>>
                             <a href="/docs/providers/vault/d/generic_secret.html">vault_generic_secret</a>
                         </li>
@@ -26,6 +30,14 @@
                     <ul class="nav nav-visible">
                         <li<%= sidebar_current("docs-vault-resource-auth-backend") %>>
                             <a href="/docs/providers/vault/r/auth_backend.html">vault_auth_backend</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-aws-secret-backend") %>>
+                            <a href="/docs/providers/vault/r/aws_secret_backend.html">vault_aws_secret_backend</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-aws-secret-role") %>>
+                            <a href="/docs/providers/vault/r/aws_secret_role.html">vault_aws_secret_role</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-generic-secret") %>>
