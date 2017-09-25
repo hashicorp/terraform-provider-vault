@@ -52,22 +52,16 @@ func TestAccAWSAuthBackendClient_basic(t *testing.T) {
 func testAccCheckAWSAuthBackendClientDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return err
-	}
-
-	for path, auth := range auths {
-		if auth.Type != "aws" {
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "vault_aws_auth_backend_client" {
 			continue
 		}
-		// keys come back with a trailing slash
-		secret, err := client.Logical().Read("auth/" + path + "config/client")
+		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("Error checking for AWS auth backend %q client config: %s", path, err)
+			return fmt.Errorf("Error checking for AWS auth backend %q client config: %s", rs.Primary.ID, err)
 		}
 		if secret != nil {
-			return fmt.Errorf("AWS auth backend %q still configured", path)
+			return fmt.Errorf("AWS auth backend %q still configured", rs.Primary.ID)
 		}
 	}
 	return nil
