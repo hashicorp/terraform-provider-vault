@@ -78,6 +78,7 @@ func awsAuthBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
 
 	path := awsAuthBackendCertPath(backend, name)
 
+	log.Printf("[DEBUG] Writing cert %q to AWS auth backend", path)
 	_, err := client.Logical().Write(path, map[string]interface{}{
 		"aws_public_cert": publicCert,
 		"type":            certType,
@@ -89,6 +90,7 @@ func awsAuthBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return fmt.Errorf("Error configuring AWS auth backend cert %q: %s", path, err)
 	}
+	log.Printf("[DEBUG] Wrote cert %q to AWS auth backend", path)
 
 	return awsAuthBackendCertRead(d, meta)
 }
@@ -108,10 +110,12 @@ func awsAuthBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("Invalid path %q for AWS auth backend cert: %s", path, err)
 	}
 
+	log.Printf("[DEBUG] Reading cert %q from AWS auth backend", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
 		return fmt.Errorf("Error reading AWS auth backend cert %q: %s", path, err)
 	}
+	log.Printf("[DEBUG] Read cert %q from AWS auth backend", path)
 	if resp == nil {
 		log.Printf("[WARN] AWS auth backend cert %q not found, removing it from state", path)
 		d.SetId("")
@@ -133,10 +137,12 @@ func awsAuthBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Id()
 
+	log.Printf("[DEBUG] Removing cert %q from AWS auth backend", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
 		return fmt.Errorf("Error deleting AWS auth backend cert %q: %s", path, err)
 	}
+	log.Printf("[DEBUG] Removed cert %q from AWS auth backend", path)
 
 	return nil
 }
@@ -146,10 +152,12 @@ func awsAuthBackendCertExists(d *schema.ResourceData, meta interface{}) (bool, e
 
 	path := d.Id()
 
+	log.Printf("[DEBUG] Checking if cert %q exists in AWS auth backend", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
 		return true, fmt.Errorf("Error checking for existence of AWS auth backend cert %q: %s", path, err)
 	}
+	log.Printf("[DEBUG] Checked if cert %q exists in AWS auth backend", path)
 	return resp != nil, nil
 }
 
