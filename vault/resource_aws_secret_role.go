@@ -129,5 +129,6 @@ func awsSecretRoleExists(d *schema.ResourceData, meta interface{}) (bool, error)
 	if err != nil {
 		return true, fmt.Errorf("Error checking if %q exists: %s", path, err)
 	}
+	log.Printf("[DEBUG] Checked if %q exists", path)
 	return secret != nil, nil
 }

@@ -141,19 +141,25 @@ func awsSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 	for successes := 0; successes < 3; successes++ {
 		err = resource.Retry(1*time.Minute, func() *resource.RetryError {
 			if credType == "creds" {
+				log.Printf("[DEBUG] Checking if AWS creds %q are valid", secret.LeaseID)
 				_, err := iamconn.GetUser(nil)
 				if err != nil && isAWSAuthError(err) {
+					log.Printf("[DEBUG] AWS auth error checking if creds %q are valid, is retryable", secret.LeaseID)
 					return resource.RetryableError(err)
 				} else if err != nil {
+					log.Printf("[DEBUG] Error checking if creds %q are valid: %s", secret.LeaseID, err)
 					return resource.NonRetryableError(err)
 				}
+				log.Printf("[DEBUG] Checked if AWS creds %q are valid", secret.LeaseID)
 			} else {
+				log.Printf("[DEBUG] Checking if AWS sts token %q is valid", secret.LeaseID)
 				_, err := stsconn.GetCallerIdentity(&sts.GetCallerIdentityInput{})
 				if err != nil && isAWSAuthError(err) {
 					return resource.RetryableError(err)
 				} else if err != nil {
 					return resource.NonRetryableError(err)
 				}
+				log.Printf("[DEBUG] Checked if AWS sts token %q is valid", secret.LeaseID)
 			}
 			return nil
 		})

@@ -145,6 +145,7 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("Error reading mount %q: %s", path, err)
 	}
+	log.Printf("[DEBUG] Read AWS backend mount %q from Vault", path)
 
 	// the API always returns the path with a trailing slash, so let's make
 	// sure we always specify it as a trailing slash.
@@ -182,6 +183,7 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		if err != nil {
 			return fmt.Errorf("Error updating mount TTLs for %q: %s", path, err)
 		}
+		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
 		d.SetPartial("default_lease_ttl_seconds")
 		d.SetPartial("max_lease_ttl_seconds")
 	}
@@ -233,6 +235,7 @@ func awsSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, err
 	if err != nil {
 		return true, fmt.Errorf("Error retrieving list of mounts: %s", err)
 	}
+	log.Printf("[DEBUG] Checked if AWS backend exists at %q", path)
 	_, ok := mounts[strings.Trim(path, "/")+"/"]
 	return ok, nil
 }

@@ -33,8 +33,6 @@ func TestAccDataSourceAWSSecret_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.vault_aws_secret.test", "lease_id"),
 					testAccDataSourceAWSSecretCheck_tokenWorks(mountPath),
 				),
-				// Plan always says data source will be read
-				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
@@ -57,8 +55,6 @@ func TestAccDataSourceAWSSecret_sts(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.vault_aws_secret.test", "lease_id"),
 					testAccDataSourceAWSSecretCheck_tokenWorks(mountPath),
 				),
-				// Plan always says data source will be read
-				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
