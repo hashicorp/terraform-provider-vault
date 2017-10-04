@@ -73,13 +73,15 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 
 	// if backend comes from the config, it won't have the StateFunc
 	// applied yet, so we need to apply it again.
-	backend := strings.Trim(d.Get("backend").(string), "/")
+	backend := d.Get("backend").(string)
 	accessKey := d.Get("access_key").(string)
 	secretKey := d.Get("secret_key").(string)
 	ec2Endpoint := d.Get("ec2_endpoint").(string)
 	iamEndpoint := d.Get("iam_endpoint").(string)
 	stsEndpoint := d.Get("sts_endpoint").(string)
 	iamServerIDHeaderValue := d.Get("iam_server_id_header_value").(string)
+
+	path := awsAuthBackendClientPath(backend)
 
 	data := map[string]interface{}{
 		"access_key":                 accessKey,
@@ -90,14 +92,14 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		"iam_server_id_header_value": iamServerIDHeaderValue,
 	}
 
-	log.Printf("[DEBUG] Writing AWS auth backend client config to %q", "/auth/"+backend+"/config/client")
-	_, err := client.Logical().Write("auth/"+backend+"/config/client", data)
+	log.Printf("[DEBUG] Writing AWS auth backend client config to %q", path)
+	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error writing to %q: %s", "auth/"+backend+"/config/client", err)
+		return fmt.Errorf("error writing to %q: %s", path, err)
 	}
-	log.Printf("[DEBUG] Wrote AWS auth backend client config to %q", "auth/"+backend+"/config/client")
+	log.Printf("[DEBUG] Wrote AWS auth backend client config to %q", path)
 
-	d.SetId("auth/" + backend + "/config/client")
+	d.SetId(path)
 
 	return awsAuthBackendRead(d, meta)
 }
@@ -154,4 +156,8 @@ func awsAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error
 	}
 	log.Printf("[DEBUG] Checked if AWS auth backend client is configured at %q", d.Id())
 	return secret != nil, nil
+}
+
+func awsAuthBackendClientPath(path string) string {
+	return "auth/" + strings.Trim(path, "/") + "/config/client"
 }
