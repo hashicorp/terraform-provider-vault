@@ -105,7 +105,7 @@ func awsAuthBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 
 	name, err := awsAuthBackendCertNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("Invalid path %q for AWS auth backend cert: %s", err)
+		return fmt.Errorf("Invalid path %q for AWS auth backend cert: %s", path, err)
 	}
 
 	resp, err := client.Logical().Read(path)
