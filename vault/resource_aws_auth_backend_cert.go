@@ -119,6 +119,7 @@ func awsAuthBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 	if resp == nil {
 		log.Printf("[WARN] AWS auth backend cert %q not found, removing it from state", path)
 		d.SetId("")
+		return nil
 	}
 
 	// the cert response gets back as undecoded base64
