@@ -158,7 +158,7 @@ func awsAuthBackendSTSRoleExists(d *schema.ResourceData, meta interface{}) (bool
 }
 
 func awsAuthBackendSTSRolePath(backend, account string) string {
-	return "/auth/" + strings.Trim(backend, "/") + "/config/sts/" + strings.Trim(account, "/")
+	return "auth/" + strings.Trim(backend, "/") + "/config/sts/" + strings.Trim(account, "/")
 }
 
 func awsAuthBackendSTSRoleBackendFromPath(path string) (string, error) {
