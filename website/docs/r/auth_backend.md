@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_auth_backend resource"
-sidebar_current: "docs-vault-auth-backend"
+sidebar_current: "docs-vault-resource-auth-backend"
 description: |-
   Writes arbitrary policies for Vault
 ---
