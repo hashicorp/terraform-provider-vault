@@ -58,3 +58,15 @@ func testAccPreCheck(t *testing.T) {
 		t.Fatal("VAULT_TOKEN must be set for acceptance tests")
 	}
 }
+
+func getTestAWSCreds(t *testing.T) (string, string) {
+	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	if accessKey == "" {
+		t.Skip("AWS_ACCESS_KEY_ID not set")
+	}
+	if secretKey == "" {
+		t.Skip("AWS_SECRET_ACCESS_KEY not set")
+	}
+	return accessKey, secretKey
+}
