@@ -88,11 +88,12 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"vault_auth_backend":          authBackendResource(),
-			"vault_aws_auth_backend_role": awsAuthBackendRoleResource(),
-			"vault_generic_secret":        genericSecretResource(),
-			"vault_policy":                policyResource(),
-			"vault_mount":                 mountResource(),
+			"vault_auth_backend":              authBackendResource(),
+			"vault_aws_auth_backend_role":     awsAuthBackendRoleResource(),
+			"vault_aws_auth_backend_sts_role": awsAuthBackendSTSRoleResource(),
+			"vault_generic_secret":            genericSecretResource(),
+			"vault_policy":                    policyResource(),
+			"vault_mount":                     mountResource(),
 		},
 	}
 }
