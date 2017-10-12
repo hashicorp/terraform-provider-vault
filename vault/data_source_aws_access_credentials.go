@@ -18,9 +18,9 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func awsSecretDataSource() *schema.Resource {
+func awsAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: awsSecretDataSourceRead,
+		Read: awsAccessCredentialsDataSourceRead,
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -91,7 +91,7 @@ func awsSecretDataSource() *schema.Resource {
 	}
 }
 
-func awsSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error {
+func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)

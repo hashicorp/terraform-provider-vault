@@ -9,13 +9,13 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func awsSecretRoleResource() *schema.Resource {
+func awsSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
-		Create: awsSecretRoleWrite,
-		Read:   awsSecretRoleRead,
-		Update: awsSecretRoleWrite,
-		Delete: awsSecretRoleDelete,
-		Exists: awsSecretRoleExists,
+		Create: awsSecretBackendRoleWrite,
+		Read:   awsSecretBackendRoleRead,
+		Update: awsSecretBackendRoleWrite,
+		Delete: awsSecretBackendRoleDelete,
+		Exists: awsSecretBackendRoleExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -50,7 +50,7 @@ func awsSecretRoleResource() *schema.Resource {
 	}
 }
 
-func awsSecretRoleWrite(d *schema.ResourceData, meta interface{}) error {
+func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
@@ -77,10 +77,10 @@ func awsSecretRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Created role %q on AWS backend %q", name, backend)
 
 	d.SetId(backend + "/roles/" + name)
-	return awsSecretRoleRead(d, meta)
+	return awsSecretBackendRoleRead(d, meta)
 }
 
-func awsSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
+func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
@@ -107,7 +107,7 @@ func awsSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func awsSecretRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func awsSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
@@ -120,7 +120,7 @@ func awsSecretRoleDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func awsSecretRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func awsSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client := meta.(*api.Client)
 
 	path := d.Id()

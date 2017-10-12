@@ -84,17 +84,20 @@ func Provider() terraform.ResourceProvider {
 		ConfigureFunc: providerConfigure,
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"vault_generic_secret": genericSecretDataSource(),
-			"vault_aws_secret":     awsSecretDataSource(),
+			"vault_aws_access_credentials": awsAccessCredentialsDataSource(),
+			"vault_generic_secret":         genericSecretDataSource(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"vault_auth_backend":       authBackendResource(),
-			"vault_generic_secret":     genericSecretResource(),
-			"vault_policy":             policyResource(),
-			"vault_mount":              mountResource(),
-			"vault_aws_secret_backend": awsSecretBackendResource(),
-			"vault_aws_secret_role":    awsSecretRoleResource(),
+			"vault_auth_backend":              authBackendResource(),
+			"vault_aws_auth_backend_cert":     awsAuthBackendCertResource(),
+			"vault_aws_auth_backend_role":     awsAuthBackendRoleResource(),
+			"vault_aws_auth_backend_sts_role": awsAuthBackendSTSRoleResource(),
+			"vault_aws_secret_backend":        awsSecretBackendResource(),
+			"vault_aws_secret_backend_role":   awsSecretBackendRoleResource(),
+			"vault_generic_secret":            genericSecretResource(),
+			"vault_policy":                    policyResource(),
+			"vault_mount":                     mountResource(),
 		},
 	}
 }

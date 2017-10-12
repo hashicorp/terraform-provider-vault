@@ -1,12 +1,12 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_aws_secret data source"
-sidebar_current: "docs-vault-datasource-aws-secret"
+page_title: "Vault: vault_aws_access_credentials data source"
+sidebar_current: "docs-vault-datasource-aws-access_credentials"
 description: |-
   Reads AWS credentials from an AWS secret backend in Vault
 ---
 
-# vault\_aws\_secret
+# vault\_aws\_access\_credentials
 
 Reads AWS credentials from an AWS secret backend in Vault.
 
@@ -26,9 +26,10 @@ resource "vault_aws_secret_backend" "aws" {
   secret_key = "SECRETKEYFROMAWS"
 }
 
-resource "vault_aws_secret_role" "role" {
+resource "vault_aws_secret_backend_role" "role" {
   backend = "${vault_aws_secret_backend.aws.path}"
-  name = "test"
+  name    = "test"
+
   policy = <<EOT
 {
   "Version": "2012-10-17",
@@ -43,14 +44,15 @@ resource "vault_aws_secret_role" "role" {
 EOT
 }
 
-data "vault_aws_secret" "creds" {
+# generally, these blocks would be in a different module
+data "vault_aws_access_credentials" "creds" {
   backend = "${vault_aws_secret_backend.aws.path}"
-  role = "${vault_aws_secret_role.role.name}"
+  role    = "${vault_aws_secret_backend_role.role.name}"
 }
 
 provider "aws" {
-  access_key = "${data.vault_aws_secret.creds.access_key}"
-  secret_key = "${data.vault_aws_secret.creds.secret_key}"
+  access_key = "${data.vault_aws_access_credentials.creds.access_key}"
+  secret_key = "${data.vault_aws_access_credentials.creds.secret_key}"
 }
 ```
 
@@ -61,7 +63,7 @@ The following arguments are supported:
 * `backend` - (Required) The path to the AWS secret backend to
 read credentials from, with no leading or trailing `/`s.
 
-* `role` - (Required) The name of the AWS secret role to read
+* `role` - (Required) The name of the AWS secret backend role to read
 credentials from, with no leading or trailing `/`s.
 
 * `type` - (Optional) The type of credentials to read. Defaults

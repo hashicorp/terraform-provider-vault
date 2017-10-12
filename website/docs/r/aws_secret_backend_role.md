@@ -1,14 +1,14 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_aws_secret_role resource"
-sidebar_current: "docs-vault-resource-aws-secret-role"
+page_title: "Vault: vault_aws_secret_backend_role resource"
+sidebar_current: "docs-vault-resource-aws-secret-backend-role"
 description: |-
-  Creates a role on an AWS Backend for Vault.
+  Creates a role on an AWS Secret Backend for Vault.
 ---
 
-# vault\_aws\_secret\_role
+# vault\_aws\_secret\_backend\_role
 
-Creates a role on an AWS Backend for Vault. Roles are
+Creates a role on an AWS Secret Backend for Vault. Roles are
 used to map credentials to the policies that generated them.
 
 ~> **Important** All data provided in the resource configuration will be
@@ -26,9 +26,10 @@ resource "vault_aws_secret_backend" "aws" {
   secret_key = "AWS secret key"
 }
 
-resource "vault_aws_secret_role" "role" {
+resource "vault_aws_secret_backend_role" "role" {
   backend = "${vault_aws_secret_backend.aws.path}"
-  name = "deploy"
+  name    = "deploy"
+
   policy = <<EOT
 {
   "Version": "2012-10-17",

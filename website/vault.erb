@@ -14,8 +14,8 @@
                 <a href="#">Data Sources</a>
                     <ul class="nav nav-visible">
 
-                        <li<%= sidebar_current("docs-vault-datasource-aws-secret") %>>
-                            <a href="/docs/providers/vault/d/aws_secret.html">vault_aws_secret</a>
+                        <li<%= sidebar_current("docs-vault-datasource-aws-access-credentials") %>>
+                            <a href="/docs/providers/vault/d/aws_access_credentials.html">vault_aws_access_credentials</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-datasource-generic-secret") %>>
@@ -32,12 +32,20 @@
                             <a href="/docs/providers/vault/r/auth_backend.html">vault_auth_backend</a>
                         </li>
 
+                        <li<%= sidebar_current("docs-vault-resource-aws-auth-backend-cert") %>>
+                            <a href="/docs/providers/vault/r/aws_auth_backend_cert.html">vault_aws_auth_backend_cert</a>
+                        </li>
+			
+                        <li<%= sidebar_current("docs-vault-resource-aws-auth-backend-sts-role") %>>
+			    <a href="/docs/providers/vault/r/aws_auth_backend_sts_role.html">vault_aws_auth_backend_sts_role</a>
+                        </li>
+
                         <li<%= sidebar_current("docs-vault-resource-aws-secret-backend") %>>
                             <a href="/docs/providers/vault/r/aws_secret_backend.html">vault_aws_secret_backend</a>
                         </li>
 
-                        <li<%= sidebar_current("docs-vault-resource-aws-secret-role") %>>
-                            <a href="/docs/providers/vault/r/aws_secret_role.html">vault_aws_secret_role</a>
+                        <li<%= sidebar_current("docs-vault-resource-aws-secret-backend-role") %>>
+                            <a href="/docs/providers/vault/r/aws_secret_backend_role.html">vault_aws_secret_backend_role</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-generic-secret") %>>
