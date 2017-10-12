@@ -39,11 +39,6 @@ func awsAuthBackendCertResource() *schema.Resource {
 				Required:    true,
 				Description: "Base64 encoded AWS Public key required to verify PKCS7 signature of the EC2 instance metadata.",
 				ForceNew:    true,
-				/*DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					return base64.StdEncoding.EncodeToString([]byte(old)) == new ||
-						base64.RawStdEncoding.EncodeToString([]byte(old)) == new ||
-						base64.URLEncoding.EncodeToString([]byte(old)) == new
-				},*/
 			},
 			"type": {
 				Type:         schema.TypeString,
