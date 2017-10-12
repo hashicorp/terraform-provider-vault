@@ -89,6 +89,7 @@ func Provider() terraform.ResourceProvider {
 
 		ResourcesMap: map[string]*schema.Resource{
 			"vault_auth_backend":              authBackendResource(),
+			"vault_aws_auth_backend_cert":     awsAuthBackendCertResource(),
 			"vault_aws_auth_backend_role":     awsAuthBackendRoleResource(),
 			"vault_aws_auth_backend_sts_role": awsAuthBackendSTSRoleResource(),
 			"vault_generic_secret":            genericSecretResource(),
