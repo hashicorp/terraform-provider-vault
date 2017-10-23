@@ -1,7 +1,7 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_aws_auth_backend_role_tag data source"
-sidebar_current: "docs-vault-datasource-aws-auth-backend-role-tag"
+page_title: "Vault: vault_aws_auth_backend_role_tag resource"
+sidebar_current: "docs-vault-resource-aws-auth-backend-role-tag"
 description: |-
   Reads role tags from a Vault AWS auth backend.
 ---
@@ -27,7 +27,7 @@ resource "vault_aws_auth_backend_role" "role" {
   role_tag         = "VaultRoleTag"
 }
 
-data "vault_aws_auth_backend_role_tag" "test" {
+resource "vault_aws_auth_backend_role_tag" "test" {
   backend     = "${vault_auth_backend.aws.path}"
   role        = "${vault_aws_auth_backend_role.role.role}"
   policies    = ["prod", "dev", "test"]

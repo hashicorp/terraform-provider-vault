@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform/helper/resource"
 )
 
-func TestAccDataSourceAWSAuthBackendRoleTag_basic(t *testing.T) {
+func TestAccAWSAuthBackendRoleTag_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-aws")
 	role := acctest.RandomWithPrefix("tf-test-aws")
 	resource.Test(t, resource.TestCase{
@@ -16,17 +16,17 @@ func TestAccDataSourceAWSAuthBackendRoleTag_basic(t *testing.T) {
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceAWSAuthBackendRoleTagConfig_basic(backend, role),
+				Config: testAccAWSAuthBackendRoleTagConfig_basic(backend, role),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.vault_aws_auth_backend_role_tag.test", "tag_value"),
-					resource.TestCheckResourceAttrSet("data.vault_aws_auth_backend_role_tag.test", "tag_key"),
+					resource.TestCheckResourceAttrSet("vault_aws_auth_backend_role_tag.test", "tag_value"),
+					resource.TestCheckResourceAttrSet("vault_aws_auth_backend_role_tag.test", "tag_key"),
 				),
 			},
 		},
 	})
 }
 
-func testAccDataSourceAWSAuthBackendRoleTagConfig_basic(backend, role string) string {
+func testAccAWSAuthBackendRoleTagConfig_basic(backend, role string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "aws" {
     path = "%s"
@@ -42,7 +42,7 @@ resource "vault_aws_auth_backend_role" "role" {
     role_tag = "VaultRoleTag"
 }
 
-data "vault_aws_auth_backend_role_tag" "test" {
+resource "vault_aws_auth_backend_role_tag" "test" {
     backend = "${vault_auth_backend.aws.path}"
     role = "${vault_aws_auth_backend_role.role.role}"
     policies = ["prod", "dev", "test"]

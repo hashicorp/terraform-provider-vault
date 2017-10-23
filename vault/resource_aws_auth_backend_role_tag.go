@@ -10,9 +10,11 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func awsAuthBackendRoleTagDataSource() *schema.Resource {
+func awsAuthBackendRoleTagResource() *schema.Resource {
 	return &schema.Resource{
-		Read: awsAuthBackendRoleTagDataSourceRead,
+		Create: awsAuthBackendRoleTagResourceCreate,
+		Read:   awsAuthBackendRoleTagResourceRead,
+		Delete: awsAuthBackendRoleTagResourceDelete,
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -20,11 +22,13 @@ func awsAuthBackendRoleTagDataSource() *schema.Resource {
 				Optional:    true,
 				Default:     "aws",
 				Description: "AWS auth backend to read tags from.",
+				ForceNew:    true,
 			},
 			"role": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Name of the role.",
+				ForceNew:    true,
 			},
 			"policies": {
 				Type:        schema.TypeList,
@@ -33,26 +37,31 @@ func awsAuthBackendRoleTagDataSource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				ForceNew: true,
 			},
 			"max_ttl": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The maximum allowed lifetime of tokens issued using this role.",
+				ForceNew:    true,
 			},
 			"instance_id": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Instance ID for which this tag is intended. The created tag can only be used by the instance with the given ID.",
+				ForceNew:    true,
 			},
 			"allow_instance_migration": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Allows migration of the underlying instance where the client resides.",
+				ForceNew:    true,
 			},
 			"disallow_reauthentication": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Only allow a single token to be granted per instance ID.",
+				ForceNew:    true,
 			},
 			"tag_value": {
 				Type:     schema.TypeString,
@@ -66,7 +75,7 @@ func awsAuthBackendRoleTagDataSource() *schema.Resource {
 	}
 }
 
-func awsAuthBackendRoleTagDataSourceRead(d *schema.ResourceData, meta interface{}) error {
+func awsAuthBackendRoleTagResourceCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
@@ -102,5 +111,17 @@ func awsAuthBackendRoleTagDataSourceRead(d *schema.ResourceData, meta interface{
 	d.Set("tag_value", secret.Data["tag_value"])
 	d.Set("tag_key", secret.Data["tag_key"])
 
+	return nil
+}
+
+func awsAuthBackendRoleTagResourceRead(d *schema.ResourceData, meta interface{}) error {
+	// no read API call, this is only a resource to avoid nonces regenerating
+	// on every refresh
+	return nil
+}
+
+func awsAuthBackendRoleTagResourceDelete(d *schema.ResourceData, meta interface{}) error {
+	// no delete API call, this is only a resource to avoid nonces regenerating
+	// on every refresh
 	return nil
 }
