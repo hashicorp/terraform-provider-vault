@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_auth_backend_group resource"
-sidebar_current: "docs-vault-resource-auth-backend-group"
+sidebar_current: "docs-vault-resource-okta-auth-backend-group"
 description: |-
   Managing groups in an Okta auth backend in Vault
 ---

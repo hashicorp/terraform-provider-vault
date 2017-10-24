@@ -82,14 +82,14 @@ func oktaAuthBackendUserWrite(d *schema.ResourceData, meta interface{}) error {
 
 	var groupsString []string
 	if groups, ok := d.GetOk("groups"); ok {
-		groupsString = toStringArray(groups.([]interface{}))
+		groupsString = toStringArray(groups.(*schema.Set).List())
 	} else {
 		groupsString = []string{}
 	}
 
 	var policiesString []string
 	if policies, ok := d.GetOk("policies"); ok {
-		policiesString = toStringArray(policies.([]interface{}))
+		policiesString = toStringArray(policies.(*schema.Set).List())
 	} else {
 		policiesString = []string{}
 	}
@@ -100,12 +100,12 @@ func oktaAuthBackendUserWrite(d *schema.ResourceData, meta interface{}) error {
 		Policies: policiesString,
 	}
 	if err := updateOktaUser(client, path, user); err != nil {
-		return fmt.Errorf("Unable to update user %s in Vault: %s", username, err)
+		return fmt.Errorf("unable to update user %s in Vault: %s", username, err)
 	}
 
 	d.SetId(fmt.Sprintf("%s/%s", path, username))
 
-	return nil
+	return oktaAuthBackendUserRead(d, meta)
 }
 
 func oktaAuthBackendUserRead(d *schema.ResourceData, meta interface{}) error {
@@ -119,13 +119,22 @@ func oktaAuthBackendUserRead(d *schema.ResourceData, meta interface{}) error {
 	present, err := isOktaUserPresent(client, path, username)
 
 	if err != nil {
-		return fmt.Errorf("Unable to read user %s in Vault: %s", username, err)
+		return fmt.Errorf("unable to read user %s in Vault: %s", username, err)
 	}
 
 	if !present {
 		// User not found, so remove this resource
 		d.SetId("")
+		return nil
 	}
+
+	user, err := readOktaUser(client, path, username)
+	if err != nil {
+		return fmt.Errorf("unable to update user %s from Vault: %s", username, err)
+	}
+
+	d.Set("groups", user.Groups)
+	d.Set("policies", user.Policies)
 
 	return nil
 }
@@ -139,7 +148,7 @@ func oktaAuthBackendUserDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleting user %s from Okta auth backend %s", username, path)
 
 	if err := deleteOktaUser(client, path, username); err != nil {
-		return fmt.Errorf("Unable to delete user %s from Vault: %s", username, path)
+		return fmt.Errorf("unable to delete user %s from Vault: %s", username, path)
 	}
 
 	d.SetId("")

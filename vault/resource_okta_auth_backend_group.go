@@ -40,7 +40,7 @@ func oktaAuthBackendGroupResource() *schema.Resource {
 			},
 
 			"policies": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Required:    false,
 				Optional:    true,
 				Description: "Policies to associate with this group",
@@ -55,6 +55,7 @@ func oktaAuthBackendGroupResource() *schema.Resource {
 						return
 					},
 				},
+				Set: schema.HashString,
 			},
 		},
 	}
@@ -70,7 +71,7 @@ func oktaAuthBackendGroupWrite(d *schema.ResourceData, meta interface{}) error {
 
 	var policiesString []string
 	if policies, ok := d.GetOk("policies"); ok {
-		policiesString = toStringArray(policies.([]interface{}))
+		policiesString = toStringArray(policies.(*schema.Set).List())
 	} else {
 		policiesString = []string{}
 	}
@@ -80,32 +81,41 @@ func oktaAuthBackendGroupWrite(d *schema.ResourceData, meta interface{}) error {
 		Policies: policiesString,
 	}
 	if err := updateOktaGroup(client, path, group); err != nil {
-		return fmt.Errorf("Unable to write group %s to Vault: %s", groupName, err)
+		return fmt.Errorf("unable to write group %s to Vault: %s", groupName, err)
 	}
 
 	d.SetId(fmt.Sprintf("%s/%s", path, group))
 
-	return nil
+	return oktaAuthBackendGroupRead(d, meta)
 }
 
 func oktaAuthBackendGroupRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Get("path").(string)
-	group := d.Get("group_name").(string)
+	name := d.Get("group_name").(string)
 
-	log.Printf("[DEBUG] Reading group %s from Okta auth backend %s", group, path)
+	log.Printf("[DEBUG] Reading group %s from Okta auth backend %s", name, path)
 
-	present, err := isOktaGroupPresent(client, path, group)
+	present, err := isOktaGroupPresent(client, path, name)
 
 	if err != nil {
-		return fmt.Errorf("Unable to read group %s from Vault: %s", group, err)
+		return fmt.Errorf("unable to read group %s from Vault: %s", name, err)
 	}
 
 	if !present {
 		// Group not found, so remove this resource
 		d.SetId("")
+		return nil
 	}
+
+	group, err := readOktaGroup(client, path, name)
+
+	if err != nil {
+		return fmt.Errorf("unable to update group %s from Vault: %s", name, err)
+	}
+
+	d.Set("policies", group.Policies)
 
 	return nil
 }
@@ -119,7 +129,7 @@ func oktaAuthBackendGroupDelete(d *schema.ResourceData, meta interface{}) error 
 	log.Printf("[DEBUG] Deleting group %s from Okta auth backend %s", group, path)
 
 	if err := deleteOktaGroup(client, path, group); err != nil {
-		return fmt.Errorf("Unable to delete group %s from Vault: %s", group, err)
+		return fmt.Errorf("unable to delete group %s from Vault: %s", group, err)
 	}
 
 	d.SetId("")

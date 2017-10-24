@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_auth_backend_user resource"
-sidebar_current: "docs-vault-resource-auth-backend-user"
+sidebar_current: "docs-vault-resource-okta-auth-backend-user"
 description: |-
   Managing users in an Okta auth backend in Vault
 ---

@@ -3,47 +3,61 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
+	"strconv"
 	"testing"
 	"time"
 )
 
 func TestOktaAuthBackend(t *testing.T) {
+	path := "okta-" + strconv.Itoa(acctest.RandInt())
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testOktaAuthBackend_Destroyed,
+		CheckDestroy: testOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
-				Config: initialOktaAuthConfig,
-				Check:  testOktaAuthBackend_InitialCheck,
+				Config: initialOktaAuthConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					testOktaAuthBackend_InitialCheck,
+					testOktaAuthBackend_GroupsCheck(path, "dummy", []string{"one", "two", "default"}),
+					testOktaAuthBackend_UsersCheck(path, "foo", []string{"dummy"}, []string{""}),
+				),
 			},
 			{
-				Config: updatedOktaAuthConfig,
-				Check:  testOktaAuthBackend_UpdatedCheck,
+				Config: updatedOktaAuthConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					testOktaAuthBackend_GroupsCheck(path, "example", []string{"three", "four", "default"}),
+					testOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{""}),
+				),
 			},
 		},
 	})
 }
 
-var initialOktaAuthConfig = `
+func initialOktaAuthConfig(path string) string {
+	return fmt.Sprintf(`
 resource "vault_okta_auth_backend" "test" {
     description = "Testing the Terraform okta auth backend"
     organization = "example"
+    path = "%s"
     token = "this must be kept secret"
     ttl = "1h"
     group {
         group_name = "dummy"
-        policies = ["one", "two"]
+        policies = ["one", "two", "default"]
     }
     user {
         username = "foo"
         groups = ["dummy"]
     }
 }
-`
+`, path)
+}
 
 func testOktaAuthBackend_InitialCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["vault_okta_auth_backend.test"]
@@ -72,184 +86,168 @@ func testOktaAuthBackend_InitialCheck(s *terraform.State) error {
 	authMount := authMounts[path+"/"]
 
 	if authMount == nil {
-		return fmt.Errorf("Auth mount %s not present", path)
+		return fmt.Errorf("auth mount %s not present", path)
 	}
 
-	err = assertEquals("okta", authMount.Type)
-	if err != nil {
-		return err
+	if "okta" != authMount.Type {
+		return fmt.Errorf("incorrect mount type: %s", authMount.Type)
 	}
 
-	err = assertEquals("Testing the Terraform okta auth backend", authMount.Description)
-	if err != nil {
-		return err
+	if "Testing the Terraform okta auth backend" != authMount.Description {
+		return fmt.Errorf("incorrect description: %s", authMount.Description)
 	}
 
-	config, err := client.Logical().Read("/auth/okta/config")
+	config, err := client.Logical().Read(fmt.Sprintf("/auth/%s/config", path))
 	if err != nil {
 		return fmt.Errorf("error reading back configuration: %s", err)
 	}
 
-	err = assertEquals("example", config.Data["organization"])
-	if err != nil {
-		return err
+	if "example" != config.Data["organization"] {
+		return fmt.Errorf("incorrect organization: %s", config.Data["organization"])
 	}
 
 	ttl, err := config.Data["ttl"].(json.Number).Int64()
 	if err != nil {
 		return err
 	}
-	err = assertEquals((time.Hour * 1).Nanoseconds(), ttl)
-	if err != nil {
-		return err
-	}
-
-	groupList, err := client.Logical().List("/auth/okta/groups")
-	if err != nil {
-		return fmt.Errorf("error reading back configuration: %s", err)
-	}
-
-	if len(groupList.Data["keys"].([]interface{})) != 1 {
-		return fmt.Errorf("Unexpected groups present: %v", groupList.Data)
-	}
-
-	dummyGroup, err := client.Logical().Read("/auth/okta/groups/dummy")
-	if err != nil {
-		return fmt.Errorf("error reading back configuration: %s", err)
-	}
-	err = assertArrayContains([]string{"one", "two", "default"}, toStringArray(dummyGroup.Data["policies"].([]interface{})))
-	if err != nil {
-		return err
-	}
-
-	userList, err := client.Logical().List("/auth/okta/users")
-	if err != nil {
-		return fmt.Errorf("error reading back configuration: %s", err)
-	}
-
-	if len(userList.Data["keys"].([]interface{})) != 1 {
-		return fmt.Errorf("Unexpected users present: %v", userList.Data)
-	}
-
-	user, err := client.Logical().Read("/auth/okta/users/foo")
-	if err != nil {
-		return fmt.Errorf("error reading back configuration: %s", err)
-	}
-	err = assertArrayContains([]string{"dummy"}, toStringArray(user.Data["groups"].([]interface{})))
-	if err != nil {
-		return err
-	}
-	err = assertArrayContains([]string{""}, toStringArray(user.Data["policies"].([]interface{})))
-	if err != nil {
-		return err
+	if (time.Hour * 1).Nanoseconds() != ttl {
+		return fmt.Errorf("incorrect ttl: %s", config.Data["ttl"])
 	}
 
 	return nil
 }
 
-var updatedOktaAuthConfig = `
+func testOktaAuthBackend_GroupsCheck(path, groupName string, expectedPolicies []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client := testProvider.Meta().(*api.Client)
+
+		groupList, err := client.Logical().List(fmt.Sprintf("/auth/%s/groups", path))
+		if err != nil {
+			return fmt.Errorf("error reading back group configuration: %s", err)
+		}
+
+		if len(groupList.Data["keys"].([]interface{})) != 1 {
+			return fmt.Errorf("unexpected groups present: %v", groupList.Data)
+		}
+
+		dummyGroup, err := client.Logical().Read(fmt.Sprintf("/auth/%s/groups/%s", path, groupName))
+		if err != nil {
+			return fmt.Errorf("error reading back configuration: %s", err)
+		}
+
+		var missing []interface{}
+
+		actual := toStringArray(dummyGroup.Data["policies"].([]interface{}))
+	EXPECTED:
+		for _, i := range expectedPolicies {
+			for _, j := range actual {
+				if i == j {
+					continue EXPECTED
+				}
+			}
+
+			missing = append(missing, i)
+		}
+
+		if len(missing) != 0 {
+			return fmt.Errorf("group policies incorrect; expected %[1]v, actual %[2]v (types: %[1]T, %[2]T)", expectedPolicies, actual)
+		}
+
+		return nil
+	}
+
+}
+
+func testOktaAuthBackend_UsersCheck(path, userName string, expectedGroups, expectedPolicies []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client := testProvider.Meta().(*api.Client)
+
+		userList, err := client.Logical().List(fmt.Sprintf("/auth/%s/users", path))
+		if err != nil {
+			return fmt.Errorf("error reading back configuration: %s", err)
+		}
+
+		if len(userList.Data["keys"].([]interface{})) != 1 {
+			return fmt.Errorf("unexpected users present: %v", userList.Data)
+		}
+
+		user, err := client.Logical().Read(fmt.Sprintf("/auth/%s/users/%s", path, userName))
+		if err != nil {
+			return fmt.Errorf("error reading back configuration: %s", err)
+		}
+
+		var missing []interface{}
+
+		actual := toStringArray(user.Data["policies"].([]interface{}))
+	EXPECTED_POLICIES:
+		for _, i := range expectedPolicies {
+			for _, j := range actual {
+				if i == j {
+					continue EXPECTED_POLICIES
+				}
+			}
+
+			missing = append(missing, i)
+		}
+
+		if len(missing) != 0 {
+			return fmt.Errorf("user policies incorrect; expected %[1]v, actual %[2]v (types: %[1]T, %[2]T)", expectedPolicies, actual)
+		}
+
+		actual = toStringArray(user.Data["groups"].([]interface{}))
+	EXPECTED_GROUPS:
+		for _, i := range expectedGroups {
+			for _, j := range actual {
+				if i == j {
+					continue EXPECTED_GROUPS
+				}
+			}
+
+			missing = append(missing, i)
+		}
+
+		if len(missing) != 0 {
+			return fmt.Errorf("user groups incorrect; expected %[1]v, actual %[2]v (types: %[1]T, %[2]T)", expectedGroups, actual)
+		}
+
+		return nil
+	}
+
+}
+
+func updatedOktaAuthConfig(path string) string {
+	return fmt.Sprintf(`
 resource "vault_okta_auth_backend" "test" {
     description = "Testing the Terraform okta auth backend"
     organization = "example"
+    path = "%s"
     token = "this must be kept secret"
     group {
         group_name = "example"
-        policies = ["three", "four"]
+        policies = ["three", "four", "default"]
     }
     user {
         username = "bar"
         groups = ["example"]
     }
 }
-`
-
-func testOktaAuthBackend_UpdatedCheck(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
-	groupList, err := client.Logical().List("/auth/okta/groups")
-	if err != nil {
-		return fmt.Errorf("error reading back configuration: %s", err)
-	}
-
-	if len(groupList.Data["keys"].([]interface{})) != 1 {
-		return fmt.Errorf("Unexpected groups present: %v", groupList.Data)
-	}
-
-	dummyGroup, err := client.Logical().Read("/auth/okta/groups/example")
-	if err != nil {
-		return fmt.Errorf("error reading back configuration: %s", err)
-	}
-	err = assertArrayContains([]string{"three", "four", "default"}, toStringArray(dummyGroup.Data["policies"].([]interface{})))
-	if err != nil {
-		return err
-	}
-
-	userList, err := client.Logical().List("/auth/okta/users")
-	if err != nil {
-		return fmt.Errorf("error reading back configuration: %s", err)
-	}
-
-	if len(userList.Data["keys"].([]interface{})) != 1 {
-		return fmt.Errorf("Unexpected users present: %v", userList.Data)
-	}
-
-	user, err := client.Logical().Read("/auth/okta/users/bar")
-	if err != nil {
-		return fmt.Errorf("error reading back configuration: %s", err)
-	}
-	err = assertArrayContains([]string{"example"}, toStringArray(user.Data["groups"].([]interface{})))
-	if err != nil {
-		return err
-	}
-
-	err = assertArrayContains([]string{""}, toStringArray(user.Data["policies"].([]interface{})))
-	if err != nil {
-		return err
-	}
-
-	return nil
+`, path)
 }
 
-func testOktaAuthBackend_Destroyed(state *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+func testOktaAuthBackend_Destroyed(path string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
 
-	authMounts, err := client.Sys().ListAuth()
-	if err != nil {
-		return err
-	}
+		client := testProvider.Meta().(*api.Client)
 
-	if _, ok := authMounts["okta/"]; ok {
-		return fmt.Errorf("Auth mount not destroyed")
-	}
-
-	return nil
-}
-
-func assertEquals(expected, actual interface{}) error {
-	if expected != actual {
-		return fmt.Errorf("Value incorrect; expected %[1]v, actual %[2]v (types: %[1]T, %[2]T)", expected, actual)
-	}
-
-	return nil
-}
-
-func assertArrayContains(expected, actual []string) error {
-	var missing []interface{}
-
-EXPECTED:
-	for _, i := range expected {
-		for _, j := range actual {
-			if i == j {
-				continue EXPECTED
-			}
+		authMounts, err := client.Sys().ListAuth()
+		if err != nil {
+			return err
 		}
 
-		missing = append(missing, i)
-	}
+		if _, ok := authMounts[fmt.Sprintf("%s/", path)]; ok {
+			return fmt.Errorf("auth mount not destroyed")
+		}
 
-	if len(missing) != 0 {
-		return fmt.Errorf("Value incorrect; expected %[1]v, actual %[2]v (types: %[1]T, %[2]T)", expected, actual)
+		return nil
 	}
-
-	return nil
 }

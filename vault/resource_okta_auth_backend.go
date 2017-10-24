@@ -6,9 +6,12 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
+
+var oktaAuthType = "okta"
 
 func oktaAuthBackendResource() *schema.Resource {
 	return &schema.Resource{
@@ -22,9 +25,9 @@ func oktaAuthBackendResource() *schema.Resource {
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Computed:    true,
 				ForceNew:    true,
 				Description: "path to mount the backend",
+				Default:     oktaAuthType,
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
 					value := v.(string)
 					if strings.HasSuffix(value, "/") {
@@ -45,7 +48,6 @@ func oktaAuthBackendResource() *schema.Resource {
 			"organization": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
 				Optional:    false,
 				Description: "The Okta organization. This will be the first part of the url https://XXX.okta.com.",
 			},
@@ -82,6 +84,7 @@ func oktaAuthBackendResource() *schema.Resource {
 				Type:     schema.TypeSet,
 				Required: false,
 				Optional: true,
+				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"group_name": {
@@ -99,7 +102,7 @@ func oktaAuthBackendResource() *schema.Resource {
 						},
 
 						"policies": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Required:    true,
 							Description: "Policies to associate with this group",
 							Elem: &schema.Schema{
@@ -113,19 +116,22 @@ func oktaAuthBackendResource() *schema.Resource {
 									return
 								},
 							},
+							Set: schema.HashString,
 						},
 					},
 				},
+				Set: resourceOktaGroupHash,
 			},
 
 			"user": {
 				Type:     schema.TypeSet,
 				Required: false,
 				Optional: true,
+				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"groups": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Required:    true,
 							Description: "Groups within the Okta auth backend to associate with this user",
 							Elem: &schema.Schema{
@@ -139,6 +145,7 @@ func oktaAuthBackendResource() *schema.Resource {
 									return
 								},
 							},
+							Set: schema.HashString,
 						},
 
 						"username": {
@@ -155,7 +162,7 @@ func oktaAuthBackendResource() *schema.Resource {
 						},
 
 						"policies": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Required:    false,
 							Optional:    true,
 							Description: "Policies to associate with this user",
@@ -170,9 +177,11 @@ func oktaAuthBackendResource() *schema.Resource {
 									return
 								},
 							},
+							Set: schema.HashString,
 						},
 					},
 				},
+				Set: resourceOktaUserHash,
 			},
 		},
 	}
@@ -181,23 +190,13 @@ func oktaAuthBackendResource() *schema.Resource {
 func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	authType := "okta"
+	authType := oktaAuthType
 	desc := d.Get("description").(string)
 	path := d.Get("path").(string)
 
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
 
-	var err error
-
-	if path == "" {
-		path = authType
-		err = d.Set("path", authType)
-		if err != nil {
-			return fmt.Errorf("unable to set state: %s", err)
-		}
-	}
-
-	err = client.Sys().EnableAuth(path, authType, desc)
+	err := client.Sys().EnableAuth(path, authType, desc)
 
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
@@ -227,29 +226,48 @@ func oktaAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	auths, err := client.Sys().ListAuth()
+	path := d.Id()
+	log.Printf("[DEBUG] Reading auth %s from Vault", path)
+
+	present, err := isOktaAuthBackendPresent(client, path)
+
 	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+		return fmt.Errorf("unable to check auth backends in Vault for path %s: %s", path, err)
 	}
 
-	configuredPath := d.Id() + "/"
-
-	for path, auth := range auths {
-
-		if auth.Type == "okta" && path == configuredPath {
-			return nil
-		}
+	if !present {
+		// If we fell out here then we didn't find our Auth in the list.
+		d.SetId("")
+		return nil
 	}
 
-	// If we fell out here then we didn't find our Auth in the list.
-	d.SetId("")
+	log.Printf("[DEBUG] Reading groups for mount %s from Vault", path)
+	groups, err := oktaReadAllGroups(client, path)
+	if err != nil {
+		return err
+	}
+	if err := d.Set("group", groups); err != nil {
+		return err
+	}
+
+	log.Printf("[DEBUG] Reading users for mount %s from Vault", path)
+	users, err := oktaReadAllUsers(client, path)
+	if err != nil {
+		return err
+	}
+	if err := d.Set("user", users); err != nil {
+		return err
+	}
+
 	return nil
+
 }
 
 func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
+	log.Printf("[DEBUG] Updating auth %s in Vault", path)
 
 	configuration := map[string]interface{}{
 		"base_url":     d.Get("base_url"),
@@ -273,7 +291,7 @@ func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("group") {
 		oldValue, newValue := d.GetChange("group")
 
-		err = oktaAuthUpdateGroups(client, path, oldValue, newValue)
+		err = oktaAuthUpdateGroups(d, client, path, oldValue, newValue)
 		if err != nil {
 			return err
 		}
@@ -282,27 +300,94 @@ func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("user") {
 		oldValue, newValue := d.GetChange("user")
 
-		err = oktaAuthUpdateUsers(client, path, oldValue, newValue)
+		err = oktaAuthUpdateUsers(d, client, path, oldValue, newValue)
 		if err != nil {
 			return err
 		}
 	}
 
-	return nil
+	return oktaAuthBackendRead(d, meta)
 }
 
-func oktaAuthUpdateGroups(client *api.Client, path string, oldValue, newValue interface{}) error {
-	groupsToDelete := onlyInFirstList(toStringList(oldValue, "group_name"), toStringList(newValue, "group_name"))
+func oktaReadAllGroups(client *api.Client, path string) (*schema.Set, error) {
+	groupNames, err := listOktaGroups(client, path)
+	if err != nil {
+		return nil, fmt.Errorf("unable to list groups from %s in Vault: %s", path, err)
+	}
 
-	for _, groupName := range groupsToDelete {
+	groups := &schema.Set{F: resourceOktaGroupHash}
+	for _, groupName := range groupNames {
+		group, err := readOktaGroup(client, path, groupName)
+		if err != nil {
+			return nil, fmt.Errorf("unable to read group %s from %s in Vault: %s", path, groupName, err)
+		}
+
+		policies := &schema.Set{F: schema.HashString}
+		for _, v := range group.Policies {
+			policies.Add(v)
+		}
+
+		m := make(map[string]interface{})
+		m["policies"] = policies
+		m["group_name"] = group.Name
+
+		groups.Add(m)
+	}
+
+	return groups, nil
+}
+
+func oktaReadAllUsers(client *api.Client, path string) (*schema.Set, error) {
+	userNames, err := listOktaUsers(client, path)
+	if err != nil {
+		return nil, fmt.Errorf("unable to list groups from %s in Vault: %s", path, err)
+	}
+
+	users := &schema.Set{F: resourceOktaUserHash}
+	for _, userName := range userNames {
+		user, err := readOktaUser(client, path, userName)
+		if err != nil {
+			return nil, fmt.Errorf("unable to read user %s from %s in Vault: %s", path, userName, err)
+		}
+
+		groups := &schema.Set{F: schema.HashString}
+		for _, v := range user.Groups {
+			groups.Add(v)
+		}
+
+		policies := &schema.Set{F: schema.HashString}
+		for _, v := range user.Policies {
+			policies.Add(v)
+		}
+
+		m := make(map[string]interface{})
+		m["policies"] = policies
+		m["groups"] = groups
+		m["username"] = user.Username
+
+		users.Add(m)
+	}
+
+	return users, nil
+}
+
+func oktaAuthUpdateGroups(d *schema.ResourceData, client *api.Client, path string, oldValue, newValue interface{}) error {
+
+	groupsToDelete := oldValue.(*schema.Set).Difference(newValue.(*schema.Set))
+	newGroups := newValue.(*schema.Set).Difference(oldValue.(*schema.Set))
+
+	for _, group := range groupsToDelete.List() {
+		groupName := group.(map[string]interface{})["group_name"].(string)
 		log.Printf("[DEBUG] Removing Okta group %s from Vault", groupName)
 		if err := deleteOktaGroup(client, path, groupName); err != nil {
 			return fmt.Errorf("error removing group %s to Vault for path %s: %s", groupName, path, err)
 		}
 	}
 
-	vL := newValue.(*schema.Set).List()
-	for _, v := range vL {
+	groups := oldValue.(*schema.Set).Intersection(newValue.(*schema.Set))
+	d.Set("group", groups)
+
+	for _, v := range newGroups.List() {
 		groupMapping := v.(map[string]interface{})
 		groupName := groupMapping["group_name"].(string)
 
@@ -310,29 +395,36 @@ func oktaAuthUpdateGroups(client *api.Client, path string, oldValue, newValue in
 
 		group := oktaGroup{
 			Name:     groupName,
-			Policies: toStringArray(groupMapping["policies"].([]interface{})),
+			Policies: toStringArray(groupMapping["policies"].(*schema.Set).List()),
 		}
 
 		if err := updateOktaGroup(client, path, group); err != nil {
-			return fmt.Errorf("Error updating group %s mapping to Vault for path %s: %s", group.Name, path, err)
+			return fmt.Errorf("error updating group %s mapping to Vault for path %s: %s", group.Name, path, err)
 		}
+
+		groups.Add(v)
+		d.Set("group", groups)
 	}
 
 	return nil
 }
 
-func oktaAuthUpdateUsers(client *api.Client, path string, oldValue, newValue interface{}) error {
-	usersToDelete := onlyInFirstList(toStringList(oldValue, "username"), toStringList(newValue, "username"))
+func oktaAuthUpdateUsers(d *schema.ResourceData, client *api.Client, path string, oldValue, newValue interface{}) error {
+	usersToDelete := oldValue.(*schema.Set).Difference(newValue.(*schema.Set))
+	newUsers := newValue.(*schema.Set).Difference(oldValue.(*schema.Set))
 
-	for _, userName := range usersToDelete {
+	for _, user := range usersToDelete.List() {
+		userName := user.(map[string]interface{})["username"].(string)
 		log.Printf("[DEBUG] Removing Okta user %s from Vault", userName)
 		if err := deleteOktaUser(client, path, userName); err != nil {
 			return fmt.Errorf("error removing user %s mapping to Vault for path %s: %s", userName, path, err)
 		}
 	}
 
-	vL := newValue.(*schema.Set).List()
-	for _, v := range vL {
+	users := oldValue.(*schema.Set).Intersection(newValue.(*schema.Set))
+	d.Set("user", users)
+
+	for _, v := range newUsers.List() {
 		userMapping := v.(map[string]interface{})
 		userName := userMapping["username"].(string)
 
@@ -340,15 +432,42 @@ func oktaAuthUpdateUsers(client *api.Client, path string, oldValue, newValue int
 
 		user := oktaUser{
 			Username: userName,
-			Policies: toStringArray(userMapping["policies"].([]interface{})),
-			Groups:   toStringArray(userMapping["groups"].([]interface{})),
+			Policies: toStringArray(userMapping["policies"].(*schema.Set).List()),
+			Groups:   toStringArray(userMapping["groups"].(*schema.Set).List()),
 		}
 
 		if err := updateOktaUser(client, path, user); err != nil {
 			return fmt.Errorf("error updating user %s mapping to Vault for path %s: %s", user.Username, path, err)
 		}
 
+		users.Add(v)
+		d.Set("user", users)
+
 	}
 
 	return nil
+}
+
+func resourceOktaGroupHash(v interface{}) int {
+	m, castOk := v.(map[string]interface{})
+	if !castOk {
+		return 0
+	}
+	if v, ok := m["group_name"]; ok {
+		return hashcode.String(v.(string))
+	}
+
+	return 0
+}
+
+func resourceOktaUserHash(v interface{}) int {
+	m, castOk := v.(map[string]interface{})
+	if !castOk {
+		return 0
+	}
+	if v, ok := m["username"]; ok {
+		return hashcode.String(v.(string))
+	}
+
+	return 0
 }

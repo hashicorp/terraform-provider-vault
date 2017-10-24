@@ -2,30 +2,38 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
+	"strconv"
 	"testing"
 )
 
 // This is light on testing as most of the code is covered by `resource_okta_auth_backend_test.go`
 func TestOktaAuthBackendUser(t *testing.T) {
+	path := "okta-" + strconv.Itoa(acctest.RandInt())
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testOktaAuthBackendUser_Destroyed,
+		CheckDestroy: testOktaAuthBackendUser_Destroyed(path, "user_test"),
 		Steps: []resource.TestStep{
 			{
-				Config: initialOktaAuthUserConfig,
-				Check:  testOktaAuthBackendUser_InitialCheck,
+				Config: initialOktaAuthUserConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					testOktaAuthBackendUser_InitialCheck,
+					testOktaAuthBackend_UsersCheck(path, "user_test", []string{"one", "two"}, []string{"three"}),
+				),
 			},
 		},
 	})
 }
 
-var initialOktaAuthUserConfig = `
+func initialOktaAuthUserConfig(path string) string {
+	return fmt.Sprintf(`
 resource "vault_okta_auth_backend" "test" {
-    path = "user_okta"
+    path = "%s"
     organization = "dummy"
 }
 
@@ -35,7 +43,8 @@ resource "vault_okta_auth_backend_user" "test" {
     groups = ["one", "two"]
     policies = ["three"]
 }
-`
+`, path)
+}
 
 func testOktaAuthBackendUser_InitialCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["vault_okta_auth_backend_user.test"]
@@ -48,36 +57,21 @@ func testOktaAuthBackendUser_InitialCheck(s *terraform.State) error {
 		return fmt.Errorf("resource has no primary instance")
 	}
 
-	client := testProvider.Meta().(*api.Client)
-
-	user, err := client.Logical().Read("/auth/user_okta/users/user_test")
-	if err != nil {
-		return fmt.Errorf("error reading back configuration: %s", err)
-	}
-
-	err = assertArrayContains([]string{"one", "two"}, toStringArray(user.Data["groups"].([]interface{})))
-	if err != nil {
-		return err
-	}
-
-	err = assertArrayContains([]string{"three"}, toStringArray(user.Data["policies"].([]interface{})))
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
-func testOktaAuthBackendUser_Destroyed(state *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+func testOktaAuthBackendUser_Destroyed(path, userName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client := testProvider.Meta().(*api.Client)
 
-	group, err := client.Logical().Read("/auth/user_okta/users/user_test")
-	if err != nil {
-		return fmt.Errorf("error reading back configuration: %s", err)
-	}
-	if group != nil {
-		return fmt.Errorf("okta user still exists")
-	}
+		group, err := client.Logical().Read(fmt.Sprintf("/auth/%s/users/%s", path, userName))
+		if err != nil {
+			return fmt.Errorf("error reading back configuration: %s", err)
+		}
+		if group != nil {
+			return fmt.Errorf("okta user still exists")
+		}
 
-	return nil
+		return nil
+	}
 }
