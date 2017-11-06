@@ -89,6 +89,7 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
+			"vault_approle_auth_backend_login":          approleAuthBackendLoginResource(),
 			"vault_approle_auth_backend_role":           approleAuthBackendRoleResource(),
 			"vault_approle_auth_backend_role_secret_id": approleAuthBackendRoleSecretIDResource(),
 			"vault_auth_backend":                        authBackendResource(),
