@@ -57,10 +57,10 @@ func awsAuthBackendIdentityWhitelistWrite(d *schema.ResourceData, meta interface
 	backend := d.Get("backend").(string)
 	data := map[string]interface{}{}
 
-	if v, ok := d.GetOk("safety_buffer"); ok {
+	if v, ok := d.GetOkExists("safety_buffer"); ok {
 		data["safety_buffer"] = v
 	}
-	if v, ok := d.GetOk("disable_periodic_tidy"); ok {
+	if v, ok := d.GetOkExists("disable_periodic_tidy"); ok {
 		data["disable_periodic_tidy"] = v
 	}
 

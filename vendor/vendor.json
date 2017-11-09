@@ -480,10 +480,10 @@
 			"versionExact": "v0.10.0"
 		},
 		{
-			"checksumSHA1": "0smlb90amL15c/6nWtW4DV6Lqh8=",
+			"checksumSHA1": "juS4uWVIFt4ANQBvZ2j8mawtjlY=",
 			"path": "github.com/hashicorp/terraform/helper/schema",
-			"revision": "2041053ee9444fa8175a298093b55a89586a1823",
-			"revisionTime": "2017-08-02T18:39:14Z",
+			"revision": "f6d16263a0389cfea95266d9e0072ccfc2bd4bf0",
+			"revisionTime": "2017-08-15T21:50:02Z",
 			"version": "v0.10.0",
 			"versionExact": "v0.10.0"
 		},
