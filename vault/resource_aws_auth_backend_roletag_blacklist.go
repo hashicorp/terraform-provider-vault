@@ -28,10 +28,9 @@ func awsAuthBackendRoleTagBlacklistResource() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"backend": {
 				Type:        schema.TypeString,
-				Optional:    true,
+				Required:    true,
 				Description: "Unique name of the auth backend to configure.",
 				ForceNew:    true,
-				Default:     "aws",
 				// standardise on no beginning or trailing slashes
 				StateFunc: func(v interface{}) string {
 					return strings.Trim(v.(string), "/")
@@ -41,11 +40,13 @@ func awsAuthBackendRoleTagBlacklistResource() *schema.Resource {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "The amount of extra time that must have passed beyond the roletag expiration, before it's removed from backend storage.",
+				Default:     259200,
 			},
 			"disable_periodic_tidy": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "If true, disables the periodic tidying of the roletag blacklist entries.",
+				Default:     false,
 			},
 		},
 	}
@@ -55,13 +56,9 @@ func awsAuthBackendRoleTagBlacklistWrite(d *schema.ResourceData, meta interface{
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
-	data := map[string]interface{}{}
-
-	if v, ok := d.GetOk("safety_buffer"); ok {
-		data["safety_buffer"] = v
-	}
-	if v, ok := d.GetOk("disable_periodic_tidy"); ok {
-		data["disable_periodic_tidy"] = v
+	data := map[string]interface{}{
+		"safety_buffer":         d.Get("safety_buffer").(int),
+		"disable_periodic_tidy": d.Get("disable_periodic_tidy").(bool),
 	}
 
 	path := awsAuthBackendRoleTagBlacklistPath(backend)
@@ -69,13 +66,13 @@ func awsAuthBackendRoleTagBlacklistWrite(d *schema.ResourceData, meta interface{
 	log.Printf("[DEBUG] Configuring AWS auth backend roletag blacklist %q", path)
 	_, err := client.Logical().Write(path, data)
 
-	d.SetId(path)
-
 	if err != nil {
 		d.SetId("")
 		return fmt.Errorf("Error configuring AWS auth backend roletag blacklist %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Configured AWS backend roletag blacklist %q", path)
+
+	d.SetId(path)
 
 	return awsAuthBackendRoleTagBlacklistRead(d, meta)
 }
@@ -87,6 +84,8 @@ func awsAuthBackendRoleTagBlacklistRead(d *schema.ResourceData, meta interface{}
 
 	backend, err := awsAuthBackendRoleTagBlacklistBackendFromPath(path)
 	if err != nil {
+		log.Printf("[WARN] Removing invalid ID %q from state", d.Id())
+		d.SetId("")
 		return fmt.Errorf("Invalid path %q for AWS auth backend roletag blacklist: %s", path, err)
 	}
 

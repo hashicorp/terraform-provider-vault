@@ -47,6 +47,43 @@ func TestAccAWSAuthBackendRoleTagBlacklist_basic(t *testing.T) {
 	})
 }
 
+func TestAccAWSAuthBackendRoleTagBlacklist_updated(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckAWSAuthBackendRoleTagBlacklistDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendRoleTagBlacklistConfig_basic(backend),
+				Check:  testAccAWSAuthBackendRoleTagBlacklistCheck_attrs(backend),
+			},
+			{
+				Config: testAccAWSAuthBackendRoleTagBlacklistConfig_updated(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_roletag_blacklist.test",
+						"backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_roletag_blacklist.test",
+						"safety_buffer", "3600"),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_roletag_blacklist.test",
+						"disable_periodic_tidy", "true"),
+				),
+			},
+			{
+				Config: testAccAWSAuthBackendRoleTagBlacklistConfig_updated2(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_roletag_blacklist.test",
+						"backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_roletag_blacklist.test",
+						"safety_buffer", "3600"),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_roletag_blacklist.test",
+						"disable_periodic_tidy", "false"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckAWSAuthBackendRoleTagBlacklistDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 	for _, rs := range s.RootModule().Resources {
@@ -75,6 +112,34 @@ resource "vault_aws_auth_backend_roletag_blacklist" "test" {
   backend = "${vault_auth_backend.aws.path}"
   safety_buffer = 8600
   disable_periodic_tidy = true
+}`, backend)
+}
+
+func testAccAWSAuthBackendRoleTagBlacklistConfig_updated(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+}
+
+resource "vault_aws_auth_backend_roletag_blacklist" "test" {
+  backend = "${vault_auth_backend.aws.path}"
+  safety_buffer = 3600
+  disable_periodic_tidy = true
+}`, backend)
+}
+
+func testAccAWSAuthBackendRoleTagBlacklistConfig_updated2(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+}
+
+resource "vault_aws_auth_backend_roletag_blacklist" "test" {
+  backend = "${vault_auth_backend.aws.path}"
+  safety_buffer = 3600
+  disable_periodic_tidy = false
 }`, backend)
 }
 
