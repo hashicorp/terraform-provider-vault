@@ -6,6 +6,12 @@ BACKWARDS INCOMPATIBILITIES / NOTES:
   its `.type` property. [GH-12]
 
 FEATURES:
+* **New Data Source**: `aws_access_credentials` [GH-20]
+* **New Resource**: `aws_auth_backend_cert` [GH-21]
+* **New Resource**: `aws_auth_backend_client` [GH-19]
+* **New Resource**: `aws_auth_backend_login` [GH-28]
+* **New Resource**: `aws_auth_backend_role` [GH-24]
+* **New Resource**: `aws_auth_backend_sts_role` [GH-22]
 
 IMPROVEMENTS:
 * `vault_auth_backend`s are now importable. [GH-12]
