@@ -74,7 +74,7 @@ The following arguments are supported:
 * `nonce` - (Optional) The unique nonce to be used for login requests. Can be
   set to a user-specified value, or will contain the server-generated value
   once a token is issued. EC2 instances can only acquire a single token until
-  the whitelist is tidied again unless they keep track of this nonce.e
+  the whitelist is tidied again unless they keep track of this nonce.
 
 * `iam_http_request_method` - (Optional) The HTTP method used in the signed IAM
   request.
