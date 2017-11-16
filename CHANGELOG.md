@@ -1,3 +1,4 @@
+## 1.0.1 (Unreleased)
 ## 1.0.0 (November 16, 2017)
 
 BACKWARDS INCOMPATIBILITIES / NOTES:
