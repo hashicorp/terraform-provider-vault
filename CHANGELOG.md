@@ -1,4 +1,4 @@
-## 0.1.1 (Unreleased)
+## 1.0.0 (Unreleased)
 
 BACKWARDS INCOMPATIBILITIES / NOTES:
 * `vault_auth_backend`'s ID has changed from the `type` to the `path` of the auth backend.
