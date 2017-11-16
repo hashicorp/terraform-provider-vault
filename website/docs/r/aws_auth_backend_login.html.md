@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_aws_auth_backend_login resource"
-sidebar_current: "docs-vault-aws-auth-backend-login"
+sidebar_current: "docs-vault-resource-aws-auth-backend-login"
 description: |-
   Manages Vault tokens acquired using the AWS auth backend.
 ---
