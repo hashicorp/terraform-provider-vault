@@ -5,7 +5,7 @@ BACKWARDS INCOMPATIBILITIES / NOTES:
   Interpolations referring to the `.id` of a `vault_auth_backend` should be updated to use
   its `.type` property. [GH-12]
 * `vault_generic_secret`'s `allow_read` field is deprecated; use `disable_read` instead.
-  If `disable_read` is set to false or not set, the secret will not be read.
+  If `disable_read` is set to false or not set, the secret will be read.
   If `disable_read` is true and `allow_read` is false or not set, the secret will not be read.
   If `disable_read` is true and `allow_read` is true, the secret will be read. [GH-17]
 
