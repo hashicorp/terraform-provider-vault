@@ -4,6 +4,10 @@ BACKWARDS INCOMPATIBILITIES / NOTES:
 * `vault_auth_backend`'s ID has changed from the `type` to the `path` of the auth backend.
   Interpolations referring to the `.id` of a `vault_auth_backend` should be updated to use
   its `.type` property. [GH-12]
+* `vault_generic_secret`'s `allow_read` field is deprecated; use `disable_read` instead.
+  If `disable_read` is set to false or not set, the secret will not be read.
+  If `disable_read` is true and `allow_read` is false or not set, the secret will not be read.
+  If `disable_read` is true and `allow_read` is true, the secret will be read. [GH-17]
 
 FEATURES:
 * **New Data Source**: `aws_access_credentials` [GH-20]
@@ -17,6 +21,7 @@ IMPROVEMENTS:
 * `vault_auth_backend`s are now importable. [GH-12]
 * `vault_policy`s are now importable [GH-15]
 * `vault_mount`s are now importable [GH-16]
+* `vault_generic_secret`s are now importable [GH-17]
 
 BUG FIXES:
 
