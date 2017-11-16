@@ -1,27 +1,27 @@
-## 1.0.0 (Unreleased)
+## 1.0.0 (November 16, 2017)
 
 BACKWARDS INCOMPATIBILITIES / NOTES:
 * `vault_auth_backend`'s ID has changed from the `type` to the `path` of the auth backend.
   Interpolations referring to the `.id` of a `vault_auth_backend` should be updated to use
-  its `.type` property. [GH-12]
+  its `.type` property. ([#12](https://github.com/terraform-providers/terraform-provider-vault/issues/12))
 * `vault_generic_secret`'s `allow_read` field is deprecated; use `disable_read` instead.
   If `disable_read` is set to false or not set, the secret will be read.
   If `disable_read` is true and `allow_read` is false or not set, the secret will not be read.
-  If `disable_read` is true and `allow_read` is true, the secret will be read. [GH-17]
+  If `disable_read` is true and `allow_read` is true, the secret will be read. ([#17](https://github.com/terraform-providers/terraform-provider-vault/issues/17))
 
 FEATURES:
-* **New Data Source**: `aws_access_credentials` [GH-20]
-* **New Resource**: `aws_auth_backend_cert` [GH-21]
-* **New Resource**: `aws_auth_backend_client` [GH-19]
-* **New Resource**: `aws_auth_backend_login` [GH-28]
-* **New Resource**: `aws_auth_backend_role` [GH-24]
-* **New Resource**: `aws_auth_backend_sts_role` [GH-22]
+* **New Data Source**: `aws_access_credentials` ([#20](https://github.com/terraform-providers/terraform-provider-vault/issues/20))
+* **New Resource**: `aws_auth_backend_cert` ([#21](https://github.com/terraform-providers/terraform-provider-vault/issues/21))
+* **New Resource**: `aws_auth_backend_client` ([#19](https://github.com/terraform-providers/terraform-provider-vault/issues/19))
+* **New Resource**: `aws_auth_backend_login` ([#28](https://github.com/terraform-providers/terraform-provider-vault/issues/28))
+* **New Resource**: `aws_auth_backend_role` ([#24](https://github.com/terraform-providers/terraform-provider-vault/issues/24))
+* **New Resource**: `aws_auth_backend_sts_role` ([#22](https://github.com/terraform-providers/terraform-provider-vault/issues/22))
 
 IMPROVEMENTS:
-* `vault_auth_backend`s are now importable. [GH-12]
-* `vault_policy`s are now importable [GH-15]
-* `vault_mount`s are now importable [GH-16]
-* `vault_generic_secret`s are now importable [GH-17]
+* `vault_auth_backend`s are now importable. ([#12](https://github.com/terraform-providers/terraform-provider-vault/issues/12))
+* `vault_policy`s are now importable ([#15](https://github.com/terraform-providers/terraform-provider-vault/issues/15))
+* `vault_mount`s are now importable ([#16](https://github.com/terraform-providers/terraform-provider-vault/issues/16))
+* `vault_generic_secret`s are now importable ([#17](https://github.com/terraform-providers/terraform-provider-vault/issues/17))
 
 BUG FIXES:
 
