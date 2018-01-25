@@ -108,6 +108,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_okta_auth_backend":                   oktaAuthBackendResource(),
 			"vault_okta_auth_backend_user":              oktaAuthBackendUserResource(),
 			"vault_okta_auth_backend_group":             oktaAuthBackendGroupResource(),
+			"vault_pki_generate":                        pkiGenerateResource(),
 			"vault_policy":                              policyResource(),
 			"vault_mount":                               mountResource(),
 		},
