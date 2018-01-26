@@ -89,8 +89,8 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 		Type:        "consul",
 		Description: d.Get("description").(string),
 		Config: api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds").(int)),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
+			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
+			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
 		},
 	}
 
