@@ -11,7 +11,7 @@ import (
 )
 
 func TestConsulSecretBackend(t *testing.T) {
-	//path := acctest.RandomWithPrefix("tf-test-consul")
+	//backend := acctest.RandomWithPrefix("tf-test-consul")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -20,7 +20,7 @@ func TestConsulSecretBackend(t *testing.T) {
 			{
 				Config: testConsulSecretBackend_initialConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "path", "tf-test-consul"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "backend", "tf-test-consul"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "description", "test description"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "default_lease_ttl_seconds", "3600"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "max_lease_ttl_seconds", "86400"),
@@ -32,7 +32,7 @@ func TestConsulSecretBackend(t *testing.T) {
 			{
 				Config: testConsulSecretBackend_updateConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "path", "tf-test-consul"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "backend", "tf-test-consul"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "description", "test description"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "default_lease_ttl_seconds", "1800"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "max_lease_ttl_seconds", "43200"),
@@ -46,7 +46,7 @@ func TestConsulSecretBackend(t *testing.T) {
 }
 
 func TestAccConsulSecretBackend_import(t *testing.T) {
-	// path := acctest.RandomWithPrefix("tf-test-consul")
+	// backend := acctest.RandomWithPrefix("tf-test-consul")
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
@@ -55,7 +55,7 @@ func TestAccConsulSecretBackend_import(t *testing.T) {
 			{
 				Config: testConsulSecretBackend_initialConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "path", "tf-test-consul"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "backend", "tf-test-consul"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "description", "test description"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "default_lease_ttl_seconds", "3600"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "max_lease_ttl_seconds", "86400"),
@@ -87,11 +87,11 @@ func testAccConsulSecretBackendCheckDestroy(s *terraform.State) error {
 		if rs.Type != "vault_consul_secret_backend" {
 			continue
 		}
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "consul" && path == rsPath {
-				return fmt.Errorf("Mount %q still exists", path)
+		for backend, mount := range mounts {
+			backend = strings.Trim(backend, "/")
+			rsPath := strings.Trim(rs.Primary.Attributes["backend"], "/")
+			if mount.Type == "consul" && backend == rsPath {
+				return fmt.Errorf("Mount %q still exists", backend)
 			}
 		}
 	}
@@ -100,7 +100,7 @@ func testAccConsulSecretBackendCheckDestroy(s *terraform.State) error {
 
 var testConsulSecretBackend_initialConfig = `
 resource "vault_consul_secret_backend" "test" {
-  path = "tf-test-consul"
+  backend = "tf-test-consul"
   description = "test description"
   default_lease_ttl_seconds = 0
   max_lease_ttl_seconds = 0
@@ -111,7 +111,7 @@ resource "vault_consul_secret_backend" "test" {
 
 var testConsulSecretBackend_updateConfig = `
 resource "vault_consul_secret_backend" "test" {
-  path = "tf-test-consul"
+  backend = "tf-test-consul"
   description = "test description"
   default_lease_ttl_seconds = 1800
   max_lease_ttl_seconds = 43200

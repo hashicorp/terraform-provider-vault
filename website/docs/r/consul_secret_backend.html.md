@@ -39,13 +39,13 @@ The following arguments are supported:
 token back from the API, Terraform cannot detect and correct drift
 on `token`. Changing the value, however, _will_ overwrite the previously stored values.
 
-* `path` - (Optional) The unique path this backend should be mounted at. Must not begin or end with a `/`. Defaults to `consul`.
+* `backend` - (Optional) The unique location this backend should be mounted at. Must not begin or end with a `/`. Defaults to `consul`.
 
 * `description` - (Optional) A human-friendly description for this backend.
 
 * `address` - (Required) Specifies the address of the Consul instance, provided as "host:port" like "127.0.0.1:8500".
 
-* `scheme` - (Optional) Specifies the URL scheme to use. Defaults to 'http'.
+* `scheme` - (Optional) Specifies the URL scheme to use. Defaults to `http`.
 
 * `default_lease_ttl_seconds` - (Optional) The default TTL for credentials issued by this backend.
 
