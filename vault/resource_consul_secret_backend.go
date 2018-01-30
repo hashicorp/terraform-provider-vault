@@ -21,7 +21,7 @@ func consulSecretBackendResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"backend": &schema.Schema{
+			"path": &schema.Schema{
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
@@ -29,6 +29,9 @@ func consulSecretBackendResource() *schema.Resource {
 				Description: "Unique name of the Vault Consul mount to configure",
 				StateFunc: func(s interface{}) string {
 					return strings.Trim(s.(string), "/")
+				},
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					return old+"/" == new || new+"/" == old
 				},
 			},
 			"description": {
@@ -40,13 +43,13 @@ func consulSecretBackendResource() *schema.Resource {
 			"default_lease_ttl_seconds": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Computed:    true,
+				Default:     "0",
 				Description: "Default lease duration for secrets in seconds",
 			},
 			"max_lease_ttl_seconds": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Computed:    true,
+				Default:     "0",
 				Description: "Maximum possible lease duration for secrets in seconds",
 			},
 			"address": {
@@ -73,12 +76,12 @@ func consulSecretBackendResource() *schema.Resource {
 func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	backend := d.Get("backend").(string)
+	path := d.Get("path").(string)
 	address := d.Get("address").(string)
 	scheme := d.Get("scheme").(string)
 	token := d.Get("token").(string)
 
-	path := consulSecretBackendPath(backend)
+	configPath := consulSecretBackendConfigPath(path)
 
 	info := &api.MountInput{
 		Type:        "consul",
@@ -90,30 +93,30 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Partial(true)
-	log.Printf("[DEBUG] Mounting Consul backend at %q", backend)
+	log.Printf("[DEBUG] Mounting Consul backend at %q", path)
 
-	if err := client.Sys().Mount(backend, info); err != nil {
-		return fmt.Errorf("Error mounting to %q: %s", backend, err)
+	if err := client.Sys().Mount(path, info); err != nil {
+		return fmt.Errorf("Error mounting to %q: %s", path, err)
 	}
 
-	log.Printf("[DEBUG] Mounted Consul backend at %q", backend)
+	log.Printf("[DEBUG] Mounted Consul backend at %q", path)
 	d.SetId(path)
 
-	d.SetPartial("backend")
+	d.SetPartial("path")
 	d.SetPartial("description")
 	d.SetPartial("default_lease_ttl_seconds")
 	d.SetPartial("max_lease_ttl_seconds")
 
-	log.Printf("[DEBUG] Writing Consul configuration to %q", path)
+	log.Printf("[DEBUG] Writing Consul configuration to %q", configPath)
 	data := map[string]interface{}{
 		"address": address,
 		"token":   token,
 		"scheme":  scheme,
 	}
-	if _, err := client.Logical().Write(path, data); err != nil {
-		return fmt.Errorf("Error writing Consul configuration for %q: %s", backend, err)
+	if _, err := client.Logical().Write(configPath, data); err != nil {
+		return fmt.Errorf("Error writing Consul configuration for %q: %s", path, err)
 	}
-	log.Printf("[DEBUG] Wrote Consul configuration to %q", path)
+	log.Printf("[DEBUG] Wrote Consul configuration to %q", configPath)
 	d.SetPartial("address")
 	d.SetPartial("token")
 	d.SetPartial("scheme")
@@ -126,32 +129,32 @@ func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
-	backend := d.Get("backend").(string)
+	configPath := consulSecretBackendConfigPath(path)
 
-	log.Printf("[DEBUG] Reading Consul backend mount %q from Vault", backend)
+	log.Printf("[DEBUG] Reading Consul backend mount %q from Vault", path)
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
-		return fmt.Errorf("Error reading mount %q: %s", backend, err)
+		return fmt.Errorf("Error reading mount %q: %s", path, err)
 	}
 
-	// backend can have a trailing slash, but doesn't need to have one
+	// path can have a trailing slash, but doesn't need to have one
 	// this standardises on having a trailing slash, which is how the
 	// API always responds.
-	mount, ok := mounts[strings.Trim(backend, "/")+"/"]
+	mount, ok := mounts[strings.Trim(path, "/")+"/"]
 	if !ok {
-		log.Printf("[WARN] Mount %q not found, removing from state.", backend)
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
 		return nil
 	}
 
-	d.Set("backend", backend)
+	d.Set("path", path)
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
 
-	log.Printf("[DEBUG] Reading %s from Vault", path)
-	secret, err := client.Logical().Read(path)
+	log.Printf("[DEBUG] Reading %s from Vault", configPath)
+	secret, err := client.Logical().Read(configPath)
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
@@ -171,7 +174,7 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
-	backend := d.Get("backend").(string)
+	configPath := consulSecretBackendConfigPath(path)
 
 	d.Partial(true)
 
@@ -181,25 +184,25 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
 		}
 
-		log.Printf("[DEBUG] Updating lease TTLs for %q", backend)
-		if err := client.Sys().TuneMount(backend, config); err != nil {
-			return fmt.Errorf("Error updating mount TTLs for %q: %s", backend, err)
+		log.Printf("[DEBUG] Updating lease TTLs for %q", path)
+		if err := client.Sys().TuneMount(path, config); err != nil {
+			return fmt.Errorf("Error updating mount TTLs for %q: %s", path, err)
 		}
 
 		d.SetPartial("default_lease_ttl_seconds")
 		d.SetPartial("max_lease_ttl_seconds")
 	}
 	if d.HasChange("address") || d.HasChange("token") || d.HasChange("scheme") {
-		log.Printf("[DEBUG] Updating Consul configuration at %q", path)
+		log.Printf("[DEBUG] Updating Consul configuration at %q", configPath)
 		data := map[string]interface{}{
 			"address": d.Get("address").(string),
 			"token":   d.Get("token").(string),
 			"scheme":  d.Get("scheme").(string),
 		}
-		if _, err := client.Logical().Write(path, data); err != nil {
-			return fmt.Errorf("Error configuring Consul configuration for %q: %s", backend, err)
+		if _, err := client.Logical().Write(configPath, data); err != nil {
+			return fmt.Errorf("Error configuring Consul configuration for %q: %s", path, err)
 		}
-		log.Printf("[DEBUG] Updated Consul configuration at %q", path)
+		log.Printf("[DEBUG] Updated Consul configuration at %q", configPath)
 		d.SetPartial("address")
 		d.SetPartial("token")
 		d.SetPartial("scheme")
@@ -211,32 +214,32 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 func consulSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	backend := d.Get("backend").(string)
+	path := d.Id()
 
-	log.Printf("[DEBUG] Unmounting Consul backend %q", backend)
-	err := client.Sys().Unmount(backend)
+	log.Printf("[DEBUG] Unmounting Consul backend %q", path)
+	err := client.Sys().Unmount(path)
 	if err != nil {
-		return fmt.Errorf("Error unmounting Consul backend from %q: %s", backend, err)
+		return fmt.Errorf("Error unmounting Consul backend from %q: %s", path, err)
 	}
-	log.Printf("[DEBUG] Unmounted Consul backend %q", backend)
+	log.Printf("[DEBUG] Unmounted Consul backend %q", path)
 	return nil
 }
 
 func consulSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client := meta.(*api.Client)
 
-	backend := d.Get("backend").(string)
+	path := d.Id()
 
-	log.Printf("[DEBUG] Checking if Consul backend exists at %q", backend)
+	log.Printf("[DEBUG] Checking if Consul backend exists at %q", path)
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
 		return true, fmt.Errorf("Error retrieving list of mounts: %s", err)
 	}
-	log.Printf("[DEBUG] Checked if Consul backend exists at %q", backend)
-	_, ok := mounts[strings.Trim(backend, "/")+"/"]
+	log.Printf("[DEBUG] Checked if Consul backend exists at %q", path)
+	_, ok := mounts[strings.Trim(path, "/")+"/"]
 	return ok, nil
 }
 
-func consulSecretBackendPath(backend string) string {
+func consulSecretBackendConfigPath(backend string) string {
 	return strings.Trim(backend, "/") + "/config/access"
 }
