@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_aws_auth_backend_sts_role resource"
-sidebar_current: "docs-vault-aws-auth-backend-sts-role"
+sidebar_current: "docs-vault-resource-aws-auth-backend-sts-role"
 description: |-
   Configures an STS role in the Vault AWS Auth backend.
 ---
