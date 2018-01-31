@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_aws_access_credentials data source"
-sidebar_current: "docs-vault-datasource-aws-access_credentials"
+sidebar_current: "docs-vault-datasource-aws-access-credentials"
 description: |-
   Reads AWS credentials from an AWS secret backend in Vault
 ---
