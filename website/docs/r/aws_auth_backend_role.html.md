@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_aws_auth_backend_role resource"
-sidebar_current: "docs-vault-aws-auth-backend-role"
+sidebar_current: "docs-vault-resource-aws-auth-backend-role"
 description: |-
   Manages AWS auth backend roles in Vault.
 ---

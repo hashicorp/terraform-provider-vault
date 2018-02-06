@@ -12,10 +12,16 @@ import (
 
 func genericSecretResource() *schema.Resource {
 	return &schema.Resource{
+		SchemaVersion: 1,
+
 		Create: genericSecretResourceWrite,
 		Update: genericSecretResourceWrite,
 		Delete: genericSecretResourceDelete,
 		Read:   genericSecretResourceRead,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
+		MigrateState: resourceGenericSecretMigrateState,
 
 		Schema: map[string]*schema.Schema{
 			"path": &schema.Schema{
@@ -34,7 +40,7 @@ func genericSecretResource() *schema.Resource {
 				// We rebuild the attached JSON string to a simple singleline
 				// string. This makes terraform not want to change when an extra
 				// space is included in the JSON string. It is also necesarry
-				// when allow_read is true for comparing values.
+				// when disable_read is false for comparing values.
 				StateFunc:    NormalizeDataJSON,
 				ValidateFunc: ValidateDataJSON,
 			},
@@ -42,8 +48,15 @@ func genericSecretResource() *schema.Resource {
 			"allow_read": &schema.Schema{
 				Type:        schema.TypeBool,
 				Optional:    true,
+				Description: "Attempt to read the token from Vault if true; if false, drift won't be detected.",
+				Deprecated:  "Please use disable_read instead.",
+			},
+
+			"disable_read": &schema.Schema{
+				Type:        schema.TypeBool,
+				Optional:    true,
 				Default:     false,
-				Description: "True if the provided token is allowed to read the secret from vault",
+				Description: "Don't attempt to read the token from Vault if true; drift won't be detected.",
 			},
 		},
 	}
@@ -99,7 +112,7 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 
 	d.SetId(path)
 
-	return nil
+	return genericSecretResourceRead(d, meta)
 }
 
 func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error {
@@ -117,10 +130,16 @@ func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error
 }
 
 func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
-	allowed_to_read := d.Get("allow_read").(bool)
-	path := d.Get("path").(string)
+	shouldRead := !d.Get("disable_read").(bool)
+	if !shouldRead {
+		// if disable_read is set to false or unset (we can't know which)
+		// and allow_read is set to true, go with allow_read.
+		shouldRead = d.Get("allow_read").(bool)
+	}
 
-	if allowed_to_read {
+	path := d.Id()
+
+	if shouldRead {
 		client := meta.(*api.Client)
 
 		log.Printf("[DEBUG] Reading %s from Vault", path)
@@ -129,15 +148,17 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error reading from Vault: %s", err)
 		}
 
+		log.Printf("[DEBUG] secret: %#v", secret)
+
 		jsonDataBytes, err := json.Marshal(secret.Data)
 		if err != nil {
 			return fmt.Errorf("Error marshaling JSON for %q: %s", path, err)
 		}
 		d.Set("data_json", string(jsonDataBytes))
+		d.Set("path", path)
 	} else {
-		log.Printf("[WARN] vault_generic_secret does not automatically refresh if allow_read is set to false")
+		log.Printf("[WARN] vault_generic_secret does not refresh when disable_read is set to true")
 	}
-
-	d.SetId(path)
+	d.Set("disable_read", !shouldRead)
 	return nil
 }
