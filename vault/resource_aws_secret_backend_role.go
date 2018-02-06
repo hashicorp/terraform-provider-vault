@@ -67,7 +67,7 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		data["policy"] = policy
 	}
 	if policyARN != "" {
-		data["policy_arn"] = policyARN
+		data["arn"] = policyARN
 	}
 	log.Printf("[DEBUG] Creating role %q on AWS backend %q", name, backend)
 	_, err := client.Logical().Write(backend+"/roles/"+name, data)

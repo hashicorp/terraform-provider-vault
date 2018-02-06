@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_aws_auth_backend_cert resource"
-sidebar_current: "docs-vault-aws-auth-backend-cert"
+sidebar_current: "docs-vault-resource-aws-auth-backend-cert"
 description: |-
   Manages a certificate for an AWS Auth Backend in Vault.
 ---
