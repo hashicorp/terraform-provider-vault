@@ -52,10 +52,12 @@ func approleAuthBackendRoleIDRead(d *schema.ResourceData, meta interface{}) erro
 	}
 	log.Printf("[DEBUG] Read AppRole auth backend role %q RoleID", path)
 
-	if resp != nil {
-		d.SetId(path + "/role-id")
-		d.Set("role_id", resp.Data["role_id"])
+	if resp == nil {
+		d.SetId("")
+		return nil
 	}
+	d.SetId(path + "/role-id")
+	d.Set("role_id", resp.Data["role_id"])
 
 	return nil
 }
