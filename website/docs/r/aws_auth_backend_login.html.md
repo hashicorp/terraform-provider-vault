@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_aws_auth_backend_login resource"
-sidebar_current: "docs-vault-aws-auth-backend-login"
+sidebar_current: "docs-vault-resource-aws-auth-backend-login"
 description: |-
   Manages Vault tokens acquired using the AWS auth backend.
 ---
@@ -10,7 +10,7 @@ description: |-
 
 Logs into a Vault server using an AWS auth backend. Login can be
 accomplished using a signed identity request from IAM or using ec2
-instance metadata. For more informtion, see the [Vault
+instance metadata. For more information, see the [Vault
 documentation](https://www.vaultproject.io/docs/auth/aws.html).
 
 ## Example Usage
