@@ -14,6 +14,7 @@ import (
 var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
+	dbBackendTypes                                      = []string{"cassandra", "hana", "mongodb", "mssql", "mysql", "postgresql", "oracle"}
 )
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
@@ -119,7 +120,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: []string{"mongodb", "hana", "mssql", "mysql", "postgresql", "oracle"},
+				ConflictsWith: calculateConflictsWith("cassandra", dbBackendTypes),
 			},
 
 			"mongodb": {
@@ -136,7 +137,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: []string{"cassandra", "hana", "mssql", "mysql", "postgresql", "oracle"},
+				ConflictsWith: calculateConflictsWith("mongodb", dbBackendTypes),
 			},
 
 			"hana": {
@@ -145,7 +146,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the hana-database-plugin plugin.",
 				Elem:          connectionStringResource(),
 				MaxItems:      1,
-				ConflictsWith: []string{"cassandra", "mongodb", "mssql", "mysql", "postgresql", "oracle"},
+				ConflictsWith: calculateConflictsWith("hana", dbBackendTypes),
 			},
 
 			"mssql": {
@@ -154,7 +155,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mssql-database-plugin plugin.",
 				Elem:          connectionStringResource(),
 				MaxItems:      1,
-				ConflictsWith: []string{"cassandra", "mongodb", "hana", "mysql", "postgresql", "oracle"},
+				ConflictsWith: calculateConflictsWith("mssql", dbBackendTypes),
 			},
 
 			"mysql": {
@@ -163,7 +164,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mysql-database-plugin plugin.",
 				Elem:          connectionStringResource(),
 				MaxItems:      1,
-				ConflictsWith: []string{"cassandra", "mongodb", "hana", "mssql", "postgresql", "oracle"},
+				ConflictsWith: calculateConflictsWith("mysql", dbBackendTypes),
 			},
 
 			"postgresql": {
@@ -172,7 +173,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the postgresql-database-plugin plugin.",
 				Elem:          connectionStringResource(),
 				MaxItems:      1,
-				ConflictsWith: []string{"cassandra", "mongodb", "hana", "mssql", "mysql", "oracle"},
+				ConflictsWith: calculateConflictsWith("postgresql", dbBackendTypes),
 			},
 
 			"oracle": {
@@ -181,7 +182,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the oracle-database-plugin plugin.",
 				Elem:          connectionStringResource(),
 				MaxItems:      1,
-				ConflictsWith: []string{"cassandra", "mongodb", "hana", "mssql", "mysql", "postgresql"},
+				ConflictsWith: calculateConflictsWith("oracle", dbBackendTypes),
 			},
 
 			"backend": {
@@ -260,8 +261,11 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case "cassandra-database-plugin":
 		if v, ok := d.GetOk("cassandra.0.hosts"); ok {
 			log.Printf("[DEBUG] Cassandra hosts: %v", v.([]interface{}))
-			hosts := make([]string, 0, len(v.([]interface{})))
+			var hosts []string
 			for _, host := range v.([]interface{}) {
+				if v == nil {
+					continue
+				}
 				hosts = append(hosts, host.(string))
 			}
 			data["hosts"] = strings.Join(hosts, ",")
@@ -391,13 +395,11 @@ func databaseSecretBackendConnectionCreate(d *schema.ResourceData, meta interfac
 
 	log.Printf("[DEBUG] Writing connection config to %q", path)
 	_, err = client.Logical().Write(path, data)
-
-	d.SetId(path)
-
 	if err != nil {
-		d.SetId("")
 		return fmt.Errorf("Error configuring database connection %q: %s", path, err)
 	}
+
+	d.SetId(path)
 	log.Printf("[DEBUG] Wrote database connection config %q", path)
 
 	return databaseSecretBackendConnectionRead(d, meta)

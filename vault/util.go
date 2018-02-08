@@ -22,3 +22,17 @@ func jsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
 	}
 	return reflect.DeepEqual(oldJSON, newJSON)
 }
+
+func calculateConflictsWith(self string, group []string) []string {
+	if len(group) < 2 {
+		return []string{}
+	}
+	results := make([]string, 0, len(group)-2)
+	for _, item := range group {
+		if item == self {
+			continue
+		}
+		results = append(results, item)
+	}
+	return results
+}
