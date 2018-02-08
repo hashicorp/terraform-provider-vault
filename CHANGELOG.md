@@ -1,4 +1,9 @@
 ## 1.0.1 (Unreleased)
+
+BUG FIXES:
+
+* Fix bug in `policy_arn` parameter of `vault_aws_secret_backend_role` [GH-49]
+
 ## 1.0.0 (November 16, 2017)
 
 BACKWARDS INCOMPATIBILITIES / NOTES:
