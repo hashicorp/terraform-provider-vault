@@ -484,8 +484,8 @@
 			"path": "github.com/hashicorp/terraform/helper/schema",
 			"revision": "f6d16263a0389cfea95266d9e0072ccfc2bd4bf0",
 			"revisionTime": "2017-08-15T21:50:02Z",
-			"version": "v0.10.0",
-			"versionExact": "v0.10.0"
+			"version": "v0.10.1",
+			"versionExact": "v0.10.1"
 		},
 		{
 			"checksumSHA1": "1yCGh/Wl4H4ODBBRmIRFcV025b0=",
