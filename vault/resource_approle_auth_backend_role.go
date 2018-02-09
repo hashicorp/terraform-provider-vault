@@ -47,7 +47,7 @@ func approleAuthBackendRoleResource() *schema.Resource {
 				Description: "Whether or not to require secret_id to be present when logging in using this AppRole.",
 			},
 			"bound_cidr_list": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "List of CIDR blocks that can log in using the AppRole.",
 				Elem: &schema.Schema{
@@ -56,7 +56,7 @@ func approleAuthBackendRoleResource() *schema.Resource {
 			},
 
 			"policies": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -118,13 +118,14 @@ func approleAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 	path := approleAuthBackendRolePath(backend, role)
 
 	log.Printf("[DEBUG] Writing AppRole auth backend role %q", path)
-	iPolicies := d.Get("policies").([]interface{})
+	iPolicies := d.Get("policies").(*schema.Set).List()
 	policies := make([]string, 0, len(iPolicies))
 	for _, iPolicy := range iPolicies {
 		policies = append(policies, iPolicy.(string))
 	}
 
-	iCIDRs := d.Get("bound_cidr_list").([]interface{})
+
+	iCIDRs := d.Get("bound_cidr_list").(*schema.Set).List()
 	cidrs := make([]string, 0, len(iCIDRs))
 	for _, iCIDR := range iCIDRs {
 		cidrs = append(cidrs, iCIDR.(string))
@@ -160,13 +161,10 @@ func approleAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	_, err := client.Logical().Write(path, data)
-
-	d.SetId(path)
-
 	if err != nil {
-		d.SetId("")
 		return fmt.Errorf("Error writing AppRole auth backend role %q: %s", path, err)
 	}
+	d.SetId(path)
 	log.Printf("[DEBUG] Wrote AppRole auth backend role %q", path)
 
 	if v, ok := d.GetOk("role_id"); ok {
@@ -252,8 +250,14 @@ func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 	d.Set("backend", backend)
 	d.Set("role_name", role)
 	d.Set("period", period)
-	d.Set("policies", policies)
-	d.Set("bound_cidr_list", cidrs)
+	err = d.Set("policies", policies)
+	if err != nil {
+		return fmt.Errorf("Error setting policies in state: %s", err)
+	}
+	err = d.Set("bound_cidr_list", cidrs)
+	if err != nil {
+		return fmt.Errorf("Error setting bound_cidr_list in state: %s", err)
+	}
 	d.Set("secret_id_num_uses", secretIDNumUses)
 	d.Set("secret_id_ttl", secretIDTTL)
 	d.Set("token_num_uses", tokenNumUses)
@@ -280,13 +284,13 @@ func approleAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) erro
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating AppRole auth backend role %q", path)
-	iPolicies := d.Get("policies").([]interface{})
+	iPolicies := d.Get("policies").(*schema.Set).List()
 	policies := make([]string, 0, len(iPolicies))
 	for _, iPolicy := range iPolicies {
 		policies = append(policies, iPolicy.(string))
 	}
 
-	iCIDRs := d.Get("bound_cidr_list").([]interface{})
+	iCIDRs := d.Get("bound_cidr_list").(*schema.Set).List()
 	cidrs := make([]string, 0, len(iCIDRs))
 	for _, iCIDR := range iCIDRs {
 		cidrs = append(cidrs, iCIDR.(string))
@@ -334,8 +338,12 @@ func approleAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) erro
 
 	log.Printf("[DEBUG] Deleting AppRole auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
-	if err != nil {
+	if err != nil && !is404(err) {
 		return fmt.Errorf("Error deleting AppRole auth backend role %q", path)
+	} else if err != nil {
+		log.Printf("[DEBUG] AppRole auth backend role %q not found, removing from state", path)
+		d.SetId("")
+		return nil
 	}
 	log.Printf("[DEBUG] Deleted AppRole auth backend role %q", path)
 
