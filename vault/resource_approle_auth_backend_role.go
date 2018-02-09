@@ -124,7 +124,6 @@ func approleAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 		policies = append(policies, iPolicy.(string))
 	}
 
-
 	iCIDRs := d.Get("bound_cidr_list").(*schema.Set).List()
 	cidrs := make([]string, 0, len(iCIDRs))
 	for _, iCIDR := range iCIDRs {
