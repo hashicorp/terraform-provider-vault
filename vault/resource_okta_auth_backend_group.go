@@ -3,10 +3,11 @@ package vault
 import (
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/vault/api"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/vault/api"
 )
 
 func oktaAuthBackendGroupResource() *schema.Resource {
@@ -84,7 +85,7 @@ func oktaAuthBackendGroupWrite(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("unable to write group %s to Vault: %s", groupName, err)
 	}
 
-	d.SetId(fmt.Sprintf("%s/%s", path, group))
+	d.SetId(fmt.Sprintf("%s/%s", path, groupName))
 
 	return oktaAuthBackendGroupRead(d, meta)
 }
