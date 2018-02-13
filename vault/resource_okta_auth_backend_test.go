@@ -3,13 +3,14 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
-	"strconv"
-	"testing"
-	"time"
 )
 
 func TestOktaAuthBackend(t *testing.T) {
@@ -25,14 +26,14 @@ func TestOktaAuthBackend(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testOktaAuthBackend_InitialCheck,
 					testOktaAuthBackend_GroupsCheck(path, "dummy", []string{"one", "two", "default"}),
-					testOktaAuthBackend_UsersCheck(path, "foo", []string{"dummy"}, []string{""}),
+					testOktaAuthBackend_UsersCheck(path, "foo", []string{"dummy"}, []string{}),
 				),
 			},
 			{
 				Config: updatedOktaAuthConfig(path),
 				Check: resource.ComposeTestCheckFunc(
 					testOktaAuthBackend_GroupsCheck(path, "example", []string{"three", "four", "default"}),
-					testOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{""}),
+					testOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{}),
 				),
 			},
 		},
@@ -179,6 +180,9 @@ func testOktaAuthBackend_UsersCheck(path, userName string, expectedGroups, expec
 		var missing []interface{}
 
 		actual := toStringArray(user.Data["policies"].([]interface{}))
+		if len(expectedPolicies) != len(actual) {
+			return fmt.Errorf("expected %d policies, got %d", len(expectedPolicies), len(actual))
+		}
 	EXPECTED_POLICIES:
 		for _, i := range expectedPolicies {
 			for _, j := range actual {
@@ -191,10 +195,14 @@ func testOktaAuthBackend_UsersCheck(path, userName string, expectedGroups, expec
 		}
 
 		if len(missing) != 0 {
-			return fmt.Errorf("user policies incorrect; expected %[1]v, actual %[2]v (types: %[1]T, %[2]T)", expectedPolicies, actual)
+			return fmt.Errorf("user policies incorrect; expected %[1]v (len: %[3]d), actual %[2]v (len: %[4]d) (types: %[1]T, %[2]T)", expectedPolicies, actual, len(expectedPolicies), len(actual))
 		}
 
 		actual = toStringArray(user.Data["groups"].([]interface{}))
+
+		if len(expectedGroups) != len(actual) {
+			return fmt.Errorf("expected %d groups, got %d", len(expectedGroups), len(actual))
+		}
 	EXPECTED_GROUPS:
 		for _, i := range expectedGroups {
 			for _, j := range actual {

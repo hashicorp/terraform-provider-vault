@@ -385,7 +385,6 @@ func oktaAuthUpdateGroups(d *schema.ResourceData, client *api.Client, path strin
 	}
 
 	groups := oldValue.(*schema.Set).Intersection(newValue.(*schema.Set))
-	d.Set("group", groups)
 
 	for _, v := range newGroups.List() {
 		groupMapping := v.(map[string]interface{})
@@ -403,7 +402,6 @@ func oktaAuthUpdateGroups(d *schema.ResourceData, client *api.Client, path strin
 		}
 
 		groups.Add(v)
-		d.Set("group", groups)
 	}
 
 	return nil
@@ -422,7 +420,6 @@ func oktaAuthUpdateUsers(d *schema.ResourceData, client *api.Client, path string
 	}
 
 	users := oldValue.(*schema.Set).Intersection(newValue.(*schema.Set))
-	d.Set("user", users)
 
 	for _, v := range newUsers.List() {
 		userMapping := v.(map[string]interface{})
@@ -441,8 +438,6 @@ func oktaAuthUpdateUsers(d *schema.ResourceData, client *api.Client, path string
 		}
 
 		users.Add(v)
-		d.Set("user", users)
-
 	}
 
 	return nil
