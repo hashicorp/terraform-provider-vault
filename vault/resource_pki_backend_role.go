@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -52,12 +53,12 @@ func pkiBackendRoleResource() *schema.Resource {
 				Description: "Specifies if clients can request certificates for localhost as one of the requested common names.",
 			},
 			"allowed_domains": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "Policies to be set on tokens issued using this role.",
+				Description: "Specifies the domains of the role.",
 			},
 			"allow_bare_domains": {
 				Type:        schema.TypeBool,
@@ -120,10 +121,11 @@ func pkiBackendRoleResource() *schema.Resource {
 				Description: "Specifies if certificates are flagged for email protection use.",
 			},
 			"key_type": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "rsa",
-				Description: "Specifies the type of key to generate for generated private keys. Currently, rsa and ec are supported.",
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "rsa",
+				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec"}, false),
+				Description:  "Specifies the type of key to generate for generated private keys. Currently, rsa and ec are supported.",
 			},
 			"key_bits": {
 				Type:        schema.TypeInt,
@@ -178,10 +180,9 @@ func pkiBackendRoleResource() *schema.Resource {
 			},
 			"backend": {
 				Type:        schema.TypeString,
-				Optional:    true,
+				Required:    true,
 				Description: "Unique name of the PKI backend to configure.",
 				ForceNew:    true,
-				Default:     "pki",
 				// standardise on no beginning or trailing slashes
 				StateFunc: func(v interface{}) string {
 					return strings.Trim(v.(string), "/")
@@ -198,8 +199,6 @@ func pkiBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	role := d.Get("role").(string)
 
 	path := pkiBackendRolePath(backend, role)
-
-	log.Printf("[DEBUG] Writing PKI backend role %q", path)
 
 	data := map[string]interface{}{}
 
@@ -244,14 +243,14 @@ func pkiBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	data["generate_lease"] = d.Get("generate_lease").(bool)
 	data["no_store"] = d.Get("no_store").(bool)
 
+	log.Printf("[DEBUG] Writing PKI backend role %q", path)
 	_, err := client.Logical().Write(path, data)
 
-	d.SetId(path)
-
 	if err != nil {
-		d.SetId("")
 		return fmt.Errorf("Error writing PKI backend role %q: %s", path, err)
 	}
+
+	d.SetId(path)
 	log.Printf("[DEBUG] Wrote PKI backend role %q", path)
 
 	return pkiBackendRoleRead(d, meta)
@@ -300,7 +299,9 @@ func pkiBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("ttl", resp.Data["ttl"])
 	d.Set("max_ttl", resp.Data["max_ttl"])
 	d.Set("allow_localhost", resp.Data["allow_localhost"])
-	d.Set("allowed_domains", domains)
+	if err := d.Set("allowed_domains", domains); err != nil {
+		return err
+	}
 	d.Set("allow_bare_domains", resp.Data["allow_bare_domains"])
 	d.Set("allow_subdomains", resp.Data["allow_subdomains"])
 	d.Set("allow_glob_domains", resp.Data["allow_glob_domains"])
@@ -313,7 +314,9 @@ func pkiBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("email_protection_flag", resp.Data["email_protection_flag"])
 	d.Set("key_type", resp.Data["key_type"])
 	d.Set("key_bits", resp.Data["key_bits"])
-	d.Set("key_usage", usages)
+	if err := d.Set("key_usage", usages); err != nil {
+		return err
+	}
 	d.Set("use_csr_common_name", resp.Data["use_csr_common_name"])
 	d.Set("use_csr_sans", resp.Data["use_csr_sans"])
 	d.Set("ou", resp.Data["ou"])
@@ -342,8 +345,8 @@ func pkiBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error
 	client := meta.(*api.Client)
 
 	path := d.Id()
-	log.Printf("[DEBUG] Checking if PKI backend role %q exists", path)
 
+	log.Printf("[DEBUG] Checking if PKI backend role %q exists", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
 		return true, fmt.Errorf("Error checking if PKI backend role %q exists: %s", path, err)
