@@ -134,7 +134,7 @@ func pkiBackendRoleResource() *schema.Resource {
 				Description: "Specifies the number of bits to use for the generated keys.",
 			},
 			"key_usage": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Computed: true,
 				Elem: &schema.Schema{
