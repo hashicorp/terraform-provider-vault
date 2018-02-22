@@ -1,4 +1,10 @@
-## 1.0.1 (Unreleased)
+## 1.1.0 (Unreleased)
+
+FEATURES:
+
+* **New Resource**: `vault_okta_auth_backend` [GH-8]
+* **New Resource**: `vault_okta_auth_backend_group` [GH-8]
+* **New Resource**: `vault_okta_auth_backend_user` [GH-8]
 
 BUG FIXES:
 

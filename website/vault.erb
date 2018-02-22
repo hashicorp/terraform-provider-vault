@@ -14,6 +14,10 @@
                 <a href="#">Data Sources</a>
                     <ul class="nav nav-visible">
 
+                        <li<%= sidebar_current("docs-vault-datasource-approle-auth-backend-role-id") %>>
+                            <a href="/docs/providers/vault/d/approle_auth_backend_role_id.html">vault_approle_auth_backend_role_id</a>
+                        </li>
+
                         <li<%= sidebar_current("docs-vault-datasource-aws-access-credentials") %>>
                             <a href="/docs/providers/vault/d/aws_access_credentials.html">vault_aws_access_credentials</a>
                         </li>
@@ -39,7 +43,6 @@
                         <li<%= sidebar_current("docs-vault-resource-approle-auth-backend-role-secret-id") %>>
 			    <a href="/docs/providers/vault/r/approle_auth_backend_role_secret_id.html">vault_approle_auth_backend_role_secret_id</a>
                         </li>
-
                         <li<%= sidebar_current("docs-vault-resource-auth-backend") %>>
                             <a href="/docs/providers/vault/r/auth_backend.html">vault_auth_backend</a>
                         </li>
@@ -52,12 +55,20 @@
                             <a href="/docs/providers/vault/r/aws_auth_backend_client.html">vault_aws_auth_backend_client</a>
                         </li>
 
+                        <li<%= sidebar_current("docs-vault-resource-aws-auth-backend-identity-whitelist") %>>
+                            <a href="/docs/providers/vault/r/aws_auth_backend_identity_whitelist.html">vault_aws_auth_backend_identity_whitelist</a>
+                        </li>
+			
                         <li<%= sidebar_current("docs-vault-resource-aws-auth-backend-login") %>>
                             <a href="/docs/providers/vault/r/aws_auth_backend_login.html">vault_aws_auth_backend_login</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-aws-auth-backend-role") %>>
                             <a href="/docs/providers/vault/r/aws_auth_backend_role.html">vault_aws_auth_backend_role</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-aws-auth-backend-role-tag") %>>
+                            <a href="/docs/providers/vault/r/aws_auth_backend_role_tag.html">vault_aws_auth_backend_role_tag</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-aws-auth-backend-sts-role") %>>
@@ -71,6 +82,26 @@
                         <li<%= sidebar_current("docs-vault-resource-aws-secret-backend-role") %>>
                             <a href="/docs/providers/vault/r/aws_secret_backend_role.html">vault_aws_secret_backend_role</a>
                         </li>
+                  
+                        <li<%= sidebar_current("docs-vault-resource-database-secret-backend-connection") %>>
+                            <a href="/docs/providers/vault/r/database_secret_backend_connection.html">vault_database_secret_backend_connection</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-database-secret-backend-role") %>>
+                            <a href="/docs/providers/vault/r/database_secret_backend_role.html">vault_database_secret_backend_role</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-okta-auth-backend") %>>
+                            <a href="/docs/providers/vault/r/okta_auth_backend.html">vault_okta_auth_backend</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-okta-auth-backend-user") %>>
+                            <a href="/docs/providers/vault/r/okta_auth_backend_user.html">vault_okta_auth_backend_user</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-okta-auth-backend-group") %>>
+                            <a href="/docs/providers/vault/r/okta_auth_backend_group.html">vault_okta_auth_backend_group</a>
+                        </li>
 
                         <li<%= sidebar_current("docs-vault-resource-generic-secret") %>>
                             <a href="/docs/providers/vault/r/generic_secret.html">vault_generic_secret</a>
@@ -78,6 +109,18 @@
 
                         <li<%= sidebar_current("docs-vault-resource-mount") %>>
                             <a href="/docs/providers/vault/r/mount.html">vault_mount</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-okta-auth-backend") %>>
+                            <a href="/docs/providers/vault/r/okta_auth_backend.html">vault_okta_auth_backend</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-okta-auth-backend-group") %>>
+                            <a href="/docs/providers/vault/r/okta_auth_backend_group.html">vault_okta_auth_backend_group</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-okta-auth-backend-user") %>>
+                            <a href="/docs/providers/vault/r/okta_auth_backend_user.html">vault_okta_auth_backend_user</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-policy") %>>

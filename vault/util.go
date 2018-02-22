@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"reflect"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 )
@@ -21,4 +22,32 @@ func jsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
 		return true
 	}
 	return reflect.DeepEqual(oldJSON, newJSON)
+}
+
+func toStringArray(input []interface{}) []string {
+	output := make([]string, len(input))
+
+	for i, item := range input {
+		output[i] = item.(string)
+	}
+
+	return output
+}
+
+func is404(err error) bool {
+	return strings.Contains(err.Error(), "Code: 404")
+}
+
+func calculateConflictsWith(self string, group []string) []string {
+	if len(group) < 2 {
+		return []string{}
+	}
+	results := make([]string, 0, len(group)-2)
+	for _, item := range group {
+		if item == self {
+			continue
+		}
+		results = append(results, item)
+	}
+	return results
 }

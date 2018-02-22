@@ -40,7 +40,7 @@ func approleAuthBackendRoleSecretIDResource() *schema.Resource {
 			},
 
 			"cidr_list": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "List of CIDR blocks that can log in using the SecretID.",
 				Elem: &schema.Schema{
@@ -101,7 +101,7 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	}
 
 	log.Printf("[DEBUG] Writing AppRole auth backend role SecretID %q", path)
-	iCIDRs := d.Get("cidr_list").([]interface{})
+	iCIDRs := d.Get("cidr_list").(*schema.Set).List()
 	cidrs := make([]string, 0, len(iCIDRs))
 	for _, iCIDR := range iCIDRs {
 		cidrs = append(cidrs, iCIDR.(string))
@@ -183,7 +183,10 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 
 	d.Set("backend", backend)
 	d.Set("role_name", role)
-	d.Set("cidr_list", cidrs)
+	err = d.Set("cidr_list", cidrs)
+	if err != nil {
+		return fmt.Errorf("Error setting cidr_list in state: %s", err)
+	}
 	d.Set("metadata", string(metadata))
 	d.Set("accessor", accessor)
 
