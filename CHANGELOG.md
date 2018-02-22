@@ -7,6 +7,7 @@ FEATURES:
 * **New Resource**: `vault_okta_auth_backend_user` [GH-8]
 * **New Resource**: `vault_approle_auth_backend_login` [GH-34]
 * **New Resource**: `vault_approle_auth_backend_role_secret_id` [GH-31]
+* **New Resource**: `vault_database_secret_backend_connection` [GH-37]
 
 BUG FIXES:
 
