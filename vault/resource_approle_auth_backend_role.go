@@ -160,7 +160,6 @@ func approleAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("Error writing AppRole auth backend role %q: %s", path, err)
 	}

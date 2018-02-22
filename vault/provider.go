@@ -90,7 +90,9 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
+			"vault_approle_auth_backend_login":          approleAuthBackendLoginResource(),
 			"vault_approle_auth_backend_role":           approleAuthBackendRoleResource(),
+			"vault_approle_auth_backend_role_secret_id": approleAuthBackendRoleSecretIDResource(),
 			"vault_auth_backend":                        authBackendResource(),
 			"vault_aws_auth_backend_cert":               awsAuthBackendCertResource(),
 			"vault_aws_auth_backend_client":             awsAuthBackendClientResource(),
@@ -104,6 +106,9 @@ func Provider() terraform.ResourceProvider {
 			"vault_database_secret_backend_connection":  databaseSecretBackendConnectionResource(),
 			"vault_database_secret_backend_role":        databaseSecretBackendRoleResource(),
 			"vault_generic_secret":                      genericSecretResource(),
+			"vault_okta_auth_backend":                   oktaAuthBackendResource(),
+			"vault_okta_auth_backend_user":              oktaAuthBackendUserResource(),
+			"vault_okta_auth_backend_group":             oktaAuthBackendGroupResource(),
 			"vault_policy":                              policyResource(),
 			"vault_mount":                               mountResource(),
 		},

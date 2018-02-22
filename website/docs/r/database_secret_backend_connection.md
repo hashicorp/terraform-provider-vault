@@ -51,19 +51,21 @@ The following arguments are supported:
 * `allowed_roles` - (Optional) A list of roles that are allowed to use this
   connection.
 
-* `cassandra` - (Optional) Configuration options for Cassandra connections.
+* `cassandra` - (Optional) A nested block containing configuration options for Cassandra connections.
 
-* `mongodb` - (Optional) Configuration options for MongoDB connections.
+* `mongodb` - (Optional) A nested block containing configuration options for MongoDB connections.
 
-* `hana` - (Optional) Configuration options for SAP HanaDB connections.
+* `hana` - (Optional) A nested block containing configuration options for SAP HanaDB connections.
 
-* `mssql` - (Optional) Configuration options for MSSQL connections.
+* `mssql` - (Optional) A nested block containing configuration options for MSSQL connections.
 
-* `mysql` - (Optional) Configuration options for MySQL connections.
+* `mysql` - (Optional) A nested block containing configuration options for MySQL connections.
 
-* `postgresql` - (Optional) Configuration options for PostgreSQL connections.
+* `postgresql` - (Optional) A nested block containing configuration options for PostgreSQL connections.
 
-* `oracle` - (Optional) Configuration options for Oracle connections.
+* `oracle` - (Optional) A nested block containing configuration options for Oracle connections.
+
+Exactly one of the nested blocks of configuration options must be supplied.
 
 ### Cassandra Configuration Options
 
