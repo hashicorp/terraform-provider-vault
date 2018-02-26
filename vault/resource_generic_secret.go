@@ -147,6 +147,11 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 		if err != nil {
 			return fmt.Errorf("error reading from Vault: %s", err)
 		}
+		if secret == nil {
+			log.Printf("vault_generic_secret at %s has been deleted, so removing it from state", path)
+			d.SetId("")
+			return nil
+		}
 
 		log.Printf("[DEBUG] secret: %#v", secret)
 
