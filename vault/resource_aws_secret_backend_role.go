@@ -85,7 +85,7 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 	pathPieces := strings.Split(path, "/")
-	if len(pathPieces) != 3 || pathPieces[1] != "roles" {
+	if len(pathPieces) < 3 || pathPieces[len(pathPieces)-2] != "roles" {
 		return fmt.Errorf("Invalid id %q; must be {backend}/roles/{name}", path)
 	}
 
