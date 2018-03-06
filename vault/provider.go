@@ -94,6 +94,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_approle_auth_backend_role":           approleAuthBackendRoleResource(),
 			"vault_approle_auth_backend_role_secret_id": approleAuthBackendRoleSecretIDResource(),
 			"vault_auth_backend":                        authBackendResource(),
+			"vault_token_auth_backend_role":             tokenAuthBackendRoleResource(),
 			"vault_aws_auth_backend_cert":               awsAuthBackendCertResource(),
 			"vault_aws_auth_backend_client":             awsAuthBackendClientResource(),
 			"vault_aws_auth_backend_identity_whitelist": awsAuthBackendIdentityWhitelistResource(),
