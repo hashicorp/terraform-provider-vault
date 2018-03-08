@@ -102,8 +102,8 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	d.Set("policy", secret.Data["policy"])
 	d.Set("policy_arn", secret.Data["arn"])
-	d.Set("backend", pathPieces[0])
-	d.Set("name", pathPieces[2])
+	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
+	d.Set("name", pathPieces[len(pathPieces)-1])
 	return nil
 }
 
