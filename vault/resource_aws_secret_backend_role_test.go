@@ -16,7 +16,7 @@ const testAccAWSSecretBackendRolePolicyArn_basic = "arn:aws:iam::123456789123:po
 const testAccAWSSecretBackendRolePolicyArn_updated = "arn:aws:iam::123456789123:policy/bar"
 
 func TestAccAWSSecretBackendRole_basic(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-aws/nested")
+	backend := acctest.RandomWithPrefix("tf-test-aws")
 	name := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := getTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
@@ -79,6 +79,41 @@ func TestAccAWSSecretBackendRole_import(t *testing.T) {
 				ResourceName:      "vault_aws_secret_backend_role.test_policy_arn",
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccAWSSecretBackendRole_nested(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-aws/nested")
+	name := acctest.RandomWithPrefix("tf-test-aws")
+	accessKey, secretKey := getTestAWSCreds(t)
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccAWSSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSSecretBackendRoleConfig_basic(name, backend, accessKey, secretKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "name", name),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "backend", backend),
+					testCheckResourceAttrJSON("vault_aws_secret_backend_role.test_policy_inline", "policy", testAccAWSSecretBackendRolePolicyInline_basic),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arn", "name", name),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arn", "backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arn", "policy_arn", testAccAWSSecretBackendRolePolicyArn_basic),
+				),
+			},
+			{
+				Config: testAccAWSSecretBackendRoleConfig_updated(name, backend, accessKey, secretKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "name", name),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline", "backend", backend),
+					testCheckResourceAttrJSON("vault_aws_secret_backend_role.test_policy_inline", "policy", testAccAWSSecretBackendRolePolicyInline_updated),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arn", "name", name),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arn", "backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_arn", "policy_arn", testAccAWSSecretBackendRolePolicyArn_updated),
+				),
 			},
 		},
 	})
