@@ -16,7 +16,7 @@ const testAccAWSSecretBackendRolePolicyArn_basic = "arn:aws:iam::123456789123:po
 const testAccAWSSecretBackendRolePolicyArn_updated = "arn:aws:iam::123456789123:policy/bar"
 
 func TestAccAWSSecretBackendRole_basic(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-aws")
+	backend := acctest.RandomWithPrefix("tf-test-aws/nested")
 	name := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := getTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
