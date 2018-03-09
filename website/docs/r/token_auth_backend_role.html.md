@@ -8,9 +8,7 @@ description: |-
 
 # vault\_token\_auth\_backend\_role
 
-Manages Token auth backend role in a Vault server. Roles constrain the
-instances or principals that can perform the login operation against the
-backend. See the [Vault
+Manages Token auth backend role in a Vault server. See the [Vault
 documentation](https://www.vaultproject.io/docs/auth/token.html) for more
 information.
 
