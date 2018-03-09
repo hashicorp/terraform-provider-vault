@@ -53,7 +53,6 @@ The following arguments are supported:
 
 * `max_ttl` (Optional) The maximum allowed lifetime of tokens issued using this role.
 
-
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
