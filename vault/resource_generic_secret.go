@@ -6,7 +6,6 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
-
 	"github.com/hashicorp/vault/api"
 )
 
@@ -146,6 +145,11 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 		secret, err := client.Logical().Read(path)
 		if err != nil {
 			return fmt.Errorf("error reading from Vault: %s", err)
+		}
+		if secret == nil {
+			log.Printf("[WARN] secret (%s) not found, removing from state", path)
+			d.SetId("")
+			return nil
 		}
 
 		log.Printf("[DEBUG] secret: %#v", secret)
