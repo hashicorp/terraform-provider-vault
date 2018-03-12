@@ -28,6 +28,31 @@ func TestResourceGenericSecret(t *testing.T) {
 	})
 }
 
+func TestResourceGenericSecret_deleted(t *testing.T) {
+	path := acctest.RandomWithPrefix("secret/test")
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testResourceGenericSecret_initialConfig(path),
+				Check:  testResourceGenericSecret_initialCheck(path),
+			},
+			resource.TestStep{
+				PreConfig: func() {
+					client := testProvider.Meta().(*api.Client)
+					_, err := client.Logical().Delete(path)
+					if err != nil {
+						t.Fatalf("unable to manually delete the secret via the SDK: %s", err)
+					}
+				},
+				Config: testResourceGenericSecret_initialConfig(path),
+				Check:  testResourceGenericSecret_initialCheck(path),
+			},
+		},
+	})
+}
+
 func testResourceGenericSecret_initialConfig(path string) string {
 	return fmt.Sprintf(`
 resource "vault_generic_secret" "test" {
