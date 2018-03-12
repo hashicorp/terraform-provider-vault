@@ -12,6 +12,7 @@ FEATURES:
 BUG FIXES:
 
 * Fix bug in `policy_arn` parameter of `vault_aws_secret_backend_role` [GH-49]
+* Fix panic in `vault_generic_secret` when reading a missing secret [GH-55]
 
 ## 1.0.0 (November 16, 2017)
 
