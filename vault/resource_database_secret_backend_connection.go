@@ -14,7 +14,7 @@ import (
 var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
-	dbBackendTypes                                      = []string{"cassandra", "hana", "mongodb", "mssql", "mysql", "postgresql", "oracle"}
+	dbBackendTypes                                      = []string{"cassandra", "hana", "mongodb", "mssql", "mysql", "mysql_rds", "mysql_aurora", "mysql_legacy", "postgresql", "oracle"}
 )
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
@@ -166,6 +166,30 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				MaxItems:      1,
 				ConflictsWith: calculateConflictsWith("mysql", dbBackendTypes),
 			},
+			"mysql_rds": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				Description:   "Connection parameters for the mysql-rds-database-plugin plugin.",
+				Elem:          connectionStringResource(),
+				MaxItems:      1,
+				ConflictsWith: calculateConflictsWith("mysql-rds", dbBackendTypes),
+			},
+			"mysql_aurora": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				Description:   "Connection parameters for the mysql-aurora-database-plugin plugin.",
+				Elem:          connectionStringResource(),
+				MaxItems:      1,
+				ConflictsWith: calculateConflictsWith("mysql-aurora", dbBackendTypes),
+			},
+			"mysql_legacy": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				Description:   "Connection parameters for the mysql-legacy-database-plugin plugin.",
+				Elem:          connectionStringResource(),
+				MaxItems:      1,
+				ConflictsWith: calculateConflictsWith("mysql-legacy", dbBackendTypes),
+			},
 
 			"postgresql": {
 				Type:          schema.TypeList,
@@ -239,6 +263,12 @@ func getDatabasePluginName(d *schema.ResourceData) (string, error) {
 		return "mssql-database-plugin", nil
 	case len(d.Get("mysql").([]interface{})) > 0:
 		return "mysql-database-plugin", nil
+	case len(d.Get("mysql_rds").([]interface{})) > 0:
+		return "mysql-rds-database-plugin", nil
+	case len(d.Get("mysql_aurora").([]interface{})) > 0:
+		return "mysql-aurora-database-plugin", nil
+	case len(d.Get("mysql_legacy").([]interface{})) > 0:
+		return "mysql-legacy-database-plugin", nil
 	case len(d.Get("oracle").([]interface{})) > 0:
 		return "oracle-database-plugin", nil
 	case len(d.Get("postgresql").([]interface{})) > 0:
@@ -307,6 +337,12 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		setDatabaseConnectionData(d, "mssql.0.", data)
 	case "mysql-database-plugin":
 		setDatabaseConnectionData(d, "mysql.0.", data)
+	case "mysql-rds-database-plugin":
+		setDatabaseConnectionData(d, "mysql_rds.0.", data)
+	case "mysql-aurora-database-plugin":
+		setDatabaseConnectionData(d, "mysql_aurora.0.", data)
+	case "mysql-legacy-database-plugin":
+		setDatabaseConnectionData(d, "mysql_legacy.0.", data)
 	case "oracle-database-plugin":
 		setDatabaseConnectionData(d, "oracle.0.", data)
 	case "postgresql-database-plugin":
@@ -499,6 +535,12 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		d.Set("mssql", getConnectionDetailsFromResponse(resp))
 	case "mysql-database-plugin":
 		d.Set("mysql", getConnectionDetailsFromResponse(resp))
+	case "mysql-rds-database-plugin":
+		d.Set("mysql_rds", getConnectionDetailsFromResponse(resp))
+	case "mysql-aurora-database-plugin":
+		d.Set("mysql_aurora", getConnectionDetailsFromResponse(resp))
+	case "mysql-legacy-database-plugin":
+		d.Set("mysql_legacy", getConnectionDetailsFromResponse(resp))
 	case "oracle-database-plugin":
 		d.Set("oracle", getConnectionDetailsFromResponse(resp))
 	case "postgresql-database-plugin":

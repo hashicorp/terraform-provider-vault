@@ -61,6 +61,12 @@ The following arguments are supported:
 
 * `mysql` - (Optional) A nested block containing configuration options for MySQL connections.
 
+* `mysql_rds` - (Optional) A nested block containing configuration options for RDS MySQL connections.
+
+* `mysql_aurora` - (Optional) A nested block containing configuration options for Aurora MySQL connections.
+
+* `mysql_legacy` - (Optional) A nested block containing configuration options for legacy MySQL connections.
+
 * `postgresql` - (Optional) A nested block containing configuration options for PostgreSQL connections.
 
 * `oracle` - (Optional) A nested block containing configuration options for Oracle connections.
