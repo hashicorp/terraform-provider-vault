@@ -1,10 +1,10 @@
 package vault
 
 import (
-	"fmt"
-	"log"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -67,7 +67,7 @@ func consulRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	data["lease"] = 0
 	data["token_type"] = "client"
 
-	path := userPath + name
+	path := userPath + "/" + name
 	log.Printf("[DEBUG] Writing Consul Role %s to Vault", path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -119,8 +119,9 @@ func consulRoleRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
 	}
+	splitPath := strings.Split(path, "/")
 	d.Set("data_json", string(jsonDataBytes))
-	d.Set("path", path)
+	d.Set("path", splitPath[0]+"/"+splitPath[1])
 
 	return nil
 }

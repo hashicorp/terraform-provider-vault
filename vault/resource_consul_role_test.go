@@ -1,9 +1,9 @@
 package vault
 
 import (
+	"encoding/base64"
 	"fmt"
 	"testing"
-	"encoding/base64"
 
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
@@ -56,7 +56,7 @@ func TestResourceConsulRole_deleted(t *testing.T) {
 
 func testResourceConsulRole_initialConfig(name string) string {
 	return fmt.Sprintf(`
-resource "consul_role" "test" {
+resource "vault_consul_role" "test" {
     name = "%s"
     role = <<EOT
 key "zip/zap" { policy = "read" }
@@ -66,7 +66,7 @@ EOT
 
 func testResourceConsulRole_initialCheck(expectedName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["consul_role.test"]
+		resourceState := s.Modules[0].Resources["vault_consul_role.test"]
 		if resourceState == nil {
 			return fmt.Errorf("resource not found in state")
 		}
@@ -78,8 +78,7 @@ func testResourceConsulRole_initialCheck(expectedName string) resource.TestCheck
 
 		name := instanceState.Attributes["name"]
 		path := instanceState.ID
-		constructedPath := "consul/roles"+name
-
+		constructedPath := "consul/roles" + name
 
 		if name != expectedName {
 			return fmt.Errorf("unexpected policy name %q, expected %q", name, expectedName)
@@ -88,7 +87,6 @@ func testResourceConsulRole_initialCheck(expectedName string) resource.TestCheck
 		if path != constructedPath {
 			return fmt.Errorf("id %q doesn't match path %q", path, instanceState.Attributes["name"])
 		}
-
 
 		client := testProvider.Meta().(*api.Client)
 		role, err := client.Logical().Read(path)
@@ -110,7 +108,7 @@ func testResourceConsulRole_initialCheck(expectedName string) resource.TestCheck
 }
 
 var testResourceConsulRole_updateConfig = `
-resource "consul_role" "test" {
+resource "vault_consul_role" "test" {
     name = "%s"
     role = <<EOT
 key "zip/zoop" { policy = "write" }
@@ -119,7 +117,7 @@ EOT
 `
 
 func testResourceConsulRole_updateCheck(s *terraform.State) error {
-	resourceState := s.Modules[0].Resources["consul_role.test"]
+	resourceState := s.Modules[0].Resources["vault_consul_role.test"]
 	instanceState := resourceState.Primary
 
 	path := instanceState.ID
