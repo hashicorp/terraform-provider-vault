@@ -13,6 +13,8 @@ BUG FIXES:
 
 * Fix bug in `policy_arn` parameter of `vault_aws_secret_backend_role` [GH-49]
 * Fix panic in `vault_generic_secret` when reading a missing secret [GH-55]
+* Fix bug in `vault_aws_secret_backend_role` preventing use of nested paths [GH-79]
+* Fix bug in `vault_aws_auth_backend_role` that failed to update the role name when it changed [GH-86]
 
 ## 1.0.0 (November 16, 2017)
 
