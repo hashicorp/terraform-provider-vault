@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform/helper/logging"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
@@ -83,15 +84,34 @@ func Provider() terraform.ResourceProvider {
 		ConfigureFunc: providerConfigure,
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"vault_generic_secret": genericSecretDataSource(),
+			"vault_approle_auth_backend_role_id": approleAuthBackendRoleIDDataSource(),
+			"vault_aws_access_credentials":       awsAccessCredentialsDataSource(),
+			"vault_generic_secret":               genericSecretDataSource(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"vault_auth_backend":   authBackendResource(),
-			"vault_generic_secret": genericSecretResource(),
-			"vault_policy":         policyResource(),
-			"vault_mount":          mountResource(),
-			"vault_token":          tokenResource(),
+			"vault_approle_auth_backend_login":          approleAuthBackendLoginResource(),
+			"vault_approle_auth_backend_role":           approleAuthBackendRoleResource(),
+			"vault_approle_auth_backend_role_secret_id": approleAuthBackendRoleSecretIDResource(),
+			"vault_auth_backend":                        authBackendResource(),
+			"vault_aws_auth_backend_cert":               awsAuthBackendCertResource(),
+			"vault_aws_auth_backend_client":             awsAuthBackendClientResource(),
+			"vault_aws_auth_backend_identity_whitelist": awsAuthBackendIdentityWhitelistResource(),
+			"vault_aws_auth_backend_login":              awsAuthBackendLoginResource(),
+			"vault_aws_auth_backend_role":               awsAuthBackendRoleResource(),
+			"vault_aws_auth_backend_role_tag":           awsAuthBackendRoleTagResource(),
+			"vault_aws_auth_backend_sts_role":           awsAuthBackendSTSRoleResource(),
+			"vault_aws_secret_backend":                  awsSecretBackendResource(),
+			"vault_aws_secret_backend_role":             awsSecretBackendRoleResource(),
+			"vault_database_secret_backend_connection":  databaseSecretBackendConnectionResource(),
+			"vault_database_secret_backend_role":        databaseSecretBackendRoleResource(),
+			"vault_generic_secret":                      genericSecretResource(),
+			"vault_okta_auth_backend":                   oktaAuthBackendResource(),
+			"vault_okta_auth_backend_user":              oktaAuthBackendUserResource(),
+			"vault_okta_auth_backend_group":             oktaAuthBackendGroupResource(),
+			"vault_policy":                              policyResource(),
+			"vault_mount":                               mountResource(),
+			"vault_token":                               tokenResource(),
 		},
 	}
 }
@@ -124,6 +144,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure TLS for Vault API: %s", err)
 	}
+
+	config.HttpClient.Transport = logging.NewTransport("Vault", config.HttpClient.Transport)
 
 	client, err := api.NewClient(config)
 	if err != nil {

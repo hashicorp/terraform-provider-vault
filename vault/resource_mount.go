@@ -2,9 +2,11 @@ package vault
 
 import (
 	"fmt"
+	"log"
+	"strings"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
-	"log"
 )
 
 func mountResource() *schema.Resource {
@@ -13,6 +15,9 @@ func mountResource() *schema.Resource {
 		Update: mountUpdate,
 		Delete: mountDelete,
 		Read:   mountRead,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"path": {
@@ -137,13 +142,26 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Reading mount %s from Vault", path)
 
-	mount, err := client.Sys().MountConfig(path)
+	mounts, err := client.Sys().ListMounts()
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
-	d.Set("default_lease_ttl_seconds", mount.DefaultLeaseTTL)
-	d.Set("max_lease_ttl_seconds", mount.MaxLeaseTTL)
+	// path can have a trailing slash, but doesn't need to have one
+	// this standardises on having a trailing slash, which is how the
+	// API always responds.
+	mount, ok := mounts[strings.Trim(path, "/")+"/"]
+	if !ok {
+		log.Printf("[WARN] Mount %q not found, removing from state.", path)
+		d.SetId("")
+		return nil
+	}
+
+	d.Set("path", path)
+	d.Set("type", mount.Type)
+	d.Set("description", mount.Description)
+	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
+	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
 
 	return nil
 }
