@@ -1,20 +1,20 @@
-## 1.1.0 (Unreleased)
+## 1.1.0 (April 09, 2018)
 
 FEATURES:
 
-* **New Resource**: `vault_okta_auth_backend` [GH-8]
-* **New Resource**: `vault_okta_auth_backend_group` [GH-8]
-* **New Resource**: `vault_okta_auth_backend_user` [GH-8]
-* **New Resource**: `vault_approle_auth_backend_login` [GH-34]
-* **New Resource**: `vault_approle_auth_backend_role_secret_id` [GH-31]
-* **New Resource**: `vault_database_secret_backend_connection` [GH-37]
+* **New Resource**: `vault_okta_auth_backend` ([#8](https://github.com/terraform-providers/terraform-provider-vault/issues/8))
+* **New Resource**: `vault_okta_auth_backend_group` ([#8](https://github.com/terraform-providers/terraform-provider-vault/issues/8))
+* **New Resource**: `vault_okta_auth_backend_user` ([#8](https://github.com/terraform-providers/terraform-provider-vault/issues/8))
+* **New Resource**: `vault_approle_auth_backend_login` ([#34](https://github.com/terraform-providers/terraform-provider-vault/issues/34))
+* **New Resource**: `vault_approle_auth_backend_role_secret_id` ([#31](https://github.com/terraform-providers/terraform-provider-vault/issues/31))
+* **New Resource**: `vault_database_secret_backend_connection` ([#37](https://github.com/terraform-providers/terraform-provider-vault/issues/37))
 
 BUG FIXES:
 
-* Fix bug in `policy_arn` parameter of `vault_aws_secret_backend_role` [GH-49]
-* Fix panic in `vault_generic_secret` when reading a missing secret [GH-55]
-* Fix bug in `vault_aws_secret_backend_role` preventing use of nested paths [GH-79]
-* Fix bug in `vault_aws_auth_backend_role` that failed to update the role name when it changed [GH-86]
+* Fix bug in `policy_arn` parameter of `vault_aws_secret_backend_role` ([#49](https://github.com/terraform-providers/terraform-provider-vault/issues/49))
+* Fix panic in `vault_generic_secret` when reading a missing secret ([#55](https://github.com/terraform-providers/terraform-provider-vault/issues/55))
+* Fix bug in `vault_aws_secret_backend_role` preventing use of nested paths ([#79](https://github.com/terraform-providers/terraform-provider-vault/issues/79))
+* Fix bug in `vault_aws_auth_backend_role` that failed to update the role name when it changed ([#86](https://github.com/terraform-providers/terraform-provider-vault/issues/86))
 
 ## 1.0.0 (November 16, 2017)
 
