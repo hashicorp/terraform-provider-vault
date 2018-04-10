@@ -50,6 +50,10 @@ func TestAccDatabaseSecretBackendConnection_import(t *testing.T) {
 
 func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 	host := os.Getenv("CASSANDRA_HOST")
+	if host == "" {
+		t.Skip("CASSANDRA_HOST not set")
+	}
+
 	username := os.Getenv("CASSANDRA_USERNAME")
 	password := os.Getenv("CASSANDRA_PASSWORD")
 	backend := acctest.RandomWithPrefix("tf-test-db")
