@@ -91,6 +91,12 @@ variables in order to keep credential information out of the configuration.
   the given token must have the update capability on the auth/token/create
   path in Vault in order to create child tokens.
 
+* `use_child_token` - (Optional) Set this to `false` to disable Terraform
+  from issuing itself a new token that is a child of the one given by the
+  `token` argument. This is necessary where the policy is not to allow
+  update capability in order to create child tokens. The default of `true`
+  limits the exposure of any generated secrets.
+
 * `ca_cert_file` - (Optional) Path to a file on local disk that will be
   used to validate the certificate presented by the Vault server.
   May be set via the `VAULT_CACERT` environment variable.
