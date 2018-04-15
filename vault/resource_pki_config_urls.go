@@ -35,6 +35,7 @@ func pkiConfigURLsResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "Specifies the URL values for the Issuing Certificate field. ",
 			},
 			"crl_distribution_points": {
 				Type:     schema.TypeList,
@@ -42,6 +43,7 @@ func pkiConfigURLsResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "Specifies the URL values for the CRL Distribution Points field.",
 			},
 			"ocsp_servers": {
 				Type:     schema.TypeList,
@@ -49,6 +51,7 @@ func pkiConfigURLsResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "Specifies the URL values for the OCSP Servers field.",
 			},
 		},
 	}
