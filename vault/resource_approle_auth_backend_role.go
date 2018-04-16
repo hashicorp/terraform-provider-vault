@@ -212,8 +212,17 @@ func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	var cidrs []string
-	if resp.Data["bound_cidr_list"].(string) != "" {
-		cidrs = strings.Split(resp.Data["bound_cidr_list"].(string), ",")
+
+	// NOTE: `string` is for backward-compatibility with pre-0.10.0 Vault.
+	switch value := resp.Data["bound_cidr_list"].(type) {
+	case string:
+		if value != "" {
+			cidrs = strings.Split(value, ",")
+		}
+	case []interface{}:
+		for _, iCIDR := range value {
+			cidrs = append(cidrs, iCIDR.(string))
+		}
 	}
 
 	secretIDTTL, err := resp.Data["secret_id_ttl"].(json.Number).Int64()
