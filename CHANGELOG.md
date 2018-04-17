@@ -1,4 +1,8 @@
 ## 1.1.1 (Unreleased)
+
+BUG FIXES:
+* Fix panic in `vault_approle_auth_backend_role` when used with Vault 0.10 [GH-103]
+
 ## 1.1.0 (April 09, 2018)
 
 FEATURES:
