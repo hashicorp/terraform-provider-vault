@@ -50,6 +50,8 @@ If this is not supplied only locally configured groups will be enabled.
 * `max_ttl` - (Optional) Maximum duration after which authentication will be expired
 [See the documentation for info on valid duration formats](https://golang.org/pkg/time/#ParseDuration).
 
+* `bypass_okta_mfa` - (Optional) Whether to bypass an Okta MFA request. Useful if using one of Vault's built-in MFA mechanisms, but this will also cause certain other statuses to be ignored, such as PASSWORD_EXPIRED.
+
 * `group` - (Optional) Associate Okta groups with policies within Vault.
 [See below for more details](#okta-group). 
 

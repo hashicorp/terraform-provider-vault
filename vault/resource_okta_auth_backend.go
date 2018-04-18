@@ -80,6 +80,14 @@ func oktaAuthBackendResource() *schema.Resource {
 				Description: "Maximum duration after which authentication will be expired",
 			},
 
+			"bypass_okta_mfa": {
+				Type:        schema.TypeBool,
+				Required:    false,
+				Optional:    true,
+				Description: "Whether to bypass an Okta MFA request. Useful if using one of Vault's built-in MFA mechanisms, but this will also cause certain other statuses to be ignored, such as PASSWORD_EXPIRED.",
+				Default:     false,
+			},
+
 			"group": {
 				Type:     schema.TypeSet,
 				Required: false,
@@ -281,6 +289,10 @@ func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if maxTtl, ok := d.GetOk("max_ttl"); ok {
 		configuration["max_ttl"] = maxTtl
+	}
+
+	if bypassOktaMFA, ok := d.GetOk("bypass_okta_mfa"); ok {
+		configuration["bypass_okta_mfa"] = bypassOktaMFA
 	}
 
 	_, err := client.Logical().Write(oktaConfigEndpoint(path), configuration)
