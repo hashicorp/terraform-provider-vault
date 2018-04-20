@@ -16,6 +16,7 @@ func pkiConfigCAResource() *schema.Resource {
 
 		Create: pkiConfigCAWrite,
 		Read:   pkiConfigCARead,
+		Update: pkiConfigCAWrite,
 		Delete: pkiConfigCaDelete,
 
 		Schema: map[string]*schema.Schema{
@@ -33,16 +34,14 @@ func pkiConfigCAResource() *schema.Resource {
 			"cert": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
 				Description: "The pem encoded certificate of the CA.",
 			},
 			"key": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Sensitive:   true,
-				StateFunc:   pkiPemSha,
-				Description: "The pem encoded key of the CA.",
+				Type:             schema.TypeString,
+				Required:         true,
+				StateFunc:        pkiPemSha,
+				DiffSuppressFunc: pkiKeyDiff,
+				Description:      "The pem encoded key of the CA.",
 			},
 		},
 	}
@@ -55,6 +54,14 @@ func pkiPemSha(pemI interface{}) string {
 	h.Write([]byte(pem))
 
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func pkiKeyDiff(k, old, new string, d *schema.ResourceData) bool {
+	h := sha256.New()
+	h.Write([]byte(new))
+	newSha := hex.EncodeToString(h.Sum(nil))
+
+	return newSha == old
 }
 
 func pkiConfigCAWrite(d *schema.ResourceData, meta interface{}) error {
@@ -76,7 +83,16 @@ func pkiConfigCAWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func pkiConfigCARead(d *schema.ResourceData, meta interface{}) error {
-	// There is nothing to actually read back
+	client := meta.(*api.Client)
+
+	backend := d.Get("backend").(string)
+	secret, err := client.Logical().Read(backend + "/cert/ca")
+	if err != nil {
+		return fmt.Errorf("error reading from Vault: %s", err)
+	}
+
+	d.Set("ca", secret.Data["certificate"])
+
 	return nil
 }
 
