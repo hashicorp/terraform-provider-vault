@@ -34,6 +34,7 @@ func pkiConfigCAResource() *schema.Resource {
 			"cert": {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Description: "The pem encoded certificate of the CA.",
 			},
 			"key": {
