@@ -19,6 +19,28 @@ func TestDataSourceGenericSecret(t *testing.T) {
 			},
 		},
 	})
+
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: testDataSourceGenericSecretWrapped_config,
+				Check:  testDataSourceGenericSecretWrapped_check,
+			},
+		},
+	})
+
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: testDataSourceGenericSecretWrappedWrite_config,
+				Check:  testDataSourceGenericSecretWrapped_check,
+			},
+		},
+	})
 }
 
 var testDataSourceGenericSecret_config = `
@@ -60,3 +82,63 @@ func testDataSourceGenericSecret_check(s *terraform.State) error {
 
 	return nil
 }
+
+var testDataSourceGenericSecretWrapped_config = `
+
+resource "vault_generic_secret" "test" {
+    path = "secret/foo"
+    data_json = <<EOT
+{
+    "zip": "zap"
+}
+EOT
+}
+
+data "vault_generic_secret" "test" {
+	wrap_ttl = "1s"
+    path = "${vault_generic_secret.test.path}"
+}
+
+`
+
+func testDataSourceGenericSecretWrapped_check(s *terraform.State) error {
+	resourceState := s.Modules[0].Resources["data.vault_generic_secret.test"]
+	if resourceState == nil {
+		return fmt.Errorf("resource not found in state %v", s.Modules[0].Resources)
+	}
+
+	iState := resourceState.Primary
+	if iState == nil {
+		return fmt.Errorf("resource has no primary instance")
+	}
+
+	if data := iState.Attributes["data_json"]; data != "null" {
+		return fmt.Errorf("data_json should be nil, result wrapped, found: %s", data)
+	}
+
+	wantedTTL := "1"
+	if got, want := iState.Attributes["wrap_information.ttl"], wantedTTL; got != want {
+		return fmt.Errorf("wrap_information[\"ttl\"] contains %s; want %s", got, want)
+	}
+
+	if token := iState.Attributes["wrap_information.ttl"]; len(token) == 0 {
+		return fmt.Errorf("wrap_information[\"token\"] is empty on wrapped result")
+	}
+
+	return nil
+}
+
+var testDataSourceGenericSecretWrappedWrite_config = `
+
+data "vault_generic_secret" "test" {
+	wrap_ttl = "1s"
+	command = "write"
+    path = "auth/token/create"
+	write_data_json = <<EOT
+{
+	"ttl": "1s"
+}
+EOT
+}
+
+`
