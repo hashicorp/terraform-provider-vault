@@ -321,6 +321,10 @@ func pkiConfigRoleRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
+	if secret == nil {
+		d.SetId("")
+		return nil
+	}
 
 	for k, v := range secret.Data {
 		d.Set(k, v)

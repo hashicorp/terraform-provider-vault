@@ -83,6 +83,10 @@ func pkiConfigURLsRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error reading to Vault: %s", err)
 	}
+	if secret == nil {
+		d.SetId("")
+		return nil
+	}
 
 	d.Set("issuing_certificates", secret.Data["issuing_certificates"])
 	d.Set("crl_distribution_points", secret.Data["crl_distribution_points"])
