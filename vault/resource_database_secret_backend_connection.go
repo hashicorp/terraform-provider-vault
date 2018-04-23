@@ -172,7 +172,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mysql-rds-database-plugin plugin.",
 				Elem:          connectionStringResource(),
 				MaxItems:      1,
-				ConflictsWith: calculateConflictsWith("mysql-rds", dbBackendTypes),
+				ConflictsWith: calculateConflictsWith("mysql_rds", dbBackendTypes),
 			},
 			"mysql_aurora": {
 				Type:          schema.TypeList,
@@ -180,7 +180,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mysql-aurora-database-plugin plugin.",
 				Elem:          connectionStringResource(),
 				MaxItems:      1,
-				ConflictsWith: calculateConflictsWith("mysql-aurora", dbBackendTypes),
+				ConflictsWith: calculateConflictsWith("mysql_aurora", dbBackendTypes),
 			},
 			"mysql_legacy": {
 				Type:          schema.TypeList,
@@ -188,7 +188,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mysql-legacy-database-plugin plugin.",
 				Elem:          connectionStringResource(),
 				MaxItems:      1,
-				ConflictsWith: calculateConflictsWith("mysql-legacy", dbBackendTypes),
+				ConflictsWith: calculateConflictsWith("mysql_legacy", dbBackendTypes),
 			},
 
 			"postgresql": {
