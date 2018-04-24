@@ -1,12 +1,12 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_approle_auth_backend_role_login resource"
-sidebar_current: "docs-vault-approle-auth-backend-role-login"
+page_title: "Vault: vault_approle_auth_backend_login resource"
+sidebar_current: "docs-vault-approle-auth-backend-login"
 description: |-
   Log into Vault using the AppRole auth backend.
 ---
 
-# vault\_approle\_auth\_backend\_role\_login
+# vault\_approle\_auth\_backend\_login
 
 Logs into Vault using the AppRole auth backend. See the [Vault
 documentation](https://www.vaultproject.io/docs/auth/approle.html) for more
@@ -30,7 +30,7 @@ resource "vault_approle_auth_backend_role_secret_id" "id" {
   role_name = "${vault_approle_auth_backend_role.example.role_name}"
 }
 
-resource "vault_approle_auth_backend_role_login" "login" {
+resource "vault_approle_auth_backend_login" "login" {
   backend   = "${vault_auth_backend.approle.path}"
   role_id   = "${vault_approle_auth_backend_role.example.role_id}"
   secret_id = "${vault_approle_auth_backend_role_secret_id.id.secret_id}"
