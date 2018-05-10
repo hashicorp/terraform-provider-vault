@@ -6,6 +6,7 @@ import (
 	"log"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -343,12 +344,13 @@ func getConnectionDetailsFromResponse(resp *api.Secret) []map[string]interface{}
 		}
 	}
 	if v, ok := data["max_connection_lifetime"]; ok {
-		i, err := v.(json.Number).Int64()
+		// This is returned as a string ,'Xs', from the server.
+		secs, err := time.ParseDuration(v.(string))
 		if err != nil {
-			log.Printf("[WARN] Non-number %s returned from Vault server: %s", v, err)
-		} else {
-			result["max_connection_lifetime"] = i
+			log.Printf("[WARN] Non-duration %s returned from Vault server: %s", v, err)
 		}
+
+		result["max_connection_lifetime"] = int64(secs.Seconds())
 	}
 	return []map[string]interface{}{result}
 }
