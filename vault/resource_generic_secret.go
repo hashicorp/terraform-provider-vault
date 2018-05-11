@@ -133,7 +133,6 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 			return nil
 		}
 		jsonDataBytes, err := json.Marshal(secret.Data)
-		log.Printf("[DEBUG] Secret is %s", jsonDataBytes)
 		if err != nil {
 			return fmt.Errorf("Error marshaling JSON for %q: %s", path, err)
 		}
@@ -148,20 +147,20 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 		for k, v := range secret.Data {
 			if vs, ok := v.(string); ok {
 				dataMap[k] = vs
-			} else {
-				// Again ignoring error because we know this value
-				// came from JSON in the first place and so must be valid.
-				vBytes, _ := json.Marshal(v)
-				dataMap[k] = string(vBytes)
+				continue
 			}
+			// Again ignoring error because we know this value
+			// came from JSON in the first place and so must be valid.
+			vBytes, _ := json.Marshal(v)
+			dataMap[k] = string(vBytes)
 		}
 		d.Set("data", dataMap)
 
 		d.Set("path", path)
 		return nil
-	} else {
-		return genericSecretResourceRead(d, meta)
 	}
+
+	return genericSecretResourceRead(d, meta)
 }
 
 func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error {
