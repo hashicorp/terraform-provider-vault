@@ -50,6 +50,10 @@ The following arguments are supported:
 
 * `data_json` - (Required) String containing a JSON-encoded object that will be
   written as the secret data at the given path.
+  
+* `capture_response` - (Optional) True/false.  Set this to true for writes which return data
+  as part of their response (i.e. CSRs generated with the pki backend).  The data will be 
+  available in the data_json and data attributes.
 
 * `allow_read` - (Optional, Deprecated) True/false. Set this to true if your
   vault authentication is able to read the data, this allows the resource to be

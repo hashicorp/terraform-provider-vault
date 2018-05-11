@@ -45,10 +45,10 @@ func genericSecretResource() *schema.Resource {
 			},
 
 			"data": &schema.Schema{
-				Type:		  schema.TypeMap,
-				Required:	  false,
-				Description:  "Data returned from the resource.  Should be a map containing the content from data_json.",
-				Computed:	  true,
+				Type:        schema.TypeMap,
+				Required:    false,
+				Description: "Data returned from the resource.  Should be a map containing the content from data_json.",
+				Computed:    true,
 			},
 
 			"allow_read": &schema.Schema{
