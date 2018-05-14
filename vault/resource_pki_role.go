@@ -311,7 +311,7 @@ func pkiRoleResourceRead(d *schema.ResourceData, meta interface{}) error {
 
 	keyBits, err := resp.Data["key_bits"].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("Expected key_bits to be a number, isn't", resp.Data["key_bits"])
+		return fmt.Errorf("Expected key_bits to be a number, isn't (%q)", resp.Data["key_bits"])
 	}
 
 	d.Set("ttl", resp.Data["ttl"])
