@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"encoding/base64"
 	"fmt"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -30,7 +31,7 @@ func consulSecretRoleResource() *schema.Resource {
 			"role": &schema.Schema{
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The role in base64 encoded string",
+				Description: "The role ACL",
 			},
 		},
 	}
@@ -43,8 +44,10 @@ func roleWrite(d *schema.ResourceData, meta interface{}) error {
 	name := d.Get("name").(string)
 	role := d.Get("role").(string)
 
+	roleBase64Encoded := base64.StdEncoding.EncodeToString([]byte(role))
+
 	data := map[string]interface{}{
-		"policy": role,
+		"policy": roleBase64Encoded,
 	}
 
 	log.Printf("[DEBUG] Writing Consul role %s to Vault backend %s", role, name)
@@ -83,6 +86,10 @@ func roleRead(d *schema.ResourceData, meta interface{}) error {
 	role, err := client.Logical().Read(mountName + "/roles/" + name)
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
+	}
+
+	if err != nil {
+		return fmt.Errorf("error decoding role: %s", err)
 	}
 
 	d.Set("role", role)
