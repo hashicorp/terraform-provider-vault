@@ -1,100 +1,52 @@
 package vault
 
 import (
-	"encoding/base64"
 	"fmt"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/vault/api"
-	"log"
+	"testing"
+
+	r "github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform/terraform"
 )
 
-func consulSecretRoleResource() *schema.Resource {
-	return &schema.Resource{
-		Create: roleWrite,
-		Update: roleWrite,
-		Read:   roleRead,
-		Delete: roleDelete,
+// Prerequisite - `vault secret enable consul`
+// need to establish and enable consul secret backend before running this test.
 
-		Schema: map[string]*schema.Schema{
-			"mount": &schema.Schema{
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    false,
-				Description: "Name of the Consul secret mount which you have mounted earlier",
-			},
-			"name": &schema.Schema{
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "Name of the role",
-			},
-			"role": &schema.Schema{
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The role ACL",
+func TestResourceConsulSecretRole(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			r.TestStep{
+				Config: testResourceConsulSecretRole_config,
+				Check:  testResourceConsulSecretRole_check,
 			},
 		},
-	}
+	})
 }
 
-func roleWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+var testResourceConsulSecretRole_config = `
 
-	mountName := d.Get("mount").(string)
-	name := d.Get("name").(string)
-	role := d.Get("role").(string)
-
-	roleBase64Encoded := base64.StdEncoding.EncodeToString([]byte(role))
-
-	data := map[string]interface{}{
-		"policy": roleBase64Encoded,
-	}
-
-	log.Printf("[DEBUG] Writing Consul role %s to Vault backend %s", role, name)
-	_, err := client.Logical().Write(mountName+"/roles/"+name, data)
-	if err != nil {
-		return fmt.Errorf("error writing to Vault: %s", err)
-	}
-
-	d.SetId(name)
-
-	return policyRead(d, meta)
+resource "vault_consul_secret_backend_role" "test" {
+  mount = "consul"
+  name = "test"
+  role = <<EOF
+key "lolly" { policy = "read" }
+key "pop" { policy = "write" }
+EOF
 }
 
-func roleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+`
 
-	mountName := d.Get("mount").(string)
-	name := d.Id()
-
-	log.Printf("[DEBUG] Deleting role %s from Vault", name)
-
-	_, err := client.Logical().Delete(mountName + "/roles/" + name)
-	if err != nil {
-		return fmt.Errorf("error deleting from Vault: %s", err)
+func testResourceConsulSecretRole_check(s *terraform.State) error {
+	resourceState := s.Modules[0].Resources["vault_consul_secret_backend_role.test"]
+	if resourceState == nil {
+		return fmt.Errorf("resource not found in state %v", s.Modules[0].Resources)
 	}
 
-	return nil
-}
-
-func roleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
-	mountName := d.Get("mount").(string)
-	name := d.Id()
-
-	role, err := client.Logical().Read(mountName + "/roles/" + name)
-	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+	iState := resourceState.Primary
+	if iState == nil {
+		return fmt.Errorf("resource has no primary instance")
 	}
-
-	if err != nil {
-		return fmt.Errorf("error decoding role: %s", err)
-	}
-
-	d.Set("role", role)
-	d.Set("name", name)
-	d.Set("mount", mountName)
 
 	return nil
 }
