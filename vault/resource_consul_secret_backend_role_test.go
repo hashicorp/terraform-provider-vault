@@ -3,10 +3,9 @@ package vault
 import (
 	"encoding/base64"
 	"fmt"
-	"log"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
+	"log"
 )
 
 func consulSecretRoleResource() *schema.Resource {
