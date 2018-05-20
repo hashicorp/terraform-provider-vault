@@ -3,6 +3,10 @@
 BUG FIXES:
 * Fix panic in `vault_approle_auth_backend_role` when used with Vault 0.10 [GH-103]
 
+FEATURES:
+
+* **New Resource**: `vault_consul_secret_engine_role`
+
 ## 1.1.0 (April 09, 2018)
 
 FEATURES:
