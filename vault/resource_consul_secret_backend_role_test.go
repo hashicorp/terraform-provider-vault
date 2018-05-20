@@ -10,8 +10,6 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-// Prerequisite - `vault secret enable consul`
-
 func TestResourceConsulSecretRole(t *testing.T) {
 	client := testProvider.Meta().(*api.Client)
 	_, err := client.Logical().Delete("/sys/mounts/consul")
