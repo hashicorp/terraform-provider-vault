@@ -3,13 +3,14 @@ package vault
 import (
 	"fmt"
 	"testing"
+	"encoding/base64"
 
 	r "github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/vault/api"
 )
 
 // Prerequisite - `vault secret enable consul`
-// need to establish and enable consul secret backend before running this test.
 
 func TestResourceConsulSecretRole(t *testing.T) {
 	r.Test(t, r.TestCase{
@@ -30,15 +31,17 @@ resource "vault_consul_secret_backend_role" "test" {
   mount = "consul"
   name = "test"
   role = <<EOF
-key "lolly" { policy = "read" }
-key "pop" { policy = "write" }
+key "foo" { policy = "read" }
+key "bar/baz" { policy = "write" }
 EOF
 }
 
 `
 
 func testResourceConsulSecretRole_check(s *terraform.State) error {
+	client := testProvider.Meta().(*api.Client)
 	resourceState := s.Modules[0].Resources["vault_consul_secret_backend_role.test"]
+
 	if resourceState == nil {
 		return fmt.Errorf("resource not found in state %v", s.Modules[0].Resources)
 	}
@@ -46,6 +49,33 @@ func testResourceConsulSecretRole_check(s *terraform.State) error {
 	iState := resourceState.Primary
 	if iState == nil {
 		return fmt.Errorf("resource has no primary instance")
+	}
+
+	mountName := resourceState.Primary.Attributes["mount"]
+	if mountName != "consul" {
+		return fmt.Errorf("resource mount name should be 'consul', but was %s", mountName)
+	}
+
+	role, err := client.Logical().Read("/consul/roles/test")
+	if err != nil {
+		return fmt.Errorf("error reading role from path /consul/roles/test; got %s", err)
+	}
+
+	expectedEncodedPolicy := "a2V5ICJmb28iIHsgcG9saWN5ID0gInJlYWQiIH0Ka2V5ICJiYXIvYmF6IiB7IHBvbGljeSA9ICJ3cml0ZSIgfQo="
+	encodedPolicy := role.Data["policy"]
+	if encodedPolicy != expectedEncodedPolicy {
+		return fmt.Errorf("encoded policy should be %s but was %s", expectedEncodedPolicy, encodedPolicy)
+	}
+
+	expectedTokenType := "client"
+	tokenType := role.Data["token_type"]
+	if tokenType != expectedTokenType {
+		return fmt.Errorf("token type should be %s but was %s", expectedTokenType, tokenType)
+	}
+
+	roleBase64Encoded := base64.StdEncoding.EncodeToString([]byte(resourceState.Primary.Attributes["role"]))
+	if roleBase64Encoded != encodedPolicy {
+		return fmt.Errorf("encoded policy %s from backend does not match the test policy %s", encodedPolicy, roleBase64Encoded)
 	}
 
 	return nil
