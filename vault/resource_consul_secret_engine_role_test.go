@@ -38,7 +38,7 @@ func TestResourceConsulSecretRole(t *testing.T) {
 
 var testResourceConsulSecretRole_config = `
 
-resource "vault_consul_secret_backend_role" "test" {
+resource "vault_consul_secret_engine_role" "test" {
   mount = "consul"
   name = "test"
   role = <<EOF
@@ -51,7 +51,7 @@ EOF
 
 func testResourceConsulSecretRole_check(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
-	resourceState := s.Modules[0].Resources["vault_consul_secret_backend_role.test"]
+	resourceState := s.Modules[0].Resources["vault_consul_secret_engine_role.test"]
 
 	if resourceState == nil {
 		return fmt.Errorf("resource not found in state %v", s.Modules[0].Resources)
