@@ -12,7 +12,8 @@ import (
 )
 
 func TestResourceConsulRole(t *testing.T) {
-	path := acctest.RandomWithPrefix("consul/roles/test")
+	path := acctest.RandomWithPrefix("test")
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -30,7 +31,7 @@ func TestResourceConsulRole(t *testing.T) {
 }
 
 func TestResourceConsulRole_deleted(t *testing.T) {
-	path := acctest.RandomWithPrefix("consul/roles/test")
+	path := acctest.RandomWithPrefix("test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -42,7 +43,7 @@ func TestResourceConsulRole_deleted(t *testing.T) {
 			resource.TestStep{
 				PreConfig: func() {
 					client := testProvider.Meta().(*api.Client)
-					_, err := client.Logical().Delete(path)
+					_, err := client.Logical().Delete("consul/roles/" + path)
 					if err != nil {
 						t.Fatalf("unable to manually delete the consul role via the SDK: %s", err)
 					}
@@ -99,7 +100,7 @@ func testResourceConsulRole_initialCheck(expectedName string) resource.TestCheck
 			return fmt.Errorf("error base64 decoding role: %s", err)
 		}
 
-		if got, want := string(decodedPolicy[:]), "key \"zip/zap\" { policy = \"read\" }"; got != want {
+		if got, want := string(decodedPolicy[:]), "key \"zip/zap\" { policy = \"read\" }\n"; got != want {
 			return fmt.Errorf("role data is %q; want %q", got, want)
 		}
 
@@ -109,8 +110,8 @@ func testResourceConsulRole_initialCheck(expectedName string) resource.TestCheck
 
 var testResourceConsulRole_updateConfig = `
 resource "vault_consul_role" "test" {
-    name = "%s"
-    role = <<EOT
+    name = "test"
+    policy = <<EOT
 key "zip/zoop" { policy = "write" }
 EOT
 }
@@ -133,7 +134,7 @@ func testResourceConsulRole_updateCheck(s *terraform.State) error {
 		return fmt.Errorf("error base64 decoding role: %s", err)
 	}
 
-	if got, want := string(decodedPolicy[:]), "key \"zip/zoop\" { policy = \"write\" }"; got != want {
+	if got, want := string(decodedPolicy[:]), "key \"zip/zoop\" { policy = \"write\" }\n"; got != want {
 		return fmt.Errorf("role data is %q; want %q", got, want)
 	}
 	return nil
