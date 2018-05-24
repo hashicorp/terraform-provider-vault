@@ -6,7 +6,7 @@ description: |-
   Manages AppRole auth backend roles in Vault.
 ---
 
-# vault\_approle\_auth\_backend\_role
+# vault\_approle\_auth\_backend\_role\_id
 
 Reads the Role ID of an AppRole from a Vault server.
 
