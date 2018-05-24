@@ -32,6 +32,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Name of the role.",
+				ForceNew:    true,
 			},
 			"auth_type": {
 				Type:        schema.TypeString,
