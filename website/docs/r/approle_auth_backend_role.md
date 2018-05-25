@@ -66,6 +66,9 @@ The following arguments are supported:
   value of this field. The maximum allowed lifetime of token issued using this
   role. Specified as a number of seconds.
 
+* `backend` - (Optional) The unique name of the auth backend to configure.
+  Defaults to `approle`.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
