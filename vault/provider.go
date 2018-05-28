@@ -86,6 +86,7 @@ func Provider() terraform.ResourceProvider {
 		DataSourcesMap: map[string]*schema.Resource{
 			"vault_approle_auth_backend_role_id": approleAuthBackendRoleIDDataSource(),
 			"vault_aws_access_credentials":       awsAccessCredentialsDataSource(),
+			"vault_ssh_signed_key":               sshSignCertificateDataSource(),
 			"vault_generic_secret":               genericSecretDataSource(),
 		},
 
