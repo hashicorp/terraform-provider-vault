@@ -212,6 +212,7 @@ func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestChe
 			"bound_subnet_id":                "bound_subnet_id",
 			"bound_iam_role_arn":             "bound_iam_role_arn",
 			"bound_iam_instance_profile_arn": "bound_iam_instance_profile_arn",
+			"bound_ec2_instance_id":          "bound_ec2_instance_id",
 			"role_tag":                       "role_tag",
 			"bound_iam_principal_arn":        "bound_iam_principal_arn",
 			"inferred_entity_type":           "inferred_entity_type",
@@ -302,6 +303,7 @@ resource "vault_aws_auth_backend_role" "role" {
   bound_subnet_id = "vpc-a33128f1"
   bound_iam_role_arn = "arn:aws:iam::123456789012:role/S3Access"
   bound_iam_instance_profile_arn = "arn:aws:iam::123456789012:instance-profile/Webserver"
+  bound_ec2_instance_id = "i-06bb291939760ba66"
   inferred_entity_type = "ec2_instance"
   inferred_aws_region = "us-east-1"
   ttl = 60
@@ -366,6 +368,7 @@ resource "vault_aws_auth_backend_role" "role" {
   bound_subnet_id = "vpc-a33128f1"
   bound_iam_role_arn = "arn:aws:iam::123456789012:role/S3Access"
   bound_iam_instance_profile_arn = "arn:aws:iam::123456789012:instance-profile/Webserver"
+  bound_ec2_instance_id = "i-06bb291939760ba66"
   role_tag = "VaultRoleTag"
   allow_instance_migration = true
   disallow_reauthentication = true
