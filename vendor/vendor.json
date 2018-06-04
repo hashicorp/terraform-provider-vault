@@ -15,6 +15,12 @@
 			"revisionTime": "2016-08-26T14:30:32Z"
 		},
 		{
+			"checksumSHA1": "GCTVJ1J/SGZstNZauuLAnTFOhGA=",
+			"path": "github.com/armon/go-radix",
+			"revision": "1fca145dffbcaa8fe914309b1ec0cfc67500fe61",
+			"revisionTime": "2017-07-27T15:54:43Z"
+		},
+		{
 			"checksumSHA1": "fFU9OeM0pKWGL3D+Fa3PmHSjjLg=",
 			"path": "github.com/aws/aws-sdk-go/aws",
 			"revision": "be4fa13e47938e4801fada8c8ca3d1867ad3dcb3",
@@ -225,6 +231,12 @@
 			"path": "github.com/bgentry/go-netrc/netrc",
 			"revision": "9fd32a8b3d3d3f9d43c341bfe098430e07609480",
 			"revisionTime": "2014-04-22T17:41:19Z"
+		},
+		{
+			"checksumSHA1": "oTmBS67uxM6OXB/+OJUAG9LK4jw=",
+			"path": "github.com/bgentry/speakeasy",
+			"revision": "4aabc24848ce5fd31929f7d1e4ea74d3709c14cd",
+			"revisionTime": "2017-04-17T20:07:03Z"
 		},
 		{
 			"checksumSHA1": "OT4XN9z5k69e2RsMSpwW74B+yk4=",
@@ -564,6 +576,12 @@
 			"revisionTime": "2018-05-25T23:20:11Z"
 		},
 		{
+			"checksumSHA1": "NKuji4DOr6kia0RGemhGbnHIb5Y=",
+			"path": "github.com/hashicorp/vault/command/token",
+			"revision": "95978c208f0b4c0966f3ef2edc1c8ca62cfe3e2e",
+			"revisionTime": "2018-05-25T23:20:11Z"
+		},
+		{
 			"checksumSHA1": "ft77GtqeZEeCXioGpF/s6DlGm/U=",
 			"path": "github.com/hashicorp/vault/helper/compressutil",
 			"revision": "9a60bf2a50e4dd1ba4b929a3ccf8072435cbdd0a",
@@ -587,6 +605,18 @@
 			"path": "github.com/jmespath/go-jmespath",
 			"revision": "bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d",
 			"revisionTime": "2016-08-03T19:07:31Z"
+		},
+		{
+			"checksumSHA1": "AZO2VGorXTMDiSVUih3k73vORHY=",
+			"path": "github.com/mattn/go-isatty",
+			"revision": "6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c",
+			"revisionTime": "2017-11-07T05:05:31Z"
+		},
+		{
+			"checksumSHA1": "UIqCj7qI0hhIMpAhS9YYqs2jD48=",
+			"path": "github.com/mitchellh/cli",
+			"revision": "65fcae5817c8600da98ada9d7edf26dd1a84837b",
+			"revisionTime": "2017-09-08T18:10:43Z"
 		},
 		{
 			"checksumSHA1": "guxbLo8KHHBeM0rzou4OTzzpDNs=",
@@ -616,6 +646,30 @@
 			"path": "github.com/mitchellh/reflectwalk",
 			"revision": "92573fe8d000a145bfebc03a16bc22b34945867f",
 			"revisionTime": "2016-10-03T17:45:16Z"
+		},
+		{
+			"checksumSHA1": "Nt4Ol6ZM2n0XD5zatxjwEYBpQnw=",
+			"path": "github.com/posener/complete",
+			"revision": "dc2bc5a81accba8782bebea28628224643a8286a",
+			"revisionTime": "2017-11-04T09:57:02Z"
+		},
+		{
+			"checksumSHA1": "NB7uVS0/BJDmNu68vPAlbrq4TME=",
+			"path": "github.com/posener/complete/cmd",
+			"revision": "dc2bc5a81accba8782bebea28628224643a8286a",
+			"revisionTime": "2017-11-04T09:57:02Z"
+		},
+		{
+			"checksumSHA1": "Hwojin3GxRyKwPAiz5r7UszqkPc=",
+			"path": "github.com/posener/complete/cmd/install",
+			"revision": "dc2bc5a81accba8782bebea28628224643a8286a",
+			"revisionTime": "2017-11-04T09:57:02Z"
+		},
+		{
+			"checksumSHA1": "DMo94FwJAm9ZCYCiYdJU2+bh4no=",
+			"path": "github.com/posener/complete/match",
+			"revision": "dc2bc5a81accba8782bebea28628224643a8286a",
+			"revisionTime": "2017-11-04T09:57:02Z"
 		},
 		{
 			"checksumSHA1": "u5s2PZ7fzCOqQX7bVPf9IJ+qNLQ=",
