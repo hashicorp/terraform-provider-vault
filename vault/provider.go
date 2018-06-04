@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"strings"
 
@@ -10,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/go-homedir"
+	"github.com/hashicorp/vault/command/config"
 )
 
 func Provider() terraform.ResourceProvider {
@@ -129,8 +128,8 @@ func Provider() terraform.ResourceProvider {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	config := api.DefaultConfig()
-	config.Address = d.Get("address").(string)
+	clientConfig := api.DefaultConfig()
+	clientConfig.Address = d.Get("address").(string)
 
 	clientAuthI := d.Get("client_auth").([]interface{})
 	if len(clientAuthI) > 1 {
@@ -145,7 +144,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		clientAuthKey = clientAuth["key_file"].(string)
 	}
 
-	err := config.ConfigureTLS(&api.TLSConfig{
+	err := clientConfig.ConfigureTLS(&api.TLSConfig{
 		CACert:   d.Get("ca_cert_file").(string),
 		CAPath:   d.Get("ca_cert_dir").(string),
 		Insecure: d.Get("skip_tls_verify").(bool),
@@ -157,26 +156,24 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, fmt.Errorf("failed to configure TLS for Vault API: %s", err)
 	}
 
-	config.HttpClient.Transport = logging.NewTransport("Vault", config.HttpClient.Transport)
+	clientConfig.HttpClient.Transport = logging.NewTransport("Vault", clientConfig.HttpClient.Transport)
 
-	client, err := api.NewClient(config)
+	client, err := api.NewClient(clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
 	}
 
 	token := d.Get("token").(string)
 	if token == "" {
-		// Use the vault CLI's token, if present.
-		homePath, err := homedir.Dir()
+		// Use ~/.vault-token, or the configured token helper.
+		tokenHelper, err := config.DefaultTokenHelper()
 		if err != nil {
-			return nil, fmt.Errorf("can't find home directory when looking for ~/.vault-token: %s", err)
+			return nil, fmt.Errorf("error getting token helper: %s", err)
 		}
-		tokenBytes, err := ioutil.ReadFile(homePath + "/.vault-token")
+		token, err = tokenHelper.Get()
 		if err != nil {
-			return nil, fmt.Errorf("no vault token found: %s", err)
+			return nil, fmt.Errorf("error getting token: %s", err)
 		}
-
-		token = strings.TrimSpace(string(tokenBytes))
 	}
 
 	// In order to enforce our relatively-short lease TTL, we derive a
