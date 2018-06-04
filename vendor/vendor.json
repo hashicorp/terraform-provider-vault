@@ -558,6 +558,12 @@
 			"revisionTime": "2018-06-20T14:55:40Z"
 		},
 		{
+			"checksumSHA1": "cYsW0ei8JxRNXy1ZHoHjYlBRDIQ=",
+			"path": "github.com/hashicorp/vault/command/config",
+			"revision": "95978c208f0b4c0966f3ef2edc1c8ca62cfe3e2e",
+			"revisionTime": "2018-05-25T23:20:11Z"
+		},
+		{
 			"checksumSHA1": "ft77GtqeZEeCXioGpF/s6DlGm/U=",
 			"path": "github.com/hashicorp/vault/helper/compressutil",
 			"revision": "9a60bf2a50e4dd1ba4b929a3ccf8072435cbdd0a",
