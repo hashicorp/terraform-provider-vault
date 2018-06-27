@@ -42,6 +42,7 @@ func genericSecretResource() *schema.Resource {
 				// when disable_read is false for comparing values.
 				StateFunc:    NormalizeDataJSON,
 				ValidateFunc: ValidateDataJSON,
+				Sensitive:    true,
 			},
 
 			"allow_read": &schema.Schema{
