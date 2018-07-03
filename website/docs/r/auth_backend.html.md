@@ -30,3 +30,11 @@ The following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+Authentication backends can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_auth_backend.example github
+```

@@ -69,3 +69,11 @@ The following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+AppRole authentication backend roles can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_approle_auth_backend_role.example auth/approle/role/test-role
+```
