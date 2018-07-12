@@ -151,6 +151,11 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 		"secret_id_accessor": accessor,
 	})
 	if err != nil {
+		// We need to check if the secret_id has expired
+		if strings.Contains(err.Error(), "failed to find accessor entry") {
+			d.SetId("")
+			return nil
+		}
 		return fmt.Errorf("Error reading AppRole auth backend role SecretID %q: %s", id, err)
 	}
 	log.Printf("[DEBUG] Read AppRole auth backend role SecretID %q", id)
@@ -231,6 +236,10 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 		"secret_id_accessor": accessor,
 	})
 	if err != nil {
+		// We need to check if the secret_id has expired
+		if strings.Contains(err.Error(), "failed to find accessor entry") {
+			return true, nil
+		}
 		return true, fmt.Errorf("Error checking if AppRole auth backend role SecretID %q exists: %s", id, err)
 	}
 	log.Printf("[DEBUG] Checked if AppRole auth backend role SecretID %q exists", id)

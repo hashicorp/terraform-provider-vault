@@ -59,6 +59,12 @@ func mountResource() *schema.Resource {
 				ForceNew:    false,
 				Description: "Maximum possible lease duration for tokens and secrets in seconds",
 			},
+
+			"accessor": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Accessor of the mount",
+			},
 		},
 	}
 }
@@ -162,6 +168,7 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
+	d.Set("accessor", mount.Accessor)
 
 	return nil
 }
