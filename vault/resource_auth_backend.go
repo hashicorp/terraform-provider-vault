@@ -54,6 +54,12 @@ func authBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "The description of the auth backend",
 			},
+
+			"accessor": &schema.Schema{
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The accessor of the auth backend",
+			},
 		},
 	}
 }
@@ -114,6 +120,7 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 			d.Set("type", auth.Type)
 			d.Set("path", path)
 			d.Set("description", auth.Description)
+			d.Set("accessor", auth.Accessor)
 			return nil
 		}
 	}

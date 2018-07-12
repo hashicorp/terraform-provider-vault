@@ -145,6 +145,9 @@ func testResourceAuth_updateCheck(s *terraform.State) error {
 	for _, auth := range auths {
 		if auth.Type == name {
 			found = true
+			if wanted := instanceState.Attributes["accessor"]; auth.Accessor != wanted {
+				return fmt.Errorf("accessor is %v; wanted %v", auth.Accessor, wanted)
+			}
 			break
 		}
 	}
