@@ -1,7 +1,7 @@
-## 1.1.1 (Unreleased)
+## 1.1.1 (July 23, 2018)
 
 BUG FIXES:
-* Fix panic in `vault_approle_auth_backend_role` when used with Vault 0.10 [GH-103]
+* Fix panic in `vault_approle_auth_backend_role` when used with Vault 0.10 ([#103](https://github.com/terraform-providers/terraform-provider-vault/issues/103))
 
 ## 1.1.0 (April 09, 2018)
 
