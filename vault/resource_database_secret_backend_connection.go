@@ -343,12 +343,7 @@ func getConnectionDetailsFromResponse(resp *api.Secret) []map[string]interface{}
 		}
 	}
 	if v, ok := data["max_connection_lifetime"]; ok {
-		i, err := v.(json.Number).Int64()
-		if err != nil {
-			log.Printf("[WARN] Non-number %s returned from Vault server: %s", v, err)
-		} else {
-			result["max_connection_lifetime"] = i
-		}
+		result["max_connection_lifetime"] = v.(string)
 	}
 	return []map[string]interface{}{result}
 }
