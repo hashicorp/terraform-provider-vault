@@ -367,7 +367,6 @@ resource "vault_aws_auth_backend_role" "role" {
   bound_iam_role_arn = "arn:aws:iam::123456789012:role/S3Access"
   bound_iam_instance_profile_arn = "arn:aws:iam::123456789012:instance-profile/Webserver"
   role_tag = "VaultRoleTag"
-  allow_instance_migration = true
   disallow_reauthentication = true
   ttl = 60
   max_ttl = 120
