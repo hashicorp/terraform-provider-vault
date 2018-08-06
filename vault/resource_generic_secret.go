@@ -96,12 +96,26 @@ func NormalizeDataJSON(configI interface{}) string {
 func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	path := d.Get("path").(string)
-
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data)
 	if err != nil {
 		return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
+	}
+
+	path := d.Get("path").(string)
+	originalPath := path // if the path belongs to a v2 endpoint, it will be modified
+	mountPath, v2, err := isKVv2(path, client)
+	if err != nil {
+		return fmt.Errorf("error determining if it's a v2 path: %s", err)
+	}
+
+	if v2 {
+		path = addPrefixToVKVPath(path, mountPath, "data")
+		data = map[string]interface{}{
+			"data":    data,
+			"options": map[string]interface{}{},
+		}
+
 	}
 
 	log.Printf("[DEBUG] Writing generic Vault secret to %s", path)
@@ -110,7 +124,7 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
 
-	d.SetId(path)
+	d.SetId(originalPath)
 
 	return genericSecretResourceRead(d, meta)
 }
@@ -120,8 +134,17 @@ func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error
 
 	path := d.Id()
 
+	mountPath, v2, err := isKVv2(path, client)
+	if err != nil {
+		return fmt.Errorf("error determining if it's a v2 path: %s", err)
+	}
+
+	if v2 {
+		path = addPrefixToVKVPath(path, mountPath, "data")
+	}
+
 	log.Printf("[DEBUG] Deleting vault_generic_secret from %q", path)
-	_, err := client.Logical().Delete(path)
+	_, err = client.Logical().Delete(path)
 	if err != nil {
 		return fmt.Errorf("error deleting %q from Vault: %q", path, err)
 	}
@@ -143,7 +166,8 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 		client := meta.(*api.Client)
 
 		log.Printf("[DEBUG] Reading %s from Vault", path)
-		secret, err := client.Logical().Read(path)
+		secret, err := versionedSecret(-1, path, client)
+
 		if err != nil {
 			return fmt.Errorf("error reading from Vault: %s", err)
 		}
@@ -155,11 +179,12 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 
 		log.Printf("[DEBUG] secret: %#v", secret)
 
-		jsonDataBytes, err := json.Marshal(secret.Data)
+		jsonData, err := json.Marshal(secret.Data)
 		if err != nil {
 			return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
 		}
-		d.Set("data_json", string(jsonDataBytes))
+
+		d.Set("data_json", string(jsonData))
 		d.Set("path", path)
 	} else {
 		log.Printf("[WARN] vault_generic_secret does not refresh when disable_read is set to true")

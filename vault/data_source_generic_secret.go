@@ -22,6 +22,13 @@ func genericSecretDataSource() *schema.Resource {
 				Description: "Full path from which a secret will be read.",
 			},
 
+			"version": {
+				Type:     schema.TypeInt,
+				Required: false,
+				Optional: true,
+				Default:  -1,
+			},
+
 			"data_json": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -66,8 +73,10 @@ func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error
 
 	path := d.Get("path").(string)
 
-	log.Printf("[DEBUG] Reading %s from Vault", path)
-	secret, err := client.Logical().Read(path)
+	secretVersion := d.Get("version").(int)
+	log.Printf("[DEBUG] Reading %s %d from Vault", path, secretVersion)
+
+	secret, err := versionedSecret(secretVersion, path, client)
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
