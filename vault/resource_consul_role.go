@@ -38,6 +38,11 @@ func consulRoleResource() *schema.Resource {
 				Default:     "client",
 				Description: "Consul token type",
 			},
+			"lease": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Consul Role Lease Duration",
+			},
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -69,8 +74,11 @@ func consulRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	data := map[string]interface{}{
 		"policy":     base64.StdEncoding.EncodeToString([]byte(policy)),
-		"lease":      0,
 		"token_type": tokenType,
+	}
+
+	if leaseDuration, ok := d.GetOk("lease"); ok {
+		data["lease"] = leaseDuration
 	}
 
 	path := userPath + "/roles/" + name
