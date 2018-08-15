@@ -4,98 +4,90 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/vault/api"
 )
 
-func TestResourceToken(t *testing.T) {
-	policy := acctest.RandomWithPrefix("test-")
+func testResourceTokenCheckDestroy(s *terraform.State) error {
+	client := testProvider.Meta().(*api.Client)
+
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "vault_token" {
+			continue
+		}
+		_, err := client.Auth().Token().LookupAccessor(rs.Primary.ID)
+		if err == nil {
+			return fmt.Errorf("token with accessor %q still exists", rs.Primary.ID)
+		}
+	}
+	return nil
+}
+
+func TestResourceToken_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testResourceTokenCheckDestroy,
 		Steps: []resource.TestStep{
-			resource.TestStep{
-				Config: testResourceToken_initialConfig(),
-				Check:  testResourceToken_initialCheck(),
-			},
-			resource.TestStep{
-				Config: testResourceToken_policyConfig(policy),
-				Check:  testResourceToken_policyCheck(policy),
+			{
+				Config: testResourceTokenConfig_basic(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_token.test", "policies.#", "1"),
+				),
 			},
 		},
 	})
 }
 
-func testResourceToken_initialConfig() string {
+func testResourceTokenConfig_basic() string {
 	return `
-resource "vault_token" "test" {
-	policies = [ "basic" ]
-}
-`
-}
-
-func testResourceToken_initialCheck() resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_token.test"]
-		if resourceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
-
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("resource has no primary instance")
-		}
-
-		name := instanceState.ID
-
-		if name != instanceState.Attributes["client_token"] {
-			return fmt.Errorf("id %q doesn't match client_token %q", name, instanceState.Attributes["client_token"])
-		}
-
-		return nil
-	}
-}
-
-func testResourceToken_policyConfig(policy string) string {
-	return fmt.Sprintf(`
 resource "vault_policy" "test" {
-	name = "%s"
+	name = "test"
 	policy = <<EOT
-path "secret/*" {
-	policy = "read"
-}
+path "secret/*" { capabilities = [ "list" ] }
 EOT
 }
 
 resource "vault_token" "test" {
 	policies = [ "${vault_policy.test.name}" ]
+	ttl = "60s"
+}`
 }
-`, policy)
+
+func TestResourceToken_role(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testResourceTokenCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceTokenConfig_role(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_token.test", "role_name", "test"),
+					resource.TestCheckResourceAttr("vault_token.test", "policies.#", "1"),
+				),
+			},
+		},
+	})
 }
 
-func testResourceToken_policyCheck(expectedPolicy string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_token.test"]
-		if resourceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
+func testResourceTokenConfig_role() string {
+	return `
+resource "vault_policy" "test" {
+	name = "test"
+	policy = <<EOT
+path "secret/*" { capabilities = [ "list" ] }
+EOT
+}
 
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("resource has no primary instance")
-		}
+resource "vault_token_role" "test" {
+	name = "test"
+}
 
-		policiesCount := instanceState.Attributes["policies.#"]
-		if policiesCount != "1" {
-			return fmt.Errorf("unexpected policies count %s, expected %d", policiesCount, 1)
-		}
-
-		policy := instanceState.Attributes["policies.0"]
-		if policy != expectedPolicy {
-			return fmt.Errorf("unexpected policy name %q, expected %q", policy, expectedPolicy)
-		}
-
-		return nil
-	}
+resource "vault_token" "test" {
+	role_name = "${vault_token_role.test.name}"
+	policies = [ "${vault_policy.test.name}" ]
+	ttl = "60s"
+}`
 }

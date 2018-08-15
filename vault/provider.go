@@ -141,6 +141,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_rabbitmq_secret_backend":             rabbitmqSecretBackendResource(),
 			"vault_rabbitmq_secret_backend_role":        rabbitmqSecretBackendRoleResource(),
 			"vault_token":                               tokenResource(),
+			"vault_token_role":                          tokenRoleResource(),
 		},
 	}
 }
