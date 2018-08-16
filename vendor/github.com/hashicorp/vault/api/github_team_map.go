@@ -2,43 +2,30 @@ package api
 
 import (
 	"fmt"
-
-	"github.com/mitchellh/mapstructure"
+	"github.com/tidwall/gjson"
+	"io/ioutil"
 )
 
-func (c *Sys) GetGithubTeamMap(team_name string) (string, error) {
-	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/auth/github/map/teams/%s", team_name))
+func (c *Sys) GetGithubTeamMap(name string) (string, error) {
+	r := c.c.NewRequest("GET", fmt.Sprintf("/v1/auth/github/map/teams/%s", name))
 	resp, err := c.c.RawRequest(r)
-	if resp != nil {
-		defer resp.Body.Close()
-		if resp.StatusCode == 404 {
-			return "", nil
-		}
-	}
+	
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
-	}
+	 panic(err.Error())
+   	}
+	bodyString := string(body)
 
-	var result map[string]interface{}
-	err = resp.DecodeJSON(&result)
-	if err != nil {
-		return "", err
-	}
-
-	var ok bool
-	if _, ok = result["data"]; !ok {
-		return "", fmt.Errorf("policies mapped to group not found in response")
-	}
-
-	return result["data"].(string), nil
+	policy := gjson.Get(bodyString, "data.value")	
+	return policy.String(), nil
 }
 
-func (c *Sys) PostGithubTeamMap(team_name, policies string) error {
+func (c *Sys) PostGithubTeamMap(name, policies string) error {
 	body := map[string]string{
 		"value": policies,
 	}
 
-	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/auth/github/map/teams/%s", team_name))
+	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/auth/github/map/teams/%s", name))
 	if err := r.SetJSONBody(body); err != nil {
 		return err
 	}
@@ -50,4 +37,14 @@ func (c *Sys) PostGithubTeamMap(team_name, policies string) error {
 	defer resp.Body.Close()
 
 	return nil
+}
+
+
+func (c *Sys) DeleteGithubTeamMap(name string) error {
+	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/auth/github/map/teams/%s", name))
+	resp, err := c.c.RawRequest(r)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+	return err
 }

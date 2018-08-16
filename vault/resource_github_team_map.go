@@ -3,7 +3,6 @@ package vault
 import (
 	"fmt"
 	"log"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
