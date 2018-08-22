@@ -57,6 +57,7 @@ func oktaAuthBackendResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				Description: "The Okta API token. This is required to query Okta for user group membership. If this is not supplied only locally configured groups will be enabled.",
+				Sensitive:   true,
 			},
 
 			"base_url": {
