@@ -30,7 +30,7 @@ resource "vault_approle_auth_backend_role_secret_id" "id" {
   role_name = "${vault_approle_auth_backend_role.example.role_name}"
 }
 
-resource "vault_approle_auth_backend_role_login" "login" {
+resource "vault_approle_auth_backend_login" "login" {
   backend   = "${vault_auth_backend.approle.path}"
   role_id   = "${vault_approle_auth_backend_role.example.role_id}"
   secret_id = "${vault_approle_auth_backend_role_secret_id.id.secret_id}"
