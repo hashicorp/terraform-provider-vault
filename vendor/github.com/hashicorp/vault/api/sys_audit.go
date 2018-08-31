@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mitchellh/mapstructure"
@@ -16,7 +17,9 @@ func (c *Sys) AuditHash(path string, input string) (string, error) {
 		return "", err
 	}
 
-	resp, err := c.c.RawRequest(r)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return "", err
 	}
@@ -37,7 +40,11 @@ func (c *Sys) AuditHash(path string, input string) (string, error) {
 
 func (c *Sys) ListAudit() (map[string]*Audit, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/audit")
-	resp, err := c.c.RawRequest(r)
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := c.c.RawRequestWithContext(ctx, r)
+
 	if err != nil {
 		return nil, err
 	}
@@ -71,20 +78,26 @@ func (c *Sys) ListAudit() (map[string]*Audit, error) {
 	return mounts, nil
 }
 
+// DEPRECATED: Use EnableAuditWithOptions instead
 func (c *Sys) EnableAudit(
 	path string, auditType string, desc string, opts map[string]string) error {
-	body := map[string]interface{}{
-		"type":        auditType,
-		"description": desc,
-		"options":     opts,
-	}
+	return c.EnableAuditWithOptions(path, &EnableAuditOptions{
+		Type:        auditType,
+		Description: desc,
+		Options:     opts,
+	})
+}
 
+func (c *Sys) EnableAuditWithOptions(path string, options *EnableAuditOptions) error {
 	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/audit/%s", path))
-	if err := r.SetJSONBody(body); err != nil {
+	if err := r.SetJSONBody(options); err != nil {
 		return err
 	}
 
-	resp, err := c.c.RawRequest(r)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := c.c.RawRequestWithContext(ctx, r)
+
 	if err != nil {
 		return err
 	}
@@ -95,7 +108,11 @@ func (c *Sys) EnableAudit(
 
 func (c *Sys) DisableAudit(path string) error {
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/audit/%s", path))
-	resp, err := c.c.RawRequest(r)
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := c.c.RawRequestWithContext(ctx, r)
+
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -106,9 +123,17 @@ func (c *Sys) DisableAudit(path string) error {
 // individually documented because the map almost directly to the raw HTTP API
 // documentation. Please refer to that documentation for more details.
 
+type EnableAuditOptions struct {
+	Type        string            `json:"type"`
+	Description string            `json:"description"`
+	Options     map[string]string `json:"options"`
+	Local       bool              `json:"local"`
+}
+
 type Audit struct {
 	Path        string
 	Type        string
 	Description string
 	Options     map[string]string
+	Local       bool
 }
