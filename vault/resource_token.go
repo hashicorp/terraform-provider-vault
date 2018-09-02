@@ -3,11 +3,11 @@ package vault
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
-	"strings"
 )
 
 func tokenResource() *schema.Resource {
@@ -15,6 +15,7 @@ func tokenResource() *schema.Resource {
 		Create: tokenCreate,
 		Read:   tokenRead,
 		Delete: tokenDelete,
+		Exists: tokenExists,
 
 		Schema: map[string]*schema.Schema{
 			"role_name": {
@@ -172,8 +173,8 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		log.Printf("[DEBUG] Created token %q", resp.Auth.Accessor)
 	}
 
+	d.Set("lease_duration", resp.Auth.LeaseDuration)
 	d.Set("lease_started", time.Now().Format(time.RFC3339))
-	d.Set("accessor", resp.Auth.Accessor)
 	d.Set("client_token", resp.Auth.ClientToken)
 
 	d.SetId(resp.Auth.Accessor)
@@ -203,6 +204,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 			log.Printf("[DEBUG] Error renewing token %q, bailing", d.Id())
 		} else {
 			resp = renewed
+			d.Set("lease_duration", resp.Data["lease_duration"])
 			d.Set("lease_started", time.Now().Format(time.RFC3339))
 			d.Set("client_token", resp.Auth.ClientToken)
 
@@ -225,8 +227,6 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("renewable", resp.Data["renewable"])
 	d.Set("display_name", strings.TrimPrefix(resp.Data["display_name"].(string), "token-"))
 	d.Set("num_uses", resp.Data["num_uses"])
-	d.Set("period", resp.Data["period"])
-	d.Set("lease_duration", resp.Data["lease_duration"])
 	d.Set("accessor", resp.Data["accessor"])
 
 	return nil
@@ -245,6 +245,18 @@ func tokenDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleted token %q", token)
 
 	return nil
+}
+
+func tokenExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+	client := meta.(*api.Client)
+	accessor := d.Id()
+
+	log.Printf("[DEBUG] Checking if token %q exists", accessor)
+	resp, err := client.Auth().Token().LookupAccessor(accessor)
+	if err != nil {
+		return false, nil
+	}
+	return resp != nil, nil
 }
 
 func tokenCheckLease(d *schema.ResourceData, client *api.Client) bool {
