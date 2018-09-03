@@ -47,12 +47,12 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 				},
 			},
 
-			"ttl": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "60m",
-				Description: "TTL for STS token",
-			},
+			// "ttl": {
+			// 	Type:        schema.TypeString,
+			// 	Optional:    true,
+			// 	Default:     "60m",
+			// 	Description: "TTL for STS token",
+			// },
 
 			"access_key": {
 				Type:        schema.TypeString,
@@ -106,7 +106,8 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	credType := d.Get("type").(string)
 	role := d.Get("role").(string)
 	ttl := d.Get("ttl").(string)
-	path := backend + "/" + credType + "/" + role + " " + ttl
+	path := backend + "/" + credType + "/" + role
+	// path := backend + "/" + credType + "/" + role + " " + ttl
 
 	log.Printf("[DEBUG] Reading %q from Vault", path)
 	secret, err := client.Logical().Read(path)
