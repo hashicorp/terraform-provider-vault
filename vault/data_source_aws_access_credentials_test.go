@@ -41,18 +41,20 @@ func TestAccDataSourceAWSAccessCredentials_basic(t *testing.T) {
 func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("aws")
 	accessKey, secretKey := getTestAWSCreds(t)
+	ttl := "35m"
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceAWSAccessCredentialsConfig_sts(mountPath, accessKey, secretKey),
+				Config: testAccDataSourceAWSAccessCredentialsConfig_sts(mountPath, accessKey, secretKey, ttl),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "access_key"),
 					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
 					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "security_token"),
 					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "sts"),
 					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "lease_id"),
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "lease_duration"),
 					testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(mountPath),
 				),
 			},
@@ -121,7 +123,6 @@ func testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(mountPath string) res
 		accessKey := iState.Attributes["access_key"]
 		secretKey := iState.Attributes["secret_key"]
 		credType := iState.Attributes["type"]
-		ttl := iState.Attributes["lease_duration"]
 		securityToken := iState.Attributes["security_token"]
 
 		awsConfig := &aws.Config{
