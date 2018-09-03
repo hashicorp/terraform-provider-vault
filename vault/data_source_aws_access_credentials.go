@@ -46,6 +46,12 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 					return
 				},
 			},
+			"ttl": {
+				Type: schema.TypeString,
+				Optional: true,
+				Default: "60m"
+				Description: "TTL for STS token"
+			},
 			"access_key": {
 				Type:        schema.TypeString,
 				Computed:    true,
