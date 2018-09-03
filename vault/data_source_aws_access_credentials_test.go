@@ -82,26 +82,28 @@ data "vault_aws_access_credentials" "test" {
 }`, mountPath, accessKey, secretKey)
 }
 
-func testAccDataSourceAWSAccessCredentialsConfig_sts(mountPath, accessKey, secretKey string) string {
+func testAccDataSourceAWSAccessCredentialsConfig_sts(mountPath, accessKey, secretKey, ttl string) string {
 	return fmt.Sprintf(`
 resource "vault_aws_secret_backend" "aws" {
     path = "%s"
     description = "Obtain AWS credentials."
     access_key = "%s"
-    secret_key = "%s"
+		secret_key = "%s"
 }
 
 resource "vault_aws_secret_backend_role" "role" {
     backend = "${vault_aws_secret_backend.aws.path}"
     name = "test"
-    policy = "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"iam:*\", \"Resource\": \"*\"}]}"
+		policy = "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"iam:*\", \"Resource\": \"*\"}]}"
+
 }
 
 data "vault_aws_access_credentials" "test" {
     backend = "${vault_aws_secret_backend.aws.path}"
     role = "${vault_aws_secret_backend_role.role.name}"
-    type = "sts"
-}`, mountPath, accessKey, secretKey)
+		type = "sts"
+		ttl  = "35m"
+}`, mountPath, accessKey, secretKey, ttl)
 }
 
 func testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(mountPath string) resource.TestCheckFunc {
@@ -119,6 +121,7 @@ func testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(mountPath string) res
 		accessKey := iState.Attributes["access_key"]
 		secretKey := iState.Attributes["secret_key"]
 		credType := iState.Attributes["type"]
+		ttl := iState.Attributes["lease_duration"]
 		securityToken := iState.Attributes["security_token"]
 
 		awsConfig := &aws.Config{
