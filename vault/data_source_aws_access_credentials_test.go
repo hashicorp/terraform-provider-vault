@@ -104,7 +104,7 @@ data "vault_aws_access_credentials" "test" {
     backend = "${vault_aws_secret_backend.aws.path}"
     role = "${vault_aws_secret_backend_role.role.name}"
 		type = "sts"
-		ttl  = "35m"
+		ttl  = "%s"
 }`, mountPath, accessKey, secretKey, ttl)
 }
 
