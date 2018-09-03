@@ -106,7 +106,7 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	credType := d.Get("type").(string)
 	role := d.Get("role").(string)
 	ttl := d.Get("ttl").(string)
-	path := backend + "/" + credType + "/" + role + " " + ttl
+	path := backend + "/" + credType + "/" + role + " ttl=" + ttl
 
 	log.Printf("[DEBUG] Reading %q from Vault", path)
 	secret, err := client.Logical().Read(path)
