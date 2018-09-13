@@ -23,7 +23,7 @@ func genericSecretResource() *schema.Resource {
 		MigrateState: resourceGenericSecretMigrateState,
 
 		Schema: map[string]*schema.Schema{
-			"path": &schema.Schema{
+			"path": {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
@@ -32,7 +32,7 @@ func genericSecretResource() *schema.Resource {
 
 			// Data is passed as JSON so that an arbitrary structure is
 			// possible, rather than forcing e.g. all values to be strings.
-			"data_json": &schema.Schema{
+			"data_json": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "JSON-encoded secret data to write.",
@@ -44,14 +44,14 @@ func genericSecretResource() *schema.Resource {
 				ValidateFunc: ValidateDataJSON,
 			},
 
-			"allow_read": &schema.Schema{
+			"allow_read": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Attempt to read the token from Vault if true; if false, drift won't be detected.",
 				Deprecated:  "Please use disable_read instead.",
 			},
 
-			"disable_read": &schema.Schema{
+			"disable_read": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
@@ -104,7 +104,7 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	log.Printf("[DEBUG] Writing generic Vault secret to %s", path)
-	_, err = client.Logical().Write(path, data)
+	_, err = client.Logical().Write(path, map[string]interface{}{"data": data})
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -154,9 +154,13 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 
 		log.Printf("[DEBUG] secret: %#v", secret)
 
-		jsonDataBytes, err := json.Marshal(secret.Data)
+		secretData, exists := secret.Data["data"]
+		if !exists {
+			return fmt.Errorf("secret data is not present in %s", secret.Data)
+		}
+		jsonDataBytes, err := json.Marshal(secretData)
 		if err != nil {
-			return fmt.Errorf("Error marshaling JSON for %q: %s", path, err)
+			return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
 		}
 		d.Set("data_json", string(jsonDataBytes))
 		d.Set("path", path)

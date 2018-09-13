@@ -72,14 +72,19 @@ func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 	if secret == nil {
-		return fmt.Errorf("No secret found at %q", path)
+		return fmt.Errorf("no secret found at %q", path)
 	}
 
 	d.SetId(secret.RequestID)
 
-	// Ignoring error because this value came from JSON in the
-	// first place so no reason why it should fail to re-encode.
-	jsonDataBytes, _ := json.Marshal(secret.Data)
+	secretData, exists := secret.Data["data"]
+	if !exists {
+		return fmt.Errorf("no secret data contained in %s", secret.Data)
+	}
+	jsonDataBytes, err := json.Marshal(secretData)
+	if err != nil {
+		return err
+	}
 	d.Set("data_json", string(jsonDataBytes))
 
 	// Since our "data" map can only contain string values, we
@@ -87,19 +92,23 @@ func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error
 	// and write everything else in as a JSON serialization of
 	// whatever value we get so that complex types can be
 	// passed around and processed elsewhere if desired.
+	secretDataMap, ok := secretData.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("unable to convert %s to map", secretData)
+	}
 	dataMap := map[string]string{}
-	for k, v := range secret.Data {
+	for k, v := range secretDataMap {
 		if vs, ok := v.(string); ok {
 			dataMap[k] = vs
 		} else {
-			// Again ignoring error because we know this value
-			// came from JSON in the first place and so must be valid.
-			vBytes, _ := json.Marshal(v)
+			vBytes, err := json.Marshal(v)
+			if err != nil {
+				return err
+			}
 			dataMap[k] = string(vBytes)
 		}
 	}
 	d.Set("data", dataMap)
-
 	d.Set("lease_id", secret.LeaseID)
 	d.Set("lease_duration", secret.LeaseDuration)
 	d.Set("lease_start_time", time.Now().Format("RFC3339"))
