@@ -1,4 +1,7 @@
-## 1.2.0 (Unreleased)
+## 1.1.2 (September 13, 2018)
+UPDATES:
+* Update to vendoring Vault 0.11.1. Introduces some breaking changes for some back ends so update with care.
+
 ## 1.1.1 (July 23, 2018)
 
 BUG FIXES:
