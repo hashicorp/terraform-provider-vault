@@ -105,17 +105,17 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			"ttl": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Description: "The TTL period of tokens issued using this role, provided as the number of minutes.",
+				Description: "The TTL period of tokens issued using this role, provided as the number of seconds.",
 			},
 			"max_ttl": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Description: "The maximum allowed lifetime of tokens issued using this role.",
+				Description: "The maximum allowed lifetime of tokens issued using this role, provided as the number of seconds.",
 			},
 			"period": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Description: "The duration in which a token should be renewed. At each renewal, the token's TTL will be set to the value of this parameter.",
+				Description: "If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this field. The maximum allowed lifetime of token issued using this role. Specified as a number of seconds.",
 			},
 			"policies": {
 				Type:     schema.TypeList,

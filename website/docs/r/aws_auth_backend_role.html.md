@@ -120,16 +120,16 @@ The following arguments are supported:
   the value set to `true`.
 
 * `ttl` - (Optional) The TTL period of tokens issued using this role, provided
-  as a number of minutes.
+  as a number of seconds.
 
 * `max_ttl` - (Optional) The maximum allowed lifetime of tokens issued using
-  this role, provided as a number of minutes.
+  this role, provided as a number of seconds.
 
 * `period` - (Optional) If set, indicates that the token generated using this
   role should never expire. The token should be renewed within the duration
   specified by this value. At each renewal, the token's TTL will be set to the
   value of this field. The maximum allowed lifetime of token issued using this
-  role. Specified as a number of minutes.
+  role. Specified as a number of seconds.
 
 * `policies` - (Optional) An array of strings specifying the policies to be set
   on tokens issued using this role.
