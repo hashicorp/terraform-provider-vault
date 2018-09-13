@@ -23,7 +23,6 @@ func tokenResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
-				Default:     "",
 				Description: "The client token.",
 			},
 			"policies": {
@@ -41,7 +40,6 @@ func tokenResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
-				Default:     false,
 				Description: "Flag to create a token without parent.",
 			},
 			"no_default_policy": {
@@ -49,7 +47,6 @@ func tokenResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
-				Default:     false,
 				Description: "Flag to disable the default policy.",
 			},
 			"renewable": {
@@ -57,7 +54,6 @@ func tokenResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
-				Default:     true,
 				Description: "Flag to allow the token to be renewed",
 			},
 			"ttl": {
@@ -65,7 +61,6 @@ func tokenResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
-				Default:     "",
 				Description: "The TTL period of the token.",
 			},
 			"explicit_max_ttl": {
@@ -73,7 +68,6 @@ func tokenResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
-				Default:     "",
 				Description: "The explicit max TTL of the token.",
 			},
 			"display_name": {
@@ -89,7 +83,6 @@ func tokenResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
-				Default:     0,
 				Description: "The number of allowed uses of the token.",
 			},
 			"period": {
@@ -97,7 +90,6 @@ func tokenResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
-				Default:     "",
 				Description: "The period of the token.",
 			},
 			"lease_duration": {
@@ -119,6 +111,7 @@ func tokenResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The client token.",
+				Sensitive:   true,
 			},
 		},
 	}
@@ -135,21 +128,43 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		policies = append(policies, iPolicy.(string))
 	}
 
-	var createRequest = &api.TokenCreateRequest{
-		NoParent:        d.Get("no_parent").(bool),
-		NoDefaultPolicy: d.Get("no_default_policy").(bool),
-		TTL:             d.Get("ttl").(string),
-		ExplicitMaxTTL:  d.Get("explicit_max_ttl").(string),
-		DisplayName:     d.Get("display_name").(string),
-		NumUses:         d.Get("num_uses").(int),
-		Period:          d.Get("period").(string),
-	}
-
-	renewable := d.Get("renewable").(bool)
-	createRequest.Renewable = &renewable
+	var createRequest = &api.TokenCreateRequest{}
 
 	if len(policies) > 0 {
 		createRequest.Policies = policies
+	}
+
+	if v, ok := d.GetOk("ttl"); ok {
+		createRequest.TTL = v.(string)
+	}
+
+	if v, ok := d.GetOk("explicit_max_ttl"); ok {
+		createRequest.ExplicitMaxTTL = v.(string)
+	}
+
+	if v, ok := d.GetOk("period"); ok {
+		createRequest.Period = v.(string)
+	}
+
+	if v, ok := d.GetOk("no_parent"); ok {
+		createRequest.NoParent = v.(bool)
+	}
+
+	if v, ok := d.GetOk("no_default_policy"); ok {
+		createRequest.NoDefaultPolicy = v.(bool)
+	}
+
+	if v, ok := d.GetOk("display_name"); ok {
+		createRequest.DisplayName = v.(string)
+	}
+
+	if v, ok := d.GetOk("num_uses"); ok {
+		createRequest.NumUses = v.(int)
+	}
+
+	if v, ok := d.GetOk("renewable"); ok {
+		renewable := v.(bool)
+		createRequest.Renewable = &renewable
 	}
 
 	var resp *api.Secret
@@ -224,7 +239,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("policies", policies)
 	d.Set("no_parent", resp.Data["orphan"])
-	d.Set("renewable", resp.Data["renewable"])
+	d.Set("renewable", fmt.Sprintf("%v", resp.Data["renewable"]))
 	d.Set("display_name", strings.TrimPrefix(resp.Data["display_name"].(string), "token-"))
 	d.Set("num_uses", resp.Data["num_uses"])
 	d.Set("accessor", resp.Data["accessor"])
