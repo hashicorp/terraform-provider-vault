@@ -217,12 +217,12 @@ func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestChe
 			"inferred_entity_type":           "inferred_entity_type",
 			"inferred_aws_region":            "inferred_aws_region",
 			"resolve_aws_unique_ids":         "resolve_aws_unique_ids",
-			"ttl":                       "ttl",
-			"max_ttl":                   "max_ttl",
-			"period":                    "period",
-			"policies":                  "policies",
-			"allow_instance_migration":  "allow_instance_migration",
-			"disallow_reauthentication": "disallow_reauthentication",
+			"ttl":                            "ttl",
+			"max_ttl":                        "max_ttl",
+			"period":                         "period",
+			"policies":                       "policies",
+			"allow_instance_migration":       "allow_instance_migration",
+			"disallow_reauthentication":      "disallow_reauthentication",
 		}
 		for stateAttr, apiAttr := range attrs {
 			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
