@@ -32,7 +32,7 @@ resource "vault_database_secret_backend_connection" "postgres" {
   allowed_roles = ["dev", "prod"]
 
   postgresql {
-    role_url = "postgres://username:password@host:port/database"
+    connection_url = "postgres://username:password@host:port/database"
   }
 }
 
