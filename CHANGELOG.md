@@ -1,4 +1,12 @@
+## 1.1.3 (September 14, 2018)
+
+FEATURES:
+
+* **New Resource**: `vault_audit` ([#81](https://github.com/terraform-providers/terraform-provider-vault/pull/81))
+* **New Resource**: `vault_token_auth_backend_role` ([#80](https://github.com/terraform-providers/terraform-provider-vault/pull/80))
+
 ## 1.1.2 (September 13, 2018)
+
 UPDATES:
 * Update to vendoring Vault 0.11.1. Introduces some breaking changes for some back ends so update with care.
 
