@@ -227,7 +227,7 @@ func tokenAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error updating Token auth backend role %q: %s", path, err)
+		return fmt.Errorf("error updating Token auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated Token auth backend role %q", path)
 
@@ -241,7 +241,7 @@ func tokenAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error 
 	log.Printf("[DEBUG] Deleting Token auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting Token auth backend role %q", path)
+		return fmt.Errorf("error deleting Token auth backend role %q", path)
 	}
 	log.Printf("[DEBUG] Deleted Token auth backend role %q", path)
 
@@ -256,7 +256,7 @@ func tokenAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool,
 
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return true, fmt.Errorf("Error checking if Token auth backend role %q exists: %s", path, err)
+		return true, fmt.Errorf("error checking if Token auth backend role %q exists: %s", path, err)
 	}
 	log.Printf("[DEBUG] Checked if Token auth backend role %q exists", path)
 

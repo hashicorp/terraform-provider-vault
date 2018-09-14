@@ -13,7 +13,7 @@ func TestDataSourceGenericSecret(t *testing.T) {
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: testDataSourceGenericSecret_config,
 				Check:  testDataSourceGenericSecret_check,
 			},

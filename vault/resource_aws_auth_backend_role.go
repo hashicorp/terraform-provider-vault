@@ -238,7 +238,7 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing AWS auth backend role %q: %s", path, err)
+		return fmt.Errorf("error writing AWS auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote AWS auth backend role %q", path)
 
@@ -251,18 +251,18 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	backend, err := awsAuthBackendRoleBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("Invalid path %q for AWS auth backend role: %s", path, err)
+		return fmt.Errorf("invalid path %q for AWS auth backend role: %s", path, err)
 	}
 
 	role, err := awsAuthBackendRoleNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("Invalid path %q for AWS auth backend role: %s", path, err)
+		return fmt.Errorf("invalid path %q for AWS auth backend role: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading AWS auth backend role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading AWS auth backend role %q: %s", path, err)
+		return fmt.Errorf("error reading AWS auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read AWS auth backend role %q", path)
 	if resp == nil {
@@ -278,17 +278,17 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	ttl, err := resp.Data["ttl"].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("Expected ttl %q to be a number, isn't", resp.Data["ttl"])
+		return fmt.Errorf("expected ttl %q to be a number, isn't", resp.Data["ttl"])
 	}
 
 	maxTTL, err := resp.Data["max_ttl"].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("Expected max_ttl %q to be a number, isn't", resp.Data["max_ttl"])
+		return fmt.Errorf("expected max_ttl %q to be a number, isn't", resp.Data["max_ttl"])
 	}
 
 	period, err := resp.Data["period"].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("Expected period %q to be a number, isn't", resp.Data["period"])
+		return fmt.Errorf("expected period %q to be a number, isn't", resp.Data["period"])
 	}
 
 	d.Set("backend", backend)
@@ -394,7 +394,7 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error updating AWS auth backend role %q: %s", path, err)
+		return fmt.Errorf("error updating AWS auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated AWS auth backend role %q", path)
 
@@ -408,7 +408,7 @@ func awsAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleting AWS auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting AWS auth backend role %q", path)
+		return fmt.Errorf("error deleting AWS auth backend role %q", path)
 	}
 	log.Printf("[DEBUG] Deleted AWS auth backend role %q", path)
 
@@ -423,7 +423,7 @@ func awsAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, e
 
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return true, fmt.Errorf("Error checking if AWS auth backend role %q exists: %s", path, err)
+		return true, fmt.Errorf("error checking if AWS auth backend role %q exists: %s", path, err)
 	}
 	log.Printf("[DEBUG] Checked if AWS auth backend role %q exists", path)
 

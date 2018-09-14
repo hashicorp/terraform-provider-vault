@@ -123,7 +123,7 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	resp, err := client.Logical().Write(path, data)
 
 	if err != nil {
-		return fmt.Errorf("Error writing AppRole auth backend role SecretID %q: %s", path, err)
+		return fmt.Errorf("error writing AppRole auth backend role SecretID %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote AppRole auth backend role SecretID %q", path)
 
@@ -141,7 +141,7 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 
 	backend, role, accessor, err := approleAuthBackendRoleSecretIDParseID(id)
 	if err != nil {
-		return fmt.Errorf("Invalid ID %q for AppRole auth backend role SecretID: %s", id, err)
+		return fmt.Errorf("invalid ID %q for AppRole auth backend role SecretID: %s", id, err)
 	}
 
 	path := approleAuthBackendRolePath(backend, role) + "/secret-id-accessor/lookup"
@@ -151,7 +151,7 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 		"secret_id_accessor": accessor,
 	})
 	if err != nil {
-		return fmt.Errorf("Error reading AppRole auth backend role SecretID %q: %s", id, err)
+		return fmt.Errorf("error reading AppRole auth backend role SecretID %q: %s", id, err)
 	}
 	log.Printf("[DEBUG] Read AppRole auth backend role SecretID %q", id)
 	if resp == nil {
@@ -173,19 +173,19 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 			cidrs = append(cidrs, i.(string))
 		}
 	default:
-		return fmt.Errorf("Unknown type %T for cidr_list in response for SecretID %q", resp.Data["cidr_list"], accessor)
+		return fmt.Errorf("unknown type %T for cidr_list in response for SecretID %q", resp.Data["cidr_list"], accessor)
 	}
 
 	metadata, err := json.Marshal(resp.Data["metadata"])
 	if err != nil {
-		return fmt.Errorf("Error encoding metadata for SecretID %q to JSON: %s", id, err)
+		return fmt.Errorf("error encoding metadata for SecretID %q to JSON: %s", id, err)
 	}
 
 	d.Set("backend", backend)
 	d.Set("role_name", role)
 	err = d.Set("cidr_list", cidrs)
 	if err != nil {
-		return fmt.Errorf("Error setting cidr_list in state: %s", err)
+		return fmt.Errorf("error setting cidr_list in state: %s", err)
 	}
 	d.Set("metadata", string(metadata))
 	d.Set("accessor", accessor)
@@ -198,7 +198,7 @@ func approleAuthBackendRoleSecretIDDelete(d *schema.ResourceData, meta interface
 	id := d.Id()
 	backend, role, accessor, err := approleAuthBackendRoleSecretIDParseID(id)
 	if err != nil {
-		return fmt.Errorf("Invalid ID %q for AppRole auth backend role SecretID: %s", id, err)
+		return fmt.Errorf("invalid ID %q for AppRole auth backend role SecretID: %s", id, err)
 	}
 
 	path := approleAuthBackendRolePath(backend, role) + "/secret-id-accessor/destroy"
@@ -208,7 +208,7 @@ func approleAuthBackendRoleSecretIDDelete(d *schema.ResourceData, meta interface
 		"secret_id_accessor": accessor,
 	})
 	if err != nil {
-		return fmt.Errorf("Error deleting AppRole auth backend role SecretID %q", id)
+		return fmt.Errorf("error deleting AppRole auth backend role SecretID %q", id)
 	}
 	log.Printf("[DEBUG] Deleted AppRole auth backend role SecretID %q", id)
 
@@ -221,7 +221,7 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 
 	backend, role, accessor, err := approleAuthBackendRoleSecretIDParseID(id)
 	if err != nil {
-		return true, fmt.Errorf("Invalid ID %q for AppRole auth backend role SecretID: %s", id, err)
+		return true, fmt.Errorf("invalid ID %q for AppRole auth backend role SecretID: %s", id, err)
 	}
 
 	path := approleAuthBackendRolePath(backend, role) + "/secret-id-accessor/lookup"
@@ -231,7 +231,7 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 		"secret_id_accessor": accessor,
 	})
 	if err != nil {
-		return true, fmt.Errorf("Error checking if AppRole auth backend role SecretID %q exists: %s", id, err)
+		return true, fmt.Errorf("error checking if AppRole auth backend role SecretID %q exists: %s", id, err)
 	}
 	log.Printf("[DEBUG] Checked if AppRole auth backend role SecretID %q exists", id)
 

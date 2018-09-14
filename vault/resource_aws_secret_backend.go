@@ -21,7 +21,7 @@ func awsSecretBackendResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"path": &schema.Schema{
+			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
@@ -57,19 +57,19 @@ func awsSecretBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "Maximum possible lease duration for secrets in seconds",
 			},
-			"access_key": &schema.Schema{
+			"access_key": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The AWS Access Key ID to use when generating new credentials.",
 				Sensitive:   true,
 			},
-			"secret_key": &schema.Schema{
+			"secret_key": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The AWS Secret Access Key to use when generating new credentials.",
 				Sensitive:   true,
 			},
-			"region": &schema.Schema{
+			"region": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
@@ -101,7 +101,7 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("Error mounting to %q: %s", path, err)
+		return fmt.Errorf("error mounting to %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Mounted AWS backend at %q", path)
 	d.SetId(path)
@@ -121,7 +121,7 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 	_, err = client.Logical().Write(path+"/config/root", data)
 	if err != nil {
-		return fmt.Errorf("Error configuring root credentials for %q: %s", path, err)
+		return fmt.Errorf("error configuring root credentials for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote root credentials to %q", path+"/config/root")
 	d.SetPartial("access_key")
@@ -143,7 +143,7 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Reading AWS backend mount %q from Vault", path)
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
-		return fmt.Errorf("Error reading mount %q: %s", path, err)
+		return fmt.Errorf("error reading mount %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read AWS backend mount %q from Vault", path)
 
@@ -181,7 +181,7 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		log.Printf("[DEBUG] Updating lease TTLs for %q", path)
 		err := client.Sys().TuneMount(path, config)
 		if err != nil {
-			return fmt.Errorf("Error updating mount TTLs for %q: %s", path, err)
+			return fmt.Errorf("error updating mount TTLs for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
 		d.SetPartial("default_lease_ttl_seconds")
@@ -199,7 +199,7 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 		_, err := client.Logical().Write(path+"/config/root", data)
 		if err != nil {
-			return fmt.Errorf("Error configuring root credentials for %q: %s", path, err)
+			return fmt.Errorf("error configuring root credentials for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated root credentials at %q", path+"/config/root")
 		d.SetPartial("access_key")
@@ -221,7 +221,7 @@ func awsSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Unmounting AWS backend %q", path)
 	err := client.Sys().Unmount(path)
 	if err != nil {
-		return fmt.Errorf("Error unmounting AWS backend from %q: %s", path, err)
+		return fmt.Errorf("error unmounting AWS backend from %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Unmounted AWS backend %q", path)
 	return nil
@@ -233,7 +233,7 @@ func awsSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, err
 	log.Printf("[DEBUG] Checking if AWS backend exists at %q", path)
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
-		return true, fmt.Errorf("Error retrieving list of mounts: %s", err)
+		return true, fmt.Errorf("error retrieving list of mounts: %s", err)
 	}
 	log.Printf("[DEBUG] Checked if AWS backend exists at %q", path)
 	_, ok := mounts[strings.Trim(path, "/")+"/"]
