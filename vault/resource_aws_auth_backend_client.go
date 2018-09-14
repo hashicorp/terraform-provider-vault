@@ -110,7 +110,7 @@ func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Reading AWS auth backend client config")
 	secret, err := client.Logical().Read(d.Id())
 	if err != nil {
-		return fmt.Errorf("Error reading AWS auth backend client config from %q: %s", d.Id(), err)
+		return fmt.Errorf("error reading AWS auth backend client config from %q: %s", d.Id(), err)
 	}
 	log.Printf("[DEBUG] Read AWS auth backend client config")
 
@@ -139,7 +139,7 @@ func awsAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleting AWS auth backend client config from %q", d.Id())
 	_, err := client.Logical().Delete(d.Id())
 	if err != nil {
-		return fmt.Errorf("Error deleting AWS auth backend client config from %q: %s", d.Id(), err)
+		return fmt.Errorf("error deleting AWS auth backend client config from %q: %s", d.Id(), err)
 	}
 	log.Printf("[DEBUG] Deleted AWS auth backend client config from %q", d.Id())
 
@@ -152,7 +152,7 @@ func awsAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error
 	log.Printf("[DEBUG] Checking if AWS auth backend client is configured at %q", d.Id())
 	secret, err := client.Logical().Read(d.Id())
 	if err != nil {
-		return true, fmt.Errorf("Error checking if AWS auth backend client is configured at %q: %s", d.Id(), err)
+		return true, fmt.Errorf("error checking if AWS auth backend client is configured at %q: %s", d.Id(), err)
 	}
 	log.Printf("[DEBUG] Checked if AWS auth backend client is configured at %q", d.Id())
 	return secret != nil, nil

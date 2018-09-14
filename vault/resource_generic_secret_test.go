@@ -16,11 +16,11 @@ func TestResourceGenericSecret(t *testing.T) {
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: testResourceGenericSecret_initialConfig(path),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
-			resource.TestStep{
+			{
 				Config: testResourceGenericSecret_updateConfig,
 				Check:  testResourceGenericSecret_updateCheck,
 			},
@@ -34,11 +34,11 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: testResourceGenericSecret_initialConfig(path),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
-			resource.TestStep{
+			{
 				PreConfig: func() {
 					client := testProvider.Meta().(*api.Client)
 					_, err := client.Logical().Delete(path)

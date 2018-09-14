@@ -16,11 +16,11 @@ func TestResourceAuth(t *testing.T) {
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: testResourceAuth_initialConfig(path),
 				Check:  testResourceAuth_initialCheck(path),
 			},
-			resource.TestStep{
+			{
 				Config: testResourceAuth_updateConfig,
 				Check:  testResourceAuth_updateCheck,
 			},

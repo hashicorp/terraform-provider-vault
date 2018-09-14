@@ -94,5 +94,5 @@ func findAudit(path string) (*api.Audit, error) {
 		return audits[path], nil
 	}
 
-	return nil, fmt.Errorf("Unable to find audit %s in Vault; current list: %v", path, audits)
+	return nil, fmt.Errorf("unable to find audit %s in Vault; current list: %v", path, audits)
 }

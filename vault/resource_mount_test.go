@@ -177,5 +177,5 @@ func findMount(path string) (*api.MountOutput, error) {
 		return mounts[path], nil
 	}
 
-	return nil, fmt.Errorf("Unable to find mount %s in Vault; current list: %v", path, mounts)
+	return nil, fmt.Errorf("unable to find mount %s in Vault; current list: %v", path, mounts)
 }

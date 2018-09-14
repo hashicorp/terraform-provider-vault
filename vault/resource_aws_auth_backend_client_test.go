@@ -58,7 +58,7 @@ func testAccCheckAWSAuthBackendClientDestroy(s *terraform.State) error {
 		}
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("Error checking for AWS auth backend %q client config: %s", rs.Primary.ID, err)
+			return fmt.Errorf("error checking for AWS auth backend %q client config: %s", rs.Primary.ID, err)
 		}
 		if secret != nil {
 			return fmt.Errorf("AWS auth backend %q still configured", rs.Primary.ID)
@@ -126,7 +126,7 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 				continue
 			}
 			if resp.Data[apiAttr] != instanceState.Attributes[stateAttr] {
-				return fmt.Errorf("Expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
+				return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
 			}
 		}
 		return nil
