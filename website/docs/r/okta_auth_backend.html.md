@@ -44,6 +44,8 @@ If this is not supplied only locally configured groups will be enabled.
 
 * `base_url` - (Optional) The Okta url. Examples: oktapreview.com, okta.com
 
+* `bypass_okta_mfa` - (Optional) When true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.
+
 * `ttl` - (Optional) Duration after which authentication will be expired.
 [See the documentation for info on valid duration formats](https://golang.org/pkg/time/#ParseDuration).
 

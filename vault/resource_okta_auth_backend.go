@@ -67,6 +67,13 @@ func oktaAuthBackendResource() *schema.Resource {
 				Description: "The Okta url. Examples: oktapreview.com, okta.com (default)",
 			},
 
+			"bypass_okta_mfa": {
+				Type:        schema.TypeBool,
+				Required:    false,
+				Optional:    true,
+				Description: "When true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.",
+			},
+
 			"ttl": {
 				Type:        schema.TypeString,
 				Required:    false,
@@ -271,9 +278,10 @@ func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
 
 	configuration := map[string]interface{}{
-		"base_url":     d.Get("base_url"),
-		"organization": d.Get("organization"),
-		"token":        d.Get("token"),
+		"base_url":        d.Get("base_url"),
+		"bypass_okta_mfa": d.Get("bypass_okta_mfa"),
+		"organization":    d.Get("organization"),
+		"token":           d.Get("token"),
 	}
 
 	if ttl, ok := d.GetOk("ttl"); ok {
