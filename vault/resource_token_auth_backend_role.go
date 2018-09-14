@@ -131,10 +131,9 @@ func tokenAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 	data["renewable"] = d.Get("renewable").(bool)
 	data["path_suffix"] = d.Get("path_suffix").(string)
 
-	_, err := client.Logical().Write(path, data)
-
 	d.SetId(path)
 
+	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
 		return fmt.Errorf("Error writing Token auth backend role %q: %s", path, err)
