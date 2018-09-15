@@ -105,7 +105,7 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	log.Printf("[DEBUG] Writing generic Vault secret to %s", path)
-	_, err = client.Logical().Write(path, data)
+	_, err = client.Logical().Write(path, map[string]interface{}{"data": data})
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -155,7 +155,11 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 
 		log.Printf("[DEBUG] secret: %#v", secret)
 
-		jsonDataBytes, err := json.Marshal(secret.Data)
+		secretData, exists := secret.Data["data"]
+		if !exists {
+			return fmt.Errorf("secret data is not present in %s", secret.Data)
+		}
+		jsonDataBytes, err := json.Marshal(secretData)
 		if err != nil {
 			return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
 		}
