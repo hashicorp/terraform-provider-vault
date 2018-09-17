@@ -20,37 +20,37 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 		Delete: gcpAuthResourceDelete,
 
 		Schema: map[string]*schema.Schema{
-			"role": &schema.Schema{
+			"role": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"type": &schema.Schema{
+			"type": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"project_id": &schema.Schema{
+			"project_id": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"ttl": &schema.Schema{
+			"ttl": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"max_ttl": &schema.Schema{
+			"max_ttl": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"period": &schema.Schema{
+			"period": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"policies": &schema.Schema{
+			"policies": {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -122,8 +122,8 @@ func gcpAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[DEBUG] Writing role %q to GCP auth backend", path)
-	_, err := client.Logical().Write(path, data)
 	d.SetId(path)
+	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
 		return fmt.Errorf("Error writing GCP auth role %q: %s", path, err)
