@@ -59,7 +59,7 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	policy := d.Get("policy").(string)
 
 	if policy == "" && policyARN == "" {
-		return fmt.Errorf("Either policy or policy_arn must be set.")
+		return fmt.Errorf("either policy or policy_arn must be set.")
 	}
 
 	data := map[string]interface{}{}
@@ -72,7 +72,7 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Creating role %q on AWS backend %q", name, backend)
 	_, err := client.Logical().Write(backend+"/roles/"+name, data)
 	if err != nil {
-		return fmt.Errorf("Error creating role %q for backend %q: %s", name, backend, err)
+		return fmt.Errorf("error creating role %q for backend %q: %s", name, backend, err)
 	}
 	log.Printf("[DEBUG] Created role %q on AWS backend %q", name, backend)
 
@@ -85,14 +85,14 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 	pathPieces := strings.Split(path, "/")
-	if len(pathPieces) != 3 || pathPieces[1] != "roles" {
-		return fmt.Errorf("Invalid id %q; must be {backend}/roles/{name}", path)
+	if len(pathPieces) < 3 || pathPieces[len(pathPieces)-2] != "roles" {
+		return fmt.Errorf("invalid id %q; must be {backend}/roles/{name}", path)
 	}
 
 	log.Printf("[DEBUG] Reading role from %q", path)
 	secret, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading role %q: %s", path, err)
+		return fmt.Errorf("error reading role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read role from %q", path)
 	if secret == nil {
@@ -102,8 +102,8 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	d.Set("policy", secret.Data["policy"])
 	d.Set("policy_arn", secret.Data["arn"])
-	d.Set("backend", pathPieces[0])
-	d.Set("name", pathPieces[2])
+	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
+	d.Set("name", pathPieces[len(pathPieces)-1])
 	return nil
 }
 
@@ -114,7 +114,7 @@ func awsSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error 
 	log.Printf("[DEBUG] Deleting role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting role %q: %s", path, err)
+		return fmt.Errorf("error deleting role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Deleted role %q", path)
 	return nil
@@ -127,7 +127,7 @@ func awsSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool,
 	log.Printf("[DEBUG] Checking if %q exists", path)
 	secret, err := client.Logical().Read(path)
 	if err != nil {
-		return true, fmt.Errorf("Error checking if %q exists: %s", path, err)
+		return true, fmt.Errorf("error checking if %q exists: %s", path, err)
 	}
 	log.Printf("[DEBUG] Checked if %q exists", path)
 	return secret != nil, nil

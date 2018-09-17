@@ -25,12 +25,12 @@ resource "vault_aws_auth_backend_role" "example" {
   backend                        = "${vault_auth_backend.aws.path}"
   role                           = "test-role"
   auth_type                      = "iam"
-  bound_ami_id                   = "ami-8c1be5f6"
-  bound_account_id               = "123456789012"
-  bound_vpc_id                   = "vpc-b61106d4"
-  bound_subnet_id                = "vpc-133128f1"
-  bound_iam_role_arn             = "arn:aws:iam::123456789012:role/MyRole"
-  bound_iam_instance_profile_arn = "arn:aws:iam::123456789012:instance-profile/MyProfile"
+  bound_ami_id                   = ["ami-8c1be5f6"]
+  bound_account_id               = ["123456789012"]
+  bound_vpc_id                   = ["vpc-b61106d4"]
+  bound_subnet_id                = ["vpc-133128f1"]
+  bound_iam_role_arn             = ["arn:aws:iam::123456789012:role/MyRole"]
+  bound_iam_instance_profile_arn = ["arn:aws:iam::123456789012:instance-profile/MyProfile"]
   inferred_entity_type           = "ec2_instance"
   inferred_aws_region            = "us-east-1"
   ttl                            = 60
@@ -120,16 +120,16 @@ The following arguments are supported:
   the value set to `true`.
 
 * `ttl` - (Optional) The TTL period of tokens issued using this role, provided
-  as a number of minutes.
+  as a number of seconds.
 
 * `max_ttl` - (Optional) The maximum allowed lifetime of tokens issued using
-  this role, provided as a number of minutes.
+  this role, provided as a number of seconds.
 
 * `period` - (Optional) If set, indicates that the token generated using this
   role should never expire. The token should be renewed within the duration
   specified by this value. At each renewal, the token's TTL will be set to the
   value of this field. The maximum allowed lifetime of token issued using this
-  role. Specified as a number of minutes.
+  role. Specified as a number of seconds.
 
 * `policies` - (Optional) An array of strings specifying the policies to be set
   on tokens issued using this role.

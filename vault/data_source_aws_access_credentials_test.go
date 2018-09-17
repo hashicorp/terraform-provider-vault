@@ -127,7 +127,7 @@ func testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(mountPath string) res
 		}
 		sess, err := session.NewSession(awsConfig)
 		if err != nil {
-			return fmt.Errorf("Error creating new session: %s", err)
+			return fmt.Errorf("error creating new session: %s", err)
 		}
 
 		switch credType {
@@ -135,18 +135,18 @@ func testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(mountPath string) res
 			conn := iam.New(sess)
 			user, err := conn.GetUser(nil)
 			if err != nil {
-				return fmt.Errorf("Error retrieving credentials user: %s", err)
+				return fmt.Errorf("error retrieving credentials user: %s", err)
 			}
 			log.Printf("[DEBUG] User: %+v", user)
 		case "sts":
 			conn := sts.New(sess)
 			resp, err := conn.GetCallerIdentity(nil)
 			if err != nil {
-				return fmt.Errorf("Error retrieving STS user: %s", err)
+				return fmt.Errorf("error retrieving STS user: %s", err)
 			}
 			log.Printf("[DEBUG] STS resp: %+v", resp)
 		default:
-			return fmt.Errorf("Unrecognised credentials type %q", credType)
+			return fmt.Errorf("unrecognised credentials type %q", credType)
 		}
 		return nil
 	}

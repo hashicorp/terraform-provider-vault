@@ -396,7 +396,7 @@ func databaseSecretBackendConnectionCreate(d *schema.ResourceData, meta interfac
 	log.Printf("[DEBUG] Writing connection config to %q", path)
 	_, err = client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error configuring database connection %q: %s", path, err)
+		return fmt.Errorf("error configuring database connection %q: %s", path, err)
 	}
 
 	d.SetId(path)
@@ -412,18 +412,18 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 
 	backend, err := databaseSecretBackendConnectionBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("Invalid path %q for database connection: %s", path, err)
+		return fmt.Errorf("invalid path %q for database connection: %s", path, err)
 	}
 
 	name, err := databaseSecretBackendConnectionNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("Invalid path %q for database connection: %s", path, err)
+		return fmt.Errorf("invalid path %q for database connection: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading database connection config %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading database connection config %q: %s", path, err)
+		return fmt.Errorf("error reading database connection config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read database connection config %q", path)
 	if resp == nil {
@@ -445,7 +445,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			if v, ok := data["port"]; ok {
 				port, err := v.(json.Number).Int64()
 				if err != nil {
-					return fmt.Errorf("Unexpected non-number %q returned as port from Vault: %s", v, err)
+					return fmt.Errorf("unexpected non-number %q returned as port from Vault: %s", v, err)
 				}
 				result["port"] = port
 			}
@@ -470,14 +470,14 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			if v, ok := data["protocol_version"]; ok {
 				protocol, err := v.(json.Number).Int64()
 				if err != nil {
-					return fmt.Errorf("Unexpected non-number %q returned as protocol_version from Vault: %s", v, err)
+					return fmt.Errorf("unexpected non-number %q returned as protocol_version from Vault: %s", v, err)
 				}
 				result["protocol_version"] = protocol
 			}
 			if v, ok := data["connect_timeout"]; ok {
 				timeout, err := v.(json.Number).Int64()
 				if err != nil {
-					return fmt.Errorf("Unexpected non-number %q returned as connect_timeout from Vault: %s", v, err)
+					return fmt.Errorf("unexpected non-number %q returned as connect_timeout from Vault: %s", v, err)
 				}
 				result["connect_timeout"] = timeout
 			}
@@ -506,7 +506,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	}
 
 	if err != nil {
-		return fmt.Errorf("Error reading response for %q: %s", path, err)
+		return fmt.Errorf("error reading response for %q: %s", path, err)
 	}
 
 	var roles []string
@@ -553,7 +553,7 @@ func databaseSecretBackendConnectionUpdate(d *schema.ResourceData, meta interfac
 	_, err = client.Logical().Write(path, data)
 
 	if err != nil {
-		return fmt.Errorf("Error configuring database connection %q: %s", path, err)
+		return fmt.Errorf("error configuring database connection %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote database connection config %q", path)
 
@@ -567,7 +567,7 @@ func databaseSecretBackendConnectionDelete(d *schema.ResourceData, meta interfac
 	log.Printf("[DEBUG] Removing database connection config %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error removing database connection config %q: %s", path, err)
+		return fmt.Errorf("error removing database connection config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Removed database connection config %q", path)
 
@@ -582,7 +582,7 @@ func databaseSecretBackendConnectionExists(d *schema.ResourceData, meta interfac
 	log.Printf("[DEBUG] Checking if database connection config %q exists", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return true, fmt.Errorf("Error checking for existence of database connection config %q: %s", path, err)
+		return true, fmt.Errorf("error checking for existence of database connection config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Checked if database connection config %q exists", path)
 	return resp != nil, nil

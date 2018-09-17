@@ -55,7 +55,7 @@ func testAccCheckAWSAuthBackendIdentityWhitelistDestroy(s *terraform.State) erro
 		}
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("Error checking for AWS Auth Backend identity whitelist %q: %s", rs.Primary.ID, err)
+			return fmt.Errorf("error checking for AWS Auth Backend identity whitelist %q: %s", rs.Primary.ID, err)
 		}
 		if secret != nil {
 			return fmt.Errorf("AWS auth backend identity whitelist %q still exists", rs.Primary.ID)
@@ -130,11 +130,11 @@ func testAccAWSAuthBackendIdentityWhitelistCheck_attrs(backend string) resource.
 		}
 
 		if respBuffer != stateBuffer {
-			return fmt.Errorf("Expected safety_buffer of %q to be %q, got %q", endpoint, stateBuffer, respBuffer)
+			return fmt.Errorf("expected safety_buffer of %q to be %q, got %q", endpoint, stateBuffer, respBuffer)
 		}
 
 		if respDisable != stateDisable {
-			return fmt.Errorf("Expected disable_periodic_tidy of %q to be %q, got %q", endpoint, stateBuffer, respBuffer)
+			return fmt.Errorf("expected disable_periodic_tidy of %q to be %q, got %q", endpoint, stateBuffer, respBuffer)
 		}
 		return nil
 	}

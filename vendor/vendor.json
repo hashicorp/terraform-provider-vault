@@ -538,6 +538,14 @@
 			"versionExact": "v0.10.0"
 		},
 		{
+			"checksumSHA1": "Agqmy6rgChDCY8deGHJYANp2Jm4=",
+			"path": "github.com/hashicorp/vault",
+			"revision": "8575f8fedcf8f5a6eb2b4701cb527b99574b5286",
+			"revisionTime": "2018-09-06T17:45:45Z",
+			"version": "v0.11.1",
+			"versionExact": "v0.11.1"
+		},
+		{
 			"checksumSHA1": "2fkVZIzvxIGBLhSiVnkTgGiqpQ4=",
 			"path": "github.com/hashicorp/vault/api",
 			"revision": "9a60bf2a50e4dd1ba4b929a3ccf8072435cbdd0a",

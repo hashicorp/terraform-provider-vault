@@ -6,7 +6,6 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
-
 	"github.com/hashicorp/vault/api"
 )
 
@@ -24,7 +23,7 @@ func genericSecretResource() *schema.Resource {
 		MigrateState: resourceGenericSecretMigrateState,
 
 		Schema: map[string]*schema.Schema{
-			"path": &schema.Schema{
+			"path": {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
@@ -33,7 +32,7 @@ func genericSecretResource() *schema.Resource {
 
 			// Data is passed as JSON so that an arbitrary structure is
 			// possible, rather than forcing e.g. all values to be strings.
-			"data_json": &schema.Schema{
+			"data_json": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "JSON-encoded secret data to write.",
@@ -43,16 +42,17 @@ func genericSecretResource() *schema.Resource {
 				// when disable_read is false for comparing values.
 				StateFunc:    NormalizeDataJSON,
 				ValidateFunc: ValidateDataJSON,
+				Sensitive:    true,
 			},
 
-			"allow_read": &schema.Schema{
+			"allow_read": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Attempt to read the token from Vault if true; if false, drift won't be detected.",
 				Deprecated:  "Please use disable_read instead.",
 			},
 
-			"disable_read": &schema.Schema{
+			"disable_read": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
@@ -147,12 +147,17 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 		if err != nil {
 			return fmt.Errorf("error reading from Vault: %s", err)
 		}
+		if secret == nil {
+			log.Printf("[WARN] secret (%s) not found, removing from state", path)
+			d.SetId("")
+			return nil
+		}
 
 		log.Printf("[DEBUG] secret: %#v", secret)
 
 		jsonDataBytes, err := json.Marshal(secret.Data)
 		if err != nil {
-			return fmt.Errorf("Error marshaling JSON for %q: %s", path, err)
+			return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
 		}
 		d.Set("data_json", string(jsonDataBytes))
 		d.Set("path", path)

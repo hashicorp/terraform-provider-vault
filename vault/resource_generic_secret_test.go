@@ -7,23 +7,47 @@ import (
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
-
 	"github.com/hashicorp/vault/api"
 )
 
 func TestResourceGenericSecret(t *testing.T) {
-	path := acctest.RandomWithPrefix("secret/test")
+	path := acctest.RandomWithPrefix("secretsv1/test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: testResourceGenericSecret_initialConfig(path),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
-			resource.TestStep{
+			{
 				Config: testResourceGenericSecret_updateConfig,
 				Check:  testResourceGenericSecret_updateCheck,
+			},
+		},
+	})
+}
+
+func TestResourceGenericSecret_deleted(t *testing.T) {
+	path := acctest.RandomWithPrefix("secretsv1/test")
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceGenericSecret_initialConfig(path),
+				Check:  testResourceGenericSecret_initialCheck(path),
+			},
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*api.Client)
+					_, err := client.Logical().Delete(path)
+					if err != nil {
+						t.Fatalf("unable to manually delete the secret via the SDK: %s", err)
+					}
+				},
+				Config: testResourceGenericSecret_initialConfig(path),
+				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 		},
 	})
@@ -79,7 +103,7 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 var testResourceGenericSecret_updateConfig = `
 
 resource "vault_generic_secret" "test" {
-    path = "secret/foo"
+    path = "secretsv1/foo"
     disable_read = false
     data_json = <<EOT
 {
