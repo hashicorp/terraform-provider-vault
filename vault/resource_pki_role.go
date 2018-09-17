@@ -22,27 +22,27 @@ func pkiRoleResource() *schema.Resource {
 		Exists: pkiRoleResourceExists,
 
 		Schema: map[string]*schema.Schema{
-			"role": &schema.Schema{
+			"role": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"ttl": &schema.Schema{
+			"ttl": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"max_ttl": &schema.Schema{
+			"max_ttl": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"allow_localhost": &schema.Schema{
+			"allow_localhost": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"allowed_domains": &schema.Schema{
+			"allowed_domains": {
 				Type: schema.TypeList,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -50,67 +50,67 @@ func pkiRoleResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"allow_bare_domains": &schema.Schema{
+			"allow_bare_domains": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"allow_subdomains": &schema.Schema{
+			"allow_subdomains": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"allow_glob_domains": &schema.Schema{
+			"allow_glob_domains": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"allow_any_name": &schema.Schema{
+			"allow_any_name": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"enforce_hostnames": &schema.Schema{
+			"enforce_hostnames": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"allow_ip_sans": &schema.Schema{
+			"allow_ip_sans": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"server_flag": &schema.Schema{
+			"server_flag": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"client_flag": &schema.Schema{
+			"client_flag": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"code_signing_flag": &schema.Schema{
+			"code_signing_flag": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"email_protection_flag": &schema.Schema{
+			"email_protection_flag": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"key_type": &schema.Schema{
+			"key_type": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"key_bits": &schema.Schema{
+			"key_bits": {
 				Type:     schema.TypeInt,
 				Optional: true,
 				Computed: true,
 			},
-			"key_usage": &schema.Schema{
+			"key_usage": {
 				Type: schema.TypeList,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -118,37 +118,37 @@ func pkiRoleResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"use_csr_common_name": &schema.Schema{
+			"use_csr_common_name": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"use_csr_sans": &schema.Schema{
+			"use_csr_sans": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"ou": &schema.Schema{
+			"ou": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"organization": &schema.Schema{
+			"organization": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"generate_lease": &schema.Schema{
+			"generate_lease": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"no_store": &schema.Schema{
+			"no_store": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"backend": &schema.Schema{
+			"backend": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
@@ -267,10 +267,8 @@ func pkiRoleResourceWrite(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[DEBUG] Writing PKI role %q to PKI backend", path)
-	_, err := client.Logical().Write(path, data)
-
 	d.SetId(path)
-
+	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
 		return fmt.Errorf("Error configuring PKI role %q: %s", path, err)
