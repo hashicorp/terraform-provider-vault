@@ -26,7 +26,8 @@ func awsAuthBackendRoleResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-
+		SchemaVersion: 1,
+		MigrateState:  awsAuthBackendRoleResourceMigrateState,
 		Schema: map[string]*schema.Schema{
 			"role": {
 				Type:        schema.TypeString,
