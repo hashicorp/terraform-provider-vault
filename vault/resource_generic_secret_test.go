@@ -11,7 +11,7 @@ import (
 )
 
 func TestResourceGenericSecret(t *testing.T) {
-	path := acctest.RandomWithPrefix("secret/test")
+	path := acctest.RandomWithPrefix("secretsv1/test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -29,7 +29,7 @@ func TestResourceGenericSecret(t *testing.T) {
 }
 
 func TestResourceGenericSecret_deleted(t *testing.T) {
-	path := acctest.RandomWithPrefix("secret/test")
+	path := acctest.RandomWithPrefix("secretsv1/test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -103,7 +103,7 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 var testResourceGenericSecret_updateConfig = `
 
 resource "vault_generic_secret" "test" {
-    path = "secret/foo"
+    path = "secretsv1/foo"
     disable_read = false
     data_json = <<EOT
 {
