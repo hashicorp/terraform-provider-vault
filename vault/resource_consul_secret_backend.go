@@ -21,7 +21,7 @@ func consulSecretBackendResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"path": &schema.Schema{
+			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
