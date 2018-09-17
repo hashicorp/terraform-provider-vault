@@ -22,9 +22,10 @@ func TestAccAWSAuthBackendClient_import(t *testing.T) {
 				Check:  testAccAWSAuthBackendClientCheck_attrs(backend),
 			},
 			{
-				ResourceName:      "vault_aws_auth_backend_client.client",
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            "vault_aws_auth_backend_client.client",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"secret_key"},
 			},
 		},
 	})
@@ -114,8 +115,8 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 			return fmt.Errorf("AWS auth client not configured at %q", endpoint)
 		}
 		attrs := map[string]string{
-			"access_key":                 "access_key",
-			"secret_key":                 "secret_key",
+			"access_key": "access_key",
+			//"secret_key":                 "secret_key",
 			"ec2_endpoint":               "endpoint",
 			"iam_endpoint":               "iam_endpoint",
 			"sts_endpoint":               "sts_endpoint",
