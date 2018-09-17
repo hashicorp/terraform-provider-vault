@@ -20,17 +20,17 @@ func certAuthBackendRoleResource() *schema.Resource {
 		Delete: certAuthResourceRead,
 
 		Schema: map[string]*schema.Schema{
-			"name": &schema.Schema{
+			"name": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"certificate": &schema.Schema{
+			"certificate": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"allowed_names": &schema.Schema{
+			"allowed_names": {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -38,7 +38,7 @@ func certAuthBackendRoleResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"required_extensions": &schema.Schema{
+			"required_extensions": {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -46,22 +46,22 @@ func certAuthBackendRoleResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"ttl": &schema.Schema{
+			"ttl": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"max_ttl": &schema.Schema{
+			"max_ttl": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"period": &schema.Schema{
+			"period": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"policies": &schema.Schema{
+			"policies": {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -69,12 +69,12 @@ func certAuthBackendRoleResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"display_name": &schema.Schema{
+			"display_name": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"backend": &schema.Schema{
+			"backend": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
