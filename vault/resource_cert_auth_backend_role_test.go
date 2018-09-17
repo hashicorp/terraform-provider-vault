@@ -90,7 +90,7 @@ func testCertAuthBackendDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_cert_auth_backend" {
+		if rs.Type != "vault_cert_auth_backend_role" {
 			continue
 		}
 		secret, err := client.Logical().Read(rs.Primary.ID)
@@ -106,7 +106,7 @@ func testCertAuthBackendDestroy(s *terraform.State) error {
 
 func testCertAuthBackendCheck_attrs(backend, name string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_cert_auth_backend.test"]
+		resourceState := s.Modules[0].Resources["vault_cert_auth_backend_role.test"]
 		if resourceState == nil {
 			return fmt.Errorf("resource not found in state")
 		}
@@ -227,7 +227,6 @@ func testCertAuthBackendCheck_attrs(backend, name string) resource.TestCheckFunc
 }
 
 func testCertAuthBackendConfig_basic(backend, name, certificate string, allowedNames []string) string {
-
 	quotedNames := make([]string, len(allowedNames))
 	for idx, name := range allowedNames {
 		quotedNames[idx] = fmt.Sprintf(`"%s"`, name)
