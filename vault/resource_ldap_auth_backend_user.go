@@ -21,11 +21,11 @@ func ldapAuthBackendUserResource() *schema.Resource {
 		Exists: ldapAuthBackendUserResourceExists,
 
 		Schema: map[string]*schema.Schema{
-			"username": &schema.Schema{
+			"username": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"policies": &schema.Schema{
+			"policies": {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -33,7 +33,7 @@ func ldapAuthBackendUserResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"groups": &schema.Schema{
+			"groups": {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -41,7 +41,7 @@ func ldapAuthBackendUserResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"backend": &schema.Schema{
+			"backend": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
@@ -82,7 +82,7 @@ func ldapAuthBackendUserResourceWrite(d *schema.ResourceData, meta interface{}) 
 
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing LDAP user %q: %s", path, err)
+		return fmt.Errorf("error writing ldap user %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote LDAP user %q", path)
 
@@ -96,7 +96,7 @@ func ldapAuthBackendUserResourceRead(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[DEBUG] Reading LDAP user %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading LDAP user %q: %s", path, err)
+		return fmt.Errorf("error reading ldap user %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read LDAP user %q", path)
 
@@ -127,7 +127,7 @@ func ldapAuthBackendUserResourceDelete(d *schema.ResourceData, meta interface{})
 	log.Printf("[DEBUG] Deleting LDAP user %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error LDAP user %q", path)
+		return fmt.Errorf("error deleting ldap user %q", path)
 	}
 	log.Printf("[DEBUG] Deleted LDAP user %q", path)
 
@@ -141,7 +141,7 @@ func ldapAuthBackendUserResourceExists(d *schema.ResourceData, meta interface{})
 	log.Printf("[DEBUG] Checking if LDAP user %q exists", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return true, fmt.Errorf("Error checking for existence of LDAP user %q: %s", path, err)
+		return true, fmt.Errorf("error checking for existence of ldap user %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Checked if LDAP user %q exists", path)
 

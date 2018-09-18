@@ -52,10 +52,10 @@ func testLDAPAuthBackendUserDestroy(s *terraform.State) error {
 		}
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("Error checking for LDAP auth backend user %q: %s", rs.Primary.ID, err)
+			return fmt.Errorf("error checking for ldap auth backend user %q: %s", rs.Primary.ID, err)
 		}
 		if secret != nil {
-			return fmt.Errorf("LDAP auth backend user %q still exists", rs.Primary.ID)
+			return fmt.Errorf("ldap auth backend user %q still exists", rs.Primary.ID)
 		}
 	}
 	return nil
@@ -86,7 +86,7 @@ func testLDAPAuthBackendUserCheck_groups(backend, username string, groups []stri
 			return err
 		}
 		if len(vaultGroups) != count {
-			return fmt.Errorf("Saw %d groups on server, expected %d", len(vaultGroups), count)
+			return fmt.Errorf("saw %d groups on server, expected %d", len(vaultGroups), count)
 		}
 
 		for _, group := range vaultGroups {
@@ -100,7 +100,7 @@ func testLDAPAuthBackendUserCheck_groups(backend, username string, groups []stri
 				}
 			}
 			if !found {
-				return fmt.Errorf("Unable to find group %s in state file", group)
+				return fmt.Errorf("unable to find group %s in state file", group)
 			}
 		}
 		return nil
@@ -157,11 +157,11 @@ func testLDAPAuthBackendUserCheck_attrs(backend, username string) resource.TestC
 			case json.Number:
 				apiData, err := resp.Data[apiAttr].(json.Number).Int64()
 				if err != nil {
-					return fmt.Errorf("Expected API field %s to be an int, was %q", apiAttr, resp.Data[apiAttr])
+					return fmt.Errorf("expected api field %s to be an int, was %q", apiAttr, resp.Data[apiAttr])
 				}
 				stateData, err := strconv.ParseInt(instanceState.Attributes[stateAttr], 10, 64)
 				if err != nil {
-					return fmt.Errorf("Expected state field %s to be an int, was %q", stateAttr, instanceState.Attributes[stateAttr])
+					return fmt.Errorf("expected state field %s to be an int, was %q", stateAttr, instanceState.Attributes[stateAttr])
 				}
 				match = apiData == stateData
 			case bool:
@@ -170,7 +170,7 @@ func testLDAPAuthBackendUserCheck_attrs(backend, username string) resource.TestC
 				} else {
 					stateData, err := strconv.ParseBool(instanceState.Attributes[stateAttr])
 					if err != nil {
-						return fmt.Errorf("Expected state field %s to be a bool, was %q", stateAttr, instanceState.Attributes[stateAttr])
+						return fmt.Errorf("expected state field %s to be a bool, was %q", stateAttr, instanceState.Attributes[stateAttr])
 					}
 					match = resp.Data[apiAttr] == stateData
 				}
@@ -180,16 +180,16 @@ func testLDAPAuthBackendUserCheck_attrs(backend, username string) resource.TestC
 				length := instanceState.Attributes[stateAttr+".#"]
 				if length == "" {
 					if len(resp.Data[apiAttr].([]interface{})) != 0 {
-						return fmt.Errorf("Expected state field %s to have %d entries, had 0", stateAttr, len(apiData))
+						return fmt.Errorf("expected state field %s to have %d entries, had 0", stateAttr, len(apiData))
 					}
 					match = true
 				} else {
 					count, err := strconv.Atoi(length)
 					if err != nil {
-						return fmt.Errorf("Expected %s.# to be a number, got %q", stateAttr, instanceState.Attributes[stateAttr+".#"])
+						return fmt.Errorf("expected %s.# to be a number, got %q", stateAttr, instanceState.Attributes[stateAttr+".#"])
 					}
 					if count != len(apiData) {
-						return fmt.Errorf("Expected %s to have %d entries in state, has %d", stateAttr, len(apiData), count)
+						return fmt.Errorf("expected %s to have %d entries in state, has %d", stateAttr, len(apiData), count)
 					}
 
 					for i := 0; i < count; i++ {
@@ -203,7 +203,7 @@ func testLDAPAuthBackendUserCheck_attrs(backend, username string) resource.TestC
 							}
 						}
 						if !found {
-							return fmt.Errorf("Expected item %d of %s (%s in state) of %q to be in state but wasn't", i, apiAttr, stateAttr, endpoint)
+							return fmt.Errorf("expected item %d of %s (%s in state) of %q to be in state but wasn't", i, apiAttr, stateAttr, endpoint)
 						}
 					}
 					match = true
@@ -213,7 +213,7 @@ func testLDAPAuthBackendUserCheck_attrs(backend, username string) resource.TestC
 
 			}
 			if !match {
-				return fmt.Errorf("Expected %s (%s in state) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
+				return fmt.Errorf("expected %s (%s in state) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
 			}
 
 		}

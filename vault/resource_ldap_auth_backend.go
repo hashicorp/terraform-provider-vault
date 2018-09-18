@@ -23,51 +23,51 @@ func ldapAuthBackendResource() *schema.Resource {
 		Exists: ldapAuthBackendExists,
 
 		Schema: map[string]*schema.Schema{
-			"url": &schema.Schema{
+			"url": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"starttls": &schema.Schema{
+			"starttls": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"tls_min_version": &schema.Schema{
+			"tls_min_version": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"tls_max_version": &schema.Schema{
+			"tls_max_version": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"insecure_tls": &schema.Schema{
+			"insecure_tls": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"certificate": &schema.Schema{
+			"certificate": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"binddn": &schema.Schema{
+			"binddn": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"bindpass": &schema.Schema{
+			"bindpass": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"userdn": &schema.Schema{
+			"userdn": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"userattr": &schema.Schema{
+			"userattr": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
@@ -75,44 +75,44 @@ func ldapAuthBackendResource() *schema.Resource {
 					return strings.ToLower(v.(string))
 				},
 			},
-			"discoverdn": &schema.Schema{
+			"discoverdn": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"deny_null_bind": &schema.Schema{
+			"deny_null_bind": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
-			"upndomain": &schema.Schema{
+			"upndomain": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"groupfilter": &schema.Schema{
+			"groupfilter": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"groupdn": &schema.Schema{
+			"groupdn": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"groupattr": &schema.Schema{
+			"groupattr": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
 
-			"description": &schema.Schema{
+			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
 
-			"path": &schema.Schema{
+			"path": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
@@ -139,7 +139,7 @@ func ldapAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Enabling LDAP auth backend %q", path)
 	err := client.Sys().EnableAuth(path, authType, desc)
 	if err != nil {
-		return fmt.Errorf("Error enabling LDAP auth backend %q: %s", path, err)
+		return fmt.Errorf("error enabling ldap auth backend %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Enabled LDAP auth backend %q", path)
 
@@ -223,7 +223,7 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing LDAP config %q: %s", path, err)
+		return fmt.Errorf("error writing ldap config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote LDAP config %q", path)
 
@@ -237,7 +237,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Reading LDAP auth backend config %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading LDAP auth backend config %q: %s", path, err)
+		return fmt.Errorf("error reading ldap auth backend config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read LDAP auth backend config %q", path)
 
@@ -274,7 +274,7 @@ func ldapAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleting LDAP auth backend %q", path)
 	err := client.Sys().DisableAuth(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting LDAP auth backend %q: %q", path, err)
+		return fmt.Errorf("error deleting ldap auth backend %q: %q", path, err)
 	}
 	log.Printf("[DEBUG] Deleted LDAP auth backend %q", path)
 
@@ -288,7 +288,7 @@ func ldapAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, erro
 	log.Printf("[DEBUG] Checking if LDAP auth backend %q exists", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return true, fmt.Errorf("Error checking for existence of LDAP config %q: %s", path, err)
+		return true, fmt.Errorf("error checking for existence of ldap config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Checked if LDAP auth backend %q exists", path)
 

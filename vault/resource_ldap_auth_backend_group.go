@@ -21,11 +21,11 @@ func ldapAuthBackendGroupResource() *schema.Resource {
 		Exists: ldapAuthBackendGroupResourceExists,
 
 		Schema: map[string]*schema.Schema{
-			"groupname": &schema.Schema{
+			"groupname": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"policies": &schema.Schema{
+			"policies": {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -33,7 +33,7 @@ func ldapAuthBackendGroupResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"backend": &schema.Schema{
+			"backend": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
@@ -70,7 +70,7 @@ func ldapAuthBackendGroupResourceWrite(d *schema.ResourceData, meta interface{})
 
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing LDAP group %q: %s", path, err)
+		return fmt.Errorf("error writing ldap group %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote LDAP group %q", path)
 
@@ -84,7 +84,7 @@ func ldapAuthBackendGroupResourceRead(d *schema.ResourceData, meta interface{}) 
 	log.Printf("[DEBUG] Reading LDAP group %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading LDAP group %q: %s", path, err)
+		return fmt.Errorf("error reading ldap group %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read LDAP group %q", path)
 
@@ -109,7 +109,7 @@ func ldapAuthBackendGroupResourceDelete(d *schema.ResourceData, meta interface{}
 	log.Printf("[DEBUG] Deleting LDAP group %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error LDAP group %q", path)
+		return fmt.Errorf("error deleting ldap group %q", path)
 	}
 	log.Printf("[DEBUG] Deleted LDAP group %q", path)
 
@@ -123,7 +123,7 @@ func ldapAuthBackendGroupResourceExists(d *schema.ResourceData, meta interface{}
 	log.Printf("[DEBUG] Checking if LDAP group %q exists", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return true, fmt.Errorf("Error checking for existence of LDAP group %q: %s", path, err)
+		return true, fmt.Errorf("error checking for existence of ldap group %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Checked if LDAP group %q exists", path)
 
