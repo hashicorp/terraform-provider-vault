@@ -104,6 +104,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_aws_auth_backend_sts_role":           awsAuthBackendSTSRoleResource(),
 			"vault_aws_secret_backend":                  awsSecretBackendResource(),
 			"vault_aws_secret_backend_role":             awsSecretBackendRoleResource(),
+			"vault_consul_secret_backend":               consulSecretBackendResource(),
 			"vault_database_secret_backend_connection":  databaseSecretBackendConnectionResource(),
 			"vault_database_secret_backend_role":        databaseSecretBackendRoleResource(),
 			"vault_gcp_auth_backend_role":               gcpAuthBackendRoleResource(),
