@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func TestResourceConsulRole(t *testing.T) {
+func TestResourceConsulSecretBackendRole(t *testing.T) {
 	path := acctest.RandomWithPrefix("test")
 
 	resource.Test(t, resource.TestCase{
@@ -19,26 +19,26 @@ func TestResourceConsulRole(t *testing.T) {
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			resource.TestStep{
-				Config: testResourceConsulRole_initialConfig(path),
-				Check:  testResourceConsulRole_initialCheck(path),
+				Config: testResourceConsulSecretBackendRole_initialConfig(path),
+				Check:  testResourceConsulSecretBackendRole_initialCheck(path),
 			},
 			resource.TestStep{
-				Config: testResourceConsulRole_updateConfig,
-				Check:  testResourceConsulRole_updateCheck,
+				Config: testResourceConsulSecretBackendRole_updateConfig,
+				Check:  testResourceConsulSecretBackendRole_updateCheck,
 			},
 		},
 	})
 }
 
-func TestResourceConsulRole_deleted(t *testing.T) {
+func TestResourceConsulSecretBackendRole_deleted(t *testing.T) {
 	path := acctest.RandomWithPrefix("test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			resource.TestStep{
-				Config: testResourceConsulRole_initialConfig(path),
-				Check:  testResourceConsulRole_initialCheck(path),
+				Config: testResourceConsulSecretBackendRole_initialConfig(path),
+				Check:  testResourceConsulSecretBackendRole_initialCheck(path),
 			},
 			resource.TestStep{
 				PreConfig: func() {
@@ -48,16 +48,16 @@ func TestResourceConsulRole_deleted(t *testing.T) {
 						t.Fatalf("unable to manually delete the consul role via the SDK: %s", err)
 					}
 				},
-				Config: testResourceConsulRole_initialConfig(path),
-				Check:  testResourceConsulRole_initialCheck(path),
+				Config: testResourceConsulSecretBackendRole_initialConfig(path),
+				Check:  testResourceConsulSecretBackendRole_initialCheck(path),
 			},
 		},
 	})
 }
 
-func testResourceConsulRole_initialConfig(name string) string {
+func testResourceConsulSecretBackendRole_initialConfig(name string) string {
 	return fmt.Sprintf(`
-resource "vault_consul_role" "test" {
+resource "vault_consul_secret_backend_role" "test" {
     name = "%s"
     policy = <<EOT
 key "zip/zap" { policy = "read" }
@@ -65,9 +65,9 @@ EOT
 }`, name)
 }
 
-func testResourceConsulRole_initialCheck(expectedName string) resource.TestCheckFunc {
+func testResourceConsulSecretBackendRole_initialCheck(expectedName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_consul_role.test"]
+		resourceState := s.Modules[0].Resources["vault_consul_secret_backend_role.test"]
 		if resourceState == nil {
 			return fmt.Errorf("resource not found in state")
 		}
@@ -108,8 +108,8 @@ func testResourceConsulRole_initialCheck(expectedName string) resource.TestCheck
 	}
 }
 
-var testResourceConsulRole_updateConfig = `
-resource "vault_consul_role" "test" {
+var testResourceConsulSecretBackendRole_updateConfig = `
+resource "vault_consul_secret_backend_role" "test" {
     name = "test"
     policy = <<EOT
 key "zip/zoop" { policy = "write" }
@@ -117,8 +117,8 @@ EOT
 }
 `
 
-func testResourceConsulRole_updateCheck(s *terraform.State) error {
-	resourceState := s.Modules[0].Resources["vault_consul_role.test"]
+func testResourceConsulSecretBackendRole_updateCheck(s *terraform.State) error {
+	resourceState := s.Modules[0].Resources["vault_consul_secret_backend_role.test"]
 	instanceState := resourceState.Primary
 
 	path := instanceState.ID

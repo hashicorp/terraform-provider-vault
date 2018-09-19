@@ -1,7 +1,7 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_consul_role resource"
-sidebar_current: "docs-vault-consul-role"
+page_title: "Vault: vault_consul_secret_backend_role resource"
+sidebar_current: "docs-vault-consul-secret-backend-role"
 description: |-
   Writes arbitrary consul roles for Vault
 ---
@@ -12,7 +12,7 @@ description: |-
 ## Example Usage
 
 ```hcl
-resource "vault_consul_role" "example" {
+resource "vault_consul_secret_backend_role" "example" {
   name = "app"
   path = "consul"
   role = <<EOT

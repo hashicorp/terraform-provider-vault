@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func consulRoleResource() *schema.Resource {
+func consulSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: consulRoleWrite,
 		Update: consulRoleWrite,

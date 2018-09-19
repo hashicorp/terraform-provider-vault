@@ -7,18 +7,18 @@ import (
 	"github.com/hashicorp/terraform/helper/resource"
 )
 
-func TestAccConsulRole_importBasic(t *testing.T) {
+func TestAccConsulSecretBackendRole_importBasic(t *testing.T) {
 	path := acctest.RandomWithPrefix("consul-")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceConsulRole_initialConfig(path),
-				Check:  testResourceConsulRole_initialCheck(path),
+				Config: testResourceConsulSecretBackendRole_initialConfig(path),
+				Check:  testResourceConsulSecretBackendRole_initialCheck(path),
 			},
 			{
-				ResourceName:      "vault_consul_role.test",
+				ResourceName:      "vault_consul_secret_backend_role.test",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
