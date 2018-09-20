@@ -111,8 +111,7 @@ func testOktaAuthBackend_InitialCheck(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
-
-	if int64((time.Hour * 1).Seconds()) != ttl {
+	if (time.Hour * 1).Nanoseconds() != ttl {
 		return fmt.Errorf("incorrect ttl: %s", config.Data["ttl"])
 	}
 

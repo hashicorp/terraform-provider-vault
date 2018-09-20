@@ -8,7 +8,7 @@ import (
 )
 
 func TestAccGenericSecret_importBasic(t *testing.T) {
-	path := acctest.RandomWithPrefix("secretsv1/test-")
+	path := acctest.RandomWithPrefix("secret/test-")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testProviders,
