@@ -125,6 +125,7 @@ func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	d.Set("backend", idPieces[1])
 	d.Set("access_key", secret.Data["access_key"])
+	d.Set("secret_key", secret.Data["secret_key"])
 	d.Set("ec2_endpoint", secret.Data["endpoint"])
 	d.Set("iam_endpoint", secret.Data["iam_endpoint"])
 	d.Set("sts_endpoint", secret.Data["sts_endpoint"])

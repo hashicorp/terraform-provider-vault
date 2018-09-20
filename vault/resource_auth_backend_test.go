@@ -45,7 +45,7 @@ func testAccCheckAuthBackendDestroy(s *terraform.State) error {
 		}
 
 		if _, ok := auths[instanceState.ID]; ok {
-			return fmt.Errorf("Auth backend still exists")
+			return fmt.Errorf("Auth backend still exists.")
 		}
 	}
 	return nil

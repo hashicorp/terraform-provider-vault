@@ -24,7 +24,7 @@ func TestDataSourceGenericSecret(t *testing.T) {
 var testDataSourceGenericSecret_config = `
 
 resource "vault_generic_secret" "test" {
-    path = "secretsv1/foo"
+    path = "secret/foo"
     data_json = <<EOT
 {
     "zip": "zap"
