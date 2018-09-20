@@ -38,3 +38,11 @@ The following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+Mounts can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_mount.example dummy
+```

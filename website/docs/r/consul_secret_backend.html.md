@@ -55,3 +55,11 @@ for credentials issued by this backend.
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+Consul secret backends can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_consul_secret_backend.example consul
+```

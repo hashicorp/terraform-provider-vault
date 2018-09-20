@@ -54,3 +54,11 @@ The following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+Token auth backend roles can be imported with `auth/token/roles/` followed by the `role_name`, e.g.
+
+```
+$ terraform import vault_token_auth_backend_role.example auth/token/roles/my-role
+```
