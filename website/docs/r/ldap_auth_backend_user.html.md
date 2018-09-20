@@ -14,7 +14,7 @@ Provides a resource to create a user in an [LDAP auth backend within Vault](http
 
 ```hcl
 resource "vault_ldap_auth_backend" "ldap" {
-    backend     = "ldap"
+    path        = "ldap"
     url         = "ldaps://dc-01.example.org"
     userdn      = "OU=Users,OU=Accounts,DC=example,DC=org"
     userattr    = "sAMAccountName"
