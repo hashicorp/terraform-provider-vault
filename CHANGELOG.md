@@ -1,4 +1,9 @@
 ## 1.1.4 (Unreleased)
+
+BUG FIXES:
+
+* Reverts breaking changes to `vault_aws_auth_backend_role` introduced by ([#53](https://github.com/terraform-providers/terraform-provider-vault/pull/153))
+
 ## 1.1.3 (September 18, 2018)
 
 FEATURES:
