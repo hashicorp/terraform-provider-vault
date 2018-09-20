@@ -26,8 +26,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		SchemaVersion: 1,
-		MigrateState:  awsAuthBackendRoleResourceMigrateState,
 		Schema: map[string]*schema.Schema{
 			"role": {
 				Type:        schema.TypeString,
@@ -43,6 +41,12 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				ForceNew:    true,
 			},
 			"bound_ami_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Only EC2 instances using this AMI ID will be permitted to log in.",
+				Deprecated: `"bound_ami_id" is deprecated, please use "bound_ami_ids" as a list.`,
+			},
+			"bound_ami_ids": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Only EC2 instances using this AMI ID will be permitted to log in.",
@@ -51,6 +55,12 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				},
 			},
 			"bound_account_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Only EC2 instances with this account ID in their identity document will be permitted to log in.",
+				Deprecated: `"bound_account_id" is deprecated, please use "bound_account_ids" as a list.`,
+			},
+			"bound_account_ids": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Only EC2 instances with this account ID in their identity document will be permitted to log in.",
@@ -59,6 +69,12 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				},
 			},
 			"bound_region": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Only EC2 instances in this region will be permitted to log in.",
+				Deprecated:`"bound_region" is deprecated, please use "bound_regions" as a list.`,
+			},
+			"bound_regions": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Only EC2 instances in this region will be permitted to log in.",
@@ -67,6 +83,12 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				},
 			},
 			"bound_vpc_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Only EC2 instances associated with this VPC ID will be permitted to log in.",
+				Deprecated: `"bound_vpc_id" is deprecated, please use "bound_vpc_ids" as a list.`,
+			},
+			"bound_vpc_ids": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Only EC2 instances associated with this VPC ID will be permitted to log in.",
@@ -75,6 +97,12 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				},
 			},
 			"bound_subnet_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Only EC2 instances associated with this subnet ID will be permitted to log in.",
+				Deprecated:`"bound_subnet_id" is deprecated, please use "bound_subnet_ids" as a list.`,
+			},
+			"bound_subnet_ids": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Only EC2 instances associated with this subnet ID will be permitted to log in.",
@@ -83,6 +111,12 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				},
 			},
 			"bound_iam_role_arn": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Only EC2 instances that match this IAM role ARN will be permitted to log in.",
+				Deprecated:`"bound_iam_role_arn" is deprecated, please use "bound_iam_role_arns" as a list.`,
+			},
+			"bound_iam_role_arns": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Only EC2 instances that match this IAM role ARN will be permitted to log in.",
@@ -91,6 +125,12 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				},
 			},
 			"bound_iam_instance_profile_arn": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Only EC2 instances associated with an IAM instance profile ARN that matches this value will be permitted to log in.",
+				Deprecated: `"bound_iam_instance_profile_arn" is deprecated, please use "bound_iam_instance_profile_arns" as a list.`,
+			},
+			"bound_iam_instance_profile_arns": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Only EC2 instances associated with an IAM instance profile ARN that matches this value will be permitted to log in.",
@@ -104,6 +144,12 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Description: "The key of the tag on EC2 instance to use for role tags.",
 			},
 			"bound_iam_principal_arn": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The IAM principal that must be authenticated using the iam auth method.",
+				Deprecated: `"bound_iam_principal_arn" is deprecated, please use "bound_iam_principal_arns" as a list.`,
+			},
+			"bound_iam_principal_arns": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "The IAM principal that must be authenticated using the iam auth method.",
@@ -176,14 +222,14 @@ func awsAuthBackendRoleResource() *schema.Resource {
 	}
 }
 
-func setSlice(d *schema.ResourceData, k string, data map[string]interface{}) {
-	if v, ok := d.GetOk(k); ok {
+func setSlice(d *schema.ResourceData, tfFieldName, vaultFieldName string, data map[string]interface{}) {
+	if v, ok := d.GetOk(tfFieldName); ok {
 		iAmis := v.([]interface{})
 		amis := make([]string, 0, len(iAmis))
 		for _, iAmi := range iAmis {
 			amis = append(amis, iAmi.(string))
 		}
-		data[k] = amis
+		data[vaultFieldName] = amis
 	}
 }
 
@@ -222,13 +268,38 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if isEc2(authType, inferred) {
-		setSlice(d, "bound_ami_id", data)
-		setSlice(d, "bound_account_id", data)
-		setSlice(d, "bound_region", data)
-		setSlice(d, "bound_vpc_id", data)
-		setSlice(d, "bound_subnet_id", data)
-		setSlice(d, "bound_iam_role_arn", data)
-		setSlice(d, "bound_iam_instance_profile_arn", data)
+
+		// Support the deprecated version of the fields.
+		if v, ok := d.GetOk("bound_ami_id"); ok {
+			data["bound_ami_id"] = v.(string)
+		}
+		if v, ok := d.GetOk("bound_account_id"); ok {
+			data["bound_account_id"] = v.(string)
+		}
+		if v, ok := d.GetOk("bound_region"); ok {
+			data["bound_region"] = v.(string)
+		}
+		if v, ok := d.GetOk("bound_vpc_id"); ok {
+			data["bound_vpc_id"] = v.(string)
+		}
+		if v, ok := d.GetOk("bound_subnet_id"); ok {
+			data["bound_subnet_id"] = v.(string)
+		}
+		if v, ok := d.GetOk("bound_iam_role_arn"); ok {
+			data["bound_iam_role_arn"] = v.(string)
+		}
+		if v, ok := d.GetOk("bound_iam_instance_profile_arn"); ok {
+			data["bound_iam_instance_profile_arn"] = v.(string)
+		}
+
+		// Support and favor the current version of the fields.
+		setSlice(d, "bound_ami_ids", "bound_ami_id", data)
+		setSlice(d, "bound_account_ids", "bound_account_id", data)
+		setSlice(d, "bound_regions", "bound_region", data)
+		setSlice(d, "bound_vpc_ids", "bound_vpc_id", data)
+		setSlice(d, "bound_subnet_ids", "bound_subnet_id", data)
+		setSlice(d, "bound_iam_role_arns", "bound_iam_role_arn", data)
+		setSlice(d, "bound_iam_instance_profile_arns", "bound_iam_instance_profile_arn", data)
 	}
 
 	if authType == "ec2" {
@@ -247,7 +318,13 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 			data["inferred_entity_type"] = inferred
 		}
 
-		setSlice(d, "bound_iam_principal_arn", data)
+		// Support the deprecated version of the field.
+		if v, ok := d.GetOk("bound_iam_principal_arn"); ok {
+			data["bound_iam_principal_arn"] = v.(string)
+		}
+
+		// Support and favor the current version of the field.
+		setSlice(d, "bound_iam_principal_arns", "bound_iam_principal_arn", data)
 
 		if v, ok := d.GetOk("inferred_aws_region"); ok {
 			data["inferred_aws_region"] = v.(string)
@@ -410,7 +487,10 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 		if inferred != "" {
 			data["inferred_entity_type"] = inferred
 		}
-		setSlice(d, "bound_iam_principal_arn", data)
+		if v, ok := d.GetOk("bound_iam_principal_arn"); ok {
+			data["bound_iam_principal_arn"] = v.(string)
+		}
+		setSlice(d, "bound_iam_principal_arns", "bound_iam_principal_arn", data)
 		if v, ok := d.GetOk("inferred_aws_region"); ok {
 			data["inferred_aws_region"] = v.(string)
 		}
