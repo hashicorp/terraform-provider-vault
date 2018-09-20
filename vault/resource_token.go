@@ -238,7 +238,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Set("policies", policies)
-	d.Set("no_parent", resp.Data["orphan"])
+	d.Set("no_parent", fmt.Sprintf("%v", resp.Data["orphan"]))
 	d.Set("renewable", fmt.Sprintf("%v", resp.Data["renewable"]))
 	d.Set("display_name", strings.TrimPrefix(resp.Data["display_name"].(string), "token-"))
 	d.Set("num_uses", resp.Data["num_uses"])
