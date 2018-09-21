@@ -144,9 +144,9 @@ func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccAWSAuthBackendRoleCheck_attrs(backend, role),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"bound_iam_principal_arn.#", "1"),
+						"bound_iam_principal_arns.#", "1"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"bound_iam_principal_arn.0", "arn:aws:iam::123456789012:role/MyRole/*"),
+						"bound_iam_principal_arns.0", "arn:aws:iam::123456789012:role/MyRole/*"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
 						"ttl", "30"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
@@ -206,25 +206,25 @@ func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestChe
 		}
 
 		attrs := map[string]string{
-			"auth_type":                      "auth_type",
-			"bound_ami_id":                   "bound_ami_id",
-			"bound_account_id":               "bound_account_id",
-			"bound_region":                   "bound_region",
-			"bound_vpc_id":                   "bound_vpc_id",
-			"bound_subnet_id":                "bound_subnet_id",
-			"bound_iam_role_arn":             "bound_iam_role_arn",
-			"bound_iam_instance_profile_arn": "bound_iam_instance_profile_arn",
-			"role_tag":                       "role_tag",
-			"bound_iam_principal_arn":        "bound_iam_principal_arn",
-			"inferred_entity_type":           "inferred_entity_type",
-			"inferred_aws_region":            "inferred_aws_region",
-			"resolve_aws_unique_ids":         "resolve_aws_unique_ids",
-			"ttl":                            "ttl",
-			"max_ttl":                        "max_ttl",
-			"period":                         "period",
-			"policies":                       "policies",
-			"allow_instance_migration":       "allow_instance_migration",
-			"disallow_reauthentication":      "disallow_reauthentication",
+			"auth_type":                       "auth_type",
+			"bound_ami_ids":                   "bound_ami_id",
+			"bound_account_ids":               "bound_account_id",
+			"bound_regions":                   "bound_region",
+			"bound_vpc_ids":                   "bound_vpc_id",
+			"bound_subnet_ids":                "bound_subnet_id",
+			"bound_iam_role_arns":             "bound_iam_role_arn",
+			"bound_iam_instance_profile_arns": "bound_iam_instance_profile_arn",
+			"role_tag":                        "role_tag",
+			"bound_iam_principal_arns":        "bound_iam_principal_arn",
+			"inferred_entity_type":            "inferred_entity_type",
+			"inferred_aws_region":             "inferred_aws_region",
+			"resolve_aws_unique_ids":          "resolve_aws_unique_ids",
+			"ttl":                             "ttl",
+			"max_ttl":                         "max_ttl",
+			"period":                          "period",
+			"policies":                        "policies",
+			"allow_instance_migration":        "allow_instance_migration",
+			"disallow_reauthentication":       "disallow_reauthentication",
 		}
 		for stateAttr, apiAttr := range attrs {
 			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
@@ -298,12 +298,12 @@ resource "vault_aws_auth_backend_role" "role" {
   backend = "${vault_auth_backend.aws.path}"
   role = "%s"
   auth_type = "iam"
-  bound_ami_id = ["ami-8c1be5f6"]
-  bound_account_id = ["123456789012"]
-  bound_vpc_id = ["vpc-b61106d4"]
-  bound_subnet_id = ["vpc-a33128f1"]
-  bound_iam_role_arn = ["arn:aws:iam::123456789012:role/S3Access"]
-  bound_iam_instance_profile_arn = ["arn:aws:iam::123456789012:instance-profile/Webserver"]
+  bound_ami_ids = ["ami-8c1be5f6"]
+  bound_account_ids = ["123456789012"]
+  bound_vpc_ids = ["vpc-b61106d4"]
+  bound_subnet_ids = ["vpc-a33128f1"]
+  bound_iam_role_arns = ["arn:aws:iam::123456789012:role/S3Access"]
+  bound_iam_instance_profile_arns = ["arn:aws:iam::123456789012:instance-profile/Webserver"]
   inferred_entity_type = "ec2_instance"
   inferred_aws_region = "us-east-1"
   ttl = 60
@@ -323,7 +323,7 @@ resource "vault_aws_auth_backend_role" "role" {
   backend = "${vault_auth_backend.aws.path}"
   role = "%s"
   auth_type = "iam"
-  bound_iam_principal_arn = ["arn:aws:iam::123456789012:role/*"]
+  bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/*"]
   resolve_aws_unique_ids = true
   ttl = 60
   max_ttl = 120
@@ -342,7 +342,7 @@ resource "vault_aws_auth_backend_role" "role" {
   backend = "${vault_auth_backend.aws.path}"
   role = "%s"
   auth_type = "iam"
-  bound_iam_principal_arn = ["arn:aws:iam::123456789012:role/MyRole/*"]
+  bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/MyRole/*"]
   resolve_aws_unique_ids = true
   ttl = 30
   max_ttl = 60
@@ -361,13 +361,13 @@ resource "vault_aws_auth_backend_role" "role" {
   backend = "${vault_auth_backend.aws.path}"
   role = "%s"
   auth_type = "ec2"
-  bound_ami_id = ["ami-8c1be5f6"]
-  bound_account_id = ["123456789012"]
-  bound_region = ["us-east-1"]
-  bound_vpc_id = ["vpc-b61106d4"]
-  bound_subnet_id = ["vpc-a33128f1"]
-  bound_iam_role_arn = ["arn:aws:iam::123456789012:role/S3Access"]
-  bound_iam_instance_profile_arn = ["arn:aws:iam::123456789012:instance-profile/Webserver"]
+  bound_ami_ids = ["ami-8c1be5f6"]
+  bound_account_ids = ["123456789012"]
+  bound_regions = ["us-east-1"]
+  bound_vpc_ids = ["vpc-b61106d4"]
+  bound_subnet_ids = ["vpc-a33128f1"]
+  bound_iam_role_arns = ["arn:aws:iam::123456789012:role/S3Access"]
+  bound_iam_instance_profile_arns = ["arn:aws:iam::123456789012:instance-profile/Webserver"]
   role_tag = "VaultRoleTag"
   disallow_reauthentication = true
   ttl = 60

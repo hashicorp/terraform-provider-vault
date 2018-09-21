@@ -223,13 +223,13 @@ func awsAuthBackendRoleResource() *schema.Resource {
 }
 
 func setSlice(d *schema.ResourceData, tfFieldName, vaultFieldName string, data map[string]interface{}) {
-	if v, ok := d.GetOk(tfFieldName); ok {
-		iAmis := v.([]interface{})
-		amis := make([]string, 0, len(iAmis))
-		for _, iAmi := range iAmis {
-			amis = append(amis, iAmi.(string))
+	if ifcValue, ok := d.GetOk(tfFieldName); ok {
+		ifcValues := ifcValue.([]interface{})
+		strVals := make([]string, len(ifcValues))
+		for i, ifcVal := range ifcValues {
+			strVals[i] = ifcVal.(string)
 		}
-		data[vaultFieldName] = amis
+		data[vaultFieldName] = strVals
 	}
 }
 
@@ -243,9 +243,9 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Writing AWS auth backend role %q", path)
 	iPolicies := d.Get("policies").([]interface{})
-	policies := make([]string, 0, len(iPolicies))
-	for _, iPolicy := range iPolicies {
-		policies = append(policies, iPolicy.(string))
+	policies := make([]string, len(iPolicies))
+	for i, iPolicy := range iPolicies {
+		policies[i] = iPolicy.(string)
 	}
 
 	authType := d.Get("auth_type").(string)
@@ -333,11 +333,8 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 			data["resolve_aws_unique_ids"] = v.(bool)
 		}
 	}
-	_, err := client.Logical().Write(path, data)
-
 	d.SetId(path)
-
-	if err != nil {
+	if _, err := client.Logical().Write(path, data); err != nil {
 		d.SetId("")
 		return fmt.Errorf("error writing AWS auth backend role %q: %s", path, err)
 	}
@@ -372,9 +369,9 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 	iPolicies := resp.Data["policies"].([]interface{})
-	policies := make([]string, 0, len(iPolicies))
-	for _, iPolicy := range iPolicies {
-		policies = append(policies, iPolicy.(string))
+	policies := make([]string, len(iPolicies))
+	for i, iPolicy := range iPolicies {
+		policies[i] = iPolicy.(string)
 	}
 
 	ttl, err := resp.Data["ttl"].(json.Number).Int64()
@@ -396,16 +393,27 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("role", role)
 	d.Set("auth_type", resp.Data["auth_type"])
 
+	// Read Vault's response into the currently supported version of these fields.
+	d.Set("bound_account_ids", resp.Data["bound_account_id"])
+	d.Set("bound_ami_ids", resp.Data["bound_ami_id"])
+	d.Set("bound_iam_instance_profile_arns", resp.Data["bound_iam_instance_profile_arn"])
+	d.Set("bound_iam_role_arns", resp.Data["bound_iam_role_arn"])
+	d.Set("bound_subnet_ids", resp.Data["bound_subnet_id"])
+	d.Set("bound_vpc_ids", resp.Data["bound_vpc_id"])
+	d.Set("bound_regions", resp.Data["bound_region"])
+	d.Set("bound_iam_principal_arns", resp.Data["bound_iam_principal_arn"])
+
+	// For backward-compatibility, also read them into the deprecated version.
 	d.Set("bound_account_id", resp.Data["bound_account_id"])
 	d.Set("bound_ami_id", resp.Data["bound_ami_id"])
 	d.Set("bound_iam_instance_profile_arn", resp.Data["bound_iam_instance_profile_arn"])
 	d.Set("bound_iam_role_arn", resp.Data["bound_iam_role_arn"])
 	d.Set("bound_subnet_id", resp.Data["bound_subnet_id"])
 	d.Set("bound_vpc_id", resp.Data["bound_vpc_id"])
-
 	d.Set("bound_region", resp.Data["bound_region"])
-	d.Set("role_tag", resp.Data["role_tag"])
 	d.Set("bound_iam_principal_arn", resp.Data["bound_iam_principal_arn"])
+
+	d.Set("role_tag", resp.Data["role_tag"])
 	d.Set("inferred_entity_type", resp.Data["inferred_entity_type"])
 	d.Set("inferred_aws_region", resp.Data["inferred_aws_region"])
 	d.Set("resolve_aws_unique_ids", resp.Data["resolve_aws_unique_ids"])
@@ -425,9 +433,9 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Updating AWS auth backend role %q", path)
 	iPolicies := d.Get("policies").([]interface{})
-	policies := make([]string, 0, len(iPolicies))
-	for _, iPolicy := range iPolicies {
-		policies = append(policies, iPolicy.(string))
+	policies := make([]string, len(iPolicies))
+	for i, iPolicy := range iPolicies {
+		policies[i] = iPolicy.(string)
 	}
 
 	authType := d.Get("auth_type").(string)
@@ -448,6 +456,8 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if isEc2(authType, inferred) {
+
+		// Support the deprecated version of the fields.
 		if v, ok := d.GetOk("bound_ami_id"); ok {
 			data["bound_ami_id"] = v.(string)
 		}
@@ -469,6 +479,15 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 		if v, ok := d.GetOk("bound_iam_instance_profile_arn"); ok {
 			data["bound_iam_instance_profile_arn"] = v.(string)
 		}
+
+		// Support and favor the current version of the fields.
+		setSlice(d, "bound_ami_ids", "bound_ami_id", data)
+		setSlice(d, "bound_account_ids", "bound_account_id", data)
+		setSlice(d, "bound_regions", "bound_region", data)
+		setSlice(d, "bound_vpc_ids", "bound_vpc_id", data)
+		setSlice(d, "bound_subnet_ids", "bound_subnet_id", data)
+		setSlice(d, "bound_iam_role_arns", "bound_iam_role_arn", data)
+		setSlice(d, "bound_iam_instance_profile_arns", "bound_iam_instance_profile_arn", data)
 	}
 
 	if authType == "ec2" {
@@ -487,13 +506,19 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 		if inferred != "" {
 			data["inferred_entity_type"] = inferred
 		}
+
+		// Support the deprecated version of the field.
 		if v, ok := d.GetOk("bound_iam_principal_arn"); ok {
 			data["bound_iam_principal_arn"] = v.(string)
 		}
+
+		// Support and favor the current version of the field.
 		setSlice(d, "bound_iam_principal_arns", "bound_iam_principal_arn", data)
+
 		if v, ok := d.GetOk("inferred_aws_region"); ok {
 			data["inferred_aws_region"] = v.(string)
 		}
+
 		if v, ok := d.GetOk("resolve_aws_unique_ids"); ok {
 			data["resolve_aws_unique_ids"] = v.(bool)
 		}
@@ -509,7 +534,7 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func isEc2(authType, inferred string) bool {
-	isEc2InstanceWithIam := (inferred == "ec2_instance" && authType == "iam")
+	isEc2InstanceWithIam := inferred == "ec2_instance" && authType == "iam"
 	return authType == "ec2" || isEc2InstanceWithIam
 }
 
