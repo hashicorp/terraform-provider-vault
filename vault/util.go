@@ -60,3 +60,20 @@ func arrayToTerraformList(values []string) string {
 	}
 	return fmt.Sprintf("[%s]", strings.Join(output, ", "))
 }
+
+func terraformSetToStringArray(set interface{}) []string {
+	list := set.(*schema.Set).List()
+	arr := make([]string, 0, len(list))
+	for _, v := range list {
+		arr = append(arr, v.(string))
+	}
+	return arr
+}
+
+func jsonStringArrayToStringArray(jsonList []interface{}) []string {
+	strList := make([]string, 0, len(jsonList))
+	for _, v := range jsonList {
+		strList = append(strList, v.(string))
+	}
+	return strList
+}
