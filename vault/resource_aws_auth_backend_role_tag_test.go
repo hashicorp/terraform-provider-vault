@@ -93,4 +93,3 @@ resource "vault_aws_auth_backend_role_tag" "test" {
     instance_id = "i-1234567"
 }`, backend, role)
 }
-
