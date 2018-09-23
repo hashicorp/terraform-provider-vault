@@ -66,6 +66,17 @@ The following arguments are supported:
   value of this field. The maximum allowed lifetime of token issued using this
   role. Specified as a number of seconds.
 
+* `backend` - (Optional) The unique name of the auth backend to configure.
+  Defaults to `approle`.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+AppRole authentication backend roles can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_approle_auth_backend_role.example auth/approle/role/test-role
+```

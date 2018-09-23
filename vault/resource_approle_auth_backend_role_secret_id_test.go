@@ -74,7 +74,7 @@ func testAccCheckAppRoleAuthBackendRoleSecretIDDestroy(s *terraform.State) error
 		}
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("Error checking for AppRole auth backend role SecretID %q: %s", rs.Primary.ID, err)
+			return fmt.Errorf("error checking for AppRole auth backend role SecretID %q: %s", rs.Primary.ID, err)
 		}
 		if secret != nil {
 			return fmt.Errorf("AppRole auth backend role SecretID %q still exists", rs.Primary.ID)

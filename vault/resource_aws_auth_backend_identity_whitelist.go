@@ -73,7 +73,7 @@ func awsAuthBackendIdentityWhitelistWrite(d *schema.ResourceData, meta interface
 
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error configuring AWS auth backend identity whitelist %q: %s", path, err)
+		return fmt.Errorf("error configuring AWS auth backend identity whitelist %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Configured AWS backend identity whitelist %q", path)
 
@@ -87,13 +87,13 @@ func awsAuthBackendIdentityWhitelistRead(d *schema.ResourceData, meta interface{
 
 	backend, err := awsAuthBackendIdentityWhitelistBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("Invalid path %q for AWS auth backend identity whitelist: %s", path, err)
+		return fmt.Errorf("invalid path %q for AWS auth backend identity whitelist: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading identity whitelist %q from AWS auth backend", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading AWS auth backend identity whitelist %q: %s", path, err)
+		return fmt.Errorf("error reading AWS auth backend identity whitelist %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read identity whitelist %q from AWS auth backend", path)
 	if resp == nil {
@@ -116,7 +116,7 @@ func awsAuthBackendIdentityWhitelistDelete(d *schema.ResourceData, meta interfac
 	log.Printf("[DEBUG] Removing identity whitelist %q from AWS auth backend", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting AWS auth backend identity whitelist %q: %s", path, err)
+		return fmt.Errorf("error deleting AWS auth backend identity whitelist %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Removed identity whitelist %q from AWS auth backend", path)
 
@@ -131,7 +131,7 @@ func awsAuthBackendIdentityWhitelistExists(d *schema.ResourceData, meta interfac
 	log.Printf("[DEBUG] Checking if identity whitelist %q exists in AWS auth backend", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return true, fmt.Errorf("Error checking for existence of AWS auth backend identity whitelist %q: %s", path, err)
+		return true, fmt.Errorf("error checking for existence of AWS auth backend identity whitelist %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Checked if identity whitelist %q exists in AWS auth backend", path)
 	return resp != nil, nil
