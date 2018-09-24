@@ -76,3 +76,11 @@ The following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+Database secret backend roles can be imported using the `backend`, `/roles/`, and the `name` e.g.
+
+```
+$ terraform import vault_database_secret_backend_role.example postgres/roles/my-role
+```

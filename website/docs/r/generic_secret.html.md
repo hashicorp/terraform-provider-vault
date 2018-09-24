@@ -76,3 +76,11 @@ true
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+Generic secrets can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_mount.example secret/foo
+```
