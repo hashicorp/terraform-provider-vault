@@ -13,13 +13,8 @@ Provides a resource to create a user in an [LDAP auth backend within Vault](http
 ## Example Usage
 
 ```hcl
-resource "vault_auth_backend" "ldap" {
-    path = "ldap"
-    type = "ldap"
-}
-
-resource "vault_ldap_auth_backend_config" "ldap" {
-    backend     = "${vault_auth_backend.ldap.path}"
+resource "vault_ldap_auth_backend" "ldap" {
+    path        = "ldap"
     url         = "ldaps://dc-01.example.org"
     userdn      = "OU=Users,OU=Accounts,DC=example,DC=org"
     userattr    = "sAMAccountName"
@@ -32,7 +27,7 @@ resource "vault_ldap_auth_backend_config" "ldap" {
 resource "vault_ldap_auth_backend_user" "user" {
     username = "test-user"
     policies = ["dba", "sysops"]
-    backend  = "${vault_auth_backend.ldap.path}"
+    backend  = "${vault_ldap_auth_backend.ldap.path}"
 }
 ```
 

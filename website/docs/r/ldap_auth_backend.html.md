@@ -14,7 +14,7 @@ Provides a resource for managing an [LDAP auth backend within Vault](https://www
 
 ```hcl
 resource "vault_ldap_auth_backend" "ldap" {
-    path        = "${vault_auth_backend.ldap.path}"
+    path        = "ldap"
     url         = "ldaps://dc-01.example.org"
     userdn      = "OU=Users,OU=Accounts,DC=example,DC=org"
     userattr    = "sAMAccountName"
@@ -31,7 +31,7 @@ The following arguments are supported:
 
 * `url` - (Required) The URL of the LDAP server
 
-* `startls` - (Optional) Control use of TLS when conecting to LDAP
+* `starttls` - (Optional) Control use of TLS when conecting to LDAP
 
 * `tls_min_version` - (Optional) Minimum acceptable version of TLS
 
@@ -50,6 +50,12 @@ The following arguments are supported:
 * `userattr` - (Optional) Attribute on user object matching username passed in
 
 * `upndomain` - (Optional) The userPrincipalDomain used to construct UPN string
+
+* `discoverdn`: (Optional) Use anonymous bind to discover the bind DN of a user.
+
+* `deny_null_bind`: (Optional) Prevents users from bypassing authentication when providing an empty password.
+
+* `upndomain`: (Optional) The `userPrincipalDomain` used to construct the UPN string for the authenticating user.
 
 * `groupfilter` - (Optional) Go template used to construct group membership query
 
