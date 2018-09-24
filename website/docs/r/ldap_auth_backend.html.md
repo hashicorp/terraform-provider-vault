@@ -31,7 +31,7 @@ The following arguments are supported:
 
 * `url` - (Required) The URL of the LDAP server
 
-* `startls` - (Optional) Control use of TLS when conecting to LDAP
+* `starttls` - (Optional) Control use of TLS when conecting to LDAP
 
 * `tls_min_version` - (Optional) Minimum acceptable version of TLS
 
