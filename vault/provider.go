@@ -110,6 +110,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_gcp_auth_backend_role":               gcpAuthBackendRoleResource(),
 			"vault_cert_auth_backend_role":              certAuthBackendRoleResource(),
 			"vault_generic_secret":                      genericSecretResource(),
+			"vault_jwt_auth_backend_role":               jwtAuthBackendRoleResource(),
 			"vault_okta_auth_backend":                   oktaAuthBackendResource(),
 			"vault_okta_auth_backend_user":              oktaAuthBackendUserResource(),
 			"vault_okta_auth_backend_group":             oktaAuthBackendGroupResource(),
