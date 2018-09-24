@@ -13,8 +13,8 @@ description: |-
 
 ```hcl
 resource "vault_mount" "example" {
-  path = "dummy"
-  type = "generic"
+  path        = "dummy"
+  type        = "generic"
   description = "This is an example mount"
 }
 ```
