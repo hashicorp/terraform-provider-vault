@@ -58,9 +58,10 @@ func ldapAuthBackendResource() *schema.Resource {
 				Computed: true,
 			},
 			"bindpass": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:      schema.TypeString,
+				Optional:  true,
+				Computed:  true,
+				Sensitive: true,
 			},
 			"userdn": {
 				Type:     schema.TypeString,
@@ -254,7 +255,6 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("insecure_tls", resp.Data["insecure_tls"])
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("binddn", resp.Data["binddn"])
-	d.Set("bindpass", resp.Data["bindpass"])
 	d.Set("userdn", resp.Data["userdn"])
 	d.Set("userattr", resp.Data["userattr"])
 	d.Set("discoverdn", resp.Data["discoverdn"])
@@ -263,6 +263,9 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("groupfilter", resp.Data["groupfilter"])
 	d.Set("groupdn", resp.Data["groupdn"])
 	d.Set("groupattr", resp.Data["groupattr"])
+
+	// `bindpass` cannot be read out from the API
+	// So... if they drift, they drift.
 
 	return nil
 }

@@ -69,6 +69,11 @@ The following arguments are supported:
 
 For more details on the usage of each argument consult the [Vault LDAP API documentation](https://www.vaultproject.io/api/auth/ldap/index.html).
 
+~> **Important** Because Vault does not support reading the configured
+credentials back from the API, Terraform cannot detect and correct drift
+on `bindpass`. Changing the values, however, _will_ overwrite the
+previously stored values.
+
 ## Attribute Reference
 
 No additional attributes are exposed by this resource.
