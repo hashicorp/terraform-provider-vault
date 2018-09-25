@@ -2,6 +2,7 @@ package vault
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"reflect"
 	"strings"
@@ -50,4 +51,29 @@ func calculateConflictsWith(self string, group []string) []string {
 		results = append(results, item)
 	}
 	return results
+}
+
+func arrayToTerraformList(values []string) string {
+	output := make([]string, len(values))
+	for idx, value := range values {
+		output[idx] = fmt.Sprintf(`"%s"`, value)
+	}
+	return fmt.Sprintf("[%s]", strings.Join(output, ", "))
+}
+
+func terraformSetToStringArray(set interface{}) []string {
+	list := set.(*schema.Set).List()
+	arr := make([]string, 0, len(list))
+	for _, v := range list {
+		arr = append(arr, v.(string))
+	}
+	return arr
+}
+
+func jsonStringArrayToStringArray(jsonList []interface{}) []string {
+	strList := make([]string, 0, len(jsonList))
+	for _, v := range jsonList {
+		strList = append(strList, v.(string))
+	}
+	return strList
 }

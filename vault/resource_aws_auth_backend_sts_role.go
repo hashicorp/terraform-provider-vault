@@ -70,7 +70,7 @@ func awsAuthBackendSTSRoleCreate(d *schema.ResourceData, meta interface{}) error
 
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing STS role %q to AWS auth backend: %s", path, err)
+		return fmt.Errorf("error writing STS role %q to AWS auth backend: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote STS role %q to AWS auth backend", path)
 
@@ -84,18 +84,18 @@ func awsAuthBackendSTSRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	backend, err := awsAuthBackendSTSRoleBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("Invalid path %q for AWS auth backend STS role: %s", path, err)
+		return fmt.Errorf("invalid path %q for AWS auth backend STS role: %s", path, err)
 	}
 
 	accountID, err := awsAuthBackendSTSRoleAccountIDFromPath(path)
 	if err != nil {
-		return fmt.Errorf("Invalid path %q for AWS auth backend STS role: %s", path, err)
+		return fmt.Errorf("invalid path %q for AWS auth backend STS role: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading STS role %q from AWS auth backend", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading STS role %q from AWS auth backend %s", path, err)
+		return fmt.Errorf("error reading STS role %q from AWS auth backend %s", path, err)
 	}
 	log.Printf("[DEBUG] Read STS role %q from AWS auth backend", path)
 	if resp == nil {
@@ -121,7 +121,7 @@ func awsAuthBackendSTSRoleUpdate(d *schema.ResourceData, meta interface{}) error
 		"sts_role": stsRole,
 	})
 	if err != nil {
-		return fmt.Errorf("Error updating STS role %q in AWS auth backend", path)
+		return fmt.Errorf("error updating STS role %q in AWS auth backend", path)
 	}
 	log.Printf("[DEBUG] Updated STS role %q in AWS auth backend", path)
 
@@ -135,7 +135,7 @@ func awsAuthBackendSTSRoleDelete(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[DEBUG] Deleting STS role %q from AWS auth backend", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting STS role %q from AWS auth backend", path)
+		return fmt.Errorf("error deleting STS role %q from AWS auth backend", path)
 	}
 	log.Printf("[DEBUG] Deleted STS role %q from AWS auth backend", path)
 
@@ -150,7 +150,7 @@ func awsAuthBackendSTSRoleExists(d *schema.ResourceData, meta interface{}) (bool
 
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return true, fmt.Errorf("Error checking if STS role %q exists in AWS auth backend: %s", path, err)
+		return true, fmt.Errorf("error checking if STS role %q exists in AWS auth backend: %s", path, err)
 	}
 	log.Printf("[DEBUG] Checked if STS role %q exists in AWS auth backend", path)
 

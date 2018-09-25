@@ -59,3 +59,11 @@ The following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+AWS auth backend certificates can be imported using `auth/`, the `backend` path, `/config/certificate/`, and the `cert_name` e.g.
+
+```
+$ terraform import vault_aws_auth_backend_cert.example auth/aws/config/certificate/my-cert
+```

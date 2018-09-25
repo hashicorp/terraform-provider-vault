@@ -23,14 +23,14 @@ func authBackendResource() *schema.Resource {
 		MigrateState: resourceAuthBackendMigrateState,
 
 		Schema: map[string]*schema.Schema{
-			"type": &schema.Schema{
+			"type": {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Name of the auth backend",
 			},
 
-			"path": &schema.Schema{
+			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
@@ -48,7 +48,7 @@ func authBackendResource() *schema.Resource {
 				},
 			},
 
-			"description": &schema.Schema{
+			"description": {
 				Type:        schema.TypeString,
 				ForceNew:    true,
 				Optional:    true,

@@ -161,7 +161,7 @@ func approleAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error writing AppRole auth backend role %q: %s", path, err)
+		return fmt.Errorf("error writing AppRole auth backend role %q: %s", path, err)
 	}
 	d.SetId(path)
 	log.Printf("[DEBUG] Wrote AppRole auth backend role %q", path)
@@ -172,7 +172,7 @@ func approleAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 			"role_id": v.(string),
 		})
 		if err != nil {
-			return fmt.Errorf("Error writing AppRole auth backend role %q's RoleID: %s", path, err)
+			return fmt.Errorf("error writing AppRole auth backend role %q's RoleID: %s", path, err)
 		}
 		log.Printf("[DEBUG] Wrote AppRole auth backend role %q RoleID", path)
 	}
@@ -186,18 +186,18 @@ func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 
 	backend, err := approleAuthBackendRoleBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("Invalid path %q for AppRole auth backend role: %s", path, err)
+		return fmt.Errorf("invalid path %q for AppRole auth backend role: %s", path, err)
 	}
 
 	role, err := approleAuthBackendRoleNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("Invalid path %q for AppRole auth backend role: %s", path, err)
+		return fmt.Errorf("invalid path %q for AppRole auth backend role: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading AppRole auth backend role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading AppRole auth backend role %q: %s", path, err)
+		return fmt.Errorf("error reading AppRole auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read AppRole auth backend role %q", path)
 	if resp == nil {
@@ -227,32 +227,32 @@ func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 
 	secretIDTTL, err := resp.Data["secret_id_ttl"].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("Expected secret_id_ttl %q to be a number, isn't", resp.Data["secret_id_ttl"])
+		return fmt.Errorf("expected secret_id_ttl %q to be a number, isn't", resp.Data["secret_id_ttl"])
 	}
 
 	secretIDNumUses, err := resp.Data["secret_id_num_uses"].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("Expected secret_id_num_uses %q to be a number, isn't", resp.Data["secret_id_num_uses"])
+		return fmt.Errorf("expected secret_id_num_uses %q to be a number, isn't", resp.Data["secret_id_num_uses"])
 	}
 
 	tokenTTL, err := resp.Data["token_ttl"].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("Expected token_ttl %q to be a number, isn't", resp.Data["token_ttl"])
+		return fmt.Errorf("expected token_ttl %q to be a number, isn't", resp.Data["token_ttl"])
 	}
 
 	tokenNumUses, err := resp.Data["token_num_uses"].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("Expected token_num_uses %q to be a number, isn't", resp.Data["token_num_uses"])
+		return fmt.Errorf("expected token_num_uses %q to be a number, isn't", resp.Data["token_num_uses"])
 	}
 
 	tokenMaxTTL, err := resp.Data["token_max_ttl"].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("Expected token_max_ttl %q to be a number, isn't", resp.Data["token_max_ttl"])
+		return fmt.Errorf("expected token_max_ttl %q to be a number, isn't", resp.Data["token_max_ttl"])
 	}
 
 	period, err := resp.Data["period"].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("Expected period %q to be a number, isn't", resp.Data["period"])
+		return fmt.Errorf("expected period %q to be a number, isn't", resp.Data["period"])
 	}
 
 	d.Set("backend", backend)
@@ -260,11 +260,11 @@ func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 	d.Set("period", period)
 	err = d.Set("policies", policies)
 	if err != nil {
-		return fmt.Errorf("Error setting policies in state: %s", err)
+		return fmt.Errorf("error setting policies in state: %s", err)
 	}
 	err = d.Set("bound_cidr_list", cidrs)
 	if err != nil {
-		return fmt.Errorf("Error setting bound_cidr_list in state: %s", err)
+		return fmt.Errorf("error setting bound_cidr_list in state: %s", err)
 	}
 	d.Set("secret_id_num_uses", secretIDNumUses)
 	d.Set("secret_id_ttl", secretIDTTL)
@@ -277,7 +277,7 @@ func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 	log.Printf("[DEBUG] Reading AppRole auth backend role %q RoleID", path)
 	resp, err = client.Logical().Read(path + "/role-id")
 	if err != nil {
-		return fmt.Errorf("Error reading AppRole auth backend role %q RoleID: %s", path, err)
+		return fmt.Errorf("error reading AppRole auth backend role %q RoleID: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read AppRole auth backend role %q RoleID", path)
 	if resp != nil {
@@ -321,7 +321,7 @@ func approleAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) erro
 	d.SetId(path)
 
 	if err != nil {
-		return fmt.Errorf("Error updating AppRole auth backend role %q: %s", path, err)
+		return fmt.Errorf("error updating AppRole auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated AppRole auth backend role %q", path)
 
@@ -331,7 +331,7 @@ func approleAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) erro
 			"role_id": d.Get("role_id").(string),
 		})
 		if err != nil {
-			return fmt.Errorf("Error updating AppRole auth backend role %q's RoleID: %s", path, err)
+			return fmt.Errorf("error updating AppRole auth backend role %q's RoleID: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated AppRole auth backend role %q RoleID", path)
 	}
@@ -347,7 +347,7 @@ func approleAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) erro
 	log.Printf("[DEBUG] Deleting AppRole auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil && !is404(err) {
-		return fmt.Errorf("Error deleting AppRole auth backend role %q", path)
+		return fmt.Errorf("error deleting AppRole auth backend role %q", path)
 	} else if err != nil {
 		log.Printf("[DEBUG] AppRole auth backend role %q not found, removing from state", path)
 		d.SetId("")
@@ -366,7 +366,7 @@ func approleAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (boo
 
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return true, fmt.Errorf("Error checking if AppRole auth backend role %q exists: %s", path, err)
+		return true, fmt.Errorf("error checking if AppRole auth backend role %q exists: %s", path, err)
 	}
 	log.Printf("[DEBUG] Checked if AppRole auth backend role %q exists", path)
 

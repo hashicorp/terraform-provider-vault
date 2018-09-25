@@ -13,7 +13,7 @@ func testCheckResourceAttrJSON(name, key, value string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState, ok := s.RootModule().Resources[name]
 		if !ok {
-			return fmt.Errorf("Not found: %q", name)
+			return fmt.Errorf("not found: %q", name)
 		}
 		instanceState := resourceState.Primary
 		if instanceState == nil {

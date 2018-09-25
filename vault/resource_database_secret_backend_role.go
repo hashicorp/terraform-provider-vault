@@ -112,7 +112,7 @@ func databaseSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 	log.Printf("[DEBUG] Creating role %q on database backend %q", name, backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error creating role %q for backend %q: %s", name, backend, err)
+		return fmt.Errorf("error creating role %q for backend %q: %s", name, backend, err)
 	}
 	log.Printf("[DEBUG] Created role %q on AWS backend %q", name, backend)
 
@@ -129,20 +129,20 @@ func databaseSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 	if err != nil {
 		log.Printf("[WARN] Removing database role %q because its ID is invalid", path)
 		d.SetId("")
-		return fmt.Errorf("Invalid role ID %q: %s", path, err)
+		return fmt.Errorf("invalid role ID %q: %s", path, err)
 	}
 
 	backend, err := databaseSecretBackendRoleBackendFromPath(path)
 	if err != nil {
 		log.Printf("[WARN] Removing database role %q because its ID is invalid", path)
 		d.SetId("")
-		return fmt.Errorf("Invalid role ID %q: %s", path, err)
+		return fmt.Errorf("invalid role ID %q: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading role from %q", path)
 	secret, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading role %q: %s", path, err)
+		return fmt.Errorf("error reading role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read role from %q", path)
 	if secret == nil {
@@ -161,14 +161,14 @@ func databaseSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 	if v, ok := secret.Data["default_ttl"]; ok {
 		n, err := v.(json.Number).Int64()
 		if err != nil {
-			return fmt.Errorf("Unexpected value %q for default_ttl of %q", v, path)
+			return fmt.Errorf("unexpected value %q for default_ttl of %q", v, path)
 		}
 		d.Set("default_ttl", n)
 	}
 	if v, ok := secret.Data["max_ttl"]; ok {
 		n, err := v.(json.Number).Int64()
 		if err != nil {
-			return fmt.Errorf("Unexpected value %q for max_ttl of %q", v, path)
+			return fmt.Errorf("unexpected value %q for max_ttl of %q", v, path)
 		}
 		d.Set("max_ttl", n)
 	}
@@ -182,7 +182,7 @@ func databaseSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[DEBUG] Deleting role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting role %q: %s", path, err)
+		return fmt.Errorf("error deleting role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Deleted role %q", path)
 	return nil
@@ -195,7 +195,7 @@ func databaseSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (
 	log.Printf("[DEBUG] Checking if %q exists", path)
 	secret, err := client.Logical().Read(path)
 	if err != nil {
-		return true, fmt.Errorf("Error checking if %q exists: %s", path, err)
+		return true, fmt.Errorf("error checking if %q exists: %s", path, err)
 	}
 	log.Printf("[DEBUG] Checked if %q exists", path)
 	return secret != nil, nil

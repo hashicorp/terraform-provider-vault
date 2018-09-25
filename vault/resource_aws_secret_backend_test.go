@@ -94,7 +94,7 @@ func testAccAWSSecretBackendCheckDestroy(s *terraform.State) error {
 			path = strings.Trim(path, "/")
 			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
 			if mount.Type == "aws" && path == rsPath {
-				return fmt.Errorf("Mount %q still exists", path)
+				return fmt.Errorf("mount %q still exists", path)
 			}
 		}
 	}
