@@ -58,3 +58,11 @@ for credentials issued by this backend.
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+AWS secret backends can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_aws_secret_backend.aws aws
+```

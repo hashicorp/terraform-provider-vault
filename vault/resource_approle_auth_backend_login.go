@@ -103,7 +103,7 @@ func approleAuthBackendLoginCreate(d *schema.ResourceData, meta interface{}) err
 
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error logging into AppRole auth backend %q: %s", path, err)
+		return fmt.Errorf("error logging into AppRole auth backend %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Logged in with AppRole auth backend %q", path)
 
@@ -120,7 +120,7 @@ func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[DEBUG] Reading token %q", d.Id())
 	resp, err := client.Auth().Token().LookupAccessor(d.Id())
 	if err != nil {
-		return fmt.Errorf("Error reading token %q from Vault: %s", d.Id(), err)
+		return fmt.Errorf("error reading token %q from Vault: %s", d.Id(), err)
 	}
 	if resp == nil {
 		log.Printf("[DEBUG] Token %q not found, removing from state", d.Id())
@@ -156,7 +156,7 @@ func approleAuthBackendLoginDelete(d *schema.ResourceData, meta interface{}) err
 	log.Printf("[DEBUG] Revoking token %q", accessor)
 	err := client.Auth().Token().RevokeAccessor(accessor)
 	if err != nil {
-		return fmt.Errorf("Error revoking token %q", accessor)
+		return fmt.Errorf("error revoking token %q", accessor)
 	}
 	log.Printf("[DEBUG] Revoked token %q", accessor)
 
@@ -170,7 +170,7 @@ func approleAuthBackendLoginExists(d *schema.ResourceData, meta interface{}) (bo
 	log.Printf("[DEBUG] Checking if token %q exists", accessor)
 	resp, err := client.Auth().Token().LookupAccessor(accessor)
 	if err != nil {
-		return true, fmt.Errorf("Error reading %q: %s", accessor, err)
+		return true, fmt.Errorf("error reading %q: %s", accessor, err)
 	}
 	return resp != nil, nil
 }

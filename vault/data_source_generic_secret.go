@@ -72,7 +72,7 @@ func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 	if secret == nil {
-		return fmt.Errorf("No secret found at %q", path)
+		return fmt.Errorf("no secret found at %q", path)
 	}
 
 	d.SetId(secret.RequestID)

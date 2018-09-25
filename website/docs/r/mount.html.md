@@ -13,8 +13,8 @@ description: |-
 
 ```hcl
 resource "vault_mount" "example" {
-  path = "dummy"
-  type = "generic"
+  path        = "dummy"
+  type        = "generic"
   description = "This is an example mount"
 }
 ```
@@ -33,6 +33,16 @@ The following arguments are supported:
 
 * `max_lease_ttl_seconds` - (Optional) Maximum possible lease duration for tokens and secrets in seconds
 
+* `options` - (Optional) Specifies mount type specific options that are passed to the backend
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+Mounts can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_mount.example dummy
+```

@@ -107,7 +107,7 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	log.Printf("[DEBUG] Read %q from Vault", path)
 
 	if secret == nil {
-		return fmt.Errorf("No role found at %q; are you sure you're using the right backend and role?", path)
+		return fmt.Errorf("no role found at path %q", path)
 	}
 
 	accessKey := secret.Data["access_key"].(string)
@@ -132,7 +132,7 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	}
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
-		return fmt.Errorf("Error creating AWS session: %s", err)
+		return fmt.Errorf("error creating AWS session: %s", err)
 	}
 
 	iamconn := iam.New(sess)
@@ -164,7 +164,7 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("Error checking if credentials are valid: %s", err)
+			return fmt.Errorf("error checking if credentials are valid: %s", err)
 		}
 	}
 	return nil

@@ -1,4 +1,31 @@
-## 1.2.0 (Unreleased)
+## 1.1.5 (Unreleased)
+## 1.1.4 (September 20, 2018)
+
+BUG FIXES:
+
+* Reverts breaking changes to `vault_aws_auth_backend_role` introduced by ([#53](https://github.com/terraform-providers/terraform-provider-vault/pull/153))
+
+## 1.1.3 (September 18, 2018)
+
+FEATURES:
+
+* **New Resource**: `vault_consul_secret_backend` ([#59](https://github.com/terraform-providers/terraform-provider-vault/pull/59))
+* **New Resource**: `vault_cert_auth_backend_role` ([#123](https://github.com/terraform-providers/terraform-provider-vault/pull/123))
+* **New Resource**: `vault_gcp_auth_backend_role` ([#124](https://github.com/terraform-providers/terraform-provider-vault/pull/124))
+* **New Resource**: `vault_ldap_auth_backend` ([#126](https://github.com/terraform-providers/terraform-provider-vault/pull/126))
+* **New Resource**: `vault_ldap_auth_backend_user` ([#126](https://github.com/terraform-providers/terraform-provider-vault/pull/126))
+* **New Resource**: `vault_ldap_auth_backend_group` ([#126](https://github.com/terraform-providers/terraform-provider-vault/pull/126))
+
+## 1.1.2 (September 14, 2018)
+
+FEATURES:
+
+* **New Resource**: `vault_audit` ([#81](https://github.com/terraform-providers/terraform-provider-vault/pull/81))
+* **New Resource**: `vault_token_auth_backend_role` ([#80](https://github.com/terraform-providers/terraform-provider-vault/pull/80))
+
+UPDATES:
+* Update to vendoring Vault 0.11.1. Introduces some breaking changes for some back ends so update with care.
+
 ## 1.1.1 (July 23, 2018)
 
 BUG FIXES:
