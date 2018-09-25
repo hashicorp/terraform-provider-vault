@@ -60,7 +60,7 @@ func testAccCheckAWSAuthBackendCertDestroy(s *terraform.State) error {
 		}
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("Error checking for AWS Auth Backend certificate %q: %s", rs.Primary.ID, err)
+			return fmt.Errorf("error checking for AWS Auth Backend certificate %q: %s", rs.Primary.ID, err)
 		}
 		if secret != nil {
 			return fmt.Errorf("AWS auth backend certificate %q still exists", rs.Primary.ID)
@@ -123,7 +123,7 @@ func testAccAWSAuthBackendCertCheck_attrs(backend, name string) resource.TestChe
 				continue
 			}
 			if resp.Data[apiAttr] != instanceState.Attributes[stateAttr] {
-				return fmt.Errorf("Expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
+				return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
 			}
 		}
 		return nil
