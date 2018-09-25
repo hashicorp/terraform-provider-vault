@@ -77,3 +77,16 @@ func jsonStringArrayToStringArray(jsonList []interface{}) []string {
 	}
 	return strList
 }
+
+func isExpiredTokenErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if strings.Contains(err.Error(), "invalid accessor") {
+		return true
+	}
+	if strings.Contains(err.Error(), "failed to find accessor entry") {
+		return true
+	}
+	return false
+}

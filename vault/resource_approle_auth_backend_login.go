@@ -121,7 +121,7 @@ func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error
 	resp, err := client.Auth().Token().LookupAccessor(d.Id())
 	if err != nil {
 		// If the token is not found (it has expired) we don't return an error
-		if strings.Contains(err.Error(), "invalid accessor") { // Not found
+		if isExpiredTokenErr(err) {
 			return nil
 		}
 		return fmt.Errorf("error reading token %q from Vault: %s", d.Id(), err)
@@ -175,7 +175,7 @@ func approleAuthBackendLoginExists(d *schema.ResourceData, meta interface{}) (bo
 	resp, err := client.Auth().Token().LookupAccessor(accessor)
 	if err != nil {
 		// If the token is not found (it has expired) we don't return an error
-		if strings.Contains(err.Error(), "invalid accessor") { // Not found
+		if isExpiredTokenErr(err) {
 			return false, nil
 		}
 		return true, fmt.Errorf("error reading %q: %s", accessor, err)

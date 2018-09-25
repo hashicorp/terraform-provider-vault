@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
@@ -37,5 +38,20 @@ func testCheckResourceAttrJSON(name, key, value string) resource.TestCheckFunc {
 		}
 		return nil
 
+	}
+}
+
+func TestExpiredTokenError(t *testing.T) {
+	if ok := isExpiredTokenErr(fmt.Errorf("error: invalid accessor custom_accesor_value")); !ok {
+		t.Errorf("Should be expired")
+	}
+	if ok := isExpiredTokenErr(fmt.Errorf("error: failed to find accessor entry custom_accesor_value")); !ok {
+		t.Errorf("Should be expired")
+	}
+	if ok := isExpiredTokenErr(nil); ok {
+		t.Errorf("Shouldn't be expired")
+	}
+	if ok := isExpiredTokenErr(fmt.Errorf("Error making request")); ok {
+		t.Errorf("Shouldn't be expired")
 	}
 }
