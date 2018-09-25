@@ -154,15 +154,11 @@ func testResourceMount_updateCheck(s *terraform.State) error {
 		return fmt.Errorf("description is %v; wanted %v", mount.Description, wanted)
 	}
 
-<<<<<<< HEAD
 	if wanted := instanceState.Attributes["accessor"]; mount.Accessor != wanted {
 		return fmt.Errorf("accessor is %v; wanted %v", mount.Accessor, wanted)
 	}
 
-	if wanted := "generic"; mount.Type != wanted {
-=======
 	if wanted := "kv"; mount.Type != wanted {
->>>>>>> origin/master
 		return fmt.Errorf("type is %v; wanted %v", mount.Description, wanted)
 	}
 
