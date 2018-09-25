@@ -13,7 +13,7 @@ func TestDataSourceGenericSecret(t *testing.T) {
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []r.TestStep{
-			r.TestStep{
+			{
 				Config: testDataSourceGenericSecret_config,
 				Check:  testDataSourceGenericSecret_check,
 			},
@@ -24,7 +24,7 @@ func TestDataSourceGenericSecret(t *testing.T) {
 var testDataSourceGenericSecret_config = `
 
 resource "vault_generic_secret" "test" {
-    path = "secret/foo"
+    path = "secretsv1/foo"
     data_json = <<EOT
 {
     "zip": "zap"

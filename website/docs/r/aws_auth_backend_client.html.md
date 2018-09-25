@@ -67,3 +67,11 @@ The following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+AWS auth backend clients can be imported using `auth/`, the `backend` path, and `/config/client` e.g.
+
+```
+$ terraform import vault_aws_auth_backend_client.example auth/aws/config/client
+```

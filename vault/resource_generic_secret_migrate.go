@@ -19,7 +19,7 @@ func resourceGenericSecretMigrateState(v int, s *terraform.InstanceState, meta i
 		s, err := migrateGenericSecretStateV0toV1(s)
 		return s, err
 	default:
-		return s, fmt.Errorf("Unexpected schema version: %d", v)
+		return s, fmt.Errorf("unexpected schema version: %d", v)
 	}
 }
 

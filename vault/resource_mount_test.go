@@ -19,7 +19,7 @@ func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
 				Config: `
 				resource "vault_mount" "zero_ttl" {
 					path = "example"
-					type = "generic"
+					type = "kv"
 				}
 				`,
 			},
@@ -28,7 +28,7 @@ func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
 				Config: `
 				resource "vault_mount" "zero_ttl" {
 					path = "example"
-					type = "generic"
+					type = "kv"
 				}
 				`,
 			},
@@ -58,10 +58,13 @@ func testResourceMount_initialConfig(path string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "generic"
+	type = "kv"
 	description = "Example mount for testing"
 	default_lease_ttl_seconds = 3600
 	max_lease_ttl_seconds = 36000
+	options = {
+		version = "1"
+	}
 }
 `, path)
 }
@@ -97,7 +100,7 @@ func testResourceMount_initialCheck(expectedPath string) resource.TestCheckFunc 
 			return fmt.Errorf("description is %v; wanted %v", mount.Description, wanted)
 		}
 
-		if wanted := "generic"; mount.Type != wanted {
+		if wanted := "kv"; mount.Type != wanted {
 			return fmt.Errorf("type is %v; wanted %v", mount.Description, wanted)
 		}
 
@@ -117,10 +120,13 @@ var testResourceMount_updateConfig = `
 
 resource "vault_mount" "test" {
 	path = "remountingExample"
-	type = "generic"
+	type = "kv"
 	description = "Example mount for testing"
 	default_lease_ttl_seconds = 7200
 	max_lease_ttl_seconds = 72000
+	options = {
+		version = "1"
+	}
 }
 
 `
@@ -148,11 +154,15 @@ func testResourceMount_updateCheck(s *terraform.State) error {
 		return fmt.Errorf("description is %v; wanted %v", mount.Description, wanted)
 	}
 
+<<<<<<< HEAD
 	if wanted := instanceState.Attributes["accessor"]; mount.Accessor != wanted {
 		return fmt.Errorf("accessor is %v; wanted %v", mount.Accessor, wanted)
 	}
 
 	if wanted := "generic"; mount.Type != wanted {
+=======
+	if wanted := "kv"; mount.Type != wanted {
+>>>>>>> origin/master
 		return fmt.Errorf("type is %v; wanted %v", mount.Description, wanted)
 	}
 
@@ -181,5 +191,5 @@ func findMount(path string) (*api.MountOutput, error) {
 		return mounts[path], nil
 	}
 
-	return nil, fmt.Errorf("Unable to find mount %s in Vault; current list: %v", path, mounts)
+	return nil, fmt.Errorf("unable to find mount %s in Vault; current list: %v", path, mounts)
 }

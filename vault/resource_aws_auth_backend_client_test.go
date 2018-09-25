@@ -22,9 +22,10 @@ func TestAccAWSAuthBackendClient_import(t *testing.T) {
 				Check:  testAccAWSAuthBackendClientCheck_attrs(backend),
 			},
 			{
-				ResourceName:      "vault_aws_auth_backend_client.client",
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            "vault_aws_auth_backend_client.client",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"secret_key"},
 			},
 		},
 	})
@@ -58,7 +59,7 @@ func testAccCheckAWSAuthBackendClientDestroy(s *terraform.State) error {
 		}
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("Error checking for AWS auth backend %q client config: %s", rs.Primary.ID, err)
+			return fmt.Errorf("error checking for AWS auth backend %q client config: %s", rs.Primary.ID, err)
 		}
 		if secret != nil {
 			return fmt.Errorf("AWS auth backend %q still configured", rs.Primary.ID)
@@ -114,8 +115,8 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 			return fmt.Errorf("AWS auth client not configured at %q", endpoint)
 		}
 		attrs := map[string]string{
-			"access_key":                 "access_key",
-			"secret_key":                 "secret_key",
+			"access_key": "access_key",
+			//"secret_key":                 "secret_key",
 			"ec2_endpoint":               "endpoint",
 			"iam_endpoint":               "iam_endpoint",
 			"sts_endpoint":               "sts_endpoint",
@@ -126,7 +127,7 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 				continue
 			}
 			if resp.Data[apiAttr] != instanceState.Attributes[stateAttr] {
-				return fmt.Errorf("Expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
+				return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
 			}
 		}
 		return nil

@@ -32,3 +32,11 @@ The following arguments are supported:
 In addition to the fields above, the following attributes are exported:
 
 * `accessor` - The accessor for this auth mount.
+
+## Import
+
+Authentication backends can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_auth_backend.example github
+```
