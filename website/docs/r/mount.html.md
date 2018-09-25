@@ -37,7 +37,9 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+In addition to the fields above, the following attributes are exported:
+
+* `accessor` - The accessor for this mount.
 
 ## Import
 
