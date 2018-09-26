@@ -98,6 +98,14 @@ func awsAuthBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"bound_ec2_instance_id": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Only EC2 instances that match this instance ID will be permitted to log in.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"role_tag": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -229,6 +237,7 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 		setSlice(d, "bound_subnet_id", data)
 		setSlice(d, "bound_iam_role_arn", data)
 		setSlice(d, "bound_iam_instance_profile_arn", data)
+		setSlice(d, "bound_ec2_instance_id", data)
 	}
 
 	if authType == "ec2" {
@@ -321,6 +330,7 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("bound_account_id", resp.Data["bound_account_id"])
 	d.Set("bound_ami_id", resp.Data["bound_ami_id"])
+	d.Set("bound_ec2_instance_id", resp.Data["bound_ec2_instance_id"])
 	d.Set("bound_iam_instance_profile_arn", resp.Data["bound_iam_instance_profile_arn"])
 	d.Set("bound_iam_role_arn", resp.Data["bound_iam_role_arn"])
 	d.Set("bound_subnet_id", resp.Data["bound_subnet_id"])
@@ -391,6 +401,9 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 		if v, ok := d.GetOk("bound_iam_instance_profile_arn"); ok {
 			data["bound_iam_instance_profile_arn"] = v.(string)
+		}
+		if v, ok := d.GetOk("bound_ec2_instance_id"); ok {
+			data["bound_ec2_instance_id"] = v.(string)
 		}
 	}
 

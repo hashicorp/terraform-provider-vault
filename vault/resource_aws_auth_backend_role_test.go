@@ -214,6 +214,7 @@ func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestChe
 			"bound_subnet_id":                "bound_subnet_id",
 			"bound_iam_role_arn":             "bound_iam_role_arn",
 			"bound_iam_instance_profile_arn": "bound_iam_instance_profile_arn",
+			"bound_ec2_instance_id":          "bound_ec2_instance_id",
 			"role_tag":                       "role_tag",
 			"bound_iam_principal_arn":        "bound_iam_principal_arn",
 			"inferred_entity_type":           "inferred_entity_type",
@@ -300,6 +301,7 @@ resource "vault_aws_auth_backend_role" "role" {
   auth_type = "iam"
   bound_ami_id = ["ami-8c1be5f6"]
   bound_account_id = ["123456789012"]
+  bound_ec2_instance_id = ["i-06bb291939760ba66"]
   bound_vpc_id = ["vpc-b61106d4"]
   bound_subnet_id = ["vpc-a33128f1"]
   bound_iam_role_arn = ["arn:aws:iam::123456789012:role/S3Access"]
@@ -363,6 +365,7 @@ resource "vault_aws_auth_backend_role" "role" {
   auth_type = "ec2"
   bound_ami_id = ["ami-8c1be5f6"]
   bound_account_id = ["123456789012"]
+  bound_ec2_instance_id = ["i-06bb291939760ba66"]
   bound_region = ["us-east-1"]
   bound_vpc_id = ["vpc-b61106d4"]
   bound_subnet_id = ["vpc-a33128f1"]
