@@ -168,9 +168,14 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 		if _, ok := d.GetOk("credential_type"); ok {
 			d.Set("credential_type", credentialTypes[0])
-			d.Set("policy_arns", secret.Data["policy_arns"])
-			d.Set("role_arns", secret.Data["role_arns"])
 			d.Set("policy_document", secret.Data["policy_document"])
+
+			if err := d.Set("role_arns", secret.Data["role_arns"]); err != nil {
+				return fmt.Errorf("error setting role_arns for role %q: %s", path, err)
+			}
+			if err := d.Set("policy_arns", secret.Data["policy_arns"]); err != nil {
+				return fmt.Errorf("error setting policy_arns for role %q: %s", path, err)
+			}
 
 		} else {
 			// Deprecated style
