@@ -74,6 +74,8 @@ credentials back from the API, Terraform cannot detect and correct drift
 on `bindpass`. Changing the values, however, _will_ overwrite the
 previously stored values.
 
-## Attribute Reference
+## Attributes Reference
 
-No additional attributes are exposed by this resource.
+In addition to the fields above, the following attributes are exported:
+
+* `accessor` - The accessor for this auth mount.

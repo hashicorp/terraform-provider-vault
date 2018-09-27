@@ -122,6 +122,12 @@ func ldapAuthBackendResource() *schema.Resource {
 					return strings.Trim(v.(string), "/")
 				},
 			},
+
+			"accessor": &schema.Schema{
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The accessor of the LDAP auth backend",
+			},
 		},
 	}
 }
@@ -233,7 +239,22 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	path := ldapAuthBackendConfigPath(d.Id())
+
+	path := d.Id()
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		return fmt.Errorf("error reading from Vault: %s", err)
+	}
+
+	authMount := auths[strings.Trim(path, "/")+"/"]
+	if authMount == nil {
+		return fmt.Errorf("auth mount %s not present", path)
+	}
+
+	d.Set("description", authMount.Description)
+	d.Set("accessor", authMount.Accessor)
+
+	path = ldapAuthBackendConfigPath(path)
 
 	log.Printf("[DEBUG] Reading LDAP auth backend config %q", path)
 	resp, err := client.Logical().Read(path)
