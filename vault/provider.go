@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -127,6 +128,22 @@ func Provider() terraform.ResourceProvider {
 	}
 }
 
+func providerToken(d *schema.ResourceData) (string, error) {
+	if token := d.Get("token").(string); token != "" {
+		return token, nil
+	}
+	// Use ~/.vault-token, or the configured token helper.
+	tokenHelper, err := config.DefaultTokenHelper()
+	if err != nil {
+		return "", fmt.Errorf("error getting token helper: %s", err)
+	}
+	token, err := tokenHelper.Get()
+	if err != nil {
+		return "", fmt.Errorf("error getting token: %s", err)
+	}
+	return strings.TrimSpace(token), nil
+}
+
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	clientConfig := api.DefaultConfig()
 	clientConfig.Address = d.Get("address").(string)
@@ -163,17 +180,12 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
 	}
 
-	token := d.Get("token").(string)
+	token, err := providerToken(d)
+	if err != nil {
+		return nil, err
+	}
 	if token == "" {
-		// Use ~/.vault-token, or the configured token helper.
-		tokenHelper, err := config.DefaultTokenHelper()
-		if err != nil {
-			return nil, fmt.Errorf("error getting token helper: %s", err)
-		}
-		token, err = tokenHelper.Get()
-		if err != nil {
-			return nil, fmt.Errorf("error getting token: %s", err)
-		}
+		return nil, errors.New("no vault token found")
 	}
 
 	// In order to enforce our relatively-short lease TTL, we derive a
