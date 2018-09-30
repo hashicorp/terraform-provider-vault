@@ -33,7 +33,6 @@ func sshSecretBackendCAResource() *schema.Resource {
 			"generate_signing_key": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
 				ForceNew:    true,
 				Description: "Whether Vault should generate the signing key pair internally.",
 			},
@@ -58,20 +57,16 @@ func sshSecretBackendCAResource() *schema.Resource {
 
 func sshSecretBackendCACreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-
 	backend := d.Get("backend").(string)
-	generateSigningKey := d.Get("generate_signing_key").(bool)
 
-	data := map[string]interface{}{
-		"generate_signing_key": generateSigningKey,
+	data := make(map[string]interface{})
+	if generateSigningKey, ok := d.Get("generate_signing_key").(bool); ok {
+		data["generate_signing_key"] = generateSigningKey
 	}
-	if !generateSigningKey {
-		privateKey := d.Get("private_key").(string)
-		publicKey := d.Get("public_key").(string)
-		if privateKey == "" || publicKey == "" {
-			return fmt.Errorf("When generate_signing_key is false, both public_key and private_keys should be specified")
-		}
+	if privateKey, ok := d.Get("private_key").(string); ok {
 		data["private_key"] = privateKey
+	}
+	if publicKey, ok := d.Get("public_key").(string); ok {
 		data["public_key"] = publicKey
 	}
 
