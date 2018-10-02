@@ -43,9 +43,9 @@ resource "vault_aws_auth_backend_role" "example" {
 }
 
 resource "vault_aws_auth_backend_login" "example" {
-  backend = "${vault_auth_backend.example.path}"
-  role = "${vault_aws_auth_backend_role.example.role}"
-  identity = "BASE64ENCODEDIDENTITYDOCUMENT"
+  backend   = "${vault_auth_backend.example.path}"
+  role      = "${vault_aws_auth_backend_role.example.role}"
+  identity  = "BASE64ENCODEDIDENTITYDOCUMENT"
   signature = "BASE64ENCODEDSHA256IDENTITYDOCUMENTSIGNATURE"
 }
 ```

@@ -37,7 +37,7 @@ The following arguments are supported:
 
 * `allowed_names` - (Optional) Allowed subject names for authenticated client certificates
 
-* `required_extensions` - (Optional) TLS extensions required on client certificates
+* `required_exwtensions` - (Optional) TLS extensions required on client certificates
 
 * `ttl` - (Optional) Default TTL of tokens issued by the backend
 

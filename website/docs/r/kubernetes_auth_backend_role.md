@@ -20,12 +20,12 @@ resource "vault_auth_backend" "kubernetes" {
 }
 
 resource "vault_kubernetes_auth_backend_role" "example" {
-  backend   = "${vault_auth_backend.kubernetes.path}"
-  role_name = "example-role"
-  bound_service_account_names = ["example"]
+  backend                          = "${vault_auth_backend.kubernetes.path}"
+  role_name                        = "example-role"
+  bound_service_account_names      = ["example"]
   bound_service_account_namespaces = ["example"]
-  ttl = 3600
-  policies = ["default", "dev", "prod"]
+  ttl                              = 3600
+  policies                         = ["default", "dev", "prod"]
 }
 ```
 

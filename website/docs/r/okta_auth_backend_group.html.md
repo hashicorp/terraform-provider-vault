@@ -15,14 +15,14 @@ Provides a resource to create a group in an
 
 ```hcl
 resource "vault_okta_auth_backend" "example" {
-    path = "group_okta"
+    path         = "group_okta"
     organization = "dummy"
 }
 
 resource "vault_okta_auth_backend_group" "foo" {
-    path = "${vault_okta_auth_backend.example.path}"
+    path       = "${vault_okta_auth_backend.example.path}"
     group_name = "foo"
-    policies = ["one", "two"]
+    policies   = ["one", "two"]
 }
 ```
 
