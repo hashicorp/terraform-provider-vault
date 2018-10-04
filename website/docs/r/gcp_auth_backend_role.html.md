@@ -33,7 +33,7 @@ The following arguments are supported:
 
 * `role` - (Required) Name of the GCP role
 
-* `type` - (Required) Type of GCP authentication role
+* `type` - (Required) Type of GCP authentication role (either `gce` or `iam`)
 
 * `project_id` - (Required) GCP Project that the role exists within
 
