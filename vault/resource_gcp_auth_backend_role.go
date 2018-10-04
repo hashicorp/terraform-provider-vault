@@ -66,6 +66,38 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"bound_zones": &schema.Schema{
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional: true,
+				Computed: true,
+			},
+			"bound_regions": &schema.Schema{
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional: true,
+				Computed: true,
+			},
+			"bound_instance_groups": &schema.Schema{
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional: true,
+				Computed: true,
+			},
+			"bound_labels": &schema.Schema{
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional: true,
+				Computed: true,
+			},
 			"backend": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
@@ -121,6 +153,22 @@ func gcpAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 		data["bound_service_accounts"] = v.(*schema.Set).List()
 	}
 
+	if v, ok := d.GetOk("bound_zones"); ok {
+		data["bound_zones"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("bound_regions"); ok {
+		data["bound_regions"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("bound_instance_groups"); ok {
+		data["bound_instance_groups"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("bound_instance_labels"); ok {
+		data["bound_instance_labels"] = v.(*schema.Set).List()
+	}
+
 	log.Printf("[DEBUG] Writing role %q to GCP auth backend", path)
 	d.SetId(path)
 	_, err := client.Logical().Write(path, data)
@@ -157,6 +205,22 @@ func gcpAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("bound_service_accounts"); ok {
 		data["bound_service_accounts"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("bound_zones"); ok {
+		data["bound_zones"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("bound_regions"); ok {
+		data["bound_regions"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("bound_instance_groups"); ok {
+		data["bound_instance_groups"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("bound_labels"); ok {
+		data["bound_labels"] = v.(*schema.Set).List()
 	}
 
 	log.Printf("[DEBUG] Updating role %q in GCP auth backend", path)
@@ -199,6 +263,22 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("bound_service_accounts",
 		schema.NewSet(
 			schema.HashString, resp.Data["bound_service_accounts"].([]interface{})))
+
+	d.Set("bound_zones",
+		schema.NewSet(
+			schema.HashString, resp.Data["bound_zones"].([]interface{})))
+
+	d.Set("bound_regions",
+		schema.NewSet(
+			schema.HashString, resp.Data["bound_regions"].([]interface{})))
+
+	d.Set("bound_instance_groups",
+		schema.NewSet(
+			schema.HashString, resp.Data["bound_instance_groups"].([]interface{})))
+
+	d.Set("bound_labels",
+		schema.NewSet(
+			schema.HashString, resp.Data["bound_labels"].([]interface{})))
 
 	return nil
 }
