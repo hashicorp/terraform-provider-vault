@@ -45,10 +45,9 @@ The following arguments are supported:
 
 * `policies` - (Optional) Policies to grant on the issued token
 
-* `bound_service_accounts` - (Optional) GCP Service Accounts allowed to issue tokens under this role
-
 * `backend` - (Optional) Path to the mounted GCP auth backend
 
+* `bound_service_accounts` - (Optional) GCP Service Accounts allowed to issue tokens under this role. (Note: **Required** if role is `iam`We)
 
 ### gce-only Parameters
 
