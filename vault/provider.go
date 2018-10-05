@@ -124,6 +124,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_policy":                              policyResource(),
 			"vault_mount":                               mountResource(),
 			"vault_audit":                               auditResource(),
+			"vault_ssh_secret_backend_ca":               sshSecretBackendCAResource(),
 		},
 	}
 }
