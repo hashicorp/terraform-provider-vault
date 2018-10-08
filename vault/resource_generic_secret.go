@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+const latestSecretVersion = -1
+
 func genericSecretResource() *schema.Resource {
 	return &schema.Resource{
 		SchemaVersion: 1,
@@ -166,7 +168,7 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 		client := meta.(*api.Client)
 
 		log.Printf("[DEBUG] Reading %s from Vault", path)
-		secret, err := versionedSecret(-1, path, client)
+		secret, err := versionedSecret(latestSecretVersion, path, client)
 
 		if err != nil {
 			return fmt.Errorf("error reading from Vault: %s", err)

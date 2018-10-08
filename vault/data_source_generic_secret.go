@@ -26,7 +26,7 @@ func genericSecretDataSource() *schema.Resource {
 				Type:     schema.TypeInt,
 				Required: false,
 				Optional: true,
-				Default:  -1,
+				Default:  latestSecretVersion,
 			},
 
 			"data_json": {
