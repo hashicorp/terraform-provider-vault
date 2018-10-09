@@ -193,13 +193,13 @@ func pkiSecretBackendIntermediateCertRequestCreate(d *schema.ResourceData, meta 
 		"key_type":             d.Get("key_type").(string),
 		"key_bits":             d.Get("key_bits").(int),
 		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(string),
-		"ou":             d.Get("ou").(string),
-		"organization":   d.Get("organization").(string),
-		"country":        d.Get("country").(string),
-		"locality":       d.Get("locality").(string),
-		"province":       d.Get("province").(string),
-		"street_address": d.Get("street_address").(string),
-		"postal_code":    d.Get("postal_code").(string),
+		"ou":                   d.Get("ou").(string),
+		"organization":         d.Get("organization").(string),
+		"country":              d.Get("country").(string),
+		"locality":             d.Get("locality").(string),
+		"province":             d.Get("province").(string),
+		"street_address":       d.Get("street_address").(string),
+		"postal_code":          d.Get("postal_code").(string),
 	}
 
 	if len(altNames) > 0 {
