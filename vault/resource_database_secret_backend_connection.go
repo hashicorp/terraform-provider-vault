@@ -127,7 +127,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Connection parameters for the mongodb-database-plugin plugin.",
-				Elem: &schema.Resource{
+				Elem: addCredentialsSchema(&schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"connection_url": {
 							Type:        schema.TypeString,
@@ -135,7 +135,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 							Description: "Connection string to use to connect to the database.",
 						},
 					},
-				},
+				}),
 				MaxItems:      1,
 				ConflictsWith: calculateConflictsWith("mongodb", dbBackendTypes),
 			},
@@ -144,7 +144,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the hana-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          addCredentialsSchema(connectionStringResource()),
 				MaxItems:      1,
 				ConflictsWith: calculateConflictsWith("hana", dbBackendTypes),
 			},
@@ -153,7 +153,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mssql-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          addCredentialsSchema(connectionStringResource()),
 				MaxItems:      1,
 				ConflictsWith: calculateConflictsWith("mssql", dbBackendTypes),
 			},
@@ -162,7 +162,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          addCredentialsSchema(connectionStringResource()),
 				MaxItems:      1,
 				ConflictsWith: calculateConflictsWith("mysql", dbBackendTypes),
 			},
@@ -170,7 +170,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-rds-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          addCredentialsSchema(connectionStringResource()),
 				MaxItems:      1,
 				ConflictsWith: calculateConflictsWith("mysql_rds", dbBackendTypes),
 			},
@@ -178,7 +178,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-aurora-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          addCredentialsSchema(connectionStringResource()),
 				MaxItems:      1,
 				ConflictsWith: calculateConflictsWith("mysql_aurora", dbBackendTypes),
 			},
@@ -195,7 +195,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the postgresql-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          addCredentialsSchema(connectionStringResource()),
 				MaxItems:      1,
 				ConflictsWith: calculateConflictsWith("postgresql", dbBackendTypes),
 			},
@@ -249,6 +249,21 @@ func connectionStringResource() *schema.Resource {
 			},
 		},
 	}
+}
+
+func addCredentialsSchema(resource *schema.Resource) *schema.Resource {
+	resource.Schema["username"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The root credential username used in the connection URL.",
+	}
+	resource.Schema["password"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The root credential password used in the connection URL.",
+		Sensitive:   true,
+	}
+	return resource
 }
 
 func getDatabasePluginName(d *schema.ResourceData) (string, error) {
@@ -328,31 +343,37 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 			data["connect_timeout"] = v.(int)
 		}
 	case "hana-database-plugin":
-		setDatabaseConnectionData(d, "hana.0.", data)
+		setDatabaseConnectionData(d, "hana.0.", true, data)
 	case "mongodb-database-plugin":
 		if v, ok := d.GetOk("mongodb.0.connection_url"); ok {
 			data["connection_url"] = v.(string)
 		}
+		if v, ok := d.GetOk("mongodb.0.username"); ok {
+			data["username"] = v.(string)
+		}
+		if v, ok := d.GetOk("mongodb.0.password"); ok {
+			data["password"] = v.(string)
+		}
 	case "mssql-database-plugin":
-		setDatabaseConnectionData(d, "mssql.0.", data)
+		setDatabaseConnectionData(d, "mssql.0.", true, data)
 	case "mysql-database-plugin":
-		setDatabaseConnectionData(d, "mysql.0.", data)
+		setDatabaseConnectionData(d, "mysql.0.", true, data)
 	case "mysql-rds-database-plugin":
-		setDatabaseConnectionData(d, "mysql_rds.0.", data)
+		setDatabaseConnectionData(d, "mysql_rds.0.", true, data)
 	case "mysql-aurora-database-plugin":
-		setDatabaseConnectionData(d, "mysql_aurora.0.", data)
+		setDatabaseConnectionData(d, "mysql_aurora.0.", true, data)
 	case "mysql-legacy-database-plugin":
-		setDatabaseConnectionData(d, "mysql_legacy.0.", data)
+		setDatabaseConnectionData(d, "mysql_legacy.0.", true, data)
 	case "oracle-database-plugin":
-		setDatabaseConnectionData(d, "oracle.0.", data)
+		setDatabaseConnectionData(d, "oracle.0.", false, data)
 	case "postgresql-database-plugin":
-		setDatabaseConnectionData(d, "postgresql.0.", data)
+		setDatabaseConnectionData(d, "postgresql.0.", true, data)
 	}
 
 	return data, nil
 }
 
-func getConnectionDetailsFromResponse(resp *api.Secret) []map[string]interface{} {
+func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
 	if !ok {
@@ -386,10 +407,19 @@ func getConnectionDetailsFromResponse(resp *api.Secret) []map[string]interface{}
 			result["max_connection_lifetime"] = i
 		}
 	}
+	if v, ok := data["username"]; ok {
+		result["username"] = v.(string)
+	}
+
+	// Vault does not return the password. Setting the state to the password in the resource
+	// to avoid a diff between state and reality
+	if v, ok := d.GetOkExists(prefix + "password"); ok {
+		result["password"] = v
+	}
 	return []map[string]interface{}{result}
 }
 
-func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+func setDatabaseConnectionData(d *schema.ResourceData, prefix string, includeCredentials bool, data map[string]interface{}) {
 	if v, ok := d.GetOk(prefix + "connection_url"); ok {
 		data["connection_url"] = v.(string)
 	}
@@ -401,6 +431,15 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	}
 	if v, ok := d.GetOkExists(prefix + "max_connection_lifetime"); ok {
 		data["max_connection_lifetime"] = fmt.Sprintf("%ds", v)
+	}
+
+	if includeCredentials {
+		if v, ok := d.GetOk(prefix + "username"); ok {
+			data["username"] = v.(string)
+		}
+		if v, ok := d.GetOk(prefix + "password"); ok {
+			data["password"] = v.(string)
+		}
 	}
 }
 
@@ -520,7 +559,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			d.Set("cassandra", []map[string]interface{}{result})
 		}
 	case "hana-database-plugin":
-		d.Set("hana", getConnectionDetailsFromResponse(resp))
+		d.Set("hana", getConnectionDetailsFromResponse(d, "hana.0.", resp))
 	case "mongodb-database-plugin":
 		details := resp.Data["connection_details"]
 		data, ok := details.(map[string]interface{})
@@ -529,22 +568,31 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			if v, ok := data["connection_url"]; ok {
 				result["connection_url"] = v.(string)
 			}
+			if v, ok := data["username"]; ok {
+				result["username"] = v.(string)
+			}
+
+			// Vault does not return the password. Setting the state to the password in the resource
+			// to avoid a diff between state and reality
+			if v, ok := d.GetOkExists("mongodb.0.password"); ok {
+				result["password"] = v
+			}
 			d.Set("mongodb", []map[string]interface{}{result})
 		}
 	case "mssql-database-plugin":
-		d.Set("mssql", getConnectionDetailsFromResponse(resp))
+		d.Set("mssql", getConnectionDetailsFromResponse(d, "mssql.0.", resp))
 	case "mysql-database-plugin":
-		d.Set("mysql", getConnectionDetailsFromResponse(resp))
+		d.Set("mysql", getConnectionDetailsFromResponse(d, "mysql.0.", resp))
 	case "mysql-rds-database-plugin":
-		d.Set("mysql_rds", getConnectionDetailsFromResponse(resp))
+		d.Set("mysql_rds", getConnectionDetailsFromResponse(d, "mysql_rds.0.", resp))
 	case "mysql-aurora-database-plugin":
-		d.Set("mysql_aurora", getConnectionDetailsFromResponse(resp))
+		d.Set("mysql_aurora", getConnectionDetailsFromResponse(d, "mysql_aurora.0.", resp))
 	case "mysql-legacy-database-plugin":
-		d.Set("mysql_legacy", getConnectionDetailsFromResponse(resp))
+		d.Set("mysql_legacy", getConnectionDetailsFromResponse(d, "mysql_legacy.0.", resp))
 	case "oracle-database-plugin":
-		d.Set("oracle", getConnectionDetailsFromResponse(resp))
+		d.Set("oracle", getConnectionDetailsFromResponse(d, "mysql_oracle.0.", resp))
 	case "postgresql-database-plugin":
-		d.Set("postgresql", getConnectionDetailsFromResponse(resp))
+		d.Set("postgresql", getConnectionDetailsFromResponse(d, "postgresql.0.", resp))
 	}
 
 	if err != nil {
