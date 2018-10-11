@@ -183,7 +183,7 @@ func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error 
 
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("issuing_ca", resp.Data["issuing_ca"])
-	d.Set("ca_chain", resp.Data["ca_chain"])
+	d.Set("ca_chain", strings.Join(convertIntoSliceOfString(resp.Data["ca_chain"])[:], "\n"))
 	d.Set("private_key", resp.Data["private_key"])
 	d.Set("private_key_type", resp.Data["private_key_type"])
 	d.Set("serial_number", resp.Data["serial_number"])
@@ -206,4 +206,13 @@ func pkiSecretBackendCertDelete(d *schema.ResourceData, meta interface{}) error 
 
 func pkiSecretBackendCertPath(backend string, name string) string {
 	return strings.Trim(backend, "/") + "/issue/" + strings.Trim(name, "/")
+}
+
+func convertIntoSliceOfString(slice interface{}) []string {
+	intSlice := slice.([]interface{})
+	strSlice := make([]string, len(intSlice))
+	for i, v := range intSlice {
+		strSlice[i] = v.(string)
+	}
+	return strSlice
 }
