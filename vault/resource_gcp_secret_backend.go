@@ -81,13 +81,14 @@ func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	maxTTL := d.Get("max_lease_ttl_seconds").(int)
 	credentials := d.Get("credentials").(string)
 
+	configPath := gcpSecretBackendConfigPath(path)
+
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting GCP backend at %q", path)
 	err := client.Sys().Mount(path, &api.MountInput{
 		Type:        "gcp",
 		Description: description,
 		Config: api.MountConfigInput{
-			Credentials:     credentials,
 			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
 		},
@@ -102,6 +103,15 @@ func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	d.SetPartial("description")
 	d.SetPartial("default_lease_ttl_seconds")
 	d.SetPartial("max_lease_ttl_seconds")
+
+	log.Printf("[DEBUG] Writing GCP configuration to %q", configPath)
+	data := map[string]interface{}{
+		"credentials": credentials,
+	}
+	if _, err := client.Logical().Write(configPath, data); err != nil {
+		return fmt.Errorf("Error writing GCP configuration for %q: %s", path, err)
+	}
+	log.Printf("[DEBUG] Wrote GCP configuration to %q", configPath)
 	d.Partial(false)
 
 	return gcpSecretBackendRead(d, meta)
@@ -186,4 +196,8 @@ func gcpSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, err
 	log.Printf("[DEBUG] Checked if GCP backend exists at %q", path)
 	_, ok := mounts[strings.Trim(path, "/")+"/"]
 	return ok, nil
+}
+
+func gcpSecretBackendConfigPath(backend string) string {
+	return strings.Trim(backend, "/") + "/config"
 }
