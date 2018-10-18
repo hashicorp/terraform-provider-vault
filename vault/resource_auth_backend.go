@@ -60,6 +60,13 @@ func authBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The accessor of the auth backend",
 			},
+
+			"plugin": {
+				Type:        schema.TypeString,
+				ForceNew:    true,
+				Optional:    true,
+				Description: "The name of the auth plugin to use",
+			},
 		},
 	}
 }
@@ -77,6 +84,7 @@ func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	options := &api.EnableAuthOptions{
 		Type:        name,
 		Description: d.Get("description").(string),
+		PluginName:  d.Get("plugin").(string),
 	}
 
 	log.Printf("[DEBUG] Writing auth %q to Vault", path)
@@ -125,6 +133,7 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 			d.Set("path", path)
 			d.Set("description", auth.Description)
 			d.Set("accessor", auth.Accessor)
+			d.Set("plugin", auth.Config.PluginName)
 			return nil
 		}
 	}
