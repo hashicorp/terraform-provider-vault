@@ -68,16 +68,20 @@ func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	name := d.Get("type").(string)
-	desc := d.Get("description").(string)
 	path := d.Get("path").(string)
 
 	if path == "" {
 		path = name
 	}
 
+	options := &api.EnableAuthOptions{
+		Type:        name,
+		Description: d.Get("description").(string),
+	}
+
 	log.Printf("[DEBUG] Writing auth %q to Vault", path)
 
-	err := client.Sys().EnableAuth(path, name, desc)
+	err := client.Sys().EnableAuthWithOptions(path, options)
 
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)

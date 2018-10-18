@@ -82,6 +82,13 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 			return fmt.Errorf("unexpected auth path %q, expected %q", path, expectedPath)
 		}
 
+		if instanceState.Attributes["type"] != "github" {
+			return fmt.Errorf("unexpected auth type")
+		}
+		if instanceState.Attributes["description"] != "Test auth backend" {
+			return fmt.Errorf("unexpected auth description")
+		}
+
 		client := testProvider.Meta().(*api.Client)
 		auths, err := client.Sys().ListAuth()
 
@@ -90,9 +97,15 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 		}
 
 		found := false
-		for serverPath := range auths {
+		for serverPath, serverAuth := range auths {
 			if serverPath == expectedPath+"/" {
 				found = true
+				if serverAuth.Type != "github" {
+					return fmt.Errorf("unexpected auth type")
+				}
+				if serverAuth.Description != "Test auth backend" {
+					return fmt.Errorf("unexpected auth description")
+				}
 				break
 			}
 		}
