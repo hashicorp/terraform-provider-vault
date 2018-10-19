@@ -67,7 +67,7 @@ No additional attributes are exported by this resource.
 
 ## Import
 
-AWS secret backend roles can be imported using the `path`, e.g.
+RabbitMQ secret backend roles can be imported using the `path`, e.g.
 
 ```
 $ terraform import vault_aws_secret_backend_role.role aws/roles/deploy
