@@ -13,13 +13,11 @@ import (
 
 func TestAccRabbitmqSecretBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	connectionUri := "http://" + acctest.RandString(10) + ":15672"
-	username := acctest.RandString(10)
-	password := acctest.RandString(10)
+	connectionUri, username, password := getTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testAccAWSSecretBackendCheckDestroy,
+		CheckDestroy: testAccRabbitmqSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitmqSecretBackendConfig_basic(path, connectionUri, username, password),
@@ -51,13 +49,11 @@ func TestAccRabbitmqSecretBackend_basic(t *testing.T) {
 
 func TestAccRabbitmqSecretBackend_import(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	connectionUri := "http://" + acctest.RandString(10) + ":15672"
-	username := acctest.RandString(10)
-	password := acctest.RandString(10)
+	connectionUri, username, password := getTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testAccAWSSecretBackendCheckDestroy,
+		CheckDestroy: testAccRabbitmqSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitmqSecretBackendConfig_basic(path, connectionUri, username, password),

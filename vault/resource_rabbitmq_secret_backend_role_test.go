@@ -18,9 +18,7 @@ const testAccRabbitmqSecretBackendRoleVhost_updated = "{\"/\": {\"configure\":\"
 func TestAccRabbitmqSecretBackendRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	connectionUri := "http://" + acctest.RandString(10) + ":15672"
-	username := acctest.RandString(10)
-	password := acctest.RandString(10)
+	connectionUri, username, password := getTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -51,9 +49,7 @@ func TestAccRabbitmqSecretBackendRole_basic(t *testing.T) {
 func TestAccRabbitmqSecretBackendRole_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	connectionUri := "http://" + acctest.RandString(10) + ":15672"
-	username := acctest.RandString(10)
-	password := acctest.RandString(10)
+	connectionUri, username, password := getTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -80,9 +76,7 @@ func TestAccRabbitmqSecretBackendRole_import(t *testing.T) {
 func TestAccRabbitmqSecretBackendRole_nested(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	connectionUri := "http://" + acctest.RandString(10) + ":15672"
-	username := acctest.RandString(10)
-	password := acctest.RandString(10)
+	connectionUri, username, password := getTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -141,11 +135,12 @@ resource "vault_rabbitmq_secret_backend" "test" {
 }
 
 resource "vault_rabbitmq_secret_backend_role" "test" {
+  backend = "%s"
   name = "%s"
   tags = %q
   vhost = %q
 }
-`, path, connectionUri, username, password, name, testAccRabbitmqSecretBackendRoleTags_basic, testAccRabbitmqSecretBackendRoleVhost_basic)
+`, path, connectionUri, username, password, path, name, testAccRabbitmqSecretBackendRoleTags_basic, testAccRabbitmqSecretBackendRoleVhost_basic)
 }
 
 func testAccRabbitmqSecretBackendRoleConfig_updated(name, path, connectionUri, username, password string) string {
@@ -161,9 +156,10 @@ resource "vault_rabbitmq_secret_backend" "test" {
 }
 
 resource "vault_rabbitmq_secret_backend_role" "test" {
+  backend = "%s"
   name = "%s"
   tags = %q
   vhost = %q
 }
-`, path, connectionUri, username, password, name, testAccRabbitmqSecretBackendRoleTags_updated, testAccRabbitmqSecretBackendRoleVhost_updated)
+`, path, connectionUri, username, password, path, name, testAccRabbitmqSecretBackendRoleTags_updated, testAccRabbitmqSecretBackendRoleVhost_updated)
 }
