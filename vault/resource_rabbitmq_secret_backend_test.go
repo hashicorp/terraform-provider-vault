@@ -1,10 +1,13 @@
 package vault
 
 import (
+	"testing"
+
 	"fmt"
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/vault/api"
 	"strings"
 )
 
