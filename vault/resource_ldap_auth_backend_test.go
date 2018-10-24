@@ -86,6 +86,11 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 			return err
 		}
 
+		// Check that `bindpass`, if present in the state, is not returned by the API
+		if instanceState.Attributes["bindpass"] != "" && resp.Data["bindpass"] != nil {
+			return fmt.Errorf("expected api field bindpass to not be returned, but was %q", resp.Data["bindpass"])
+		}
+
 		attrs := map[string]string{
 			"url":             "url",
 			"starttls":        "starttls",
@@ -94,7 +99,6 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 			"insecure_tls":    "insecure_tls",
 			"certificate":     "certificate",
 			"binddn":          "binddn",
-			"bindpass":        "bindpass",
 			"userdn":          "userdn",
 			"userattr":        "userattr",
 			"discoverdn":      "discoverdn",
@@ -180,6 +184,10 @@ resource "vault_ldap_auth_backend" "test" {
     tls_min_version        = "tls11"
     tls_max_version        = "tls12"
     insecure_tls           = false
+    binddn                 = "cn=example.com"
+    bindpass               = "supersecurepassword"
+    discoverdn             = false
+    deny_null_bind         = true
 }
 `, path)
 

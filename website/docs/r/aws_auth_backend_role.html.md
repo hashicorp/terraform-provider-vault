@@ -144,3 +144,11 @@ The following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+AWS auth backend roles can be imported using `auth/`, the `backend` path, `/role/`, and the `role` name e.g.
+
+```
+$ terraform import vault_database_secret_backend_role.example auth/aws/role/test-role
+```

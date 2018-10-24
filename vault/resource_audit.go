@@ -21,7 +21,8 @@ func auditResource() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 				ForceNew:    true,
 				Description: "Path in which to enable the audit device",
 			},
@@ -55,6 +56,10 @@ func auditWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Get("path").(string)
+	if path == "" {
+		path = d.Get("type").(string)
+	}
+
 	optionsRaw := d.Get("options").(map[string]interface{})
 	options := make(map[string]string)
 

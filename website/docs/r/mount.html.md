@@ -13,8 +13,8 @@ description: |-
 
 ```hcl
 resource "vault_mount" "example" {
-  path = "dummy"
-  type = "generic"
+  path        = "dummy"
+  type        = "generic"
   description = "This is an example mount"
 }
 ```
@@ -37,4 +37,14 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+In addition to the fields above, the following attributes are exported:
+
+* `accessor` - The accessor for this mount.
+
+## Import
+
+Mounts can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_mount.example dummy
+```

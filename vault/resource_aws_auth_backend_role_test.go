@@ -214,6 +214,7 @@ func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestChe
 			"bound_subnet_ids":                "bound_subnet_id",
 			"bound_iam_role_arns":             "bound_iam_role_arn",
 			"bound_iam_instance_profile_arns": "bound_iam_instance_profile_arn",
+			"bound_ec2_instance_ids":          "bound_ec2_instance_id",
 			"role_tag":                        "role_tag",
 			"bound_iam_principal_arns":        "bound_iam_principal_arn",
 			"inferred_entity_type":            "inferred_entity_type",
@@ -298,12 +299,22 @@ resource "vault_aws_auth_backend_role" "role" {
   backend = "${vault_auth_backend.aws.path}"
   role = "%s"
   auth_type = "iam"
+<<<<<<< HEAD
   bound_ami_ids = ["ami-8c1be5f6"]
   bound_account_ids = ["123456789012"]
   bound_vpc_ids = ["vpc-b61106d4"]
   bound_subnet_ids = ["vpc-a33128f1"]
   bound_iam_role_arns = ["arn:aws:iam::123456789012:role/S3Access"]
   bound_iam_instance_profile_arns = ["arn:aws:iam::123456789012:instance-profile/Webserver"]
+=======
+  bound_ami_id = ["ami-8c1be5f6"]
+  bound_account_id = ["123456789012"]
+  bound_ec2_instance_id = ["i-06bb291939760ba66"]
+  bound_vpc_id = ["vpc-b61106d4"]
+  bound_subnet_id = ["vpc-a33128f1"]
+  bound_iam_role_arn = ["arn:aws:iam::123456789012:role/S3Access"]
+  bound_iam_instance_profile_arn = ["arn:aws:iam::123456789012:instance-profile/Webserver"]
+>>>>>>> master
   inferred_entity_type = "ec2_instance"
   inferred_aws_region = "us-east-1"
   ttl = 60
@@ -361,6 +372,7 @@ resource "vault_aws_auth_backend_role" "role" {
   backend = "${vault_auth_backend.aws.path}"
   role = "%s"
   auth_type = "ec2"
+<<<<<<< HEAD
   bound_ami_ids = ["ami-8c1be5f6"]
   bound_account_ids = ["123456789012"]
   bound_regions = ["us-east-1"]
@@ -368,6 +380,16 @@ resource "vault_aws_auth_backend_role" "role" {
   bound_subnet_ids = ["vpc-a33128f1"]
   bound_iam_role_arns = ["arn:aws:iam::123456789012:role/S3Access"]
   bound_iam_instance_profile_arns = ["arn:aws:iam::123456789012:instance-profile/Webserver"]
+=======
+  bound_ami_id = ["ami-8c1be5f6"]
+  bound_account_id = ["123456789012"]
+  bound_ec2_instance_id = ["i-06bb291939760ba66"]
+  bound_region = ["us-east-1"]
+  bound_vpc_id = ["vpc-b61106d4"]
+  bound_subnet_id = ["vpc-a33128f1"]
+  bound_iam_role_arn = ["arn:aws:iam::123456789012:role/S3Access"]
+  bound_iam_instance_profile_arn = ["arn:aws:iam::123456789012:instance-profile/Webserver"]
+>>>>>>> master
   role_tag = "VaultRoleTag"
   disallow_reauthentication = true
   ttl = 60
