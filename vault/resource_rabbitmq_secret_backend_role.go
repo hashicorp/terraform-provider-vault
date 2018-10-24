@@ -39,7 +39,7 @@ func rabbitmqSecretBackendRoleResource() *schema.Resource {
 				Default:     "",
 				Description: "Specifies a comma-separated RabbitMQ management tags.",
 			},
-			"vhost": {
+			"vhosts": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Specifies a map of virtual hosts to permissions.",
@@ -55,11 +55,11 @@ func rabbitmqSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
 	tags := d.Get("tags").(string)
-	vhost := d.Get("vhost").(string)
+	vhosts := d.Get("vhosts").(string)
 
 	data := map[string]interface{}{
-		"tags":  tags,
-		"vhost": vhost,
+		"tags":   tags,
+		"vhosts": vhosts,
 	}
 	log.Printf("[DEBUG] Creating role %q on Rabbitmq backend %q", name, backend)
 	_, err := client.Logical().Write(backend+"/roles/"+name, data)
@@ -69,6 +69,10 @@ func rabbitmqSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 	log.Printf("[DEBUG] Created role %q on Rabbitmq backend %q", name, backend)
 
 	d.SetId(backend + "/roles/" + name)
+	d.Set("name", name)
+	d.Set("tags", tags)
+	d.Set("vhosts", vhosts)
+	d.Set("backend", backend)
 	return rabbitmqSecretBackendRoleRead(d, meta)
 }
 
@@ -93,7 +97,7 @@ func rabbitmqSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 		return nil
 	}
 	d.Set("tags", secret.Data["tags"])
-	d.Set("vhost", secret.Data["vhost"])
+	d.Set("vhosts", secret.Data["vhosts"])
 	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
 	d.Set("name", pathPieces[len(pathPieces)-1])
 	return nil

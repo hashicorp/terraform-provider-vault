@@ -138,7 +138,7 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
   backend = "%s"
   name = "%s"
   tags = %q
-  vhost = %q
+  vhosts = %q
 }
 `, path, connectionUri, username, password, path, name, testAccRabbitmqSecretBackendRoleTags_basic, testAccRabbitmqSecretBackendRoleVhost_basic)
 }
@@ -159,7 +159,7 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
   backend = "%s"
   name = "%s"
   tags = %q
-  vhost = %q
+  vhosts = %q
 }
 `, path, connectionUri, username, password, path, name, testAccRabbitmqSecretBackendRoleTags_updated, testAccRabbitmqSecretBackendRoleVhost_updated)
 }
