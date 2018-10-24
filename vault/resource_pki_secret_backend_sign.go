@@ -165,19 +165,19 @@ func pkiSecretBackendSignCreate(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	if len(altNames) > 0 {
-		data["alt_names"] = altNames
+		data["alt_names"] = strings.Join(altNames, ",")
 	}
 
 	if len(otherSans) > 0 {
-		data["other_sans"] = otherSans
+		data["other_sans"] = strings.Join(otherSans, ",")
 	}
 
 	if len(ipSans) > 0 {
-		data["ip_sans"] = ipSans
+		data["ip_sans"] = strings.Join(ipSans, ",")
 	}
 
 	if len(uriSans) > 0 {
-		data["uri_sans"] = uriSans
+		data["uri_sans"] = strings.Join(uriSans, ",")
 	}
 
 	log.Printf("[DEBUG] Creating certificate sign %s by %s on PKI secret backend %q", commonName, name,

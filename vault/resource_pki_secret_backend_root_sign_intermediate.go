@@ -238,23 +238,23 @@ func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta int
 	}
 
 	if len(altNames) > 0 {
-		data["alt_names"] = altNames
+		data["alt_names"] = strings.Join(altNames, ",")
 	}
 
 	if len(ipSans) > 0 {
-		data["ip_sans"] = ipSans
+		data["ip_sans"] = strings.Join(ipSans, ",")
 	}
 
 	if len(uriSans) > 0 {
-		data["uri_sans"] = uriSans
+		data["uri_sans"] = strings.Join(uriSans, ",")
 	}
 
 	if len(otherSans) > 0 {
-		data["other_sans"] = otherSans
+		data["other_sans"] = strings.Join(otherSans, ",")
 	}
 
 	if len(permittedDNSDomains) > 0 {
-		data["permitted_dns_domains"] = permittedDNSDomains
+		data["permitted_dns_domains"] = strings.Join(permittedDNSDomains, ",")
 	}
 
 	log.Printf("[DEBUG] Creating root sign-intermediate on PKI secret backend %q", backend)

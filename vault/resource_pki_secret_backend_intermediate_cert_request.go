@@ -203,15 +203,15 @@ func pkiSecretBackendIntermediateCertRequestCreate(d *schema.ResourceData, meta 
 	}
 
 	if len(altNames) > 0 {
-		data["alt_names"] = altNames
+		data["alt_names"] = strings.Join(altNames, ",")
 	}
 
 	if len(ipSans) > 0 {
-		data["ip_sans"] = ipSans
+		data["ip_sans"] = strings.Join(ipSans, ",")
 	}
 
 	if len(otherSans) > 0 {
-		data["other_sans"] = otherSans
+		data["other_sans"] = strings.Join(otherSans, ",")
 	}
 
 	log.Printf("[DEBUG] Creating intermediate cert request on PKI secret backend %q", backend)
