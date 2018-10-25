@@ -205,60 +205,83 @@ func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestChe
 			return fmt.Errorf("%q doesn't exist", endpoint)
 		}
 
-		attrs := map[string]string{
-			"auth_type":                       "auth_type",
-			"bound_ami_ids":                   "bound_ami_id",
-			"bound_account_ids":               "bound_account_id",
-			"bound_regions":                   "bound_region",
-			"bound_vpc_ids":                   "bound_vpc_id",
-			"bound_subnet_ids":                "bound_subnet_id",
-			"bound_iam_role_arns":             "bound_iam_role_arn",
-			"bound_iam_instance_profile_arns": "bound_iam_instance_profile_arn",
-			"bound_ec2_instance_ids":          "bound_ec2_instance_id",
-			"role_tag":                        "role_tag",
-			"bound_iam_principal_arns":        "bound_iam_principal_arn",
-			"inferred_entity_type":            "inferred_entity_type",
-			"inferred_aws_region":             "inferred_aws_region",
-			"resolve_aws_unique_ids":          "resolve_aws_unique_ids",
-			"ttl":                             "ttl",
-			"max_ttl":                         "max_ttl",
-			"period":                          "period",
-			"policies":                        "policies",
-			"allow_instance_migration":        "allow_instance_migration",
-			"disallow_reauthentication":       "disallow_reauthentication",
+		attrs := []*fieldNames{
+			{NameInVault:"auth_type", NameInProvider:"auth_type"},
+			{NameInVault:"bound_ami_id", NameInProvider:"bound_ami_ids", PreviousNameInProvider:"bound_ami_id"},
+			{NameInVault:"bound_account_id", NameInProvider:"bound_account_ids", PreviousNameInProvider:"bound_account_id"},
+			{NameInVault:"bound_region", NameInProvider:"bound_regions", PreviousNameInProvider:"bound_region"},
+			{NameInVault:"bound_vpc_id", NameInProvider:"bound_vpc_ids", PreviousNameInProvider:"bound_vpc_id"},
+			{NameInVault:"bound_subnet_id", NameInProvider:"bound_subnet_ids", PreviousNameInProvider:"bound_subnet_id"},
+			{NameInVault:"bound_iam_role_arn", NameInProvider:"bound_iam_role_arns", PreviousNameInProvider:"bound_iam_role_arn"},
+			{NameInVault:"bound_iam_instance_profile_arn", NameInProvider:"bound_iam_instance_profile_arns", PreviousNameInProvider:"bound_iam_instance_profile_arn"},
+			{NameInVault:"bound_ec2_instance_id", NameInProvider:"bound_ec2_instance_ids", PreviousNameInProvider:"bound_ec2_instance_id"},
+			{NameInVault:"role_tag", NameInProvider:"role_tag"},
+			{NameInVault:"bound_iam_principal_arn", NameInProvider:"bound_iam_principal_arns", PreviousNameInProvider:"bound_iam_principal_arn"},
+			{NameInVault:"inferred_entity_type", NameInProvider:"inferred_entity_type"},
+			{NameInVault:"inferred_aws_region", NameInProvider:"inferred_aws_region"},
+			{NameInVault:"resolve_aws_unique_ids", NameInProvider:"resolve_aws_unique_ids"},
+			{NameInVault:"ttl", NameInProvider:"ttl"},
+			{NameInVault:"max_ttl", NameInProvider:"max_ttl"},
+			{NameInVault:"period", NameInProvider:"period"},
+			{NameInVault:"policies", NameInProvider:"policies"},
+			{NameInVault:"allow_instance_migration", NameInProvider:"allow_instance_migration"},
+			{NameInVault:"disallow_reauthentication", NameInProvider:"disallow_reauthentication"},
 		}
-		for stateAttr, apiAttr := range attrs {
-			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
+		for _, attr := range attrs {
+
+			providerValIsArray := true
+			stateAttr := ""
+			if _, ok := instanceState.Attributes[attr.NameInProvider]; ok {
+				providerValIsArray = false
+				stateAttr = attr.NameInProvider
+			} else if _, ok := instanceState.Attributes[attr.PreviousNameInProvider]; ok {
+				providerValIsArray = false
+				stateAttr = attr.PreviousNameInProvider
+			} else if _, ok := instanceState.Attributes[attr.NameInProvider+".0"]; ok {
+				stateAttr = attr.NameInProvider
+			} else if _, ok := instanceState.Attributes[attr.PreviousNameInProvider+".0"]; ok {
+				stateAttr = attr.PreviousNameInProvider
+			}
+			stateAttrVal := instanceState.Attributes[stateAttr]
+
+			if resp.Data[attr.NameInVault] == nil && stateAttrVal == "" {
 				continue
 			}
 			var match bool
-			switch resp.Data[apiAttr].(type) {
+			switch vaultRespVal := resp.Data[attr.NameInVault].(type) {
 			case json.Number:
-				apiData, err := resp.Data[apiAttr].(json.Number).Int64()
+				apiData, err := vaultRespVal.Int64()
 				if err != nil {
-					return fmt.Errorf("expected API field %s to be an int, was %q", apiAttr, resp.Data[apiAttr])
+					return fmt.Errorf("expected API field %s to be an int, was %q", attr.NameInVault, resp.Data[attr.NameInVault])
 				}
-				stateData, err := strconv.ParseInt(instanceState.Attributes[stateAttr], 10, 64)
+				stateData, err := strconv.ParseInt(stateAttrVal, 10, 64)
 				if err != nil {
-					return fmt.Errorf("expected state field %s to be an int, was %q", stateAttr, instanceState.Attributes[stateAttr])
+					return fmt.Errorf("expected state field %s to be an int, was %q", stateAttr, stateAttrVal)
 				}
 				match = apiData == stateData
 			case bool:
-				if _, ok := resp.Data[apiAttr]; !ok && instanceState.Attributes[stateAttr] == "" {
+				if _, ok := resp.Data[attr.NameInVault]; !ok && stateAttrVal == "" {
 					match = true
 				} else {
-					stateData, err := strconv.ParseBool(instanceState.Attributes[stateAttr])
+					stateData, err := strconv.ParseBool(stateAttrVal)
 					if err != nil {
-						return fmt.Errorf("expected state field %s to be a bool, was %q", stateAttr, instanceState.Attributes[stateAttr])
+						return fmt.Errorf("expected state field %s to be a bool, was %q", stateAttr, stateAttrVal)
 					}
-					match = resp.Data[apiAttr] == stateData
+					match = vaultRespVal == stateData
 				}
 			case []interface{}:
-				apiData := resp.Data[apiAttr].([]interface{})
 				length := instanceState.Attributes[stateAttr+".#"]
-				if length == "" {
-					if len(resp.Data[apiAttr].([]interface{})) != 0 {
-						return fmt.Errorf("expected state field %s to have %d entries, had 0", stateAttr, len(apiData))
+				if !providerValIsArray {
+					if len(vaultRespVal) != 1 {
+						return fmt.Errorf("expected one response value but received %s", vaultRespVal)
+					}
+					if vaultRespVal[0] != stateAttrVal {
+						return fmt.Errorf("expected %s but received %s", stateAttrVal, vaultRespVal[0])
+					}
+					match = true
+				} else if length == "" {
+					if len(vaultRespVal) != 0 {
+						return fmt.Errorf("expected state field %s to have %d entries, had 0", stateAttr, len(vaultRespVal))
 					}
 					match = true
 				} else {
@@ -266,22 +289,22 @@ func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestChe
 					if err != nil {
 						return fmt.Errorf("expected %s.# to be a number, got %q", stateAttr, instanceState.Attributes[stateAttr+".#"])
 					}
-					if count != len(apiData) {
-						return fmt.Errorf("expected %s to have %d entries in state, has %d", stateAttr, len(apiData), count)
+					if count != len(vaultRespVal) {
+						return fmt.Errorf("expected %s to have %d entries in state, has %d", stateAttr, len(vaultRespVal), count)
 					}
 					for i := 0; i < count; i++ {
 						stateData := instanceState.Attributes[stateAttr+"."+strconv.Itoa(i)]
-						if stateData != apiData[i] {
-							return fmt.Errorf("expected item %d of %s (%s in state) of %q to be %q, got %q", i, apiAttr, stateAttr, endpoint, stateData, apiData[i])
+						if stateData != vaultRespVal[i] {
+							return fmt.Errorf("expected item %d of %s (%s in state) of %q to be %q, got %q", i, attr.NameInVault, stateAttr, endpoint, stateData, vaultRespVal[i])
 						}
 					}
 					match = true
 				}
 			default:
-				match = resp.Data[apiAttr] == instanceState.Attributes[stateAttr]
+				match = resp.Data[attr.NameInVault] == stateAttrVal
 			}
 			if !match {
-				return fmt.Errorf("expected %s (%s in state) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
+				return fmt.Errorf("expected %s (%s in state) of %q to be %q, got %q", attr.NameInVault, stateAttr, endpoint, stateAttrVal, resp.Data[attr.NameInVault])
 			}
 		}
 		return nil
@@ -302,7 +325,7 @@ resource "vault_aws_auth_backend_role" "role" {
   bound_account_ids = ["123456789012"]
   bound_vpc_ids = ["vpc-b61106d4"]
   bound_subnet_ids = ["vpc-a33128f1"]
-  bound_iam_role_arns = ["arn:aws:iam::123456789012:role/S3Access"]
+  bound_iam_role_arn = "arn:aws:iam::123456789012:role/S3Access"
   bound_iam_instance_profile_arns = ["arn:aws:iam::123456789012:instance-profile/Webserver"]
   bound_ec2_instance_ids = ["i-06bb291939760ba66"]
   inferred_entity_type = "ec2_instance"
@@ -373,4 +396,10 @@ resource "vault_aws_auth_backend_role" "role" {
   max_ttl = 120
   policies = ["default", "dev", "prod"]
 }`, backend, role)
+}
+
+type fieldNames struct {
+	NameInVault string
+	NameInProvider string
+	PreviousNameInProvider string
 }

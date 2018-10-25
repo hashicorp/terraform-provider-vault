@@ -286,42 +286,53 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if isEc2(authType, inferred) {
 
-		// Support the deprecated version of the fields.
 		if v, ok := d.GetOk("bound_ami_id"); ok {
 			data["bound_ami_id"] = v.(string)
-		}
-		if v, ok := d.GetOk("bound_account_id"); ok {
-			data["bound_account_id"] = v.(string)
-		}
-		if v, ok := d.GetOk("bound_region"); ok {
-			data["bound_region"] = v.(string)
-		}
-		if v, ok := d.GetOk("bound_vpc_id"); ok {
-			data["bound_vpc_id"] = v.(string)
-		}
-		if v, ok := d.GetOk("bound_subnet_id"); ok {
-			data["bound_subnet_id"] = v.(string)
-		}
-		if v, ok := d.GetOk("bound_iam_role_arn"); ok {
-			data["bound_iam_role_arn"] = v.(string)
-		}
-		if v, ok := d.GetOk("bound_iam_instance_profile_arn"); ok {
-			data["bound_iam_instance_profile_arn"] = v.(string)
-		}
-		if _, ok := d.GetOk("bound_ec2_instance_ids"); ok {
-			setSlice(d, "bound_ec2_instance_ids", "bound_ec2_instance_id", data)
-		} else if _, ok := d.GetOk("bound_ec2_instance_id"); ok {
-			setSlice(d, "bound_ec2_instance_id", "bound_ec2_instance_id", data)
+		} else if _, ok := d.GetOk("bound_ami_ids"); ok {
+			setSlice(d, "bound_ami_ids", "bound_ami_id", data)
 		}
 
-		// Support and favor the current version of the fields.
-		setSlice(d, "bound_ami_ids", "bound_ami_id", data)
-		setSlice(d, "bound_account_ids", "bound_account_id", data)
-		setSlice(d, "bound_regions", "bound_region", data)
-		setSlice(d, "bound_vpc_ids", "bound_vpc_id", data)
-		setSlice(d, "bound_subnet_ids", "bound_subnet_id", data)
-		setSlice(d, "bound_iam_role_arns", "bound_iam_role_arn", data)
-		setSlice(d, "bound_iam_instance_profile_arns", "bound_iam_instance_profile_arn", data)
+		if v, ok := d.GetOk("bound_account_id"); ok {
+			data["bound_account_id"] = v.(string)
+		} else if _, ok := d.GetOk("bound_account_ids"); ok {
+			setSlice(d, "bound_account_ids", "bound_account_id", data)
+		}
+
+		if v, ok := d.GetOk("bound_region"); ok {
+			data["bound_region"] = v.(string)
+		} else if _, ok := d.GetOk("bound_regions"); ok {
+			setSlice(d, "bound_regions", "bound_region", data)
+		}
+
+		if v, ok := d.GetOk("bound_vpc_id"); ok {
+			data["bound_vpc_id"] = v.(string)
+		} else if _, ok := d.GetOk("bound_vpc_ids"); ok {
+			setSlice(d, "bound_vpc_ids", "bound_vpc_id", data)
+		}
+
+		if v, ok := d.GetOk("bound_subnet_id"); ok {
+			data["bound_subnet_id"] = v.(string)
+		} else if _, ok := d.GetOk("bound_subnet_ids"); ok {
+			setSlice(d, "bound_subnet_ids", "bound_subnet_id", data)
+		}
+
+		if v, ok := d.GetOk("bound_iam_role_arn"); ok {
+			data["bound_iam_role_arn"] = v.(string)
+		} else if _, ok := d.GetOk("bound_iam_role_arns"); ok {
+			setSlice(d, "bound_iam_role_arns", "bound_iam_role_arn", data)
+		}
+
+		if v, ok := d.GetOk("bound_iam_instance_profile_arn"); ok {
+			data["bound_iam_instance_profile_arn"] = v.(string)
+		} else if _, ok := d.GetOk("bound_iam_instance_profile_arns"); ok {
+			setSlice(d, "bound_iam_instance_profile_arns", "bound_iam_instance_profile_arn", data)
+		}
+
+		if v, ok := d.GetOk("bound_ec2_instance_id"); ok {
+			data["bound_ec2_instance_id"] = v.(string)
+		} else if _, ok := d.GetOk("bound_ec2_instance_ids"); ok {
+			setSlice(d, "bound_ec2_instance_ids", "bound_ec2_instance_id", data)
+		}
 	}
 
 	if authType == "ec2" {
@@ -340,13 +351,11 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 			data["inferred_entity_type"] = inferred
 		}
 
-		// Support the deprecated version of the field.
 		if v, ok := d.GetOk("bound_iam_principal_arn"); ok {
 			data["bound_iam_principal_arn"] = v.(string)
+		} else if _, ok := d.GetOk("bound_iam_principal_arns"); ok {
+			setSlice(d, "bound_iam_principal_arns", "bound_iam_principal_arn", data)
 		}
-
-		// Support and favor the current version of the field.
-		setSlice(d, "bound_iam_principal_arns", "bound_iam_principal_arn", data)
 
 		if v, ok := d.GetOk("inferred_aws_region"); ok {
 			data["inferred_aws_region"] = v.(string)
@@ -415,26 +424,59 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("role", role)
 	d.Set("auth_type", resp.Data["auth_type"])
 
-	// Read Vault's response into the currently supported version of these fields.
-	d.Set("bound_account_ids", resp.Data["bound_account_id"])
-	d.Set("bound_ami_ids", resp.Data["bound_ami_id"])
-	d.Set("bound_ec2_instance_ids", resp.Data["bound_ec2_instance_id"])
-	d.Set("bound_iam_instance_profile_arns", resp.Data["bound_iam_instance_profile_arn"])
-	d.Set("bound_iam_role_arns", resp.Data["bound_iam_role_arn"])
-	d.Set("bound_subnet_ids", resp.Data["bound_subnet_id"])
-	d.Set("bound_vpc_ids", resp.Data["bound_vpc_id"])
-	d.Set("bound_regions", resp.Data["bound_region"])
-	d.Set("bound_iam_principal_arns", resp.Data["bound_iam_principal_arn"])
+	if _, ok := d.GetOk("bound_account_id"); ok {
+		d.Set("bound_account_id", resp.Data["bound_account_id"])
+	} else {
+		d.Set("bound_account_ids", resp.Data["bound_account_id"])
+	}
 
-	// For backward-compatibility, also read them into the deprecated version.
-	d.Set("bound_account_id", resp.Data["bound_account_id"])
-	d.Set("bound_ami_id", resp.Data["bound_ami_id"])
-	d.Set("bound_iam_instance_profile_arn", resp.Data["bound_iam_instance_profile_arn"])
-	d.Set("bound_iam_role_arn", resp.Data["bound_iam_role_arn"])
-	d.Set("bound_subnet_id", resp.Data["bound_subnet_id"])
-	d.Set("bound_vpc_id", resp.Data["bound_vpc_id"])
-	d.Set("bound_region", resp.Data["bound_region"])
-	d.Set("bound_iam_principal_arn", resp.Data["bound_iam_principal_arn"])
+	if _, ok := d.GetOk("bound_ami_id"); ok {
+		d.Set("bound_ami_id", resp.Data["bound_ami_id"])
+	} else {
+		d.Set("bound_ami_ids", resp.Data["bound_ami_id"])
+	}
+
+	if _, ok := d.GetOk("bound_ec2_instance_id"); ok {
+		d.Set("bound_ec2_instance_id", resp.Data["bound_ec2_instance_id"])
+	} else {
+		d.Set("bound_ec2_instance_ids", resp.Data["bound_ec2_instance_id"])
+	}
+
+	if _, ok := d.GetOk("bound_iam_instance_profile_arn"); ok {
+		d.Set("bound_iam_instance_profile_arn", resp.Data["bound_iam_instance_profile_arn"])
+	} else {
+		d.Set("bound_iam_instance_profile_arns", resp.Data["bound_iam_instance_profile_arn"])
+	}
+
+	if _, ok := d.GetOk("bound_iam_role_arn"); ok {
+		d.Set("bound_iam_role_arn", resp.Data["bound_iam_role_arn"])
+	} else {
+		d.Set("bound_iam_role_arns", resp.Data["bound_iam_role_arn"])
+	}
+
+	if _, ok := d.GetOk("bound_subnet_id"); ok {
+		d.Set("bound_subnet_id", resp.Data["bound_subnet_id"])
+	} else {
+		d.Set("bound_subnet_ids", resp.Data["bound_subnet_id"])
+	}
+
+	if _, ok := d.GetOk("bound_vpc_id"); ok {
+		d.Set("bound_vpc_id", resp.Data["bound_vpc_id"])
+	} else {
+		d.Set("bound_vpc_ids", resp.Data["bound_vpc_id"])
+	}
+
+	if _, ok := d.GetOk("bound_region"); ok {
+		d.Set("bound_region", resp.Data["bound_region"])
+	} else {
+		d.Set("bound_regions", resp.Data["bound_region"])
+	}
+
+	if _, ok := d.GetOk("bound_iam_principal_arn"); ok {
+		d.Set("bound_iam_principal_arn", resp.Data["bound_iam_principal_arn"])
+	} else {
+		d.Set("bound_iam_principal_arns", resp.Data["bound_iam_principal_arn"])
+	}
 
 	d.Set("role_tag", resp.Data["role_tag"])
 	d.Set("inferred_entity_type", resp.Data["inferred_entity_type"])
@@ -480,42 +522,53 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if isEc2(authType, inferred) {
 
-		// Support the deprecated version of the fields.
 		if v, ok := d.GetOk("bound_ami_id"); ok {
 			data["bound_ami_id"] = v.(string)
-		}
-		if v, ok := d.GetOk("bound_account_id"); ok {
-			data["bound_account_id"] = v.(string)
-		}
-		if v, ok := d.GetOk("bound_region"); ok {
-			data["bound_region"] = v.(string)
-		}
-		if v, ok := d.GetOk("bound_vpc_id"); ok {
-			data["bound_vpc_id"] = v.(string)
-		}
-		if v, ok := d.GetOk("bound_subnet_id"); ok {
-			data["bound_subnet_id"] = v.(string)
-		}
-		if v, ok := d.GetOk("bound_iam_role_arn"); ok {
-			data["bound_iam_role_arn"] = v.(string)
-		}
-		if v, ok := d.GetOk("bound_iam_instance_profile_arn"); ok {
-			data["bound_iam_instance_profile_arn"] = v.(string)
-		}
-		if _, ok := d.GetOk("bound_ec2_instance_ids"); ok {
-			setSlice(d, "bound_ec2_instance_ids", "bound_ec2_instance_id", data)
-		} else if _, ok := d.GetOk("bound_ec2_instance_id"); ok {
-			setSlice(d, "bound_ec2_instance_id", "bound_ec2_instance_id", data)
+		} else if _, ok := d.GetOk("bound_ami_ids"); ok {
+			setSlice(d, "bound_ami_ids", "bound_ami_id", data)
 		}
 
-		// Support and favor the current version of the fields.
-		setSlice(d, "bound_ami_ids", "bound_ami_id", data)
-		setSlice(d, "bound_account_ids", "bound_account_id", data)
-		setSlice(d, "bound_regions", "bound_region", data)
-		setSlice(d, "bound_vpc_ids", "bound_vpc_id", data)
-		setSlice(d, "bound_subnet_ids", "bound_subnet_id", data)
-		setSlice(d, "bound_iam_role_arns", "bound_iam_role_arn", data)
-		setSlice(d, "bound_iam_instance_profile_arns", "bound_iam_instance_profile_arn", data)
+		if v, ok := d.GetOk("bound_account_id"); ok {
+			data["bound_account_id"] = v.(string)
+		} else if _, ok := d.GetOk("bound_account_ids"); ok {
+			setSlice(d, "bound_account_ids", "bound_account_id", data)
+		}
+
+		if v, ok := d.GetOk("bound_region"); ok {
+			data["bound_region"] = v.(string)
+		} else if _, ok := d.GetOk("bound_regions"); ok {
+			setSlice(d, "bound_regions", "bound_region", data)
+		}
+
+		if v, ok := d.GetOk("bound_vpc_id"); ok {
+			data["bound_vpc_id"] = v.(string)
+		} else if _, ok := d.GetOk("bound_vpc_ids"); ok {
+			setSlice(d, "bound_vpc_ids", "bound_vpc_id", data)
+		}
+
+		if v, ok := d.GetOk("bound_subnet_id"); ok {
+			data["bound_subnet_id"] = v.(string)
+		} else if _, ok := d.GetOk("bound_subnet_ids"); ok {
+			setSlice(d, "bound_subnet_ids", "bound_subnet_id", data)
+		}
+
+		if v, ok := d.GetOk("bound_iam_role_arn"); ok {
+			data["bound_iam_role_arn"] = v.(string)
+		} else if _, ok := d.GetOk("bound_iam_role_arns"); ok {
+			setSlice(d, "bound_iam_role_arns", "bound_iam_role_arn", data)
+		}
+
+		if v, ok := d.GetOk("bound_iam_instance_profile_arn"); ok {
+			data["bound_iam_instance_profile_arn"] = v.(string)
+		} else if _, ok := d.GetOk("bound_iam_instance_profile_arns"); ok {
+			setSlice(d, "bound_iam_instance_profile_arns", "bound_iam_instance_profile_arn", data)
+		}
+
+		if v, ok := d.GetOk("bound_ec2_instance_id"); ok {
+			data["bound_ec2_instance_id"] = v.(string)
+		} else if _, ok := d.GetOk("bound_ec2_instance_ids"); ok {
+			setSlice(d, "bound_ec2_instance_ids", "bound_ec2_instance_id", data)
+		}
 	}
 
 	if authType == "ec2" {
@@ -535,13 +588,11 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 			data["inferred_entity_type"] = inferred
 		}
 
-		// Support the deprecated version of the field.
 		if v, ok := d.GetOk("bound_iam_principal_arn"); ok {
 			data["bound_iam_principal_arn"] = v.(string)
+		} else if _, ok := d.GetOk("bound_iam_principal_arns"); ok {
+			setSlice(d, "bound_iam_principal_arns", "bound_iam_principal_arn", data)
 		}
-
-		// Support and favor the current version of the field.
-		setSlice(d, "bound_iam_principal_arns", "bound_iam_principal_arn", data)
 
 		if v, ok := d.GetOk("inferred_aws_region"); ok {
 			data["inferred_aws_region"] = v.(string)
