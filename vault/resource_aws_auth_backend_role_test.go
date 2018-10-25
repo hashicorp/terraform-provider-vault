@@ -211,26 +211,26 @@ func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestChe
 		}
 
 		attrs := []*fieldNames{
-			{NameInVault:"auth_type", NameInProvider:"auth_type"},
-			{NameInVault:"bound_ami_id", NameInProvider:"bound_ami_ids", PreviousNameInProvider:"bound_ami_id"},
-			{NameInVault:"bound_account_id", NameInProvider:"bound_account_ids", PreviousNameInProvider:"bound_account_id"},
-			{NameInVault:"bound_region", NameInProvider:"bound_regions", PreviousNameInProvider:"bound_region"},
-			{NameInVault:"bound_vpc_id", NameInProvider:"bound_vpc_ids", PreviousNameInProvider:"bound_vpc_id"},
-			{NameInVault:"bound_subnet_id", NameInProvider:"bound_subnet_ids", PreviousNameInProvider:"bound_subnet_id"},
-			{NameInVault:"bound_iam_role_arn", NameInProvider:"bound_iam_role_arns", PreviousNameInProvider:"bound_iam_role_arn"},
-			{NameInVault:"bound_iam_instance_profile_arn", NameInProvider:"bound_iam_instance_profile_arns", PreviousNameInProvider:"bound_iam_instance_profile_arn"},
-			{NameInVault:"bound_ec2_instance_id", NameInProvider:"bound_ec2_instance_ids", PreviousNameInProvider:"bound_ec2_instance_id"},
-			{NameInVault:"role_tag", NameInProvider:"role_tag"},
-			{NameInVault:"bound_iam_principal_arn", NameInProvider:"bound_iam_principal_arns", PreviousNameInProvider:"bound_iam_principal_arn"},
-			{NameInVault:"inferred_entity_type", NameInProvider:"inferred_entity_type"},
-			{NameInVault:"inferred_aws_region", NameInProvider:"inferred_aws_region"},
-			{NameInVault:"resolve_aws_unique_ids", NameInProvider:"resolve_aws_unique_ids"},
-			{NameInVault:"ttl", NameInProvider:"ttl"},
-			{NameInVault:"max_ttl", NameInProvider:"max_ttl"},
-			{NameInVault:"period", NameInProvider:"period"},
-			{NameInVault:"policies", NameInProvider:"policies"},
-			{NameInVault:"allow_instance_migration", NameInProvider:"allow_instance_migration"},
-			{NameInVault:"disallow_reauthentication", NameInProvider:"disallow_reauthentication"},
+			{NameInVault: "auth_type", NameInProvider: "auth_type"},
+			{NameInVault: "bound_ami_id", NameInProvider: "bound_ami_ids", PreviousNameInProvider: "bound_ami_id"},
+			{NameInVault: "bound_account_id", NameInProvider: "bound_account_ids", PreviousNameInProvider: "bound_account_id"},
+			{NameInVault: "bound_region", NameInProvider: "bound_regions", PreviousNameInProvider: "bound_region"},
+			{NameInVault: "bound_vpc_id", NameInProvider: "bound_vpc_ids", PreviousNameInProvider: "bound_vpc_id"},
+			{NameInVault: "bound_subnet_id", NameInProvider: "bound_subnet_ids", PreviousNameInProvider: "bound_subnet_id"},
+			{NameInVault: "bound_iam_role_arn", NameInProvider: "bound_iam_role_arns", PreviousNameInProvider: "bound_iam_role_arn"},
+			{NameInVault: "bound_iam_instance_profile_arn", NameInProvider: "bound_iam_instance_profile_arns", PreviousNameInProvider: "bound_iam_instance_profile_arn"},
+			{NameInVault: "bound_ec2_instance_id", NameInProvider: "bound_ec2_instance_ids", PreviousNameInProvider: "bound_ec2_instance_id"},
+			{NameInVault: "role_tag", NameInProvider: "role_tag"},
+			{NameInVault: "bound_iam_principal_arn", NameInProvider: "bound_iam_principal_arns", PreviousNameInProvider: "bound_iam_principal_arn"},
+			{NameInVault: "inferred_entity_type", NameInProvider: "inferred_entity_type"},
+			{NameInVault: "inferred_aws_region", NameInProvider: "inferred_aws_region"},
+			{NameInVault: "resolve_aws_unique_ids", NameInProvider: "resolve_aws_unique_ids"},
+			{NameInVault: "ttl", NameInProvider: "ttl"},
+			{NameInVault: "max_ttl", NameInProvider: "max_ttl"},
+			{NameInVault: "period", NameInProvider: "period"},
+			{NameInVault: "policies", NameInProvider: "policies"},
+			{NameInVault: "allow_instance_migration", NameInProvider: "allow_instance_migration"},
+			{NameInVault: "disallow_reauthentication", NameInProvider: "disallow_reauthentication"},
 		}
 		for _, attr := range attrs {
 
@@ -404,7 +404,7 @@ resource "vault_aws_auth_backend_role" "role" {
 }
 
 type fieldNames struct {
-	NameInVault string
-	NameInProvider string
+	NameInVault            string
+	NameInProvider         string
 	PreviousNameInProvider string
 }

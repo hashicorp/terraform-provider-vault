@@ -41,10 +41,10 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				ForceNew:    true,
 			},
 			"bound_ami_id": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Only EC2 instances using this AMI ID will be permitted to log in.",
-				Deprecated:  `"bound_ami_id" is deprecated, please use "bound_ami_ids" as a list.`,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Only EC2 instances using this AMI ID will be permitted to log in.",
+				Deprecated:    `"bound_ami_id" is deprecated, please use "bound_ami_ids" as a list.`,
 				ConflictsWith: []string{"bound_ami_ids"},
 			},
 			"bound_ami_ids": {
@@ -57,10 +57,10 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				ConflictsWith: []string{"bound_ami_id"},
 			},
 			"bound_account_id": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Only EC2 instances with this account ID in their identity document will be permitted to log in.",
-				Deprecated:  `"bound_account_id" is deprecated, please use "bound_account_ids" as a list.`,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Only EC2 instances with this account ID in their identity document will be permitted to log in.",
+				Deprecated:    `"bound_account_id" is deprecated, please use "bound_account_ids" as a list.`,
 				ConflictsWith: []string{"bound_account_ids"},
 			},
 			"bound_account_ids": {
@@ -73,10 +73,10 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				ConflictsWith: []string{"bound_account_id"},
 			},
 			"bound_region": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Only EC2 instances in this region will be permitted to log in.",
-				Deprecated:  `"bound_region" is deprecated, please use "bound_regions" as a list.`,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Only EC2 instances in this region will be permitted to log in.",
+				Deprecated:    `"bound_region" is deprecated, please use "bound_regions" as a list.`,
 				ConflictsWith: []string{"bound_regions"},
 			},
 			"bound_regions": {
@@ -89,10 +89,10 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				ConflictsWith: []string{"bound_region"},
 			},
 			"bound_vpc_id": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Only EC2 instances associated with this VPC ID will be permitted to log in.",
-				Deprecated:  `"bound_vpc_id" is deprecated, please use "bound_vpc_ids" as a list.`,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Only EC2 instances associated with this VPC ID will be permitted to log in.",
+				Deprecated:    `"bound_vpc_id" is deprecated, please use "bound_vpc_ids" as a list.`,
 				ConflictsWith: []string{"bound_vpc_ids"},
 			},
 			"bound_vpc_ids": {
@@ -105,10 +105,10 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				ConflictsWith: []string{"bound_vpc_id"},
 			},
 			"bound_subnet_id": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Only EC2 instances associated with this subnet ID will be permitted to log in.",
-				Deprecated:  `"bound_subnet_id" is deprecated, please use "bound_subnet_ids" as a list.`,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Only EC2 instances associated with this subnet ID will be permitted to log in.",
+				Deprecated:    `"bound_subnet_id" is deprecated, please use "bound_subnet_ids" as a list.`,
 				ConflictsWith: []string{"bound_subnet_ids"},
 			},
 			"bound_subnet_ids": {
@@ -121,10 +121,10 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				ConflictsWith: []string{"bound_subnet_id"},
 			},
 			"bound_iam_role_arn": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Only EC2 instances that match this IAM role ARN will be permitted to log in.",
-				Deprecated:  `"bound_iam_role_arn" is deprecated, please use "bound_iam_role_arns" as a list.`,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Only EC2 instances that match this IAM role ARN will be permitted to log in.",
+				Deprecated:    `"bound_iam_role_arn" is deprecated, please use "bound_iam_role_arns" as a list.`,
 				ConflictsWith: []string{"bound_iam_role_arns"},
 			},
 			"bound_iam_role_arns": {
@@ -137,10 +137,10 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				ConflictsWith: []string{"bound_iam_role_arn"},
 			},
 			"bound_iam_instance_profile_arn": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Only EC2 instances associated with an IAM instance profile ARN that matches this value will be permitted to log in.",
-				Deprecated:  `"bound_iam_instance_profile_arn" is deprecated, please use "bound_iam_instance_profile_arns" as a list.`,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Only EC2 instances associated with an IAM instance profile ARN that matches this value will be permitted to log in.",
+				Deprecated:    `"bound_iam_instance_profile_arn" is deprecated, please use "bound_iam_instance_profile_arns" as a list.`,
 				ConflictsWith: []string{"bound_iam_instance_profile_arns"},
 			},
 			"bound_iam_instance_profile_arns": {
@@ -159,7 +159,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Deprecated:  `"bound_ec2_instance_id" is deprecated, please use "bound_ec2_instance_ids".`,
+				Deprecated:    `"bound_ec2_instance_id" is deprecated, please use "bound_ec2_instance_ids".`,
 				ConflictsWith: []string{"bound_ec2_instance_ids"},
 			},
 			"bound_ec2_instance_ids": {
@@ -177,11 +177,11 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Description: "The key of the tag on EC2 instance to use for role tags.",
 			},
 			"bound_iam_principal_arn": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The IAM principal that must be authenticated using the iam auth method.",
-				Deprecated:  `"bound_iam_principal_arn" is deprecated, please use "bound_iam_principal_arns" as a list.`,
-				ConflictsWith:[]string{"bound_iam_principal_arns"},
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The IAM principal that must be authenticated using the iam auth method.",
+				Deprecated:    `"bound_iam_principal_arn" is deprecated, please use "bound_iam_principal_arns" as a list.`,
+				ConflictsWith: []string{"bound_iam_principal_arns"},
 			},
 			"bound_iam_principal_arns": {
 				Type:        schema.TypeList,
@@ -190,7 +190,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				ConflictsWith:[]string{"bound_iam_principal_arn"},
+				ConflictsWith: []string{"bound_iam_principal_arn"},
 			},
 			"inferred_entity_type": {
 				Type:        schema.TypeString,
