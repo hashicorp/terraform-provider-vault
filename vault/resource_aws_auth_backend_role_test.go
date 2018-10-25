@@ -28,6 +28,11 @@ func TestAccAWSAuthBackendRole_importInferred(t *testing.T) {
 				ResourceName:      "vault_aws_auth_backend_role.role",
 				ImportState:       true,
 				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"bound_ami_id", "bound_account_id", "bound_region",
+					"bound_vpc_id", "bound_subnet_id", "bound_iam_role_arn",
+					"bound_iam_instance_profile_arn", "bound_ec2_instance_id",
+					"bound_iam_principal_arn"},
 			},
 		},
 	})
