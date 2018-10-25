@@ -145,6 +145,15 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Deprecated:  `"bound_ec2_instance_id" is deprecated, please use "bound_ec2_instance_ids".`,
+			},
+			"bound_ec2_instance_ids": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Only EC2 instances that match this instance ID will be permitted to log in.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 			"role_tag": {
 				Type:        schema.TypeString,
@@ -299,8 +308,10 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 		if v, ok := d.GetOk("bound_iam_instance_profile_arn"); ok {
 			data["bound_iam_instance_profile_arn"] = v.(string)
 		}
-		if v, ok := d.GetOk("bound_ec2_instance_id"); ok {
-			data["bound_ec2_instance_id"] = v.(string)
+		if _, ok := d.GetOk("bound_ec2_instance_ids"); ok {
+			setSlice(d, "bound_ec2_instance_ids", "bound_ec2_instance_id", data)
+		} else if _, ok := d.GetOk("bound_ec2_instance_id"); ok {
+			setSlice(d, "bound_ec2_instance_id", "bound_ec2_instance_id", data)
 		}
 
 		// Support and favor the current version of the fields.
@@ -311,7 +322,6 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 		setSlice(d, "bound_subnet_ids", "bound_subnet_id", data)
 		setSlice(d, "bound_iam_role_arns", "bound_iam_role_arn", data)
 		setSlice(d, "bound_iam_instance_profile_arns", "bound_iam_instance_profile_arn", data)
-		setSlice(d, "bound_ec2_instance_ids", "bound_ec2_instance_ids", data)
 	}
 
 	if authType == "ec2" {
@@ -408,6 +418,7 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	// Read Vault's response into the currently supported version of these fields.
 	d.Set("bound_account_ids", resp.Data["bound_account_id"])
 	d.Set("bound_ami_ids", resp.Data["bound_ami_id"])
+	d.Set("bound_ec2_instance_ids", resp.Data["bound_ec2_instance_id"])
 	d.Set("bound_iam_instance_profile_arns", resp.Data["bound_iam_instance_profile_arn"])
 	d.Set("bound_iam_role_arns", resp.Data["bound_iam_role_arn"])
 	d.Set("bound_subnet_ids", resp.Data["bound_subnet_id"])
@@ -418,7 +429,6 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	// For backward-compatibility, also read them into the deprecated version.
 	d.Set("bound_account_id", resp.Data["bound_account_id"])
 	d.Set("bound_ami_id", resp.Data["bound_ami_id"])
-	d.Set("bound_ec2_instance_id", resp.Data["bound_ec2_instance_id"])
 	d.Set("bound_iam_instance_profile_arn", resp.Data["bound_iam_instance_profile_arn"])
 	d.Set("bound_iam_role_arn", resp.Data["bound_iam_role_arn"])
 	d.Set("bound_subnet_id", resp.Data["bound_subnet_id"])
@@ -492,8 +502,10 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 		if v, ok := d.GetOk("bound_iam_instance_profile_arn"); ok {
 			data["bound_iam_instance_profile_arn"] = v.(string)
 		}
-		if v, ok := d.GetOk("bound_ec2_instance_id"); ok {
-			data["bound_ec2_instance_id"] = v.(string)
+		if _, ok := d.GetOk("bound_ec2_instance_ids"); ok {
+			setSlice(d, "bound_ec2_instance_ids", "bound_ec2_instance_id", data)
+		} else if _, ok := d.GetOk("bound_ec2_instance_id"); ok {
+			setSlice(d, "bound_ec2_instance_id", "bound_ec2_instance_id", data)
 		}
 
 		// Support and favor the current version of the fields.
@@ -504,7 +516,6 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 		setSlice(d, "bound_subnet_ids", "bound_subnet_id", data)
 		setSlice(d, "bound_iam_role_arns", "bound_iam_role_arn", data)
 		setSlice(d, "bound_iam_instance_profile_arns", "bound_iam_instance_profile_arn", data)
-		setSlice(d, "bound_ec2_instance_ids", "bound_ec2_instance_id", data)
 	}
 
 	if authType == "ec2" {
