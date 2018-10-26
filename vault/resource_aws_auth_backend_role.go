@@ -206,7 +206,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Whether or not Vault should resolve the bound_iam_principal_arn to an AWS Unique ID. When true, deleting a principal and recreating it with the same name won't automatically grant the new principal the same roles in Vault that the old principal had.",
-				Computed:    true,
+				Default:     true,
 			},
 			"ttl": {
 				Type:        schema.TypeInt,
@@ -235,12 +235,13 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "When true, allows migration of the underlying instance where the client resides. Use with caution.",
-				Computed:    true,
+				Default:     false,
 			},
 			"disallow_reauthentication": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "When true, only allows a single token to be granted per instance ID.",
+				Default:     false,
 			},
 			"backend": {
 				Type:        schema.TypeString,
