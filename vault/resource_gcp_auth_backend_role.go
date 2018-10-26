@@ -260,25 +260,33 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		schema.NewSet(
 			schema.HashString, resp.Data["policies"].([]interface{})))
 
-	d.Set("bound_service_accounts",
-		schema.NewSet(
-			schema.HashString, resp.Data["bound_service_accounts"].([]interface{})))
+	if accounts, ok := resp.Data["bound_service_accounts"]; ok {
+		d.Set("bound_service_accounts",
+			schema.NewSet(
+				schema.HashString, accounts.([]interface{})))
+	}
 
-	d.Set("bound_zones",
-		schema.NewSet(
-			schema.HashString, resp.Data["bound_zones"].([]interface{})))
+	if zones, ok := resp.Data["bound_zones"]; ok {
+		d.Set("bound_zones", schema.NewSet(schema.HashString, zones.([]interface{})))
+	}
 
-	d.Set("bound_regions",
-		schema.NewSet(
-			schema.HashString, resp.Data["bound_regions"].([]interface{})))
+	if regions, ok := resp.Data["bound_regions"]; ok {
+		d.Set("bound_regions",
+			schema.NewSet(
+				schema.HashString, regions.([]interface{})))
+	}
 
-	d.Set("bound_instance_groups",
-		schema.NewSet(
-			schema.HashString, resp.Data["bound_instance_groups"].([]interface{})))
+	if groups, ok := resp.Data["bound_instance_groups"]; ok {
+		d.Set("bound_instance_groups",
+			schema.NewSet(
+				schema.HashString, groups.([]interface{})))
+	}
 
-	d.Set("bound_labels",
-		schema.NewSet(
-			schema.HashString, resp.Data["bound_labels"].([]interface{})))
+	if labels, ok := resp.Data["bound_labels"]; ok {
+		d.Set("bound_labels",
+			schema.NewSet(
+				schema.HashString, labels.([]interface{})))
+	}
 
 	return nil
 }
