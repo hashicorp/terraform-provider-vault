@@ -26,7 +26,7 @@ resource "vault_mount" "db" {
   type = "database"
 }
 
-resource "vault_database_secret_backend" "postgres" {
+resource "vault_database_secret_backend_connection" "postgres" {
   backend       = "${vault_mount.db.path}"
   name          = "postgres"
   allowed_roles = ["dev", "prod"]
@@ -51,19 +51,27 @@ The following arguments are supported:
 * `allowed_roles` - (Optional) A list of roles that are allowed to use this
   connection.
 
-* `cassandra` - (Optional) Configuration options for Cassandra connections.
+* `cassandra` - (Optional) A nested block containing configuration options for Cassandra connections.
 
-* `mongodb` - (Optional) Configuration options for MongoDB connections.
+* `mongodb` - (Optional) A nested block containing configuration options for MongoDB connections.
 
-* `hana` - (Optional) Configuration options for SAP HanaDB connections.
+* `hana` - (Optional) A nested block containing configuration options for SAP HanaDB connections.
 
-* `mssql` - (Optional) Configuration options for MSSQL connections.
+* `mssql` - (Optional) A nested block containing configuration options for MSSQL connections.
 
-* `mysql` - (Optional) Configuration options for MySQL connections.
+* `mysql` - (Optional) A nested block containing configuration options for MySQL connections.
 
-* `postgresql` - (Optional) Configuration options for PostgreSQL connections.
+* `mysql_rds` - (Optional) A nested block containing configuration options for RDS MySQL connections.
 
-* `oracle` - (Optional) Configuration options for Oracle connections.
+* `mysql_aurora` - (Optional) A nested block containing configuration options for Aurora MySQL connections.
+
+* `mysql_legacy` - (Optional) A nested block containing configuration options for legacy MySQL connections.
+
+* `postgresql` - (Optional) A nested block containing configuration options for PostgreSQL connections.
+
+* `oracle` - (Optional) A nested block containing configuration options for Oracle connections.
+
+Exactly one of the nested blocks of configuration options must be supplied.
 
 ### Cassandra Configuration Options
 
@@ -181,3 +189,11 @@ The following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+Database secret backend connections can be imported using the `backend`, `/config/`, and the `name` e.g.
+
+```
+$ terraform import vault_database_secret_backend_connection.example postgres/config/postgres
+```

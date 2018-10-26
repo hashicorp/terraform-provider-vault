@@ -32,7 +32,7 @@ resource "vault_database_secret_backend_connection" "postgres" {
   allowed_roles = ["dev", "prod"]
 
   postgresql {
-    role_url = "postgres://username:password@host:port/database"
+    connection_url = "postgres://username:password@host:port/database"
   }
 }
 
@@ -40,7 +40,7 @@ resource "vault_database_secret_backend_role" "role" {
   backend             = "${vault_mount.db.path}"
   name                = "my-role"
   db_name             = "${vault_database_secret_backend_connection.postgres.name}"
-  creation_statements = "CREATE ROLE {{name}} WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';"
+  creation_statements = "CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';"
 }
 ```
 
@@ -76,3 +76,11 @@ The following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+Database secret backend roles can be imported using the `backend`, `/roles/`, and the `name` e.g.
+
+```
+$ terraform import vault_database_secret_backend_role.example postgres/roles/my-role
+```

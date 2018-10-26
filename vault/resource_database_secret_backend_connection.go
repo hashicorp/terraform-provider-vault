@@ -14,7 +14,7 @@ import (
 var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
-	dbBackendTypes                                      = []string{"cassandra", "hana", "mongodb", "mssql", "mysql", "postgresql", "oracle"}
+	dbBackendTypes                                      = []string{"cassandra", "hana", "mongodb", "mssql", "mysql", "mysql_rds", "mysql_aurora", "mysql_legacy", "postgresql", "oracle"}
 )
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
@@ -48,6 +48,12 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+			},
+			"data": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "A map of sensitive data to pass to the endpoint. Usefule for templated connection strings.",
+				Sensitive:   true,
 			},
 
 			"cassandra": {
@@ -166,6 +172,30 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				MaxItems:      1,
 				ConflictsWith: calculateConflictsWith("mysql", dbBackendTypes),
 			},
+			"mysql_rds": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				Description:   "Connection parameters for the mysql-rds-database-plugin plugin.",
+				Elem:          connectionStringResource(),
+				MaxItems:      1,
+				ConflictsWith: calculateConflictsWith("mysql_rds", dbBackendTypes),
+			},
+			"mysql_aurora": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				Description:   "Connection parameters for the mysql-aurora-database-plugin plugin.",
+				Elem:          connectionStringResource(),
+				MaxItems:      1,
+				ConflictsWith: calculateConflictsWith("mysql_aurora", dbBackendTypes),
+			},
+			"mysql_legacy": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				Description:   "Connection parameters for the mysql-legacy-database-plugin plugin.",
+				Elem:          connectionStringResource(),
+				MaxItems:      1,
+				ConflictsWith: calculateConflictsWith("mysql_legacy", dbBackendTypes),
+			},
 
 			"postgresql": {
 				Type:          schema.TypeList,
@@ -239,6 +269,12 @@ func getDatabasePluginName(d *schema.ResourceData) (string, error) {
 		return "mssql-database-plugin", nil
 	case len(d.Get("mysql").([]interface{})) > 0:
 		return "mysql-database-plugin", nil
+	case len(d.Get("mysql_rds").([]interface{})) > 0:
+		return "mysql-rds-database-plugin", nil
+	case len(d.Get("mysql_aurora").([]interface{})) > 0:
+		return "mysql-aurora-database-plugin", nil
+	case len(d.Get("mysql_legacy").([]interface{})) > 0:
+		return "mysql-legacy-database-plugin", nil
 	case len(d.Get("oracle").([]interface{})) > 0:
 		return "oracle-database-plugin", nil
 	case len(d.Get("postgresql").([]interface{})) > 0:
@@ -307,6 +343,12 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		setDatabaseConnectionData(d, "mssql.0.", data)
 	case "mysql-database-plugin":
 		setDatabaseConnectionData(d, "mysql.0.", data)
+	case "mysql-rds-database-plugin":
+		setDatabaseConnectionData(d, "mysql_rds.0.", data)
+	case "mysql-aurora-database-plugin":
+		setDatabaseConnectionData(d, "mysql_aurora.0.", data)
+	case "mysql-legacy-database-plugin":
+		setDatabaseConnectionData(d, "mysql_legacy.0.", data)
 	case "oracle-database-plugin":
 		setDatabaseConnectionData(d, "oracle.0.", data)
 	case "postgresql-database-plugin":
@@ -393,10 +435,16 @@ func databaseSecretBackendConnectionCreate(d *schema.ResourceData, meta interfac
 		data["allowed_roles"] = strings.Join(roles, ",")
 	}
 
+	if m, ok := d.GetOkExists("data"); ok {
+		for k, v := range m.(map[string]interface{}) {
+			data[k] = v.(string)
+		}
+	}
+
 	log.Printf("[DEBUG] Writing connection config to %q", path)
 	_, err = client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error configuring database connection %q: %s", path, err)
+		return fmt.Errorf("error configuring database connection %q: %s", path, err)
 	}
 
 	d.SetId(path)
@@ -412,18 +460,18 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 
 	backend, err := databaseSecretBackendConnectionBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("Invalid path %q for database connection: %s", path, err)
+		return fmt.Errorf("invalid path %q for database connection: %s", path, err)
 	}
 
 	name, err := databaseSecretBackendConnectionNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("Invalid path %q for database connection: %s", path, err)
+		return fmt.Errorf("invalid path %q for database connection: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading database connection config %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading database connection config %q: %s", path, err)
+		return fmt.Errorf("error reading database connection config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read database connection config %q", path)
 	if resp == nil {
@@ -445,7 +493,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			if v, ok := data["port"]; ok {
 				port, err := v.(json.Number).Int64()
 				if err != nil {
-					return fmt.Errorf("Unexpected non-number %q returned as port from Vault: %s", v, err)
+					return fmt.Errorf("unexpected non-number %q returned as port from Vault: %s", v, err)
 				}
 				result["port"] = port
 			}
@@ -470,14 +518,14 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			if v, ok := data["protocol_version"]; ok {
 				protocol, err := v.(json.Number).Int64()
 				if err != nil {
-					return fmt.Errorf("Unexpected non-number %q returned as protocol_version from Vault: %s", v, err)
+					return fmt.Errorf("unexpected non-number %q returned as protocol_version from Vault: %s", v, err)
 				}
 				result["protocol_version"] = protocol
 			}
 			if v, ok := data["connect_timeout"]; ok {
 				timeout, err := v.(json.Number).Int64()
 				if err != nil {
-					return fmt.Errorf("Unexpected non-number %q returned as connect_timeout from Vault: %s", v, err)
+					return fmt.Errorf("unexpected non-number %q returned as connect_timeout from Vault: %s", v, err)
 				}
 				result["connect_timeout"] = timeout
 			}
@@ -499,6 +547,12 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		d.Set("mssql", getConnectionDetailsFromResponse(resp))
 	case "mysql-database-plugin":
 		d.Set("mysql", getConnectionDetailsFromResponse(resp))
+	case "mysql-rds-database-plugin":
+		d.Set("mysql_rds", getConnectionDetailsFromResponse(resp))
+	case "mysql-aurora-database-plugin":
+		d.Set("mysql_aurora", getConnectionDetailsFromResponse(resp))
+	case "mysql-legacy-database-plugin":
+		d.Set("mysql_legacy", getConnectionDetailsFromResponse(resp))
 	case "oracle-database-plugin":
 		d.Set("oracle", getConnectionDetailsFromResponse(resp))
 	case "postgresql-database-plugin":
@@ -506,7 +560,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	}
 
 	if err != nil {
-		return fmt.Errorf("Error reading response for %q: %s", path, err)
+		return fmt.Errorf("error reading response for %q: %s", path, err)
 	}
 
 	var roles []string
@@ -553,7 +607,7 @@ func databaseSecretBackendConnectionUpdate(d *schema.ResourceData, meta interfac
 	_, err = client.Logical().Write(path, data)
 
 	if err != nil {
-		return fmt.Errorf("Error configuring database connection %q: %s", path, err)
+		return fmt.Errorf("error configuring database connection %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote database connection config %q", path)
 
@@ -567,7 +621,7 @@ func databaseSecretBackendConnectionDelete(d *schema.ResourceData, meta interfac
 	log.Printf("[DEBUG] Removing database connection config %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error removing database connection config %q: %s", path, err)
+		return fmt.Errorf("error removing database connection config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Removed database connection config %q", path)
 
@@ -582,7 +636,7 @@ func databaseSecretBackendConnectionExists(d *schema.ResourceData, meta interfac
 	log.Printf("[DEBUG] Checking if database connection config %q exists", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return true, fmt.Errorf("Error checking for existence of database connection config %q: %s", path, err)
+		return true, fmt.Errorf("error checking for existence of database connection config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Checked if database connection config %q exists", path)
 	return resp != nil, nil

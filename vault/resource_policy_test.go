@@ -16,11 +16,11 @@ func TestResourcePolicy(t *testing.T) {
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: testResourcePolicy_initialConfig(name),
 				Check:  testResourcePolicy_initialCheck(name),
 			},
-			resource.TestStep{
+			{
 				Config: testResourcePolicy_updateConfig,
 				Check:  testResourcePolicy_updateCheck,
 			},

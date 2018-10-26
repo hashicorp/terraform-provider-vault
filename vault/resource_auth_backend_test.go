@@ -16,11 +16,11 @@ func TestResourceAuth(t *testing.T) {
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: testResourceAuth_initialConfig(path),
 				Check:  testResourceAuth_initialCheck(path),
 			},
-			resource.TestStep{
+			{
 				Config: testResourceAuth_updateConfig,
 				Check:  testResourceAuth_updateCheck,
 			},
@@ -45,7 +45,7 @@ func testAccCheckAuthBackendDestroy(s *terraform.State) error {
 		}
 
 		if _, ok := auths[instanceState.ID]; ok {
-			return fmt.Errorf("Auth backend still exists.")
+			return fmt.Errorf("Auth backend still exists")
 		}
 	}
 	return nil
@@ -145,6 +145,9 @@ func testResourceAuth_updateCheck(s *terraform.State) error {
 	for _, auth := range auths {
 		if auth.Type == name {
 			found = true
+			if wanted := instanceState.Attributes["accessor"]; auth.Accessor != wanted {
+				return fmt.Errorf("accessor is %v; wanted %v", auth.Accessor, wanted)
+			}
 			break
 		}
 	}

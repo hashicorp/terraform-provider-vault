@@ -48,7 +48,7 @@ func approleAuthBackendRoleIDRead(d *schema.ResourceData, meta interface{}) erro
 	log.Printf("[DEBUG] Reading AppRole auth backend role %q RoleID", path)
 	resp, err := client.Logical().Read(path + "/role-id")
 	if err != nil {
-		return fmt.Errorf("Error reading AppRole auth backend role %q RoleID: %s", path, err)
+		return fmt.Errorf("error reading AppRole auth backend role %q RoleID: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read AppRole auth backend role %q RoleID", path)
 

@@ -49,3 +49,11 @@ The following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+AWS auth backend STS roles can be imported using `auth/`, the `backend` path, `/config/sts/`, and the `account_id` e.g.
+
+```
+$ terraform import vault_aws_auth_backend_sts_role.example auth/aws/config/sts/1234567890
+```

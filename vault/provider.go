@@ -1,8 +1,8 @@
 package vault
 
 import (
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"strings"
 
@@ -10,49 +10,49 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/go-homedir"
+	"github.com/hashicorp/vault/command/config"
 )
 
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"address": &schema.Schema{
+			"address": {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_ADDR", nil),
 				Description: "URL of the root of the target Vault server.",
 			},
-			"token": &schema.Schema{
+			"token": {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN", ""),
 				Description: "Token to use to authenticate to Vault.",
 			},
-			"ca_cert_file": &schema.Schema{
+			"ca_cert_file": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_CACERT", ""),
 				Description: "Path to a CA certificate file to validate the server's certificate.",
 			},
-			"ca_cert_dir": &schema.Schema{
+			"ca_cert_dir": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_CAPATH", ""),
 				Description: "Path to directory containing CA certificate files to validate the server's certificate.",
 			},
-			"client_auth": &schema.Schema{
+			"client_auth": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Client authentication credentials.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"cert_file": &schema.Schema{
+						"cert_file": {
 							Type:        schema.TypeString,
 							Required:    true,
 							DefaultFunc: schema.EnvDefaultFunc("VAULT_CLIENT_CERT", ""),
 							Description: "Path to a file containing the client certificate.",
 						},
-						"key_file": &schema.Schema{
+						"key_file": {
 							Type:        schema.TypeString,
 							Required:    true,
 							DefaultFunc: schema.EnvDefaultFunc("VAULT_CLIENT_KEY", ""),
@@ -61,13 +61,13 @@ func Provider() terraform.ResourceProvider {
 					},
 				},
 			},
-			"skip_tls_verify": &schema.Schema{
+			"skip_tls_verify": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", ""),
 				Description: "Set this to true only if the target Vault server is an insecure development instance.",
 			},
-			"max_lease_ttl_seconds": &schema.Schema{
+			"max_lease_ttl_seconds": {
 				Type:     schema.TypeInt,
 				Optional: true,
 
@@ -84,34 +84,73 @@ func Provider() terraform.ResourceProvider {
 		ConfigureFunc: providerConfigure,
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"vault_approle_auth_backend_role_id": approleAuthBackendRoleIDDataSource(),
-			"vault_aws_access_credentials":       awsAccessCredentialsDataSource(),
-			"vault_generic_secret":               genericSecretDataSource(),
+			"vault_approle_auth_backend_role_id":   approleAuthBackendRoleIDDataSource(),
+			"vault_kubernetes_auth_backend_config": kubernetesAuthBackendConfigDataSource(),
+			"vault_kubernetes_auth_backend_role":   kubernetesAuthBackendRoleDataSource(),
+			"vault_aws_access_credentials":         awsAccessCredentialsDataSource(),
+			"vault_generic_secret":                 genericSecretDataSource(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"vault_approle_auth_backend_role":          approleAuthBackendRoleResource(),
-			"vault_auth_backend":                       authBackendResource(),
-			"vault_aws_auth_backend_cert":              awsAuthBackendCertResource(),
-			"vault_aws_auth_backend_client":            awsAuthBackendClientResource(),
-			"vault_aws_auth_backend_login":             awsAuthBackendLoginResource(),
-			"vault_aws_auth_backend_role":              awsAuthBackendRoleResource(),
+			"vault_approle_auth_backend_login":          approleAuthBackendLoginResource(),
+			"vault_approle_auth_backend_role":           approleAuthBackendRoleResource(),
+			"vault_approle_auth_backend_role_secret_id": approleAuthBackendRoleSecretIDResource(),
+			"vault_auth_backend":                        authBackendResource(),
+			"vault_token_auth_backend_role":             tokenAuthBackendRoleResource(),
+			"vault_aws_auth_backend_cert":               awsAuthBackendCertResource(),
+			"vault_aws_auth_backend_client":             awsAuthBackendClientResource(),
+			"vault_aws_auth_backend_identity_whitelist": awsAuthBackendIdentityWhitelistResource(),
+			"vault_aws_auth_backend_login":              awsAuthBackendLoginResource(),
+			"vault_aws_auth_backend_role":               awsAuthBackendRoleResource(),
+			"vault_aws_auth_backend_role_tag":           awsAuthBackendRoleTagResource(),
 			"vault_aws_auth_backend_roletag_blacklist": awsAuthBackendRoleTagBlacklistResource(),
-			"vault_aws_auth_backend_sts_role":          awsAuthBackendSTSRoleResource(),
-			"vault_aws_secret_backend":                 awsSecretBackendResource(),
-			"vault_aws_secret_backend_role":            awsSecretBackendRoleResource(),
-			"vault_database_secret_backend_connection": databaseSecretBackendConnectionResource(),
-			"vault_database_secret_backend_role":       databaseSecretBackendRoleResource(),
-			"vault_generic_secret":                     genericSecretResource(),
-			"vault_policy":                             policyResource(),
-			"vault_mount":                              mountResource(),
+			"vault_aws_auth_backend_sts_role":           awsAuthBackendSTSRoleResource(),
+			"vault_aws_secret_backend":                  awsSecretBackendResource(),
+			"vault_aws_secret_backend_role":             awsSecretBackendRoleResource(),
+			"vault_consul_secret_backend":               consulSecretBackendResource(),
+			"vault_database_secret_backend_connection":  databaseSecretBackendConnectionResource(),
+			"vault_database_secret_backend_role":        databaseSecretBackendRoleResource(),
+			"vault_gcp_auth_backend_role":               gcpAuthBackendRoleResource(),
+			"vault_cert_auth_backend_role":              certAuthBackendRoleResource(),
+			"vault_generic_secret":                      genericSecretResource(),
+			"vault_jwt_auth_backend_role":               jwtAuthBackendRoleResource(),
+			"vault_kubernetes_auth_backend_config":      kubernetesAuthBackendConfigResource(),
+			"vault_kubernetes_auth_backend_role":        kubernetesAuthBackendRoleResource(),
+			"vault_okta_auth_backend":                   oktaAuthBackendResource(),
+			"vault_okta_auth_backend_user":              oktaAuthBackendUserResource(),
+			"vault_okta_auth_backend_group":             oktaAuthBackendGroupResource(),
+			"vault_ldap_auth_backend":                   ldapAuthBackendResource(),
+			"vault_ldap_auth_backend_user":              ldapAuthBackendUserResource(),
+			"vault_ldap_auth_backend_group":             ldapAuthBackendGroupResource(),
+			"vault_policy":                              policyResource(),
+			"vault_mount":                               mountResource(),
+			"vault_audit":                               auditResource(),
+			"vault_ssh_secret_backend_ca":               sshSecretBackendCAResource(),
+			"vault_rabbitmq_secret_backend":             rabbitmqSecretBackendResource(),
+			"vault_rabbitmq_secret_backend_role":        rabbitmqSecretBackendRoleResource(),
 		},
 	}
 }
 
+func providerToken(d *schema.ResourceData) (string, error) {
+	if token := d.Get("token").(string); token != "" {
+		return token, nil
+	}
+	// Use ~/.vault-token, or the configured token helper.
+	tokenHelper, err := config.DefaultTokenHelper()
+	if err != nil {
+		return "", fmt.Errorf("error getting token helper: %s", err)
+	}
+	token, err := tokenHelper.Get()
+	if err != nil {
+		return "", fmt.Errorf("error getting token: %s", err)
+	}
+	return strings.TrimSpace(token), nil
+}
+
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	config := api.DefaultConfig()
-	config.Address = d.Get("address").(string)
+	clientConfig := api.DefaultConfig()
+	clientConfig.Address = d.Get("address").(string)
 
 	clientAuthI := d.Get("client_auth").([]interface{})
 	if len(clientAuthI) > 1 {
@@ -126,7 +165,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		clientAuthKey = clientAuth["key_file"].(string)
 	}
 
-	err := config.ConfigureTLS(&api.TLSConfig{
+	err := clientConfig.ConfigureTLS(&api.TLSConfig{
 		CACert:   d.Get("ca_cert_file").(string),
 		CAPath:   d.Get("ca_cert_dir").(string),
 		Insecure: d.Get("skip_tls_verify").(bool),
@@ -138,26 +177,19 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, fmt.Errorf("failed to configure TLS for Vault API: %s", err)
 	}
 
-	config.HttpClient.Transport = logging.NewTransport("Vault", config.HttpClient.Transport)
+	clientConfig.HttpClient.Transport = logging.NewTransport("Vault", clientConfig.HttpClient.Transport)
 
-	client, err := api.NewClient(config)
+	client, err := api.NewClient(clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
 	}
 
-	token := d.Get("token").(string)
+	token, err := providerToken(d)
+	if err != nil {
+		return nil, err
+	}
 	if token == "" {
-		// Use the vault CLI's token, if present.
-		homePath, err := homedir.Dir()
-		if err != nil {
-			return nil, fmt.Errorf("Can't find home directory when looking for ~/.vault-token: %s", err)
-		}
-		tokenBytes, err := ioutil.ReadFile(homePath + "/.vault-token")
-		if err != nil {
-			return nil, fmt.Errorf("No vault token found: %s", err)
-		}
-
-		token = strings.TrimSpace(string(tokenBytes))
+		return nil, errors.New("no vault token found")
 	}
 
 	// In order to enforce our relatively-short lease TTL, we derive a

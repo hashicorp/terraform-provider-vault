@@ -59,6 +59,21 @@ func mountResource() *schema.Resource {
 				ForceNew:    false,
 				Description: "Maximum possible lease duration for tokens and secrets in seconds",
 			},
+
+			"accessor": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Accessor of the mount",
+			},
+
+			"options": {
+				Type:        schema.TypeMap,
+				Required:    false,
+				Optional:    true,
+				Computed:    false,
+				ForceNew:    false,
+				Description: "Specifies mount type specific options that are passed to the backend",
+			},
 		},
 	}
 }
@@ -73,6 +88,7 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
 		},
+		Options: opts(d),
 	}
 
 	path := d.Get("path").(string)
@@ -94,6 +110,7 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 	config := api.MountConfigInput{
 		DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 		MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
+		Options:         opts(d),
 	}
 
 	path := d.Id()
@@ -162,6 +179,18 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
+	d.Set("accessor", mount.Accessor)
+	d.Set("options", mount.Options)
 
 	return nil
+}
+
+func opts(d *schema.ResourceData) map[string]string {
+	options := map[string]string{}
+	if opts, ok := d.GetOk("options"); ok {
+		for k, v := range opts.(map[string]interface{}) {
+			options[k] = v.(string)
+		}
+	}
+	return options
 }

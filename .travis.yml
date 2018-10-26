@@ -1,26 +1,38 @@
 dist: trusty
-sudo: false
+sudo: required
+services:
+  - docker
+go_import_path: github.com/terraform-providers/terraform-provider-vault
 language: go
 go:
-- 1.8.1
+  - 1.11
 
 install:
-# This script is used by the Travis build to install a cookie for
-# go.googlesource.com so rate limits are higher when using `go get` to fetch
-# packages that live there.
-# See: https://github.com/golang/go/issues/12933
-- bash scripts/gogetcookie.sh
-- go get github.com/kardianos/govendor
+  # This script is used by the Travis build to install a cookie for
+  # go.googlesource.com so rate limits are higher when using `go get` to fetch
+  # packages that live there.
+  # See: https://github.com/golang/go/issues/12933
+  - bash scripts/gogetcookie.sh
+  - go get github.com/kardianos/govendor
 
 script:
-- make test
-- make vendor-status
-- make vet
+  - docker run -d -e VAULT_DEV_ROOT_TOKEN_ID=TEST -p 8200:8200 --name vault vault:0.11.1
+  - |
+    until $(curl --output /dev/null --silent --head --fail http://localhost:8200)
+    do
+        printf '.'
+        sleep 1
+    done
+  - make test
+  - VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=TEST make testacc
+  - make vendor-status
+  - make vet
+  - make website-test
 
 branches:
   only:
-  - master
-matrix:
-  fast_finish: true
-  allow_failures:
-  - go: tip
+    - master
+  matrix:
+    fast_finish: true
+    allow_failures:
+      - go: tip

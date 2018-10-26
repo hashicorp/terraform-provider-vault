@@ -34,3 +34,11 @@ The following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+Policies can be imported using the `name`, e.g.
+
+```
+$ terraform import vault_policy.example dev-team
+```

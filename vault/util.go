@@ -2,6 +2,7 @@ package vault
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"reflect"
 	"strings"
@@ -24,6 +25,16 @@ func jsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
 	return reflect.DeepEqual(oldJSON, newJSON)
 }
 
+func toStringArray(input []interface{}) []string {
+	output := make([]string, len(input))
+
+	for i, item := range input {
+		output[i] = item.(string)
+	}
+
+	return output
+}
+
 func is404(err error) bool {
 	return strings.Contains(err.Error(), "Code: 404")
 }
@@ -40,4 +51,42 @@ func calculateConflictsWith(self string, group []string) []string {
 		results = append(results, item)
 	}
 	return results
+}
+
+func arrayToTerraformList(values []string) string {
+	output := make([]string, len(values))
+	for idx, value := range values {
+		output[idx] = fmt.Sprintf(`"%s"`, value)
+	}
+	return fmt.Sprintf("[%s]", strings.Join(output, ", "))
+}
+
+func terraformSetToStringArray(set interface{}) []string {
+	list := set.(*schema.Set).List()
+	arr := make([]string, 0, len(list))
+	for _, v := range list {
+		arr = append(arr, v.(string))
+	}
+	return arr
+}
+
+func jsonStringArrayToStringArray(jsonList []interface{}) []string {
+	strList := make([]string, 0, len(jsonList))
+	for _, v := range jsonList {
+		strList = append(strList, v.(string))
+	}
+	return strList
+}
+
+func isExpiredTokenErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if strings.Contains(err.Error(), "invalid accessor") {
+		return true
+	}
+	if strings.Contains(err.Error(), "failed to find accessor entry") {
+		return true
+	}
+	return false
 }

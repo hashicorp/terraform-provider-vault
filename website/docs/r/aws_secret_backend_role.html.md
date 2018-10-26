@@ -64,3 +64,11 @@ with this role. Either `policy` or `policy_arn` must be specified.
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+RabbitMQ secret backend roles can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_aws_secret_backend_role.role aws/roles/deploy
+```

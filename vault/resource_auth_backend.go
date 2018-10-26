@@ -23,14 +23,14 @@ func authBackendResource() *schema.Resource {
 		MigrateState: resourceAuthBackendMigrateState,
 
 		Schema: map[string]*schema.Schema{
-			"type": &schema.Schema{
+			"type": {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Name of the auth backend",
 			},
 
-			"path": &schema.Schema{
+			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
@@ -48,11 +48,17 @@ func authBackendResource() *schema.Resource {
 				},
 			},
 
-			"description": &schema.Schema{
+			"description": {
 				Type:        schema.TypeString,
 				ForceNew:    true,
 				Optional:    true,
 				Description: "The description of the auth backend",
+			},
+
+			"accessor": &schema.Schema{
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The accessor of the auth backend",
 			},
 		},
 	}
@@ -114,6 +120,7 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 			d.Set("type", auth.Type)
 			d.Set("path", path)
 			d.Set("description", auth.Description)
+			d.Set("accessor", auth.Accessor)
 			return nil
 		}
 	}
