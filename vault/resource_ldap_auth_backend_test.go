@@ -79,6 +79,10 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 			return fmt.Errorf("incorrect mount type: %s", authMount.Type)
 		}
 
+		if instanceState.Attributes["accessor"] != authMount.Accessor {
+			return fmt.Errorf("accessor in state %s does not match accessor returned from vault %s", instanceState.Attributes["accessor"], authMount.Accessor)
+		}
+
 		configPath := "auth/" + endpoint + "/config"
 
 		resp, err := client.Logical().Read(configPath)
@@ -188,6 +192,7 @@ resource "vault_ldap_auth_backend" "test" {
     bindpass               = "supersecurepassword"
     discoverdn             = false
     deny_null_bind         = true
+    description            = "example"
 }
 `, path)
 
