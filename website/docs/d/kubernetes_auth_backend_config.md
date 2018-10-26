@@ -16,7 +16,7 @@ information.
 
 ```hcl
 data "vault_kubernetes_auth_backend_config" "config" {
-  backend   = "my-kubernetes-backend"
+  backend = "my-kubernetes-backend"
 }
 
 output "token_reviewer_jwt" {
