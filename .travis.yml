@@ -17,8 +17,12 @@ install:
 
 script:
   - docker run -d -e VAULT_DEV_ROOT_TOKEN_ID=TEST -p 8200:8200 --name vault vault:0.11.1
-  - sleep 10
-  - docker exec -e VAULT_TOKEN=TEST -e VAULT_ADDR="http://localhost:8200" vault vault secrets enable --version=1 -path=secretsv1 kv
+  - |
+    until $(curl --output /dev/null --silent --head --fail http://localhost:8200)
+    do
+        printf '.'
+        sleep 1
+    done
   - make test
   - VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=TEST make testacc
   - make vendor-status

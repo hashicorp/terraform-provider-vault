@@ -21,10 +21,70 @@ func TestDataSourceGenericSecret(t *testing.T) {
 	})
 }
 
-var testDataSourceGenericSecret_config = `
+func TestV2Secret(t *testing.T) {
+	r.Test(t, r.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []r.TestStep{
+			{
+				Config: testv2DataSourceGenericSecret_config,
+				Check:  testDataSourceGenericSecret_check,
+			},
+			{
+				Config: testv2DataSourceGenericSecretUpdated_config,
+				Check:  testDataSourceGenericSecret_check,
+			},
+		},
+	})
+}
+
+var testv2DataSourceGenericSecret_config = `
 
 resource "vault_generic_secret" "test" {
-    path = "secretsv1/foo"
+    path = "secret/foo"
+    data_json = <<EOT
+{
+    "zip": "zap"
+}
+EOT
+}
+
+data "vault_generic_secret" "test" {
+    path = "${vault_generic_secret.test.path}"
+		version = -1
+}
+
+`
+var testv2DataSourceGenericSecretUpdated_config = `
+
+resource "vault_generic_secret" "test" {
+    path = "secret/foo"
+    data_json = <<EOT
+{
+    "zip": "kablamo"
+}
+EOT
+}
+
+data "vault_generic_secret" "test" {
+    path = "${vault_generic_secret.test.path}"
+		version = 1
+}
+
+`
+
+var testDataSourceGenericSecret_config = `
+
+resource "vault_mount" "v1" {
+	  path = "secretsv1"
+	  type = "kv"
+	  options = {
+		  version = "1"
+	  }
+}
+
+resource "vault_generic_secret" "test" {
+    path = "${vault_mount.v1.path}/foo"
     data_json = <<EOT
 {
     "zip": "zap"
