@@ -77,6 +77,22 @@ func getTestAWSCreds(t *testing.T) (string, string) {
 	return accessKey, secretKey
 }
 
+func getTestRMQCreds(t *testing.T) (string, string, string) {
+	connectionUri := os.Getenv("RMQ_CONNECTION_URI")
+	username := os.Getenv("RMQ_USERNAME")
+	password := os.Getenv("RMQ_PASSWORD")
+	if connectionUri == "" {
+		t.Skip("RMQ_CONNECTION_URI not set")
+	}
+	if username == "" {
+		t.Skip("RMQ_USERNAME not set")
+	}
+	if password == "" {
+		t.Skip("RMQ_PASSWORD not set")
+	}
+	return connectionUri, username, password
+}
+
 // A basic token helper script.
 const tokenHelperScript = `
 #!/usr/bin/env bash
