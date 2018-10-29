@@ -94,7 +94,7 @@ func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("Error mounting to %q: %s", path, err)
+		return fmt.Errorf("error mounting to %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Mounted GCP backend at %q", path)
 	d.SetId(path)
@@ -109,7 +109,7 @@ func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 		"credentials": credentials,
 	}
 	if _, err := client.Logical().Write(configPath, data); err != nil {
-		return fmt.Errorf("Error writing GCP configuration for %q: %s", path, err)
+		return fmt.Errorf("error writing GCP configuration for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote GCP configuration to %q", configPath)
 	d.Partial(false)
@@ -122,7 +122,6 @@ func gcpSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 
-	// TODO: Fill this out
 	log.Printf("[DEBUG] Reading GCP backend mount %q from Vault", path)
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
@@ -179,7 +178,7 @@ func gcpSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Unmounting GCP backend %q", path)
 	err := client.Sys().Unmount(path)
 	if err != nil {
-		return fmt.Errorf("Error unmounting GCP backend from %q: %s", path, err)
+		return fmt.Errorf("error unmounting GCP backend from %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Unmounted GCP backend %q", path)
 	return nil
@@ -191,7 +190,7 @@ func gcpSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, err
 	log.Printf("[DEBUG] Checking if GCP backend exists at %q", path)
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
-		return true, fmt.Errorf("Error retrieving list of mounts: %s", err)
+		return true, fmt.Errorf("error retrieving list of mounts: %s", err)
 	}
 	log.Printf("[DEBUG] Checked if GCP backend exists at %q", path)
 	_, ok := mounts[strings.Trim(path, "/")+"/"]
