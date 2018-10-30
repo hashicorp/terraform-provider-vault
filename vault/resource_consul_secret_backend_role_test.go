@@ -18,11 +18,11 @@ func TestResourceConsulSecretBackendRole(t *testing.T) {
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: testResourceConsulSecretBackendRole_initialConfig(path),
 				Check:  testResourceConsulSecretBackendRole_initialCheck(path),
 			},
-			resource.TestStep{
+			{
 				Config: testResourceConsulSecretBackendRole_updateConfig,
 				Check:  testResourceConsulSecretBackendRole_updateCheck,
 			},
@@ -36,11 +36,11 @@ func TestResourceConsulSecretBackendRole_deleted(t *testing.T) {
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: testResourceConsulSecretBackendRole_initialConfig(path),
 				Check:  testResourceConsulSecretBackendRole_initialCheck(path),
 			},
-			resource.TestStep{
+			{
 				PreConfig: func() {
 					client := testProvider.Meta().(*api.Client)
 					_, err := client.Logical().Delete("consul/roles/" + path)
