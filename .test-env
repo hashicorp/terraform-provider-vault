@@ -1,0 +1,3 @@
+export VAULT_ADDR="http://localhost:8200"
+export VAULT_TOKEN="TEST"
+export MYSQL_URL="vault:vault@tcp(mysql:3306)/"
