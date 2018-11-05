@@ -32,6 +32,24 @@ func TestGCPAuthBackendRole_basic(t *testing.T) {
 	})
 }
 
+func TestGCPAuthBackendRole_gce(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-gcp-backend")
+	name := acctest.RandomWithPrefix("tf-test-gcp-role")
+	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testGCPAuthBackendRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testGCPAuthBackendRoleConfig_gce(backend, name, projectId),
+				Check:  testGCPAuthBackendRoleCheck_attrs(backend, name),
+			},
+		},
+	})
+}
+
 func testGCPAuthBackendRoleDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
@@ -95,6 +113,9 @@ func testGCPAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckF
 			"period":                 "period",
 			"policies":               "policies",
 			"bound_service_accounts": "bound_service_accounts",
+			"bound_regions":          "bound_regions",
+			"bound_zones":            "bound_zones",
+			"bound_labels":           "bound_labels",
 		}
 
 		for stateAttr, apiAttr := range attrs {
@@ -190,5 +211,30 @@ resource "vault_gcp_auth_backend_role" "test" {
     policies               = ["policy_a", "policy_b"]
 }
 `, backend, name, serviceAccount, projectId)
+
+}
+
+func testGCPAuthBackendRoleConfig_gce(backend, name, projectId string) string {
+
+	return fmt.Sprintf(`
+
+resource "vault_auth_backend" "gcp" {
+    path = "%s"
+    type = "gcp"
+}
+
+resource "vault_gcp_auth_backend_role" "test" {
+    backend                = "${vault_auth_backend.gcp.path}"
+    role                   = "%s"
+    type                   = "gce"
+    project_id             = "%s"
+    ttl                    = 300
+    max_ttl                = 600
+		policies               = ["policy_a", "policy_b"]
+		bound_regions					 = ["eu-west2"]
+		bound_zones  					 = ["europe-west2-c"]
+		bound_labels					 = ["foo"]
+}
+`, backend, name, projectId)
 
 }
