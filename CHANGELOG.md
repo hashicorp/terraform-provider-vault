@@ -1,4 +1,9 @@
 ## 1.3.1 (Unreleased)
+
+BUG FIXES:
+
+* Solves issue where the incorrect KV store was selected for older Vault versions as described in [#229](https://github.com/terraform-providers/terraform-provider-vault/issues/229).
+
 ## 1.3.0 (November 05, 2018)
 
 FEATURES:
