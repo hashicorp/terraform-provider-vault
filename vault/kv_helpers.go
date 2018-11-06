@@ -57,7 +57,7 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if resp != nil && resp.StatusCode == 404 {
+	if resp != nil && (resp.StatusCode == 403 || resp.StatusCode == 404) {
 		secret, parseErr := api.ParseSecret(resp.Body)
 		switch parseErr {
 		case nil:
@@ -93,7 +93,7 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 	if err != nil {
 		// If we get a 404 we are using an older version of vault, default to
 		// version 1
-		if resp != nil && resp.StatusCode == 404 {
+		if resp != nil && (resp.StatusCode == 403 || resp.StatusCode == 404) {
 			return "", 1, nil
 		}
 
