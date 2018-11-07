@@ -177,7 +177,7 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error creating token with role %q: %s", role, err)
 		}
 
-		log.Printf("[DEBUG] Created token %q with role %q", resp.Auth.Accessor, role)
+		log.Printf("[DEBUG] Created token accessor %q with role %q", resp.Auth.Accessor, role)
 	} else {
 		log.Printf("[DEBUG] Creating token")
 		resp, err = client.Auth().Token().Create(createRequest)
@@ -185,7 +185,7 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error creating token: %s", err)
 		}
 
-		log.Printf("[DEBUG] Created token %q", resp.Auth.Accessor)
+		log.Printf("[DEBUG] Created token accessor %q", resp.Auth.Accessor)
 	}
 
 	d.Set("lease_duration", resp.Auth.LeaseDuration)
@@ -202,7 +202,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 	id := d.Id()
 
-	log.Printf("[DEBUG] Reading token %q", id)
+	log.Printf("[DEBUG] Reading token accessor %q", id)
 	resp, err := client.Auth().Token().LookupAccessor(id)
 	if err != nil {
 		log.Printf("[WARN] Token not found, removing from state")
@@ -210,13 +210,13 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	log.Printf("[DEBUG] Read token %q", id)
+	log.Printf("[DEBUG] Read token accessor %q", id)
 
 	if tokenCheckLease(d, client) {
-		log.Printf("[DEBUG] Lease for %q expiring soon, renewing", d.Id())
+		log.Printf("[DEBUG] Lease for token accessor %q expiring soon, renewing", d.Id())
 		renewed, err := client.Auth().Token().Renew(d.Get("client_token").(string), d.Get("lease_duration").(int))
 		if err != nil {
-			log.Printf("[DEBUG] Error renewing token %q, bailing", d.Id())
+			log.Printf("[DEBUG] Error renewing token accessor %q, bailing", d.Id())
 		} else {
 			resp = renewed
 			d.Set("lease_duration", resp.Data["lease_duration"])
@@ -257,7 +257,7 @@ func tokenDelete(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error deleting token %q: %s", token, err)
 	}
-	log.Printf("[DEBUG] Deleted token %q", token)
+	log.Printf("[DEBUG] Deleted token accessor %q", token)
 
 	return nil
 }
@@ -266,9 +266,10 @@ func tokenExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client := meta.(*api.Client)
 	accessor := d.Id()
 
-	log.Printf("[DEBUG] Checking if token %q exists", accessor)
+	log.Printf("[DEBUG] Checking if token accessor %q exists", accessor)
 	resp, err := client.Auth().Token().LookupAccessor(accessor)
 	if err != nil {
+		log.Printf("[DEBUG] token accessor %q not found: %s", d.Id(), err)
 		return false, nil
 	}
 	return resp != nil, nil
@@ -283,7 +284,8 @@ func tokenCheckLease(d *schema.ResourceData, client *api.Client) bool {
 
 	started, err := time.Parse(time.RFC3339, startedStr)
 	if err != nil {
-		log.Printf("[DEBUG] lease_started %q for %q is an invalid value, removing: %s", startedStr, d.Id(), err)
+		log.Printf("[DEBUG] lease_started %q for token accessor %q is an invalid value, removing: %s", startedStr,
+			d.Id(), err)
 		d.Set("lease_started", "")
 
 		return false
