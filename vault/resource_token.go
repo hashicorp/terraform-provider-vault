@@ -216,15 +216,17 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 		log.Printf("[DEBUG] Lease for token accessor %q expiring soon, renewing", d.Id())
 		renewed, err := client.Auth().Token().Renew(d.Get("client_token").(string), d.Get("lease_duration").(int))
 		if err != nil {
-			log.Printf("[DEBUG] Error renewing token accessor %q, bailing", d.Id())
-		} else {
-			resp = renewed
-			d.Set("lease_duration", resp.Data["lease_duration"])
-			d.Set("lease_started", time.Now().Format(time.RFC3339))
-			d.Set("client_token", resp.Auth.ClientToken)
-
-			d.SetId(resp.Auth.Accessor)
+			log.Printf("[DEBUG] Error renewing token, removing from state")
+			d.SetId("")
+			return nil
 		}
+
+		resp = renewed
+		d.Set("lease_duration", resp.Data["lease_duration"])
+		d.Set("lease_started", time.Now().Format(time.RFC3339))
+		d.Set("client_token", resp.Auth.ClientToken)
+
+		d.SetId(resp.Auth.Accessor)
 	}
 
 	iPolicies := resp.Data["policies"].([]interface{})
