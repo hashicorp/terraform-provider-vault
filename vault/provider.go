@@ -127,6 +127,8 @@ func Provider() terraform.ResourceProvider {
 			"vault_mount":                               mountResource(),
 			"vault_audit":                               auditResource(),
 			"vault_ssh_secret_backend_ca":               sshSecretBackendCAResource(),
+			"vault_identity_group":                      identityGroupResource(),
+			"vault_identity_group_alias":                identityGroupAliasResource(),
 			"vault_rabbitmq_secret_backend":             rabbitmqSecretBackendResource(),
 			"vault_rabbitmq_secret_backend_role":        rabbitmqSecretBackendRoleResource(),
 		},
