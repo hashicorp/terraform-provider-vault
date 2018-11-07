@@ -42,7 +42,7 @@ func TestAccDatabaseSecretBackendConnection_import(t *testing.T) {
 				ResourceName:            "vault_database_secret_backend_connection.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"verify_connection"},
+				ImportStateVerifyIgnore: []string{"verify_connection", "postgresql.0.connection_url"},
 			},
 		},
 	})
