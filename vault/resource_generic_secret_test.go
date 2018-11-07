@@ -55,7 +55,16 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 
 func testResourceGenericSecret_initialConfig(path string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "v1" {
+	path = "secretsv1"
+	type = "kv"
+	options = {
+		version = "1"
+	}
+}
+
 resource "vault_generic_secret" "test" {
+    depends_on = ["vault_mount.v1"]
     path = "%s"
     data_json = <<EOT
 {
@@ -102,8 +111,16 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 
 var testResourceGenericSecret_updateConfig = `
 
+resource "vault_mount" "v1" {
+	path = "secretsv1"
+	type = "kv"
+	options = {
+		version = "1"
+	}
+}
+
 resource "vault_generic_secret" "test" {
-    path = "secretsv1/foo"
+    path = "${vault_mount.v1.path}/foo"
     disable_read = false
     data_json = <<EOT
 {

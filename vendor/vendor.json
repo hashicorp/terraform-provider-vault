@@ -564,10 +564,12 @@
 			"versionExact": "v0.11.1"
 		},
 		{
-			"checksumSHA1": "LYQZ+o7zJCda/6LibdN0spFco34=",
+			"checksumSHA1": "+B4wuJNerIUKNAVzld7CmMaNW5A=",
 			"path": "github.com/hashicorp/vault/api",
-			"revision": "533003e27840d9646cb4e7d23b3a113895da1dd0",
-			"revisionTime": "2018-06-20T14:55:40Z"
+			"revision": "8575f8fedcf8f5a6eb2b4701cb527b99574b5286",
+			"revisionTime": "2018-09-06T17:45:45Z",
+			"version": "v0.11.1",
+			"versionExact": "v0.11.1"
 		},
 		{
 			"checksumSHA1": "cYsW0ei8JxRNXy1ZHoHjYlBRDIQ=",
@@ -800,6 +802,12 @@
 			"path": "golang.org/x/net/idna",
 			"revision": "26e67e76b6c3f6ce91f7c52def5af501b4e0f3a2",
 			"revisionTime": "2018-09-11T21:37:47Z"
+		},
+		{
+			"checksumSHA1": "4zt1Dz8yMi0tHQKO2aN5rZVshWU=",
+			"path": "golang.org/x/sys/unix",
+			"revision": "2772b66316d2c587efeb188dcd5ebc6987656e84",
+			"revisionTime": "2018-10-17T18:36:36Z"
 		},
 		{
 			"checksumSHA1": "CbpjEkkOeh0fdM/V8xKDdI0AA88=",

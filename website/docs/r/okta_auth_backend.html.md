@@ -15,16 +15,18 @@ Provides a resource for managing an
 
 ```hcl
 resource "vault_okta_auth_backend" "example" {
-    description = "Demonstration of the Terraform Okta auth backend"
+    description  = "Demonstration of the Terraform Okta auth backend"
     organization = "example"
-    token = "something that should be kept secret"
+    token        = "something that should be kept secret"
+    
     group {
         group_name = "foo"
-        policies = ["one", "two"]
+        policies   = ["one", "two"]
     }
+    
     user {
         username = "bar"
-        groups = ["foo"]
+        groups   = ["foo"]
     }
 }
 ```

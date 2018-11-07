@@ -1,0 +1,23 @@
+version: "2.2"
+
+services:
+  vault:
+    image: vault:0.11.1
+    cap_add:
+    - "IPC_LOCK"
+    ports:
+    - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "TEST"
+      VAULT_ADDR: "http://localhost:8200"
+      VAULT_TOKEN: "TEST"
+      MYSQL_URL: "vault:vault@tcp(mysql:3306)/"
+
+  mysql:
+    image: mysql:5.7
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: "root"
+      MYSQL_DATABASE: "main"
+      MYSQL_USER: "vault"
+      MYSQL_PASSWORD: "vault"

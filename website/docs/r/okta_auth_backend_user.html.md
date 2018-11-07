@@ -15,14 +15,14 @@ Provides a resource to create a user in an
 
 ```hcl
 resource "vault_okta_auth_backend" "example" {
-    path = "user_okta"
+    path         = "user_okta"
     organization = "dummy"
 }
 
 resource "vault_okta_auth_backend_user" "foo" {
-    path = "${vault_okta_auth_backend.example.path}"
+    path     = "${vault_okta_auth_backend.example.path}"
     username = "foo"
-    groups = ["one", "two"]
+    groups   = ["one", "two"]
 }
 ```
 

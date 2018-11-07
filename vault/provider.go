@@ -103,6 +103,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_aws_auth_backend_login":              awsAuthBackendLoginResource(),
 			"vault_aws_auth_backend_role":               awsAuthBackendRoleResource(),
 			"vault_aws_auth_backend_role_tag":           awsAuthBackendRoleTagResource(),
+			"vault_aws_auth_backend_roletag_blacklist":  awsAuthBackendRoleTagBlacklistResource(),
 			"vault_aws_auth_backend_sts_role":           awsAuthBackendSTSRoleResource(),
 			"vault_aws_secret_backend":                  awsSecretBackendResource(),
 			"vault_aws_secret_backend_role":             awsSecretBackendRoleResource(),
@@ -110,6 +111,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_database_secret_backend_connection":  databaseSecretBackendConnectionResource(),
 			"vault_database_secret_backend_role":        databaseSecretBackendRoleResource(),
 			"vault_gcp_auth_backend_role":               gcpAuthBackendRoleResource(),
+			"vault_gcp_secret_backend":                  gcpSecretBackendResource(),
 			"vault_cert_auth_backend_role":              certAuthBackendRoleResource(),
 			"vault_generic_secret":                      genericSecretResource(),
 			"vault_jwt_auth_backend_role":               jwtAuthBackendRoleResource(),
@@ -127,6 +129,8 @@ func Provider() terraform.ResourceProvider {
 			"vault_ssh_secret_backend_ca":               sshSecretBackendCAResource(),
 			"vault_identity_group":                      identityGroupResource(),
 			"vault_identity_group_alias":                identityGroupAliasResource(),
+			"vault_rabbitmq_secret_backend":             rabbitmqSecretBackendResource(),
+			"vault_rabbitmq_secret_backend_role":        rabbitmqSecretBackendRoleResource(),
 		},
 	}
 }
