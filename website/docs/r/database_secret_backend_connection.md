@@ -142,7 +142,7 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `connection_url` - (Required) A URL containing connection information. See
   the [Vault
-  docs](https://www.vaultproject.io/api/secret/databases/mysql.html#sample-payload)
+  docs](https://www.vaultproject.io/api/secret/databases/mysql-maria.html#sample-payload)
   for an example.
 
 * `max_open_connections` - (Optional) The maximum number of open connections to
