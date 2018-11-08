@@ -123,7 +123,7 @@ func ldapAuthBackendResource() *schema.Resource {
 				},
 			},
 
-			"accessor": &schema.Schema{
+			"accessor": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The accessor of the LDAP auth backend",

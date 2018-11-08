@@ -58,7 +58,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"bound_service_accounts": &schema.Schema{
+			"bound_service_accounts": {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -66,7 +66,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"bound_zones": &schema.Schema{
+			"bound_zones": {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -74,7 +74,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"bound_regions": &schema.Schema{
+			"bound_regions": {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -82,7 +82,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"bound_instance_groups": &schema.Schema{
+			"bound_instance_groups": {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -90,7 +90,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"bound_labels": &schema.Schema{
+			"bound_labels": {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -98,7 +98,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
-			"backend": &schema.Schema{
+			"backend": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
