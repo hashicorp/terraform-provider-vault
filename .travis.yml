@@ -1,39 +1,36 @@
 dist: trusty
 sudo: required
 services:
-  - docker
+- docker
 go_import_path: github.com/terraform-providers/terraform-provider-vault
 language: go
 go:
-  - 1.11
-
+- 1.11
 install:
-  # This script is used by the Travis build to install a cookie for
-  # go.googlesource.com so rate limits are higher when using `go get` to fetch
-  # packages that live there.
-  # See: https://github.com/golang/go/issues/12933
-  - bash scripts/gogetcookie.sh
-  - go get github.com/kardianos/govendor
-
+- bash scripts/gogetcookie.sh
+- go get github.com/kardianos/govendor
 script:
-  - docker-compose up -d
-  - |
-    until $(curl --output /dev/null --silent --head --fail http://localhost:8200)
-    do
-        printf '.'
-        sleep 1
-    done
-  - source .test-env
-  - make test
-  - make testacc
-  - make vendor-status
-  - make vet
-  - make website-test
-
+- docker-compose up -d
+- |
+  until $(curl --output /dev/null --silent --head --fail http://localhost:8200)
+  do
+      printf '.'
+      sleep 1
+  done
+- source .test-env
+- make test
+- make testacc
+- make vendor-status
+- make vet
+- make website-test
 branches:
   only:
-    - master
+  - master
   matrix:
     fast_finish: true
     allow_failures:
-      - go: tip
+    - go: tip
+notifications:
+  slack:
+    secure: 3HTR1F2l3Gf+lZgI0p3XYNlu20oZCjK/Q2esv3eFRZe/0l7suuHSovWADGMXflWNGEQe2pHeLpQEELl142bZ2FjYMkZQn2RXfWEuwTOyjMQdlNRzsh0Tm4XiPJqWMYr0NL0cNNXbePQSV+ap3Me8XB6ret5+mkDJGSlI0cStzmmt6pJiVdZ3kq8iu2CnqR11pEgC+v2plGF8OEEca1ixOJF5bRQ2fBQbl6KA81TvE25t1qM5brdT3NzNqZMLtUcHOFoQgsS5Ot5ymQL1HJGatMABAgwmNyUsCcMaBOsdf1qfCAwHC8q8Vpt4RORxY5Rrc0kuWLgKrblHVmJ3uzq+U/XM7rAY3eVKgFm+ZFfyLHQ0Yowpe1jTPGCM3RYVnaDZukf7J39w+958B4xl7NYcK6Sux9q4U1f7k/OTXRHyYmmHSvlZPXjq6+65BEaAEXisy2HvNVqflcXv0n6WqAKwT5vp+xZdd/dc06nCROysc0M9duSm19VOkjIfHlXQLcXlc36tp48S1v8PMNVO2P2Bwh06rRFtPhWXYPYXzeN8g+Fv9dLeHaBj3kEbbtDTsMIYu5cyofQDiphQDCH4/Z/1rjbLhXAVuL/bk8XNwxPsVW90Jh4aZN4B1+tZIT2io3IsxlqUcPvXqtin8B4uVc7850VQSEgK/3HJrPZZrhXmxl0=
+    on_failure: change
