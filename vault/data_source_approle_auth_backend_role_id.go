@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func approleAuthBackendRoleIDDataSource() *schema.Resource {
