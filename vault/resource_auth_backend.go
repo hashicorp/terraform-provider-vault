@@ -55,7 +55,7 @@ func authBackendResource() *schema.Resource {
 				Description: "The description of the auth backend",
 			},
 
-			"accessor": &schema.Schema{
+			"accessor": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The accessor of the auth backend",
