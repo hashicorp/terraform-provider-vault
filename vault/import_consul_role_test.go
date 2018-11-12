@@ -9,7 +9,7 @@ import (
 
 func TestAccConsulSecretBackendRole_importBasic(t *testing.T) {
 	path := acctest.RandomWithPrefix("test")
-	x := []string{"path", "name"}
+	toIgnore := []string{"path", "name"}
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccPreCheck(t) },
 		Providers: testProviders,
@@ -22,7 +22,7 @@ func TestAccConsulSecretBackendRole_importBasic(t *testing.T) {
 				ResourceName:            "vault_consul_secret_backend_role.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: x,
+				ImportStateVerifyIgnore: toIgnore,
 			},
 		},
 	})

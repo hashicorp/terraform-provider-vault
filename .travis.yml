@@ -18,7 +18,7 @@ script:
       sleep 1
   done
 - source .test-env
-- curl --header "X-VAULT-TOKEN: $VAULT_TOKEN" --header "Content-Type: application/json" --request POST --data '{"type": "consul"}'  $VAULT_ADDR/v1/sys/mounts/consul
+- "curl --header \"X-VAULT-TOKEN: ${VAULT_TOKEN}\" --header \"Content-Type: application/json\" --request POST --data '{\"type\": \"consul\"}'  ${VAULT_ADDR}/v1/sys/mounts/consul"
 - make test
 - make testacc
 - make vendor-status
