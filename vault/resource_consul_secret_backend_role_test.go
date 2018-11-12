@@ -14,6 +14,19 @@ import (
 func TestResourceConsulSecretBackendRole(t *testing.T) {
 	path := acctest.RandomWithPrefix("test")
 
+	client := testProvider.Meta().(*api.Client)
+	_, err := client.Logical().Delete("/sys/mounts/consul")
+	if err != nil {
+		t.Skip("could not unmount consul secret engine", err)
+	}
+
+	data := map[string]interface{}{}
+	data["type"] = "consul"
+	_, err2 := client.Logical().Write("/sys/mounts/consul", data)
+	if err2 != nil {
+		t.Skip("could not mount consul secret engine", err)
+	}
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -25,31 +38,6 @@ func TestResourceConsulSecretBackendRole(t *testing.T) {
 			{
 				Config: testResourceConsulSecretBackendRole_updateConfig,
 				Check:  testResourceConsulSecretBackendRole_updateCheck,
-			},
-		},
-	})
-}
-
-func TestResourceConsulSecretBackendRole_deleted(t *testing.T) {
-	path := acctest.RandomWithPrefix("test")
-	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []resource.TestStep{
-			{
-				Config: testResourceConsulSecretBackendRole_initialConfig(path),
-				Check:  testResourceConsulSecretBackendRole_initialCheck(path),
-			},
-			{
-				PreConfig: func() {
-					client := testProvider.Meta().(*api.Client)
-					_, err := client.Logical().Delete("consul/roles/" + path)
-					if err != nil {
-						t.Fatalf("unable to manually delete the consul role via the SDK: %s", err)
-					}
-				},
-				Config: testResourceConsulSecretBackendRole_initialConfig(path),
-				Check:  testResourceConsulSecretBackendRole_initialCheck(path),
 			},
 		},
 	})
