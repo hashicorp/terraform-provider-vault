@@ -209,8 +209,6 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("display_name", resp.Data["display_name"])
 	d.Set("ttl", resp.Data["ttl"])
 	d.Set("max_ttl", resp.Data["max_ttl"])
-	d.Set("type", resp.Data["role_type"])
-	d.Set("project_id", resp.Data["project_id"])
 	d.Set("period", resp.Data["period"])
 
 	// Vault sometimes returns these as null instead of an empty list.
