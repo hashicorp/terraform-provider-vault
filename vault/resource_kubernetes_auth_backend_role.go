@@ -1,14 +1,15 @@
 package vault
 
 import (
+	"encoding/json"
+	"fmt"
+	"log"
 	"regexp"
 	"strings"
 
-	"encoding/json"
-	"fmt"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
-	"log"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 var (
@@ -311,7 +312,7 @@ func kubernetesAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) e
 
 	log.Printf("[DEBUG] Deleting Kubernetes auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
-	if err != nil && !is404(err) {
+	if err != nil && !util.Is404(err) {
 		return fmt.Errorf("error deleting Kubernetes auth backend role %q", path)
 	} else if err != nil {
 		log.Printf("[DEBUG] Kubernetes auth backend role %q not found, removing from state", path)

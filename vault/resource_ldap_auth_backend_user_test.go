@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 func TestLDAPAuthBackendUser_basic(t *testing.T) {
@@ -237,6 +238,6 @@ resource "vault_ldap_auth_backend_user" "test" {
     policies = %s
     groups   = %s
 }
-`, backend, username, arrayToTerraformList(policies), arrayToTerraformList(groups))
+`, backend, username, util.ArrayToTerraformList(policies), util.ArrayToTerraformList(groups))
 
 }

@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
-
 	"github.com/hashicorp/vault/api"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 func ldapAuthBackendUserResource() *schema.Resource {
@@ -72,7 +72,7 @@ func ldapAuthBackendUserResourceWrite(d *schema.ResourceData, meta interface{}) 
 	}
 
 	if v, ok := d.GetOk("groups"); ok {
-		data["groups"] = strings.Join(toStringArray(v.(*schema.Set).List()), ",")
+		data["groups"] = strings.Join(util.ToStringArray(v.(*schema.Set).List()), ",")
 	}
 
 	log.Printf("[DEBUG] Writing LDAP user %q", path)

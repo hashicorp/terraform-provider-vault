@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 var (
@@ -152,7 +153,7 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 	})
 	if err != nil {
 		// We need to check if the secret_id has expired
-		if isExpiredTokenErr(err) {
+		if util.IsExpiredTokenErr(err) {
 			return nil
 		}
 		return fmt.Errorf("error reading AppRole auth backend role SecretID %q: %s", id, err)
@@ -236,7 +237,7 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 	})
 	if err != nil {
 		// We need to check if the secret_id has expired
-		if isExpiredTokenErr(err) {
+		if util.IsExpiredTokenErr(err) {
 			return true, nil
 		}
 		return true, fmt.Errorf("error checking if AppRole auth backend role SecretID %q exists: %s", id, err)

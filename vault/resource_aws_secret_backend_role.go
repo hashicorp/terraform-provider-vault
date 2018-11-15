@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 func awsSecretBackendRoleResource() *schema.Resource {
@@ -44,7 +45,7 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Optional:         true,
 				ConflictsWith:    []string{"policy_arn"},
 				Description:      "IAM policy the role should use in JSON format.",
-				DiffSuppressFunc: jsonDiffSuppress,
+				DiffSuppressFunc: util.JsonDiffSuppress,
 			},
 		},
 	}

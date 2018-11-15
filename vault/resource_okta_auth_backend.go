@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 var oktaAuthType = "okta"
@@ -403,7 +404,7 @@ func oktaAuthUpdateGroups(d *schema.ResourceData, client *api.Client, path strin
 
 		group := oktaGroup{
 			Name:     groupName,
-			Policies: toStringArray(groupMapping["policies"].(*schema.Set).List()),
+			Policies: util.ToStringArray(groupMapping["policies"].(*schema.Set).List()),
 		}
 
 		if err := updateOktaGroup(client, path, group); err != nil {
@@ -438,8 +439,8 @@ func oktaAuthUpdateUsers(d *schema.ResourceData, client *api.Client, path string
 
 		user := oktaUser{
 			Username: userName,
-			Policies: toStringArray(userMapping["policies"].(*schema.Set).List()),
-			Groups:   toStringArray(userMapping["groups"].(*schema.Set).List()),
+			Policies: util.ToStringArray(userMapping["policies"].(*schema.Set).List()),
+			Groups:   util.ToStringArray(userMapping["groups"].(*schema.Set).List()),
 		}
 
 		if err := updateOktaUser(client, path, user); err != nil {
