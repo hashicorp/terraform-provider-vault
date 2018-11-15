@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 var (
@@ -166,7 +167,7 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	boundAuds := jsonStringArrayToStringArray(resp.Data["bound_audiences"].([]interface{}))
+	boundAuds := util.JsonStringArrayToStringArray(resp.Data["bound_audiences"].([]interface{}))
 	err = d.Set("bound_audiences", boundAuds)
 	if err != nil {
 		return fmt.Errorf("error setting bound_audiences in state: %s", err)
@@ -174,7 +175,7 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("user_claim", resp.Data["user_claim"].(string))
 
-	policies := jsonStringArrayToStringArray(resp.Data["policies"].([]interface{}))
+	policies := util.JsonStringArrayToStringArray(resp.Data["policies"].([]interface{}))
 	err = d.Set("policies", policies)
 	if err != nil {
 		return fmt.Errorf("error setting policies in state: %s", err)
@@ -207,7 +208,7 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("bound_subject", resp.Data["bound_subject"].(string))
 
 	if resp.Data["bound_cidrs"] != nil {
-		cidrs := jsonStringArrayToStringArray(resp.Data["bound_cidrs"].([]interface{}))
+		cidrs := util.JsonStringArrayToStringArray(resp.Data["bound_cidrs"].([]interface{}))
 		err = d.Set("bound_cidrs", cidrs)
 		if err != nil {
 			return fmt.Errorf("error setting bound_cidrs in state: %s", err)
@@ -260,7 +261,7 @@ func jwtAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Deleting JWT auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
-	if err != nil && !is404(err) {
+	if err != nil && !util.Is404(err) {
 		return fmt.Errorf("error deleting JWT auth backend role %q", path)
 	} else if err != nil {
 		log.Printf("[DEBUG] JWT auth backend role %q not found, removing from state", path)
@@ -316,10 +317,10 @@ func jwtAuthBackendRoleBackendFromPath(path string) (string, error) {
 func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData) map[string]interface{} {
 	data := map[string]interface{}{}
 
-	data["bound_audiences"] = terraformSetToStringArray(d.Get("bound_audiences"))
+	data["bound_audiences"] = util.TerraformSetToStringArray(d.Get("bound_audiences"))
 	data["user_claim"] = d.Get("user_claim").(string)
 
-	if dataList := terraformSetToStringArray(d.Get("policies")); len(dataList) > 0 {
+	if dataList := util.TerraformSetToStringArray(d.Get("policies")); len(dataList) > 0 {
 		data["policies"] = dataList
 	}
 
@@ -340,7 +341,7 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData) map[string]interface{
 		data["bound_subject"] = v.(string)
 	}
 
-	if dataList := terraformSetToStringArray(d.Get("bound_cidrs")); len(dataList) > 0 {
+	if dataList := util.TerraformSetToStringArray(d.Get("bound_cidrs")); len(dataList) > 0 {
 		data["bound_cidrs"] = dataList
 	}
 

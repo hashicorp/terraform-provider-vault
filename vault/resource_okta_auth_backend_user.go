@@ -3,10 +3,12 @@ package vault
 import (
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/vault/api"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/vault/api"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 func oktaAuthBackendUserResource() *schema.Resource {
@@ -82,14 +84,14 @@ func oktaAuthBackendUserWrite(d *schema.ResourceData, meta interface{}) error {
 
 	var groupsString []string
 	if groups, ok := d.GetOk("groups"); ok {
-		groupsString = toStringArray(groups.(*schema.Set).List())
+		groupsString = util.ToStringArray(groups.(*schema.Set).List())
 	} else {
 		groupsString = []string{}
 	}
 
 	var policiesString []string
 	if policies, ok := d.GetOk("policies"); ok {
-		policiesString = toStringArray(policies.(*schema.Set).List())
+		policiesString = util.ToStringArray(policies.(*schema.Set).List())
 	} else {
 		policiesString = []string{}
 	}

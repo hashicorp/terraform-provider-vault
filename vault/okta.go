@@ -2,8 +2,10 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/vault/api"
 	"strings"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 type oktaUser struct {
@@ -37,7 +39,7 @@ func listOktaUsers(client *api.Client, path string) ([]string, error) {
 	}
 
 	if v, ok := secret.Data["keys"]; ok {
-		return toStringArray(v.([]interface{})), nil
+		return util.ToStringArray(v.([]interface{})), nil
 	}
 
 	return []string{}, nil
@@ -52,8 +54,8 @@ func readOktaUser(client *api.Client, path string, username string) (*oktaUser, 
 
 	return &oktaUser{
 		Username: username,
-		Groups:   toStringArray(secret.Data["groups"].([]interface{})),
-		Policies: toStringArray(secret.Data["policies"].([]interface{})),
+		Groups:   util.ToStringArray(secret.Data["groups"].([]interface{})),
+		Policies: util.ToStringArray(secret.Data["policies"].([]interface{})),
 	}, nil
 }
 
@@ -109,7 +111,7 @@ func listOktaGroups(client *api.Client, path string) ([]string, error) {
 	}
 
 	if v, ok := secret.Data["keys"]; ok {
-		return toStringArray(v.([]interface{})), nil
+		return util.ToStringArray(v.([]interface{})), nil
 	}
 
 	return []string{}, nil
@@ -124,7 +126,7 @@ func readOktaGroup(client *api.Client, path string, name string) (*oktaGroup, er
 
 	return &oktaGroup{
 		Name:     name,
-		Policies: toStringArray(secret.Data["policies"].([]interface{})),
+		Policies: util.ToStringArray(secret.Data["policies"].([]interface{})),
 	}, nil
 }
 

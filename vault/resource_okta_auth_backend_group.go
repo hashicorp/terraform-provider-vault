@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 func oktaAuthBackendGroupResource() *schema.Resource {
@@ -72,7 +73,7 @@ func oktaAuthBackendGroupWrite(d *schema.ResourceData, meta interface{}) error {
 
 	var policiesString []string
 	if policies, ok := d.GetOk("policies"); ok {
-		policiesString = toStringArray(policies.(*schema.Set).List())
+		policiesString = util.ToStringArray(policies.(*schema.Set).List())
 	} else {
 		policiesString = []string{}
 	}

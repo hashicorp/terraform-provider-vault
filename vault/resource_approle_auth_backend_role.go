@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 var (
@@ -346,7 +347,7 @@ func approleAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) erro
 
 	log.Printf("[DEBUG] Deleting AppRole auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
-	if err != nil && !is404(err) {
+	if err != nil && !util.Is404(err) {
 		return fmt.Errorf("error deleting AppRole auth backend role %q", path)
 	} else if err != nil {
 		log.Printf("[DEBUG] AppRole auth backend role %q not found, removing from state", path)

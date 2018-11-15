@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 const identityGroupPath = "/identity/group"
@@ -157,7 +158,7 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 	resp, err := client.Logical().Read(path)
 	if err != nil {
 		// We need to check if the secret_id has expired
-		if isExpiredTokenErr(err) {
+		if util.IsExpiredTokenErr(err) {
 			return nil
 		}
 		return fmt.Errorf("error reading AppRole auth backend role SecretID %q: %s", id, err)
