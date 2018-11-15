@@ -252,7 +252,7 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("ttl", resp.Data["ttl"])
 	d.Set("max_ttl", resp.Data["max_ttl"])
-	d.Set("type", resp.Data["role_type"])
+	d.Set("type", resp.Data["type"])
 	d.Set("project_id", resp.Data["project_id"])
 	d.Set("period", resp.Data["period"])
 
