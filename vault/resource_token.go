@@ -212,7 +212,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Read token accessor %q", id)
 
-	if tokenCheckLease(d, client) {
+	if d.Get("renewable").(bool) && tokenCheckLease(d) {
 		log.Printf("[DEBUG] Lease for token accessor %q expiring soon, renewing", d.Id())
 		renewed, err := client.Auth().Token().Renew(d.Get("client_token").(string), d.Get("lease_duration").(int))
 		if err != nil {
@@ -277,7 +277,7 @@ func tokenExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	return resp != nil, nil
 }
 
-func tokenCheckLease(d *schema.ResourceData, client *api.Client) bool {
+func tokenCheckLease(d *schema.ResourceData) bool {
 	startedStr := d.Get("lease_started").(string)
 	duration := d.Get("lease_duration").(int)
 	if startedStr == "" {
