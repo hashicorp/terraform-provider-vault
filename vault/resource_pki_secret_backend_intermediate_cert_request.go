@@ -94,7 +94,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Default:     2048,
 			},
 			"exclude_cn_from_sans": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Flag to exclude CN from SANs.",
 				ForceNew:    true,
@@ -192,7 +192,7 @@ func pkiSecretBackendIntermediateCertRequestCreate(d *schema.ResourceData, meta 
 		"private_key_format":   d.Get("private_key_format").(string),
 		"key_type":             d.Get("key_type").(string),
 		"key_bits":             d.Get("key_bits").(int),
-		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(string),
+		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
 		"ou":                   d.Get("ou").(string),
 		"organization":         d.Get("organization").(string),
 		"country":              d.Get("country").(string),

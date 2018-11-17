@@ -94,7 +94,7 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Default:     -1,
 			},
 			"exclude_cn_from_sans": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Flag to exclude CN from SANs.",
 				ForceNew:    true,
@@ -109,7 +109,7 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 			"permitted_dns_domains": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "List of domains for which certifiaces are allowed to be issued.",
+				Description: "List of domains for which certificates are allowed to be issued.",
 				ForceNew:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -226,7 +226,7 @@ func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta int
 		"ttl":                  d.Get("ttl").(string),
 		"format":               d.Get("format").(string),
 		"max_path_length":      d.Get("max_path_length").(int),
-		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(string),
+		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
 		"use_csr_values":       d.Get("use_csr_values").(bool),
 		"ou":                   d.Get("ou").(string),
 		"organization":         d.Get("organization").(string),

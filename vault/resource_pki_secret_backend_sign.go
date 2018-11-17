@@ -93,7 +93,7 @@ func pkiSecretBackendSignResource() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle"}, false),
 			},
 			"exclude_cn_from_sans": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Flag to exclude CN from SANs.",
 				ForceNew:    true,
@@ -130,7 +130,7 @@ func pkiSecretBackendSignCreate(d *schema.ResourceData, meta interface{}) error 
 
 	path := pkiSecretBackendIssuePath(backend, name)
 
-	commonName := d.Get("commonName").(string)
+	commonName := d.Get("common_name").(string)
 
 	iAltNames := d.Get("alt_names").([]interface{})
 	altNames := make([]string, 0, len(iAltNames))
@@ -158,10 +158,10 @@ func pkiSecretBackendSignCreate(d *schema.ResourceData, meta interface{}) error 
 
 	data := map[string]interface{}{
 		"csr":                  d.Get("csr").(string),
-		"commonName":           d.Get("commonName").(string),
+		"common_name":          d.Get("common_name").(string),
 		"ttl":                  d.Get("ttl").(string),
 		"format":               d.Get("format").(string),
-		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(string),
+		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
 	}
 
 	if len(altNames) > 0 {

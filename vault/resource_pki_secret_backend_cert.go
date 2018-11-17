@@ -86,7 +86,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"der", "pkcs8"}, false),
 			},
 			"exclude_cn_from_sans": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Flag to exclude CN from SANs.",
 				ForceNew:    true,
@@ -158,7 +158,7 @@ func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error 
 		"ttl":                  d.Get("ttl").(int),
 		"format":               d.Get("format").(string),
 		"private_key_format":   d.Get("private_key_format").(string),
-		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(string),
+		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
 	}
 
 	if len(altNames) > 0 {
