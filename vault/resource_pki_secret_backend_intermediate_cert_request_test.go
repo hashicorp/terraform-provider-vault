@@ -61,12 +61,13 @@ resource "vault_pki_secret_backend" "test" {
   path = "%s"
   description = "test"
   default_lease_ttl_seconds = "86400"
-  max_lease_ttl_seconds     = "86400"
+  max_lease_ttl_seconds = "86400"
 }
 
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
-  backend     = "${vault_pki_secret_backend.test.path}"
-  type        = "internal"
+  depends_on = [ "vault_pki_secret_backend.test" ]
+  backend = "${vault_pki_secret_backend.test.path}"
+  type = "internal"
   common_name = "test.my.domain"
 }`, path)
 }

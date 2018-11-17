@@ -61,7 +61,7 @@ resource "vault_pki_secret_backend" "test-root" {
   path = "%s"
   description = "test root"
   default_lease_ttl_seconds = "8640000"
-  max_lease_ttl_seconds     = "8640000"
+  max_lease_ttl_seconds = "8640000"
 }
 
 resource "vault_pki_secret_backend" "test-intermediate" {
@@ -69,10 +69,11 @@ resource "vault_pki_secret_backend" "test-intermediate" {
   path = "%s"
   description = "test intermediate"
   default_lease_ttl_seconds = "86400"
-  max_lease_ttl_seconds     = "86400"
+  max_lease_ttl_seconds = "86400"
 }
 
 resource "vault_pki_secret_backend_root_cert" "test" {
+  depends_on = [ "vault_pki_secret_backend.test-intermediate" ]
   backend = "${vault_pki_secret_backend.test-root.path}"
   type = "internal"
   common_name = "my.domain"
@@ -89,8 +90,9 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 }
 
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
-  backend     = "${vault_pki_secret_backend.test-intermediate.path}"
-  type        = "internal"
+  depends_on = [ "vault_pki_secret_backend_root_cert.test" ]
+  backend = "${vault_pki_secret_backend.test-intermediate.path}"
+  type = "internal"
   common_name = "test.my.domain"
 }
 
@@ -108,11 +110,13 @@ resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
 }
 
 resource "vault_pki_secret_backend_intermediate_set_signed" "test" {
+  depends_on = [ "vault_pki_secret_backend_root_sign_intermediate.test" ]
   backend = "${vault_pki_secret_backend.test-intermediate.path}"
   certificate = "${vault_pki_secret_backend_root_sign_intermediate.test.certificate}"
 }
 
 resource "vault_pki_secret_backend_role" "test" {
+  depends_on = [ "vault_pki_secret_backend_intermediate_set_signed.test" ]
   backend = "${vault_pki_secret_backend.test-intermediate.path}"
   name = "test"
   allowed_domains  = ["test.my.domain"]
@@ -122,6 +126,7 @@ resource "vault_pki_secret_backend_role" "test" {
 }
 
 resource "vault_pki_secret_backend_cert" "test" {
+  depends_on = [ "vault_pki_secret_backend_role.test" ]
   backend = "${vault_pki_secret_backend.test-intermediate.path}"
   name = "${vault_pki_secret_backend_role.test.name}"
   common_name = "cert.test.my.domain"

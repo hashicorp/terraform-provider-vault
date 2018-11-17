@@ -123,8 +123,8 @@ resource "vault_pki_secret_backend" "pki" {
 }
 
 resource "vault_pki_secret_backend_role" "test" {
+  depends_on = [ "vault_pki_secret_backend.pki" ]
   backend = "${vault_pki_secret_backend.pki.path}"
-
   name = "%s"
   ttl = 3600
   max_ttl = 7200
@@ -170,8 +170,8 @@ resource "vault_pki_secret_backend" "pki" {
 }
 
 resource "vault_pki_secret_backend_role" "test" {
+  depends_on = [ "vault_pki_secret_backend.pki" ]
   backend = "${vault_pki_secret_backend.pki.path}"
-
   name = "%s"
   ttl = 1800
   max_ttl = 3600
