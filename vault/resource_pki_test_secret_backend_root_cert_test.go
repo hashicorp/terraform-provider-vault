@@ -36,8 +36,6 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_cert.test", "country", "test"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_cert.test", "locality", "test"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_cert.test", "province", "test"),
-
-
 				),
 			},
 		},
