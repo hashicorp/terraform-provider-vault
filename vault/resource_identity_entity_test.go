@@ -161,7 +161,6 @@ func testAccIdentityEntityConfig(entityName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "entity" {
   name = "%s"
-  type = "external"
   policies = ["test"]
   metadata = {
     version = "1"

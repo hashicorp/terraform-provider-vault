@@ -89,7 +89,6 @@ func testAccIdentityEntityAliasConfig(entityName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "entity" {
   name = "%s"
-  type = "external"
   policies = ["test"]
 }
 
@@ -114,7 +113,6 @@ func testAccIdentityEntityAliasConfigUpdate(entityName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "entity" {
   name = "%s"
-  type = "external"
   policies = ["test"]
 }
 
