@@ -133,6 +133,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_rabbitmq_secret_backend":                      rabbitmqSecretBackendResource(),
 			"vault_rabbitmq_secret_backend_role":                 rabbitmqSecretBackendRoleResource(),
 			"vault_pki_secret_backend":                           pkiSecretBackendResource(),
+			"vault_pki_secret_backend_config_ca":                 pkiSecretBackendConfigCAResource(),
 			"vault_pki_secret_backend_cert":                      pkiSecretBackendCertResource(),
 			"vault_pki_secret_backend_intermediate_cert_request": pkiSecretBackendIntermediateCertRequestResource(),
 			"vault_pki_secret_backend_intermediate_set_signed":   pkiSecretBackendIntermediateSetSignedResource(),
