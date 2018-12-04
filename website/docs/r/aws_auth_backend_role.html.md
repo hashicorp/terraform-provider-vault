@@ -150,5 +150,5 @@ No additional attributes are exported by this resource.
 AWS auth backend roles can be imported using `auth/`, the `backend` path, `/role/`, and the `role` name e.g.
 
 ```
-$ terraform import vault_database_secret_backend_role.example auth/aws/role/test-role
+$ terraform import vault_aws_auth_backend_role.example auth/aws/role/test-role
 ```
