@@ -89,7 +89,7 @@ func githubUserRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if v, ok := dt.Data["key"]; ok {
-		d.Set("team", v.(string))
+		d.Set("user", v.(string))
 	} else {
 		return fmt.Errorf("github user information not found at path: '%v'", d.Id())
 	}

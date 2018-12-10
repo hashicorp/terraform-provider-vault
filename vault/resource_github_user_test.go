@@ -15,7 +15,7 @@ import (
 func TestAccGithubUser_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_github_user.user"
-	user := "my-user-slugified"
+	user := "john_doe"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -26,7 +26,7 @@ func TestAccGithubUser_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/map/users/"+user),
 					resource.TestCheckResourceAttr(resName, "backend", backend),
-					resource.TestCheckResourceAttr(resName, "user", "my-user-slugified"),
+					resource.TestCheckResourceAttr(resName, "user", "john_doe"),
 					resource.TestCheckResourceAttr(resName, "policies.#", "2"),
 					resource.TestCheckResourceAttr(resName, "policies.0", "admin"),
 					resource.TestCheckResourceAttr(resName, "policies.1", "security"),
@@ -37,9 +37,29 @@ func TestAccGithubUser_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/map/users/"+user),
 					resource.TestCheckResourceAttr(resName, "backend", backend),
-					resource.TestCheckResourceAttr(resName, "user", "my-user-slugified"),
+					resource.TestCheckResourceAttr(resName, "user", "john_doe"),
 					resource.TestCheckResourceAttr(resName, "policies.#", "0"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccGithubUser_importBasic(t *testing.T) {
+	backend := acctest.RandomWithPrefix("github")
+	resName := "vault_github_user.user"
+	user := "import"
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccGithubUserConfig_basic(backend, user, []string{"security", "admin"}),
+			},
+			{
+				ResourceName:      resName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})

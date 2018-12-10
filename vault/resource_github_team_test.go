@@ -62,6 +62,26 @@ func TestAccGithubTeam_teamConfigError(t *testing.T) {
 	})
 }
 
+func TestAccGithubTeam_importBasic(t *testing.T) {
+	backend := acctest.RandomWithPrefix("github")
+	resName := "vault_github_team.team"
+	team := "import-team"
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccGithubTeamConfig_basic(backend, team, []string{"admin", "developer"}),
+			},
+			{
+				ResourceName:      resName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestGithubTeamBackEndPath(t *testing.T) {
 	t.Run("With default mount", func(t *testing.T) {
 		actual := githubMappingPath("auth/github/map/teams/foo", "teams")
