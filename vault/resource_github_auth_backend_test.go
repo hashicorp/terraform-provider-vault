@@ -25,6 +25,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 				Config: testAccGithubAuthBackendConfig_basic(backend),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
+					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "organization", "vault"),
 				),
@@ -33,6 +34,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 				Config: testAccGithubAuthBackendConfig_updated(backend),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
+					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "organization", "other_vault"),
 				),
@@ -54,6 +56,7 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 				Config: testAccGithubAuthBackendConfig_tuning(backend),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
+					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "tune.4271161690.default_lease_ttl", "10"),
 					resource.TestCheckResourceAttr(resName, "tune.4271161690.max_lease_ttl", "20"),
@@ -73,6 +76,7 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 				Config: testAccGithubAuthBackendConfig_tuningUpdated(backend),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
+					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "tune.2934484151.default_lease_ttl", "50"),
 					resource.TestCheckResourceAttr(resName, "tune.2934484151.max_lease_ttl", "70"),

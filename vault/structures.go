@@ -1,7 +1,9 @@
 package vault
 
 import (
+	"log"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -30,8 +32,6 @@ func expandAuthMethodTune(rawL []interface{}) api.MountConfigInput {
 	}
 	if v, ok := raw["passthrough_request_headers"]; ok {
 		data.PassthroughRequestHeaders = expandStringSliceWithEmpty(v.([]interface{}), true)
-	} else {
-		data.PassthroughRequestHeaders = []string{""}
 	}
 	return data
 }
@@ -84,5 +84,15 @@ func flattenStringSlice(list []string) []interface{} {
 	for _, v := range list {
 		vs = append(vs, v)
 	}
+	return vs
+}
+
+func flattenCommaSeparatedStringSlice(s string) []interface{} {
+	split := strings.Split(s, ",")
+	vs := make([]interface{}, 0, len(split))
+	for _, v := range split {
+		vs = append(vs, v)
+	}
+	log.Printf("[INFO] flattenedCommaSeparatedList: %+v", vs)
 	return vs
 }
