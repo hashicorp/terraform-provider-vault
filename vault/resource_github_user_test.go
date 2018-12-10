@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/acctest"
@@ -13,32 +12,32 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func TestAccGithubTeam_basic(t *testing.T) {
+func TestAccGithubUser_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("github")
-	resName := "vault_github_team.team"
-	team := "my-team-slugified"
+	resName := "vault_github_user.user"
+	user := "my-user-slugified"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testAccGithubTeamCheckDestroy,
+		CheckDestroy: testAccGithubUserCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGithubTeamConfig_basic(backend, team, []string{"admin", "security"}),
+				Config: testAccGithubUserConfig_basic(backend, user, []string{"admin", "security"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/map/teams/"+team),
+					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/map/users/"+user),
 					resource.TestCheckResourceAttr(resName, "backend", backend),
-					resource.TestCheckResourceAttr(resName, "team", "my-team-slugified"),
+					resource.TestCheckResourceAttr(resName, "user", "my-user-slugified"),
 					resource.TestCheckResourceAttr(resName, "policies.#", "2"),
 					resource.TestCheckResourceAttr(resName, "policies.0", "admin"),
 					resource.TestCheckResourceAttr(resName, "policies.1", "security"),
 				),
 			},
 			{
-				Config: testAccGithubTeamConfig_basic(backend, team, []string{}),
+				Config: testAccGithubUserConfig_basic(backend, user, []string{}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/map/teams/"+team),
+					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/map/users/"+user),
 					resource.TestCheckResourceAttr(resName, "backend", backend),
-					resource.TestCheckResourceAttr(resName, "team", "my-team-slugified"),
+					resource.TestCheckResourceAttr(resName, "user", "my-user-slugified"),
 					resource.TestCheckResourceAttr(resName, "policies.#", "0"),
 				),
 			},
@@ -46,41 +45,25 @@ func TestAccGithubTeam_basic(t *testing.T) {
 	})
 }
 
-func TestAccGithubTeam_teamConfigError(t *testing.T) {
-	backend := acctest.RandomWithPrefix("github")
-	team := "Team With Spaces"
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testAccGithubTeamCheckDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccGithubTeamConfig_basic(backend, team, []string{}),
-				ExpectError: regexp.MustCompile(`\: expected team to be a slugified value*`),
-			},
-		},
-	})
-}
-
-func TestGithubTeamBackEndPath(t *testing.T) {
+func TestGithubUserBackEndPath(t *testing.T) {
 	t.Run("With default mount", func(t *testing.T) {
-		actual := githubMappingPath("auth/github/map/teams/foo", "teams")
+		actual := githubMappingPath("auth/github/map/users/foo", "users")
 		if actual != "github" {
 			t.Fatalf("expected '%s', got: '%s'", "github", actual)
 		}
 	})
 	t.Run("With custom mount", func(t *testing.T) {
-		actual := githubMappingPath("auth/mymount/submount/map/teams/foo", "teams")
+		actual := githubMappingPath("auth/mymount/submount/map/users/foo", "users")
 		if actual != "mymount/submount" {
 			t.Fatalf("expected '%s', got: '%s'", "mymount/submount", actual)
 		}
 	})
 }
 
-func testAccGithubTeamCheckDestroy(s *terraform.State) error {
+func testAccGithubUserCheckDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 	for _, r := range s.RootModule().Resources {
-		if r.Type != "vault_github_team" {
+		if r.Type != "vault_github_user" {
 			continue
 		}
 
@@ -90,10 +73,10 @@ func testAccGithubTeamCheckDestroy(s *terraform.State) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("Github Team resource still exists")
+	return fmt.Errorf("Github user resource still exists")
 }
 
-func testAccGithubTeamConfig_basic(backend string, team string, policies []string) string {
+func testAccGithubUserConfig_basic(backend string, user string, policies []string) string {
 	p, _ := json.Marshal(policies)
 	return fmt.Sprintf(`
 resource "vault_github_auth_backend" "gh" {
@@ -101,10 +84,10 @@ resource "vault_github_auth_backend" "gh" {
   	organization = "vault"
 }
 
-resource "vault_github_team" "team" {
+resource "vault_github_user" "user" {
 	backend = "${vault_github_auth_backend.gh.id}"
-	team = "%s"
+	user = "%s"
 	policies = %s
 }
-`, backend, team, p)
+`, backend, user, p)
 }

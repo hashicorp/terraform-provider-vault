@@ -45,12 +45,11 @@ func TestFlattenAuthMethodTune(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"default_lease_ttl":            10,
-		"max_lease_ttl":                20,
-		"audit_non_hmac_request_keys":  []interface{}{"foo", "bar"},
-		"audit_non_hmac_response_keys": []interface{}{},
-		"passthrough_request_headers":  []interface{}{"X-Custom", "X-Mas"},
-		"listing_visibility":           "",
+		"default_lease_ttl":           10,
+		"max_lease_ttl":               20,
+		"audit_non_hmac_request_keys": []interface{}{"foo", "bar"},
+		"passthrough_request_headers": []interface{}{"X-Custom", "X-Mas"},
+		"listing_visibility":          "",
 	}
 
 	actual := flattenAuthMethodTune(expanded)
