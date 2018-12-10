@@ -39,7 +39,7 @@ func githubAuthBackendResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "",
-				Description: "The API endpoint to use. Useful if you are running GitHub Enterprise or an API-compatible authentication server",
+				Description: "The API endpoint to use. Useful if you are running GitHub Enterprise or an API-compatible authentication server.",
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -49,12 +49,12 @@ func githubAuthBackendResource() *schema.Resource {
 			"ttl": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Duration after which authentication will be expired.",
+				Description: "Duration after which authentication will be expired, in seconds.",
 			},
 			"max_ttl": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Maximum duration after which authentication will be expired.",
+				Description: "Maximum duration after which authentication will be expired, in seconds.",
 			},
 			"tune": authMountTuneSchema(),
 		},
@@ -201,7 +201,7 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return err
 	}
-
+	d.Set("path", d.Id())
 	d.Set("organization", authConfig.Data["organization"])
 	d.Set("base_url", authConfig.Data["base_url"])
 	d.Set("description", authMount.Description)

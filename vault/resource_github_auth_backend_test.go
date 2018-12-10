@@ -118,6 +118,28 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 		},
 	})
 }
+
+func TestAccGithubAuthBackend_importTuning(t *testing.T) {
+	backend := acctest.RandomWithPrefix("github")
+	resName := "vault_github_auth_backend.gh"
+	var resAuth api.AuthMount
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccGithubAuthBackendConfig_tuning(backend),
+				Check:  testAccCheckAuthMountExists(resName, &resAuth),
+			},
+			{
+				ResourceName:      resName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func testAccCheckAuthMountExists(n string, out *api.AuthMount) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*api.Client)
