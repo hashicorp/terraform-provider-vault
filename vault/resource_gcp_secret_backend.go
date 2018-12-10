@@ -40,7 +40,7 @@ func gcpSecretBackendResource() *schema.Resource {
 			},
 			"credentials": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "JSON-encoded credentials to use to connect to GCP",
 				Sensitive:   true,
 				// We rebuild the attached JSON string to a simple singleline
@@ -105,11 +105,15 @@ func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	d.SetPartial("max_lease_ttl_seconds")
 
 	log.Printf("[DEBUG] Writing GCP configuration to %q", configPath)
-	data := map[string]interface{}{
-		"credentials": credentials,
-	}
-	if _, err := client.Logical().Write(configPath, data); err != nil {
-		return fmt.Errorf("error writing GCP configuration for %q: %s", path, err)
+	if credentials != "" {
+		data := map[string]interface{}{
+			"credentials": credentials,
+		}
+		if _, err := client.Logical().Write(configPath, data); err != nil {
+			return fmt.Errorf("error writing GCP configuration for %q: %s", path, err)
+		}
+	} else {
+		log.Printf("[DEBUG] No credentials configured")
 	}
 	log.Printf("[DEBUG] Wrote GCP configuration to %q", configPath)
 	d.Partial(false)
