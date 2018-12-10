@@ -47,14 +47,18 @@ func githubAuthBackendResource() *schema.Resource {
 				Description: "Specifies the description of the mount. This overrides the current stored value, if any.",
 			},
 			"ttl": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Duration after which authentication will be expired, in seconds.",
+				Type:         schema.TypeString,
+				Computed:     true,
+				Optional:     true,
+				Description:  "Duration after which authentication will be expired, in seconds.",
+				ValidateFunc: validateDuration,
 			},
 			"max_ttl": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Maximum duration after which authentication will be expired, in seconds.",
+				Type:         schema.TypeString,
+				Computed:     true,
+				Optional:     true,
+				Description:  "Maximum duration after which authentication will be expired, in seconds.",
+				ValidateFunc: validateDuration,
 			},
 			"tune": authMountTuneSchema(),
 		},
@@ -104,16 +108,10 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["base_url"] = v.(string)
 	}
 	if v, ok := d.GetOk("ttl"); ok {
-		vs := v.(string)
-		if vs != "" {
-			data["ttl"] = vs
-		}
+		data["ttl"] = v.(string)
 	}
 	if v, ok := d.GetOk("max_ttl"); ok {
-		vs := v.(string)
-		if vs != "" {
-			data["max_ttl"] = vs
-		}
+		data["max_ttl"] = v.(string)
 	}
 
 	log.Printf("[DEBUG] Writing github auth config to '%q'", configPath)
@@ -170,13 +168,13 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	configPath := path + "/config"
 
 	log.Printf("[DEBUG] Reading github auth config from '%q'", configPath)
-	authConfig, err := client.Logical().Read(configPath)
+	dt, err := client.Logical().Read(configPath)
 	if err != nil {
 		return fmt.Errorf("error reading github auth config from '%q': %s", configPath, err)
 	}
 	log.Printf("[INFO] Read github auth config from '%q'", configPath)
 
-	if authConfig == nil {
+	if dt == nil {
 		log.Printf("[WARN] Github auth config from '%q' not found, removing from state", configPath)
 		d.SetId("")
 		return nil
@@ -201,12 +199,15 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return err
 	}
+	ttlS := flattenVaultDuration(dt.Data["ttl"])
+	maxTtlS := flattenVaultDuration(dt.Data["max_ttl"])
+
 	d.Set("path", d.Id())
-	d.Set("organization", authConfig.Data["organization"])
-	d.Set("base_url", authConfig.Data["base_url"])
+	d.Set("organization", dt.Data["organization"])
+	d.Set("base_url", dt.Data["base_url"])
 	d.Set("description", authMount.Description)
-	d.Set("ttl", authConfig.Data["ttl"])
-	d.Set("max_ttl", authConfig.Data["max_ttl"])
+	d.Set("ttl", ttlS)
+	d.Set("max_ttl", maxTtlS)
 
 	return nil
 }

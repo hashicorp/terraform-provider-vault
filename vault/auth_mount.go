@@ -19,14 +19,16 @@ func authMountTuneSchema() *schema.Schema {
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"default_lease_ttl": {
-					Type:        schema.TypeInt,
-					Optional:    true,
-					Description: "Specifies the default time-to-live (seconds). This overrides the global default. A value of 0 is equivalent to the system default TTL",
+					Type:         schema.TypeString,
+					Optional:     true,
+					Description:  "Specifies the default time-to-live duration. This overrides the global default. A value of 0 is equivalent to the system default TTL",
+					ValidateFunc: validateDuration,
 				},
 				"max_lease_ttl": {
-					Type:        schema.TypeInt,
-					Optional:    true,
-					Description: "Specifies the maximum time-to-live (seconds). This overrides the global default. A value of 0 are equivalent and set to the system max TTL.",
+					Type:         schema.TypeString,
+					Optional:     true,
+					Description:  "Specifies the maximum time-to-live duration. This overrides the global default. A value of 0 are equivalent and set to the system max TTL.",
+					ValidateFunc: validateDuration,
 				},
 				"audit_non_hmac_request_keys": {
 					Type:        schema.TypeList,

@@ -1,11 +1,13 @@
 package vault
 
 import (
+	"encoding/json"
 	"log"
-	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 func expandAuthMethodTune(rawL []interface{}) api.MountConfigInput {
@@ -16,10 +18,10 @@ func expandAuthMethodTune(rawL []interface{}) api.MountConfigInput {
 	raw := rawL[0].(map[string]interface{})
 
 	if v, ok := raw["default_lease_ttl"]; ok {
-		data.DefaultLeaseTTL = strconv.Itoa(v.(int))
+		data.DefaultLeaseTTL = v.(string)
 	}
 	if v, ok := raw["max_lease_ttl"]; ok {
-		data.MaxLeaseTTL = strconv.Itoa(v.(int))
+		data.MaxLeaseTTL = v.(string)
 	}
 	if v, ok := raw["audit_non_hmac_request_keys"]; ok {
 		data.AuditNonHMACRequestKeys = expandStringSliceWithEmpty(v.([]interface{}), true)
@@ -39,8 +41,8 @@ func expandAuthMethodTune(rawL []interface{}) api.MountConfigInput {
 func flattenAuthMethodTune(dt *api.MountConfigOutput) map[string]interface{} {
 	m := make(map[string]interface{})
 
-	m["default_lease_ttl"] = dt.DefaultLeaseTTL
-	m["max_lease_ttl"] = dt.MaxLeaseTTL
+	m["default_lease_ttl"] = flattenVaultDuration(dt.DefaultLeaseTTL)
+	m["max_lease_ttl"] = flattenVaultDuration(dt.MaxLeaseTTL)
 	if len(dt.AuditNonHMACRequestKeys) > 0 && dt.AuditNonHMACRequestKeys[0] != "" {
 		m["audit_non_hmac_request_keys"] = flattenStringSlice(dt.AuditNonHMACRequestKeys)
 	}
@@ -95,4 +97,23 @@ func flattenCommaSeparatedStringSlice(s string) []interface{} {
 	}
 	log.Printf("[INFO] flattenedCommaSeparatedList: %+v", vs)
 	return vs
+}
+
+func flattenVaultDuration(d interface{}) string {
+	if d == nil {
+		return time.Duration(0).String()
+	}
+
+	switch d.(type) {
+	case int:
+		return util.ShortDur(time.Duration(d.(int)) * time.Second)
+	case int64:
+		return util.ShortDur(time.Duration(d.(int64)) * time.Second)
+	case json.Number:
+		if i, err := d.(json.Number).Int64(); err == nil {
+			return util.ShortDur(time.Duration(i) * time.Second)
+		}
+	}
+
+	return time.Duration(0).String()
 }
