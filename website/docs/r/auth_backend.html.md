@@ -27,6 +27,14 @@ The following arguments are supported:
 
 * `description` - (Optional) A description of the auth method
 
+* `default_lease_ttl_seconds` - (Optional) The default lease duration in seconds.
+
+* `max_lease_ttl_seconds` - (Optional) The maximum lease duration in seconds.
+
+* `listing_visibility` - (Optional) Speficies whether to show this mount in the UI-specific listing endpoint.
+
+* `local` - (Optional) Specifies if the auth method is local only.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
