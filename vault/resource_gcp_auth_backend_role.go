@@ -257,12 +257,12 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 
 	// These checks are done for backwards compatibility. The 'type' key used to be
 	// 'role_type' and was changed to 'role' errorneously before being corrected
-	if val, ok := resp.Data["type"]; ok {
-		d.Set("type", val)
-	} else if val, ok := resp.Data["role_type"]; ok {
-		d.Set("type", val)
-	} else if val, ok := resp.Data["role"]; ok {
-		d.Set("type", val)
+	if v, ok := resp.Data["type"]; ok {
+		d.Set("type", v)
+	} else if v, ok := resp.Data["role_type"]; ok {
+		d.Set("type", v)
+	} else if v, ok := resp.Data["role"]; ok {
+		d.Set("type", v)
 	}
 
 	d.Set("policies",
