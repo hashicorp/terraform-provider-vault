@@ -185,7 +185,7 @@ resource "vault_aws_secret_backend_role" "test_role_arn" {
   role_arns = ["%s"]
   backend = "${vault_aws_secret_backend.test.path}"
 }
-`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_basic, name, testAccAWSSecretBackendRolePolicyArn_basic, name, testAccAwsSecretBackendRoleRoleArn_basic)
+`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_basic, name, testAccAWSSecretBackendRolePolicyArn_basic, name, testAccAWSSecretBackendRoleRoleArn_basic)
 }
 
 func testAccAWSSecretBackendRoleConfig_updated(name, path, accessKey, secretKey string) string {
