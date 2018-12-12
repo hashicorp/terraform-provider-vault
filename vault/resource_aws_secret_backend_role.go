@@ -34,16 +34,28 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "The path of the AWS Secret Backend the role belongs to.",
 			},
-			"policy_arn": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ConflictsWith: []string{"policy"},
+			"policy_arns": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				ConflictsWith: []string{"policy", "role_arns"},
+				Description:   "ARN for an existing IAM policy the role should use.",
+			},
+			"role_arns": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				ConflictsWith: []string{"policy", "policy_arns"},
 				Description:   "ARN for an existing IAM policy the role should use.",
 			},
 			"policy": {
 				Type:             schema.TypeString,
 				Optional:         true,
-				ConflictsWith:    []string{"policy_arn"},
+				ConflictsWith:    []string{"policy_arns", "role_arns"},
 				Description:      "IAM policy the role should use in JSON format.",
 				DiffSuppressFunc: util.JsonDiffSuppress,
 			},
@@ -56,19 +68,24 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
-	policyARN := d.Get("policy_arn").(string)
+	policyARNs := d.Get("policy_arns").([]string)
+	roleARNs := d.Get("role_arns").([]string)
 	policy := d.Get("policy").(string)
 
-	if policy == "" && policyARN == "" {
-		return fmt.Errorf("either policy or policy_arn must be set.")
+	if policy == "" && policyARNs == nil && roleARNs == nil {
+		return fmt.Errorf("either policy, policy_arn, or role_arn must be set.")
 	}
 
 	data := map[string]interface{}{}
 	if policy != "" {
 		data["policy"] = policy
 	}
-	if policyARN != "" {
-		data["arn"] = policyARN
+	if policyARNs != nil {
+		data["policy_arns"] = policyARNs
+	}
+
+	if roleARNs != nil {
+		data["role_arns"] = roleARNs
 	}
 	log.Printf("[DEBUG] Creating role %q on AWS backend %q", name, backend)
 	_, err := client.Logical().Write(backend+"/roles/"+name, data)
@@ -102,7 +119,8 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 	d.Set("policy", secret.Data["policy"])
-	d.Set("policy_arn", secret.Data["arn"])
+	d.Set("policy_arns", secret.Data["policy_arns"])
+	d.Set("role_arns", secret.Data["role_arns"])
 	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
 	d.Set("name", pathPieces[len(pathPieces)-1])
 	return nil

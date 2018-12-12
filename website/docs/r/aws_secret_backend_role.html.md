@@ -56,10 +56,13 @@ with no leading or trailing `/`s.
 Must be unique within the backend.
 
 * `policy` - (Optional) The JSON-formatted policy to associate with this
-role. Either `policy` or `policy_arn` must be specified.
+role. Either `policy`, `policy_arns`, or `role_arns` must be specified.
 
-* `policy_arn` - (Optional) The ARN for a pre-existing policy to associate
-with this role. Either `policy` or `policy_arn` must be specified.
+* `policy_arns` - (Optional) A list of the ARNs for pre-existing policies to associate
+with this role. Either `policy`, `policy_arns`, or `role_arns`  must be specified.
+
+* `role_arns` - (Optional) A list of the ARNs for pre-existing roles to associate
+with this. Either `policy`, `policy_arns`, or `role_arns`  must be specified.
 
 ## Attributes Reference
 
