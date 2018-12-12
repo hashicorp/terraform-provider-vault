@@ -99,13 +99,13 @@ func databaseSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 	if v, ok := d.GetOkExists("max_ttl"); ok {
 		data["max_ttl"] = v.(int)
 	}
-	if v, ok := d.GetOkExists("revocation_statements"); ok {
+	if v, ok := d.GetOkExists("revocation_statements"); ok && v != "" {
 		data["revocation_statements"] = v.(string)
 	}
-	if v, ok := d.GetOkExists("rollback_statements"); ok {
+	if v, ok := d.GetOkExists("rollback_statements"); ok && v != "" {
 		data["rollback_statements"] = v.(string)
 	}
-	if v, ok := d.GetOkExists("renew_statements"); ok {
+	if v, ok := d.GetOkExists("renew_statements"); ok && v != "" {
 		data["renew_statements"] = v.(string)
 	}
 

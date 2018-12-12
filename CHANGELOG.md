@@ -1,4 +1,28 @@
-## 1.3.2 (Unreleased)
+## 1.4.2 (Unreleased)
+
+## 1.4.1 (December 14, 2018)
+
+BUG FIXES:
+
+* Fixes an issue with database resources where db statements were overwritten when not provided ([#260](https://github.com/terraform-providers/terraform-provider-vault/pull/260))
+
+## 1.4.0 (December 11, 2018)
+
+FEATURES:
+
+* **New Resource**: `vault_gcp_auth_backend` ([#198](https://github.com/terraform-providers/terraform-provider-vault/pull/198))
+* **New Resource**: `vault_identity_group` ([#220](https://github.com/terraform-providers/terraform-provider-vault/pull/220))
+* **New Resource**: `vault_identity_group_alias` ([#220](https://github.com/terraform-providers/terraform-provider-vault/pull/220))
+
+IMPROVEMENTS:
+
+* Makes `gcp_secret_backend` credentials optional ([#239](https://github.com/terraform-providers/terraform-provider-vault/pull/239))
+* Adds more configuration parameters for `auth_backend` ([#245](https://github.com/terraform-providers/terraform-provider-vault/pull/245))
+
+BUG FIXES:
+
+* Fixes issue with `vault_database_secret_backend_connection` always updating the connection URL ([#217](https://github.com/terraform-providers/terraform-provider-vault/pull/217)) 
+
 ## 1.3.1 (November 06, 2018)
 
 BUG FIXES:

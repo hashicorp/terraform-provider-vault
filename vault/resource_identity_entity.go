@@ -61,6 +61,10 @@ func identityEntityResource() *schema.Resource {
 }
 
 func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
+	if name, ok := d.GetOk("name"); ok {
+		data["name"] = name
+	}
+
 	if policies, ok := d.GetOk("policies"); ok {
 		data["policies"] = policies
 	}
@@ -144,7 +148,7 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"name", "metadata", "disabled"} {
+	for _, k := range []string{"name", "metadata", "disabled", "policies"} {
 		d.Set(k, resp.Data[k])
 	}
 	return nil

@@ -30,7 +30,7 @@ resource "vault_gcp_secret_backend" "gcp" {
 
 The following arguments are supported:
 
-* `credentials` - (Required) The GCP service account credentails in JSON format.
+* `credentials` - (Optional) The GCP service account credentails in JSON format.
 
 ~> **Important** Because Vault does not support reading the configured
 credentials back from the API, Terraform cannot detect and correct drift
