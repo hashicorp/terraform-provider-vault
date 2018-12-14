@@ -1,5 +1,11 @@
 ## 1.4.2 (Unreleased)
+
 ## 1.4.1 (December 14, 2018)
+
+BUG FIXES:
+
+* Fixes an issue with database resources where db statements were overwritten when not provided ([#260](https://github.com/terraform-providers/terraform-provider-vault/pull/260))
+
 ## 1.4.0 (December 11, 2018)
 
 FEATURES:
