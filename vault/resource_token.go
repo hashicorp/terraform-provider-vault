@@ -14,6 +14,7 @@ func tokenResource() *schema.Resource {
 	return &schema.Resource{
 		Create: tokenCreate,
 		Read:   tokenRead,
+		Update: tokenUpdate,
 		Delete: tokenDelete,
 		Exists: tokenExists,
 
@@ -91,6 +92,18 @@ func tokenResource() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 				Description: "The period of the token.",
+			},
+			"renew_min_lease": {
+				Type:        schema.TypeInt,
+				Required:    false,
+				Optional:    true,
+				Description: "The minimum lease to renew token.",
+			},
+			"renew_increment": {
+				Type:        schema.TypeInt,
+				Required:    false,
+				Optional:    true,
+				Description: "The renew increment.",
 			},
 			"lease_duration": {
 				Type:        schema.TypeInt,
@@ -214,12 +227,22 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 	if d.Get("renewable").(bool) && tokenCheckLease(d) {
 		log.Printf("[DEBUG] Lease for token accessor %q expiring soon, renewing", d.Id())
-		renewed, err := client.Auth().Token().Renew(d.Get("client_token").(string), d.Get("lease_duration").(int))
+
+		increment := d.Get("lease_duration").(int)
+
+		if v, ok := d.GetOk("renew_increment"); ok {
+			increment = v.(int)
+		}
+
+		renewed, err := client.Auth().Token().Renew(d.Get("client_token").(string), increment)
 		if err != nil {
 			log.Printf("[DEBUG] Error renewing token, removing from state")
 			d.SetId("")
 			return nil
 		}
+
+		log.Printf("[DEBUG] Lease for token accessor %q renewed, new lease duration %d", d.Id(),
+			renewed.LeaseDuration)
 
 		resp = renewed
 		d.Set("lease_duration", resp.Data["lease_duration"])
@@ -246,6 +269,10 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("num_uses", resp.Data["num_uses"])
 	d.Set("accessor", resp.Data["accessor"])
 
+	return nil
+}
+
+func tokenUpdate(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
@@ -279,7 +306,6 @@ func tokenExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 
 func tokenCheckLease(d *schema.ResourceData) bool {
 	startedStr := d.Get("lease_started").(string)
-	duration := d.Get("lease_duration").(int)
 	if startedStr == "" {
 		return false
 	}
@@ -293,13 +319,28 @@ func tokenCheckLease(d *schema.ResourceData) bool {
 		return false
 	}
 
-	if started.Add(time.Second * time.Duration(duration)).Add(time.Minute * 5).Before(time.Now()) {
-		return false
+	leaseDuration := d.Get("lease_duration").(int)
+
+	expireTime := started.Add(time.Second * time.Duration(leaseDuration))
+	if expireTime.Before(time.Now()) {
+		log.Printf("[DEBUG] token accessor %q has expired", d.Id())
+
+		return true
 	}
 
-	if started.Add(time.Second * time.Duration(duration)).After(time.Now().Add(time.Minute * -5)) {
-		return false
+	if v, ok := d.GetOk("renew_min_lease"); ok {
+		renewMinLease := v.(int)
+		if renewMinLease <= 0 {
+			return false
+		}
+
+		renewTime := int(expireTime.Sub(time.Now()).Seconds())
+		if renewTime <= renewMinLease {
+			log.Printf("[DEBUG] token accessor %q must be renewed", d.Id())
+
+			return true
+		}
 	}
 
-	return true
+	return false
 }

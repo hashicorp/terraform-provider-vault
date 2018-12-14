@@ -168,6 +168,49 @@ resource "vault_token" "test" {
 }`
 }
 
+func TestResourceToken_renew(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testResourceTokenCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceTokenConfig_renew(),
+				Check: resource.ComposeTestCheckFunc(
+					testResourceTokenCheckExpireTime("vault_token.test"),
+					resource.TestCheckResourceAttr("vault_token.test", "ttl", "24h"),
+					resource.TestCheckResourceAttr("vault_token.test", "renew_min_lease", "7200"),
+					resource.TestCheckResourceAttr("vault_token.test", "renew_increment", "86400"),
+				),
+			},
+		},
+	})
+}
+
+func testResourceTokenConfig_renew() string {
+	return `
+resource "vault_policy" "test" {
+	name = "test"
+	policy = <<EOT
+path "secret/*" { capabilities = [ "list" ] }
+EOT
+}
+
+resource "vault_token_role" "test" {
+	name = "test"
+}
+
+resource "vault_token" "test" {
+	role_name = "${vault_token_role.test.name}"
+	policies = [ "${vault_policy.test.name}" ]
+	renewable = true
+	ttl = "24h"
+	renew_min_lease = 7200
+	renew_increment = 86400
+}`
+}
+
 func testResourceTokenLookup(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
