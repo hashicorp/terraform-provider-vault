@@ -1,3 +1,4 @@
+## 1.4.2 (Unreleased)
 ## 1.4.1 (December 14, 2018)
 ## 1.4.0 (December 11, 2018)
 
