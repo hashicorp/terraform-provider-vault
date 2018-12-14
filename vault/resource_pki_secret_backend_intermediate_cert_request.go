@@ -150,6 +150,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The private key.",
+				Sensitive:   true,
 			},
 			"private_key_type": {
 				Type:        schema.TypeString,
