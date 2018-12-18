@@ -224,7 +224,7 @@ func testResourceTokenLookup(n string) resource.TestCheckFunc {
 
 		client := testProvider.Meta().(*api.Client)
 
-		_, err := client.Auth().Token().LookupAccessor(rs.Primary.Attributes["accessor"])
+		_, err := client.Auth().Token().LookupAccessor(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("Token could not be found: %s", err)
 		}
@@ -246,7 +246,7 @@ func testResourceTokenCheckExpireTime(n string) resource.TestCheckFunc {
 
 		client := testProvider.Meta().(*api.Client)
 
-		token, err := client.Auth().Token().LookupAccessor(rs.Primary.Attributes["accessor"])
+		token, err := client.Auth().Token().LookupAccessor(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("Token could not be found: %s", err)
 		}
