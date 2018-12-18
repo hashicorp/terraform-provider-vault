@@ -55,6 +55,38 @@ func authBackendResource() *schema.Resource {
 				Description: "The description of the auth backend",
 			},
 
+			"default_lease_ttl_seconds": {
+				Type:        schema.TypeInt,
+				Required:    false,
+				Optional:    true,
+				Computed:    true,
+				ForceNew:    true,
+				Description: "Default lease duration in seconds",
+			},
+
+			"max_lease_ttl_seconds": {
+				Type:        schema.TypeInt,
+				Required:    false,
+				Optional:    true,
+				Computed:    true,
+				ForceNew:    true,
+				Description: "Maximum possible lease duration in seconds",
+			},
+
+			"listing_visibility": {
+				Type:        schema.TypeString,
+				ForceNew:    true,
+				Optional:    true,
+				Description: "Speficies whether to show this mount in the UI-specific listing endpoint",
+			},
+
+			"local": {
+				Type:        schema.TypeBool,
+				ForceNew:    true,
+				Optional:    true,
+				Description: "Specifies if the auth method is local only",
+			},
+
 			"accessor": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -67,19 +99,27 @@ func authBackendResource() *schema.Resource {
 func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	name := d.Get("type").(string)
-	desc := d.Get("description").(string)
+	mountType := d.Get("type").(string)
 	path := d.Get("path").(string)
 
+	options := &api.EnableAuthOptions{
+		Type:        mountType,
+		Description: d.Get("description").(string),
+		Config: api.AuthConfigInput{
+			DefaultLeaseTTL:   fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
+			MaxLeaseTTL:       fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
+			ListingVisibility: d.Get("listing_visibility").(string),
+		},
+		Local: d.Get("local").(bool),
+	}
+
 	if path == "" {
-		path = name
+		path = mountType
 	}
 
 	log.Printf("[DEBUG] Writing auth %q to Vault", path)
 
-	err := client.Sys().EnableAuth(path, name, desc)
-
-	if err != nil {
+	if err := client.Sys().EnableAuthWithOptions(path, options); err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
 
@@ -95,9 +135,7 @@ func authBackendDelete(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Deleting auth %s from Vault", path)
 
-	err := client.Sys().DisableAuth(path)
-
-	if err != nil {
+	if err := client.Sys().DisableAuth(path); err != nil {
 		return fmt.Errorf("error disabling auth from Vault: %s", err)
 	}
 
@@ -120,6 +158,10 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 			d.Set("type", auth.Type)
 			d.Set("path", path)
 			d.Set("description", auth.Description)
+			d.Set("default_lease_ttl_seconds", auth.Config.DefaultLeaseTTL)
+			d.Set("max_lease_ttl_seconds", auth.Config.MaxLeaseTTL)
+			d.Set("listing_visibility", auth.Config.ListingVisibility)
+			d.Set("local", auth.Local)
 			d.Set("accessor", auth.Accessor)
 			return nil
 		}
