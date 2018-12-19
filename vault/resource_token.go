@@ -259,7 +259,6 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("lease_started", time.Now().Format(time.RFC3339))
 		d.Set("client_token", renewed.Auth.ClientToken)
 
-
 		d.SetId(renewed.Auth.Accessor)
 	}
 
