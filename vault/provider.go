@@ -79,6 +79,12 @@ func Provider() terraform.ResourceProvider {
 
 				Description: "Maximum TTL for secret leases requested by this provider",
 			},
+			"namespace": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
+				Description: "The namespace to use. Available only for Vault Enterprise",
+			},
 		},
 
 		ConfigureFunc: providerConfigure,
@@ -194,6 +200,11 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 	if token == "" {
 		return nil, errors.New("no vault token found")
+	}
+
+	namespace := d.Get("namespace").(string)
+	if namespace != "" {
+		client.SetNamespace(namespace)
 	}
 
 	// In order to enforce our relatively-short lease TTL, we derive a
