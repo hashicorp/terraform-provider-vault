@@ -19,13 +19,13 @@ func pkiSecretBackendIntermediateSetSignedResource() *schema.Resource {
 			"backend": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The PKI secret backend the role belongs to.",
+				Description: "The PKI secret backend the resource belongs to.",
 				ForceNew:    true,
 			},
 			"certificate": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Certificate.",
+				Description: "The certificate.",
 				ForceNew:    true,
 			},
 		},

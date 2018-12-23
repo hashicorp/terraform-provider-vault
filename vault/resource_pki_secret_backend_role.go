@@ -33,7 +33,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "The path of the PKI secret backend the role belongs to.",
+				Description: "The path of the PKI secret backend the resource belongs to.",
 			},
 			"name": {
 				Type:        schema.TypeString,

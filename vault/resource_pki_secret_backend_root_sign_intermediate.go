@@ -21,7 +21,7 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 			"backend": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The PKI secret backend the role belongs to.",
+				Description: "The PKI secret backend the resource belongs to.",
 				ForceNew:    true,
 			},
 			"csr": {

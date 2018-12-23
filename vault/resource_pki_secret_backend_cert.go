@@ -21,7 +21,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 			"backend": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The PKI secret backend the role belongs to.",
+				Description: "The PKI secret backend the resource belongs to.",
 				ForceNew:    true,
 			},
 			"name": {
@@ -33,7 +33,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 			"common_name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "CN of intermediate to create.",
+				Description: "CN of the certificate to create.",
 				ForceNew:    true,
 			},
 			"alt_names": {
