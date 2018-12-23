@@ -17,6 +17,9 @@ func tokenResource() *schema.Resource {
 		Update: tokenUpdate,
 		Delete: tokenDelete,
 		Exists: tokenExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"role_name": {
@@ -24,7 +27,7 @@ func tokenResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "The client token.",
+				Description: "The token role name.",
 			},
 			"policies": {
 				Type:     schema.TypeSet,

@@ -45,6 +45,33 @@ func TestResourceToken_basic(t *testing.T) {
 	})
 }
 
+func TestResourceToken_import(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testResourceTokenCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceTokenConfig_basic(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_token.test", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_token.test", "ttl", "60s"),
+					resource.TestCheckResourceAttrSet("vault_token.test", "lease_duration"),
+					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
+					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
+				),
+			},
+			{
+				ResourceName:      "vault_token.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				// the API can't serve these fields, so ignore them
+				ImportStateVerifyIgnore: []string{"ttl", "lease_duration", "lease_started", "client_token"},
+			},
+		},
+	})
+}
+
 func testResourceTokenConfig_basic() string {
 	return `
 resource "vault_policy" "test" {

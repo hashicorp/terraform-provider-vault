@@ -50,6 +50,33 @@ func TestResourceTokenRole_basic(t *testing.T) {
 	})
 }
 
+func TestResourceTokenRole_import(t *testing.T) {
+	name := acctest.RandomWithPrefix("role")
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testResourceTokenRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceTokenRoleConfig_basic(name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_token_role.test", "name", name),
+					resource.TestCheckResourceAttr("vault_token_role.test", "allowed_policies.#", "2"),
+					resource.TestCheckResourceAttr("vault_token_role.test", "allowed_policies.0", "dev"),
+					resource.TestCheckResourceAttr("vault_token_role.test", "allowed_policies.1", "prod"),
+					resource.TestCheckResourceAttr("vault_token_role.test", "disallowed_policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_token_role.test", "disallowed_policies.0", "test"),
+				),
+			},
+			{
+				ResourceName:      "vault_token_role.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func testResourceTokenRoleConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "vault_token_role" "test" {
