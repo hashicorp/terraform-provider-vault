@@ -125,6 +125,8 @@ func Provider() terraform.ResourceProvider {
 			"vault_ldap_auth_backend_user":              ldapAuthBackendUserResource(),
 			"vault_ldap_auth_backend_group":             ldapAuthBackendGroupResource(),
 			"vault_policy":                              policyResource(),
+			"vault_egp_policy":                          egpPolicyResource(),
+			"vault_rgp_policy":                          rgpPolicyResource(),
 			"vault_mount":                               mountResource(),
 			"vault_audit":                               auditResource(),
 			"vault_ssh_secret_backend_ca":               sshSecretBackendCAResource(),
