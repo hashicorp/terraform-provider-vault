@@ -1,11 +1,11 @@
 package vault
 
 import (
-	"fmt"
 	"context"
 	"errors"
-	"github.com/hashicorp/vault/api"
+	"fmt"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/vault/api"
 	"log"
 )
 
@@ -112,9 +112,7 @@ func sentinelPolicyWrite(policyType string, attributes []string, d *schema.Resou
 	name := d.Get("name").(string)
 
 	log.Printf("[DEBUG] Writing %s policy %s to Vault", policyType, name)
-	body := map[string]interface{}{
-
-	};
+	body := map[string]interface{}{}
 	for _, value := range attributes {
 		body[value] = d.Get(value)
 	}
