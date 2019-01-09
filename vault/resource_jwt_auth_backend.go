@@ -68,6 +68,13 @@ func jwtAuthBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "The value against which to match the iss claim in a JWT",
 			},
+
+			"accessor": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The accessor of the JWT auth backend",
+			},
+
 		},
 	}
 }
@@ -114,13 +121,13 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	path := getJwtPath(d)
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
 
-	present, err := isJwtAuthBackendPresent(client, path)
+	backend, err := getJwtAuthBackendIfPresent(client, path)
 
 	if err != nil {
 		return fmt.Errorf("unable to check auth backends in Vault for path %s: %s", path, err)
 	}
 
-	if !present {
+	if backend == nil{
 		// If we fell out here then we didn't find our Auth in the list.
 		d.SetId("")
 		return nil
@@ -138,6 +145,7 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
+	d.Set("accessor", backend.Accessor)
 	d.Set("oidc_discovery_ca_pem", config.Data["oidc_discovery_ca_pem"])
 	d.Set("bound_issuer", config.Data["bound_issuer"])
 	d.Set("oidc_discovery_url", config.Data["oidc_discovery_url"])
@@ -185,10 +193,10 @@ func jwtConfigEndpoint(path string) string {
 	return fmt.Sprintf("/auth/%s/config", path)
 }
 
-func isJwtAuthBackendPresent(client *api.Client, path string) (bool, error) {
+func getJwtAuthBackendIfPresent(client *api.Client, path string) (*api.AuthMount, error) {
 	auths, err := client.Sys().ListAuth()
 	if err != nil {
-		return false, fmt.Errorf("error reading from Vault: %s", err)
+		return nil, fmt.Errorf("error reading from Vault: %s", err)
 	}
 
 	configuredPath := path + "/"
@@ -196,11 +204,11 @@ func isJwtAuthBackendPresent(client *api.Client, path string) (bool, error) {
 	for authBackendPath, auth := range auths {
 
 		if auth.Type == jwtAuthType && authBackendPath == configuredPath {
-			return true, nil
+			return auth, nil
 		}
 	}
 
-	return false, nil
+	return nil, nil
 }
 
 func getJwtPath(d *schema.ResourceData) string {
