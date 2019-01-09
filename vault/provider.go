@@ -115,6 +115,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_gcp_secret_backend":                  gcpSecretBackendResource(),
 			"vault_cert_auth_backend_role":              certAuthBackendRoleResource(),
 			"vault_generic_secret":                      genericSecretResource(),
+			"vault_jwt_auth_backend":                    jwtAuthBackendResource(),
 			"vault_jwt_auth_backend_role":               jwtAuthBackendRoleResource(),
 			"vault_kubernetes_auth_backend_config":      kubernetesAuthBackendConfigResource(),
 			"vault_kubernetes_auth_backend_role":        kubernetesAuthBackendRoleResource(),
