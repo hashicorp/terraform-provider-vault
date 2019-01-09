@@ -74,7 +74,6 @@ func jwtAuthBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The accessor of the JWT auth backend",
 			},
-
 		},
 	}
 }
@@ -127,7 +126,7 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("unable to check auth backends in Vault for path %s: %s", path, err)
 	}
 
-	if backend == nil{
+	if backend == nil {
 		// If we fell out here then we didn't find our Auth in the list.
 		d.SetId("")
 		return nil
