@@ -13,43 +13,43 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func TestLDAPAuthBackend_basic(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-ldap-path")
+func TestLDAPAuthBackendConfig_basic(t *testing.T) {
+	backend := acctest.RandomWithPrefix("ldap")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testLDAPAuthBackendDestroy,
+		CheckDestroy: testLDAPAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_basic(path),
-				Check:  testLDAPAuthBackendCheck_attrs(path),
+				Config: testLDAPAuthBackendConfigConfig_basic(backend),
+				Check:  testLDAPAuthBackendConfigCheck_attrs(backend),
 			},
 		},
 	})
 }
 
-func testLDAPAuthBackendDestroy(s *terraform.State) error {
+func testLDAPAuthBackendConfigDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_ldap_auth_backend" {
+		if rs.Type != "vault_ldap_auth_backend_config" {
 			continue
 		}
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("error checking for ldap auth backend %q: %s", rs.Primary.ID, err)
+			return fmt.Errorf("error checking for ldap auth backend config %q: %s", rs.Primary.ID, err)
 		}
 		if secret != nil {
-			return fmt.Errorf("ldap auth backend %q still exists", rs.Primary.ID)
+			return fmt.Errorf("ldap auth backend config %q still exists", rs.Primary.ID)
 		}
 	}
 	return nil
 }
 
-func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
+func testLDAPAuthBackendConfigCheck_attrs(backend string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_ldap_auth_backend.test"]
+		resourceState := s.Modules[0].Resources["vault_ldap_auth_backend_config.test"]
 		if resourceState == nil {
 			return fmt.Errorf("resource not found in state")
 		}
@@ -59,33 +59,24 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 			return fmt.Errorf("resource has no primary instance")
 		}
 
-		endpoint := strings.Trim(path, "/")
-		if endpoint != instanceState.ID {
-			return fmt.Errorf("expected ID to be %q, got %q instead", endpoint, instanceState.ID)
-		}
-
 		client := testProvider.Meta().(*api.Client)
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {
 			return err
 		}
-		authMount := authMounts[strings.Trim(path, "/")+"/"]
+		authMount := authMounts[strings.Trim(backend, "/")+"/"]
 
 		if authMount == nil {
-			return fmt.Errorf("auth mount %s not present", path)
+			return fmt.Errorf("auth mount %s not present", backend)
 		}
 
 		if "ldap" != authMount.Type {
 			return fmt.Errorf("incorrect mount type: %s", authMount.Type)
 		}
 
-		if instanceState.Attributes["accessor"] != authMount.Accessor {
-			return fmt.Errorf("accessor in state %s does not match accessor returned from vault %s", instanceState.Attributes["accessor"], authMount.Accessor)
-		}
+		endpoint := strings.Trim(backend, "/")
 
-		configPath := "auth/" + endpoint + "/config"
-
-		resp, err := client.Logical().Read(configPath)
+		resp, err := client.Logical().Read(instanceState.ID)
 		if err != nil {
 			return err
 		}
@@ -178,11 +169,16 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 	}
 }
 
-func testLDAPAuthBackendConfig_basic(path string) string {
-
+func testLDAPAuthBackendConfigConfig_basic(backend string) string {
 	return fmt.Sprintf(`
-resource "vault_ldap_auth_backend" "test" {
-    path                   = "%s"
+	resource "vault_auth_backend" "ldap" {
+		type 				= "ldap"
+		path 				= "%s"
+		description = "example"
+	}
+
+	resource "vault_ldap_auth_backend_config" "test" {
+    backend                = "${vault_auth_backend.ldap.path}"
     url                    = "ldaps://example.org"
     starttls               = true
     tls_min_version        = "tls11"
@@ -192,8 +188,5 @@ resource "vault_ldap_auth_backend" "test" {
     bindpass               = "supersecurepassword"
     discoverdn             = false
     deny_null_bind         = true
-    description            = "example"
-}
-`, path)
-
+}`, backend)
 }

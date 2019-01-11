@@ -1,20 +1,24 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_auth_backend resource"
-sidebar_current: "docs-vault-resource-ldap-auth-backend"
+page_title: "Vault: vault_auth_backend_config resource"
+sidebar_current: "docs-vault-resource-ldap-auth-backend-config"
 description: |-
   Managing LDAP auth backends in Vault
 ---
 
-# vault\_ldap\_auth\_backend
+# vault\_ldap\_auth\_backend\_config
 
 Provides a resource for managing an [LDAP auth backend within Vault](https://www.vaultproject.io/docs/auth/ldap.html).
 
 ## Example Usage
 
 ```hcl
-resource "vault_ldap_auth_backend" "ldap" {
-    path        = "ldap"
+resource "vault_auth_backend" "ldap" {
+  type = "ldap"
+}
+
+resource "vault_ldap_auth_backend_config" "example" {
+    path        = "${vault_auth_backend.ldap.path}"
     url         = "ldaps://dc-01.example.org"
     userdn      = "OU=Users,OU=Accounts,DC=example,DC=org"
     userattr    = "sAMAccountName"
@@ -63,10 +67,6 @@ The following arguments are supported:
 
 * `groupattr` - (Optional) LDAP attribute to follow on objects returned by groupfilter
 
-* `path` - (Optional) Path to mount the LDAP auth backend under
-
-* `description` - (Optional) Description for the LDAP auth backend mount
-
 For more details on the usage of each argument consult the [Vault LDAP API documentation](https://www.vaultproject.io/api/auth/ldap/index.html).
 
 ~> **Important** Because Vault does not support reading the configured
@@ -76,6 +76,4 @@ previously stored values.
 
 ## Attributes Reference
 
-In addition to the fields above, the following attributes are exported:
-
-* `accessor` - The accessor for this auth mount.
+No additional attributes are exported by this resource.
