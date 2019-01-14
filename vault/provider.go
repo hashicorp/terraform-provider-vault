@@ -28,6 +28,12 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN", ""),
 				Description: "Token to use to authenticate to Vault.",
 			},
+			"namespace": {
+				Type:        schema.TypeString,
+				Required:    false,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
+				Description: "Namespace to optionally use within Vault.",
+			},
 			"ca_cert_file": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -187,6 +193,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
 	}
+	client.SetNamespace(d.Get("namespace").(string))
 
 	token, err := providerToken(d)
 	if err != nil {
