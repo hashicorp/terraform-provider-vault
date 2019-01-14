@@ -30,7 +30,7 @@ func Provider() terraform.ResourceProvider {
 			},
 			"namespace": {
 				Type:        schema.TypeString,
-				Required:    false,
+				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
 				Description: "Namespace to optionally use within Vault.",
 			},
