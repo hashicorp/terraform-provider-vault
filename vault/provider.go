@@ -134,6 +134,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_okta_auth_backend":                            oktaAuthBackendResource(),
 			"vault_okta_auth_backend_user":                       oktaAuthBackendUserResource(),
 			"vault_okta_auth_backend_group":                      oktaAuthBackendGroupResource(),
+			"vault_ldap_auth_backend":                            ldapAuthBackendResource(),
 			"vault_ldap_auth_backend_config":                     ldapAuthBackendConfigResource(),
 			"vault_ldap_auth_backend_user":                       ldapAuthBackendUserResource(),
 			"vault_ldap_auth_backend_group":                      ldapAuthBackendGroupResource(),

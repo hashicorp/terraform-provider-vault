@@ -22,6 +22,11 @@ BUG FIXES:
 * Fixes issue where the `role_name` on `token_auth_backend_role` would not be updated ([#279](https://github.com/terraform-providers/terraform-provider-vault/pull/279))
 * Fixes wrong response data from `gcp_auth_backend_role` ([#243](https://github.com/terraform-providers/terraform-provider-vault/pull/243))
 
+* **New Resource**: `ldap_auth_backend_config` ([#273](https://github.com/terraform-providers/terraform-provider-vault/pull/273))
+
+BACKWARDS INCOMPATIBILITIES / NOTES:
+* `ldap_auth_backend` is deprecated; use `ldap_auth_backend_config` instead.
+
 ## 1.4.1 (December 14, 2018)
 
 BUG FIXES:
