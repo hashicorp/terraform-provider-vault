@@ -29,6 +29,7 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 			"role_name": {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Description: "Name of the role.",
 			},
 			"allowed_policies": {
@@ -128,6 +129,7 @@ func tokenAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 	data["ttl"] = d.Get("ttl").(string)
 	data["max_ttl"] = d.Get("max_ttl").(string)
 	data["orphan"] = d.Get("orphan").(bool)
+	data["period"] = d.Get("period").(string)
 	data["renewable"] = d.Get("renewable").(bool)
 	data["path_suffix"] = d.Get("path_suffix").(string)
 
