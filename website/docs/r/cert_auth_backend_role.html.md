@@ -37,6 +37,16 @@ The following arguments are supported:
 
 * `allowed_names` - (Optional) Allowed subject names for authenticated client certificates
 
+* `allowed_common_names` - (Optional) Allowed the common names for authenticated client certificates
+
+* `allowed_dns_sans` - (Optional) Allowed alternative dns names for authenticated client certificates
+
+* `allowed_email_sans` - (Optional) Allowed emails for authenticated client certificates
+
+* `allowed_uri_sans` - (Optional) Allowed URIs for authenticated client certificates
+
+* `allowed_organization_units` - (Optional) Allowed organization units for authenticated client certificates
+
 * `required_exwtensions` - (Optional) TLS extensions required on client certificates
 
 * `ttl` - (Optional) Default TTL of tokens issued by the backend
@@ -48,6 +58,8 @@ The following arguments are supported:
 * `policies` - (Optional) Policies to grant on the issued token
 
 * `display_name` - (Optional) The name to display on tokens issued under this role.
+
+* `bound_cidrs` - (Optional) Restriction usage of the certificates to client IPs falling within the range of the specified CIDRs
 
 * `backend` - (Optional) Path to the mounted Cert auth backend
 
