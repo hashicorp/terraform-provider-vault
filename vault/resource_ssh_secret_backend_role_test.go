@@ -64,6 +64,44 @@ func TestAccSSHSecretBackendRole_basic(t *testing.T) {
 	})
 }
 
+func TestAccSSHSecretBackendRole_import(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test/ssh")
+	name := acctest.RandomWithPrefix("tf-test-role")
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccSSHSecretBackendRoleConfig_updated(name, backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "name", name),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "backend", backend),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_bare_domains", "true"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_host_certificates", "true"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_subdomains", "true"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_user_certificates", "false"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_user_key_ids", "true"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_critical_options", "foo,bar"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_domains", "example.com,foo.com"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_extensions", "ext1,ext2"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_users", "usr1,usr2"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user", "usr"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_id_format", "{{role_name}}-test"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_type", "ca"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "max_ttl", "86400"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "ttl", "43200"),
+				),
+			},
+			{
+				ResourceName:      "vault_ssh_secret_backend_role.test_role",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func testAccSSHSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
