@@ -50,6 +50,7 @@ func TestAccTokenAuthBackendRole(t *testing.T) {
 
 func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
+	roleUpdated := acctest.RandomWithPrefix("test-role-updated")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -64,6 +65,23 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 				Config: testAccTokenAuthBackendRoleConfigUpdate(role),
 				Check: resource.ComposeTestCheckFunc(
 					testAccTokenAuthBackendRoleCheck_attrs(role),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "role_name", role),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.0", "dev"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.1", "test"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.0", "default"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "orphan", "true"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "period", "86400"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "renewable", "true"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "explicit_max_ttl", "115200"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "path_suffix", "parth-suffix"),
+				),
+			},
+			{
+				Config: testAccTokenAuthBackendRoleConfigUpdate(roleUpdated),
+				Check: resource.ComposeTestCheckFunc(
+					testAccTokenAuthBackendRoleCheck_attrs(roleUpdated),
+					testAccTokenAuthBackendRoleCheck_deleted(role),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "role_name", roleUpdated),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.0", "dev"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.1", "test"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.0", "default"),
@@ -94,6 +112,27 @@ func testAccCheckTokenAuthBackendRoleDestroy(s *terraform.State) error {
 		}
 	}
 	return nil
+}
+
+func testAccTokenAuthBackendRoleCheck_deleted(role string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		endpoint := "auth/token/roles"
+		client := testProvider.Meta().(*api.Client)
+
+		resp, err := client.Logical().List(endpoint)
+
+		if err != nil {
+			return fmt.Errorf("%q returned unexpectedly", endpoint)
+		}
+
+		apiData := resp.Data["keys"].([]interface{})
+		for _, r := range apiData {
+			if r == role {
+				return fmt.Errorf("%q still exists, extected to be deleted", role)
+			}
+		}
+		return nil
+	}
 }
 
 func testAccTokenAuthBackendRoleCheck_attrs(role string) resource.TestCheckFunc {
