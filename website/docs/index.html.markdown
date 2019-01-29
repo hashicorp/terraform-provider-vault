@@ -118,6 +118,9 @@ variables in order to keep credential information out of the configuration.
   See the section above on *Using Vault credentials in Terraform configuration*
   for the implications of this setting.
 
+* `namespace` - (Optional) Set the namespace to use. May be set via the
+  `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
+
 The `client_auth` configuration block accepts the following arguments:
 
 * `cert_file` - (Required) Path to a file on local disk that contains the
