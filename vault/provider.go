@@ -79,6 +79,12 @@ func Provider() terraform.ResourceProvider {
 
 				Description: "Maximum TTL for secret leases requested by this provider",
 			},
+			"namespace": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
+				Description: "The namespace to use. Available only for Vault Enterprise",
+			},
 		},
 
 		ConfigureFunc: providerConfigure,
@@ -125,6 +131,8 @@ func Provider() terraform.ResourceProvider {
 			"vault_ldap_auth_backend_user":              ldapAuthBackendUserResource(),
 			"vault_ldap_auth_backend_group":             ldapAuthBackendGroupResource(),
 			"vault_policy":                              policyResource(),
+      "vault_egp_policy":                          egpPolicyResource(),
+			"vault_rgp_policy":                          rgpPolicyResource(),
 			"vault_mount":                               mountResource(),
 			"vault_audit":                               auditResource(),
 			"vault_ssh_secret_backend_ca":               sshSecretBackendCAResource(),
@@ -134,6 +142,15 @@ func Provider() terraform.ResourceProvider {
 			"vault_identity_group_alias":                identityGroupAliasResource(),
 			"vault_rabbitmq_secret_backend":             rabbitmqSecretBackendResource(),
 			"vault_rabbitmq_secret_backend_role":        rabbitmqSecretBackendRoleResource(),
+      "vault_pki_secret_backend":                           pkiSecretBackendResource(),
+			"vault_pki_secret_backend_cert":                      pkiSecretBackendCertResource(),
+			"vault_pki_secret_backend_config_ca":                 pkiSecretBackendConfigCAResource(),
+			"vault_pki_secret_backend_intermediate_cert_request": pkiSecretBackendIntermediateCertRequestResource(),
+			"vault_pki_secret_backend_intermediate_set_signed":   pkiSecretBackendIntermediateSetSignedResource(),
+			"vault_pki_secret_backend_role":                      pkiSecretBackendRoleResource(),
+			"vault_pki_secret_backend_root_cert":                 pkiSecretBackendRootCertResource(),
+			"vault_pki_secret_backend_root_sign_intermediate":    pkiSecretBackendRootSignIntermediateResource(),
+			"vault_pki_secret_backend_sign":                      pkiSecretBackendSignResource(),
 		},
 	}
 }
@@ -196,6 +213,11 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 	if token == "" {
 		return nil, errors.New("no vault token found")
+	}
+
+	namespace := d.Get("namespace").(string)
+	if namespace != "" {
+		client.SetNamespace(namespace)
 	}
 
 	// In order to enforce our relatively-short lease TTL, we derive a
