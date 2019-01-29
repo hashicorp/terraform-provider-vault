@@ -24,7 +24,7 @@ resource "vault_identity_entity" "test" {
   name      = "tester1"
   policies  = ["test"]
   metadata  = {
-    org = "foo"
+    foo = "bar"
   }
 }
 ```
