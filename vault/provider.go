@@ -79,6 +79,12 @@ func Provider() terraform.ResourceProvider {
 
 				Description: "Maximum TTL for secret leases requested by this provider",
 			},
+			"namespace": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
+				Description: "The namespace to use. Available only for Vault Enterprise",
+			},
 		},
 
 		ConfigureFunc: providerConfigure,
@@ -228,6 +234,11 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	policies := childTokenLease.Auth.Policies
 
 	log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
+
+	namespace := d.Get("namespace").(string)
+	if namespace != "" {
+		client.SetNamespace(namespace)
+	}
 
 	client.SetToken(childToken)
 
