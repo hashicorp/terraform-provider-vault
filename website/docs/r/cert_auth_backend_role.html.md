@@ -19,6 +19,8 @@ resource "vault_auth_backend" "cert" {
 }
 
 resource "vault_cert_auth_backend_role" "cert" {
+    name          = "foo"
+    certificate   = "${file("/path/to/certs/ca-cert.pem")}"
     backend       = "${vault_auth_backend.cert.path}"
     allowed_names = ["foo.example.org", "baz.example.org"]
     ttl           = 300
