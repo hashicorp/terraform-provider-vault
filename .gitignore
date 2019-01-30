@@ -23,9 +23,13 @@ website/node_modules
 *.iml
 *.test
 *.iml
+.vscode
 
 website/vendor
 
 # Test exclusions
 !command/test-fixtures/**/*.tfstate
 !command/test-fixtures/**/.terraform/
+
+# Binary
+terraform-provider-vault
