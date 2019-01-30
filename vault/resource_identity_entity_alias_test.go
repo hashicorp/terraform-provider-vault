@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccIdentityEntityAlias(t *testing.T) {
-	name := acctest.RandomWithPrefix("my-entity")
+	entity := acctest.RandomWithPrefix("my-entity")
 
 	nameEntity := "vault_identity_entity.entity"
 	nameEntityAlias := "vault_identity_entity_alias.entity-alias"
@@ -23,44 +23,11 @@ func TestAccIdentityEntityAlias(t *testing.T) {
 		CheckDestroy: testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityEntityAliasConfig(name),
+				Config: testAccIdentityEntityAliasConfig(entity),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(nameEntityAlias, "name", name),
+					resource.TestCheckResourceAttr(nameEntityAlias, "name", entity),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntity, "id"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubA, "accessor"),
-				),
-			},
-		},
-	})
-}
-
-func TestAccIdentityEntityAliasUpdate(t *testing.T) {
-	name := acctest.RandomWithPrefix("my-entity")
-
-	nameEntity := "vault_identity_entity.entity"
-	nameEntityAlias := "vault_identity_entity_alias.entity-alias"
-	nameGithubA := "vault_auth_backend.githubA"
-	nameGithubB := "vault_auth_backend.githubB"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityAliasDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccIdentityEntityAliasConfig(name),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(nameEntityAlias, "name", name),
-					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntity, "id"),
-					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubA, "accessor"),
-				),
-			},
-			{
-				Config: testAccIdentityEntityAliasConfigUpdate(name),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(nameEntityAlias, "name", name),
-					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntity, "id"),
-					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubB, "accessor"),
 				),
 			},
 		},
@@ -85,10 +52,10 @@ func testAccCheckIdentityEntityAliasDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccIdentityEntityAliasConfig(name string) string {
+func testAccIdentityEntityAliasConfig(entityName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "entity" {
-  name     = "%s"
+  name = "%s"
   policies = ["test"]
 }
 
@@ -103,32 +70,8 @@ resource "vault_auth_backend" "githubB" {
 }
 
 resource "vault_identity_entity_alias" "entity-alias" {
-  name           = "%s"
+  name = "%s"
   mount_accessor = "${vault_auth_backend.githubA.accessor}"
-  canonical_id   = "${vault_identity_entity.entity.id}"
-}`, name, name, name, name)
-}
-
-func testAccIdentityEntityAliasConfigUpdate(name string) string {
-	return fmt.Sprintf(`
-resource "vault_identity_entity" "entity" {
-  name     = "%s"
-  policies = ["test"]
-}
-
-resource "vault_auth_backend" "githubA" {
-  type = "github"
-  path = "githubA-%s"
-}
-
-resource "vault_auth_backend" "githubB" {
-  type = "github"
-  path = "githubB-%s"
-}
-
-resource "vault_identity_entity_alias" "entity-alias" {
-  name           = "%s"
-  mount_accessor = "${vault_auth_backend.githubB.accessor}"
-  canonical_id   = "${vault_identity_entity.entity.id}"
-}`, name, name, name, name)
+  canonical_id = "${vault_identity_entity.entity.id}"
+}`, entityName, entityName, entityName, entityName)
 }

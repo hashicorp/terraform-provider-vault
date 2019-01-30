@@ -23,14 +23,14 @@ func identityEntityResource() *schema.Resource {
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Name of the Entity.",
+				Description: "Name of the entity.",
 				ForceNew:    true,
 			},
 
 			"metadata": {
 				Type:        schema.TypeMap,
 				Optional:    true,
-				Description: "Metadata to be associated with the Entity.",
+				Description: "Metadata to be associated with the entity.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -42,26 +42,29 @@ func identityEntityResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "Policies to be tied to the Entity.",
+				Description: "Policies to be tied to the entity.",
 			},
 
 			"disabled": {
-				Type:        schema.TypeBool,
+				Type:        schema.TypeString,
 				Optional:    true,
-				Default:     false,
-				Description: "Whether the entity is disabled.",
+				Description: "Whether the entity is disabled. Disabled entities' associated tokens cannot be used, but are not revoked.",
 			},
 
 			"id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the Entity.",
+				Description: "ID of the entity.",
 			},
 		},
 	}
 }
 
 func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
+	if name, ok := d.GetOk("name"); ok {
+		data["name"] = name
+	}
+
 	if policies, ok := d.GetOk("policies"); ok {
 		data["policies"] = policies
 	}
@@ -80,7 +83,7 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 
 	name := d.Get("name").(string)
 
-	path := identityEntityNamePath(name)
+	path := identityEntityPath
 
 	data := map[string]interface{}{
 		"name": name,
@@ -136,7 +139,7 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 		if util.IsExpiredTokenErr(err) {
 			return nil
 		}
-		return fmt.Errorf("error reading IdentityEntity Id %q: %s", id, err)
+		return fmt.Errorf("error reading AppRole auth backend role SecretID %q: %s", id, err)
 	}
 	log.Printf("[DEBUG] Read IdentityEntity %s", id)
 	if resp == nil {
@@ -145,7 +148,7 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"name", "metadata"} {
+	for _, k := range []string{"name", "metadata", "disabled", "policies"} {
 		d.Set(k, resp.Data[k])
 	}
 	return nil
@@ -157,7 +160,7 @@ func identityEntityDelete(d *schema.ResourceData, meta interface{}) error {
 
 	path := identityEntityIDPath(id)
 
-	log.Printf("[DEBUG] Deleting IdentityEntity %q", id)
+	log.Printf("[DEBUG] Deleting IdentityEntitty %q", id)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
 		return fmt.Errorf("error IdentityEntity %q", id)

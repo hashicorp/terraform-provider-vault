@@ -35,7 +35,7 @@ func identityEntityAliasResource() *schema.Resource {
 			"canonical_id": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "ID of the entity to which this is an alias.uType of the entity, internal or external. Defaults to internal.",
+				Description: "ID of the entity to which this is an alias.",
 			},
 
 			"id": {
@@ -65,9 +65,9 @@ func identityEntityAliasCreate(d *schema.ResourceData, meta interface{}) error {
 	resp, err := client.Logical().Write(path, data)
 
 	if err != nil {
-		return fmt.Errorf("error writing identityEntityAlias to %q: %s", name, err)
+		return fmt.Errorf("error writing IdentityEntityAlias to %q: %s", name, err)
 	}
-	log.Printf("[DEBUG] Wrote identityEntityAlias %q", name)
+	log.Printf("[DEBUG] Wrote IdentityEntityAlias %q", name)
 
 	d.Set("id", resp.Data["id"])
 
@@ -80,12 +80,12 @@ func identityEntityAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	log.Printf("[DEBUG] Updating identityEntityAlias %q", id)
+	log.Printf("[DEBUG] Updating IdentityEntityAlias %q", id)
 	path := identityEntityAliasIDPath(id)
 
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error updating identityEntityAlias %q: %s", id, err)
+		return fmt.Errorf("error updating IdentityEntityAlias %q: %s", id, err)
 	}
 
 	data := map[string]interface{}{
@@ -104,9 +104,9 @@ func identityEntityAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 	_, err = client.Logical().Write(path, data)
 
 	if err != nil {
-		return fmt.Errorf("error updating identityEntityAlias %q: %s", id, err)
+		return fmt.Errorf("error updating IdentityEntityAlias %q: %s", id, err)
 	}
-	log.Printf("[DEBUG] Updated identityEntityAlias %q", id)
+	log.Printf("[DEBUG] Updated IdentityEntityAlias %q", id)
 
 	return identityEntityAliasRead(d, meta)
 }
@@ -117,14 +117,14 @@ func identityEntityAliasRead(d *schema.ResourceData, meta interface{}) error {
 
 	path := identityEntityAliasIDPath(id)
 
-	log.Printf("[DEBUG] Reading identityEntityAlias %s from %q", id, path)
+	log.Printf("[DEBUG] Reading IdentityEntityAlias %s from %q", id, path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading identityEntityAlias %q: %s", id, err)
+		return fmt.Errorf("error reading IdentityEntityAlias %q: %s", id, err)
 	}
-	log.Printf("[DEBUG] Read identityEntityAlias %s", id)
+	log.Printf("[DEBUG] Read IdentityEntityAlias %s", id)
 	if resp == nil {
-		log.Printf("[WARN] identityEntityAlias %q not found, removing from state", id)
+		log.Printf("[WARN] IdentityEntityAlias %q not found, removing from state", id)
 		d.SetId("")
 		return nil
 	}
@@ -141,12 +141,12 @@ func identityEntityAliasDelete(d *schema.ResourceData, meta interface{}) error {
 
 	path := identityEntityAliasIDPath(id)
 
-	log.Printf("[DEBUG] Deleting identityEntityAlias %q", id)
+	log.Printf("[DEBUG] Deleting IdentityEntityAlias %q", id)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("error identityEntityAlias %q", id)
+		return fmt.Errorf("error IdentityEntityAlias %q", id)
 	}
-	log.Printf("[DEBUG] Deleted identityEntityAlias %q", id)
+	log.Printf("[DEBUG] Deleted IdentityEntityAlias %q", id)
 
 	return nil
 }
@@ -164,12 +164,12 @@ func identityEntityAliasExists(d *schema.ResourceData, meta interface{}) (bool, 
 		path = identityEntityAliasNamePath(key)
 	}
 
-	log.Printf("[DEBUG] Checking if identityEntityAlias %q exists", key)
+	log.Printf("[DEBUG] Checking if IdentityEntityAlias %q exists", key)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return true, fmt.Errorf("error checking if identityEntityAlias %q exists: %s", key, err)
+		return true, fmt.Errorf("error checking if IdentityEntityAlias %q exists: %s", key, err)
 	}
-	log.Printf("[DEBUG] Checked if identityEntityAlias %q exists", key)
+	log.Printf("[DEBUG] Checked if IdentityEntityAlias %q exists", key)
 
 	return resp != nil, nil
 }

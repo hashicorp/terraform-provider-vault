@@ -13,7 +13,7 @@ import (
 )
 
 func TestAccIdentityEntity(t *testing.T) {
-	name := acctest.RandomWithPrefix("test-name")
+	entity := acctest.RandomWithPrefix("test-entity")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -21,15 +21,15 @@ func TestAccIdentityEntity(t *testing.T) {
 		CheckDestroy: testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityEntityConfig(name),
-				Check:  testAccIdentityEntityCheckAttrs(name),
+				Config: testAccIdentityEntityConfig(entity),
+				Check:  testAccIdentityEntityCheckAttrs(entity),
 			},
 		},
 	})
 }
 
 func TestAccIdentityEntityUpdate(t *testing.T) {
-	name := acctest.RandomWithPrefix("test-name")
+	entity := acctest.RandomWithPrefix("test-entity")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -37,17 +37,16 @@ func TestAccIdentityEntityUpdate(t *testing.T) {
 		CheckDestroy: testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityEntityConfig(name),
-				Check:  testAccIdentityEntityCheckAttrs(name),
+				Config: testAccIdentityEntityConfig(entity),
+				Check:  testAccIdentityEntityCheckAttrs(entity),
 			},
 			{
-				Config: testAccIdentityEntityConfigUpdate(name),
+				Config: testAccIdentityEntityConfigUpdate(entity),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityEntityCheckAttrs(name),
+					testAccIdentityEntityCheckAttrs(entity),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "metadata.version", "2"),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.0", "dev"),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.1", "test"),
-					resource.TestCheckResourceAttr("vault_identity_entity.entity", "disabled", "true"),
 				),
 			},
 		},
@@ -72,7 +71,7 @@ func testAccCheckIdentityEntityDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccIdentityEntityCheckAttrs(name string) resource.TestCheckFunc {
+func testAccIdentityEntityCheckAttrs(entity string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_identity_entity.entity"]
 		if resourceState == nil {
@@ -162,6 +161,7 @@ func testAccIdentityEntityConfig(entityName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "entity" {
   name = "%s"
+  policies = ["test"]
   metadata = {
     version = "1"
   }
@@ -172,7 +172,6 @@ func testAccIdentityEntityConfigUpdate(entityName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "entity" {
   name = "%s"
-  disabled = true
   policies = ["dev", "test"]
   metadata = {
     version = "2"
