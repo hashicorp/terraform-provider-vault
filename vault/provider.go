@@ -220,7 +220,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if token == "" {
 		return nil, errors.New("no vault token found")
 	}
-	
+
 	namespace := d.Get("namespace").(string)
 	if namespace != "" {
 		client.SetNamespace(namespace)
