@@ -2,7 +2,7 @@ version: "2.2"
 
 services:
   vault:
-    image: vault:0.11.5
+    image: vault:0.11.1
     cap_add:
     - "IPC_LOCK"
     ports:
