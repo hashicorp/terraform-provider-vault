@@ -106,12 +106,12 @@ func testGCPAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckF
 		}
 
 		attrs := map[string]string{
-			"type":                   "role_type",
-			"project_id":             "project_id",
+			"type":                   "type",
 			"ttl":                    "ttl",
 			"max_ttl":                "max_ttl",
 			"period":                 "period",
 			"policies":               "policies",
+			"bound_projects":         "bound_projects",
 			"bound_service_accounts": "bound_service_accounts",
 			"bound_regions":          "bound_regions",
 			"bound_zones":            "bound_zones",
@@ -196,19 +196,19 @@ func testGCPAuthBackendRoleConfig_basic(backend, name, serviceAccount, projectId
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "gcp" {
-    path = "%s"
-    type = "gcp"
+	path = "%s"
+	type = "gcp"
 }
 
 resource "vault_gcp_auth_backend_role" "test" {
-    backend                = "${vault_auth_backend.gcp.path}"
-    role                   = "%s"
-    type                   = "iam"
-    bound_service_accounts = ["%s"]
-    project_id             = "%s"
-    ttl                    = 300
-    max_ttl                = 600
-    policies               = ["policy_a", "policy_b"]
+	backend                = "${vault_auth_backend.gcp.path}"
+	role                   = "%s"
+	type                   = "iam"
+	bound_service_accounts = ["%s"]
+	bound_projects         = ["%s"]
+	ttl                    = 300
+	max_ttl                = 600
+	policies               = ["policy_a", "policy_b"]
 }
 `, backend, name, serviceAccount, projectId)
 
@@ -219,21 +219,21 @@ func testGCPAuthBackendRoleConfig_gce(backend, name, projectId string) string {
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "gcp" {
-    path = "%s"
-    type = "gcp"
+	path = "%s"
+	type = "gcp"
 }
 
 resource "vault_gcp_auth_backend_role" "test" {
-    backend                = "${vault_auth_backend.gcp.path}"
-    role                   = "%s"
-    type                   = "gce"
-    project_id             = "%s"
-    ttl                    = 300
-    max_ttl                = 600
-		policies               = ["policy_a", "policy_b"]
-		bound_regions					 = ["eu-west2"]
-		bound_zones  					 = ["europe-west2-c"]
-		bound_labels					 = ["foo"]
+	backend        = "${vault_auth_backend.gcp.path}"
+	role           = "%s"
+	type           = "gce"
+	bound_projects = ["%s"]
+	ttl            = 300
+	max_ttl        = 600
+	policies       = ["policy_a", "policy_b"]
+	bound_regions  = ["eu-west2"]
+	bound_zones    = ["europe-west2-c"]
+	bound_labels   = ["foo"]
 }
 `, backend, name, projectId)
 

@@ -30,25 +30,20 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"project_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
 			"ttl": {
 				Type:     schema.TypeString,
 				Optional: true,
-				Computed: true,
+				Computed: false,
 			},
 			"max_ttl": {
 				Type:     schema.TypeString,
 				Optional: true,
-				Computed: true,
+				Computed: false,
 			},
 			"period": {
 				Type:     schema.TypeString,
 				Optional: true,
-				Computed: true,
+				Computed: false,
 			},
 			"policies": {
 				Type: schema.TypeSet,
@@ -56,7 +51,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Optional: true,
-				Computed: true,
+				Computed: false,
 			},
 			"bound_service_accounts": {
 				Type: schema.TypeSet,
@@ -66,13 +61,21 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"bound_projects": {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional: true,
+				Computed: false,
+			},
 			"bound_zones": {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 				Optional: true,
-				Computed: true,
+				Computed: false,
 			},
 			"bound_regions": {
 				Type: schema.TypeSet,
@@ -80,7 +83,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Optional: true,
-				Computed: true,
+				Computed: false,
 			},
 			"bound_instance_groups": {
 				Type: schema.TypeSet,
@@ -88,7 +91,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Optional: true,
-				Computed: true,
+				Computed: false,
 			},
 			"bound_labels": {
 				Type: schema.TypeSet,
@@ -96,7 +99,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Optional: true,
-				Computed: true,
+				Computed: false,
 			},
 			"backend": {
 				Type:     schema.TypeString,
@@ -129,10 +132,6 @@ func gcpAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 		data["type"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("project_id"); ok {
-		data["project_id"] = v.(string)
-	}
-
 	if v, ok := d.GetOk("ttl"); ok {
 		data["ttl"] = v.(string)
 	}
@@ -151,6 +150,10 @@ func gcpAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("bound_service_accounts"); ok {
 		data["bound_service_accounts"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("bound_projects"); ok {
+		data["bound_projects"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("bound_zones"); ok {
@@ -205,6 +208,10 @@ func gcpAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("bound_service_accounts"); ok {
 		data["bound_service_accounts"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("bound_projects"); ok {
+		data["bound_projects"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("bound_zones"); ok {
@@ -273,6 +280,12 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("bound_service_accounts",
 			schema.NewSet(
 				schema.HashString, accounts.([]interface{})))
+	}
+
+	if projects, ok := resp.Data["bound_projects"]; ok {
+		d.Set("bound_projects",
+			schema.NewSet(
+				schema.HashString, projects.([]interface{})))
 	}
 
 	if zones, ok := resp.Data["bound_zones"]; ok {
