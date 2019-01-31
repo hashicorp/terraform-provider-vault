@@ -142,14 +142,19 @@ func testCertAuthBackendCheck_attrs(backend, name string) resource.TestCheckFunc
 		}
 
 		attrs := map[string]string{
-			"name":                "display_name",
-			"allowed_names":       "allowed_names",
-			"required_extensions": "required_extensions",
-			"period":              "period",
-			"policies":            "policies",
-			"certificate":         "certificate",
-			"ttl":                 "ttl",
-			"max_ttl":             "max_ttl",
+			"name":                       "display_name",
+			"allowed_names":              "allowed_names",
+			"allowed_dns_sans":           "allowed_dns_sans",
+			"allowed_email_sans":         "allowed_email_sans",
+			"allowed_uri_sans":           "allowed_uri_sans",
+			"allowed_organization_units": "allowed_organization_units",
+			"required_extensions":        "required_extensions",
+			"period":                     "period",
+			"policies":                   "policies",
+			"certificate":                "certificate",
+			"ttl":                        "ttl",
+			"max_ttl":                    "max_ttl",
+			"bound_cidrs":                "bound_cidrs",
 		}
 
 		for stateAttr, apiAttr := range attrs {
