@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_kubernetes_auth_backend_config resource"
-sidebar_current: "docs-vault-kubernetes-auth-backend-config"
+sidebar_current: "docs-vault-resource-kubernetes-auth-backend-config"
 description: |-
   Manages Kubernetes auth backend configs in Vault.
 ---
