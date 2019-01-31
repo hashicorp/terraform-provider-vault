@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_approle_auth_backend_login resource"
-sidebar_current: "docs-vault-approle-auth-backend-login"
+sidebar_current: "docs-vault-resource-approle-auth-backend-login"
 description: |-
   Log into Vault using the AppRole auth backend.
 ---
