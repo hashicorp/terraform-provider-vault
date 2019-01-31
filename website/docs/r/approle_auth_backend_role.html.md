@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_approle_auth_backend_role resource"
-sidebar_current: "docs-vault-approle-auth-backend-role"
+sidebar_current: "docs-vault-resource-approle-auth-backend-role"
 description: |-
   Manages AppRole auth backend roles in Vault.
 ---
