@@ -6,7 +6,7 @@ description: |-
   Creates an Identity Entity Alias for Vault.
 ---
 
-# vault\_consul\_secret\_backend
+# vault\_identity\_entity\_alias
 
 Creates an Identity Entity Alias for Vault. 
 

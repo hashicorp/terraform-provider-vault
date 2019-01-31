@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_jwt_auth_backend_role resource"
-sidebar_current: "docs-vault-jwt-auth-backend-role"
+sidebar_current: "docs-vault-resource-jwt-auth-backend-role"
 description: |-
   Manages JWT auth backend roles in Vault.
 ---
@@ -15,12 +15,12 @@ information.
 ## Example Usage
 
 ```hcl
-resource "vault_auth_backend" "jwt" {
-  type = "jwt"
+resource "vault_jwt_auth_backend" "jwt" {
+  path = "jwt"
 }
 
 resource "vault_jwt_auth_backend_role" "example" {
-  backend   = "${vault_auth_backend.jwt.path}"
+  backend   = "${vault_jwt_auth_backend.jwt.path}"
   role_name = "test-role"
   policies  = ["default", "dev", "prod"]
 

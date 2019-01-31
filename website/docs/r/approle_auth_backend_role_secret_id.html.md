@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_approle_auth_backend_role_secret_id resource"
-sidebar_current: "docs-vault-approle-auth-backend-role-secret-id"
+sidebar_current: "docs-vault-resource-approle-auth-backend-role-secret-id"
 description: |-
   Manages AppRole auth backend role SecretIDs in Vault.
 ---

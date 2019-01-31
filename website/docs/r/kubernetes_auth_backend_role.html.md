@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_kubernetes_auth_backend_role resource"
-sidebar_current: "docs-vault-kubernetes-auth-backend-role"
+sidebar_current: "docs-vault-resource-kubernetes-auth-backend-role"
 description: |-
   Manages Kubernetes auth backend roles in Vault.
 ---

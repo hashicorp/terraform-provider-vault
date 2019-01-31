@@ -6,7 +6,7 @@ description: |-
   Sign a new certificate based on the CSR by the PKI.
 ---
 
-# vault\_pki\_secret\_backend\_certificate
+# vault\_pki\_secret\_backend\_sign
 
 Signs a new certificate based upon the provided CSR and the supplied parameters by the PKI Secret Backend.
 

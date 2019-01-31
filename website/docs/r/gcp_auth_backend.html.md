@@ -6,7 +6,7 @@ description: |-
   Managing roles in an GCP auth backend in Vault
 ---
 
-# vault\_gcp\_auth\_backend\
+# vault\_gcp\_auth\_backend
 
 Provides a resource to configure the [GCP auth backend within Vault](https://www.vaultproject.io/docs/auth/gcp.html).
 
