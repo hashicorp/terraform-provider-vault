@@ -6,7 +6,7 @@ description: |-
   Creates an Identity Entity for Vault.
 ---
 
-# vault\_consul\_secret\_backend
+# vault\_identity\_entity
 
 Creates an Identity Entity for Vault. The Identity secrets engine is the identity management solution for Vault. It internally maintains the clients who are recognized by Vault.
 
