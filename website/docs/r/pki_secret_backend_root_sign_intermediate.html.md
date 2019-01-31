@@ -1,12 +1,12 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_pki_secret_backend_cert resource"
-sidebar_current: "docs-vault-resource-pki-secret-backend_cert"
+page_title: "Vault: pki_secret_backend_root_sign_intermediate resource"
+sidebar_current: "docs-vault-resource-pki-secret-backend-root-sign-intermediate"
 description: |-
-  Creates an PKI certificate.
+  Signs intermediate certificate.
 ---
 
-# vault\_pki\_secret\_backend\_certificate
+# vault\_pki\_secret\_backend\_root\_sign\_intermediate
 
 Creates an PKI certificate.
 
