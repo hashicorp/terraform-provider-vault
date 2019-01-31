@@ -1,4 +1,21 @@
-## 1.4.2 (Unreleased)
+## 1.5.1 (Unreleased)
+## 1.5.0 (January 30, 2019)
+
+FEATURES:
+
+* Adds support for namespaces ([#262](https://github.com/terraform-providers/terraform-provider-vault/pull/262/files))
+* Adds support for EGP and RGP, a.k.a. Sentinel ([#264](https://github.com/terraform-providers/terraform-provider-vault/pull/264))
+* **New Resource**: Supports the PKI secrets backend ([#158](https://github.com/terraform-providers/terraform-provider-vault/pull/158))
+* **New Resource**: Supports identity entities and entity aliases ([#247](https://github.com/terraform-providers/terraform-provider-vault/pull/247) and [#287](https://github.com/terraform-providers/terraform-provider-vault/pull/287))
+* **New Resource**: Supports Github auth backend ([#255](https://github.com/terraform-providers/terraform-provider-vault/pull/255))
+* **New Resource**: Supports Azure auth backend ([#275](https://github.com/terraform-providers/terraform-provider-vault/pull/275))
+* **New Resource**: Supports JWT auth backend ([#272](https://github.com/terraform-providers/terraform-provider-vault/pull/272))
+
+BUG FIXES:
+
+* Fixes a panic related to `max_connection_lifetime` parameters in the database secrets backends ([#250](https://github.com/terraform-providers/terraform-provider-vault/pull/250))
+* Fixes issue where the `role_name` on `token_auth_backend_role` would not be updated ([#279](https://github.com/terraform-providers/terraform-provider-vault/pull/279))
+* Fixes wrong response data from `gcp_auth_backend_role` ([#243](https://github.com/terraform-providers/terraform-provider-vault/pull/243))
 
 ## 1.4.1 (December 14, 2018)
 

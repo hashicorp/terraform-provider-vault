@@ -5,7 +5,7 @@ services:
 go_import_path: github.com/terraform-providers/terraform-provider-vault
 language: go
 go:
-- 1.11
+  - "1.11.x"
 install:
 - bash scripts/gogetcookie.sh
 - go get github.com/kardianos/govendor

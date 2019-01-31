@@ -38,6 +38,46 @@ func certAuthBackendRoleResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"allowed_common_names": {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional: true,
+				Computed: true,
+			},
+			"allowed_dns_sans": {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional: true,
+				Computed: true,
+			},
+			"allowed_email_sans": {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional: true,
+				Computed: true,
+			},
+			"allowed_uri_sans": {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional: true,
+				Computed: true,
+			},
+			"allowed_organization_units": {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional: true,
+				Computed: true,
+			},
 			"required_extensions": {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
@@ -83,6 +123,14 @@ func certAuthBackendRoleResource() *schema.Resource {
 					return strings.Trim(v.(string), "/")
 				},
 			},
+			"bound_cidrs": {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional: true,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -104,6 +152,22 @@ func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("allowed_names"); ok {
 		data["allowed_names"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("allowed_common_names"); ok {
+		data["allowed_common_names"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("allowed_dns_sans"); ok {
+		data["allowed_dns_sans"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("allowed_uri_sans"); ok {
+		data["allowed_uri_sans"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("allowed_organization_units"); ok {
+		data["allowed_organization_units"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("required_extensions"); ok {
@@ -128,6 +192,10 @@ func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("display_name"); ok {
 		data["display_name"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("bound_cidrs"); ok {
+		data["bound_cidrs"] = v.(*schema.Set).List()
 	}
 
 	log.Printf("[DEBUG] Writing %q to cert auth backend", path)
@@ -154,6 +222,22 @@ func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["allowed_names"] = v.(*schema.Set).List()
 	}
 
+	if v, ok := d.GetOk("allowed_common_names"); ok {
+		data["allowed_common_names"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("allowed_dns_sans"); ok {
+		data["allowed_dns_sans"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("allowed_uri_sans"); ok {
+		data["allowed_uri_sans"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("allowed_organization_units"); ok {
+		data["allowed_organization_units"] = v.(*schema.Set).List()
+	}
+
 	if v, ok := d.GetOk("required_extensions"); ok {
 		data["required_extensions"] = v.(*schema.Set).List()
 	}
@@ -176,6 +260,10 @@ func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("display_name"); ok {
 		data["display_name"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("bound_cidrs"); ok {
+		data["bound_cidrs"] = v.(*schema.Set).List()
 	}
 
 	log.Printf("[DEBUG] Updating %q in cert auth backend", path)
@@ -223,6 +311,50 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Vault sometimes returns these as null instead of an empty list.
+	if resp.Data["allowed_dns_sans"] != nil {
+		d.Set("allowed_dns_sans",
+			schema.NewSet(
+				schema.HashString, resp.Data["allowed_dns_sans"].([]interface{})))
+	} else {
+		d.Set("allowed_dns_sans",
+			schema.NewSet(
+				schema.HashString, []interface{}{}))
+	}
+
+	// Vault sometimes returns these as null instead of an empty list.
+	if resp.Data["allowed_email_sans"] != nil {
+		d.Set("allowed_email_sans",
+			schema.NewSet(
+				schema.HashString, resp.Data["allowed_email_sans"].([]interface{})))
+	} else {
+		d.Set("allowed_email_sans",
+			schema.NewSet(
+				schema.HashString, []interface{}{}))
+	}
+
+	// Vault sometimes returns these as null instead of an empty list.
+	if resp.Data["allowed_uri_sans"] != nil {
+		d.Set("allowed_uri_sans",
+			schema.NewSet(
+				schema.HashString, resp.Data["allowed_uri_sans"].([]interface{})))
+	} else {
+		d.Set("allowed_uri_sans",
+			schema.NewSet(
+				schema.HashString, []interface{}{}))
+	}
+
+	// Vault sometimes returns these as null instead of an empty list.
+	if resp.Data["allowed_organization_units"] != nil {
+		d.Set("allowed_organization_units",
+			schema.NewSet(
+				schema.HashString, resp.Data["allowed_organization_units"].([]interface{})))
+	} else {
+		d.Set("allowed_organization_units",
+			schema.NewSet(
+				schema.HashString, []interface{}{}))
+	}
+
+	// Vault sometimes returns these as null instead of an empty list.
 	if resp.Data["policies"] != nil {
 		d.Set("policies",
 			schema.NewSet(
@@ -240,6 +372,17 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 				schema.HashString, resp.Data["required_extensions"].([]interface{})))
 	} else {
 		d.Set("required_extensions",
+			schema.NewSet(
+				schema.HashString, []interface{}{}))
+	}
+
+	// Vault sometimes returns these as null instead of an empty list.
+	if resp.Data["bound_cidrs"] != nil {
+		d.Set("bound_cidrs",
+			schema.NewSet(
+				schema.HashString, resp.Data["bound_cidrs"].([]interface{})))
+	} else {
+		d.Set("bound_cidrs",
 			schema.NewSet(
 				schema.HashString, []interface{}{}))
 	}
