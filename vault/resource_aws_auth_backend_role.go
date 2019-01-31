@@ -379,7 +379,7 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 		if v, ok := d.GetOk("inferred_aws_region"); ok {
 			data["inferred_aws_region"] = v.(string)
 		}
-		if v, ok := d.GetOk("resolve_aws_unique_ids"); ok {
+		if v, ok := d.GetOkExists("resolve_aws_unique_ids"); ok {
 			data["resolve_aws_unique_ids"] = v.(bool)
 		}
 	}
@@ -617,7 +617,7 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 			data["inferred_aws_region"] = v.(string)
 		}
 
-		if v, ok := d.GetOk("resolve_aws_unique_ids"); ok {
+		if v, ok := d.GetOkExists("resolve_aws_unique_ids"); ok {
 			data["resolve_aws_unique_ids"] = v.(bool)
 		}
 	}

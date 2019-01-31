@@ -131,6 +131,23 @@ func TestAccAWSAuthBackendRole_iam(t *testing.T) {
 	})
 }
 
+func TestAccAWSAuthBackendRole_iam_resolve_aws_unique_ids(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	role := acctest.RandomWithPrefix("test-role")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendRoleConfig_iam_resolve_aws_unique_ids(backend, role),
+				Check:  testAccAWSAuthBackendRoleCheck_attrs(backend, role),
+			},
+		},
+	})
+}
+
 func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
@@ -353,6 +370,24 @@ resource "vault_aws_auth_backend_role" "role" {
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/*"]
   resolve_aws_unique_ids = true
+  ttl = 60
+  max_ttl = 120
+  policies = ["default", "dev", "prod"]
+}`, backend, role)
+}
+
+func testAccAWSAuthBackendRoleConfig_iam_resolve_aws_unique_ids(backend, role string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+}
+resource "vault_aws_auth_backend_role" "role" {
+  backend = "${vault_auth_backend.aws.path}"
+  role = "%s"
+  auth_type = "iam"
+  bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/*"]
+  resolve_aws_unique_ids = false
   ttl = 60
   max_ttl = 120
   policies = ["default", "dev", "prod"]
