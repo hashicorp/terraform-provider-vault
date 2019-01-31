@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_jwt_auth_backend_role resource"
-sidebar_current: "docs-vault-jwt-auth-backend-role"
+sidebar_current: "docs-vault-resource-jwt-auth-backend-role"
 description: |-
   Manages JWT auth backend roles in Vault.
 ---
