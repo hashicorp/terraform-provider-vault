@@ -14,7 +14,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		SchemaVersion: 1,
 
-		Create: gcpAuthResourceWrite,
+		Create: gcpAuthResourceCreate,
 		Update: gcpAuthResourceUpdate,
 		Read:   gcpAuthResourceRead,
 		Delete: gcpAuthResourceDelete,
@@ -30,10 +30,21 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"bound_projects": {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional:      true,
+				ForceNew:      true,
+				ConflictsWith: []string{"project_id"},
+			},
 			"project_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+				Deprecated:    `Use "bound_projects"`,
+				ConflictsWith: []string{"bound_projects"},
 			},
 			"ttl": {
 				Type:     schema.TypeString,
@@ -115,7 +126,7 @@ func gcpRoleResourcePath(backend, role string) string {
 	return "auth/" + strings.Trim(backend, "/") + "/role/" + strings.Trim(role, "/")
 }
 
-func gcpAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
+func gcpAuthResourceCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
@@ -131,6 +142,10 @@ func gcpAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("project_id"); ok {
 		data["project_id"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("bound_projects"); ok {
+		data["bound_projects"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("ttl"); ok {
@@ -223,6 +238,14 @@ func gcpAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["bound_labels"] = v.(*schema.Set).List()
 	}
 
+	if v, ok := d.GetOk("project_id"); ok {
+		data["project_id"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("bound_projects"); ok {
+		data["bound_projects"] = v.(*schema.Set).List()
+	}
+
 	log.Printf("[DEBUG] Updating role %q in GCP auth backend", path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -252,7 +275,14 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("ttl", resp.Data["ttl"])
 	d.Set("max_ttl", resp.Data["max_ttl"])
-	d.Set("project_id", resp.Data["project_id"])
+
+	if v, ok := d.GetOk("project_id"); ok {
+		d.Set("project_id", v)
+	}
+	if v, ok := d.GetOk("bound_projects"); ok {
+		d.Set("bound_projects", v)
+	}
+
 	d.Set("period", resp.Data["period"])
 
 	// These checks are done for backwards compatibility. The 'type' key used to be
