@@ -35,7 +35,7 @@ The following arguments are supported:
 
 * `type` - (Required) Type of GCP authentication role (either `gce` or `iam`)
 
-* `project_id` - (Required) GCP Project that the role exists within
+* `project_id` - (Optional, Deprecated) GCP Project that the role exists within
 
 * `ttl` - (Optional) Default TTL of tokens issued by the backend
 
@@ -60,6 +60,8 @@ The following parameters are only valid when the role is of type `"gce"`:
 * `bound_instance_groups` - (Optional) The instance groups that an authorized instance must belong to in order to be authenticated. If specified, either `bound_zones` or `bound_regions` must be set too.
 
 * `bound_labels` - (Optional) A comma-separated list of GCP labels formatted as `"key:value"` strings that must be set on authorized GCE instances. Because GCP labels are not currently ACL'd, we recommend that this be used in conjunction with other restrictions.
+
+* `bound_projects` - (Optional) GCP Projects that the role exists within
 
 For more details on the usage of each argument consult the [Vault GCP API documentation](https://www.vaultproject.io/api/auth/gcp/index.html).
 

@@ -106,8 +106,8 @@ func testGCPAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckF
 		}
 
 		attrs := map[string]string{
-			"type":                   "role_type",
-			"project_id":             "project_id",
+			"type":                   "type",
+			"bound_projects":         "project_id",
 			"ttl":                    "ttl",
 			"max_ttl":                "max_ttl",
 			"period":                 "period",
