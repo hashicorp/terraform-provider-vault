@@ -1,4 +1,9 @@
-## 1.5.1 (Unreleased)
+## 1.6.0 (Unreleased)
+
+FEATURES:
+
+* Adds compatibility with Vault 1.0 ([#292](https://github.com/terraform-providers/terraform-provider-vault/pull/292))
+
 ## 1.5.0 (January 30, 2019)
 
 FEATURES:
