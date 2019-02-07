@@ -85,6 +85,11 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
 				Description: "The namespace to use. Available only for Vault Enterprise",
 			},
+			"token-namespace": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The namespace where the provided vault token was created, if different from the value in 'namespace'",
+			},
 		},
 
 		ConfigureFunc: providerConfigure,
@@ -221,9 +226,14 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, errors.New("no vault token found")
 	}
 
-	namespace := d.Get("namespace").(string)
-	if namespace != "" {
-		client.SetNamespace(namespace)
+	tokenNamespace := d.Get("token-namespace").(string)
+	if tokenNamespace != "" {
+		client.SetNamespace(tokenNamespace)
+	} else {
+		namespace := d.Get("namespace").(string)
+		if namespace != "" {
+			client.SetNamespace(namespace)
+		}
 	}
 
 	// In order to enforce our relatively-short lease TTL, we derive a
