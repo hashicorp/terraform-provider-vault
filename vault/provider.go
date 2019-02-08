@@ -85,6 +85,11 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
 				Description: "The namespace to use. Available only for Vault Enterprise",
 			},
+			"token_namespace": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The namespace where the provided vault token was created, if different from the value in 'namespace'",
+			},
 		},
 
 		ConfigureFunc: providerConfigure,
@@ -221,8 +226,12 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, errors.New("no vault token found")
 	}
 
+	// if 'token_namespace' provided, set client namespace to use it for child token creation, else use 'namespace'
+	tokenNamespace := d.Get("token_namespace").(string)
 	namespace := d.Get("namespace").(string)
-	if namespace != "" {
+	if tokenNamespace != "" {
+		client.SetNamespace(tokenNamespace)
+	} else {
 		client.SetNamespace(namespace)
 	}
 
@@ -257,6 +266,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
 
 	client.SetToken(childToken)
+	client.SetNamespace(namespace)
 
 	return client, nil
 }
