@@ -42,6 +42,7 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 				Description: "A service account JWT used to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API.",
 				Default:     "",
 				Optional:    true,
+				Sensitive:   true,
 			},
 			"pem_keys": {
 				Type:        schema.TypeList,
