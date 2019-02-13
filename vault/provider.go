@@ -64,8 +64,15 @@ func Provider() terraform.ResourceProvider {
 			"skip_tls_verify": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", ""),
+				Default:     false,
 				Description: "Set this to true only if the target Vault server is an insecure development instance.",
+			},
+			"skip_leased_token": {
+				Type:          schema.TypeBool,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", ""),
+				Description:   "Set this to true to skip creating a temporary leased token.",
+				ConflictsWith: []string{"max_lease_ttl_seconds"},
 			},
 			"max_lease_ttl_seconds": {
 				Type:     schema.TypeInt,
@@ -222,42 +229,48 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, errors.New("no vault token found")
 	}
 
-	// In order to enforce our relatively-short lease TTL, we derive a
-	// temporary child token that inherits all of the policies of the
-	// token we were given but expires after max_lease_ttl_seconds.
-	//
-	// The intent here is that Terraform will need to re-fetch any
-	// secrets on each run and so we limit the exposure risk of secrets
-	// that end up stored in the Terraform state, assuming that they are
-	// credentials that Vault is able to revoke.
-	//
-	// Caution is still required with state files since not all secrets
-	// can explicitly be revoked, and this limited scope won't apply to
-	// any secrets that are *written* by Terraform to Vault.
-
+	skipLeasedToken := d.Get("skip_leased_token").(bool)
 	client.SetToken(token)
-	renewable := false
-	childTokenLease, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		DisplayName:    "terraform",
-		TTL:            fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
-		ExplicitMaxTTL: fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
-		Renewable:      &renewable,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create limited child token: %s", err)
+
+	if !skipLeasedToken {
+		// In order to enforce our relatively-short lease TTL, we derive a
+		// temporary child token that inherits all of the policies of the
+		// token we were given but expires after max_lease_ttl_seconds.
+		//
+		// The intent here is that Terraform will need to re-fetch any
+		// secrets on each run and so we limit the exposure risk of secrets
+		// that end up stored in the Terraform state, assuming that they are
+		// credentials that Vault is able to revoke.
+		//
+		// Caution is still required with state files since not all secrets
+		// can explicitly be revoked, and this limited scope won't apply to
+		// any secrets that are *written* by Terraform to Vault.
+
+		renewable := false
+		childTokenLease, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			DisplayName:    "terraform",
+			TTL:            fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
+			ExplicitMaxTTL: fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
+			Renewable:      &renewable,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create limited child token: %s", err)
+		}
+
+		childToken := childTokenLease.Auth.ClientToken
+		policies := childTokenLease.Auth.Policies
+
+		log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
+
+		client.SetToken(childToken)
+	} else {
+		log.Printf("[INFO] Leased Vault token was skipped")
 	}
-
-	childToken := childTokenLease.Auth.ClientToken
-	policies := childTokenLease.Auth.Policies
-
-	log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
 
 	namespace := d.Get("namespace").(string)
 	if namespace != "" {
 		client.SetNamespace(namespace)
 	}
-
-	client.SetToken(childToken)
 
 	return client, nil
 }
