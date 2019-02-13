@@ -45,7 +45,7 @@ func identityGroupResource() *schema.Resource {
 			},
 
 			"policies": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -54,7 +54,7 @@ func identityGroupResource() *schema.Resource {
 			},
 
 			"member_group_ids": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -63,7 +63,7 @@ func identityGroupResource() *schema.Resource {
 			},
 
 			"member_entity_ids": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -82,15 +82,15 @@ func identityGroupResource() *schema.Resource {
 
 func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
 	if policies, ok := d.GetOk("policies"); ok {
-		data["policies"] = policies
+		data["policies"] = policies.(*schema.Set).List()
 	}
 
 	if memberEntityIDs, ok := d.GetOk("member_entity_ids"); ok {
-		data["member_entity_ids"] = memberEntityIDs
+		data["member_entity_ids"] = memberEntityIDs.(*schema.Set).List()
 	}
 
 	if memberGroupIDs, ok := d.GetOk("member_group_ids"); ok {
-		data["member_group_ids"] = memberGroupIDs
+		data["member_group_ids"] = memberGroupIDs.(*schema.Set).List()
 	}
 
 	if metadata, ok := d.GetOk("metadata"); ok {
