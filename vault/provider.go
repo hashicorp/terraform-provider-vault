@@ -67,13 +67,6 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", ""),
 				Description: "Set this to true only if the target Vault server is an insecure development instance.",
 			},
-			"skip_leased_token": {
-				Type:          schema.TypeBool,
-				Optional:      true,
-				Default:       false,
-				Description:   "Set this to true to skip creating a temporary leased token.",
-				ConflictsWith: []string{"max_lease_ttl_seconds"},
-			},
 			"max_lease_ttl_seconds": {
 				Type:     schema.TypeInt,
 				Optional: true,
@@ -229,10 +222,10 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, errors.New("no vault token found")
 	}
 
-	skipLeasedToken := d.Get("skip_leased_token").(bool)
+	leaseTTL := d.Get("max_lease_ttl_seconds").(int)
 	client.SetToken(token)
 
-	if !skipLeasedToken {
+	if leaseTTL > 0 {
 		// In order to enforce our relatively-short lease TTL, we derive a
 		// temporary child token that inherits all of the policies of the
 		// token we were given but expires after max_lease_ttl_seconds.
@@ -249,8 +242,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		renewable := false
 		childTokenLease, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			DisplayName:    "terraform",
-			TTL:            fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
-			ExplicitMaxTTL: fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
+			TTL:            fmt.Sprintf("%ds", leaseTTL),
+			ExplicitMaxTTL: fmt.Sprintf("%ds", leaseTTL),
 			Renewable:      &renewable,
 		})
 		if err != nil {
@@ -264,7 +257,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 		client.SetToken(childToken)
 	} else {
-		log.Printf("[INFO] Leased Vault token was skipped")
+		log.Printf("[INFO] Lease TTL set to 0 - leased Vault token was skipped")
 	}
 
 	namespace := d.Get("namespace").(string)
