@@ -111,6 +111,11 @@ variables in order to keep credential information out of the configuration.
   that Terraform can be tricked into writing secrets to a server controlled
   by an intruder. May be set via the `VAULT_SKIP_VERIFY` environment variable.
 
+* `skip_leased_token` - (Optional) Set this to `true` to disable creating a
+  leased Vault token when the provider is configured. Defaults to `false`.
+  **NOTE:** This should only be used it Vault token rotation/leasing is being
+  handled before Terraform runs.
+
 * `max_lease_ttl_seconds` - (Optional) Used as the duration for the
   intermediate Vault token Terraform issues itself, which in turn limits
   the duration of secret leases issued by Vault. Defaults to 20 minutes
