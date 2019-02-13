@@ -80,12 +80,15 @@ func identityGroupResource() *schema.Resource {
 	}
 }
 
-func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
+func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface{}) error {
 	if policies, ok := d.GetOk("policies"); ok {
 		data["policies"] = policies.(*schema.Set).List()
 	}
 
 	if memberEntityIDs, ok := d.GetOk("member_entity_ids"); ok {
+		if d.Get("type").(string) == "external" {
+			return fmt.Errorf("cannot set `member_entity_ids` on external groups")
+		}
 		data["member_entity_ids"] = memberEntityIDs.(*schema.Set).List()
 	}
 
@@ -96,6 +99,8 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 	if metadata, ok := d.GetOk("metadata"); ok {
 		data["metadata"] = metadata
 	}
+
+	return nil
 }
 
 func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
@@ -111,7 +116,9 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 		"type": typeValue,
 	}
 
-	identityGroupUpdateFields(d, data)
+	if err := identityGroupUpdateFields(d, data); err != nil {
+		return fmt.Errorf("error writing IdentityGroup to %q: %s", name, err)
+	}
 
 	resp, err := client.Logical().Write(path, data)
 
@@ -136,7 +143,9 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	data := map[string]interface{}{}
 
-	identityGroupUpdateFields(d, data)
+	if err := identityGroupUpdateFields(d, data); err != nil {
+		return fmt.Errorf("error updating IdentityGroup %q: %s", id, err)
+	}
 
 	_, err := client.Logical().Write(path, data)
 
