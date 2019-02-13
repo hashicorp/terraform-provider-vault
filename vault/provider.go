@@ -64,13 +64,13 @@ func Provider() terraform.ResourceProvider {
 			"skip_tls_verify": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     false,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", ""),
 				Description: "Set this to true only if the target Vault server is an insecure development instance.",
 			},
 			"skip_leased_token": {
 				Type:          schema.TypeBool,
 				Optional:      true,
-				DefaultFunc:   schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", ""),
+				Default:       false,
 				Description:   "Set this to true to skip creating a temporary leased token.",
 				ConflictsWith: []string{"max_lease_ttl_seconds"},
 			},
