@@ -170,7 +170,7 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"name", "type", "metadata", "member_entity_ids", "member_group_ids"} {
+	for _, k := range []string{"name", "type", "metadata", "policies", "member_entity_ids", "member_group_ids"} {
 		d.Set(k, resp.Data[k])
 	}
 	return nil
