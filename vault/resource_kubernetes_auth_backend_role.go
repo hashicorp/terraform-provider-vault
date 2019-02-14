@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
@@ -35,16 +34,22 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Name of the role.",
 			},
-			"bound_service_account_names": {
-				Type:        schema.TypeList,
+			"bound_cidrs": {
+				Type:        schema.TypeSet,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "List of service account names able to access this role. If set to \"*\" all names are allowed, both this and bound_service_account_namespaces can not be \"*\".",
+				Optional:    true,
+				Description: "List of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.",
+			},
+			"bound_service_account_names": {
+				Type:        schema.TypeSet,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Description: "List of service account names able to access this role. If set to `[\"*\"]` all names are allowed, both this and bound_service_account_namespaces can not be \"*\".",
 				Required:    true,
 			},
 			"bound_service_account_namespaces": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "List of namespaces allowed to access this role. If set to \"*\" all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
+				Description: "List of namespaces allowed to access this role. If set to `[\"*\"]` all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
 				Required:    true,
 			},
 			"ttl": {
@@ -57,13 +62,18 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 				Description: "The maximum allowed lifetime of tokens issued in seconds using this role.",
 				Optional:    true,
 			},
+			"num_uses": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "Number of times issued tokens can be used. Setting this to 0 or leaving it unset means unlimited uses.",
+			},
 			"period": {
 				Type:        schema.TypeInt,
 				Description: "If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this parameter.",
 				Optional:    true,
 			},
 			"policies": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Policies to be set on tokens issued using this role.",
 				Optional:    true,
@@ -85,6 +95,32 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 
 func kubernetesAuthBackendRolePath(backend, role string) string {
 	return "auth/" + strings.Trim(backend, "/") + "/role/" + strings.Trim(role, "/")
+}
+
+func kubernetesAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
+	if boundServiceAccountNames, ok := d.GetOk("bound_service_account_names"); ok {
+		data["bound_service_account_names"] = boundServiceAccountNames.(*schema.Set).List()
+	}
+
+	if boundServiceAccountNamespaces, ok := d.GetOk("bound_service_account_namespaces"); ok {
+		data["bound_service_account_namespaces"] = boundServiceAccountNamespaces.(*schema.Set).List()
+	}
+
+	if policies, ok := d.GetOk("policies"); ok {
+		data["policies"] = policies.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("ttl"); ok {
+		data["ttl"] = v.(int)
+	}
+
+	if v, ok := d.GetOk("max_ttl"); ok {
+		data["max_ttl"] = v.(int)
+	}
+
+	if v, ok := d.GetOk("period"); ok {
+		data["period"] = v.(int)
+	}
 }
 
 func kubernetesAuthBackendRoleNameFromPath(path string) (string, error) {
@@ -119,50 +155,8 @@ func kubernetesAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) e
 
 	log.Printf("[DEBUG] Writing Kubernetes auth backend role %q", path)
 
-	iBoundServiceAccountNames := d.Get("bound_service_account_names").([]interface{})
-	boundServiceAccountNames := make([]string, 0, len(iBoundServiceAccountNames))
-	for _, iBoundServiceAccountName := range iBoundServiceAccountNames {
-		boundServiceAccountNames = append(boundServiceAccountNames, iBoundServiceAccountName.(string))
-	}
-
-	iBoundServiceAccountNamespaces := d.Get("bound_service_account_namespaces").([]interface{})
-	boundServiceAccountNamespaces := make([]string, 0, len(iBoundServiceAccountNamespaces))
-	for _, iBoundServiceAccountNamespace := range iBoundServiceAccountNamespaces {
-		boundServiceAccountNamespaces = append(boundServiceAccountNamespaces, iBoundServiceAccountNamespace.(string))
-	}
-
 	data := map[string]interface{}{}
-
-	if len(boundServiceAccountNames) > 0 {
-		data["bound_service_account_names"] = boundServiceAccountNames
-	}
-	if len(boundServiceAccountNamespaces) > 0 {
-		data["bound_service_account_namespaces"] = boundServiceAccountNamespaces
-	}
-
-	if v, ok := d.GetOk("policies"); ok {
-		iPolicies := v.([]interface{})
-		policies := make([]string, 0, len(iPolicies))
-		for _, iPolicy := range iPolicies {
-			policies = append(policies, iPolicy.(string))
-		}
-
-		if len(policies) > 0 {
-			data["policies"] = policies
-		}
-	}
-
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(int)
-	}
-
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(int)
-	}
-
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(int)
-	}
+	kubernetesAuthBackendRoleUpdateFields(d, data)
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -203,50 +197,9 @@ func kubernetesAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 	d.Set("backend", backend)
 	d.Set("role_name", role)
 
-	iBoundServiceAccountNames := resp.Data["bound_service_account_names"].([]interface{})
-	boundServiceAccountNames := make([]string, 0, len(iBoundServiceAccountNames))
-
-	for _, iBoundServiceAccountName := range iBoundServiceAccountNames {
-		boundServiceAccountNames = append(boundServiceAccountNames, iBoundServiceAccountName.(string))
+	for _, k := range []string{"bound_cidrs", "bound_service_account_names", "bound_service_account_namespaces", "num_uses", "policies", "ttl", "max_ttl", "period"} {
+		d.Set(k, resp.Data[k])
 	}
-
-	d.Set("bound_service_account_names", boundServiceAccountNames)
-
-	iBoundServiceAccountNamespaces := resp.Data["bound_service_account_namespaces"].([]interface{})
-	boundServiceAccountNamespaces := make([]string, 0, len(iBoundServiceAccountNamespaces))
-
-	for _, iBoundServiceAccountNamespace := range iBoundServiceAccountNamespaces {
-		boundServiceAccountNamespaces = append(boundServiceAccountNamespaces, iBoundServiceAccountNamespace.(string))
-	}
-
-	d.Set("bound_service_account_namespaces", boundServiceAccountNamespaces)
-
-	iPolicies := resp.Data["policies"].([]interface{})
-	policies := make([]string, 0, len(iPolicies))
-
-	for _, iPolicy := range iPolicies {
-		policies = append(policies, iPolicy.(string))
-	}
-
-	d.Set("policies", policies)
-
-	ttl, err := resp.Data["ttl"].(json.Number).Int64()
-	if err != nil {
-		return fmt.Errorf("expected `ttl` %q to be a number, isn't", resp.Data["ttl"])
-	}
-	d.Set("ttl", ttl)
-
-	maxTTL, err := resp.Data["max_ttl"].(json.Number).Int64()
-	if err != nil {
-		return fmt.Errorf("expected `max_ttl` %q to be a number, isn't", resp.Data["max_ttl"])
-	}
-	d.Set("max_ttl", maxTTL)
-
-	period, err := resp.Data["period"].(json.Number).Int64()
-	if err != nil {
-		return fmt.Errorf("expected `period` %q to be a number, isn't", resp.Data["period"])
-	}
-	d.Set("period", period)
 
 	return nil
 }
@@ -257,41 +210,8 @@ func kubernetesAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) e
 
 	log.Printf("[DEBUG] Updating Kubernetes auth backend role %q", path)
 
-	iBoundServiceAccountNames := d.Get("bound_service_account_names").([]interface{})
-	boundServiceAccountNames := make([]string, 0, len(iBoundServiceAccountNames))
-	for _, iBoundServiceAccountName := range iBoundServiceAccountNames {
-		boundServiceAccountNames = append(boundServiceAccountNames, iBoundServiceAccountName.(string))
-	}
-
-	iBoundServiceAccountNamespaces := d.Get("bound_service_account_namespaces").([]interface{})
-	boundServiceAccountNamespaces := make([]string, 0, len(iBoundServiceAccountNamespaces))
-	for _, iBoundServiceAccountNamespace := range iBoundServiceAccountNamespaces {
-		boundServiceAccountNamespaces = append(boundServiceAccountNamespaces, iBoundServiceAccountNamespace.(string))
-	}
-
-	iPolicies := d.Get("policies").([]interface{})
-	policies := make([]string, 0, len(iPolicies))
-	for _, iPolicy := range iPolicies {
-		policies = append(policies, iPolicy.(string))
-	}
-
-	data := map[string]interface{}{
-		"bound_service_account_names":      strings.Join(boundServiceAccountNames, ","),
-		"bound_service_account_namespaces": strings.Join(boundServiceAccountNamespaces, ","),
-		"policies":                         strings.Join(policies, ","),
-	}
-
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(int)
-	}
-
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(int)
-	}
-
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(int)
-	}
+	data := map[string]interface{}{}
+	kubernetesAuthBackendRoleUpdateFields(d, data)
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
