@@ -2,8 +2,6 @@
 
 # Creating Pull Requests
 
-:+1::tada:
-
 We appreciate community pull requests and have placed this guide here to help you write a complete pull request
 in as few iterations as possible.
 
