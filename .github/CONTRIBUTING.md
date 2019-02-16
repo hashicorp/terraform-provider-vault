@@ -1,11 +1,9 @@
 # Contributing
 
-# Creating Pull Requests
-
 We appreciate community pull requests and have placed this guide here to help you write a complete pull request
 in as few iterations as possible.
 
-terraform-provider-vault is a custom provider and an extension of Terraform. As such, Terraform's guide to
+`terraform-provider-vault` is a custom provider and an extension of Terraform. As such, Terraform's guide to
 [Extending Terraform](https://www.terraform.io/docs/extend/index.html) is a fantastic tool for writing new resources. 
 It includes code samples, a guide on how to write tests using the test framework, how rename and deprecate attributes, 
 and much more.
