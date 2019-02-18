@@ -35,7 +35,9 @@ The following arguments are supported:
 
 * `type` - (Required) Type of GCP authentication role (either `gce` or `iam`)
 
-* `project_id` - (Optional, Deprecated) GCP Project that the role exists within
+* `project_id` - (Optional; Deprecated, use `bound_projects` instead) GCP Project that the role exists within
+
+* `bound_projects` - (Optional) An array of GCP project IDs. Only entities belonging to this project can authenticate under the role.
 
 * `ttl` - (Optional) Default TTL of tokens issued by the backend
 
@@ -47,9 +49,15 @@ The following arguments are supported:
 
 * `backend` - (Optional) Path to the mounted GCP auth backend
 
-* `bound_service_accounts` - (Optional) GCP Service Accounts allowed to issue tokens under this role. (Note: **Required** if role is `iam`We)
+* `bound_service_accounts` - (Optional) GCP Service Accounts allowed to issue tokens under this role. (Note: **Required** if role is `iam`)
 
-### gce-only Parameters
+### `iam`-only Parameters
+
+* `max_jwt_exp` - (Optional) The number of seconds past the time of authentication that the login param JWT must expire within. For example, if a user attempts to login with a token that expires within an hour and this is set to 15 minutes, Vault will return an error prompting the user to create a new signed JWT with a shorter `exp`. The GCE metadata tokens currently do not allow the `exp` claim to be customized.
+
+* `allow_gce_inference` - (Optional) A flag to determine if this role should allow GCE instances to authenticate by inferring service accounts from the GCE identity metadata token.
+
+### `gce`-only Parameters
 
 The following parameters are only valid when the role is of type `"gce"`:
 

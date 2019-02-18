@@ -116,6 +116,7 @@ func testGCPAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckF
 			"bound_regions":          "bound_regions",
 			"bound_zones":            "bound_zones",
 			"bound_labels":           "bound_labels",
+			"add_group_aliases":      "add_group_aliases",
 		}
 
 		for stateAttr, apiAttr := range attrs {
@@ -208,7 +209,8 @@ resource "vault_gcp_auth_backend_role" "test" {
     project_id             = "%s"
     ttl                    = 300
     max_ttl                = 600
-    policies               = ["policy_a", "policy_b"]
+	policies               = ["policy_a", "policy_b"]
+	add_group_aliases 	   = true
 }
 `, backend, name, serviceAccount, projectId)
 
