@@ -225,17 +225,11 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	d.Set("ttl", resp.Data["ttl"])
-	d.Set("max_ttl", resp.Data["max_ttl"])
-
-	if v, ok := d.GetOk("project_id"); ok {
-		d.Set("project_id", v)
+	for _, k := range []string{"ttl", "max_ttl", "project_id", "bound_projects", "period", "policies", "bound_service_accounts", "bound_zones", "bound_regions", "bound_instance_groups", "bound_labels"} {
+		if v, ok := resp.Data[k]; ok {
+			d.Set(k, v)
+		}
 	}
-	if v, ok := d.GetOk("bound_projects"); ok {
-		d.Set("bound_projects", v)
-	}
-
-	d.Set("period", resp.Data["period"])
 
 	// These checks are done for backwards compatibility. The 'type' key used to be
 	// 'role_type' and was changed to 'role' errorneously before being corrected
@@ -245,38 +239,6 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("type", v)
 	} else if v, ok := resp.Data["role"]; ok {
 		d.Set("type", v)
-	}
-
-	d.Set("policies",
-		schema.NewSet(
-			schema.HashString, resp.Data["policies"].([]interface{})))
-
-	if accounts, ok := resp.Data["bound_service_accounts"]; ok {
-		d.Set("bound_service_accounts",
-			schema.NewSet(
-				schema.HashString, accounts.([]interface{})))
-	}
-
-	if zones, ok := resp.Data["bound_zones"]; ok {
-		d.Set("bound_zones", schema.NewSet(schema.HashString, zones.([]interface{})))
-	}
-
-	if regions, ok := resp.Data["bound_regions"]; ok {
-		d.Set("bound_regions",
-			schema.NewSet(
-				schema.HashString, regions.([]interface{})))
-	}
-
-	if groups, ok := resp.Data["bound_instance_groups"]; ok {
-		d.Set("bound_instance_groups",
-			schema.NewSet(
-				schema.HashString, groups.([]interface{})))
-	}
-
-	if labels, ok := resp.Data["bound_labels"]; ok {
-		d.Set("bound_labels",
-			schema.NewSet(
-				schema.HashString, labels.([]interface{})))
 	}
 
 	return nil
