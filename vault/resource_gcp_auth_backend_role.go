@@ -126,26 +126,9 @@ func gcpRoleResourcePath(backend, role string) string {
 	return "auth/" + strings.Trim(backend, "/") + "/role/" + strings.Trim(role, "/")
 }
 
-func gcpAuthResourceCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
-	backend := d.Get("backend").(string)
-	role := d.Get("role").(string)
-
-	path := gcpRoleResourcePath(backend, role)
-
-	data := map[string]interface{}{}
-
+func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
 	if v, ok := d.GetOk("type"); ok {
 		data["type"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("project_id"); ok {
-		data["project_id"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("bound_projects"); ok {
-		data["bound_projects"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("ttl"); ok {
@@ -183,6 +166,18 @@ func gcpAuthResourceCreate(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := d.GetOk("bound_instance_labels"); ok {
 		data["bound_instance_labels"] = v.(*schema.Set).List()
 	}
+}
+
+func gcpAuthResourceCreate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+
+	backend := d.Get("backend").(string)
+	role := d.Get("role").(string)
+
+	path := gcpRoleResourcePath(backend, role)
+
+	data := map[string]interface{}{}
+	gcpRoleUpdateFields(d, data)
 
 	log.Printf("[DEBUG] Writing role %q to GCP auth backend", path)
 	d.SetId(path)
@@ -201,50 +196,7 @@ func gcpAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	data := map[string]interface{}{}
-
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("policies"); ok {
-		data["policies"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("bound_service_accounts"); ok {
-		data["bound_service_accounts"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("bound_zones"); ok {
-		data["bound_zones"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("bound_regions"); ok {
-		data["bound_regions"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("bound_instance_groups"); ok {
-		data["bound_instance_groups"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("bound_labels"); ok {
-		data["bound_labels"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("project_id"); ok {
-		data["project_id"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("bound_projects"); ok {
-		data["bound_projects"] = v.(*schema.Set).List()
-	}
+	gcpRoleUpdateFields(d, data)
 
 	log.Printf("[DEBUG] Updating role %q in GCP auth backend", path)
 	_, err := client.Logical().Write(path, data)
