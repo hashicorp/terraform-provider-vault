@@ -52,6 +52,10 @@ The following arguments are supported:
 
 * `allowed_extensions` - (Optional) Specifies a comma-separated list of extensions that certificates can have when signed.
 
+* `default_extensions` - (Optional) Specifies a map of extensions that certificates have when signed.
+
+* `default_critical_options` - (Optional) Specifies a map of critical options that certificates have when signed.
+
 * `allowed_users` - (Optional) Specifies a comma-separated list of usernames that are to be allowed, only if certain usernames are to be allowed.
 
 * `default_user` - (Optional) Specifies the default username for which a credential will be generated.

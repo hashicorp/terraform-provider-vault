@@ -31,6 +31,8 @@ func TestAccSSHSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_critical_options", ""),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_domains", ""),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_extensions", ""),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_extensions.%", "0"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_critical_options.%", "0"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_users", ""),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user", ""),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_id_format", ""),
@@ -52,6 +54,8 @@ func TestAccSSHSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_critical_options", "foo,bar"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_domains", "example.com,foo.com"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_extensions", "ext1,ext2"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_extensions.ext1", ""),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_critical_options.opt1", ""),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_users", "usr1,usr2"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user", "usr"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_id_format", "{{role_name}}-test"),
@@ -85,6 +89,8 @@ func TestAccSSHSecretBackendRole_import(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_critical_options", "foo,bar"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_domains", "example.com,foo.com"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_extensions", "ext1,ext2"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_extensions.ext1", ""),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_critical_options.opt1", ""),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_users", "usr1,usr2"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user", "usr"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_id_format", "{{role_name}}-test"),
@@ -155,6 +161,8 @@ resource "vault_ssh_secret_backend_role" "test_role" {
 	allowed_critical_options = "foo,bar"
 	allowed_domains          = "example.com,foo.com"
 	allowed_extensions       = "ext1,ext2"
+	default_extensions       = { "ext1" = "" }
+	default_critical_options = { "opt1" = "" }
 	allowed_users            = "usr1,usr2"
 	default_user             = "usr"
 	key_id_format            = "{{role_name}}-test"

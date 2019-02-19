@@ -75,6 +75,14 @@ func sshSecretBackendRoleResource() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"default_extensions": {
+				Type:     schema.TypeMap,
+				Optional: true,
+			},
+			"default_critical_options": {
+				Type:     schema.TypeMap,
+				Optional: true,
+			},
 			"allowed_users": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -132,6 +140,14 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("allowed_extensions"); ok {
 		data["allowed_extensions"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("default_extensions"); ok {
+		data["default_extensions"] = v
+	}
+
+	if v, ok := d.GetOk("default_critical_options"); ok {
+		data["default_critical_options"] = v
 	}
 
 	if v, ok := d.GetOk("allowed_users"); ok {
@@ -206,6 +222,8 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("allowed_critical_options", role.Data["allowed_critical_options"])
 	d.Set("allowed_domains", role.Data["allowed_domains"])
 	d.Set("allowed_extensions", role.Data["allowed_extensions"])
+	d.Set("default_extensions", role.Data["default_extensions"])
+	d.Set("default_critical_options", role.Data["default_critical_options"])
 	d.Set("allowed_users", role.Data["allowed_users"])
 	d.Set("default_user", role.Data["default_user"])
 	d.Set("key_id_format", role.Data["key_id_format"])
