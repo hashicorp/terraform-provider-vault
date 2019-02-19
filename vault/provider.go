@@ -95,6 +95,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_kubernetes_auth_backend_role":   kubernetesAuthBackendRoleDataSource(),
 			"vault_aws_access_credentials":         awsAccessCredentialsDataSource(),
 			"vault_generic_secret":                 genericSecretDataSource(),
+			"vault_policy_document":                policyDocumentDataSource(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
