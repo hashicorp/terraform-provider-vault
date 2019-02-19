@@ -14,6 +14,7 @@ A PR that's ready for review has the following components:
 - Acceptance tests that cover the code's sunny path for all changed fields.
 - Updated docs.
 - A link to any issues the PR closes, though it isn't required that a PR be related to an open issue.
+- [Govendor is used](https://github.com/kardianos/govendor/wiki/Govendor-CheatSheet) for any updated dependencies (in `vendor/`).
 
 We review PRs on a periodic basis rather than immediately.
 
