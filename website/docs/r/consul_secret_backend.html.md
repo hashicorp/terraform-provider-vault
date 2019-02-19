@@ -39,7 +39,7 @@ The following arguments are supported:
 token back from the API, Terraform cannot detect and correct drift
 on `token`. Changing the value, however, _will_ overwrite the previously stored values.
 
-* `backend` - (Optional) The unique location this backend should be mounted at. Must not begin or end with a `/`. Defaults to `consul`.
+* `path` - (Optional) The unique location this backend should be mounted at. Must not begin or end with a `/`. Defaults to `consul`.
 
 * `description` - (Optional) A human-friendly description for this backend.
 
