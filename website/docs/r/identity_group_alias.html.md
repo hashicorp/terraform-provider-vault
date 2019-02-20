@@ -47,4 +47,4 @@ The following arguments are supported:
 
 In addition to all arguments above, the following attributes are exported:
 
-* `id` - The `id` of the created entity.
+* `id` - The `id` of the created group alias.
