@@ -210,7 +210,7 @@ resource "vault_gcp_auth_backend_role" "test" {
     ttl                    = 300
     max_ttl                = 600
     policies               = ["policy_a", "policy_b"]
-    add_group_aliases 	   = true
+    add_group_aliases      = true
 }
 `, backend, name, serviceAccount, projectId)
 
