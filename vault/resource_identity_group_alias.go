@@ -29,13 +29,13 @@ func identityGroupAliasResource() *schema.Resource {
 			"mount_accessor": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Mount accessor to which this alias belongs toMount accessor to which this alias belongs to.",
+				Description: "Mount accessor to which this alias belongs to.",
 			},
 
 			"canonical_id": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "ID of the group to which this is an alias.uType of the group, internal or external. Defaults to internal.",
+				Description: "ID of the group to which this is an alias.",
 			},
 
 			"id": {

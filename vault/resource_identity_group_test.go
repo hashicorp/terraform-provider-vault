@@ -3,7 +3,9 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/acctest"
@@ -30,6 +32,7 @@ func TestAccIdentityGroup(t *testing.T) {
 
 func TestAccIdentityGroupUpdate(t *testing.T) {
 	group := acctest.RandomWithPrefix("test-group")
+	entity := acctest.RandomWithPrefix("test-entity")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -45,9 +48,38 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityGroupCheckAttrs(group),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "metadata.version", "2"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.0", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1", "test"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "2"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "member_entity_ids.#", "0"),
 				),
+			},
+			{
+				Config: testAccIdentityGroupConfigUpdateMembers(group, entity),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityGroupCheckAttrs(group),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "member_entity_ids.#", "1"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccIdentityGroupExternal(t *testing.T) {
+	group := acctest.RandomWithPrefix("test-group")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckIdentityGroupDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccIdentityGroupConfig(group),
+				Check:  testAccIdentityGroupCheckAttrs(group),
+			},
+			{
+				Config:      testAccIdentityGroupConfigExternalMembers(group),
+				ExpectError: regexp.MustCompile(`cannot set 'member_entity_ids' on external groups`),
 			},
 		},
 	})
@@ -139,10 +171,18 @@ func testAccIdentityGroupCheckAttrs(group string) resource.TestCheckFunc {
 					if count != len(apiData) {
 						return fmt.Errorf("expected %s to have %d entries in state, has %d", stateAttr, len(apiData), count)
 					}
+
 					for i := 0; i < count; i++ {
-						stateData := instanceState.Attributes[stateAttr+"."+strconv.Itoa(i)]
-						if stateData != apiData[i] {
-							return fmt.Errorf("expected item %d of %s (%s in state) of %q to be %q, got %q", i, apiAttr, stateAttr, path, stateData, apiData[i])
+						found := false
+						for stateKey, stateValue := range instanceState.Attributes {
+							if strings.HasPrefix(stateKey, stateAttr) {
+								if apiData[i] == stateValue {
+									found = true
+								}
+							}
+						}
+						if !found {
+							return fmt.Errorf("Expected item %d of %s (%s in state) of %q to be in state but wasn't", i, apiAttr, stateAttr, apiData[i])
 						}
 					}
 					match = true
@@ -179,5 +219,42 @@ resource "vault_identity_group" "group" {
   metadata = {
     version = "2"
   }
+}`, groupName)
+}
+
+func testAccIdentityGroupConfigUpdateMembers(groupName string, entityName string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_group" "group" {
+  name = "%s"
+  type = "internal"
+  policies = ["dev", "test"]
+  metadata = {
+    version = "2"
+  }
+
+  member_entity_ids = ["${vault_identity_entity.entity.id}"]
+}
+
+resource "vault_identity_entity" "entity" {
+  name = "%s"
+  policies = ["dev", "test"]
+  metadata = {
+    version = "2"
+  }
+}
+`, groupName, entityName)
+}
+
+func testAccIdentityGroupConfigExternalMembers(groupName string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_group" "group" {
+  name = "%s"
+  type = "external"
+  policies = ["test"]
+  metadata = {
+    version = "1"
+  }
+
+  member_entity_ids = ["this will fail"]
 }`, groupName)
 }

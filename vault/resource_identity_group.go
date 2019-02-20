@@ -45,7 +45,7 @@ func identityGroupResource() *schema.Resource {
 			},
 
 			"policies": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -54,7 +54,7 @@ func identityGroupResource() *schema.Resource {
 			},
 
 			"member_group_ids": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -63,12 +63,21 @@ func identityGroupResource() *schema.Resource {
 			},
 
 			"member_entity_ids": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
+				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 				Description: "Entity IDs to be assigned as group members.",
+				// Suppress the diff if group type is "external" because we cannot manage
+				// group members
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					if d.Get("type").(string) == "external" {
+						return true
+					}
+					return false
+				},
 			},
 
 			"id": {
@@ -80,22 +89,24 @@ func identityGroupResource() *schema.Resource {
 	}
 }
 
-func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
+func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface{}) error {
 	if policies, ok := d.GetOk("policies"); ok {
-		data["policies"] = policies
+		data["policies"] = policies.(*schema.Set).List()
 	}
 
-	if memberEntityIDs, ok := d.GetOk("member_entity_ids"); ok {
-		data["member_entity_ids"] = memberEntityIDs
+	if memberEntityIDs, ok := d.GetOk("member_entity_ids"); ok && d.Get("type").(string) == "internal" {
+		data["member_entity_ids"] = memberEntityIDs.(*schema.Set).List()
 	}
 
 	if memberGroupIDs, ok := d.GetOk("member_group_ids"); ok {
-		data["member_group_ids"] = memberGroupIDs
+		data["member_group_ids"] = memberGroupIDs.(*schema.Set).List()
 	}
 
 	if metadata, ok := d.GetOk("metadata"); ok {
 		data["metadata"] = metadata
 	}
+
+	return nil
 }
 
 func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
@@ -111,7 +122,9 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 		"type": typeValue,
 	}
 
-	identityGroupUpdateFields(d, data)
+	if err := identityGroupUpdateFields(d, data); err != nil {
+		return fmt.Errorf("error writing IdentityGroup to %q: %s", name, err)
+	}
 
 	resp, err := client.Logical().Write(path, data)
 
@@ -136,7 +149,9 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	data := map[string]interface{}{}
 
-	identityGroupUpdateFields(d, data)
+	if err := identityGroupUpdateFields(d, data); err != nil {
+		return fmt.Errorf("error updating IdentityGroup %q: %s", id, err)
+	}
 
 	_, err := client.Logical().Write(path, data)
 
@@ -170,7 +185,7 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"name", "type", "metadata", "member_entity_ids", "member_group_ids"} {
+	for _, k := range []string{"name", "type", "metadata", "policies", "member_entity_ids", "member_group_ids"} {
 		d.Set(k, resp.Data[k])
 	}
 	return nil
