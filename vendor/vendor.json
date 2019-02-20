@@ -870,10 +870,6 @@
 			"revisionTime": "2017-04-03T20:32:25Z",
 			"version": "v1.6.1",
 			"versionExact": "v1.6.1"
-		},
-		{
-			"path": "vendor/github.com/hashicorp/vault-plugin-auth-jwt",
-			"revision": ""
 		}
 	],
 	"rootPath": "github.com/terraform-providers/terraform-provider-vault"
