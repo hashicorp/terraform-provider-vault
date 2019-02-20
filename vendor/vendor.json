@@ -570,6 +570,12 @@
 			"versionExact": "v0.11.1"
 		},
 		{
+			"checksumSHA1": "9OCfD9jnPcOy6y9j+iyNon6tiZk=",
+			"path": "github.com/hashicorp/vault-plugin-auth-jwt",
+			"revision": "a61556be673093888dc8119ee7c16ee964419f25",
+			"revisionTime": "2019-02-14T18:54:57Z"
+		},
+		{
 			"checksumSHA1": "+B4wuJNerIUKNAVzld7CmMaNW5A=",
 			"path": "github.com/hashicorp/vault/api",
 			"revision": "8575f8fedcf8f5a6eb2b4701cb527b99574b5286",
@@ -648,6 +654,12 @@
 			"path": "github.com/mitchellh/mapstructure",
 			"revision": "53818660ed4955e899c0bcafa97299a388bd7c8e",
 			"revisionTime": "2017-03-07T20:11:23Z"
+		},
+		{
+			"checksumSHA1": "31atAEqGt+z8hZgyVZZokEeM6dM=",
+			"path": "github.com/mitchellh/pointerstructure",
+			"revision": "f2329fcfa9e280bdb5a3f2544aec815a508ad72f",
+			"revisionTime": "2017-02-05T20:42:03Z"
 		},
 		{
 			"checksumSHA1": "vBpuqNfSTZcAR/0tP8tNYacySGs=",
@@ -858,6 +870,10 @@
 			"revisionTime": "2017-04-03T20:32:25Z",
 			"version": "v1.6.1",
 			"versionExact": "v1.6.1"
+		},
+		{
+			"path": "vendor/github.com/hashicorp/vault-plugin-auth-jwt",
+			"revision": ""
 		}
 	],
 	"rootPath": "github.com/terraform-providers/terraform-provider-vault"
