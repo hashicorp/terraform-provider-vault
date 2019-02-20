@@ -1,0 +1,349 @@
+package vault
+
+import (
+	"bytes"
+	"fmt"
+	"log"
+	"regexp"
+	"sort"
+	"strings"
+
+	"github.com/hashicorp/terraform/helper/hashcode"
+	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/vault/api"
+)
+
+var (
+	gcpSecretRolesetBackendFromPathRegex = regexp.MustCompile("^(.+)/roleset/.+$")
+	gcpSecretRolesetNameFromPathRegex    = regexp.MustCompile("^.+/roleset/(.+)$")
+)
+
+type Binding struct {
+	Resource string
+	Roles    []string
+}
+
+func gcpSecretRolesetResource() *schema.Resource {
+	return &schema.Resource{
+		Create: gcpSecretRolesetCreate,
+		Read:   gcpSecretRolesetRead,
+		Update: gcpSecretRolesetUpdate,
+		Delete: gcpSecretRolesetDelete,
+		Exists: gcpSecretRolesetExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
+
+		Schema: map[string]*schema.Schema{
+			"backend": {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Path where the GCP secrets engine is mounted.",
+				ForceNew:    true,
+				// standardise on no beginning or trailing slashes
+				StateFunc: func(v interface{}) string {
+					return strings.Trim(v.(string), "/")
+				},
+			},
+			"roleset": {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Name of the RoleSet to create",
+				ForceNew:    true,
+			},
+			"secret_type": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Computed:    true,
+				Description: "Type of secret generated for this role set. Defaults to `access_token`. Accepted values: `access_token`, `service_account_key`",
+			},
+			"project": {
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the GCP project that this roleset's service account will belong to. ",
+			},
+			"token_scopes": {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional:    true,
+				Description: "List of OAuth scopes to assign to `access_token` secrets generated under this role set (`access_token` role sets only) ",
+			},
+			"binding": {
+				Type:     schema.TypeSet,
+				Required: true,
+				Set:      gcpSecretRolesetBindingHash,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"resource": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Resource name",
+						},
+						"roles": {
+							Type:        schema.TypeSet,
+							Required:    true,
+							Description: "List of roles to apply to the resource",
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
+			"service_account_email": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Email of the service account created by Vault for this Roleset",
+			},
+		},
+	}
+}
+
+func gcpSecretRolesetCreate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+
+	backend := d.Get("backend").(string)
+	roleset := d.Get("roleset").(string)
+
+	path := gcpSecretRolesetPath(backend, roleset)
+
+	log.Printf("[DEBUG] Writing GCP Secrets backend roleset %q", path)
+
+	data := map[string]interface{}{}
+	gcpSecretRolesetUpdateFields(d, data)
+	d.SetId(path)
+	_, err := client.Logical().Write(path, data)
+	if err != nil {
+		d.SetId("")
+		return fmt.Errorf("Error writing GCP Secrets backend roleset %q: %s", path, err)
+	}
+	log.Printf("[DEBUG] Wrote GCP Secrets backend rolese %q: %s", path, err)
+
+	return gcpSecretRolesetRead(d, meta)
+}
+
+func gcpSecretRolesetRead(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+	path := d.Id()
+
+	backend, err := gcpSecretRolesetBackendFromPath(path)
+	if err != nil {
+		return fmt.Errorf("invalid path %q for GCP secrets backend roleset: %s", path, err)
+	}
+
+	roleset, err := gcpSecretRoleSetdRolesetNameFromPath(path)
+	if err != nil {
+		return fmt.Errorf("invalid path %q for GCP Secrets backend roleset: %s", path, err)
+	}
+
+	log.Printf("[DEBUG] Reading GCP Secrets backend roleset %q", path)
+	resp, err := client.Logical().Read(path)
+	if err != nil {
+		return fmt.Errorf("error reading GCP Secrets backend roleset %q: %s", path, err)
+	}
+
+	log.Printf("[DEBUG] Read GCP Secrets backend roleset %q", path)
+	if resp == nil {
+		log.Printf("[WARN] GCP Secrets backend roleset %q not found, removing from state", path)
+		d.SetId("")
+		return nil
+	}
+
+	d.Set("backend", backend)
+	d.Set("roleset", roleset)
+
+	for _, k := range []string{"secret_type", "token_scopes", "service_account_email"} {
+		v, ok := resp.Data[k]
+		if !ok {
+			return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q", k, path)
+		}
+		if err := d.Set(k, v); err != nil {
+			return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q", k, path)
+		}
+	}
+
+	v, ok := resp.Data["service_account_project"]
+	if !ok {
+		return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q", "project", path)
+	}
+	if err := d.Set("project", v); err != nil {
+		return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q", "project", path)
+	}
+
+	if err := d.Set("binding", gcpSecretRolesetFlattenBinding(resp.Data["bindings"], d)); err != nil {
+		return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q", "binding", path)
+	}
+
+	return nil
+}
+
+func gcpSecretRolesetUpdate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+	path := d.Id()
+
+	data := map[string]interface{}{}
+	gcpSecretRolesetUpdateFields(d, data)
+
+	log.Printf("[DEBUG] Updating GCP Secrets backend roleset %q", path)
+
+	_, err := client.Logical().Write(path, data)
+	if err != nil {
+		return fmt.Errorf("Error updating GCP Secrets backend roleset %q: %s", path, err)
+	}
+	log.Printf("[DEBUG] Updated GCP Secrets backend roleset %q", path)
+
+	return gcpSecretRolesetRead(d, meta)
+}
+
+func gcpSecretRolesetDelete(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+	path := d.Id()
+
+	log.Printf("[DEBUG] Deleting GCP secrets backend roleset %q", path)
+	_, err := client.Logical().Delete(path)
+	if err != nil {
+		return fmt.Errorf("Error deleting GCP secrets backend roleset %q", path)
+	}
+	log.Printf("[DEBUG] Deleted GCP secrets backend roleset %q", path)
+
+	return nil
+}
+
+func gcpSecretRolesetFlattenBinding(v interface{}, d *schema.ResourceData) interface{} {
+	if v == nil {
+		return v
+	}
+
+	rawBindings := v.((map[string]interface{}))
+	transformed := schema.NewSet(gcpSecretRolesetBindingHash, []interface{}{})
+	for resource, roles := range rawBindings {
+		transformed.Add(map[string]interface{}{
+			"resource": resource,
+			"roles":    schema.NewSet(schema.HashString, roles.([]interface{})),
+		})
+	}
+
+	return transformed
+}
+
+func gcpSecretRolesetUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
+	if v, ok := d.GetOk("secret_type"); ok {
+		data["secret_type"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("project"); ok {
+		data["project"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("token_scopes"); ok {
+		data["token_scopes"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("binding"); ok {
+		rawBindings := v.(*schema.Set).List()
+
+		bindings := make([]*Binding, len(rawBindings))
+
+		for i, binding := range rawBindings {
+			rawRoles := binding.(map[string]interface{})["roles"].(*schema.Set).List()
+			roles := make([]string, len(rawRoles))
+			for j, role := range rawRoles {
+				roles[j] = role.(string)
+			}
+
+			binding := &Binding{
+				Resource: binding.(map[string]interface{})["resource"].(string),
+				Roles:    roles,
+			}
+			bindings[i] = binding
+		}
+
+		bindingsHCL := renderBindings(bindings)
+		log.Printf("[DEBUG] Rendered GCP Secrets backend roleset bindings HCL:\n%s", bindingsHCL)
+		data["bindings"] = bindingsHCL
+	}
+}
+
+func gcpSecretRolesetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+	client := meta.(*api.Client)
+	path := d.Id()
+	log.Printf("[DEBUG] Checking if %q exists", path)
+	secret, err := client.Logical().Read(path)
+	if err != nil {
+		return true, fmt.Errorf("error checking if %q exists: %s", path, err)
+	}
+	log.Printf("[DEBUG] Checked if %q exists", path)
+	return secret != nil, nil
+}
+
+func gcpSecretRolesetBindingHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%s-", m["resource"].(string)))
+
+	// We need to make sure to sort the strings below so that we always
+	// generate the same hash code no matter what is in the set.
+	if v, ok := m["roles"]; ok {
+		vs := v.(*schema.Set).List()
+		s := make([]string, len(vs))
+		for i, raw := range vs {
+			s[i] = raw.(string)
+		}
+		sort.Strings(s)
+
+		for _, v := range s {
+			buf.WriteString(fmt.Sprintf("%s-", v))
+		}
+	}
+	return hashcode.String(buf.String())
+}
+
+func gcpSecretRolesetPath(backend, roleset string) string {
+	return strings.Trim(backend, "/") + "/roleset/" + strings.Trim(roleset, "/")
+}
+
+func gcpSecretRolesetBackendFromPath(path string) (string, error) {
+	if !gcpSecretRolesetBackendFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no backend found")
+	}
+	res := gcpSecretRolesetBackendFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
+	}
+	return res[1], nil
+}
+
+func gcpSecretRoleSetdRolesetNameFromPath(path string) (string, error) {
+	if !gcpSecretRolesetNameFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no roleset found")
+	}
+	res := gcpSecretRolesetNameFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for role", len(res))
+	}
+	return res[1], nil
+}
+
+func renderBinding(binding *Binding) string {
+	output := fmt.Sprintf("resource \"%s\" {\n", binding.Resource)
+	output = fmt.Sprintf("%s  roles = %s\n", output, policyRenderListOfStrings(binding.Roles))
+	return fmt.Sprintf("%s}\n", output)
+}
+
+func renderBindings(bindings []*Binding) string {
+	var output string
+
+	for i, binding := range bindings {
+		if i == 0 {
+			output = fmt.Sprintf("%s", renderBinding(binding))
+		} else {
+			output = fmt.Sprintf("%s\n\n%s", output, renderBinding(binding))
+		}
+	}
+
+	return output
+}
