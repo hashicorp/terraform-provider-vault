@@ -64,7 +64,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 				},
 			},
 			"ttl": {
-				Type:        schema.TypeInt,
+				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    false,
 				Description: "Time to leave.",
@@ -156,7 +156,7 @@ func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error 
 
 	data := map[string]interface{}{
 		"common_name":          d.Get("common_name").(string),
-		"ttl":                  d.Get("ttl").(int),
+		"ttl":                  d.Get("ttl").(string),
 		"format":               d.Get("format").(string),
 		"private_key_format":   d.Get("private_key_format").(string),
 		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
