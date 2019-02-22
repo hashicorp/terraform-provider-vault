@@ -37,7 +37,7 @@ func identityEntityResource() *schema.Resource {
 			},
 
 			"policies": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -66,7 +66,7 @@ func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interfac
 	}
 
 	if policies, ok := d.GetOk("policies"); ok {
-		data["policies"] = policies
+		data["policies"] = policies.(*schema.Set).List()
 	}
 
 	if metadata, ok := d.GetOk("metadata"); ok {
