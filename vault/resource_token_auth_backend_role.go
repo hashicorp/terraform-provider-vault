@@ -14,6 +14,10 @@ var (
 	tokenAuthBackendRoleNameFromPathRegex = regexp.MustCompile("^auth/token/roles/(.+)$")
 )
 
+func tokenAuthBackendRoleEmptyStringSet() (interface{}, error) {
+	return []string{}, nil
+}
+
 func tokenAuthBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: tokenAuthBackendRoleCreate,
@@ -38,6 +42,7 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
 				Description: "List of allowed policies for given role.",
 			},
 			"disallowed_policies": {
@@ -46,6 +51,7 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
 				Description: "List of disallowed policies for given role.",
 			},
 			"orphan": {
@@ -57,19 +63,19 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 			"period": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Computed:    true,
+				Default:     "0",
 				Description: "The duration in which a token should be renewed. At each renewal, the token's TTL will be set to the value of this parameter.",
 			},
 			"renewable": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Computed:    true,
+				Default:     true,
 				Description: "Whether to disable the ability of the token to be renewed past its initial TTL.",
 			},
 			"explicit_max_ttl": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Computed:    true,
+				Default:     "0",
 				Description: "If set, the token will have an explicit max TTL set upon it.",
 			},
 			"path_suffix": {
@@ -84,13 +90,13 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Optional:    true,
-				Computed:    true,
+				DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
 				Description: "If set, restricts usage of the generated token to client IPs falling within the range of the specified CIDR(s).",
 			},
 			"token_type": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Computed:    true,
+				Default:     "default-service",
 				Description: "Specifies the type of tokens that should be returned by the role. If either service or batch is specified, that kind of token will always be returned.",
 			},
 		},
@@ -98,42 +104,15 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 }
 
 func tokenAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
-	if v, ok := d.GetOk("allowed_policies"); ok {
-		data["allowed_policies"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("disallowed_policies"); ok {
-		data["disallowed_policies"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("explicit_max_ttl"); ok {
-		data["explicit_max_ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOkExists("orphan"); ok {
-		data["orphan"] = v.(bool)
-	}
-
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(string)
-	}
-
-	if v, ok := d.GetOkExists("renewable"); ok {
-		data["renewable"] = v.(bool)
-	}
-
-	if v, ok := d.GetOk("path_suffix"); ok {
-		data["path_suffix"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("bound_cidrs"); ok {
-		data["bound_cidrs"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("token_type"); ok {
-		data["token_type"] = v.(string)
-	}
-
+	data["allowed_policies"] = d.Get("allowed_policies").(*schema.Set).List()
+	data["disallowed_policies"] = d.Get("disallowed_policies").(*schema.Set).List()
+	data["explicit_max_ttl"] = d.Get("explicit_max_ttl").(string)
+	data["orphan"] = d.Get("orphan").(bool)
+	data["period"] = d.Get("period").(string)
+	data["renewable"] = d.Get("renewable").(bool)
+	data["path_suffix"] = d.Get("path_suffix").(string)
+	data["bound_cidrs"] = d.Get("bound_cidrs").(*schema.Set).List()
+	data["token_type"] = d.Get("token_type").(string)
 }
 
 func tokenAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {

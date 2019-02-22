@@ -79,7 +79,7 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "path_suffix", "parth-suffix"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "bound_cidrs.#", "1"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "bound_cidrs.217649824", "0.0.0.0/0"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_type", "default-service"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_type", "default-batch"),
 				),
 			},
 			{
@@ -100,6 +100,22 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "path_suffix", "parth-suffix"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "bound_cidrs.#", "1"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "bound_cidrs.217649824", "0.0.0.0/0"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_type", "default-batch"),
+				),
+			},
+			{
+				Config: testAccTokenAuthBackendRoleConfig(roleUpdated),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccTokenAuthBackendRoleCheck_attrs(roleUpdated),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "role_name", roleUpdated),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.#", "0"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.#", "0"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "orphan", "false"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "period", "0"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "renewable", "true"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "explicit_max_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "path_suffix", ""),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "bound_cidrs.#", "0"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_type", "default-service"),
 				),
 			},
@@ -270,5 +286,6 @@ resource "vault_token_auth_backend_role" "role" {
   explicit_max_ttl = "115200"
   path_suffix = "parth-suffix"
   bound_cidrs = ["0.0.0.0/0"]
+  token_type = "default-batch"
 }`, role)
 }
