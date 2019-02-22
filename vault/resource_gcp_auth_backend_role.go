@@ -72,6 +72,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 			"add_group_aliases": {
 				Type:     schema.TypeBool,
 				Optional: true,
+				Computed: true,
 			},
 			"max_jwt_exp": {
 				Type:     schema.TypeString,
@@ -165,7 +166,7 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
 		data["bound_service_accounts"] = v.(*schema.Set).List()
 	}
 
-	if v, ok := d.GetOk("add_group_aliases"); ok {
+	if v, ok := d.GetOkExists("add_group_aliases"); ok {
 		data["add_group_aliases"] = v.(bool)
 	}
 
@@ -173,7 +174,7 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
 		data["max_jwt_exp"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("allow_gce_inference"); ok {
+	if v, ok := d.GetOkExists("allow_gce_inference"); ok {
 		data["allow_gce_inference"] = v.(bool)
 	}
 
