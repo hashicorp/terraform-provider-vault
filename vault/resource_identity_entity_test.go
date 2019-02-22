@@ -46,6 +46,7 @@ func TestAccIdentityEntityUpdate(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityEntityCheckAttrs(entity),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "metadata.version", "2"),
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.1785148924", "test"),
 				),
