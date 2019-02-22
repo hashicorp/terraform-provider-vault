@@ -47,9 +47,9 @@ The following arguments are supported:
 
 * `path_suffix` (Optional) Tokens created against this role will have the given suffix as part of their path in addition to the role name.
 
-* `ttl` (Optional) The TTL period of tokens issued using this role, provided as the number of minutes.
+* `bound_cidrs` (Optional) If set, restricts usage of the generated token to client IPs falling within the range of the specified CIDR(s).
 
-* `max_ttl` (Optional) The maximum allowed lifetime of tokens issued using this role.
+* `token_type` (Optional) Specifies the type of tokens that should be returned by the role. If either service or batch is specified, that kind of token will always be returned.
 
 ## Attributes Reference
 

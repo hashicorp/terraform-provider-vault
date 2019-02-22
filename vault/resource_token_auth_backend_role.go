@@ -63,8 +63,8 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 			"renewable": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
-				Description: "Wether to disable the ability of the token to be renewed past its initial TTL.",
+				Computed:    true,
+				Description: "Whether to disable the ability of the token to be renewed past its initial TTL.",
 			},
 			"explicit_max_ttl": {
 				Type:        schema.TypeString,
@@ -78,17 +78,20 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 				Default:     "",
 				Description: "Tokens created against this role will have the given suffix as part of their path in addition to the role name.",
 			},
-			"ttl": {
-				Type:        schema.TypeString,
+			"bound_cidrs": {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 				Optional:    true,
 				Computed:    true,
-				Description: "The TTL period of tokens issued using this role, provided as the number of minutes.",
+				Description: "If set, restricts usage of the generated token to client IPs falling within the range of the specified CIDR(s).",
 			},
-			"max_ttl": {
+			"token_type": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
-				Description: "The maximum allowed lifetime of tokens issued using this role.",
+				Description: "Specifies the type of tokens that should be returned by the role. If either service or batch is specified, that kind of token will always be returned.",
 			},
 		},
 	}
@@ -107,15 +110,7 @@ func tokenAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]in
 		data["explicit_max_ttl"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("orphan"); ok {
+	if v, ok := d.GetOkExists("orphan"); ok {
 		data["orphan"] = v.(bool)
 	}
 
@@ -123,13 +118,22 @@ func tokenAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]in
 		data["period"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("renewable"); ok {
+	if v, ok := d.GetOkExists("renewable"); ok {
 		data["renewable"] = v.(bool)
 	}
 
 	if v, ok := d.GetOk("path_suffix"); ok {
 		data["path_suffix"] = v.(string)
 	}
+
+	if v, ok := d.GetOk("bound_cidrs"); ok {
+		data["bound_cidrs"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("token_type"); ok {
+		data["token_type"] = v.(string)
+	}
+
 }
 
 func tokenAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
@@ -179,7 +183,7 @@ func tokenAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("role_name", roleName)
 
-	for _, k := range []string{"allowed_policies", "disallowed_policies", "orphan", "period", "renewable", "explicit_max_ttl", "path_suffix", "ttl", "max_ttl"} {
+	for _, k := range []string{"allowed_policies", "disallowed_policies", "orphan", "period", "explicit_max_ttl", "path_suffix", "renewable", "bound_cidrs", "token_type"} {
 		d.Set(k, resp.Data[k])
 	}
 
