@@ -33,7 +33,7 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 				Description: "Name of the role.",
 			},
 			"allowed_policies": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -41,7 +41,7 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 				Description: "List of allowed policies for given role.",
 			},
 			"disallowed_policies": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -94,6 +94,44 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 	}
 }
 
+func tokenAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
+	if v, ok := d.GetOk("allowed_policies"); ok {
+		data["allowed_policies"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("disallowed_policies"); ok {
+		data["disallowed_policies"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("explicit_max_ttl"); ok {
+		data["explicit_max_ttl"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("ttl"); ok {
+		data["ttl"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("max_ttl"); ok {
+		data["max_ttl"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("orphan"); ok {
+		data["orphan"] = v.(bool)
+	}
+
+	if v, ok := d.GetOk("period"); ok {
+		data["period"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("renewable"); ok {
+		data["renewable"] = v.(bool)
+	}
+
+	if v, ok := d.GetOk("path_suffix"); ok {
+		data["path_suffix"] = v.(string)
+	}
+}
+
 func tokenAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
@@ -103,35 +141,8 @@ func tokenAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 
 	log.Printf("[DEBUG] Writing Token auth backend role %q", path)
 
-	iAllowedPolicies := d.Get("allowed_policies").([]interface{})
-	allowedPolicies := make([]string, 0, len(iAllowedPolicies))
-	for _, iPolicy := range iAllowedPolicies {
-		allowedPolicies = append(allowedPolicies, iPolicy.(string))
-	}
-
-	iDisallowedPolicies := d.Get("disallowed_policies").([]interface{})
-	disallowedPolicies := make([]string, 0, len(iDisallowedPolicies))
-	for _, iPolicy := range iDisallowedPolicies {
-		disallowedPolicies = append(disallowedPolicies, iPolicy.(string))
-	}
-
 	data := map[string]interface{}{}
-
-	if len(allowedPolicies) > 0 {
-		data["allowed_policies"] = allowedPolicies
-	}
-
-	if len(disallowedPolicies) > 0 {
-		data["disallowed_policies"] = disallowedPolicies
-	}
-
-	data["explicit_max_ttl"] = d.Get("explicit_max_ttl").(string)
-	data["ttl"] = d.Get("ttl").(string)
-	data["max_ttl"] = d.Get("max_ttl").(string)
-	data["orphan"] = d.Get("orphan").(bool)
-	data["period"] = d.Get("period").(string)
-	data["renewable"] = d.Get("renewable").(bool)
-	data["path_suffix"] = d.Get("path_suffix").(string)
+	tokenAuthBackendRoleUpdateFields(d, data)
 
 	d.SetId(path)
 
@@ -166,28 +177,11 @@ func tokenAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	iAllowedPolicies := resp.Data["allowed_policies"].([]interface{})
-	allowedPolicies := make([]string, 0, len(iAllowedPolicies))
-	for _, iAllowedPolicy := range iAllowedPolicies {
-		allowedPolicies = append(allowedPolicies, iAllowedPolicy.(string))
-	}
-
-	iDisallowedPolicies := resp.Data["disallowed_policies"].([]interface{})
-	disallowedPolicies := make([]string, 0, len(iDisallowedPolicies))
-	for _, iDisallowedPolicy := range iDisallowedPolicies {
-		disallowedPolicies = append(disallowedPolicies, iDisallowedPolicy.(string))
-	}
-
 	d.Set("role_name", roleName)
-	d.Set("allowed_policies", allowedPolicies)
-	d.Set("disallowed_policies", disallowedPolicies)
-	d.Set("orphan", resp.Data["orphan"])
-	d.Set("period", resp.Data["period"])
-	d.Set("renewable", resp.Data["renewable"])
-	d.Set("explicit_max_ttl", resp.Data["explicit_max_ttl"])
-	d.Set("path_suffix", resp.Data["path_suffix"])
-	d.Set("ttl", resp.Data["ttl"])
-	d.Set("max_ttl", resp.Data["max_ttl"])
+
+	for _, k := range []string{"allowed_policies", "disallowed_policies", "orphan", "period", "renewable", "explicit_max_ttl", "path_suffix", "ttl", "max_ttl"} {
+		d.Set(k, resp.Data[k])
+	}
 
 	return nil
 }
@@ -198,34 +192,8 @@ func tokenAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 
 	log.Printf("[DEBUG] Updating Token auth backend role %q", path)
 
-	iAllowedPolicies := d.Get("allowed_policies").([]interface{})
-	allowedPolicies := make([]string, 0, len(iAllowedPolicies))
-	for _, iPolicy := range iAllowedPolicies {
-		allowedPolicies = append(allowedPolicies, iPolicy.(string))
-	}
-
-	iDisallowedPolicies := d.Get("disallowed_policies").([]interface{})
-	disallowedPolicies := make([]string, 0, len(iDisallowedPolicies))
-	for _, iPolicy := range iDisallowedPolicies {
-		disallowedPolicies = append(disallowedPolicies, iPolicy.(string))
-	}
-
 	data := map[string]interface{}{}
-
-	if len(allowedPolicies) > 0 {
-		data["allowed_policies"] = allowedPolicies
-	}
-	if len(disallowedPolicies) > 0 {
-		data["disallowed_policies"] = disallowedPolicies
-	}
-
-	data["orphan"] = d.Get("orphan").(bool)
-	data["period"] = d.Get("period").(string)
-	data["renewable"] = d.Get("renewable").(bool)
-	data["explicit_max_ttl"] = d.Get("explicit_max_ttl").(string)
-	data["path_suffix"] = d.Get("path_suffix").(string)
-	data["ttl"] = d.Get("ttl").(string)
-	data["max_ttl"] = d.Get("max_ttl").(string)
+	tokenAuthBackendRoleUpdateFields(d, data)
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
