@@ -94,7 +94,7 @@ func IsExpiredTokenErr(err error) bool {
 	return false
 }
 
-func TestCheckResourceAttrJSON(name, key, value string) resource.TestCheckFunc {
+func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState, ok := s.RootModule().Resources[name]
 		if !ok {
@@ -108,17 +108,24 @@ func TestCheckResourceAttrJSON(name, key, value string) resource.TestCheckFunc {
 		if !ok {
 			return fmt.Errorf("%s: attribute not found %q", name, key)
 		}
-		var stateJSON, valueJSON interface{}
+		if expectedValue == "" && v == expectedValue {
+			return nil
+		}
+		if v == "" {
+			return fmt.Errorf("%s: attribute %q expected %#v, got %#v", name, key, expectedValue, v)
+		}
+
+		var stateJSON, expectedJSON interface{}
 		err := json.Unmarshal([]byte(v), &stateJSON)
 		if err != nil {
 			return fmt.Errorf("%s: attribute %q not JSON: %s", name, key, err)
 		}
-		err = json.Unmarshal([]byte(value), &valueJSON)
+		err = json.Unmarshal([]byte(expectedValue), &expectedJSON)
 		if err != nil {
-			return fmt.Errorf("expected value %q not JSON: %s", value, err)
+			return fmt.Errorf("expected value %q not JSON: %s", expectedValue, err)
 		}
-		if !reflect.DeepEqual(stateJSON, valueJSON) {
-			return fmt.Errorf("%s: attribute %q expected %#v, got %#v", name, key, stateJSON, valueJSON)
+		if !reflect.DeepEqual(stateJSON, expectedJSON) {
+			return fmt.Errorf("%s: attribute %q expected %#v, got %#v", name, key, expectedJSON, stateJSON)
 		}
 		return nil
 	}
