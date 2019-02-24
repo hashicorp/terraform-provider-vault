@@ -18,6 +18,9 @@ func identityEntityResource() *schema.Resource {
 		Read:   identityEntityRead,
 		Delete: identityEntityDelete,
 		Exists: identityEntityExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {

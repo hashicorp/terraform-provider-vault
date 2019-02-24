@@ -18,6 +18,9 @@ func identityGroupResource() *schema.Resource {
 		Read:   identityGroupRead,
 		Delete: identityGroupDelete,
 		Exists: identityGroupExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {

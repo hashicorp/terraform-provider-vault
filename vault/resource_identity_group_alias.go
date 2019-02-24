@@ -17,6 +17,9 @@ func identityGroupAliasResource() *schema.Resource {
 		Read:   identityGroupAliasRead,
 		Delete: identityGroupAliasDelete,
 		Exists: identityGroupAliasExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
