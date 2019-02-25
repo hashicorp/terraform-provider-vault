@@ -162,7 +162,7 @@ func gcpSecretRolesetRead(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q", k, path)
 		}
 		if err := d.Set(k, v); err != nil {
-			return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q", k, path)
+			return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q: %q", k, path, err)
 		}
 	}
 
@@ -174,7 +174,7 @@ func gcpSecretRolesetRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q", "project", path)
 	}
 
-	if err := d.Set("binding", gcpSecretRolesetFlattenBinding(resp.Data["bindings"], d)); err != nil {
+	if err := d.Set("binding", gcpSecretRolesetFlattenBinding(resp.Data["bindings"])); err != nil {
 		return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q", "binding", path)
 	}
 
@@ -213,7 +213,7 @@ func gcpSecretRolesetDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func gcpSecretRolesetFlattenBinding(v interface{}, d *schema.ResourceData) interface{} {
+func gcpSecretRolesetFlattenBinding(v interface{}) interface{} {
 	if v == nil {
 		return v
 	}

@@ -3,6 +3,7 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"testing"
@@ -164,6 +165,69 @@ func testGCPSecretRoleset_attrs(backend, roleset string) resource.TestCheckFunc 
 			}
 			if !match {
 				return fmt.Errorf("expected %s (%s in state) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
+			}
+		}
+
+		roleHashFunction := schema.HashSchema(&schema.Schema{
+			Type: schema.TypeString,
+		})
+
+		// Bindings need to be tested separately
+		remoteBindings := resp.Data["bindings"] // map[string]interface {}
+		if remoteBindings == nil {
+			return fmt.Errorf("cannot find bindings from Vault")
+		}
+		localBindingsLengthRaw := instanceState.Attributes["binding.#"]
+		if localBindingsLengthRaw == "" {
+			return fmt.Errorf("cannot find bindings from state")
+		}
+		localBindingsLength, err := strconv.Atoi(localBindingsLengthRaw)
+		if err != nil {
+			return fmt.Errorf("expected binding.# to be a number, got %q", localBindingsLengthRaw)
+		}
+		remoteLength := len(remoteBindings.(map[string]interface{}))
+		if localBindingsLength != remoteLength {
+			return fmt.Errorf("expected %s to have %d entries in state, has %d", "binding", remoteLength, localBindingsLength)
+		}
+
+		flattenedBindings := gcpSecretRolesetFlattenBinding(remoteBindings).(*schema.Set)
+		for _, remoteBinding := range flattenedBindings.List() {
+			bindingHash := strconv.Itoa(gcpSecretRolesetBindingHash(remoteBinding))
+
+			remoteResource := remoteBinding.(map[string]interface{})["resource"].(string)
+			localResource := instanceState.Attributes["binding."+bindingHash+".resource"]
+			if localResource == "" {
+				return fmt.Errorf("expected to find binding for resource %s in state, but didn't", remoteResource)
+			}
+			if localResource != remoteResource {
+				return fmt.Errorf("expected to find binding for resource %s in state, but found %s instead", remoteResource, localResource)
+			}
+
+			// Check Roles
+			remoteRoles := remoteBinding.(map[string]interface{})["roles"].(*schema.Set)
+			localRolesCountRaw := instanceState.Attributes["binding."+bindingHash+".roles.#"]
+			if localRolesCountRaw == "" {
+				return fmt.Errorf("cannot find role counts for the binding for resource %s", remoteResource)
+			}
+			localRolesCount, err := strconv.Atoi(localRolesCountRaw)
+			if err != nil {
+				return fmt.Errorf("expected binding.%s.roles.# to be a number, got %q", remoteResource, localRolesCountRaw)
+			}
+			if remoteRoles.Len() != localRolesCount {
+				return fmt.Errorf("expected %d roles for binding for resource %s but got %d instead", remoteRoles.Len(), remoteResource, localRolesCount)
+			}
+
+			for _, remoteRole := range remoteRoles.List() {
+				roleHash := strconv.Itoa(roleHashFunction(remoteRole.(string)))
+				log.Printf("[DEBUG] Path to look for %s for %s", "binding."+bindingHash+".roles."+roleHash, remoteRole.(string))
+				localRole := instanceState.Attributes["binding."+bindingHash+".roles."+roleHash]
+				if localRole == "" {
+					return fmt.Errorf("expected to find role %s for binding for resource %s in state, but didn't", remoteRole.(string), remoteResource)
+				}
+
+				if localRole != remoteRole.(string) {
+					return fmt.Errorf("expected to find role %s for binding for resource %s in state, but found %s instead", remoteRole.(string), remoteResource, localRole)
+				}
 			}
 		}
 		return nil
