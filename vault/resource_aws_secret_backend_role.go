@@ -34,16 +34,19 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "The path of the AWS Secret Backend the role belongs to.",
 			},
-			"policy_arn": {
-				Type:          schema.TypeString,
+			"policy_arns": {
+				Type:          schema.TypeList,
 				Optional:      true,
 				ConflictsWith: []string{"policy_document"},
 				Description:   "ARN for an existing IAM policy the role should use.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 			"policy_document": {
 				Type:             schema.TypeString,
 				Optional:         true,
-				ConflictsWith:    []string{"policy_arn"},
+				ConflictsWith:    []string{"policy_arns"},
 				Description:      "IAM policy the role should use in JSON format.",
 				DiffSuppressFunc: util.JsonDiffSuppress,
 			},
@@ -61,10 +64,10 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
-	policyARN := d.Get("policy_arn").(string)
+	policyARN := d.Get("policy_arns").([]interface{})
 	policy := d.Get("policy_document").(string)
 
-	if policy == "" && policyARN == "" {
+	if policy == "" && len(policyARN) == 0 {
 		return fmt.Errorf("either policy or policy_arn must be set.")
 	}
 
@@ -72,8 +75,8 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	if policy != "" {
 		data["policy_document"] = policy
 	}
-	if policyARN != "" {
-		data["policy_arn"] = policyARN
+	if len(policyARN) != 0 {
+		data["policy_arns"] = policyARN
 	}
 	data["credential_type"] = d.Get("credential_type").(string)
 	log.Printf("[DEBUG] Creating role %q on AWS backend %q", name, backend)
@@ -108,7 +111,7 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 	d.Set("policy_document", secret.Data["policy_document"])
-	d.Set("policy_arn", secret.Data["policy_arn"])
+	d.Set("policy_arns", secret.Data["policy_arns"])
 	d.Set("credential_type", secret.Data["credential_type"])
 	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
 	d.Set("name", pathPieces[len(pathPieces)-1])
