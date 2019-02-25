@@ -149,12 +149,14 @@ resource "vault_aws_secret_backend" "test" {
 resource "vault_aws_secret_backend_role" "test_policy_inline" {
   name = "%s-policy-inline"
   policy_document = %q
+  credential_type = "assumed_role"
   backend = "${vault_aws_secret_backend.test.path}"
 }
 
 resource "vault_aws_secret_backend_role" "test_policy_arn" {
   name = "%s-policy-arn"
   policy_arn = "%s"
+  credential_type = "assumed_role"
   backend = "${vault_aws_secret_backend.test.path}"
 }
 `, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_basic, name, testAccAWSSecretBackendRolePolicyArn_basic)
@@ -171,12 +173,14 @@ resource "vault_aws_secret_backend" "test" {
 resource "vault_aws_secret_backend_role" "test_policy_inline" {
   name = "%s-policy-inline"
   policy_document = %q
+  credential_type = "assumed_role"
   backend = "${vault_aws_secret_backend.test.path}"
 }
 
 resource "vault_aws_secret_backend_role" "test_policy_arn" {
   name = "%s-policy-arn"
   policy_arn = "%s"
+  credential_type = "assumed_role"
   backend = "${vault_aws_secret_backend.test.path}"
 }
 `, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_updated, name, testAccAWSSecretBackendRolePolicyArn_updated)

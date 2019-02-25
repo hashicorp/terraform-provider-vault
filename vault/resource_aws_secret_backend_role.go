@@ -47,6 +47,11 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Description:      "IAM policy the role should use in JSON format.",
 				DiffSuppressFunc: util.JsonDiffSuppress,
 			},
+			"credential_type": {
+				Type:          schema.TypeString,
+				Required:      true,
+				Description:   "Role credential type.",
+			},
 		},
 	}
 }
@@ -70,6 +75,7 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	if policyARN != "" {
 		data["policy_arn"] = policyARN
 	}
+	data["credential_type"] = d.Get("credential_type").(string)
 	log.Printf("[DEBUG] Creating role %q on AWS backend %q", name, backend)
 	_, err := client.Logical().Write(backend+"/roles/"+name, data)
 	if err != nil {
@@ -103,6 +109,7 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	d.Set("policy_document", secret.Data["policy_document"])
 	d.Set("policy_arn", secret.Data["policy_arn"])
+	d.Set("credential_type", secret.Data["credential_type"])
 	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
 	d.Set("name", pathPieces[len(pathPieces)-1])
 	return nil
