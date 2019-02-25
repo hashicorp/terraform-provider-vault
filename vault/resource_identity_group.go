@@ -186,7 +186,11 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	for _, k := range []string{"name", "type", "metadata", "policies", "member_entity_ids", "member_group_ids"} {
-		d.Set(k, resp.Data[k])
+		if v, ok := resp.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return fmt.Errorf("error reading %s for Identity Group %q: %q", k, path, err)
+			}
+		}
 	}
 	return nil
 }
