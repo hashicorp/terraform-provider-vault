@@ -48,12 +48,12 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 			{
 				Config: testAccDataSourceAWSAccessCredentialsConfig_sts(mountPath, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					//resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "access_key"),
-					//resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "access_key"),
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
 					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "security_token"),
-					//resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "sts"),
-					//resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "lease_id"),
-					//testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(mountPath),
+					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "sts"),
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "lease_id"),
+					testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(mountPath),
 				),
 			},
 		},
