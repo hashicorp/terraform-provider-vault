@@ -254,7 +254,9 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 
 	for _, k := range []string{"ttl", "max_ttl", "project_id", "bound_projects", "period", "policies", "add_group_aliases", "max_jwt_exp", "bound_service_accounts", "bound_zones", "bound_regions", "bound_instance_groups", "bound_labels"} {
 		if v, ok := resp.Data[k]; ok {
-			d.Set(k, v)
+			if err := d.Set(k, v); err != nil {
+				return fmt.Errorf("error reading %s for GCP Auth Backend Role %q", k, path)
+			}
 		}
 	}
 
