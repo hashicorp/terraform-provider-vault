@@ -25,9 +25,8 @@ func identityEntityResource() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Name of the entity.",
-				ForceNew:    true,
 			},
 
 			"metadata": {
@@ -101,7 +100,9 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 	log.Printf("[DEBUG] Wrote IdentityEntity %q", name)
 
-	d.Set("id", resp.Data["id"])
+	if err := d.Set("id", resp.Data["id"]); err != nil {
+		return fmt.Errorf("error setting \"id\" on IdentityEntity to %q: %s", name, err)
+	}
 
 	d.SetId(resp.Data["id"].(string))
 
@@ -153,7 +154,7 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 
 	for _, k := range []string{"name", "metadata", "disabled", "policies"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return fmt.Errorf("error reading %s of IdentityEntity %q: %q", k, path, err)
+			return fmt.Errorf("error setting state key \"%s\" on IdentityEntity %q: %s", k, id, err)
 		}
 	}
 	return nil

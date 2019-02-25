@@ -25,9 +25,8 @@ func identityGroupResource() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Name of the group.",
-				ForceNew:    true,
 			},
 
 			"type": {
@@ -54,6 +53,13 @@ func identityGroupResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Description: "Policies to be tied to the group.",
+			},
+
+			"external_policies": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Manage policies externally through `vault_identity_group_policies`, allows using group ID in assigned policies.",
 			},
 
 			"member_group_ids": {
@@ -93,8 +99,14 @@ func identityGroupResource() *schema.Resource {
 }
 
 func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface{}) error {
-	if policies, ok := d.GetOk("policies"); ok {
-		data["policies"] = policies.(*schema.Set).List()
+	if name, ok := d.GetOk("name"); ok {
+		data["name"] = name
+	}
+
+	if externalPolicies, ok := d.GetOk("external_policies"); !(ok && externalPolicies.(bool)) {
+		if policies, ok := d.GetOk("policies"); ok {
+			data["policies"] = policies.(*schema.Set).List()
+		}
 	}
 
 	if memberEntityIDs, ok := d.GetOk("member_entity_ids"); ok && d.Get("type").(string) == "internal" {
@@ -136,7 +148,9 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 	log.Printf("[DEBUG] Wrote IdentityGroup %q", name)
 
-	d.Set("id", resp.Data["id"])
+	if err := d.Set("id", resp.Data["id"]); err != nil {
+		return fmt.Errorf("error setting \"id\" on IdentityGroup to %q: %s", name, err)
+	}
 
 	d.SetId(resp.Data["id"].(string))
 
@@ -179,7 +193,7 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 		if util.IsExpiredTokenErr(err) {
 			return nil
 		}
-		return fmt.Errorf("error reading AppRole auth backend role SecretID %q: %s", id, err)
+		return fmt.Errorf("error reading IdentityGroup %q: %s", id, err)
 	}
 	log.Printf("[DEBUG] Read IdentityGroup %s", id)
 	if resp == nil {
@@ -188,11 +202,15 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"name", "type", "metadata", "policies", "member_entity_ids", "member_group_ids"} {
-		if v, ok := resp.Data[k]; ok {
-			if err := d.Set(k, v); err != nil {
-				return fmt.Errorf("error reading %s for Identity Group %q: %q", k, path, err)
-			}
+	readFields := []string{"name", "type", "metadata", "member_entity_ids", "member_group_ids"}
+
+	if externalPolicies, ok := d.GetOk("external_policies"); !(ok && externalPolicies.(bool)) {
+		readFields = append(readFields, "policies")
+	}
+
+	for _, k := range readFields {
+		if err := d.Set(k, resp.Data[k]); err != nil {
+			return fmt.Errorf("error setting state key \"%s\" on IdentityGroup %q: %s", k, id, err)
 		}
 	}
 	return nil

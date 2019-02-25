@@ -72,7 +72,9 @@ func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 	log.Printf("[DEBUG] Wrote IdentityGroupAlias %q", name)
 
-	d.Set("id", resp.Data["id"])
+	if err := d.Set("id", resp.Data["id"]); err != nil {
+		return fmt.Errorf("error setting \"id\" on IdentityGroupAlias to %q: %s", name, err)
+	}
 
 	d.SetId(resp.Data["id"].(string))
 
@@ -133,7 +135,9 @@ func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	for _, k := range []string{"id", "name", "mount_accessor", "canonical_id"} {
-		d.Set(k, resp.Data[k])
+		if err := d.Set(k, resp.Data[k]); err != nil {
+			return fmt.Errorf("error setting state key \"%s\" on IdentityGroupAlias %q: %s", k, id, err)
+		}
 	}
 	return nil
 }

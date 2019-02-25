@@ -13,69 +13,68 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func TestAccIdentityEntity(t *testing.T) {
-	entity := acctest.RandomWithPrefix("test-entity")
+func TestAccidentityGroupPolicies(t *testing.T) {
+	group := acctest.RandomWithPrefix("test-group")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		CheckDestroy: testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityEntityConfig(entity),
-				Check:  testAccIdentityEntityCheckAttrs(entity),
+				Config: testAccidentityGroupPoliciesConfig(group),
+				Check:  testAccidentityGroupPoliciesCheckAttrs(group),
 			},
 		},
 	})
 }
 
-func TestAccIdentityEntityUpdate(t *testing.T) {
-	entity := acctest.RandomWithPrefix("test-entity")
+func TestAccidentityGroupPoliciesUpdate(t *testing.T) {
+	group := acctest.RandomWithPrefix("test-group")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		CheckDestroy: testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityEntityConfig(entity),
-				Check:  testAccIdentityEntityCheckAttrs(entity),
+				Config: testAccidentityGroupPoliciesConfig(group),
+				Check:  testAccidentityGroupPoliciesCheckAttrs(group),
 			},
 			{
-				Config: testAccIdentityEntityConfigUpdate(entity),
+				Config: testAccidentityGroupPoliciesConfigUpdate(group),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityEntityCheckAttrs(entity),
-					resource.TestCheckResourceAttr("vault_identity_entity.entity", "metadata.version", "2"),
-					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.1785148924", "test"),
+					testAccidentityGroupPoliciesCheckAttrs(group),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.#", "2"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.1785148924", "test"),
 				),
 			},
 		},
 	})
 }
 
-func testAccCheckIdentityEntityDestroy(s *terraform.State) error {
+func testAccCheckidentityGroupPoliciesDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_identity_entity" {
+		if rs.Type != "vault_identity_group" {
 			continue
 		}
-		secret, err := client.Logical().Read(identityEntityIDPath(rs.Primary.ID))
+		secret, err := client.Logical().Read(identityGroupIDPath(rs.Primary.ID))
 		if err != nil {
-			return fmt.Errorf("error checking for identity entity %q: %s", rs.Primary.ID, err)
+			return fmt.Errorf("error checking for identity group %q: %s", rs.Primary.ID, err)
 		}
 		if secret != nil {
-			return fmt.Errorf("identity entity role %q still exists", rs.Primary.ID)
+			return fmt.Errorf("identity group role %q still exists", rs.Primary.ID)
 		}
 	}
 	return nil
 }
 
-func testAccIdentityEntityCheckAttrs(entity string) resource.TestCheckFunc {
+func testAccidentityGroupPoliciesCheckAttrs(group string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_identity_entity.entity"]
+		resourceState := s.Modules[0].Resources["vault_identity_group_policies.policies"]
 		if resourceState == nil {
 			return fmt.Errorf("resource not found in state")
 		}
@@ -87,7 +86,7 @@ func testAccIdentityEntityCheckAttrs(entity string) resource.TestCheckFunc {
 
 		id := instanceState.ID
 
-		path := identityEntityIDPath(id)
+		path := identityGroupIDPath(id)
 		client := testProvider.Meta().(*api.Client)
 		resp, err := client.Logical().Read(path)
 		if err != nil {
@@ -95,8 +94,9 @@ func testAccIdentityEntityCheckAttrs(entity string) resource.TestCheckFunc {
 		}
 
 		attrs := map[string]string{
-			"name":     "name",
-			"policies": "policies",
+			"group_id":   "id",
+			"group_name": "name",
+			"policies":   "policies",
 		}
 		for stateAttr, apiAttr := range attrs {
 			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
@@ -147,7 +147,6 @@ func testAccIdentityEntityCheckAttrs(entity string) resource.TestCheckFunc {
 							if strings.HasPrefix(stateKey, stateAttr) {
 								if apiData[i] == stateValue {
 									found = true
-									break
 								}
 							}
 						}
@@ -168,24 +167,28 @@ func testAccIdentityEntityCheckAttrs(entity string) resource.TestCheckFunc {
 	}
 }
 
-func testAccIdentityEntityConfig(entityName string) string {
+func testAccidentityGroupPoliciesConfig(groupName string) string {
 	return fmt.Sprintf(`
-resource "vault_identity_entity" "entity" {
+resource "vault_identity_group" "group" {
   name = "%s"
-  policies = ["test"]
-  metadata = {
-    version = "1"
-  }
-}`, entityName)
+  external_policies = true
 }
 
-func testAccIdentityEntityConfigUpdate(entityName string) string {
+resource "vault_identity_group_policies" "policies" {
+  group_id = "${vault_identity_group.group.id}"
+  policies = ["test"]
+}`, groupName)
+}
+
+func testAccidentityGroupPoliciesConfigUpdate(groupName string) string {
 	return fmt.Sprintf(`
-resource "vault_identity_entity" "entity" {
-  name = "%s-2"
+resource "vault_identity_group" "group" {
+  name = "%s"
+  external_policies = true
+}
+
+resource "vault_identity_group_policies" "policies" {
+  group_id = "${vault_identity_group.group.id}"
   policies = ["dev", "test"]
-  metadata = {
-    version = "2"
-  }
-}`, entityName)
+}`, groupName)
 }
