@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
-	"strconv"
 )
 
 func TestPkiSecretBackendCert_basic(t *testing.T) {
@@ -26,6 +26,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_cert.test", "backend", intermediatePath),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_cert.test", "common_name", "cert.test.my.domain"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_cert.test", "ttl", "720h"),
 				),
 			},
 		},
@@ -130,5 +131,6 @@ resource "vault_pki_secret_backend_cert" "test" {
   backend = "${vault_pki_secret_backend.test-intermediate.path}"
   name = "${vault_pki_secret_backend_role.test.name}"
   common_name = "cert.test.my.domain"
+  ttl = "720h"
 }`, rootPath, intermediatePath)
 }
