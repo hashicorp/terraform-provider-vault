@@ -48,7 +48,7 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Optional:      true,
 				ConflictsWith: []string{"policy_document", "policy", "policy_arns"},
 				Description:   "ARN for an existing IAM policy the role should use.",
-				Deprecated: `Use "policy_arns".`,
+				Deprecated:    `Use "policy_arns".`,
 			},
 			"policy_document": {
 				Type:             schema.TypeString,
@@ -63,12 +63,12 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				ConflictsWith:    []string{"policy_arns", "policy_arn", "policy_document"},
 				Description:      "IAM policy the role should use in JSON format.",
 				DiffSuppressFunc: util.JsonDiffSuppress,
-				Deprecated: `Use "policy_document".`,
+				Deprecated:       `Use "policy_document".`,
 			},
 			"credential_type": {
-				Type:          schema.TypeString,
-				Required:      true,
-				Description:   "Role credential type.",
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Role credential type.",
 			},
 		},
 	}
@@ -85,7 +85,7 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	if !ok {
 		policyARN := d.Get("policy_arn").(string)
 		if policyARN != "" {
-			policyARNs = append (policyARNs, policyARN)
+			policyARNs = append(policyARNs, policyARN)
 		}
 	}
 	for _, arnIfc := range policyARNsIfc.([]interface{}) {

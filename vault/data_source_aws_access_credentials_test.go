@@ -95,7 +95,7 @@ resource "vault_aws_secret_backend" "aws" {
 resource "vault_aws_secret_backend_role" "role" {
     backend = "${vault_aws_secret_backend.aws.path}"
     name = "test"
-	credential_type = "federation_token"
+    credential_type = "federation_token"
     policy_document = "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"iam:*\", \"Resource\": \"*\"}]}"
 }
 
