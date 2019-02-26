@@ -1,14 +1,5 @@
 package vault
 
-/*
-
-These tests are broken:
-
-- TestAccAWSAuthBackendLogin_ec2Identity
-- TestAccAWSAuthBackendLogin_pkcs7
-
-*/
-
 import (
 	"encoding/base64"
 	"encoding/json"
