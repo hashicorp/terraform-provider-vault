@@ -9,12 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 )
@@ -24,11 +21,7 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := getTestAWSCreds(t)
 
-	awsConfig := &aws.Config{
-		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
-		HTTPClient:  cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	sess, err := session.NewSession(nil)
 	if err != nil {
 		t.Errorf("Error creating AWS session: %s", err)
 	}
@@ -73,11 +66,7 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := getTestAWSCreds(t)
 
-	awsConfig := &aws.Config{
-		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
-		HTTPClient:  cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	sess, err := session.NewSession(nil)
 	if err != nil {
 		t.Errorf("Error creating AWS session: %s", err)
 	}
@@ -128,11 +117,7 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := getTestAWSCreds(t)
 
-	awsConfig := &aws.Config{
-		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
-		HTTPClient:  cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	sess, err := session.NewSession(nil)
 	if err != nil {
 		t.Errorf("Error creating AWS session: %s", err)
 	}
