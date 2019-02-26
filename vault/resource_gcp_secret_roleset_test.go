@@ -24,10 +24,12 @@ func TestGCPSecretRoleset(t *testing.T) {
 	credentials, project := getTestGCPCreds(t)
 
 	initialRole := "roles/viewer"
-	initialConfig, initialHash := testGCPSecretRoleset_config(backend, roleset, credentials, project, initialRole)
+	initialConfig, initialHash := testGCPSecretRoleset_access_token(backend, roleset, credentials, project, initialRole)
 
 	updatedRole := "roles/browser"
-	updatedConfig, updatedHash := testGCPSecretRoleset_config(backend, roleset, credentials, project, updatedRole)
+	updatedConfig, updatedHash := testGCPSecretRoleset_access_token(backend, roleset, credentials, project, updatedRole)
+
+	keyConfig, keyHash := testGCPSecretRoleset_service_account_key(backend, roleset, credentials, project, updatedRole)
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -66,6 +68,21 @@ func TestGCPSecretRoleset(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.resource", updatedHash), fmt.Sprintf("//cloudresourcemanager.googleapis.com/projects/%s", project)),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.roles.#", updatedHash), "1"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.roles.2133424675", updatedHash), updatedRole),
+				),
+			},
+			{
+				Config: keyConfig,
+				Check: resource.ComposeTestCheckFunc(
+					testGCPSecretRoleset_attrs(backend, roleset),
+					resource.TestCheckResourceAttr("vault_gcp_secret_backend.test", "path", backend),
+					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "backend", backend),
+					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "roleset", roleset),
+					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "secret_type", "service_account_key"),
+					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "project", project),
+					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "binding.#", "1"),
+					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.resource", keyHash), fmt.Sprintf("//cloudresourcemanager.googleapis.com/projects/%s", project)),
+					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.roles.#", keyHash), "1"),
+					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.roles.2133424675", keyHash), updatedRole),
 				),
 			},
 		},
@@ -252,7 +269,7 @@ func testGCPSecretRolesetDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testGCPSecretRoleset_config(backend, roleset, credentials, project, role string) (string, int) {
+func testGCPSecretRoleset_access_token(backend, roleset, credentials, project, role string) (string, int) {
 	resource := fmt.Sprintf("//cloudresourcemanager.googleapis.com/projects/%s", project)
 
 	terraform := fmt.Sprintf(`
@@ -267,6 +284,38 @@ resource "vault_gcp_secret_roleset" "test" {
   secret_type = "access_token"
   project = "%s"
   token_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+
+  binding {
+	resource = "%s"
+
+	roles = ["%s"]
+  }
+}
+`, backend, credentials, roleset, project, resource, role)
+
+	// Hash the set of bindings
+	binding := make(map[string]interface{})
+	roles := []interface{}{role}
+	binding["resource"] = resource
+	binding["roles"] = schema.NewSet(schema.HashString, roles)
+
+	return terraform, gcpSecretRolesetBindingHash(binding)
+}
+
+func testGCPSecretRoleset_service_account_key(backend, roleset, credentials, project, role string) (string, int) {
+	resource := fmt.Sprintf("//cloudresourcemanager.googleapis.com/projects/%s", project)
+
+	terraform := fmt.Sprintf(`
+resource "vault_gcp_secret_backend" "test" {
+  path = "%s"
+  credentials = "${file("%s")}"
+}
+
+resource "vault_gcp_secret_roleset" "test" {
+  backend = "${vault_gcp_secret_backend.test.path}"
+  roleset = "%s"
+  secret_type = "service_account_key"
+  project = "%s"
 
   binding {
 	resource = "%s"

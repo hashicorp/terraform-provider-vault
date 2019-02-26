@@ -158,11 +158,10 @@ func gcpSecretRolesetRead(d *schema.ResourceData, meta interface{}) error {
 
 	for _, k := range []string{"secret_type", "token_scopes", "service_account_email"} {
 		v, ok := resp.Data[k]
-		if !ok {
-			return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q", k, path)
-		}
-		if err := d.Set(k, v); err != nil {
-			return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q: %q", k, path, err)
+		if ok {
+			if err := d.Set(k, v); err != nil {
+				return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q: %q", k, path, err)
+			}
 		}
 	}
 
@@ -239,7 +238,7 @@ func gcpSecretRolesetUpdateFields(d *schema.ResourceData, data map[string]interf
 		data["project"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("token_scopes"); ok {
+	if v, ok := d.GetOk("token_scopes"); ok && d.Get("secret_type").(string) == "access_token" {
 		data["token_scopes"] = v.(*schema.Set).List()
 	}
 
