@@ -72,7 +72,8 @@ resource "vault_aws_secret_backend" "aws" {
 resource "vault_aws_secret_backend_role" "role" {
     backend = "${vault_aws_secret_backend.aws.path}"
     name = "test"
-    policy = "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"iam:*\", \"Resource\": \"*\"}]}"
+    credential_type = "iam_user"
+    policy_document = "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"iam:*\", \"Resource\": \"*\"}]}"
 }
 
 data "vault_aws_access_credentials" "test" {
@@ -94,7 +95,8 @@ resource "vault_aws_secret_backend" "aws" {
 resource "vault_aws_secret_backend_role" "role" {
     backend = "${vault_aws_secret_backend.aws.path}"
     name = "test"
-    policy = "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"iam:*\", \"Resource\": \"*\"}]}"
+    credential_type = "federation_token"
+    policy_document = "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"iam:*\", \"Resource\": \"*\"}]}"
 }
 
 data "vault_aws_access_credentials" "test" {
