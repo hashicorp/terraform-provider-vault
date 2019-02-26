@@ -1,5 +1,14 @@
 package vault
 
+/*
+
+These tests are broken:
+
+- TestAccAWSAuthBackendLogin_ec2Identity
+- TestAccAWSAuthBackendLogin_pkcs7
+
+*/
+
 import (
 	"encoding/base64"
 	"encoding/json"
@@ -74,7 +83,6 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 	accessKey, secretKey := getTestAWSCreds(t)
 
 	awsConfig := &aws.Config{
-		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
 	sess, err := session.NewSession(awsConfig)
@@ -129,7 +137,6 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 	accessKey, secretKey := getTestAWSCreds(t)
 
 	awsConfig := &aws.Config{
-		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
 	sess, err := session.NewSession(awsConfig)
