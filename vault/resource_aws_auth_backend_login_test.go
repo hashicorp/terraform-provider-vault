@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 
@@ -59,9 +58,8 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
-	if os.Getenv(resource.TestEnvVar) == "" {
-		t.Skip(resource.TestEnvVar + " not set.")
-	}
+	t.Skip("skipping because remote environment isn't suitable for testing")
+
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := getTestAWSCreds(t)
@@ -110,9 +108,8 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
-	if os.Getenv(resource.TestEnvVar) == "" {
-		t.Skip(resource.TestEnvVar + " not set.")
-	}
+	t.Skip("skipping because remote environment isn't suitable for testing")
+
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := getTestAWSCreds(t)
