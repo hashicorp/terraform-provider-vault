@@ -75,7 +75,12 @@ true
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+The following attributes are exported in addition to the above:
+
+* `data` - A mapping whose keys are the top-level data keys returned from
+Vault and whose values are the corresponding values. This map can only
+represent string data, so any non-string values returned from Vault are
+serialized as JSON.
 
 ## Import
 
