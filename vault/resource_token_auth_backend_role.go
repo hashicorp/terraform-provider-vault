@@ -163,7 +163,9 @@ func tokenAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("role_name", roleName)
 
 	for _, k := range []string{"allowed_policies", "disallowed_policies", "orphan", "period", "explicit_max_ttl", "path_suffix", "renewable", "bound_cidrs", "token_type"} {
-		d.Set(k, resp.Data[k])
+		if err := d.Set(k, resp.Data[k]); err != nil {
+			return fmt.Errorf("error reading %s for Token auth backend role %q: %q", k, path, err)
+		}
 	}
 
 	return nil
