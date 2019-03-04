@@ -141,6 +141,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_egp_policy":                                   egpPolicyResource(),
 			"vault_rgp_policy":                                   rgpPolicyResource(),
 			"vault_mount":                                        mountResource(),
+			"vault_namespace":                                    namespaceResource(),
 			"vault_audit":                                        auditResource(),
 			"vault_ssh_secret_backend_ca":                        sshSecretBackendCAResource(),
 			"vault_ssh_secret_backend_role":                      sshSecretBackendRoleResource(),
