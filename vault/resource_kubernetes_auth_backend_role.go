@@ -198,7 +198,11 @@ func kubernetesAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 	d.Set("role_name", role)
 
 	for _, k := range []string{"bound_cidrs", "bound_service_account_names", "bound_service_account_namespaces", "num_uses", "policies", "ttl", "max_ttl", "period"} {
-		d.Set(k, resp.Data[k])
+		if v, ok := resp.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return fmt.Errorf("error reading %s for Kubernetes Auth Backend Role %q: %q", k, path, err)
+			}
+		}
 	}
 
 	return nil
