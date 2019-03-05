@@ -71,6 +71,10 @@ func sshSecretBackendRoleResource() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"cidr_list": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"allowed_extensions": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -136,6 +140,10 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("allowed_domains"); ok {
 		data["allowed_domains"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("cidr_list"); ok {
+		data["cidr_list"] = v.(string)
 	}
 
 	if v, ok := d.GetOk("allowed_extensions"); ok {
@@ -221,6 +229,7 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("allow_user_key_ids", role.Data["allow_user_key_ids"])
 	d.Set("allowed_critical_options", role.Data["allowed_critical_options"])
 	d.Set("allowed_domains", role.Data["allowed_domains"])
+	d.Set("cidr_list", role.Data["cidr_list"])
 	d.Set("allowed_extensions", role.Data["allowed_extensions"])
 	d.Set("default_extensions", role.Data["default_extensions"])
 	d.Set("default_critical_options", role.Data["default_critical_options"])
