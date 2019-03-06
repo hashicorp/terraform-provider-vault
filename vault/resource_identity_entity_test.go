@@ -147,6 +147,7 @@ func testAccIdentityEntityCheckAttrs(entity string) resource.TestCheckFunc {
 							if strings.HasPrefix(stateKey, stateAttr) {
 								if apiData[i] == stateValue {
 									found = true
+									break
 								}
 							}
 						}
