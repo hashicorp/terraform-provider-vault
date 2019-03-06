@@ -165,11 +165,17 @@ func gcpSecretRolesetRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	v, ok := resp.Data["service_account_project"]
+	// In https://github.com/hashicorp/vault-plugin-secrets-gcp/pull/28, this field is changed to
+	// `project`. We handle cases where it used to be `service_account_project` for backward
+	// compatibility.
+	project, ok := resp.Data["project"]
 	if !ok {
-		return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q", "project", path)
+		project, ok = resp.Data["service_account_project"]
+		if !ok {
+			return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q", "project", path)
+		}
 	}
-	if err := d.Set("project", v); err != nil {
+	if err := d.Set("project", project); err != nil {
 		return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q", "project", path)
 	}
 
