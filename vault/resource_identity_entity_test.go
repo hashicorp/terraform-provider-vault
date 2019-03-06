@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/acctest"
@@ -45,8 +46,9 @@ func TestAccIdentityEntityUpdate(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityEntityCheckAttrs(entity),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "metadata.version", "2"),
-					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.0", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.1", "test"),
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.#", "2"),
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.1785148924", "test"),
 				),
 			},
 		},
@@ -138,10 +140,19 @@ func testAccIdentityEntityCheckAttrs(entity string) resource.TestCheckFunc {
 					if count != len(apiData) {
 						return fmt.Errorf("expected %s to have %d entries in state, has %d", stateAttr, len(apiData), count)
 					}
+
 					for i := 0; i < count; i++ {
-						stateData := instanceState.Attributes[stateAttr+"."+strconv.Itoa(i)]
-						if stateData != apiData[i] {
-							return fmt.Errorf("expected item %d of %s (%s in state) of %q to be %q, got %q", i, apiAttr, stateAttr, path, stateData, apiData[i])
+						found := false
+						for stateKey, stateValue := range instanceState.Attributes {
+							if strings.HasPrefix(stateKey, stateAttr) {
+								if apiData[i] == stateValue {
+									found = true
+									break
+								}
+							}
+						}
+						if !found {
+							return fmt.Errorf("Expected item %d of %s (%s in state) of %q to be in state but wasn't", i, apiAttr, stateAttr, apiData[i])
 						}
 					}
 					match = true

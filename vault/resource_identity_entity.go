@@ -37,7 +37,7 @@ func identityEntityResource() *schema.Resource {
 			},
 
 			"policies": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -46,7 +46,7 @@ func identityEntityResource() *schema.Resource {
 			},
 
 			"disabled": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Whether the entity is disabled. Disabled entities' associated tokens cannot be used, but are not revoked.",
 			},
@@ -66,7 +66,7 @@ func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interfac
 	}
 
 	if policies, ok := d.GetOk("policies"); ok {
-		data["policies"] = policies
+		data["policies"] = policies.(*schema.Set).List()
 	}
 
 	if metadata, ok := d.GetOk("metadata"); ok {
@@ -139,7 +139,7 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 		if util.IsExpiredTokenErr(err) {
 			return nil
 		}
-		return fmt.Errorf("error reading AppRole auth backend role SecretID %q: %s", id, err)
+		return fmt.Errorf("error reading IdentityEntity %q: %s", id, err)
 	}
 	log.Printf("[DEBUG] Read IdentityEntity %s", id)
 	if resp == nil {
@@ -149,7 +149,9 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	for _, k := range []string{"name", "metadata", "disabled", "policies"} {
-		d.Set(k, resp.Data[k])
+		if err := d.Set(k, resp.Data[k]); err != nil {
+			return fmt.Errorf("error reading %s of IdentityEntity %q: %q", k, path, err)
+		}
 	}
 	return nil
 }
