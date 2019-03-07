@@ -159,7 +159,15 @@ resource "vault_aws_secret_backend_role" "test_policy_arns" {
   credential_type = "iam_user"
   backend = "${vault_aws_secret_backend.test.path}"
 }
-`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_basic, name, testAccAWSSecretBackendRolePolicyArn_basic)
+
+resource "vault_aws_secret_backend_role" "test_policy_inline_and_arns" {
+  name = "%s-policy-inline-and-arn"
+  policy_arns = ["%s"]
+  policy_document = %q
+  credential_type = "iam_user"
+  backend = "${vault_aws_secret_backend.test.path}"
+}
+`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_basic, name, testAccAWSSecretBackendRolePolicyArn_basic, name, testAccAWSSecretBackendRolePolicyInline_basic, testAccAWSSecretBackendRolePolicyArn_basic)
 }
 
 func testAccAWSSecretBackendRoleConfig_updated(name, path, accessKey, secretKey string) string {
@@ -183,5 +191,13 @@ resource "vault_aws_secret_backend_role" "test_policy_arns" {
   credential_type = "iam_user"
   backend = "${vault_aws_secret_backend.test.path}"
 }
-`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_updated, name, testAccAWSSecretBackendRolePolicyArn_updated)
+
+resource "vault_aws_secret_backend_role" "test_policy_inline_and_arns" {
+  name = "%s-policy-inline-and-arn"
+  policy_document = %q
+  policy_arns = ["%s"]
+  credential_type = "iam_user"
+  backend = "${vault_aws_secret_backend.test.path}"
+}
+`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_updated, name, testAccAWSSecretBackendRolePolicyArn_updated, name, testAccAWSSecretBackendRolePolicyInline_updated, testAccAWSSecretBackendRolePolicyArn_updated)
 }
