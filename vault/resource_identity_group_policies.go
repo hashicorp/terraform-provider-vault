@@ -33,8 +33,8 @@ func identityGroupPoliciesResource() *schema.Resource {
 			"exclusive": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     false,
-				Description: "Should the resource manage policies exclusively?",
+				Default:     true,
+				Description: "Should the resource manage policies exclusively? Beware of race conditions when disabling exclusive management",
 			},
 
 			"group_id": {
@@ -165,4 +165,21 @@ func identityGroupPoliciesExists(d *schema.ResourceData, meta interface{}) (bool
 	log.Printf("[DEBUG] Checked if IdentityGroupPolicies %q exists", id)
 
 	return resp != nil, nil
+}
+
+func identityGroupPoliciesDetermineNew(presentPolicies, oldStatePolicies, newStatePolicies []interface{}) []string {
+	policies := schema.NewSet(schema.HashString, presentPolicies)
+
+	for _, policy := range oldStatePolicies {
+		policies.Remove(policy)
+	}
+	for _, policy := range newStatePolicies {
+		policies.Add(policy)
+	}
+
+	var ret []string
+	for _, policy := range policies.List() {
+		ret = append(ret, policy.(string))
+	}
+	return ret
 }
