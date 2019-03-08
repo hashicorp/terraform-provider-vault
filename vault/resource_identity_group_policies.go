@@ -30,6 +30,13 @@ func identityGroupPoliciesResource() *schema.Resource {
 				Description: "Policies to be tied to the group.",
 			},
 
+			"exclusive": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Should the resource manage policies exclusively?",
+			},
+
 			"group_id": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -44,10 +51,12 @@ func identityGroupPoliciesResource() *schema.Resource {
 		},
 	}
 }
-
-func identityGroupPoliciesUpdateFields(d *schema.ResourceData, data map[string]interface{}) error {
-	if policies, ok := d.GetOk("policies"); ok {
-		data["policies"] = policies.(*schema.Set).List()
+func identityGroupPoliciesUpdateFields(d *schema.ResourceData, data map[string]interface{}, presentPolicies []interface{}) error {
+	o, n := d.GetChange("policies")
+	if d.Get("exclusive").(bool) {
+		data["policies"] = n.(*schema.Set).List()
+	} else {
+		data["policies"] = identityGroupPoliciesDetermineNew(presentPolicies, o.(*schema.Set).List(), n.(*schema.Set).List())
 	}
 	return nil
 }
@@ -63,7 +72,7 @@ func identityGroupPoliciesCreate(d *schema.ResourceData, meta interface{}) error
 		"id": groupId,
 	}
 
-	if err := identityGroupPoliciesUpdateFields(d, data); err != nil {
+	if err := identityGroupPoliciesUpdateFields(d, data, []interface{}{}); err != nil {
 		return fmt.Errorf("error writing IdentityGroupPolicies to %q: %s", groupId, err)
 	}
 
@@ -86,13 +95,18 @@ func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[DEBUG] Updating IdentityGroupPolicies %q", id)
 	path := identityGroupIDPath(id)
 
+	presentPolicies, err := readIdentityGroupPolicies(client, id)
+	if err != nil {
+		return fmt.Errorf("error updating IdentityGroupPolicies %q - %s: %s", id, d.Get("policies"), err)
+	}
+
 	data := map[string]interface{}{}
 
-	if err := identityGroupPoliciesUpdateFields(d, data); err != nil {
+	if err := identityGroupPoliciesUpdateFields(d, data, presentPolicies); err != nil {
 		return fmt.Errorf("error updating IdentityGroupPolicies %q: %s", id, err)
 	}
 
-	_, err := client.Logical().Write(path, data)
+	_, err = client.Logical().Write(path, data)
 
 	if err != nil {
 		return fmt.Errorf("error updating IdentityGroupPolicies %q: %s", id, err)
@@ -106,10 +120,7 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	path := identityGroupIDPath(id)
-
-	log.Printf("[DEBUG] Reading IdentityGroupPolicies %s from %q", id, path)
-	resp, err := client.Logical().Read(path)
+	resp, err := readIdentityGroup(client, id)
 	if err != nil {
 		// We need to check if the secret_id has expired
 		if util.IsExpiredTokenErr(err) {
@@ -137,34 +148,21 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupPoliciesDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-	id := d.Id()
-
-	path := identityGroupIDPath(id)
-
-	log.Printf("[DEBUG] Deleting IdentityGroupPolicies %q", id)
-	_, err := client.Logical().Delete(path)
-	if err != nil {
-		return fmt.Errorf("error IdentityGroupPolicies %q", id)
+	if err := d.Set("policies", []string{}); err != nil {
+		return fmt.Errorf("failed setting policy to empty set: %s", err)
 	}
-	log.Printf("[DEBUG] Deleted IdentityGroupPolicies %q", id)
-
-	return nil
+	return identityGroupPoliciesUpdate(d, meta)
 }
 
 func identityGroupPoliciesExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	path := identityGroupIDPath(id)
-	key := id
-
-	log.Printf("[DEBUG] Checking if IdentityGroupPolicies %q exists", key)
-	resp, err := client.Logical().Read(path)
+	resp, err := readIdentityGroup(client, id)
 	if err != nil {
-		return true, fmt.Errorf("error checking if IdentityGroupPolicies %q exists: %s", key, err)
+		return true, fmt.Errorf("error checking if IdentityGroupPolicies %q exists: %s", id, err)
 	}
-	log.Printf("[DEBUG] Checked if IdentityGroupPolicies %q exists", key)
+	log.Printf("[DEBUG] Checked if IdentityGroupPolicies %q exists", id)
 
 	return resp != nil, nil
 }

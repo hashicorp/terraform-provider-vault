@@ -12,44 +12,43 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func TestAccidentityGroupPolicies(t *testing.T) {
+func TestAccidentityGroupPolicy(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityGroupPoliciesDestroy,
+		CheckDestroy: testAccCheckidentityGroupPolicyDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccidentityGroupPoliciesConfig(),
-				Check:  testAccidentityGroupPoliciesCheckAttrs(),
+				Config: testAccidentityGroupPolicyConfig(),
+				Check:  testAccidentityGroupPolicyCheckAttrs(),
 			},
 		},
 	})
 }
 
-func TestAccidentityGroupPoliciesUpdate(t *testing.T) {
+func TestAccidentityGroupPolicyUpdate(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityGroupPoliciesDestroy,
+		CheckDestroy: testAccCheckidentityGroupPolicyDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccidentityGroupPoliciesConfig(),
-				Check:  testAccidentityGroupPoliciesCheckAttrs(),
+				Config: testAccidentityGroupPolicyConfig(),
+				Check:  testAccidentityGroupPolicyCheckAttrs(),
 			},
 			{
-				Config: testAccidentityGroupPoliciesConfigUpdate(),
+				Config: testAccidentityGroupPolicyConfigUpdate(),
 				Check: resource.ComposeTestCheckFunc(
-					testAccidentityGroupPoliciesCheckAttrs(),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.1785148924", "test"),
+					testAccidentityGroupPolicyCheckAttrs(),
+					resource.TestCheckResourceAttr("vault_identity_group_policy.policy", "group_policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_group_policy.policy", "group_policies.326271447", "dev"),
 				),
 			},
 		},
 	})
 }
 
-func testAccCheckidentityGroupPoliciesDestroy(s *terraform.State) error {
+func testAccCheckidentityGroupPolicyDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
@@ -67,9 +66,9 @@ func testAccCheckidentityGroupPoliciesDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccidentityGroupPoliciesCheckAttrs() resource.TestCheckFunc {
+func testAccidentityGroupPolicyCheckAttrs() resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_identity_group_policies.policies"]
+		resourceState := s.Modules[0].Resources["vault_identity_group_policy.policy"]
 		if resourceState == nil {
 			return fmt.Errorf("resource not found in state")
 		}
@@ -89,9 +88,9 @@ func testAccidentityGroupPoliciesCheckAttrs() resource.TestCheckFunc {
 		}
 
 		attrs := map[string]string{
-			"group_id":   "id",
-			"group_name": "name",
-			"policies":   "policies",
+			"group_id":       "id",
+			"group_name":     "name",
+			"group_policies": "policies",
 		}
 		for stateAttr, apiAttr := range attrs {
 			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
@@ -162,26 +161,26 @@ func testAccidentityGroupPoliciesCheckAttrs() resource.TestCheckFunc {
 	}
 }
 
-func testAccidentityGroupPoliciesConfig() string {
-	return fmt.Sprintf(`
+func testAccidentityGroupPolicyConfig() string {
+	return `
 resource "vault_identity_group" "group" {
   external_policies = true
 }
 
-resource "vault_identity_group_policies" "policies" {
+resource "vault_identity_group_policy" "policy" {
   group_id = "${vault_identity_group.group.id}"
-  policies = ["test"]
-}`)
+  policy = "test"
+}`
 }
 
-func testAccidentityGroupPoliciesConfigUpdate() string {
-	return fmt.Sprintf(`
+func testAccidentityGroupPolicyConfigUpdate() string {
+	return `
 resource "vault_identity_group" "group" {
   external_policies = true
 }
 
-resource "vault_identity_group_policies" "policies" {
+resource "vault_identity_group_policy" "policy" {
   group_id = "${vault_identity_group.group.id}"
-  policies = ["dev", "test"]
-}`)
+  policy = "dev"
+}`
 }

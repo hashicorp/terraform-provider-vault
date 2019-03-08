@@ -150,6 +150,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_identity_group":                               identityGroupResource(),
 			"vault_identity_group_alias":                         identityGroupAliasResource(),
 			"vault_identity_group_policies":                      identityGroupPoliciesResource(),
+			"vault_identity_group_policy":                        identityGroupPolicyResource(),
 			"vault_rabbitmq_secret_backend":                      rabbitmqSecretBackendResource(),
 			"vault_rabbitmq_secret_backend_role":                 rabbitmqSecretBackendRoleResource(),
 			"vault_pki_secret_backend":                           pkiSecretBackendResource(),

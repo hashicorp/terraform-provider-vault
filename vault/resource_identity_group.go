@@ -54,6 +54,9 @@ func identityGroupResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Description: "Policies to be tied to the group.",
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					return d.Get("external_policies").(bool)
+				},
 			},
 
 			"external_policies": {
@@ -185,10 +188,7 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	path := identityGroupIDPath(id)
-
-	log.Printf("[DEBUG] Reading IdentityGroup %s from %q", id, path)
-	resp, err := client.Logical().Read(path)
+	resp, err := readIdentityGroup(client, id)
 	if err != nil {
 		// We need to check if the secret_id has expired
 		if util.IsExpiredTokenErr(err) {
@@ -203,11 +203,7 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	readFields := []string{"name", "type", "metadata", "member_entity_ids", "member_group_ids"}
-
-	if externalPolicies, ok := d.GetOk("external_policies"); !(ok && externalPolicies.(bool)) {
-		readFields = append(readFields, "policies")
-	}
+	readFields := []string{"name", "type", "metadata", "member_entity_ids", "member_group_ids", "policies"}
 
 	for _, k := range readFields {
 		if err := d.Set(k, resp.Data[k]); err != nil {
@@ -236,30 +232,44 @@ func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
 func identityGroupExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client := meta.(*api.Client)
 	id := d.Id()
-
-	path := identityGroupIDPath(id)
 	key := id
 
-	// use the name if no ID is set
 	if len(id) == 0 {
+		return false, nil
+	} else {
 		key = d.Get("name").(string)
-		path = identityGroupNamePath(key)
 	}
 
 	log.Printf("[DEBUG] Checking if IdentityGroup %q exists", key)
-	resp, err := client.Logical().Read(path)
+	resp, err := readIdentityGroup(client, id)
 	if err != nil {
 		return true, fmt.Errorf("error checking if IdentityGroup %q exists: %s", key, err)
 	}
 	log.Printf("[DEBUG] Checked if IdentityGroup %q exists", key)
-
 	return resp != nil, nil
-}
-
-func identityGroupNamePath(name string) string {
-	return fmt.Sprintf("%s/name/%s", identityGroupPath, name)
 }
 
 func identityGroupIDPath(id string) string {
 	return fmt.Sprintf("%s/id/%s", identityGroupPath, id)
+}
+
+func readIdentityGroupPolicies(client *api.Client, groupId string) ([]interface{}, error) {
+	var presentPolicies []interface{}
+	if resp, err := readIdentityGroup(client, groupId); err != nil {
+		return nil, fmt.Errorf("error reading IdentityGroup policies %q: %s", groupId, err)
+	} else {
+		presentPolicies = resp.Data["policies"].([]interface{})
+	}
+	return presentPolicies, nil
+}
+
+func readIdentityGroup(client *api.Client, groupId string) (*api.Secret, error) {
+	path := identityGroupIDPath(groupId)
+	log.Printf("[DEBUG] Reading IdentityGroup %s from %q", groupId, path)
+
+	if resp, err := client.Logical().Read(path); err != nil {
+		return resp, fmt.Errorf("failed reading IdentityGroup %s from %s", groupId, path)
+	} else {
+		return resp, nil
+	}
 }
