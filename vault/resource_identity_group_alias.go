@@ -26,7 +26,6 @@ func identityGroupAliasResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Name of the group alias.",
-				ForceNew:    true,
 			},
 
 			"mount_accessor": {

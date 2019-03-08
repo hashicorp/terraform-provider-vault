@@ -26,7 +26,6 @@ func identityEntityAliasResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Name of the entity alias.",
-				ForceNew:    true,
 			},
 
 			"mount_accessor": {

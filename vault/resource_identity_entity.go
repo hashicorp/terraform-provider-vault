@@ -25,8 +25,9 @@ func identityEntityResource() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
-				Optional:    true,
 				Description: "Name of the entity.",
+				Optional:    true,
+				Computed:    true,
 			},
 
 			"metadata": {

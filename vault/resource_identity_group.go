@@ -25,8 +25,9 @@ func identityGroupResource() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
-				Optional:    true,
 				Description: "Name of the group.",
+				Optional:    true,
+				Computed:    true,
 			},
 
 			"type": {
