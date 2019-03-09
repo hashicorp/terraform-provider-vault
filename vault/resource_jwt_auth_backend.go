@@ -69,6 +69,13 @@ func jwtAuthBackendResource() *schema.Resource {
 				Description: "The value against which to match the iss claim in a JWT",
 			},
 
+			"jwt_supported_algs": {
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+				Description: "A list of supported signing algorithms. Defaults to [RS256]",
+			},
+
 			"accessor": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -149,6 +156,7 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("bound_issuer", config.Data["bound_issuer"])
 	d.Set("oidc_discovery_url", config.Data["oidc_discovery_url"])
 	d.Set("jwt_validation_pubkeys", config.Data["jwt_validation_pubkeys"])
+	d.Set("jwt_supported_algs", config.Data["jwt_supported_algs"])
 
 	return nil
 
@@ -167,6 +175,7 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	oidcDiscoveryUrl, oidcDiscoveryUrlExists := d.GetOk("oidc_discovery_url")
 	jwtValidationPubKeys, jwtValidationPubKeysExists := d.GetOk("jwt_validation_pubkeys")
+	jwtSupportedAlgs, jwtSupportedAlgsExists := d.GetOk("jwt_supported_algs")
 
 	if oidcDiscoveryUrlExists == jwtValidationPubKeysExists {
 		return errors.New("exactly one of oidc_discovery_url and jwt_validation_pubkeys should be provided")
@@ -178,6 +187,10 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if jwtValidationPubKeysExists {
 		configuration["jwt_validation_pubkeys"] = jwtValidationPubKeys
+	}
+
+	if jwtSupportedAlgsExists {
+		configuration["jwt_supported_algs"] = jwtSupportedAlgs
 	}
 
 	_, err := client.Logical().Write(jwtConfigEndpoint(path), configuration)

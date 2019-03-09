@@ -38,6 +38,8 @@ The following arguments are supported:
 
 * `jwt_validation_pubkeys` - (Optional) A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used in combination with `oidc_discovery_url`
 
+* `jwt_supported_algs` - (Optional) A list of supported signing algorithms. Vault 1.1.0 defaults to [RS256] but future or past versions of Vault may differ
+
 ## Attributes Reference
 
 No additional attributes are exposed by this resource.
