@@ -17,7 +17,6 @@ information.
 ```hcl
 resource "vault_github_auth_backend" "example" {
   organization = "myorg"
-
 }
 
 resource "vault_github_team" "tf_devs" {
@@ -34,7 +33,7 @@ The following arguments are supported:
 * `backend` - (Required) Path where the github auth backend is mounted. Defaults to `github` 
   if not specified.
 
-* `team` - (Required) GitHub team name in "slugified" format, for example: Terraform Developers -> `terraform-developers`
+* `team` - (Required) GitHub team name in "slugified" format, for example: Terraform Developers -> `terraform-developers`.
 
 * `policies` - (Optional) A list of policies to be assigned to this team.
 

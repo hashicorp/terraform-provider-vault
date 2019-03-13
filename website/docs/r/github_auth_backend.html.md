@@ -17,7 +17,6 @@ information.
 ```hcl
 resource "vault_github_auth_backend" "example" {
   organization = "myorg"
-
 }
 ```
 
@@ -37,10 +36,10 @@ The following arguments are supported:
   This overrides the current stored value, if any.
 
 * `ttl` - (Optional) Duration after which authentication will be expired. 
-  This must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+  This must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration).
 
 * `max_ttl` - (Optional) Maximum duration after which authentication will be expired.
-  This must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+  This must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration).
 
 The `tune` block is used to tune the auth backend:
 
