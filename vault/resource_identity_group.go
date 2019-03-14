@@ -92,12 +92,6 @@ func identityGroupResource() *schema.Resource {
 					return false
 				},
 			},
-
-			"id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "ID of the group.",
-			},
 		},
 	}
 }
@@ -151,10 +145,6 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error writing IdentityGroup to %q: %s", name, err)
 	}
 	log.Printf("[DEBUG] Wrote IdentityGroup %q", name)
-
-	if err := d.Set("id", resp.Data["id"]); err != nil {
-		return fmt.Errorf("error setting \"id\" on IdentityGroup to %q: %s", name, err)
-	}
 
 	d.SetId(resp.Data["id"].(string))
 

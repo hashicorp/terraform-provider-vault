@@ -53,12 +53,6 @@ func identityEntityResource() *schema.Resource {
 				Optional:    true,
 				Description: "Whether the entity is disabled. Disabled entities' associated tokens cannot be used, but are not revoked.",
 			},
-
-			"id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "ID of the entity.",
-			},
 		},
 	}
 }
@@ -100,10 +94,6 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error writing IdentityEntity to %q: %s", name, err)
 	}
 	log.Printf("[DEBUG] Wrote IdentityEntity %q", name)
-
-	if err := d.Set("id", resp.Data["id"]); err != nil {
-		return fmt.Errorf("error setting \"id\" on IdentityEntity to %q: %s", name, err)
-	}
 
 	d.SetId(resp.Data["id"].(string))
 

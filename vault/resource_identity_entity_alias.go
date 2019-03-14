@@ -39,12 +39,6 @@ func identityEntityAliasResource() *schema.Resource {
 				Required:    true,
 				Description: "ID of the entity to which this is an alias.",
 			},
-
-			"id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "ID of the entity alias.",
-			},
 		},
 	}
 }
@@ -70,10 +64,6 @@ func identityEntityAliasCreate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error writing IdentityEntityAlias to %q: %s", name, err)
 	}
 	log.Printf("[DEBUG] Wrote IdentityEntityAlias %q", name)
-
-	if err := d.Set("id", resp.Data["id"]); err != nil {
-		return fmt.Errorf("error setting \"id\" on IdentityGroup %q: %s", name, err)
-	}
 
 	d.SetId(resp.Data["id"].(string))
 
@@ -133,7 +123,8 @@ func identityEntityAliasRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"id", "name", "mount_accessor", "canonical_id"} {
+	d.SetId(resp.Data["id"].(string))
+	for _, k := range []string{"name", "mount_accessor", "canonical_id"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return fmt.Errorf("error setting state key \"%s\" on IdentityEntityAlias %q: %s", k, id, err)
 		}
