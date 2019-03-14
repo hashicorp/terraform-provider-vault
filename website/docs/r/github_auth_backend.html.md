@@ -66,7 +66,9 @@ The `tune` block is used to tune the auth backend:
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+In addition to all arguments above, the following attributes are exported:
+
+* `accessor` - The mount accessor related to the auth mount. It is useful for integration with [Identity Secrets Engine](https://www.vaultproject.io/docs/secrets/identity/index.html).
 
 ## Import
 

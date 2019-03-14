@@ -62,7 +62,7 @@ func authMountTuneSchema() *schema.Schema {
 func authMountInfoGet(client *api.Client, path string) (*api.AuthMount, error) {
 	auths, err := client.Sys().ListAuth()
 	if err != nil {
-		return nil, fmt.Errorf("error reading from Vault: %s", err)
+		return nil, fmt.Errorf("error reading from auth mounts: %s", err)
 	}
 
 	authMount := auths[strings.Trim(path, "/")+"/"]
