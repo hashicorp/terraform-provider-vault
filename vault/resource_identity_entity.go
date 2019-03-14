@@ -50,12 +50,6 @@ func identityEntityResource() *schema.Resource {
 				Optional:    true,
 				Description: "Whether the entity is disabled. Disabled entities' associated tokens cannot be used, but are not revoked.",
 			},
-
-			"id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "ID of the entity.",
-			},
 		},
 	}
 }

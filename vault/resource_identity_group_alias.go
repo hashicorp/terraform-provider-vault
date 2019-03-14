@@ -37,12 +37,6 @@ func identityGroupAliasResource() *schema.Resource {
 				Required:    true,
 				Description: "ID of the group to which this is an alias.",
 			},
-
-			"id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "ID of the group alias.",
-			},
 		},
 	}
 }

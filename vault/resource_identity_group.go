@@ -79,12 +79,6 @@ func identityGroupResource() *schema.Resource {
 					return false
 				},
 			},
-
-			"id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "ID of the group.",
-			},
 		},
 	}
 }
