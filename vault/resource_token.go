@@ -74,6 +74,12 @@ func tokenResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "The explicit max TTL of the token.",
 			},
+			"wrapping_ttl": {
+				Type:        schema.TypeString,
+				Required:    false,
+				Optional:    true,
+				Description: "The TTL period of the wrapped token.",
+			},
 			"display_name": {
 				Type:        schema.TypeString,
 				Required:    false,
@@ -124,12 +130,26 @@ func tokenResource() *schema.Resource {
 				Description: "The client token.",
 				Sensitive:   true,
 			},
+			"wrapped_token": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The client wrapped token.",
+				Sensitive:   true,
+			},
+			"wrapping_accessor": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The client wrapping accessor.",
+				Sensitive:   true,
+			},
 		},
 	}
 }
 
 func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
+	var err error
+	var wrapped bool
 
 	role := d.Get("role_name").(string)
 
@@ -178,8 +198,25 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		createRequest.Renewable = &renewable
 	}
 
+	if v, ok := d.GetOk("wrapping_ttl"); ok {
+		wrappingTTL := v.(string)
+		token := client.Token()
+
+		client, err = client.Clone()
+		if err != nil {
+			return fmt.Errorf("error cloning client: %s", err)
+		}
+		client.SetToken(token)
+
+		client.SetWrappingLookupFunc(func(operation, path string) string {
+			return wrappingTTL
+		})
+
+		wrapped = true
+	}
+
 	var resp *api.Secret
-	var err error
+	var accessor string
 
 	if role != "" {
 		log.Printf("[DEBUG] Creating token with role %q", role)
@@ -188,7 +225,13 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error creating token with role %q: %s", role, err)
 		}
 
-		log.Printf("[DEBUG] Created token accessor %q with role %q", resp.Auth.Accessor, role)
+		if wrapped {
+			accessor = resp.WrapInfo.WrappedAccessor
+		} else {
+			accessor = resp.Auth.Accessor
+		}
+
+		log.Printf("[DEBUG] Created token accessor %q with role %q", accessor, role)
 	} else {
 		log.Printf("[DEBUG] Creating token")
 		resp, err = client.Auth().Token().Create(createRequest)
@@ -196,14 +239,23 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error creating token: %s", err)
 		}
 
-		log.Printf("[DEBUG] Created token accessor %q", resp.Auth.Accessor)
+		if wrapped {
+			accessor = resp.WrapInfo.WrappedAccessor
+		} else {
+			accessor = resp.Auth.Accessor
+		}
+
+		log.Printf("[DEBUG] Created token accessor %q", accessor)
 	}
 
-	d.Set("lease_duration", resp.Auth.LeaseDuration)
-	d.Set("lease_started", time.Now().Format(time.RFC3339))
-	d.Set("client_token", resp.Auth.ClientToken)
+	if wrapped {
+		d.Set("wrapped_token", resp.WrapInfo.Token)
+		d.Set("wrapping_accessor", resp.WrapInfo.Accessor)
+	} else {
+		d.Set("client_token", resp.Auth.ClientToken)
+	}
 
-	d.SetId(resp.Auth.Accessor)
+	d.SetId(accessor)
 
 	return tokenRead(d, meta)
 }
@@ -238,6 +290,18 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("renewable", fmt.Sprintf("%v", resp.Data["renewable"]))
 	d.Set("display_name", strings.TrimPrefix(resp.Data["display_name"].(string), "token-"))
 	d.Set("num_uses", resp.Data["num_uses"])
+
+	issueTime, err := time.Parse(time.RFC3339Nano, resp.Data["issue_time"].(string))
+	if err != nil {
+		return fmt.Errorf("error parsing issue_time: %s", err)
+	}
+	d.Set("lease_started", issueTime.Format(time.RFC3339))
+
+	expireTime, err := time.Parse(time.RFC3339Nano, resp.Data["expire_time"].(string))
+	if err != nil {
+		return fmt.Errorf("error parsing expire_time: %s", err)
+	}
+	d.Set("lease_duration", int(expireTime.Sub(issueTime).Seconds()))
 
 	if d.Get("renewable").(bool) && tokenCheckLease(d) {
 		log.Printf("[DEBUG] Lease for token accessor %q expiring soon, renewing", d.Id())
