@@ -656,12 +656,6 @@
 			"revisionTime": "2017-03-07T20:11:23Z"
 		},
 		{
-			"checksumSHA1": "31atAEqGt+z8hZgyVZZokEeM6dM=",
-			"path": "github.com/mitchellh/pointerstructure",
-			"revision": "f2329fcfa9e280bdb5a3f2544aec815a508ad72f",
-			"revisionTime": "2017-02-05T20:42:03Z"
-		},
-		{
 			"checksumSHA1": "vBpuqNfSTZcAR/0tP8tNYacySGs=",
 			"path": "github.com/mitchellh/reflectwalk",
 			"revision": "92573fe8d000a145bfebc03a16bc22b34945867f",
