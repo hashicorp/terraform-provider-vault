@@ -3,7 +3,6 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -76,10 +75,6 @@ func TestAccIdentityGroupExternal(t *testing.T) {
 			{
 				Config: testAccIdentityGroupConfig(group),
 				Check:  testAccIdentityGroupCheckAttrs(group),
-			},
-			{
-				Config:      testAccIdentityGroupConfigExternalMembers(group),
-				ExpectError: regexp.MustCompile(`cannot set 'member_entity_ids' on external groups`),
 			},
 		},
 	})
