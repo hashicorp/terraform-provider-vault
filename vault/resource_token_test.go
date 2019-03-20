@@ -136,47 +136,7 @@ resource "vault_token" "test" {
 }`
 }
 
-func TestResourceToken_role(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testResourceTokenCheckDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testResourceTokenConfig_role(),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_token.test", "role_name", "test"),
-					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "60"),
-					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
-					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
-				),
-			},
-		},
-	})
-}
-
-func testResourceTokenConfig_role() string {
-	return `
-resource "vault_policy" "test" {
-	name = "test"
-	policy = <<EOT
-path "secret/*" { capabilities = [ "list" ] }
-EOT
-}
-
-resource "vault_token_role" "test" {
-	name = "test"
-}
-
-resource "vault_token" "test" {
-	role_name = "${vault_token_role.test.name}"
-	policies = [ "${vault_policy.test.name}" ]
-	ttl = "60s"
-}`
-}
-
 func TestResourceToken_lookup(t *testing.T) {
-
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -201,12 +161,7 @@ path "secret/*" { capabilities = [ "list" ] }
 EOT
 }
 
-resource "vault_token_role" "test" {
-	name = "test"
-}
-
 resource "vault_token" "test" {
-	role_name = "${vault_token_role.test.name}"
 	policies = [ "${vault_policy.test.name}" ]
 	ttl = "60s"
 }`
@@ -267,12 +222,7 @@ path "secret/*" { capabilities = [ "list" ] }
 EOT
 }
 
-resource "vault_token_role" "test" {
-	name = "test"
-}
-
 resource "vault_token" "test" {
-	role_name = "${vault_token_role.test.name}"
 	policies = [ "${vault_policy.test.name}" ]
 	ttl = "10s"
 }`
@@ -340,12 +290,7 @@ path "secret/*" { capabilities = [ "list" ] }
 EOT
 }
 
-resource "vault_token_role" "test" {
-	name = "test"
-}
-
 resource "vault_token" "test" {
-	role_name = "${vault_token_role.test.name}"
 	policies = [ "${vault_policy.test.name}" ]
 	renewable = true
 	ttl = "30s"
