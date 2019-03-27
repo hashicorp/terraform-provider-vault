@@ -106,6 +106,11 @@ func ldapAuthBackendResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"use_token_groups": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
 
 			"description": {
 				Type:     schema.TypeString,
@@ -225,6 +230,10 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["groupattr"] = v.(string)
 	}
 
+	if v, ok := d.GetOk("use_token_groups"); ok {
+		data["use_token_groups"] = v.(bool)
+	}
+
 	log.Printf("[DEBUG] Writing LDAP config %q", path)
 	_, err := client.Logical().Write(path, data)
 
@@ -284,6 +293,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("groupfilter", resp.Data["groupfilter"])
 	d.Set("groupdn", resp.Data["groupdn"])
 	d.Set("groupattr", resp.Data["groupattr"])
+	d.Set("use_token_groups", resp.Data["use_token_groups"])
 
 	// `bindpass` cannot be read out from the API
 	// So... if they drift, they drift.
