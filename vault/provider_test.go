@@ -2,13 +2,14 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/vault/command/config"
-	"github.com/mitchellh/go-homedir"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/vault/command/config"
+	homedir "github.com/mitchellh/go-homedir"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
@@ -75,6 +76,21 @@ func getTestAWSCreds(t *testing.T) (string, string) {
 		t.Skip("AWS_SECRET_ACCESS_KEY not set")
 	}
 	return accessKey, secretKey
+}
+
+func getTestGCPCreds(t *testing.T) (string, string) {
+	credentials := os.Getenv("GOOGLE_CREDENTIALS")
+	project := os.Getenv("GOOGLE_PROJECT")
+
+	if credentials == "" {
+		t.Skip("GOOGLE_CREDENTIALS not set")
+	}
+
+	if project == "" {
+		t.Skip("GOOGLE_PROJECT not set")
+	}
+
+	return credentials, project
 }
 
 func getTestRMQCreds(t *testing.T) (string, string, string) {
