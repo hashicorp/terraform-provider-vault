@@ -69,6 +69,13 @@ The following arguments are supported:
   for the Identity group aliases created due to a successful login. The claim
   value must be a list of strings.
 
+* `groups_claim_delimiter_pattern` - (Optional) A pattern of delimiters 
+  used to allow the groups_claim to live outside of the top-level JWT structure. 
+  For instance, a groups_claim of meta/user.name/groups with this field 
+  set to // will expect nested structures named meta, user.name, and groups. 
+  If this field was set to /./ the groups information would expect to be 
+  via nested structures of meta, user, name, and groups.
+
 * `backend` - (Optional) The unique name of the auth backend to configure.
   Defaults to `jwt`.
 
