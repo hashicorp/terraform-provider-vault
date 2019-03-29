@@ -18,13 +18,16 @@ func identityEntityResource() *schema.Resource {
 		Read:   identityEntityRead,
 		Delete: identityEntityDelete,
 		Exists: identityEntityExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
-				Required:    true,
 				Description: "Name of the entity.",
-				ForceNew:    true,
+				Optional:    true,
+				Computed:    true,
 			},
 
 			"metadata": {
@@ -49,12 +52,6 @@ func identityEntityResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Whether the entity is disabled. Disabled entities' associated tokens cannot be used, but are not revoked.",
-			},
-
-			"id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "ID of the entity.",
 			},
 		},
 	}
@@ -97,8 +94,6 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error writing IdentityEntity to %q: %s", name, err)
 	}
 	log.Printf("[DEBUG] Wrote IdentityEntity %q", name)
-
-	d.Set("id", resp.Data["id"])
 
 	d.SetId(resp.Data["id"].(string))
 
@@ -150,7 +145,7 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 
 	for _, k := range []string{"name", "metadata", "disabled", "policies"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return fmt.Errorf("error reading %s of IdentityEntity %q: %q", k, path, err)
+			return fmt.Errorf("error setting state key \"%s\" on IdentityEntity %q: %s", k, id, err)
 		}
 	}
 	return nil
