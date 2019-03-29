@@ -64,7 +64,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 				},
 			},
 			"ttl": {
-				Type:        schema.TypeInt,
+				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    false,
 				Description: "Time to leave.",
@@ -156,7 +156,7 @@ func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error 
 
 	data := map[string]interface{}{
 		"common_name":          d.Get("common_name").(string),
-		"ttl":                  d.Get("ttl").(int),
+		"ttl":                  d.Get("ttl").(string),
 		"format":               d.Get("format").(string),
 		"private_key_format":   d.Get("private_key_format").(string),
 		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
@@ -182,9 +182,13 @@ func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error 
 	}
 	log.Printf("[DEBUG] Created certificate %s by %s on PKI secret backend %q", commonName, name, backend)
 
+	caChain := resp.Data["ca_chain"]
+	if caChain != nil {
+		d.Set("ca_chain", strings.Join(convertIntoSliceOfString(caChain)[:], "\n"))
+	}
+
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("issuing_ca", resp.Data["issuing_ca"])
-	d.Set("ca_chain", strings.Join(convertIntoSliceOfString(resp.Data["ca_chain"])[:], "\n"))
 	d.Set("private_key", resp.Data["private_key"])
 	d.Set("private_key_type", resp.Data["private_key_type"])
 	d.Set("serial_number", resp.Data["serial_number"])

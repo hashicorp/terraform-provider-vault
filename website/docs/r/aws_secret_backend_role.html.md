@@ -29,8 +29,9 @@ resource "vault_aws_secret_backend" "aws" {
 resource "vault_aws_secret_backend_role" "role" {
   backend = "${vault_aws_secret_backend.aws.path}"
   name    = "deploy"
+  credential_type = "assumed_role"
 
-  policy = <<EOT
+  policy_document = <<EOT
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -55,11 +56,15 @@ with no leading or trailing `/`s.
 * `name` - (Required) The name to identify this role within the backend.
 Must be unique within the backend.
 
-* `policy` - (Optional) The JSON-formatted policy to associate with this
-role. Either `policy` or `policy_arn` must be specified.
+* `policy_document` - (Optional) The JSON-formatted policy to associate with this
+role. Either `policy_document` or `policy_arns` must be specified.
 
-* `policy_arn` - (Optional) The ARN for a pre-existing policy to associate
-with this role. Either `policy` or `policy_arn` must be specified.
+* `policy_arns` - (Optional) The ARN for a pre-existing policy to associate
+with this role. Either `policy_document` or `policy_arns` must be specified.
+
+* `credential_type` - (Required) Specifies the type of credential to be used when 
+retrieving credentials from the role. Must be one of `iam_user`, `assumed_role`, or 
+`federation_token`.
 
 ## Attributes Reference
 

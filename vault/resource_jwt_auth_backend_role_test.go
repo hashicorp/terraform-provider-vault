@@ -237,6 +237,8 @@ func TestAccJWTAuthBackendRole_full(t *testing.T) {
 						"user_claim", "https://vault/user"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"groups_claim", "https://vault/groups"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"groups_claim_delimiter_pattern", "/"),
 				),
 			},
 		},
@@ -291,6 +293,8 @@ func TestAccJWTAuthBackendRole_fullUpdate(t *testing.T) {
 						"user_claim", "https://vault/user"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"groups_claim", "https://vault/groups"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"groups_claim_delimiter_pattern", "/"),
 				),
 			},
 			{
@@ -404,6 +408,7 @@ resource "vault_jwt_auth_backend_role" "role" {
   bound_audiences = ["https://myco.test"]
   user_claim = "https://vault/user"
   groups_claim = "https://vault/groups"
+  groups_claim_delimiter_pattern = "/"
   policies = ["default", "dev", "prod"]
   ttl = 3600
   num_uses = 12
@@ -427,6 +432,7 @@ resource "vault_jwt_auth_backend_role" "role" {
   bound_audiences = ["https://myco.update",]
   user_claim = "https://vault/updateuser"
   groups_claim = "https://vault/updategroups"
+  groups_claim_delimiter_pattern = "/"
   policies = ["default", "dev"]
   ttl = 7200
   num_uses = 24

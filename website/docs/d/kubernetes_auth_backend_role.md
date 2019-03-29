@@ -38,6 +38,8 @@ The following arguments are supported:
 
 In addition to the above arguments, the following attributes are exported:
 
+* `bound_cirs` - List of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.
+
 * `bound_service_account_names` - List of service account names able to access this role. If set to "*" all names are allowed, both this and bound_service_account_namespaces can not be "*".
 
 * `bound_service_account_namespaces` - List of namespaces allowed to access this role. If set to "*" all namespaces are allowed, both this and bound_service_account_names can not be set to "*".

@@ -14,7 +14,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		SchemaVersion: 1,
 
-		Create: gcpAuthResourceWrite,
+		Create: gcpAuthResourceCreate,
 		Update: gcpAuthResourceUpdate,
 		Read:   gcpAuthResourceRead,
 		Delete: gcpAuthResourceDelete,
@@ -30,10 +30,21 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"bound_projects": {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional:      true,
+				ForceNew:      true,
+				ConflictsWith: []string{"project_id"},
+			},
 			"project_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+				Deprecated:    `Use "bound_projects"`,
+				ConflictsWith: []string{"bound_projects"},
 			},
 			"ttl": {
 				Type:     schema.TypeString,
@@ -55,6 +66,21 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Optional: true,
+				Computed: true,
+			},
+			"add_group_aliases": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
+			"max_jwt_exp": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+			"allow_gce_inference": {
+				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 			},
@@ -115,22 +141,9 @@ func gcpRoleResourcePath(backend, role string) string {
 	return "auth/" + strings.Trim(backend, "/") + "/role/" + strings.Trim(role, "/")
 }
 
-func gcpAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
-	backend := d.Get("backend").(string)
-	role := d.Get("role").(string)
-
-	path := gcpRoleResourcePath(backend, role)
-
-	data := map[string]interface{}{}
-
+func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
 	if v, ok := d.GetOk("type"); ok {
 		data["type"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("project_id"); ok {
-		data["project_id"] = v.(string)
 	}
 
 	if v, ok := d.GetOk("ttl"); ok {
@@ -153,6 +166,18 @@ func gcpAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 		data["bound_service_accounts"] = v.(*schema.Set).List()
 	}
 
+	if v, ok := d.GetOkExists("add_group_aliases"); ok {
+		data["add_group_aliases"] = v.(bool)
+	}
+
+	if v, ok := d.GetOk("max_jwt_exp"); ok {
+		data["max_jwt_exp"] = v.(string)
+	}
+
+	if v, ok := d.GetOkExists("allow_gce_inference"); ok {
+		data["allow_gce_inference"] = v.(bool)
+	}
+
 	if v, ok := d.GetOk("bound_zones"); ok {
 		data["bound_zones"] = v.(*schema.Set).List()
 	}
@@ -168,6 +193,18 @@ func gcpAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := d.GetOk("bound_instance_labels"); ok {
 		data["bound_instance_labels"] = v.(*schema.Set).List()
 	}
+}
+
+func gcpAuthResourceCreate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+
+	backend := d.Get("backend").(string)
+	role := d.Get("role").(string)
+
+	path := gcpRoleResourcePath(backend, role)
+
+	data := map[string]interface{}{}
+	gcpRoleUpdateFields(d, data)
 
 	log.Printf("[DEBUG] Writing role %q to GCP auth backend", path)
 	d.SetId(path)
@@ -186,42 +223,7 @@ func gcpAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	data := map[string]interface{}{}
-
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("policies"); ok {
-		data["policies"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("bound_service_accounts"); ok {
-		data["bound_service_accounts"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("bound_zones"); ok {
-		data["bound_zones"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("bound_regions"); ok {
-		data["bound_regions"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("bound_instance_groups"); ok {
-		data["bound_instance_groups"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("bound_labels"); ok {
-		data["bound_labels"] = v.(*schema.Set).List()
-	}
+	gcpRoleUpdateFields(d, data)
 
 	log.Printf("[DEBUG] Updating role %q in GCP auth backend", path)
 	_, err := client.Logical().Write(path, data)
@@ -250,10 +252,13 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	d.Set("ttl", resp.Data["ttl"])
-	d.Set("max_ttl", resp.Data["max_ttl"])
-	d.Set("project_id", resp.Data["project_id"])
-	d.Set("period", resp.Data["period"])
+	for _, k := range []string{"ttl", "max_ttl", "project_id", "bound_projects", "period", "policies", "add_group_aliases", "max_jwt_exp", "bound_service_accounts", "bound_zones", "bound_regions", "bound_instance_groups", "bound_labels"} {
+		if v, ok := resp.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return fmt.Errorf("error reading %s for GCP Auth Backend Role %q: %q", k, path, err)
+			}
+		}
+	}
 
 	// These checks are done for backwards compatibility. The 'type' key used to be
 	// 'role_type' and was changed to 'role' errorneously before being corrected
@@ -263,38 +268,6 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("type", v)
 	} else if v, ok := resp.Data["role"]; ok {
 		d.Set("type", v)
-	}
-
-	d.Set("policies",
-		schema.NewSet(
-			schema.HashString, resp.Data["policies"].([]interface{})))
-
-	if accounts, ok := resp.Data["bound_service_accounts"]; ok {
-		d.Set("bound_service_accounts",
-			schema.NewSet(
-				schema.HashString, accounts.([]interface{})))
-	}
-
-	if zones, ok := resp.Data["bound_zones"]; ok {
-		d.Set("bound_zones", schema.NewSet(schema.HashString, zones.([]interface{})))
-	}
-
-	if regions, ok := resp.Data["bound_regions"]; ok {
-		d.Set("bound_regions",
-			schema.NewSet(
-				schema.HashString, regions.([]interface{})))
-	}
-
-	if groups, ok := resp.Data["bound_instance_groups"]; ok {
-		d.Set("bound_instance_groups",
-			schema.NewSet(
-				schema.HashString, groups.([]interface{})))
-	}
-
-	if labels, ok := resp.Data["bound_labels"]; ok {
-		d.Set("bound_labels",
-			schema.NewSet(
-				schema.HashString, labels.([]interface{})))
 	}
 
 	return nil

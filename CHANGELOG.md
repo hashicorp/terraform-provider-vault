@@ -1,4 +1,28 @@
-## 1.5.1 (Unreleased)
+## 1.6.1 (Unreleased)
+## 1.6.0 (March 06, 2019)
+
+FEATURES:
+
+* Adds compatibility with Vault 1.0 ([#292](https://github.com/terraform-providers/terraform-provider-vault/pull/292)).
+* **New Resource**: Supports the SSH secrets engine role endpoint ([#285](https://github.com/terraform-providers/terraform-provider-vault/pull/285), [#303](https://github.com/terraform-providers/terraform-provider-vault/pull/303), and [#331](https://github.com/terraform-providers/terraform-provider-vault/pull/331)).
+* **New Data Source**: Adds a `vault_policy_document` data source ([#283](https://github.com/terraform-providers/terraform-provider-vault/pull/283)).
+* **New Resource**: Adds a namespace resource ([#338](https://github.com/terraform-providers/terraform-provider-vault/pull/338)).
+
+IMPROVEMENTS:
+
+* Adds [a guide for how to contribute](https://github.com/terraform-providers/terraform-provider-vault/blob/master/.github/CONTRIBUTING.md) in the least iterations possible.
+* For the TLS Certificates auth method, adds support for the following role fields: `allowed_common_names`, `allowed_dns_sans`, `allowed_email_sans`, `allowed_uri_sans`, and `allowed_organization_units` ([#282](https://github.com/terraform-providers/terraform-provider-vault/pull/282)).
+* For the GCP auth method, adds support for the following role fields: `add_group_aliases`, `max_jwt_exp`, and `allow_gce_inference` ([#308](https://github.com/terraform-providers/terraform-provider-vault/pull/308) and [#318](https://github.com/terraform-providers/terraform-provider-vault/pull/318)).
+* For the Kubernetes auth method, adds support for `bound_cidrs` ([#305](https://github.com/terraform-providers/terraform-provider-vault/pull/305)).
+* For `vault_identity_group`, fixes issue with `policies` not being updated properly ([#301](https://github.com/terraform-providers/terraform-provider-vault/pull/301)).
+* For the AWS secret engine, updates to the current role fields ([#323](https://github.com/terraform-providers/terraform-provider-vault/pull/323)).
+
+BUG FIXES:
+
+* Marks the `token_reviewer_jwt` sensitive ([#282](https://github.com/terraform-providers/terraform-provider-vault/pull/282)).
+* Fixes an issue where boolean parameters were not set when the value was false in the AWS role resource ([#302](https://github.com/terraform-providers/terraform-provider-vault/pull/302)).
+* Guards for a nil CA chain in `resource_pki_secret_backend_cert` ([#310](https://github.com/terraform-providers/terraform-provider-vault/pull/310)).
+
 ## 1.5.0 (January 30, 2019)
 
 FEATURES:

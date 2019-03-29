@@ -24,6 +24,15 @@ resource "vault_ssh_secret_backend_role" "foo" {
     key_type                = "ca"
     allow_user_certificates = true
 }
+
+resource "vault_ssh_secret_backend_role" "bar" {
+    name          = "otp-role"
+    backend       = "${vault_mount.example.path}"
+    key_type      = "otp"
+    default_user  = "default"
+    allowed_users = "default,baz"
+    cidr_list     = "0.0.0.0/0"
+}
 ```
 
 ## Argument Reference
@@ -50,7 +59,13 @@ The following arguments are supported:
 
 * `allowed_domains` - (Optional) The list of domains for which a client can request a host certificate.
 
+* `cidr_list` - (Optional) The comma-separated string of CIDR blocks for which this role is applicable.
+
 * `allowed_extensions` - (Optional) Specifies a comma-separated list of extensions that certificates can have when signed.
+
+* `default_extensions` - (Optional) Specifies a map of extensions that certificates have when signed.
+
+* `default_critical_options` - (Optional) Specifies a map of critical options that certificates have when signed.
 
 * `allowed_users` - (Optional) Specifies a comma-separated list of usernames that are to be allowed, only if certain usernames are to be allowed.
 

@@ -17,31 +17,27 @@ func identityGroupAliasResource() *schema.Resource {
 		Read:   identityGroupAliasRead,
 		Delete: identityGroupAliasDelete,
 		Exists: identityGroupAliasExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Name of the group alias.",
-				ForceNew:    true,
 			},
 
 			"mount_accessor": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Mount accessor to which this alias belongs toMount accessor to which this alias belongs to.",
+				Description: "Mount accessor to which this alias belongs to.",
 			},
 
 			"canonical_id": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "ID of the group to which this is an alias.uType of the group, internal or external. Defaults to internal.",
-			},
-
-			"id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "ID of the group alias.",
+				Description: "ID of the group to which this is an alias.",
 			},
 		},
 	}
@@ -68,9 +64,6 @@ func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error writing IdentityGroupAlias to %q: %s", name, err)
 	}
 	log.Printf("[DEBUG] Wrote IdentityGroupAlias %q", name)
-
-	d.Set("id", resp.Data["id"])
-
 	d.SetId(resp.Data["id"].(string))
 
 	return identityGroupAliasRead(d, meta)
@@ -129,8 +122,11 @@ func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"id", "name", "mount_accessor", "canonical_id"} {
-		d.Set(k, resp.Data[k])
+	d.SetId(resp.Data["id"].(string))
+	for _, k := range []string{"name", "mount_accessor", "canonical_id"} {
+		if err := d.Set(k, resp.Data[k]); err != nil {
+			return fmt.Errorf("error setting state key \"%s\" on IdentityGroupAlias %q: %s", k, id, err)
+		}
 	}
 	return nil
 }

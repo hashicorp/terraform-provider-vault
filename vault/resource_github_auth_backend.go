@@ -60,6 +60,11 @@ func githubAuthBackendResource() *schema.Resource {
 				Description:  "Maximum duration after which authentication will be expired, in seconds.",
 				ValidateFunc: validateDuration,
 			},
+			"accessor": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The mount accessor related to the auth mount.",
+			},
 			"tune": authMountTuneSchema(),
 		},
 	}
@@ -167,6 +172,13 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
 
+	log.Printf("[DEBUG] Reading github auth mount from '%q'", path)
+	mount, err := authMountInfoGet(client, d.Id())
+	if err != nil {
+		return fmt.Errorf("error reading github auth mount from '%q': %s", path, err)
+	}
+	log.Printf("[INFO] Read github auth mount from '%q'", path)
+
 	log.Printf("[DEBUG] Reading github auth config from '%q'", configPath)
 	dt, err := client.Logical().Read(configPath)
 	if err != nil {
@@ -208,6 +220,7 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("description", authMount.Description)
 	d.Set("ttl", ttlS)
 	d.Set("max_ttl", maxTtlS)
+	d.Set("accessor", mount.Accessor)
 
 	return nil
 }

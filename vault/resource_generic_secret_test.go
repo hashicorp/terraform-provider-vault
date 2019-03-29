@@ -101,8 +101,14 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 			return fmt.Errorf("error reading back secret: %s", err)
 		}
 
+		// Test the JSON
 		if got, want := secret.Data["zip"], "zap"; got != want {
 			return fmt.Errorf("'zip' data is %q; want %q", got, want)
+		}
+
+		// Test the map
+		if got, want := instanceState.Attributes["data.zip"], "zap"; got != want {
+			return fmt.Errorf("data[\"zip\"] contains %s; want %s", got, want)
 		}
 
 		return nil
