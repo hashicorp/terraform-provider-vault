@@ -79,6 +79,13 @@ func Provider() terraform.ResourceProvider {
 
 				Description: "Maximum TTL for secret leases requested by this provider",
 			},
+			"max_retries": {
+				Type:     schema.TypeInt,
+				Optional: true,
+
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", 2),
+				Description: "Maximum number of retries when a 5xx error code is encountered.",
+			},
 			"namespace": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -218,6 +225,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
 	}
+
+	client.SetMaxRetries(d.Get("max_retries").(int))
 
 	token, err := providerToken(d)
 	if err != nil {
