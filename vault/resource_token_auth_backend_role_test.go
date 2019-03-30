@@ -104,7 +104,7 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccTokenAuthBackendRoleConfigUnset(roleUpdated),
+				Config: testAccTokenAuthBackendRoleConfig(roleUpdated),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccTokenAuthBackendRoleCheck_attrs(roleUpdated),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "role_name", roleUpdated),
@@ -114,12 +114,9 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "period", "0"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "renewable", "true"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "explicit_max_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "path_suffix", ""),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "bound_cidrs.#", "0"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_type", "default-service"),
-
-					// The following checks are disabled pending https://github.com/hashicorp/vault/issues/6296
-					// Once that is fixed, the configuration for this step should use testAccTokenAuthBackendRoleConfigUpdate()
-					// resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "path_suffix", ""),
-					// resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "bound_cidrs.#", "0"),
 				),
 			},
 		},
@@ -291,18 +288,4 @@ resource "vault_token_auth_backend_role" "role" {
   bound_cidrs = ["0.0.0.0/0"]
   token_type = "default-batch"
 }`, role)
-}
-
-func testAccTokenAuthBackendRoleConfigUnset(roleName string) string {
-	return fmt.Sprintf(`
-resource "vault_token_auth_backend_role" "role" {
-  role_name = "%s"
-
-  # Due to https://github.com/hashicorp/vault/issues/6296
-  # the following fields are left "as-is" from the previous test step.
-  # Once that is fixed, this function can be removed and the test can
-  # Go back to simply using testAccTokenAuthBackendRoleConfig()
-  path_suffix = "parth-suffix"
-  bound_cidrs = ["0.0.0.0/0"]
-  }`, roleName)
 }

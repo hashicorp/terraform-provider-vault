@@ -51,7 +51,7 @@ The following arguments are supported:
 
 * `token_type` (Optional) Specifies the type of tokens that should be returned by the role. If either service or batch is specified, that kind of token will always be returned.
 
--> Due to a [bug](https://github.com/hashicorp/vault/issues/6296) with Vault, updating `path_suffix` or `bound_cidrs` to an empty string or list respectively will not actually update the value in Vault. The only way to fix this is to [`taint`](https://www.terraform.io/docs/commands/taint.html) the resource. This *will* cause all existing tokens issued by this role to be revoked.
+-> Due to a [bug](https://github.com/hashicorp/vault/issues/6296) with Vault, updating `path_suffix` or `bound_cidrs` to an empty string or list respectively will not actually update the value in Vault. Upgrade to Vault 1.1 and above to fix this, or [`taint`](https://www.terraform.io/docs/commands/taint.html) the resource. This *will* cause all existing tokens issued by this role to be revoked.
 
 ## Attributes Reference
 
