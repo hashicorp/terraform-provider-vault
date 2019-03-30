@@ -155,13 +155,14 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 	}
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
+	password := acctest.RandomWithPrefix("password")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mysql(name, backend, connURL),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mysql(name, backend, connURL, password),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -173,6 +174,8 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "data.%", "1"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "data.password", password),
 				),
 			},
 			{
@@ -231,13 +234,14 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 	}
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
+	password := acctest.RandomWithPrefix("password")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, 0),
+				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, password, 0),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -248,10 +252,12 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.connection_url", connURL),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "data.%", "1"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "data.password", password),
 				),
 			},
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, 10),
+				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, password, 10),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -262,6 +268,8 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.connection_url", connURL),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.max_connection_lifetime", "10"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "data.%", "1"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "data.password", password),
 				),
 			},
 		},
@@ -377,7 +385,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, connURL)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mysql(name, path, connURL string) string {
+func testAccDatabaseSecretBackendConnectionConfig_mysql(name, path, connURL, password string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -392,11 +400,15 @@ resource "vault_database_secret_backend_connection" "test" {
   mysql {
 	  connection_url = "%s"
   }
+
+  data = {
+	  password = "%s"
+  }
 }
-`, path, name, connURL)
+`, path, name, connURL, password)
 }
 
-func testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, path, connURL string, connLifetime int) string {
+func testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, path, connURL, password string, connLifetime int) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -412,8 +424,12 @@ resource "vault_database_secret_backend_connection" "test" {
 	  connection_url = "%s"
 	  max_connection_lifetime = "%d"
   }
+
+  data = {
+	  password = "%s"
+  }
 }
-`, path, name, connURL, connLifetime)
+`, path, name, connURL, connLifetime, password)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_mysql_rds(name, path, connURL string) string {

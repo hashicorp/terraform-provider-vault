@@ -79,6 +79,13 @@ func Provider() terraform.ResourceProvider {
 
 				Description: "Maximum TTL for secret leases requested by this provider",
 			},
+			"max_retries": {
+				Type:     schema.TypeInt,
+				Optional: true,
+
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", 2),
+				Description: "Maximum number of retries when a 5xx error code is encountered.",
+			},
 			"namespace": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -103,6 +110,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_approle_auth_backend_role":                    approleAuthBackendRoleResource(),
 			"vault_approle_auth_backend_role_secret_id":          approleAuthBackendRoleSecretIDResource(),
 			"vault_auth_backend":                                 authBackendResource(),
+			"vault_token":                                        tokenResource(),
 			"vault_token_auth_backend_role":                      tokenAuthBackendRoleResource(),
 			"vault_aws_auth_backend_cert":                        awsAuthBackendCertResource(),
 			"vault_aws_auth_backend_client":                      awsAuthBackendClientResource(),
@@ -125,7 +133,9 @@ func Provider() terraform.ResourceProvider {
 			"vault_gcp_auth_backend":                             gcpAuthBackendResource(),
 			"vault_gcp_auth_backend_role":                        gcpAuthBackendRoleResource(),
 			"vault_gcp_secret_backend":                           gcpSecretBackendResource(),
+			"vault_gcp_secret_roleset":                           gcpSecretRolesetResource(),
 			"vault_cert_auth_backend_role":                       certAuthBackendRoleResource(),
+			"vault_generic_endpoint":                             genericEndpointResource(),
 			"vault_generic_secret":                               genericSecretResource(),
 			"vault_jwt_auth_backend":                             jwtAuthBackendResource(),
 			"vault_jwt_auth_backend_role":                        jwtAuthBackendRoleResource(),
@@ -141,6 +151,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_egp_policy":                                   egpPolicyResource(),
 			"vault_rgp_policy":                                   rgpPolicyResource(),
 			"vault_mount":                                        mountResource(),
+			"vault_namespace":                                    namespaceResource(),
 			"vault_audit":                                        auditResource(),
 			"vault_ssh_secret_backend_ca":                        sshSecretBackendCAResource(),
 			"vault_ssh_secret_backend_role":                      sshSecretBackendRoleResource(),
@@ -148,6 +159,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_identity_entity_alias":                        identityEntityAliasResource(),
 			"vault_identity_group":                               identityGroupResource(),
 			"vault_identity_group_alias":                         identityGroupAliasResource(),
+			"vault_identity_group_policies":                      identityGroupPoliciesResource(),
 			"vault_rabbitmq_secret_backend":                      rabbitmqSecretBackendResource(),
 			"vault_rabbitmq_secret_backend_role":                 rabbitmqSecretBackendRoleResource(),
 			"vault_pki_secret_backend":                           pkiSecretBackendResource(),
@@ -214,6 +226,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
 	}
+
+	client.SetMaxRetries(d.Get("max_retries").(int))
 
 	token, err := providerToken(d)
 	if err != nil {

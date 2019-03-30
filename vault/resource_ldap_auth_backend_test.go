@@ -96,21 +96,22 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 		}
 
 		attrs := map[string]string{
-			"url":             "url",
-			"starttls":        "starttls",
-			"tls_min_version": "tls_min_version",
-			"tls_max_version": "tls_max_version",
-			"insecure_tls":    "insecure_tls",
-			"certificate":     "certificate",
-			"binddn":          "binddn",
-			"userdn":          "userdn",
-			"userattr":        "userattr",
-			"discoverdn":      "discoverdn",
-			"deny_null_bind":  "deny_null_bind",
-			"upndomain":       "upndomain",
-			"groupfilter":     "groupfilter",
-			"groupdn":         "groupdn",
-			"groupattr":       "groupattr",
+			"url":              "url",
+			"starttls":         "starttls",
+			"tls_min_version":  "tls_min_version",
+			"tls_max_version":  "tls_max_version",
+			"insecure_tls":     "insecure_tls",
+			"certificate":      "certificate",
+			"binddn":           "binddn",
+			"userdn":           "userdn",
+			"userattr":         "userattr",
+			"discoverdn":       "discoverdn",
+			"deny_null_bind":   "deny_null_bind",
+			"upndomain":        "upndomain",
+			"groupfilter":      "groupfilter",
+			"groupdn":          "groupdn",
+			"groupattr":        "groupattr",
+			"use_token_groups": "use_token_groups",
 		}
 
 		for stateAttr, apiAttr := range attrs {

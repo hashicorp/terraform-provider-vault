@@ -30,6 +30,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "organization", "vault"),
 					resource.TestCheckResourceAttr(resName, "ttl", "20m"),
 					resource.TestCheckResourceAttr(resName, "max_ttl", "50m"),
+					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuth.Accessor),
 				),
 			},
 			{
@@ -41,6 +42,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "organization", "other_vault"),
 					resource.TestCheckResourceAttr(resName, "ttl", "40m"),
 					resource.TestCheckResourceAttr(resName, "max_ttl", "1h40m"),
+					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuth.Accessor),
 				),
 			},
 		},

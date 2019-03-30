@@ -32,7 +32,7 @@ resource "vault_rabbitmq_secret_backend_role" "role" {
   name    = "deploy"
 
   tags = "tag1,tag2"
-  vhost = "{\"/\": {\"configure\":\".*\", \"write\":\".*\", \"read\": \".*\"}}"
+  vhosts = "{\"/\": {\"configure\":\".*\", \"write\":\".*\", \"read\": \".*\"}}"
 }
 ```
 
@@ -48,7 +48,7 @@ Must be unique within the backend.
 
 * `tags` - (Optional) Specifies a comma-separated RabbitMQ management tags.
 
-* `vhost` - (Optional) Specifies a map of virtual hosts to permissions.
+* `vhosts` - (Optional) Specifies a map of virtual hosts to permissions.
 
 ## Attributes Reference
 

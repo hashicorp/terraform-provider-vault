@@ -72,6 +72,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 			"add_group_aliases": {
 				Type:     schema.TypeBool,
 				Optional: true,
+				Computed: true,
 			},
 			"max_jwt_exp": {
 				Type:     schema.TypeString,
@@ -165,7 +166,7 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
 		data["bound_service_accounts"] = v.(*schema.Set).List()
 	}
 
-	if v, ok := d.GetOk("add_group_aliases"); ok {
+	if v, ok := d.GetOkExists("add_group_aliases"); ok {
 		data["add_group_aliases"] = v.(bool)
 	}
 
@@ -173,7 +174,7 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
 		data["max_jwt_exp"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("allow_gce_inference"); ok {
+	if v, ok := d.GetOkExists("allow_gce_inference"); ok {
 		data["allow_gce_inference"] = v.(bool)
 	}
 
@@ -253,7 +254,9 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 
 	for _, k := range []string{"ttl", "max_ttl", "project_id", "bound_projects", "period", "policies", "add_group_aliases", "max_jwt_exp", "bound_service_accounts", "bound_zones", "bound_regions", "bound_instance_groups", "bound_labels"} {
 		if v, ok := resp.Data[k]; ok {
-			d.Set(k, v)
+			if err := d.Set(k, v); err != nil {
+				return fmt.Errorf("error reading %s for GCP Auth Backend Role %q: %q", k, path, err)
+			}
 		}
 	}
 

@@ -60,6 +60,12 @@ func genericSecretResource() *schema.Resource {
 				Default:     false,
 				Description: "Don't attempt to read the token from Vault if true; drift won't be detected.",
 			},
+
+			"data": {
+				Type:        schema.TypeMap,
+				Computed:    true,
+				Description: "Map of strings read from Vault.",
+			},
 		},
 	}
 }
@@ -185,6 +191,26 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 		if err != nil {
 			return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
 		}
+
+		// Since our "data" map can only contain string values, we
+		// will take strings from Data and write them in as-is,
+		// and write everything else in as a JSON serialization of
+		// whatever value we get so that complex types can be
+		// passed around and processed elsewhere if desired.
+		// Note: This is a different map to jsonData, as this can only
+		// contain strings
+		dataMap := map[string]string{}
+		for k, v := range secret.Data {
+			if vs, ok := v.(string); ok {
+				dataMap[k] = vs
+			} else {
+				// Again ignoring error because we know this value
+				// came from JSON in the first place and so must be valid.
+				vBytes, _ := json.Marshal(v)
+				dataMap[k] = string(vBytes)
+			}
+		}
+		d.Set("data", dataMap)
 
 		d.Set("data_json", string(jsonData))
 		d.Set("path", path)

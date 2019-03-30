@@ -7,81 +7,49 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
-func TestAccIdentityGroup(t *testing.T) {
-	group := acctest.RandomWithPrefix("test-group")
-
+func TestAccidentityGroupPolicies(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityGroupDestroy,
+		CheckDestroy: testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityGroupConfig(group),
-				Check:  testAccIdentityGroupCheckAttrs(),
+				Config: testAccidentityGroupPoliciesConfig(),
+				Check:  testAccidentityGroupPoliciesCheckAttrs(),
 			},
 		},
 	})
 }
 
-func TestAccIdentityGroupUpdate(t *testing.T) {
-	group := acctest.RandomWithPrefix("test-group")
-	entity := acctest.RandomWithPrefix("test-entity")
-
+func TestAccidentityGroupPoliciesUpdate(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityGroupDestroy,
+		CheckDestroy: testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityGroupConfig(group),
-				Check:  testAccIdentityGroupCheckAttrs(),
+				Config: testAccidentityGroupPoliciesConfig(),
+				Check:  testAccidentityGroupPoliciesCheckAttrs(),
 			},
 			{
-				Config: testAccIdentityGroupConfigUpdate(group),
+				Config: testAccidentityGroupPoliciesConfigUpdate(),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityGroupCheckAttrs(),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "name", fmt.Sprintf("%s-2", group)),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "metadata.version", "2"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1785148924", "test"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "member_entity_ids.#", "0"),
-				),
-			},
-			{
-				Config: testAccIdentityGroupConfigUpdateMembers(group, entity),
-				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityGroupCheckAttrs(),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "member_entity_ids.#", "1"),
+					testAccidentityGroupPoliciesCheckAttrs(),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.#", "2"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.1785148924", "test"),
 				),
 			},
 		},
 	})
 }
 
-func TestAccIdentityGroupExternal(t *testing.T) {
-	group := acctest.RandomWithPrefix("test-group")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityGroupDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccIdentityGroupConfig(group),
-				Check:  testAccIdentityGroupCheckAttrs(),
-			},
-		},
-	})
-}
-
-func testAccCheckIdentityGroupDestroy(s *terraform.State) error {
+func testAccCheckidentityGroupPoliciesDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
@@ -99,9 +67,9 @@ func testAccCheckIdentityGroupDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccIdentityGroupCheckAttrs() resource.TestCheckFunc {
+func testAccidentityGroupPoliciesCheckAttrs() resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_identity_group.group"]
+		resourceState := s.Modules[0].Resources["vault_identity_group_policies.policies"]
 		if resourceState == nil {
 			return fmt.Errorf("resource not found in state")
 		}
@@ -121,9 +89,9 @@ func testAccIdentityGroupCheckAttrs() resource.TestCheckFunc {
 		}
 
 		attrs := map[string]string{
-			"name":     "name",
-			"policies": "policies",
-			"type":     "type",
+			"group_id":   "id",
+			"group_name": "name",
+			"policies":   "policies",
 		}
 		for stateAttr, apiAttr := range attrs {
 			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
@@ -194,63 +162,26 @@ func testAccIdentityGroupCheckAttrs() resource.TestCheckFunc {
 	}
 }
 
-func testAccIdentityGroupConfig(groupName string) string {
+func testAccidentityGroupPoliciesConfig() string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
-  name = "%s"
-  type = "external"
+  external_policies = true
+}
+
+resource "vault_identity_group_policies" "policies" {
+  group_id = "${vault_identity_group.group.id}"
   policies = ["test"]
-  metadata = {
-    version = "1"
-  }
-}`, groupName)
+}`)
 }
 
-func testAccIdentityGroupConfigUpdate(groupName string) string {
+func testAccidentityGroupPoliciesConfigUpdate() string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
-  name = "%s-2"
-  type = "internal"
+  external_policies = true
+}
+
+resource "vault_identity_group_policies" "policies" {
+  group_id = "${vault_identity_group.group.id}"
   policies = ["dev", "test"]
-  metadata = {
-    version = "2"
-  }
-}`, groupName)
-}
-
-func testAccIdentityGroupConfigUpdateMembers(groupName string, entityName string) string {
-	return fmt.Sprintf(`
-resource "vault_identity_group" "group" {
-  name = "%s"
-  type = "internal"
-  policies = ["dev", "test"]
-  metadata = {
-    version = "2"
-  }
-
-  member_entity_ids = ["${vault_identity_entity.entity.id}"]
-}
-
-resource "vault_identity_entity" "entity" {
-  name = "%s"
-  policies = ["dev", "test"]
-  metadata = {
-    version = "2"
-  }
-}
-`, groupName, entityName)
-}
-
-func testAccIdentityGroupConfigExternalMembers(groupName string) string {
-	return fmt.Sprintf(`
-resource "vault_identity_group" "group" {
-  name = "%s"
-  type = "external"
-  policies = ["test"]
-  metadata = {
-    version = "1"
-  }
-
-  member_entity_ids = ["this will fail"]
-}`, groupName)
+}`)
 }

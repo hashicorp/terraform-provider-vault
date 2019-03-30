@@ -37,11 +37,11 @@ resource "vault_identity_group_alias" "group-alias" {
 
 The following arguments are supported:
 
-* `name` - (Required, Forces new resource) Name of the group alias to create
+* `name` - (Required, Forces new resource) Name of the group alias to create.
 
 * `mount_accessor` - (Required) Mount accessor of the authentication backend to which this alias belongs to.
 
-* `canonical_id` - (Required) ID of the group to which this is an alias
+* `canonical_id` - (Required) ID of the group to which this is an alias.
 
 ## Attributes Reference
 
