@@ -19,12 +19,6 @@ func namespaceResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "ID of the namespace.",
-			},
-
 			"path": {
 				Type:        schema.TypeString,
 				Required:    true,
