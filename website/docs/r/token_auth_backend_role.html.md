@@ -47,9 +47,11 @@ The following arguments are supported:
 
 * `path_suffix` (Optional) Tokens created against this role will have the given suffix as part of their path in addition to the role name.
 
-* `ttl` (Optional) The TTL period of tokens issued using this role, provided as the number of minutes.
+* `bound_cidrs` (Optional) If set, restricts usage of the generated token to client IPs falling within the range of the specified CIDR(s).
 
-* `max_ttl` (Optional) The maximum allowed lifetime of tokens issued using this role.
+* `token_type` (Optional) Specifies the type of tokens that should be returned by the role. If either service or batch is specified, that kind of token will always be returned.
+
+-> Due to a [bug](https://github.com/hashicorp/vault/issues/6296) with Vault, updating `path_suffix` or `bound_cidrs` to an empty string or list respectively will not actually update the value in Vault. Upgrade to Vault 1.1 and above to fix this, or [`taint`](https://www.terraform.io/docs/commands/taint.html) the resource. This *will* cause all existing tokens issued by this role to be revoked.
 
 ## Attributes Reference
 

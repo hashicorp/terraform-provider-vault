@@ -237,8 +237,6 @@ func TestAccJWTAuthBackendRole_full(t *testing.T) {
 						"user_claim", "https://vault/user"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"groups_claim", "https://vault/groups"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
-						"groups_claim_delimiter_pattern", "/"),
 				),
 			},
 		},
@@ -293,8 +291,6 @@ func TestAccJWTAuthBackendRole_fullUpdate(t *testing.T) {
 						"user_claim", "https://vault/user"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"groups_claim", "https://vault/groups"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
-						"groups_claim_delimiter_pattern", "/"),
 				),
 			},
 			{
@@ -367,7 +363,8 @@ resource "vault_auth_backend" "jwt" {
 
 resource "vault_jwt_auth_backend_role" "role" {
   backend = "${vault_auth_backend.jwt.path}"
-  role_name = "%s"
+	role_name = "%s"
+	role_type = "jwt"
 
   bound_audiences = ["https://myco.test"]
   user_claim = "https://vault/user"
@@ -384,7 +381,8 @@ resource "vault_auth_backend" "jwt" {
 
 resource "vault_jwt_auth_backend_role" "role" {
   backend = "${vault_auth_backend.jwt.path}"
-  role_name = "%s"
+	role_name = "%s"
+	role_type = "jwt"
 
   bound_audiences = ["https://myco.test"]
   user_claim = "https://vault/user"
@@ -401,14 +399,14 @@ resource "vault_auth_backend" "jwt" {
 
 resource "vault_jwt_auth_backend_role" "role" {
   backend = "${vault_auth_backend.jwt.path}"
-  role_name = "%s"
+	role_name = "%s"
+	role_type = "jwt"
 
   bound_subject = "sl29dlldsfj3uECzsU3Sbmh0F29Fios1@client"
   bound_cidrs = ["10.148.0.0/20", "10.150.0.0/20"]
   bound_audiences = ["https://myco.test"]
   user_claim = "https://vault/user"
   groups_claim = "https://vault/groups"
-  groups_claim_delimiter_pattern = "/"
   policies = ["default", "dev", "prod"]
   ttl = 3600
   num_uses = 12
@@ -425,14 +423,14 @@ resource "vault_auth_backend" "jwt" {
 
 resource "vault_jwt_auth_backend_role" "role" {
   backend = "${vault_auth_backend.jwt.path}"
-  role_name = "%s"
+	role_name = "%s"
+	role_type = "jwt"
 
   bound_subject = "sl29dlldsfj3uECzsU3Sbmh0F29Fios1@update"
   bound_cidrs = ["10.150.0.0/20", "10.152.0.0/20"]
   bound_audiences = ["https://myco.update",]
   user_claim = "https://vault/updateuser"
   groups_claim = "https://vault/updategroups"
-  groups_claim_delimiter_pattern = "/"
   policies = ["default", "dev"]
   ttl = 7200
   num_uses = 24
