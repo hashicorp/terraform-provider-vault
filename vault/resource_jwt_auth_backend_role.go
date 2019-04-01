@@ -35,6 +35,13 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 				Description: "Name of the role.",
 				ForceNew:    true,
 			},
+			"role_type": {
+				Type:        schema.TypeString,
+				Description: "Type of role, either \"oidc\" (default) or \"jwt\"",
+				Optional:    true,
+				Computed:    true,
+				ForceNew:    true,
+			},
 			"bound_audiences": {
 				Type:        schema.TypeSet,
 				Required:    true,
@@ -100,6 +107,7 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "A pattern of delimiters used to allow the groups_claim to live outside of the top-level JWT structure. For instance, a groups_claim of meta/user.name/groups with this field set to // will expect nested structures named meta, user.name, and groups. If this field was set to /./ the groups information would expect to be via nested structures of meta, user, name, and groups.",
+				Deprecated:  "`groups_claim_delimiter_pattern` has been removed since Vault 1.1. If the groups claim is not at the top level, it can now be specified as a JSONPointer.",
 			},
 			"backend": {
 				Type:        schema.TypeString,
@@ -210,6 +218,7 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	d.Set("num_uses", tokenNumUses)
 
+	d.Set("role_type", resp.Data["role_type"].(string))
 	d.Set("bound_subject", resp.Data["bound_subject"].(string))
 
 	if resp.Data["bound_cidrs"] != nil {
@@ -223,7 +232,9 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Set("groups_claim", resp.Data["groups_claim"].(string))
-	d.Set("groups_claim_delimiter_pattern", resp.Data["groups_claim_delimiter_pattern"].(string))
+	if resp.Data["groups_claim_delimiter_pattern"] != nil {
+		d.Set("groups_claim_delimiter_pattern", resp.Data["groups_claim_delimiter_pattern"].(string))
+	}
 
 	d.Set("backend", backend)
 	d.Set("role_name", role)
@@ -330,6 +341,9 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData) map[string]interface{
 		data["policies"] = dataList
 	}
 
+	if v, ok := d.GetOk("role_type"); ok {
+		data["role_type"] = v.(string)
+	}
 	if v, ok := d.GetOk("ttl"); ok {
 		data["ttl"] = v.(int)
 	}
