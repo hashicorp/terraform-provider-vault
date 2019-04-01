@@ -1,4 +1,25 @@
-## 1.6.1 (Unreleased)
+## 1.7.0 (Unreleased)
+
+FEATURES:
+
+* **New Resource**: Adds a "Flexible Generic Secret" resource so it can be used to consume Vault APIs that don't yet have a resource ([#244](https://github.com/terraform-providers/terraform-provider-vault/pull/244)).
+* **New Resource**: Adds a token resource ([#337](https://github.com/terraform-providers/terraform-provider-vault/pull/337)).
+* **New Resource**: Adds a GCP secret roleset resource ([#312](https://github.com/terraform-providers/terraform-provider-vault/pull/312)).
+* **New Resource**: Adds a `vault_identity_group_policies` resource ([#321](https://github.com/terraform-providers/terraform-provider-vault/pull/321)).
+
+IMPROVEMENTS:
+
+* For the LDAP auth method, adds support for the `use_token_groups` field ([#367](https://github.com/terraform-providers/terraform-provider-vault/pull/367)).
+* Adds the ability to set `max_retries` on the Vault client ([#355](https://github.com/terraform-providers/terraform-provider-vault/pull/355)).
+* For the Github auth method, adds support for the `accessor` field ([#350](https://github.com/terraform-providers/terraform-provider-vault/pull/350)).
+* For the generic secrets resource, adds support for a `data` field ([#330](https://github.com/terraform-providers/terraform-provider-vault/pull/330)).
+* For the JWT auth backend, adds support for a `groups_claim_delimiter_pattern` on roles ([#296](https://github.com/terraform-providers/terraform-provider-vault/pull/296)).
+
+BUG FIXES:
+
+* Fixes TTL parsing on PKI certificate creation ([#314](https://github.com/terraform-providers/terraform-provider-vault/pull/314)).
+* Fixes ability to update the `data` field on database secrets engine connections ([#340](https://github.com/terraform-providers/terraform-provider-vault/pull/340)).
+
 ## 1.6.0 (March 06, 2019)
 
 FEATURES:
