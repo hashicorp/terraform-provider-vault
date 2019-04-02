@@ -187,8 +187,8 @@ resource "vault_aws_secret_backend_role" "test_policy_arns" {
 
 resource "vault_aws_secret_backend_role" "test_policy_inline_and_arns" {
   name = "%s-policy-inline-and-arns"
-  policy_arns = ["%s"]
   policy_document = %q
+  policy_arns = ["%s"]
   credential_type = "iam_user"
   backend = "${vault_aws_secret_backend.test.path}"
 }
