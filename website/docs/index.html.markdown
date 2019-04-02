@@ -118,6 +118,10 @@ variables in order to keep credential information out of the configuration.
   See the section above on *Using Vault credentials in Terraform configuration*
   for the implications of this setting.
 
+* `max_retries` - (Optional) Used as the maximum number of retries when a 5xx
+  error code is encountered. Defaults to 2 retries and may be set via the
+  `VAULT_MAX_RETRIES` environment variable.
+
 * `namespace` - (Optional) Set the namespace to use. May be set via the
   `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
 
@@ -153,4 +157,3 @@ resource "vault_generic_secret" "example" {
 EOT
 }
 ```
-

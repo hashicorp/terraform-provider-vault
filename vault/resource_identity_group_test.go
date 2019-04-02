@@ -3,7 +3,6 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -24,7 +23,7 @@ func TestAccIdentityGroup(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupConfig(group),
-				Check:  testAccIdentityGroupCheckAttrs(group),
+				Check:  testAccIdentityGroupCheckAttrs(),
 			},
 		},
 	})
@@ -41,12 +40,13 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupConfig(group),
-				Check:  testAccIdentityGroupCheckAttrs(group),
+				Check:  testAccIdentityGroupCheckAttrs(),
 			},
 			{
 				Config: testAccIdentityGroupConfigUpdate(group),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityGroupCheckAttrs(group),
+					testAccIdentityGroupCheckAttrs(),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "name", fmt.Sprintf("%s-2", group)),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "metadata.version", "2"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.326271447", "dev"),
@@ -57,7 +57,7 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 			{
 				Config: testAccIdentityGroupConfigUpdateMembers(group, entity),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityGroupCheckAttrs(group),
+					testAccIdentityGroupCheckAttrs(),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "member_entity_ids.#", "1"),
 				),
 			},
@@ -75,11 +75,7 @@ func TestAccIdentityGroupExternal(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupConfig(group),
-				Check:  testAccIdentityGroupCheckAttrs(group),
-			},
-			{
-				Config:      testAccIdentityGroupConfigExternalMembers(group),
-				ExpectError: regexp.MustCompile(`cannot set 'member_entity_ids' on external groups`),
+				Check:  testAccIdentityGroupCheckAttrs(),
 			},
 		},
 	})
@@ -103,7 +99,7 @@ func testAccCheckIdentityGroupDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccIdentityGroupCheckAttrs(group string) resource.TestCheckFunc {
+func testAccIdentityGroupCheckAttrs() resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_identity_group.group"]
 		if resourceState == nil {
@@ -213,7 +209,7 @@ resource "vault_identity_group" "group" {
 func testAccIdentityGroupConfigUpdate(groupName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
-  name = "%s"
+  name = "%s-2"
   type = "internal"
   policies = ["dev", "test"]
   metadata = {

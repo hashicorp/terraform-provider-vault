@@ -54,7 +54,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			"data": {
 				Type:        schema.TypeMap,
 				Optional:    true,
-				Description: "A map of sensitive data to pass to the endpoint. Usefule for templated connection strings.",
+				Description: "A map of sensitive data to pass to the endpoint. Useful for templated connection strings.",
 				Sensitive:   true,
 			},
 
@@ -607,6 +607,12 @@ func databaseSecretBackendConnectionUpdate(d *schema.ResourceData, meta interfac
 			roles = append(roles, role.(string))
 		}
 		data["allowed_roles"] = strings.Join(roles, ",")
+	}
+
+	if m, ok := d.GetOkExists("data"); ok {
+		for k, v := range m.(map[string]interface{}) {
+			data[k] = v.(string)
+		}
 	}
 
 	log.Printf("[DEBUG] Writing connection config to %q", path)

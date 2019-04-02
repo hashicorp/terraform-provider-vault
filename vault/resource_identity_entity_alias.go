@@ -17,13 +17,15 @@ func identityEntityAliasResource() *schema.Resource {
 		Read:   identityEntityAliasRead,
 		Delete: identityEntityAliasDelete,
 		Exists: identityEntityAliasExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Name of the entity alias.",
-				ForceNew:    true,
 			},
 
 			"mount_accessor": {
@@ -36,12 +38,6 @@ func identityEntityAliasResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "ID of the entity to which this is an alias.",
-			},
-
-			"id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "ID of the entity alias.",
 			},
 		},
 	}
@@ -68,8 +64,6 @@ func identityEntityAliasCreate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error writing IdentityEntityAlias to %q: %s", name, err)
 	}
 	log.Printf("[DEBUG] Wrote IdentityEntityAlias %q", name)
-
-	d.Set("id", resp.Data["id"])
 
 	d.SetId(resp.Data["id"].(string))
 
@@ -129,8 +123,11 @@ func identityEntityAliasRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"id", "name", "mount_accessor", "canonical_id"} {
-		d.Set(k, resp.Data[k])
+	d.SetId(resp.Data["id"].(string))
+	for _, k := range []string{"name", "mount_accessor", "canonical_id"} {
+		if err := d.Set(k, resp.Data[k]); err != nil {
+			return fmt.Errorf("error setting state key \"%s\" on IdentityEntityAlias %q: %s", k, id, err)
+		}
 	}
 	return nil
 }

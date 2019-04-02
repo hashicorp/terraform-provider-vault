@@ -63,6 +63,8 @@ The following arguments are supported:
 
 * `groupattr` - (Optional) LDAP attribute to follow on objects returned by groupfilter
 
+* `use_token_auth` - (Optional) Use the Active Directory tokenGroups constructed attribute of the user to find the group memberships
+
 * `path` - (Optional) Path to mount the LDAP auth backend under
 
 * `description` - (Optional) Description for the LDAP auth backend mount

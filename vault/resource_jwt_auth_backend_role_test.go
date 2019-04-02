@@ -363,7 +363,8 @@ resource "vault_auth_backend" "jwt" {
 
 resource "vault_jwt_auth_backend_role" "role" {
   backend = "${vault_auth_backend.jwt.path}"
-  role_name = "%s"
+	role_name = "%s"
+	role_type = "jwt"
 
   bound_audiences = ["https://myco.test"]
   user_claim = "https://vault/user"
@@ -380,7 +381,8 @@ resource "vault_auth_backend" "jwt" {
 
 resource "vault_jwt_auth_backend_role" "role" {
   backend = "${vault_auth_backend.jwt.path}"
-  role_name = "%s"
+	role_name = "%s"
+	role_type = "jwt"
 
   bound_audiences = ["https://myco.test"]
   user_claim = "https://vault/user"
@@ -397,7 +399,8 @@ resource "vault_auth_backend" "jwt" {
 
 resource "vault_jwt_auth_backend_role" "role" {
   backend = "${vault_auth_backend.jwt.path}"
-  role_name = "%s"
+	role_name = "%s"
+	role_type = "jwt"
 
   bound_subject = "sl29dlldsfj3uECzsU3Sbmh0F29Fios1@client"
   bound_cidrs = ["10.148.0.0/20", "10.150.0.0/20"]
@@ -420,7 +423,8 @@ resource "vault_auth_backend" "jwt" {
 
 resource "vault_jwt_auth_backend_role" "role" {
   backend = "${vault_auth_backend.jwt.path}"
-  role_name = "%s"
+	role_name = "%s"
+	role_type = "jwt"
 
   bound_subject = "sl29dlldsfj3uECzsU3Sbmh0F29Fios1@update"
   bound_cidrs = ["10.150.0.0/20", "10.152.0.0/20"]

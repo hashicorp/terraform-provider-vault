@@ -17,7 +17,6 @@ information.
 ```hcl
 resource "vault_github_auth_backend" "example" {
   organization = "myorg"
-
 }
 
 resource "vault_github_user" "tf_user" {
