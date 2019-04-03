@@ -15,11 +15,13 @@ IMPROVEMENTS:
 * For the generic secrets resource, adds support for a `data` field ([#330](https://github.com/terraform-providers/terraform-provider-vault/pull/330)).
 * For the JWT auth backend, adds support for a `groups_claim_delimiter_pattern` on roles ([#296](https://github.com/terraform-providers/terraform-provider-vault/pull/296)).
 * For the JWT auth backend, adds a `role_type` field ([#317](https://github.com/terraform-providers/terraform-provider-vault/pull/317)).
+* For the JWT auth backend, adds a `jwt_supported_algs` field ([#345](https://github.com/terraform-providers/terraform-provider-vault/pull/345)).
 
 BUG FIXES:
 
 * Fixes TTL parsing on PKI certificate creation ([#314](https://github.com/terraform-providers/terraform-provider-vault/pull/314)).
 * Fixes ability to update the `data` field on database secrets engine connections ([#340](https://github.com/terraform-providers/terraform-provider-vault/pull/340)).
+* Unmarks `policy_document` and `policy_arns` from being in conflict with each other ([#344](https://github.com/terraform-providers/terraform-provider-vault/pull/344)).
 
 ## 1.6.0 (March 06, 2019)
 
