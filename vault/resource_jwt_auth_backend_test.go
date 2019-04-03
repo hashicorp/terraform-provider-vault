@@ -28,10 +28,19 @@ func TestAccJWTAuthBackend(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccJWTAuthBackendConfigFull(path, "https://myco.auth0.com/", "", "api://default"),
+				Config: testAccJWTAuthBackendConfigFull(path, "https://myco.auth0.com/", "", "api://default", "\"RS512\""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", "api://default"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "jwt_supported_algs.#", "1"),
+				),
+			},
+			{
+				Config: testAccJWTAuthBackendConfigFull(path, "https://myco.auth0.com/", "", "api://default", "\"RS256\",\"RS512\""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", "api://default"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "jwt_supported_algs.#", "2"),
 				),
 			},
 		},
@@ -50,7 +59,7 @@ func TestAccJWTAuthBackend_negative(t *testing.T) {
 				ExpectError: regexp.MustCompile("vault_jwt_auth_backend\\.jwt: cannot write to a path ending in '/'"),
 			},
 			{
-				Config:      testAccJWTAuthBackendConfigFull(path, "https://myco.auth0.com/", "\"key\"", "api://default"),
+				Config:      testAccJWTAuthBackendConfigFull(path, "https://myco.auth0.com/", "\"key\"", "api://default", ""),
 				Destroy:     false,
 				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url and jwt_validation_pubkeys should be provided"),
 			},
@@ -68,16 +77,17 @@ resource "vault_jwt_auth_backend" "jwt" {
 `, path)
 }
 
-func testAccJWTAuthBackendConfigFull(path string, oidcDiscoveryUrl string, validationPublicKeys string, boundIssuer string) string {
+func testAccJWTAuthBackendConfigFull(path string, oidcDiscoveryUrl string, validationPublicKeys string, boundIssuer string, supportedAlgs string) string {
 	return fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "jwt" {
   description = "JWT backend"
   oidc_discovery_url = "%s"
   jwt_validation_pubkeys = [%s]
   bound_issuer = "%s"
+  jwt_supported_algs = [%s]
   path = "%s"
 }
-`, oidcDiscoveryUrl, validationPublicKeys, boundIssuer, path)
+`, oidcDiscoveryUrl, validationPublicKeys, boundIssuer, supportedAlgs, path)
 }
 
 func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
