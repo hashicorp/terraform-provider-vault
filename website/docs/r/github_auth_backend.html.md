@@ -74,5 +74,5 @@ In addition to all arguments above, the following attributes are exported:
 Github authentication mounts can be imported using the `path`, e.g.
 
 ```
-$ terraform import vault_github_auth_backend_role.example auth/github
+$ terraform import vault_github_auth_backend.example github
 ```
