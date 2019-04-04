@@ -218,7 +218,10 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	d.Set("num_uses", tokenNumUses)
 
-	d.Set("role_type", resp.Data["role_type"].(string))
+	if resp.Data["role_type"] != nil {
+		d.Set("role_type", resp.Data["role_type"].(string))
+	}
+
 	d.Set("bound_subject", resp.Data["bound_subject"].(string))
 
 	if resp.Data["bound_cidrs"] != nil {
