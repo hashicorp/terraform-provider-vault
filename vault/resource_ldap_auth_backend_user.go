@@ -19,6 +19,9 @@ func ldapAuthBackendUserResource() *schema.Resource {
 		Read:   ldapAuthBackendUserResourceRead,
 		Delete: ldapAuthBackendUserResourceDelete,
 		Exists: ldapAuthBackendUserResourceExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"username": {

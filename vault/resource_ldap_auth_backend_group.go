@@ -19,6 +19,9 @@ func ldapAuthBackendGroupResource() *schema.Resource {
 		Read:   ldapAuthBackendGroupResourceRead,
 		Delete: ldapAuthBackendGroupResourceDelete,
 		Exists: ldapAuthBackendGroupResourceExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"groupname": {

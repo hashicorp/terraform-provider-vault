@@ -21,6 +21,9 @@ func ldapAuthBackendResource() *schema.Resource {
 		Read:   ldapAuthBackendRead,
 		Delete: ldapAuthBackendDelete,
 		Exists: ldapAuthBackendExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"url": {
