@@ -13,6 +13,27 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+func TestLDAPAuthBackend_import(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-ldap-path")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testLDAPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_basic(path),
+				Check:  testLDAPAuthBackendCheck_attrs(path),
+			},
+			{
+				ResourceName:      "vault_ldap_auth_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestLDAPAuthBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-ldap-path")
 
