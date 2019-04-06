@@ -48,3 +48,11 @@ For more details on the usage of each argument consult the [Vault LDAP API docum
 ## Attribute Reference
 
 No additional attributes are exposed by this resource.
+
+## Import
+
+LDAP authentication backend users can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_ldap_auth_backend_user.foo auth/ldap/users/foo
+```
