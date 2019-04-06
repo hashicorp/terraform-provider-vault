@@ -3,11 +3,17 @@ package vault
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
 	"github.com/terraform-providers/terraform-provider-vault/util"
+)
+
+var (
+	ldapAuthBackendUserBackendFromPathRegex = regexp.MustCompile("^auth/(.+)/users/.+$")
+	ldapAuthBackendUserNameFromPathRegex    = regexp.MustCompile("^auth/.+/users/(.+)$")
 )
 
 func ldapAuthBackendUserResource() *schema.Resource {
@@ -96,6 +102,16 @@ func ldapAuthBackendUserResourceRead(d *schema.ResourceData, meta interface{}) e
 	client := meta.(*api.Client)
 	path := d.Id()
 
+	backend, err := ldapAuthBackendUserBackendFromPath(path)
+	if err != nil {
+		return fmt.Errorf("invalid path %q for LDAP auth backend user: %s", path, err)
+	}
+
+	username, err := ldapAuthBackendUserNameFromPath(path)
+	if err != nil {
+		return fmt.Errorf("invalid path %q for LDAP auth backend user: %s", path, err)
+	}
+
 	log.Printf("[DEBUG] Reading LDAP user %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
@@ -118,6 +134,9 @@ func ldapAuthBackendUserResourceRead(d *schema.ResourceData, meta interface{}) e
 		groupSet.Add(group)
 	}
 	d.Set("groups", groupSet)
+
+	d.Set("backend", backend)
+	d.Set("username", username)
 
 	return nil
 
@@ -149,4 +168,26 @@ func ldapAuthBackendUserResourceExists(d *schema.ResourceData, meta interface{})
 	log.Printf("[DEBUG] Checked if LDAP user %q exists", path)
 
 	return resp != nil, nil
+}
+
+func ldapAuthBackendUserNameFromPath(path string) (string, error) {
+	if !ldapAuthBackendUserNameFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no user found")
+	}
+	res := ldapAuthBackendUserNameFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for role", len(res))
+	}
+	return res[1], nil
+}
+
+func ldapAuthBackendUserBackendFromPath(path string) (string, error) {
+	if !ldapAuthBackendUserBackendFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no backend found")
+	}
+	res := ldapAuthBackendUserBackendFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
+	}
+	return res[1], nil
 }

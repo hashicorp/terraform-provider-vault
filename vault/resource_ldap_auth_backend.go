@@ -258,6 +258,8 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
+	d.Set("path", path)
+
 	authMount := auths[strings.Trim(path, "/")+"/"]
 	if authMount == nil {
 		return fmt.Errorf("auth mount %s not present", path)

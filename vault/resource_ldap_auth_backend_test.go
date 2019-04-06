@@ -26,9 +26,10 @@ func TestLDAPAuthBackend_import(t *testing.T) {
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 			{
-				ResourceName:      "vault_ldap_auth_backend.test",
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            "vault_ldap_auth_backend.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"bindpass"},
 			},
 		},
 	})
