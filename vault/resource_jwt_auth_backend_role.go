@@ -188,7 +188,10 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("user_claim", resp.Data["user_claim"].(string))
 
-	policies := util.JsonStringArrayToStringArray(resp.Data["policies"].([]interface{}))
+	policies := make([]string, 0)
+	if resp.Data["policies"] != nil {
+		policies = util.JsonStringArrayToStringArray(resp.Data["policies"].([]interface{}))
+	}
 	err = d.Set("policies", policies)
 	if err != nil {
 		return fmt.Errorf("error setting policies in state: %s", err)

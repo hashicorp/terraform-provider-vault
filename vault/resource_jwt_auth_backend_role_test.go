@@ -85,13 +85,7 @@ func TestAccJWTAuthBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"role_name", role),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
-						"policies.#", "3"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
-						"policies.1971754988", "default"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
-						"policies.232240223", "prod"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
-						"policies.326271447", "dev"),
+						"policies.#", "0"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"ttl", "0"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
@@ -131,13 +125,7 @@ func TestAccJWTAuthBackendRole_update(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"role_name", role),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
-						"policies.#", "3"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
-						"policies.1971754988", "default"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
-						"policies.232240223", "prod"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
-						"policies.326271447", "dev"),
+						"policies.#", "0"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"ttl", "0"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
@@ -368,7 +356,6 @@ resource "vault_jwt_auth_backend_role" "role" {
 
   bound_audiences = ["https://myco.test"]
   user_claim = "https://vault/user"
-  policies = ["default", "dev", "prod"]
 }`, backend, role)
 }
 
