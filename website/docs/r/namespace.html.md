@@ -16,7 +16,7 @@ Provides a resource to manage [Namespaces](https://www.vaultproject.io/docs/ente
 
 ```hcl
 resource "vault_namespace" "ns1" {
-  path = "ns1/"
+  path = "ns1"
 }
 ```
 
@@ -24,7 +24,7 @@ resource "vault_namespace" "ns1" {
 
 The following arguments are supported:
 
-* `path` - (Required) The path of the namespace
+* `path` - (Required) The path of the namespace. Must not have a trailing `/`
 
 ## Attributes Reference
 
