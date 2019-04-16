@@ -75,7 +75,6 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 	// remove trailing slash
 	namespacePath := filepath.Clean(resp.Data["path"].(string))
 
-	d.Set("path", namespacePath)
 	d.SetId(resp.Data["id"].(string))
 
 	return nil
