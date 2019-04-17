@@ -167,7 +167,7 @@ func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if v, ok := d.GetOk("allowed_organization_units"); ok {
-		data["allowed_organization_units"] = v.(*schema.Set).List()
+		data["allowed_organizational_units"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("required_extensions"); ok {
@@ -235,7 +235,7 @@ func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if v, ok := d.GetOk("allowed_organization_units"); ok {
-		data["allowed_organization_units"] = v.(*schema.Set).List()
+		data["allowed_organizational_units"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("required_extensions"); ok {
@@ -344,10 +344,10 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Vault sometimes returns these as null instead of an empty list.
-	if resp.Data["allowed_organization_units"] != nil {
+	if resp.Data["allowed_organizational_units"] != nil {
 		d.Set("allowed_organization_units",
 			schema.NewSet(
-				schema.HashString, resp.Data["allowed_organization_units"].([]interface{})))
+				schema.HashString, resp.Data["allowed_organizational_units"].([]interface{})))
 	} else {
 		d.Set("allowed_organization_units",
 			schema.NewSet(
