@@ -7,10 +7,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
 	"github.com/hashicorp/vault/api"
 )
-
-var jwtAuthType = "jwt"
 
 func jwtAuthBackendResource() *schema.Resource {
 	return &schema.Resource{
@@ -26,7 +25,7 @@ func jwtAuthBackendResource() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 				Description: "path to mount the backend",
-				Default:     jwtAuthType,
+				Default:     "jwt",
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
 					value := v.(string)
 					if strings.HasSuffix(value, "/") {
@@ -34,6 +33,15 @@ func jwtAuthBackendResource() *schema.Resource {
 					}
 					return
 				},
+			},
+
+			"type": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Description:  "Type of backend. Can be either 'jwt' or 'oidc'",
+				Default:      "jwt",
+				ValidateFunc: validation.StringInSlice([]string{"jwt", "oidc"}, false),
 			},
 
 			"description": {
@@ -48,6 +56,19 @@ func jwtAuthBackendResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The OIDC Discovery URL, without any .well-known component (base path)",
+			},
+
+			"oidc_client_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Client ID uses for OIDC",
+			},
+
+			"oidc_client_secret": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "Client Secret uses for OIDC",
 			},
 
 			"oidc_discovery_ca_pem": {
@@ -76,11 +97,18 @@ func jwtAuthBackendResource() *schema.Resource {
 				Description: "A list of supported signing algorithms. Defaults to [RS256]",
 			},
 
+			"default_role": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The default role to use if none is provided during login",
+			},
+
 			"accessor": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The accessor of the JWT auth backend",
 			},
+			"tune": authMountTuneSchema(),
 		},
 	}
 }
@@ -88,7 +116,7 @@ func jwtAuthBackendResource() *schema.Resource {
 func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	authType := jwtAuthType
+	authType := d.Get("type").(string)
 	desc := d.Get("description").(string)
 	path := getJwtPath(d)
 
@@ -153,7 +181,10 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("accessor", backend.Accessor)
 	d.Set("oidc_discovery_ca_pem", config.Data["oidc_discovery_ca_pem"])
+	d.Set("oidc_client_id", config.Data["oidc_client_id"])
+	d.Set("oidc_client_secret", config.Data["oidc_client_secret"])
 	d.Set("bound_issuer", config.Data["bound_issuer"])
+	d.Set("default_role", config.Data["default_role"])
 	d.Set("oidc_discovery_url", config.Data["oidc_discovery_url"])
 	d.Set("jwt_validation_pubkeys", config.Data["jwt_validation_pubkeys"])
 	d.Set("jwt_supported_algs", config.Data["jwt_supported_algs"])
@@ -175,7 +206,6 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	oidcDiscoveryUrl, oidcDiscoveryUrlExists := d.GetOk("oidc_discovery_url")
 	jwtValidationPubKeys, jwtValidationPubKeysExists := d.GetOk("jwt_validation_pubkeys")
-	jwtSupportedAlgs, jwtSupportedAlgsExists := d.GetOk("jwt_supported_algs")
 
 	if oidcDiscoveryUrlExists == jwtValidationPubKeysExists {
 		return errors.New("exactly one of oidc_discovery_url and jwt_validation_pubkeys should be provided")
@@ -189,13 +219,38 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		configuration["jwt_validation_pubkeys"] = jwtValidationPubKeys
 	}
 
-	if jwtSupportedAlgsExists {
-		configuration["jwt_supported_algs"] = jwtSupportedAlgs
+	if v, ok := d.GetOkExists("jwt_supported_algs"); ok {
+		configuration["jwt_supported_algs"] = v
+	}
+	if v, ok := d.GetOkExists("oidc_client_id"); ok {
+		configuration["oidc_client_id"] = v.(string)
+	}
+	if v, ok := d.GetOkExists("oidc_client_secret"); ok {
+		configuration["oidc_client_secret"] = v.(string)
+	}
+	if v, ok := d.GetOkExists("default_role"); ok {
+		configuration["default_role"] = v.(string)
 	}
 
 	_, err := client.Logical().Write(jwtConfigEndpoint(path), configuration)
 	if err != nil {
 		return fmt.Errorf("error updating configuration to Vault for path %s: %s", path, err)
+	}
+
+	if d.HasChange("tune") {
+		log.Printf("[INFO] JWT/OIDC Auth '%q' tune configuration changed", d.Id())
+		if raw, ok := d.GetOk("tune"); ok {
+			backendType := d.Get("type")
+			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
+
+			err := authMountTune(client, "auth/"+path, raw)
+			if err != nil {
+				return nil
+			}
+
+			log.Printf("[INFO] Written %s auth tune to '%q'", backendType, path)
+			d.SetPartial("tune")
+		}
 	}
 
 	return jwtAuthBackendRead(d, meta)
@@ -215,7 +270,7 @@ func getJwtAuthBackendIfPresent(client *api.Client, path string) (*api.AuthMount
 
 	for authBackendPath, auth := range auths {
 
-		if auth.Type == jwtAuthType && authBackendPath == configuredPath {
+		if authBackendPath == configuredPath {
 			return auth, nil
 		}
 	}

@@ -63,6 +63,14 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 				},
 				Description: "Policies to be set on tokens issued using this role.",
 			},
+			"allowed_redirect_uris": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "The list of allowed values for redirect_uri during OIDC logins.",
+			},
 			"ttl": {
 				Type:          schema.TypeInt,
 				Optional:      true,
@@ -192,6 +200,13 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	err = d.Set("policies", policies)
 	if err != nil {
 		return fmt.Errorf("error setting policies in state: %s", err)
+	}
+	if resp.Data["allowed_redirect_uris"] != nil {
+		allowedRedirectUris := util.JsonStringArrayToStringArray(resp.Data["allowed_redirect_uris"].([]interface{}))
+		err = d.Set("allowed_redirect_uris", allowedRedirectUris)
+		if err != nil {
+			return fmt.Errorf("error setting allowed_redirect_uris in state: %s", err)
+		}
 	}
 
 	tokenTTL, err := resp.Data["ttl"].(json.Number).Int64()
@@ -339,6 +354,9 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData) map[string]interface{
 
 	if dataList := util.TerraformSetToStringArray(d.Get("policies")); len(dataList) > 0 {
 		data["policies"] = dataList
+	}
+	if dataList := util.TerraformSetToStringArray(d.Get("allowed_redirect_uris")); len(dataList) > 0 {
+		data["allowed_redirect_uris"] = dataList
 	}
 
 	if v, ok := d.GetOk("role_type"); ok {

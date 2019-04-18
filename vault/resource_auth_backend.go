@@ -77,7 +77,7 @@ func authBackendResource() *schema.Resource {
 				Type:        schema.TypeString,
 				ForceNew:    true,
 				Optional:    true,
-				Description: "Speficies whether to show this mount in the UI-specific listing endpoint",
+				Description: "Specifies whether to show this mount in the UI-specific listing endpoint",
 			},
 
 			"local": {

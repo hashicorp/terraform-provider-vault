@@ -3,16 +3,18 @@ layout: "vault"
 page_title: "Vault: vault_jwt_auth_backend_role resource"
 sidebar_current: "docs-vault-resource-jwt-auth-backend-role"
 description: |-
-  Manages JWT auth backend roles in Vault.
+  Manages JWT/OIDC auth backend roles in Vault.
 ---
 
 # vault\_jwt\_auth\_backend\_role
 
-Manages an JWT auth backend role in a Vault server. See the [Vault
+Manages an JWT/OIDC auth backend role in a Vault server. See the [Vault
 documentation](https://www.vaultproject.io/docs/auth/jwt.html) for more
 information.
 
 ## Example Usage
+
+Role for JWT backend:
 
 ```hcl
 resource "vault_jwt_auth_backend" "jwt" {
@@ -26,6 +28,27 @@ resource "vault_jwt_auth_backend_role" "example" {
 
   bound_audiences = ["https://myco.test"]
   user_claim      = "https://vault/user"
+  role_type = "jwt"
+}
+```
+
+Role for OIDC backend:
+
+```hcl
+resource "vault_jwt_auth_backend" "oidc" {
+  path = "oidc"
+  default_role = "test-role"
+}
+
+resource "vault_jwt_auth_backend_role" "example" {
+  backend   = "${vault_jwt_auth_backend.oidc.path}"
+  role_name = "test-role"
+  policies  = ["default", "dev", "prod"]
+
+  bound_audiences = ["https://myco.test"]
+  user_claim      = "https://vault/user"
+  allowed_redirect_uris = ["http://localhost:8200/ui/vault/auth/oidc/oidc/callback"]
+  role_type = "oidc"
 }
 ```
 
@@ -83,6 +106,9 @@ The following arguments are supported:
 
 * `backend` - (Optional) The unique name of the auth backend to configure.
   Defaults to `jwt`.
+
+* `allowed_redirect_uris` - (Optional) The list of allowed values for redirect_uri during OIDC logins.
+  Required for OIDC roles
 
 ## Attributes Reference
 
