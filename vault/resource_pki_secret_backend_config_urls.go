@@ -96,7 +96,6 @@ func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) er
 	d.Set("crl_distribution_points", config.Data["crl_distribution_points"])
 	d.Set("ocsp_servers", config.Data["ocsp_servers"])
 
-
 	return nil
 }
 
