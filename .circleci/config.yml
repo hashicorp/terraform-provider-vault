@@ -1,0 +1,14 @@
+version: 2
+jobs:
+  build:
+    docker:
+    - image: circleci/golang:1.11
+    working_directory: /go/src/github.com/terraform-providers/terraform-provider-vault
+    steps:
+    - checkout
+    - run:
+        name: "Run Tests"
+        command: go test -v ./...
+    - run:
+        name: "Run Build"
+        command: go build
