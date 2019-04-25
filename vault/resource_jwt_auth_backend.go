@@ -61,14 +61,14 @@ func jwtAuthBackendResource() *schema.Resource {
 			"oidc_client_id": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Client ID uses for OIDC",
+				Description: "Client ID used for OIDC",
 			},
 
 			"oidc_client_secret": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Sensitive:   true,
-				Description: "Client Secret uses for OIDC",
+				Description: "Client Secret used for OIDC",
 			},
 
 			"oidc_discovery_ca_pem": {
