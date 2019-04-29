@@ -25,6 +25,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "path", path),
 					resource.TestCheckResourceAttrSet("vault_jwt_auth_backend.jwt", "accessor"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", ""),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "type", "jwt"),
 				),
 			},
 			{
@@ -33,6 +34,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", "api://default"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "jwt_supported_algs.#", "1"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "type", "jwt"),
 				),
 			},
 			{
@@ -41,6 +43,27 @@ func TestAccJWTAuthBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", "api://default"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "jwt_supported_algs.#", "2"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "type", "jwt"),
+				),
+			},
+		},
+	})
+}
+func TestAccJWTAuthBackend_OIDC(t *testing.T) {
+	path := acctest.RandomWithPrefix("oidc")
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testJWTAuthBackend_Destroyed(path),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendConfigOIDC(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_discovery_url", "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "bound_issuer", "api://default"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_client_id", "client"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "type", "oidc"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "default_role", "api"),
 				),
 			},
 		},
@@ -88,6 +111,27 @@ resource "vault_jwt_auth_backend" "jwt" {
   path = "%s"
 }
 `, oidcDiscoveryUrl, validationPublicKeys, boundIssuer, supportedAlgs, path)
+}
+
+func testAccJWTAuthBackendConfigOIDC(path string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "oidc" {
+  description = "OIDC backend"
+  oidc_discovery_url = "https://myco.auth0.com/"
+  oidc_client_id = "client"
+  oidc_client_secret = "secret"
+  bound_issuer = "api://default"
+  path = "%s"
+  type = "oidc"
+  default_role = "api"
+  lifecycle = {
+	ignore_changes = [
+     # Ignore changes to odic_clie_secret inside the tests
+     "oidc_client_secret"
+    ]
+  }
+}
+`, path)
 }
 
 func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {

@@ -89,6 +89,15 @@ The following arguments are supported:
   address for login requests. This value is also encoded into any resulting
   token.
 
+* `bound_claims` - (Optional) If set, a map of claims/values to match against. 
+  The expected value may be a single string or a list of strings.
+
+* `claim_mappings` - (Optional) If set, a map of claims (keys) to be copied 
+  to specified metadata fields (values).
+
+* `oidc_scopes` - (Optional) If set, a list of OIDC scopes to be used with an OIDC role. 
+  The standard scope "openid" is automatically included and need not be specified.
+
 * `groups_claim` - (Optional) The claim to use to uniquely identify
   the set of groups to which the user belongs; this will be used as the names
   for the Identity group aliases created due to a successful login. The claim
