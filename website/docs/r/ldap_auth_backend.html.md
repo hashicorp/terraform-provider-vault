@@ -81,3 +81,11 @@ previously stored values.
 In addition to the fields above, the following attributes are exported:
 
 * `accessor` - The accessor for this auth mount.
+
+## Import
+
+LDAP authentication backends can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_ldap_auth_backend.ldap ldap
+```

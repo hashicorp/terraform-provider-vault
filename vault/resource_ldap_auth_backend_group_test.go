@@ -14,6 +14,33 @@ import (
 	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
+func TestLDAPAuthBackendGroup_import(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
+	groupname := acctest.RandomWithPrefix("tf-test-ldap-group")
+
+	policies := []string{
+		acctest.RandomWithPrefix("policy"),
+		acctest.RandomWithPrefix("policy"),
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testLDAPAuthBackendGroupDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendGroupConfig_basic(backend, groupname, policies),
+				Check:  testLDAPAuthBackendGroupCheck_attrs(backend, groupname),
+			},
+			{
+				ResourceName:      "vault_ldap_auth_backend_group.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestLDAPAuthBackendGroup_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
 	groupname := acctest.RandomWithPrefix("tf-test-ldap-group")
