@@ -1,11 +1,9 @@
 package vault
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"path/filepath"
-	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -23,16 +21,10 @@ func namespaceResource() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"path": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Path of the namespace.",
-				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
-					value := v.(string)
-					if strings.HasSuffix(value, "/") {
-						errs = append(errs, errors.New("cannot write to a path ending in '/'"))
-					}
-					return
-				},
+				Type:         schema.TypeString,
+				Required:     true,
+				Description:  "Path of the namespace.",
+				ValidateFunc: validateNoTrailingSlash,
 			},
 		},
 	}
