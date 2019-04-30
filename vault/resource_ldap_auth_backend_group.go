@@ -3,11 +3,17 @@ package vault
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 
 	"github.com/hashicorp/vault/api"
+)
+
+var (
+	ldapAuthBackendGroupBackendFromPathRegex = regexp.MustCompile("^auth/(.+)/groups/.+$")
+	ldapAuthBackendGroupNameFromPathRegex    = regexp.MustCompile("^auth/.+/groups/(.+)$")
 )
 
 func ldapAuthBackendGroupResource() *schema.Resource {
@@ -19,6 +25,9 @@ func ldapAuthBackendGroupResource() *schema.Resource {
 		Read:   ldapAuthBackendGroupResourceRead,
 		Delete: ldapAuthBackendGroupResourceDelete,
 		Exists: ldapAuthBackendGroupResourceExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"groupname": {
@@ -81,6 +90,16 @@ func ldapAuthBackendGroupResourceRead(d *schema.ResourceData, meta interface{}) 
 	client := meta.(*api.Client)
 	path := d.Id()
 
+	backend, err := ldapAuthBackendGroupBackendFromPath(path)
+	if err != nil {
+		return fmt.Errorf("invalid path %q for LDAP auth backend group: %s", path, err)
+	}
+
+	groupname, err := ldapAuthBackendGroupNameFromPath(path)
+	if err != nil {
+		return fmt.Errorf("invalid path %q for LDAP auth backend group: %s", path, err)
+	}
+
 	log.Printf("[DEBUG] Reading LDAP group %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
@@ -97,6 +116,9 @@ func ldapAuthBackendGroupResourceRead(d *schema.ResourceData, meta interface{}) 
 	d.Set("policies",
 		schema.NewSet(
 			schema.HashString, resp.Data["policies"].([]interface{})))
+
+	d.Set("backend", backend)
+	d.Set("groupname", groupname)
 
 	return nil
 
@@ -128,4 +150,26 @@ func ldapAuthBackendGroupResourceExists(d *schema.ResourceData, meta interface{}
 	log.Printf("[DEBUG] Checked if LDAP group %q exists", path)
 
 	return resp != nil, nil
+}
+
+func ldapAuthBackendGroupNameFromPath(path string) (string, error) {
+	if !ldapAuthBackendGroupNameFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no group found")
+	}
+	res := ldapAuthBackendGroupNameFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for role", len(res))
+	}
+	return res[1], nil
+}
+
+func ldapAuthBackendGroupBackendFromPath(path string) (string, error) {
+	if !ldapAuthBackendGroupBackendFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no backend found")
+	}
+	res := ldapAuthBackendGroupBackendFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
+	}
+	return res[1], nil
 }

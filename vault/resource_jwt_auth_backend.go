@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
@@ -21,18 +20,12 @@ func jwtAuthBackendResource() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 
 			"path": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				ForceNew:    true,
-				Description: "path to mount the backend",
-				Default:     "jwt",
-				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
-					value := v.(string)
-					if strings.HasSuffix(value, "/") {
-						errs = append(errs, errors.New("cannot write to a path ending in '/'"))
-					}
-					return
-				},
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Description:  "path to mount the backend",
+				Default:      jwtAuthType,
+				ValidateFunc: validateNoTrailingSlash,
 			},
 
 			"type": {
