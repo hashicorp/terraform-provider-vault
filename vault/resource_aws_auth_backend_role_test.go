@@ -181,6 +181,14 @@ func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 						"policies.1", "dev"),
 				),
 			},
+			{
+				Config: testAccAWSAuthBackendRoleConfig_DeletePolicies(backend, role),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAWSAuthBackendRoleCheck_attrs(backend, role),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
+						"policies.#", "0"),
+				),
+			},
 		},
 	})
 }
@@ -409,6 +417,24 @@ resource "vault_aws_auth_backend_role" "role" {
   ttl = 30
   max_ttl = 60
   policies = ["default", "dev"]
+}`, backend, role)
+}
+
+func testAccAWSAuthBackendRoleConfig_DeletePolicies(backend, role string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+}
+resource "vault_aws_auth_backend_role" "role" {
+  backend = "${vault_auth_backend.aws.path}"
+  role = "%s"
+  auth_type = "iam"
+  bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/MyRole/*"]
+  resolve_aws_unique_ids = true
+  ttl = 30
+  max_ttl = 60
+  policies = []
 }`, backend, role)
 }
 

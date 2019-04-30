@@ -535,9 +535,8 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := d.GetOk("period"); ok {
 		data["period"] = v.(int)
 	}
-	if len(policies) > 0 {
-		data["policies"] = policies
-	}
+
+	data["policies"] = policies
 
 	if isEc2(authType, inferred) {
 
