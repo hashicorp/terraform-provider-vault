@@ -109,7 +109,7 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			"oidc_scopes": {
 				Type:        schema.TypeSet,
 				Optional:    true,
-				Description: "List of OIDC scopes to be used with an OIDC role. The standard scope \"openid\" is automatically included and need not be specified",
+				Description: "List of OIDC scopes to be used with an OIDC role. The standard scope \"openid\" is automatically included and need not be specified.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
