@@ -3,7 +3,6 @@ package vault
 import (
 	"fmt"
 	"log"
-	"path/filepath"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -71,9 +70,6 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
-
-	// remove trailing slash
-	namespacePath := filepath.Clean(resp.Data["path"].(string))
 
 	d.SetId(resp.Data["id"].(string))
 
