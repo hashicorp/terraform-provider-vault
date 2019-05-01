@@ -24,7 +24,7 @@ func jwtAuthBackendResource() *schema.Resource {
 				Optional:     true,
 				ForceNew:     true,
 				Description:  "path to mount the backend",
-				Default:      jwtAuthType,
+				Default:      "jwt",
 				ValidateFunc: validateNoTrailingSlash,
 			},
 
