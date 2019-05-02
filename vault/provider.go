@@ -237,6 +237,13 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, errors.New("no vault token found")
 	}
 
+	// Set the namespace prior to setting the token that we are going
+	// to work with
+	namespace := d.Get("namespace").(string)
+	if namespace != "" {
+		client.SetNamespace(namespace)
+	}
+
 	// In order to enforce our relatively-short lease TTL, we derive a
 	// temporary child token that inherits all of the policies of the
 	// token we were given but expires after max_lease_ttl_seconds.
@@ -266,11 +273,6 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	policies := childTokenLease.Auth.Policies
 
 	log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
-
-	namespace := d.Get("namespace").(string)
-	if namespace != "" {
-		client.SetNamespace(namespace)
-	}
 
 	client.SetToken(childToken)
 
