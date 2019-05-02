@@ -110,7 +110,7 @@ func testNestedNamespaceCheckAttrs(expectedPath string) resource.TestCheckFunc {
 			return fmt.Errorf("child namespace resource has no primary instance")
 		}
 
-		actualPath := resourceState.Primary.Attributes["path"]
+		actualPath := instanceState.Attributes["path"]
 		if actualPath != expectedPath {
 			return fmt.Errorf("expected path to be %s, got %s", expectedPath, actualPath)
 		}
