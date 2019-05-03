@@ -37,7 +37,7 @@ func awsSecretBackendRoleResource() *schema.Resource {
 			"policy_arns": {
 				Type:          schema.TypeList,
 				Optional:      true,
-				ConflictsWith: []string{"policy", "policy_arn"},
+				ConflictsWith: []string{"policy", "policy_arn", "role_arns"},
 				Description:   "ARN for an existing IAM policy the role should use.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -46,21 +46,21 @@ func awsSecretBackendRoleResource() *schema.Resource {
 			"policy_arn": {
 				Type:          schema.TypeString,
 				Optional:      true,
-				ConflictsWith: []string{"policy_document", "policy", "policy_arns"},
+				ConflictsWith: []string{"policy_document", "policy", "policy_arns", "role_arns"},
 				Description:   "ARN for an existing IAM policy the role should use.",
 				Deprecated:    `Use "policy_arns".`,
 			},
 			"policy_document": {
 				Type:             schema.TypeString,
 				Optional:         true,
-				ConflictsWith:    []string{"policy_arn", "policy"},
+				ConflictsWith:    []string{"policy_arn", "policy", "role_arns"},
 				Description:      "IAM policy the role should use in JSON format.",
 				DiffSuppressFunc: util.JsonDiffSuppress,
 			},
 			"policy": {
 				Type:             schema.TypeString,
 				Optional:         true,
-				ConflictsWith:    []string{"policy_arns", "policy_arn", "policy_document"},
+				ConflictsWith:    []string{"policy_arns", "policy_arn", "policy_document", "role_arns"},
 				Description:      "IAM policy the role should use in JSON format.",
 				DiffSuppressFunc: util.JsonDiffSuppress,
 				Deprecated:       `Use "policy_document".`,
@@ -69,6 +69,16 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Role credential type.",
+			},
+			"role_arns": {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional:      true,
+				ForceNew:      true,
+				ConflictsWith: []string{"policy", "policy_arn", "policy_arns", "policy_document"},
+				Description:   "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is 'assumed_role'",
 			},
 		},
 	}
@@ -97,8 +107,14 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		policy = d.Get("policy")
 	}
 
-	if policy == "" && len(policyARNs) == 0 {
-		return fmt.Errorf("either policy or policy_arn must be set.")
+	var roleARNs []string
+	roleARNsIfc := d.Get("role_arns")
+	for _, roleIfc := range roleARNsIfc.([]interface{}) {
+		roleARNs = append(roleARNs, roleIfc.(string))
+	}
+
+	if policy == "" && len(policyARNs) == 0 && len(roleARNs) == 0 {
+		return fmt.Errorf("either policy, policy_arns, or role_arns must be set")
 	}
 
 	data := map[string]interface{}{
@@ -109,6 +125,9 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	}
 	if len(policyARNs) != 0 {
 		data["policy_arns"] = policyARNs
+	}
+	if len(roleARNs) != 0 {
+		data["role_arns"] = roleARNs
 	}
 
 	log.Printf("[DEBUG] Creating role %q on AWS backend %q", name, backend)
@@ -160,6 +179,7 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Set("credential_type", secret.Data["credential_type"])
+	d.Set("role_arns", secret.Data["role_arns"])
 	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
 	d.Set("name", pathPieces[len(pathPieces)-1])
 	return nil
