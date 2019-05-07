@@ -22,9 +22,9 @@ for more details.
 ```hcl
 resource "vault_pki_secret_backend_root_cert" "test" {
   depends_on = [ "vault_pki_secret_backend.pki" ]
-  
+
   backend = "${vault_pki_secret_backend.pki.path}"
-  
+
   type = "internal"
   common_name = "Root CA"
   ttl = "315360000"
@@ -56,7 +56,7 @@ The following arguments are supported:
 
 * `other_sans` - (Optional) List of other SANs
 
-* `ttl` - (Optional) Time to leave
+* `ttl` - (Optional) Time to live
 
 * `format` - (Optional) The format of data
 
@@ -68,10 +68,10 @@ The following arguments are supported:
 
 * `max_path_length` - (Optional) The maximum path length to encode in the generated certificate
 
-* `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs	
+* `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs
 
 * `permitted_dns_domains` - (Optional) List of domains for which certificates are allowed to be issued
-			
+
 * `ou` - (Optional) The organization unit
 
 * `organization` - (Optional) The organization

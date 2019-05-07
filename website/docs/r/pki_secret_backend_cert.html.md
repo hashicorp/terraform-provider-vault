@@ -22,7 +22,7 @@ for more details.
 ```hcl
 resource "vault_pki_secret_backend_cert" "app" {
   depends_on = [ "vault_pki_secret_backend_role.admin" ]
-  
+
   backend = "${vault_pki_secret_backend.intermediate.path}"
   name = "${vault_pki_secret_backend_role.test.name}"
 
@@ -46,13 +46,15 @@ The following arguments are supported:
 
 * `other_sans` - (Optional) List of other SANs
 
-* `ttl` - (Optional) Time to leave
+* `ttl` - (Optional) Time to live
 
 * `format` - (Optional) The format of data
 
 * `private_key_format` - (Optional) The private key format
 
 * `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs
+
+* `min_seconds_remaining` - (Optional) Generate a new certificate when the expiration is within this number of seconds, default is 604800 (7 days)
 
 ## Attributes Reference
 
@@ -69,3 +71,5 @@ In addition to the fields above, the following attributes are exported:
 * `private_key_type` - The private key type
 
 * `serial_number` - The serial number
+
+* `expiration` - The expiration date of the certificate in unix epoch format
