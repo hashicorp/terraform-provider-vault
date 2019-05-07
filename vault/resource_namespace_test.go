@@ -21,6 +21,7 @@ func TestNamespace_basic(t *testing.T) {
 	}
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
+	childPath := acctest.RandomWithPrefix("child-namespace")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -35,6 +36,10 @@ func TestNamespace_basic(t *testing.T) {
 				Config:      testNamespaceConfig(namespacePath + "/"),
 				Destroy:     false,
 				ExpectError: regexp.MustCompile("vault_namespace\\.test: cannot write to a path ending in '/'"),
+			},
+			{
+				Config: testNestedNamespaceConfig(namespacePath, childPath),
+				Check:  testNestedNamespaceCheckAttrs(childPath),
 			},
 		},
 	})
@@ -79,4 +84,37 @@ resource "vault_namespace" "test" {
 }
 `, path)
 
+}
+
+func testNestedNamespaceConfig(parentPath, childPath string) string {
+	return fmt.Sprintf(`
+provider "vault" {
+	namespace = %q
+}
+
+resource "vault_namespace" "test_child" {
+	path = %q
+}
+`, parentPath, childPath)
+}
+
+func testNestedNamespaceCheckAttrs(expectedPath string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["vault_namespace.test_child"]
+		if resourceState == nil {
+			return fmt.Errorf("child namespace resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return fmt.Errorf("child namespace resource has no primary instance")
+		}
+
+		actualPath := instanceState.Attributes["path"]
+		if actualPath != expectedPath {
+			return fmt.Errorf("expected path to be %s, got %s", expectedPath, actualPath)
+		}
+
+		return nil
+	}
 }
