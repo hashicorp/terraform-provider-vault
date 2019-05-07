@@ -22,7 +22,6 @@ website/node_modules
 .idea
 *.iml
 *.test
-*.iml
 .vscode
 
 website/vendor

@@ -165,6 +165,7 @@ func Provider() terraform.ResourceProvider {
 			"vault_pki_secret_backend":                           pkiSecretBackendResource(),
 			"vault_pki_secret_backend_cert":                      pkiSecretBackendCertResource(),
 			"vault_pki_secret_backend_config_ca":                 pkiSecretBackendConfigCAResource(),
+			"vault_pki_secret_backend_config_urls":               pkiSecretBackendConfigUrlsResource(),
 			"vault_pki_secret_backend_intermediate_cert_request": pkiSecretBackendIntermediateCertRequestResource(),
 			"vault_pki_secret_backend_intermediate_set_signed":   pkiSecretBackendIntermediateSetSignedResource(),
 			"vault_pki_secret_backend_role":                      pkiSecretBackendRoleResource(),
