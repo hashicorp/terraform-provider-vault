@@ -77,7 +77,7 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				},
 				Optional:      true,
 				ForceNew:      true,
-				ConflictsWith: []string{"policy", "policy_arn", "policy_arns", "policy_document"},
+				ConflictsWith: []string{"policy", "policy_arn", "policy_arns"},
 				Description:   "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is 'assumed_role'",
 			},
 		},
