@@ -53,7 +53,7 @@ func awsSecretBackendRoleResource() *schema.Resource {
 			"policy_document": {
 				Type:             schema.TypeString,
 				Optional:         true,
-				ConflictsWith:    []string{"policy_arn", "policy", "role_arns"},
+				ConflictsWith:    []string{"policy_arn", "policy"},
 				Description:      "IAM policy the role should use in JSON format.",
 				DiffSuppressFunc: util.JsonDiffSuppress,
 			},
