@@ -37,7 +37,7 @@ func awsSecretBackendRoleResource() *schema.Resource {
 			"policy_arns": {
 				Type:          schema.TypeList,
 				Optional:      true,
-				ConflictsWith: []string{"policy", "policy_arn"},
+				ConflictsWith: []string{"policy", "policy_arn", "role_arns"},
 				Description:   "ARN for an existing IAM policy the role should use.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -46,9 +46,18 @@ func awsSecretBackendRoleResource() *schema.Resource {
 			"policy_arn": {
 				Type:          schema.TypeString,
 				Optional:      true,
-				ConflictsWith: []string{"policy_document", "policy", "policy_arns"},
+				ConflictsWith: []string{"policy_document", "policy", "policy_arns", "role_arns"},
 				Description:   "ARN for an existing IAM policy the role should use.",
 				Deprecated:    `Use "policy_arns".`,
+			},
+			"role_arns": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				ConflictsWith: []string{"policy_arn", "policy_arns"},
+				Description:   "ARNs of the AWS roles the role is allowed to assume. Required when credential_type is assumed_role",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 			"policy_document": {
 				Type:             schema.TypeString,
@@ -69,6 +78,16 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Role credential type.",
+			},
+			"default_sts_ttl": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The default TTL for STS credentials. Valid only when credential_type is one of assumed_role or federation_token",
+			},
+			"max_sts_ttl": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The max allowed TTL for STS credentials. Valid only when credential_type is one of assumed_role or federation_token",
 			},
 		},
 	}
@@ -97,18 +116,66 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		policy = d.Get("policy")
 	}
 
+	var roleARNs []string
+	roleARNsIfc, ok := d.GetOk("role_arns")
+	if ok {
+		for _, arnIfc := range roleARNsIfc.([]interface{}) {
+			roleARNs = append(roleARNs, arnIfc.(string))
+		}
+	}
+
 	if policy == "" && len(policyARNs) == 0 {
 		return fmt.Errorf("either policy or policy_arn must be set.")
 	}
 
+	credentialType := d.Get("credential_type").(string)
 	data := map[string]interface{}{
-		"credential_type": d.Get("credential_type").(string),
+		"credential_type": credentialType,
 	}
+
+	if len(policyARNs) != 0 && credentialType == "iam_user" {
+		return fmt.Errorf("policy_arns is only valid when credential_type is iam_user")
+	}
+
+	if len(roleARNs) == 0 && credentialType == "assumed_role" {
+		return fmt.Errorf("role_arns must be set if credential_type is assumed_role")
+	}
+
+	if len(roleARNs) == 0 && credentialType != "assumed_role" {
+		return fmt.Errorf("role_arns is only valid when credential_type is assumed_role")
+	}
+
+	if policy == "" && len(policyARNs) == 0 && len(roleARNs) == 0 {
+		return fmt.Errorf("One of policy, policy_arns or role_arns must be set")
+	}
+
+	maxStsTtl, ok := d.GetOk("max_sts_ttl")
+	if ok {
+		if credentialType != "assumed_role" && credentialType != "federation_token" {
+			return fmt.Errorf("max_sts_ttl is only valid when credential_type is assumed_role or federation_token")
+		} else {
+			data["max_sts_ttl"] = maxStsTtl
+		}
+	}
+
+	defaultStsTtl, ok := d.GetOk("default_sts_ttl")
+	if ok {
+		if credentialType != "assumed_role" && credentialType != "federation_token" {
+			return fmt.Errorf("default_sts_ttl is only valid when credential_type is assumed_role or federation_token")
+		} else {
+			data["default_sts_ttl"] = defaultStsTtl
+		}
+	}
+
 	if policy != "" {
 		data["policy_document"] = policy
 	}
 	if len(policyARNs) != 0 {
 		data["policy_arns"] = policyARNs
+	}
+
+	if len(roleARNs) != 0 {
+		data["role_arns"] = roleARNs
 	}
 
 	log.Printf("[DEBUG] Creating role %q on AWS backend %q", name, backend)
@@ -159,7 +226,29 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("policy_arns", v)
 	}
 
-	d.Set("credential_type", secret.Data["credential_type"])
+	if v, ok := secret.Data["role_arns"]; ok {
+		d.Set("role_arns", v)
+	}
+
+	if secret.Data["credential_type"] == "federation_token" || secret.Data["credential_type"] == "assumed_role" {
+		if _, ok := d.GetOk("max_sts_ttl"); ok {
+			d.Set("max_sts_ttl", secret.Data["max_sts_ttl"])
+		}
+		if _, ok := d.GetOk("default_sts_ttl"); ok {
+			d.Set("default_sts_ttl", secret.Data["default_sts_ttl"])
+		}
+	}
+
+	if v, ok := secret.Data["credential_type"]; ok {
+		d.Set("credential_type", v)
+	} else if cTypes, ok := secret.Data["credential_types"]; ok {
+		// Vault < 1.0.3
+		cTypes := cTypes.([]interface{})
+		if len(cTypes) > 0 {
+			d.Set("credential_type", cTypes[0])
+		}
+	}
+
 	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
 	d.Set("name", pathPieces[len(pathPieces)-1])
 	return nil
