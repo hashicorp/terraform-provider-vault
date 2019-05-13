@@ -129,7 +129,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	rootProviderData := rootProviderResource.TestResourceData()
 	providerConfigure(rootProviderData)
 
-	namespacePath := acctest.RandomWithPrefix("test-namespace") + "/"
+	namespacePath := acctest.RandomWithPrefix("test-namespace")
 
 	//Create a test namespace and make sure it stays there
 	resource.Test(t, resource.TestCase{
@@ -224,7 +224,7 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 		ns2ProviderData.Set("token", vaultToken)
 		providerConfigure(ns2ProviderData)
 
-		ns2Path := acctest.RandomWithPrefix("test-namespace2") + "/"
+		ns2Path := acctest.RandomWithPrefix("test-namespace2")
 
 		//Finally test that you can do stuff with the new token by creating a sub namespace
 		resource.Test(t, resource.TestCase{
