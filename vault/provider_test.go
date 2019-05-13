@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform/helper/acctest"
 	"io/ioutil"
 	"os"
 	"path"
@@ -114,6 +115,134 @@ const tokenHelperScript = `
 #!/usr/bin/env bash
 echo "helper-token"
 `
+
+func TestAccNamespaceProviderConfigure(t *testing.T) {
+	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
+	if isEnterprise == "" {
+		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
+	}
+
+	rootProvider := Provider().(*schema.Provider)
+	rootProviderResource := &schema.Resource{
+		Schema: rootProvider.Schema,
+	}
+	rootProviderData := rootProviderResource.TestResourceData()
+	providerConfigure(rootProviderData)
+
+	namespacePath := acctest.RandomWithPrefix("test-namespace") + "/"
+
+	//Create a test namespace and make sure it stays there
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		Providers: map[string]terraform.ResourceProvider{
+			"vault": rootProvider,
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testNamespaceConfig(namespacePath),
+				Check:  testNamespaceCheckAttrs(),
+			},
+		},
+	})
+
+	nsProvider := Provider().(*schema.Provider)
+	nsProviderResource := &schema.Resource{
+		Schema: nsProvider.Schema,
+	}
+	nsProviderData := nsProviderResource.TestResourceData()
+	// We auth to the root namespace, but will configure resources in the test namespace
+	nsProviderData.Set("token_namespace", "/")
+	nsProviderData.Set("namespace", namespacePath)
+	providerConfigure(nsProviderData)
+
+	// Create a policy with sudo permissions and an orphaned periodic token within the test namespace
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		Providers: map[string]terraform.ResourceProvider{
+			"vault": nsProvider,
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceAdminPeriodicOrphanTokenConfig_basic(),
+				Check:  testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath, t),
+			},
+		},
+	})
+
+}
+
+func testResourceAdminPeriodicOrphanTokenConfig_basic() string {
+	return `
+resource "vault_policy" "test" {
+	name = "admin"
+	policy = <<EOT
+path "*" { capabilities = ["create", "read", "update", "delete", "list", "sudo"] }
+EOT
+}
+
+resource "vault_token" "test" {
+	policies = [ "${vault_policy.test.name}" ]
+	ttl = "60s"
+}`
+}
+
+func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *testing.T) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		//Check that it made the policy
+		resourceState := s.Modules[0].Resources["vault_policy.test"]
+		if resourceState == nil {
+			return fmt.Errorf("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return fmt.Errorf("resource has no primary instance")
+		}
+
+		//Check that it made the token and read it back
+
+		tokenResourceState := s.Modules[0].Resources["vault_token.test"]
+		if tokenResourceState == nil {
+			return fmt.Errorf("token resource not found in state")
+		}
+
+		tokenInstanceState := tokenResourceState.Primary
+		if tokenInstanceState == nil {
+			return fmt.Errorf("token resource has no primary instance")
+		}
+
+		vaultToken := tokenResourceState.Primary.Attributes["token"]
+
+		ns2Provider := Provider().(*schema.Provider)
+		ns2ProviderResource := &schema.Resource{
+			Schema: ns2Provider.Schema,
+		}
+		ns2ProviderData := ns2ProviderResource.TestResourceData()
+		//We use the token created above to auth against the namespace (instead of root)
+		ns2ProviderData.Set("token_namespace", namespacePath)
+		ns2ProviderData.Set("namespace", namespacePath)
+		ns2ProviderData.Set("token", vaultToken)
+		providerConfigure(ns2ProviderData)
+
+		ns2Path := acctest.RandomWithPrefix("test-namespace2") + "/"
+
+		//Finally test that you can do stuff with the new token by creating a sub namespace
+		resource.Test(t, resource.TestCase{
+			PreCheck: func() { testAccPreCheck(t) },
+			Providers: map[string]terraform.ResourceProvider{
+				"vault": ns2Provider,
+			},
+			Steps: []resource.TestStep{
+				{
+					Config: testNamespaceConfig(ns2Path),
+					Check:  testNamespaceCheckAttrs(),
+				},
+			},
+		})
+
+		return nil
+	}
+}
 
 func TestAccProviderToken(t *testing.T) {
 	// This is an acceptance test because it requires filesystem and env var
