@@ -125,6 +125,11 @@ variables in order to keep credential information out of the configuration.
 * `namespace` - (Optional) Set the namespace to use. May be set via the
   `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
 
+* `token_namespace` - (Optional) Set the namespace to authenticate to. Terraform
+  creates a limited child token during runs and if the token you provide is only
+  valid in another namespace, you'll need to specify that namespace with this parameter.
+  *Available only for Vault Enterprise*.
+
 The `client_auth` configuration block accepts the following arguments:
 
 * `cert_file` - (Required) Path to a file on local disk that contains the
