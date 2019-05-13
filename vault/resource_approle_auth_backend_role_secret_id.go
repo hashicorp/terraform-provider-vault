@@ -238,7 +238,7 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 	if err != nil {
 		// We need to check if the secret_id has expired
 		if util.IsExpiredTokenErr(err) {
-			return true, nil
+			return false, nil
 		}
 		return true, fmt.Errorf("error checking if AppRole auth backend role SecretID %q exists: %s", id, err)
 	}

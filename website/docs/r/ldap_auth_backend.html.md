@@ -63,7 +63,7 @@ The following arguments are supported:
 
 * `groupattr` - (Optional) LDAP attribute to follow on objects returned by groupfilter
 
-* `use_token_auth` - (Optional) Use the Active Directory tokenGroups constructed attribute of the user to find the group memberships
+* `use_token_groups` - (Optional) Use the Active Directory tokenGroups constructed attribute of the user to find the group memberships
 
 * `path` - (Optional) Path to mount the LDAP auth backend under
 
@@ -81,3 +81,11 @@ previously stored values.
 In addition to the fields above, the following attributes are exported:
 
 * `accessor` - The accessor for this auth mount.
+
+## Import
+
+LDAP authentication backends can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_ldap_auth_backend.ldap ldap
+```

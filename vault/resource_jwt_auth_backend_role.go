@@ -63,6 +63,14 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 				},
 				Description: "Policies to be set on tokens issued using this role.",
 			},
+			"allowed_redirect_uris": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "The list of allowed values for redirect_uri during OIDC logins.",
+			},
 			"ttl": {
 				Type:          schema.TypeInt,
 				Optional:      true,
@@ -97,6 +105,24 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+			},
+			"oidc_scopes": {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Description: "List of OIDC scopes to be used with an OIDC role. The standard scope \"openid\" is automatically included and need not be specified.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"bound_claims": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "Map of claims/values to match against. The expected value may be a single string or a list of strings.",
+			},
+			"claim_mappings": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "Map of claims (keys) to be copied to specified metadata fields (values).",
 			},
 			"groups_claim": {
 				Type:        schema.TypeString,
@@ -188,10 +214,20 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("user_claim", resp.Data["user_claim"].(string))
 
-	policies := util.JsonStringArrayToStringArray(resp.Data["policies"].([]interface{}))
+	policies := make([]string, 0)
+	if resp.Data["policies"] != nil {
+		policies = util.JsonStringArrayToStringArray(resp.Data["policies"].([]interface{}))
+	}
 	err = d.Set("policies", policies)
 	if err != nil {
 		return fmt.Errorf("error setting policies in state: %s", err)
+	}
+	if resp.Data["allowed_redirect_uris"] != nil {
+		allowedRedirectUris := util.JsonStringArrayToStringArray(resp.Data["allowed_redirect_uris"].([]interface{}))
+		err = d.Set("allowed_redirect_uris", allowedRedirectUris)
+		if err != nil {
+			return fmt.Errorf("error setting allowed_redirect_uris in state: %s", err)
+		}
 	}
 
 	tokenTTL, err := resp.Data["ttl"].(json.Number).Int64()
@@ -229,6 +265,24 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	} else {
 		d.Set("bound_cidrs", make([]string, 0))
+	}
+
+	if resp.Data["oidc_scopes"] != nil {
+		cidrs := util.JsonStringArrayToStringArray(resp.Data["oidc_scopes"].([]interface{}))
+		err = d.Set("oidc_scopes", cidrs)
+		if err != nil {
+			return fmt.Errorf("error setting oidc_scopes in state: %s", err)
+		}
+	} else {
+		d.Set("oidc_scopes", make([]string, 0))
+	}
+
+	if resp.Data["bound_claims"] != nil {
+		d.Set("bound_claims", resp.Data["bound_claims"])
+	}
+
+	if resp.Data["claim_mappings"] != nil {
+		d.Set("claim_mappings", resp.Data["claim_mappings"])
 	}
 
 	d.Set("groups_claim", resp.Data["groups_claim"].(string))
@@ -340,6 +394,9 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData) map[string]interface{
 	if dataList := util.TerraformSetToStringArray(d.Get("policies")); len(dataList) > 0 {
 		data["policies"] = dataList
 	}
+	if dataList := util.TerraformSetToStringArray(d.Get("allowed_redirect_uris")); len(dataList) > 0 {
+		data["allowed_redirect_uris"] = dataList
+	}
 
 	if v, ok := d.GetOk("role_type"); ok {
 		data["role_type"] = v.(string)
@@ -363,6 +420,18 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData) map[string]interface{
 
 	if dataList := util.TerraformSetToStringArray(d.Get("bound_cidrs")); len(dataList) > 0 {
 		data["bound_cidrs"] = dataList
+	}
+
+	if dataList := util.TerraformSetToStringArray(d.Get("oidc_scopes")); len(dataList) > 0 {
+		data["oidc_scopes"] = dataList
+	}
+
+	if v, ok := d.GetOk("bound_claims"); ok {
+		data["bound_claims"] = v
+	}
+
+	if v, ok := d.GetOk("claim_mappings"); ok {
+		data["claim_mappings"] = v
 	}
 
 	if v, ok := d.GetOkExists("groups_claim"); ok {

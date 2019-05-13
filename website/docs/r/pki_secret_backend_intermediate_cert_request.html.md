@@ -44,6 +44,8 @@ The following arguments are supported:
 
 * `ip_sans` - (Optional) List of alternative IPs
 
+* `uri_sans` - (Optional) List of alternative URIs
+
 * `other_sans` - (Optional) List of other SANs
 
 * `format` - (Optional) The format of data
@@ -54,8 +56,8 @@ The following arguments are supported:
 
 * `key_bits` - (Optional) The number of bits to use
 
-* `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs	
-			
+* `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs
+
 * `ou` - (Optional) The organization unit
 
 * `organization` - (Optional) The organization

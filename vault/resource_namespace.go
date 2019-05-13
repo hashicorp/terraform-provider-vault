@@ -20,9 +20,10 @@ func namespaceResource() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"path": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Path of the namespace.",
+				Type:         schema.TypeString,
+				Required:     true,
+				Description:  "Path of the namespace.",
+				ValidateFunc: validateNoTrailingSlash,
 			},
 		},
 	}
@@ -70,7 +71,6 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
-	d.Set("path", resp.Data["path"].(string))
 	d.SetId(resp.Data["id"].(string))
 
 	return nil

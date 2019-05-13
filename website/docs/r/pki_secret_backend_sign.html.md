@@ -22,9 +22,9 @@ for more details.
 ```hcl
 resource "vault_pki_secret_backend_sign" "test" {
   depends_on = [ "vault_pki_secret_backend_role.admin" ]
-  
+
   backend = "${vault_pki_secret_backend.pki.path}"
-  
+
   name = "${vault_pki_secret_backend_role.admin.name}"
   csr = <<EOT
 -----BEGIN CERTIFICATE REQUEST-----
@@ -79,11 +79,13 @@ The following arguments are supported:
 
 * `uri_sans` - (Optional) List of alterative URIs
 
-* `ttl` - (Optional) Time to leave
+* `ttl` - (Optional) Time to live
 
 * `format` - (Optional) The format of data
 
 * `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs
+
+* `min_seconds_remaining` - (Optional) Generate a new certificate when the expiration is within this number of seconds, default is 604800 (7 days)
 
 ## Attributes Reference
 
@@ -96,3 +98,5 @@ In addition to the fields above, the following attributes are exported:
 * `ca_chain` - The CA chain
 
 * `serial` - The serial
+
+* `expiration` - The expiration date of the certificate in unix epoch format

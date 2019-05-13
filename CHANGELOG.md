@@ -1,4 +1,24 @@
-## 1.8.0 (Unreleased)
+## 1.9.0 (Unreleased)
+## 1.8.0 (May 07, 2019)
+
+FEATURES:
+
+* Adds OIDC support to the JWT auth backend ([#398](https://github.com/terraform-providers/terraform-provider-vault/pull/398)).
+* **New Resource**: Adds a `vault_pki_secret_backend_config_urls` resource ([#399](https://github.com/terraform-providers/terraform-provider-vault/pull/399)).
+
+IMPROVEMENTS:
+
+* Adds support for automatically renewing certificates in the PKI certs backend ([#386](https://github.com/terraform-providers/terraform-provider-vault/pull/386)).
+* Adds support for `uri_sans` in the PKI secret backend ([#373](https://github.com/terraform-providers/terraform-provider-vault/pull/373)).
+* Allows a user to delete all policies in the AWS auth role resource ([#395](https://github.com/terraform-providers/terraform-provider-vault/pull/395)).
+
+BUG FIXES:
+
+* Fixes the ability to handle JWT roles that lack policies ([#389](https://github.com/terraform-providers/terraform-provider-vault/pull/389)).
+* Allows `vault_ldap_auth` resources to be imported ([#387](https://github.com/terraform-providers/terraform-provider-vault/pull/387)).
+* Fixes issue with trailing slashes for the Vault namespaces resource ([#391](https://github.com/terraform-providers/terraform-provider-vault/pull/391)).
+* Fixes a bug with namespaces where the path was being overwritten ([#396](https://github.com/terraform-providers/terraform-provider-vault/pull/396)).
+
 ## 1.7.0 (April 03, 2019)
 
 FEATURES:

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
@@ -12,10 +13,11 @@ import (
 
 func pkiSecretBackendCertResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendCertCreate,
-		Read:   pkiSecretBackendCertRead,
-		Update: pkiSecretBackendCertUpdate,
-		Delete: pkiSecretBackendCertDelete,
+		Create:        pkiSecretBackendCertCreate,
+		Read:          pkiSecretBackendCertRead,
+		Update:        pkiSecretBackendCertUpdate,
+		Delete:        pkiSecretBackendCertDelete,
+		CustomizeDiff: pkiSecretBackendCertDiff,
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -91,6 +93,18 @@ func pkiSecretBackendCertResource() *schema.Resource {
 				Description: "Flag to exclude CN from SANs.",
 				ForceNew:    true,
 			},
+			"auto_renew": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If enabled, a new certificate will be generated if the expiration is within min_seconds_remaining",
+			},
+			"min_seconds_remaining": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     604800,
+				Description: "Generate a new certificate when the expiration is within this number of seconds",
+			},
 			"certificate": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -121,6 +135,11 @@ func pkiSecretBackendCertResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The serial number.",
+			},
+			"expiration": {
+				Type:        schema.TypeInt,
+				Computed:    true,
+				Description: "The certificate expiration.",
 			},
 		},
 	}
@@ -192,9 +211,43 @@ func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error 
 	d.Set("private_key", resp.Data["private_key"])
 	d.Set("private_key_type", resp.Data["private_key_type"])
 	d.Set("serial_number", resp.Data["serial_number"])
+	d.Set("expiration", resp.Data["expiration"])
 
 	d.SetId(fmt.Sprintf("%s/%s/%s", backend, name, commonName))
 	return pkiSecretBackendCertRead(d, meta)
+}
+
+func pkiSecretBackendCertDiff(d *schema.ResourceDiff, meta interface{}) error {
+	if d.Id() == "" {
+		return nil
+	}
+
+	if !d.Get("auto_renew").(bool) {
+		return nil
+	}
+
+	expiration := d.Get("expiration").(int)
+	expireTime := time.Unix(int64(expiration), 0)
+
+	minSeconds := 0
+	if v, ok := d.GetOk("min_seconds_remaining"); ok {
+		minSeconds = v.(int)
+	}
+
+	renewTime := expireTime.Add(-time.Duration(minSeconds) * time.Second)
+	if time.Now().After(renewTime) {
+		log.Printf("[DEBUG] certificate %q is due for renewal, expires %s, renewal time %s", d.Id(), expireTime, renewTime)
+		if err := d.SetNewComputed("certificate"); err != nil {
+			return err
+		}
+		if err := d.SetNewComputed("private_key"); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	log.Printf("[DEBUG] certificate %q is not due for renewal, expires %s, renewal time %s", d.Id(), expireTime, renewTime)
+	return nil
 }
 
 func pkiSecretBackendCertRead(d *schema.ResourceData, meta interface{}) error {
@@ -202,6 +255,11 @@ func pkiSecretBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func pkiSecretBackendCertUpdate(d *schema.ResourceData, m interface{}) error {
+	// If the certificate or private_key have been marked as changed by our custom diff function we need
+	// to create a new certificate and key
+	if d.HasChange("certificate") || d.HasChange("private_key") {
+		return pkiSecretBackendCertCreate(d, m)
+	}
 	return nil
 }
 

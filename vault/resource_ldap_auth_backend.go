@@ -21,6 +21,9 @@ func ldapAuthBackendResource() *schema.Resource {
 		Read:   ldapAuthBackendRead,
 		Delete: ldapAuthBackendDelete,
 		Exists: ldapAuthBackendExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"url": {
@@ -254,6 +257,8 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
+
+	d.Set("path", path)
 
 	authMount := auths[strings.Trim(path, "/")+"/"]
 	if authMount == nil {

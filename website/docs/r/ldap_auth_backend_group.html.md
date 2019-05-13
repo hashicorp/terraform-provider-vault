@@ -46,3 +46,11 @@ For more details on the usage of each argument consult the [Vault LDAP API docum
 ## Attribute Reference
 
 No additional attributes are exposed by this resource.
+
+## Import
+
+LDAP authentication backend groups can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_ldap_auth_backend_group.foo auth/ldap/groups/foo
+```

@@ -15,9 +15,9 @@ Creates an PKI certificate.
 ```hcl
 resource "vault_pki_secret_backend_root_sign_intermediate" "root" {
   depends_on = [ "vault_pki_secret_backend_intermediate_cert_request.intermediate" ]
-  
+
   backend = "${vault_pki_secret_backend.root.path}"
-  
+
   csr = "${vault_pki_secret_backend_intermediate_cert_request.intermediate.csr}"
   common_name = "Intermediate CA"
   exclude_cn_from_sans = true
@@ -44,7 +44,7 @@ The following arguments are supported:
 
 * `other_sans` - (Optional) List of other SANs
 
-* `ttl` - (Optional) Time to leave
+* `ttl` - (Optional) Time to live
 
 * `format` - (Optional) The format of data
 
@@ -56,12 +56,12 @@ The following arguments are supported:
 
 * `max_path_length` - (Optional) The maximum path length to encode in the generated certificate
 
-* `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs	
+* `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs
 
 * `use_csr_values` - (Optional) Preserve CSR values
 
 * `permitted_dns_domains` - (Optional) List of domains for which certificates are allowed to be issued
-			
+
 * `ou` - (Optional) The organization unit
 
 * `organization` - (Optional) The organization

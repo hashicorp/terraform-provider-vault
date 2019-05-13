@@ -53,6 +53,15 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"uri_sans": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of alternative URIs.",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"other_sans": {
 				Type:        schema.TypeList,
 				Optional:    true,
@@ -181,6 +190,12 @@ func pkiSecretBackendIntermediateCertRequestCreate(d *schema.ResourceData, meta 
 		ipSans = append(ipSans, iIpSan.(string))
 	}
 
+	iURISans := d.Get("uri_sans").([]interface{})
+	uriSans := make([]string, 0, len(iURISans))
+	for _, iUriSan := range iURISans {
+		uriSans = append(uriSans, iUriSan.(string))
+	}
+
 	iOtherSans := d.Get("other_sans").([]interface{})
 	otherSans := make([]string, 0, len(iOtherSans))
 	for _, iOtherSan := range iOtherSans {
@@ -209,6 +224,10 @@ func pkiSecretBackendIntermediateCertRequestCreate(d *schema.ResourceData, meta 
 
 	if len(ipSans) > 0 {
 		data["ip_sans"] = strings.Join(ipSans, ",")
+	}
+
+	if len(uriSans) > 0 {
+		data["uri_sans"] = strings.Join(uriSans, ",")
 	}
 
 	if len(otherSans) > 0 {
