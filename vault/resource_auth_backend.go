@@ -148,7 +148,7 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 	for path, auth := range auths {
 		if path == targetPath {
 			d.Set("type", auth.Type)
-			d.Set("path", path)
+			d.Set("path", d.Id()) // not "path", because we must preserve the id we had before
 			d.Set("description", auth.Description)
 			d.Set("default_lease_ttl_seconds", auth.Config.DefaultLeaseTTL)
 			d.Set("max_lease_ttl_seconds", auth.Config.MaxLeaseTTL)
