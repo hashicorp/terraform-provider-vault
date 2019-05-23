@@ -479,7 +479,7 @@ resource "vault_jwt_auth_backend" "jwt" {
   oidc_discovery_url = "https://myco.auth0.com/"
   oidc_client_id = "client"
   oidc_client_secret = "secret"
-  lifecycle = {
+  lifecycle {
 	ignore_changes = [
      # Ignore changes to odic_clie_secret inside the tests
      "oidc_client_secret"
