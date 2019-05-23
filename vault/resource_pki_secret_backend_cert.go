@@ -217,26 +217,26 @@ func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error 
 	return pkiSecretBackendCertRead(d, meta)
 }
 
+func pkiSecretBackendCertNeedsRenewed(autoRenew bool, expiration int, minSecRemaining int) bool {
+	if !autoRenew {
+		return false
+	}
+	expireTime := time.Unix(int64(expiration), 0)
+	renewTime := expireTime.Add(-time.Duration(minSecRemaining) * time.Second)
+	return time.Now().After(renewTime)
+}
+
 func pkiSecretBackendCertDiff(d *schema.ResourceDiff, meta interface{}) error {
 	if d.Id() == "" {
 		return nil
 	}
 
-	if !d.Get("auto_renew").(bool) {
-		return nil
-	}
-
-	expiration := d.Get("expiration").(int)
-	expireTime := time.Unix(int64(expiration), 0)
-
 	minSeconds := 0
 	if v, ok := d.GetOk("min_seconds_remaining"); ok {
 		minSeconds = v.(int)
 	}
-
-	renewTime := expireTime.Add(-time.Duration(minSeconds) * time.Second)
-	if time.Now().After(renewTime) {
-		log.Printf("[DEBUG] certificate %q is due for renewal, expires %s, renewal time %s", d.Id(), expireTime, renewTime)
+	if pkiSecretBackendCertNeedsRenewed(d.Get("auto_renew").(bool), d.Get("expiration").(int), minSeconds) {
+		log.Printf("[DEBUG] certificate %q is due for renewal", d.Id())
 		if err := d.SetNewComputed("certificate"); err != nil {
 			return err
 		}
@@ -246,7 +246,7 @@ func pkiSecretBackendCertDiff(d *schema.ResourceDiff, meta interface{}) error {
 		return nil
 	}
 
-	log.Printf("[DEBUG] certificate %q is not due for renewal, expires %s, renewal time %s", d.Id(), expireTime, renewTime)
+	log.Printf("[DEBUG] certificate %q is not due for renewal", d.Id())
 	return nil
 }
 
@@ -255,9 +255,11 @@ func pkiSecretBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func pkiSecretBackendCertUpdate(d *schema.ResourceData, m interface{}) error {
-	// If the certificate or private_key have been marked as changed by our custom diff function we need
-	// to create a new certificate and key
-	if d.HasChange("certificate") || d.HasChange("private_key") {
+	minSeconds := 0
+	if v, ok := d.GetOk("min_seconds_remaining"); ok {
+		minSeconds = v.(int)
+	}
+	if pkiSecretBackendCertNeedsRenewed(d.Get("auto_renew").(bool), d.Get("expiration").(int), minSeconds) {
 		return pkiSecretBackendCertCreate(d, m)
 	}
 	return nil

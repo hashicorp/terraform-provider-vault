@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
@@ -224,28 +223,20 @@ func pkiSecretBackendSignDiff(d *schema.ResourceDiff, meta interface{}) error {
 		return nil
 	}
 
-	if !d.Get("auto_renew").(bool) {
-		return nil
-	}
-
-	expiration := d.Get("expiration").(int)
-	expireTime := time.Unix(int64(expiration), 0)
-
 	minSeconds := 0
 	if v, ok := d.GetOk("min_seconds_remaining"); ok {
 		minSeconds = v.(int)
 	}
 
-	renewTime := expireTime.Add(-time.Duration(minSeconds) * time.Second)
-	if time.Now().After(renewTime) {
-		log.Printf("[DEBUG] certificate %q is due for renewal, expires %s, renewal time %s", d.Id(), expireTime, renewTime)
+	if pkiSecretBackendCertNeedsRenewed(d.Get("auto_renew").(bool), d.Get("expiration").(int), minSeconds) {
+		log.Printf("[DEBUG] certificate %q is due for renewal", d.Id())
 		if err := d.SetNewComputed("certificate"); err != nil {
 			return err
 		}
 		return nil
 	}
 
-	log.Printf("[DEBUG] certificate %q is not due for renewal, expires %s, renewal time %s", d.Id(), expireTime, renewTime)
+	log.Printf("[DEBUG] certificate %q is not due for renewal", d.Id())
 	return nil
 }
 
@@ -254,9 +245,12 @@ func pkiSecretBackendSignRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func pkiSecretBackendSignUpdate(d *schema.ResourceData, m interface{}) error {
-	// If the certificate has been marked as changed by our custom diff function we need
-	// to create a new certificate
-	if d.HasChange("certificate") {
+	minSeconds := 0
+	if v, ok := d.GetOk("min_seconds_remaining"); ok {
+		minSeconds = v.(int)
+	}
+
+	if pkiSecretBackendCertNeedsRenewed(d.Get("auto_renew").(bool), d.Get("expiration").(int), minSeconds) {
 		return pkiSecretBackendSignCreate(d, m)
 	}
 	return nil
