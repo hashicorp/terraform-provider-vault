@@ -115,7 +115,7 @@ func testGCPSecretRoleset_attrs(backend, roleset string) resource.TestCheckFunc 
 
 		attrs := map[string]string{
 			"secret_type":           "secret_type",
-			"project":               "service_account_project",
+			"project":               "project",
 			"token_scopes":          "token_scopes",
 			"service_account_email": "service_account_email",
 		}
