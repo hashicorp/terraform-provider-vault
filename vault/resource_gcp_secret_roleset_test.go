@@ -275,7 +275,9 @@ func testGCPSecretRoleset_access_token(backend, roleset, credentials, project, r
 	terraform := fmt.Sprintf(`
 resource "vault_gcp_secret_backend" "test" {
   path = "%s"
-  credentials = "${file("%s")}"
+  credentials = <<CREDS
+%s
+CREDS
 }
 
 resource "vault_gcp_secret_roleset" "test" {
@@ -308,7 +310,9 @@ func testGCPSecretRoleset_service_account_key(backend, roleset, credentials, pro
 	terraform := fmt.Sprintf(`
 resource "vault_gcp_secret_backend" "test" {
   path = "%s"
-  credentials = "${file("%s")}"
+  credentials = <<CREDS
+%s
+CREDS
 }
 
 resource "vault_gcp_secret_roleset" "test" {

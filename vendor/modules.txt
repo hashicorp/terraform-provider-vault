@@ -98,7 +98,7 @@ github.com/hashicorp/go-retryablehttp
 github.com/hashicorp/go-rootcerts
 # github.com/hashicorp/go-safetemp v1.0.0
 github.com/hashicorp/go-safetemp
-# github.com/hashicorp/go-sockaddr v1.0.0
+# github.com/hashicorp/go-sockaddr v0.0.0-20180320115054-6d291a969b86
 github.com/hashicorp/go-sockaddr
 # github.com/hashicorp/go-uuid v1.0.1
 github.com/hashicorp/go-uuid
@@ -172,6 +172,7 @@ github.com/hashicorp/terraform/plans/objchange
 github.com/hashicorp/terraform/states/statefile
 github.com/hashicorp/terraform/helper/structure
 github.com/hashicorp/terraform/helper/acctest
+github.com/hashicorp/terraform/helper/pathorcontents
 github.com/hashicorp/terraform/registry
 github.com/hashicorp/terraform/registry/regsrc
 github.com/hashicorp/terraform/registry/response
