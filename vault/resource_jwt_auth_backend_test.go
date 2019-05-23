@@ -80,7 +80,7 @@ func TestAccJWTAuthBackend_negative(t *testing.T) {
 			{
 				Config:      testAccJWTAuthBackendConfig(path + "/"),
 				Destroy:     false,
-				ExpectError: regexp.MustCompile("vault_jwt_auth_backend\\.jwt: cannot write to a path ending in '/'"),
+				ExpectError: regexp.MustCompile("config is invalid: cannot write to a path ending in '/'"),
 			},
 			{
 				Config:      testAccJWTAuthBackendConfigFull(path, "https://myco.auth0.com/", "\"key\"", "api://default", ""),
