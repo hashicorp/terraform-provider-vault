@@ -57,23 +57,27 @@ func databaseSecretBackendRoleResource() *schema.Resource {
 				Description: "Maximum TTL for leases associated with this role, in seconds.",
 			},
 			"creation_statements": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeList,
 				Required:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Database statements to execute to create and configure a user.",
 			},
 			"revocation_statements": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeList,
 				Optional:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Database statements to execute to revoke a user.",
 			},
 			"rollback_statements": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeList,
 				Optional:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Database statements to execute to rollback a create operation in the event of an error.",
 			},
 			"renew_statements": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeList,
 				Optional:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Database statements to execute to renew a user.",
 			},
 		},
@@ -89,24 +93,24 @@ func databaseSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 	path := databaseSecretBackendRolePath(backend, name)
 
 	data := map[string]interface{}{
-		"db_name":             d.Get("db_name").(string),
-		"creation_statements": d.Get("creation_statements").(string),
+		"db_name":             d.Get("db_name"),
+		"creation_statements": d.Get("creation_statements"),
 	}
 
 	if v, ok := d.GetOkExists("default_ttl"); ok {
-		data["default_ttl"] = v.(int)
+		data["default_ttl"] = v
 	}
 	if v, ok := d.GetOkExists("max_ttl"); ok {
-		data["max_ttl"] = v.(int)
+		data["max_ttl"] = v
 	}
 	if v, ok := d.GetOkExists("revocation_statements"); ok && v != "" {
-		data["revocation_statements"] = v.(string)
+		data["revocation_statements"] = v
 	}
 	if v, ok := d.GetOkExists("rollback_statements"); ok && v != "" {
-		data["rollback_statements"] = v.(string)
+		data["rollback_statements"] = v
 	}
 	if v, ok := d.GetOkExists("renew_statements"); ok && v != "" {
-		data["renew_statements"] = v.(string)
+		data["renew_statements"] = v
 	}
 
 	log.Printf("[DEBUG] Creating role %q on database backend %q", name, backend)
@@ -153,10 +157,42 @@ func databaseSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 	d.Set("backend", backend)
 	d.Set("name", name)
 	d.Set("db_name", secret.Data["db_name"])
-	d.Set("creation_statements", secret.Data["creation_statements"])
-	d.Set("revocation_statements", secret.Data["revocation_statements"])
-	d.Set("rollback_statements", secret.Data["rollback_statements"])
-	d.Set("renew_statements", secret.Data["renew_statements"])
+	var creation []string
+	if creationStr, ok := secret.Data["creation_statements"].(string); ok {
+		creation = append(creation, creationStr)
+	} else if creations, ok := secret.Data["creation_statements"].([]interface{}); ok {
+		for _, cr := range creations {
+			creation = append(creation, cr.(string))
+		}
+	}
+	d.Set("creation_statements", creation)
+	var revocation []string
+	if revocationStr, ok := secret.Data["revocation_statements"].(string); ok {
+		revocation = append(revocation, revocationStr)
+	} else if revocations, ok := secret.Data["revocation_statements"].([]interface{}); ok {
+		for _, rev := range revocations {
+			revocation = append(revocation, rev.(string))
+		}
+	}
+	d.Set("revocation_statements", revocation)
+	var rollback []string
+	if rollbackStr, ok := secret.Data["rollback_statements"].(string); ok {
+		rollback = append(rollback, rollbackStr)
+	} else if rollbacks, ok := secret.Data["rollback_statements"].([]interface{}); ok {
+		for _, rb := range rollbacks {
+			rollback = append(rollback, rb.(string))
+		}
+	}
+	d.Set("rollback_statements", rollback)
+	var renew []string
+	if renewStr, ok := secret.Data["renew_statements"].(string); ok {
+		renew = append(renew, renewStr)
+	} else if renews, ok := secret.Data["renew_statements"].([]interface{}); ok {
+		for _, ren := range renews {
+			renew = append(renew, ren.(string))
+		}
+	}
+	d.Set("renew_statements", renew)
 
 	if v, ok := secret.Data["default_ttl"]; ok {
 		n, err := v.(json.Number).Int64()
