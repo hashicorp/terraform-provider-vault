@@ -177,11 +177,10 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Description: "The key of the tag on EC2 instance to use for role tags.",
 			},
 			"bound_iam_principal_arn": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Description:   "The IAM principal that must be authenticated using the iam auth method.",
-				Deprecated:    `"bound_iam_principal_arn" is deprecated, please use "bound_iam_principal_arns" as a list.`,
-				ConflictsWith: []string{"bound_iam_principal_arns"},
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The IAM principal that must be authenticated using the iam auth method.",
+				Removed:     `Use "bound_iam_principal_arns" as a list.`,
 			},
 			"bound_iam_principal_arns": {
 				Type:        schema.TypeList,
@@ -190,7 +189,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				ConflictsWith: []string{"bound_iam_principal_arn"},
 			},
 			"inferred_entity_type": {
 				Type:        schema.TypeString,
@@ -370,12 +368,11 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 			data["inferred_entity_type"] = inferred
 		}
 
-		if v, ok := d.GetOk("bound_iam_principal_arn"); ok {
-			data["bound_iam_principal_arn"] = v.(string)
-		} else if _, ok := d.GetOk("bound_iam_principal_arns"); ok {
+		if v, ok := data["bound_iam_principal_arns"].(string); ok {
+			d.Set("bound_iam_principal_arns", []string{v})
+		} else {
 			setSlice(d, "bound_iam_principal_arns", "bound_iam_principal_arn", data)
 		}
-
 		if v, ok := d.GetOk("inferred_aws_region"); ok {
 			data["inferred_aws_region"] = v.(string)
 		}

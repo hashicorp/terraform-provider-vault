@@ -217,7 +217,6 @@ func awsAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error {
 		id = "nonce:" + nonce
 	}
 	d.SetId(id)
-	d.Set("lease_id", secret.LeaseID)
 	d.Set("lease_duration", secret.Auth.LeaseDuration)
 	d.Set("lease_start_time", time.Now().Format(time.RFC3339))
 	d.Set("renewable", secret.Auth.Renewable)
