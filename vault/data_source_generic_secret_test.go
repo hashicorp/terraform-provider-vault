@@ -34,6 +34,10 @@ func TestV2Secret(t *testing.T) {
 			},
 			{
 				Config: testv2DataSourceGenericSecretUpdated_config(path),
+				Check:  testDataSourceGenericSecret_check,
+			},
+			{
+				Config: testv2DataSourceGenericSecretUpdatedLatest_config(path),
 				Check:  testDataSourceGenericSecretUpdated_check,
 			},
 		},
@@ -72,6 +76,24 @@ EOT
 data "vault_generic_secret" "test" {
     path = "${vault_generic_secret.test.path}"
     version = 1
+}
+`, path)
+}
+
+func testv2DataSourceGenericSecretUpdatedLatest_config(path string) string {
+	return fmt.Sprintf(`
+resource "vault_generic_secret" "test" {
+    path = "%s"
+    data_json = <<EOT
+{
+    "zip": "kablamo"
+}
+EOT
+}
+
+data "vault_generic_secret" "test" {
+    path = "${vault_generic_secret.test.path}"
+    version = 0
 }
 `, path)
 }
