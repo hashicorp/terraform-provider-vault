@@ -27,6 +27,7 @@ require (
 	github.com/mitchellh/go-homedir v1.0.0
 	github.com/rainycape/unidecode v0.0.0-20150907023854-cb7f23ec59be // indirect
 	github.com/ryanuber/columnize v0.0.0-20161220214920-0fbbb3f0e3fb // indirect
+	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/satori/uuid v0.0.0-20160927100844-b061729afc07 // indirect
 	github.com/smartystreets/assertions v0.0.0-20190116191733-b6c0e53d7304 // indirect
 	github.com/smartystreets/goconvey v0.0.0-20181108003508-044398e4856c // indirect
