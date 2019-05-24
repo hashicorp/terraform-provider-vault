@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform/helper/acctest"
 	r "github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 )
@@ -22,26 +23,27 @@ func TestDataSourceGenericSecret(t *testing.T) {
 }
 
 func TestV2Secret(t *testing.T) {
+	path := acctest.RandomWithPrefix("secret/foo")
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []r.TestStep{
 			{
-				Config: testv2DataSourceGenericSecret_config,
+				Config: testv2DataSourceGenericSecret_config(path),
 				Check:  testDataSourceGenericSecret_check,
 			},
 			{
-				Config: testv2DataSourceGenericSecretUpdated_config,
+				Config: testv2DataSourceGenericSecretUpdated_config(path),
 				Check:  testDataSourceGenericSecretUpdated_check,
 			},
 		},
 	})
 }
 
-var testv2DataSourceGenericSecret_config = `
-
+func testv2DataSourceGenericSecret_config(path string) string {
+	return fmt.Sprintf(`
 resource "vault_generic_secret" "test" {
-    path = "secret/foo"
+    path = "%s"
     data_json = <<EOT
 {
     "zip": "zap"
@@ -51,14 +53,15 @@ EOT
 
 data "vault_generic_secret" "test" {
     path = "${vault_generic_secret.test.path}"
-		version = -1
+    version = -1
+}
+`, path)
 }
 
-`
-var testv2DataSourceGenericSecretUpdated_config = `
-
+func testv2DataSourceGenericSecretUpdated_config(path string) string {
+	return fmt.Sprintf(`
 resource "vault_generic_secret" "test" {
-    path = "secret/foo"
+    path = "%s"
     data_json = <<EOT
 {
     "zip": "kablamo"
@@ -68,10 +71,10 @@ EOT
 
 data "vault_generic_secret" "test" {
     path = "${vault_generic_secret.test.path}"
-		version = 1
+    version = 1
 }
-
-`
+`, path)
+}
 
 var testDataSourceGenericSecret_config = `
 
