@@ -11,26 +11,27 @@ import (
 )
 
 func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
+	path := acctest.RandomWithPrefix("example")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: fmt.Sprintf(`
 				resource "vault_mount" "zero_ttl" {
-					path = "example"
+					path = "%s"
 					type = "kv"
 				}
-				`,
+				`, path),
 			},
 			{
 				PlanOnly: true,
-				Config: `
+				Config: fmt.Sprintf(`
 				resource "vault_mount" "zero_ttl" {
-					path = "example"
+					path = "%s"
 					type = "kv"
 				}
-				`,
+				`, path),
 			},
 		},
 	})
