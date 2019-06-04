@@ -152,7 +152,9 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	}
 	nsProviderData := nsProviderResource.TestResourceData()
 	nsProviderData.Set("namespace", namespacePath)
-	providerConfigure(nsProviderData)
+	if _, err := providerConfigure(nsProviderData); err != nil {
+		t.Fatal(err)
+	}
 
 	// Create a policy with sudo permissions and an orphaned periodic token within the test namespace
 	resource.Test(t, resource.TestCase{
@@ -219,7 +221,9 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 		ns2ProviderData := ns2ProviderResource.TestResourceData()
 		ns2ProviderData.Set("namespace", namespacePath)
 		ns2ProviderData.Set("token", vaultToken)
-		providerConfigure(ns2ProviderData)
+		if _, err := providerConfigure(ns2ProviderData); err != nil {
+			t.Fatal(err)
+		}
 
 		ns2Path := acctest.RandomWithPrefix("test-namespace2")
 

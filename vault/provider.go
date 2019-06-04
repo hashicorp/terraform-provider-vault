@@ -194,7 +194,10 @@ func providerToken(d *schema.ResourceData) (string, error) {
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	clientConfig := api.DefaultConfig()
-	clientConfig.Address = d.Get("address").(string)
+	addr := d.Get("address").(string)
+	if addr != "" {
+		clientConfig.Address = addr
+	}
 
 	clientAuthI := d.Get("client_auth").([]interface{})
 	if len(clientAuthI) > 1 {
