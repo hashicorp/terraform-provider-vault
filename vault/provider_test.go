@@ -126,7 +126,9 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 		Schema: rootProvider.Schema,
 	}
 	rootProviderData := rootProviderResource.TestResourceData()
-	providerConfigure(rootProviderData)
+	if _, err := providerConfigure(rootProviderData); err != nil {
+		t.Fatal(err)
+	}
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
 
@@ -208,7 +210,7 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 			return fmt.Errorf("token resource has no primary instance")
 		}
 
-		vaultToken := tokenResourceState.Primary.Attributes["token"]
+		vaultToken := tokenResourceState.Primary.Attributes["client_token"]
 
 		ns2Provider := Provider().(*schema.Provider)
 		ns2ProviderResource := &schema.Resource{
