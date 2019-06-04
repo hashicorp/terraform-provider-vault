@@ -92,11 +92,6 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
 				Description: "The namespace to use. Available only for Vault Enterprise",
 			},
-			"token_namespace": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The namespace where the provided vault token was created, if different from the value in 'namespace'",
-			},
 		},
 
 		ConfigureFunc: providerConfigure,
@@ -199,7 +194,10 @@ func providerToken(d *schema.ResourceData) (string, error) {
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	clientConfig := api.DefaultConfig()
-	clientConfig.Address = d.Get("address").(string)
+	addr := d.Get("address").(string)
+	if addr != "" {
+		clientConfig.Address = addr
+	}
 
 	clientAuthI := d.Get("client_auth").([]interface{})
 	if len(clientAuthI) > 1 {
@@ -242,15 +240,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if token == "" {
 		return nil, errors.New("no vault token found")
 	}
-
-	// If 'token_namespace' provided, set client namespace to use it for child token creation, else use 'namespace'
-	tokenNamespace := d.Get("token_namespace").(string)
-	namespace := d.Get("namespace").(string)
-	if tokenNamespace != "" {
-		client.SetNamespace(tokenNamespace)
-	} else if namespace != "" {
-		client.SetNamespace(namespace)
-	}
+	client.SetToken(token)
 
 	// In order to enforce our relatively-short lease TTL, we derive a
 	// temporary child token that inherits all of the policies of the
@@ -265,7 +255,19 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	// can explicitly be revoked, and this limited scope won't apply to
 	// any secrets that are *written* by Terraform to Vault.
 
-	client.SetToken(token)
+	// Set the namespace to the token's namespace only for the
+	// child token creation
+	tokenInfo, err := client.Auth().Token().LookupSelf()
+	if err != nil {
+		return nil, err
+	}
+	if tokenNamespaceRaw, ok := tokenInfo.Data["namespace_path"]; ok {
+		tokenNamespace := tokenNamespaceRaw.(string)
+		if tokenNamespace != "" {
+			client.SetNamespace(tokenNamespace)
+		}
+	}
+
 	renewable := false
 	childTokenLease, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 		DisplayName:    "terraform",
@@ -282,7 +284,11 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
 
+	// Set tht token to the generated child token
 	client.SetToken(childToken)
+
+	// Set the namespace to the requested namespace, if provided
+	namespace := d.Get("namespace").(string)
 	if namespace != "" {
 		client.SetNamespace(namespace)
 	}
