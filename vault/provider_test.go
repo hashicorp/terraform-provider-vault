@@ -2,18 +2,17 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform/helper/acctest"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
 
+	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/vault/command/config"
-	homedir "github.com/mitchellh/go-homedir"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/vault/command/config"
+	homedir "github.com/mitchellh/go-homedir"
 )
 
 // How to run the acceptance tests for this provider:
@@ -150,8 +149,6 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 		Schema: nsProvider.Schema,
 	}
 	nsProviderData := nsProviderResource.TestResourceData()
-	// We auth to the root namespace, but will configure resources in the test namespace
-	nsProviderData.Set("token_namespace", "/")
 	nsProviderData.Set("namespace", namespacePath)
 	providerConfigure(nsProviderData)
 
@@ -218,8 +215,6 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 			Schema: ns2Provider.Schema,
 		}
 		ns2ProviderData := ns2ProviderResource.TestResourceData()
-		//We use the token created above to auth against the namespace (instead of root)
-		ns2ProviderData.Set("token_namespace", namespacePath)
 		ns2ProviderData.Set("namespace", namespacePath)
 		ns2ProviderData.Set("token", vaultToken)
 		providerConfigure(ns2ProviderData)
