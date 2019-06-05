@@ -122,9 +122,10 @@ func pkiSecretBackendSignResource() *schema.Resource {
 				Description: "The issuing CA.",
 			},
 			"ca_chain": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeList,
 				Computed:    true,
 				Description: "The CA chain.",
+				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"serial": {
 				Type:        schema.TypeString,

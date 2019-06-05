@@ -120,7 +120,9 @@ func azureAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("backend", idPieces[1])
 	d.Set("tenant_id", secret.Data["tenant_id"])
 	d.Set("client_id", secret.Data["client_id"])
-	d.Set("client_secret", secret.Data["client_secret"])
+	if v, ok := secret.Data["client_secret"]; ok {
+		d.Set("client_secret", v)
+	}
 	d.Set("resource", secret.Data["resource"])
 	d.Set("environment", secret.Data["environment"])
 	return nil
