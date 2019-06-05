@@ -233,14 +233,17 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	client.SetMaxRetries(d.Get("max_retries").(int))
 
+	// Try an get the token from the config or token helper
 	token, err := providerToken(d)
 	if err != nil {
 		return nil, err
 	}
-	if token == "" {
+	if token != "" {
+		client.SetToken(token)
+	}
+	if client.Token() == "" {
 		return nil, errors.New("no vault token found")
 	}
-	client.SetToken(token)
 
 	// In order to enforce our relatively-short lease TTL, we derive a
 	// temporary child token that inherits all of the policies of the
