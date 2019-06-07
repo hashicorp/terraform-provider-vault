@@ -293,10 +293,8 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	path := awsAuthBackendRolePath(backend, role)
 
 	log.Printf("[DEBUG] Writing AWS auth backend role %q", path)
-	iPolicies := d.Get("policies").([]interface{})
-	policies := make([]string, len(iPolicies))
-	for i, iPolicy := range iPolicies {
-		policies[i] = iPolicy.(string)
+	if policies, ok := d.GetOk("policies"); ok {
+		data["policies"] = policies.(*schema.Set).List()
 	}
 
 	authType := d.Get("auth_type").(string)
