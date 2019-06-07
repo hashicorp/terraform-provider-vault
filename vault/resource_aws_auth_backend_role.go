@@ -293,9 +293,6 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	path := awsAuthBackendRolePath(backend, role)
 
 	log.Printf("[DEBUG] Writing AWS auth backend role %q", path)
-	if policies, ok := d.GetOk("policies"); ok {
-		data["policies"] = policies.(*schema.Set).List()
-	}
 
 	authType := d.Get("auth_type").(string)
 	inferred := d.Get("inferred_entity_type").(string)
@@ -312,8 +309,8 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := d.GetOk("period"); ok {
 		data["period"] = v.(int)
 	}
-	if len(policies) > 0 {
-		data["policies"] = policies
+	if policies, ok := d.GetOk("policies"); ok {
+		data["policies"] = policies.(*schema.Set).List()
 	}
 
 	if isEc2(authType, inferred) {
