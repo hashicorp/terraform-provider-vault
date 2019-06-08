@@ -25,7 +25,7 @@ func Provider() terraform.ResourceProvider {
 			"token": {
 				Type:          schema.TypeString,
 				Optional:      true,
-				DefaultFunc:   schema.EnvDefaultFunc("VAULT_TOKEN", ""),
+				DefaultFunc:   schema.EnvDefaultFunc("VAULT_TOKEN", nil),
 				ConflictsWith: []string{"approle_auth", "client_auth.login_with_tls_auth"},
 				Description:   "Token to use to authenticate to Vault.",
 			},
