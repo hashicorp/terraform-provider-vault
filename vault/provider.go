@@ -23,10 +23,11 @@ func Provider() terraform.ResourceProvider {
 				Description: "URL of the root of the target Vault server.",
 			},
 			"token": {
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN", ""),
-				Description: "Token to use to authenticate to Vault.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("VAULT_TOKEN", ""),
+				ConflictsWith: []string{"approle_auth", "client_auth.login_with_tls_auth"},
+				Description:   "Token to use to authenticate to Vault.",
 			},
 			"ca_cert_file": {
 				Type:        schema.TypeString,
@@ -40,10 +41,41 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_CAPATH", ""),
 				Description: "Path to directory containing CA certificate files to validate the server's certificate.",
 			},
+			"approle_auth": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				Description:   "Credentials for obtaining a Vault token using the AppRole auth backend.",
+				MaxItems:      1,
+				ConflictsWith: []string{"token", "client_auth.login_with_tls_auth"},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"role_id": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The AppRole RoleID to authenticate with.",
+						},
+						"secret_id": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The AppRole SecretID to authenticate with.",
+						},
+						"backend": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The name of the AppRole auth backend to authenticate with.",
+							Default:     "approle",
+							// standardise on no beginning or trailing slashes
+							StateFunc: func(v interface{}) string {
+								return strings.Trim(v.(string), "/")
+							},
+						},
+					},
+				},
+			},
 			"client_auth": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "Client authentication credentials.",
+				Description: "TLS Client authentication credentials.",
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -58,6 +90,28 @@ func Provider() terraform.ResourceProvider {
 							Required:    true,
 							DefaultFunc: schema.EnvDefaultFunc("VAULT_CLIENT_KEY", ""),
 							Description: "Path to a file containing the private key that the certificate was issued for.",
+						},
+						"login_with_tls_auth": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Obtain a Vault token from the Vault TLS Auth backend using the provided client certificate.",
+						},
+						"login_role_name": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "",
+							Description: "Authenticate against only the named certificate role, returning its policy list if successful. If not set, defaults to trying all certificate roles and returning any one that matches. Requires login_with_tls_auth.",
+						},
+						"login_backend": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The name of the TLS Auth auth backend to authenticate with. Requires login_with_tls_auth.",
+							Default:     "cert",
+							// standardise on no beginning or trailing slashes
+							StateFunc: func(v interface{}) string {
+								return strings.Trim(v.(string), "/")
+							},
 						},
 					},
 				},
