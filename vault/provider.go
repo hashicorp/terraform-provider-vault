@@ -238,6 +238,8 @@ type tokenProvider struct {
 
 func tokenFromTokenProviders(d *schema.ResourceData, client *api.Client) (string, error) {
 	tokenProviders := []tokenProvider{
+		// TLS Auth goes first to detect conflicting auth sources that can't be handled with Schema.ConflictsWith
+		{name: "tokenFromConfigTLSAuth", providerFunc: tokenFromConfigTLSAuth},
 		{name: "tokenFromConfigToken", providerFunc: tokenFromConfigToken},
 		{name: "tokenFromConfigAppRoleAuth", providerFunc: tokenFromConfigAppRoleAuth},
 	}
@@ -291,6 +293,35 @@ func tokenFromConfigAppRoleAuth(d *schema.ResourceData, client *api.Client) (str
 		log.Printf("[DEBUG] Logged in with AppRole auth backend %q", path)
 
 		return resp.Auth.ClientToken, nil
+	}
+	return "", nil
+}
+
+func tokenFromConfigTLSAuth(d *schema.ResourceData, client *api.Client) (string, error) {
+	clientAuthI := d.Get("client_auth").([]interface{})
+	if len(clientAuthI) == 1 {
+		clientAuth := clientAuthI[0].(map[string]interface{})
+		if clientAuth["login_with_tls_auth"].(bool) {
+			// enforce mutual exclusivity
+			if len(d.Get("approle_auth").([]interface{})) > 0 {
+				return "", fmt.Errorf("client_auth.login_with_tls_auth conflicts with approle_auth")
+			}
+			if _, token_set := d.GetOk("token"); token_set {
+				return "", fmt.Errorf("client_auth.login_with_tls_auth conflicts with token")
+			}
+
+			path := "auth/" + strings.Trim(clientAuth["login_backend"].(string), "/") + "/login"
+			log.Printf("[DEBUG] Logging in with TLS Cert auth backend %q", path)
+			data := map[string]interface{}{
+				"name": clientAuth["login_role_name"].(string),
+			}
+			resp, err := client.Logical().Write(path, data)
+			if err != nil {
+				return "", fmt.Errorf("error logging into TLS Cert auth backend %q: %s", path, err)
+			}
+			log.Printf("[DEBUG] Logged in with TLS Cert auth backend %q", path)
+			return resp.Auth.ClientToken, nil
+		}
 	}
 	return "", nil
 }
