@@ -231,7 +231,7 @@ func Provider() terraform.ResourceProvider {
 	}
 }
 
-func providerToken(d *schema.ResourceData) (string, error) {
+func tokenFromConfigToken(d *schema.ResourceData, _ *api.Client) (string, error) {
 	if token := d.Get("token").(string); token != "" {
 		return token, nil
 	}
@@ -284,8 +284,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	client.SetMaxRetries(d.Get("max_retries").(int))
 
-	// Try an get the token from the config or token helper
-	token, err := providerToken(d)
+	token, err := tokenFromConfigToken(d, client)
 	if err != nil {
 		return nil, err
 	}

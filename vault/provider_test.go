@@ -397,7 +397,7 @@ func TestAccProviderToken(t *testing.T) {
 			}
 
 			// Get and check the provider token.
-			token, err := providerToken(d)
+			token, err := tokenFromConfigToken(d, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
