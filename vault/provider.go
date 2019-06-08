@@ -44,6 +44,7 @@ func Provider() terraform.ResourceProvider {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Client authentication credentials.",
+				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"cert_file": {
@@ -200,10 +201,6 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	clientAuthI := d.Get("client_auth").([]interface{})
-	if len(clientAuthI) > 1 {
-		return nil, fmt.Errorf("client_auth block may appear only once")
-	}
-
 	clientAuthCert := ""
 	clientAuthKey := ""
 	if len(clientAuthI) == 1 {
