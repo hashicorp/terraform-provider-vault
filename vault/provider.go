@@ -239,6 +239,7 @@ type tokenProvider struct {
 func tokenFromTokenProviders(d *schema.ResourceData, client *api.Client) (string, error) {
 	tokenProviders := []tokenProvider{
 		{name: "tokenFromConfigToken", providerFunc: tokenFromConfigToken},
+		{name: "tokenFromConfigAppRoleAuth", providerFunc: tokenFromConfigAppRoleAuth},
 	}
 
 	for _, provider := range tokenProviders {
@@ -268,6 +269,30 @@ func tokenFromConfigToken(d *schema.ResourceData, _ *api.Client) (string, error)
 		return "", fmt.Errorf("error getting token: %s", err)
 	}
 	return strings.TrimSpace(token), nil
+}
+
+func tokenFromConfigAppRoleAuth(d *schema.ResourceData, client *api.Client) (string, error) {
+	appRoleAuthI := d.Get("approle_auth").([]interface{})
+	if len(appRoleAuthI) == 1 {
+		appRoleAuth := appRoleAuthI[0].(map[string]interface{})
+
+		path := approleAuthBackendLoginPath(appRoleAuth["backend"].(string))
+		log.Printf("[DEBUG] Logging in with AppRole auth backend %q", path)
+		data := map[string]interface{}{
+			"role_id": appRoleAuth["role_id"].(string),
+		}
+		if secret_id := appRoleAuth["secret_id"].(string); secret_id != "" {
+			data["secret_id"] = secret_id
+		}
+		resp, err := client.Logical().Write(path, data)
+		if err != nil {
+			return "", fmt.Errorf("error logging into AppRole auth backend %q: %s", path, err)
+		}
+		log.Printf("[DEBUG] Logged in with AppRole auth backend %q", path)
+
+		return resp.Auth.ClientToken, nil
+	}
+	return "", nil
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
