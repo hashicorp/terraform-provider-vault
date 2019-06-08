@@ -231,6 +231,29 @@ func Provider() terraform.ResourceProvider {
 	}
 }
 
+type tokenProvider struct {
+	name         string
+	providerFunc func(*schema.ResourceData, *api.Client) (string, error)
+}
+
+func tokenFromTokenProviders(d *schema.ResourceData, client *api.Client) (string, error) {
+	tokenProviders := []tokenProvider{
+		{name: "tokenFromConfigToken", providerFunc: tokenFromConfigToken},
+	}
+
+	for _, provider := range tokenProviders {
+		token, err := provider.providerFunc(d, client)
+		if err != nil {
+			return "", err
+		}
+		if token != "" {
+			log.Printf("[DEBUG] Using token from provider %s", provider.name)
+			return token, nil
+		}
+	}
+	return "", nil
+}
+
 func tokenFromConfigToken(d *schema.ResourceData, _ *api.Client) (string, error) {
 	if token := d.Get("token").(string); token != "" {
 		return token, nil
@@ -284,13 +307,12 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	client.SetMaxRetries(d.Get("max_retries").(int))
 
-	token, err := tokenFromConfigToken(d, client)
+	token, err := tokenFromTokenProviders(d, client)
 	if err != nil {
 		return nil, err
 	}
-	if token != "" {
-		client.SetToken(token)
-	}
+	client.SetToken(token)
+
 	if client.Token() == "" {
 		return nil, errors.New("no vault token found")
 	}
