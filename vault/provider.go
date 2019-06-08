@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/logging"
@@ -25,7 +26,6 @@ func Provider() terraform.ResourceProvider {
 			"token": {
 				Type:          schema.TypeString,
 				Optional:      true,
-				DefaultFunc:   schema.EnvDefaultFunc("VAULT_TOKEN", nil),
 				ConflictsWith: []string{"approle_auth", "client_auth.login_with_tls_auth"},
 				Description:   "Token to use to authenticate to Vault.",
 			},
@@ -240,8 +240,9 @@ func tokenFromTokenProviders(d *schema.ResourceData, client *api.Client) (string
 	tokenProviders := []tokenProvider{
 		// TLS Auth goes first to detect conflicting auth sources that can't be handled with Schema.ConflictsWith
 		{name: "tokenFromConfigTLSAuth", providerFunc: tokenFromConfigTLSAuth},
-		{name: "tokenFromConfigToken", providerFunc: tokenFromConfigToken},
 		{name: "tokenFromConfigAppRoleAuth", providerFunc: tokenFromConfigAppRoleAuth},
+		{name: "tokenFromConfigToken", providerFunc: tokenFromConfigToken},
+		{name: "tokenFromEnvironment", providerFunc: tokenFromEnvironment},
 	}
 
 	for _, provider := range tokenProviders {
@@ -257,8 +258,9 @@ func tokenFromTokenProviders(d *schema.ResourceData, client *api.Client) (string
 	return "", nil
 }
 
-func tokenFromConfigToken(d *schema.ResourceData, _ *api.Client) (string, error) {
-	if token := d.Get("token").(string); token != "" {
+func tokenFromEnvironment(d *schema.ResourceData, _ *api.Client) (string, error) {
+	if token := os.Getenv("VAULT_TOKEN"); token != "" {
+		log.Printf("[DEBUG] using token from VAULT_TOKEN env variable")
 		return token, nil
 	}
 	// Use ~/.vault-token, or the configured token helper.
@@ -270,7 +272,16 @@ func tokenFromConfigToken(d *schema.ResourceData, _ *api.Client) (string, error)
 	if err != nil {
 		return "", fmt.Errorf("error getting token: %s", err)
 	}
+	log.Printf("[DEBUG] using token from Vault token helper")
 	return strings.TrimSpace(token), nil
+}
+
+func tokenFromConfigToken(d *schema.ResourceData, _ *api.Client) (string, error) {
+	if token := d.Get("token").(string); token != "" {
+		log.Printf("[DEBUG] using token from provider config")
+		return token, nil
+	}
+	return "", nil
 }
 
 func tokenFromConfigAppRoleAuth(d *schema.ResourceData, client *api.Client) (string, error) {
