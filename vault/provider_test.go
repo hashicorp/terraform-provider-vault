@@ -296,6 +296,18 @@ func TestAccProviderToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Clear the VAULT_TOKEN env var and restore it after the test.
+	origVaultToken, ok := os.LookupEnv("VAULT_TOKEN")
+	if ok {
+		// VAULT_TOKEN env var was set; ensure we restore it.
+		defer func() {
+			err := os.Setenv("VAULT_TOKEN", origVaultToken)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}()
+	}
+
 	// Create a "resource" we can use for constructing ResourceData.
 	provider := Provider().(*schema.Provider)
 	providerResource := &schema.Resource{
@@ -306,6 +318,7 @@ func TestAccProviderToken(t *testing.T) {
 		name          string
 		fileToken     bool
 		helperToken   bool
+		envToken      bool
 		schemaToken   bool
 		expectedToken string
 	}
@@ -329,10 +342,19 @@ func TestAccProviderToken(t *testing.T) {
 			expectedToken: "helper-token",
 		},
 		{
-			// A VAULT_TOKEN env var or hardcoded token overrides all else.
+			// A VAULT_TOKEN env var overrides the helper and token file
 			name:          "Schema",
 			fileToken:     true,
 			helperToken:   true,
+			envToken:      true,
+			expectedToken: "env-token",
+		},
+		{
+			// A hardcoded token overrides all else.
+			name:          "Schema",
+			fileToken:     true,
+			helperToken:   true,
+			envToken:      true,
 			schemaToken:   true,
 			expectedToken: "schema-token",
 		},
@@ -388,6 +410,18 @@ func TestAccProviderToken(t *testing.T) {
 						t.Fatal(err)
 					}
 				}()
+			}
+
+			if tc.envToken {
+				err = os.Setenv("VAULT_TOKEN", "env-token")
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				err = os.Unsetenv("VAULT_TOKEN")
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 
 			d := providerResource.TestResourceData()
