@@ -337,12 +337,6 @@ func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestChe
 							return fmt.Errorf("Expected item %d of %s (%s in state) of %q to be in state but wasn't", i, attr.NameInVault, stateAttr, vaultRespVal[i])
 						}
 					}
-					// for i := 0; i < count; i++ {
-					// 	stateData := instanceState.Attributes[stateAttr+"."+strconv.Itoa(i)]
-					// 	if stateData != vaultRespVal[i] {
-					// 		return fmt.Errorf("expected item %d of %s (%s in state) of %q to be %q, got %q", i, attr.NameInVault, stateAttr, endpoint, stateData, vaultRespVal[i])
-					// 	}
-					// }
 					match = true
 				}
 			default:
