@@ -12,6 +12,15 @@ Maintainers
 
 This provider plugin is maintained by the Terraform team at [HashiCorp](https://www.hashicorp.com/).
 
+Best Practices
+--------------
+
+We recommend that you avoid placing secrets in your Terraform config or state file wherever possible, and if placed there, you take steps to reduce and manage your risk. We have created a practical guide on how to do this with our opensource versions in Best Practices for Using HashiCorp Terraform with HashiCorp Vault:
+
+[![Best Practices for Using HashiCorp Terraform with HashiCorp Vault](https://img.youtube.com/vi/fOybhcbuxJ0/0.jpg)](https://www.youtube.com/watch?v=fOybhcbuxJ0)
+
+This webinar walks you through how to protect secrets when using Terraform with Vault. Additional security measures are available in paid Terraform versions as well.
+
 Requirements
 ------------
 

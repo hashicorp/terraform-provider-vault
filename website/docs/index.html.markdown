@@ -22,6 +22,14 @@ own security trade-offs and caveats that are covered in the sections that
 follow. Consider these carefully before using this provider within your
 Terraform configuration.
 
+## Best Practices
+
+We recommend that you avoid placing secrets in your Terraform config or state file wherever possible, and if placed there, you take steps to reduce and manage your risk. We have created a practical guide on how to do this with our opensource versions in Best Practices for Using HashiCorp Terraform with HashiCorp Vault:
+
+[![Best Practices for Using HashiCorp Terraform with HashiCorp Vault](https://img.youtube.com/vi/fOybhcbuxJ0/0.jpg)](https://www.youtube.com/watch?v=fOybhcbuxJ0)
+
+This webinar walks you through how to protect secrets when using Terraform with Vault. Additional security measures are available in paid Terraform versions as well.
+
 ## Configuring and Populating Vault
 
 Terraform can be used by the Vault adminstrators to configure Vault and

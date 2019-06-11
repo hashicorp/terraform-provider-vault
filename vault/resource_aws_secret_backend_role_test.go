@@ -15,6 +15,8 @@ const testAccAWSSecretBackendRolePolicyInline_basic = `{"Version": "2012-10-17",
 const testAccAWSSecretBackendRolePolicyInline_updated = `{"Version": "2012-10-17","Statement": [{"Effect": "Allow","Action": "ec2:*","Resource": "*"}]}`
 const testAccAWSSecretBackendRolePolicyArn_basic = "arn:aws:iam::123456789123:policy/foo"
 const testAccAWSSecretBackendRolePolicyArn_updated = "arn:aws:iam::123456789123:policy/bar"
+const testAccAWSSecretBackendRoleRoleArn_basic = "arn:aws:iam::123456789123:role/foo"
+const testAccAWSSecretBackendRoleRoleArn_updated = "arn:aws:iam::123456789123:role/bar"
 
 func TestAccAWSSecretBackendRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-aws")
@@ -38,6 +40,9 @@ func TestAccAWSSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline_and_arns", "backend", backend),
 					util.TestCheckResourceAttrJSON("vault_aws_secret_backend_role.test_policy_inline_and_arns", "policy_document", testAccAWSSecretBackendRolePolicyInline_basic),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline_and_arns", "policy_arns.0", testAccAWSSecretBackendRolePolicyArn_basic),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "name", fmt.Sprintf("%s-role-arns", name)),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "role_arns.0", testAccAWSSecretBackendRoleRoleArn_basic),
 				),
 			},
 			{
@@ -53,6 +58,9 @@ func TestAccAWSSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline_and_arns", "backend", backend),
 					util.TestCheckResourceAttrJSON("vault_aws_secret_backend_role.test_policy_inline_and_arns", "policy_document", testAccAWSSecretBackendRolePolicyInline_updated),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline_and_arns", "policy_arns.0", testAccAWSSecretBackendRolePolicyArn_updated),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "name", fmt.Sprintf("%s-role-arns", name)),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "role_arns.0", testAccAWSSecretBackendRoleRoleArn_updated),
 				),
 			},
 		},
@@ -81,6 +89,9 @@ func TestAccAWSSecretBackendRole_import(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline_and_arns", "backend", backend),
 					util.TestCheckResourceAttrJSON("vault_aws_secret_backend_role.test_policy_inline_and_arns", "policy_document", testAccAWSSecretBackendRolePolicyInline_basic),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline_and_arns", "policy_arns.0", testAccAWSSecretBackendRolePolicyArn_basic),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "name", fmt.Sprintf("%s-role-arns", name)),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "role_arns.0", testAccAWSSecretBackendRoleRoleArn_basic),
 				),
 			},
 			{
@@ -95,6 +106,11 @@ func TestAccAWSSecretBackendRole_import(t *testing.T) {
 			},
 			{
 				ResourceName:      "vault_aws_secret_backend_role.test_policy_inline_and_arns",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName:      "vault_aws_secret_backend_role.test_role_arns",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -124,6 +140,9 @@ func TestAccAWSSecretBackendRole_nested(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline_and_arns", "backend", backend),
 					util.TestCheckResourceAttrJSON("vault_aws_secret_backend_role.test_policy_inline_and_arns", "policy_document", testAccAWSSecretBackendRolePolicyInline_basic),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline_and_arns", "policy_arns.0", testAccAWSSecretBackendRolePolicyArn_basic),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "name", fmt.Sprintf("%s-role-arns", name)),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "role_arns.0", testAccAWSSecretBackendRoleRoleArn_basic),
 				),
 			},
 			{
@@ -139,6 +158,9 @@ func TestAccAWSSecretBackendRole_nested(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline_and_arns", "backend", backend),
 					util.TestCheckResourceAttrJSON("vault_aws_secret_backend_role.test_policy_inline_and_arns", "policy_document", testAccAWSSecretBackendRolePolicyInline_updated),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_policy_inline_and_arns", "policy_arns.0", testAccAWSSecretBackendRolePolicyArn_updated),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "name", fmt.Sprintf("%s-role-arns", name)),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "role_arns.0", testAccAWSSecretBackendRoleRoleArn_updated),
 				),
 			},
 		},
@@ -192,7 +214,14 @@ resource "vault_aws_secret_backend_role" "test_policy_inline_and_arns" {
   credential_type = "iam_user"
   backend = "${vault_aws_secret_backend.test.path}"
 }
-`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_basic, name, testAccAWSSecretBackendRolePolicyArn_basic, name, testAccAWSSecretBackendRolePolicyInline_basic, testAccAWSSecretBackendRolePolicyArn_basic)
+
+resource "vault_aws_secret_backend_role" "test_role_arns" {
+	name = "%s-role-arns"
+	role_arns = ["%s"]
+	credential_type = "assumed_role"
+	backend = "${vault_aws_secret_backend.test.path}"
+}
+`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_basic, name, testAccAWSSecretBackendRolePolicyArn_basic, name, testAccAWSSecretBackendRolePolicyInline_basic, testAccAWSSecretBackendRolePolicyArn_basic, name, testAccAWSSecretBackendRoleRoleArn_basic)
 }
 
 func testAccAWSSecretBackendRoleConfig_updated(name, path, accessKey, secretKey string) string {
@@ -224,5 +253,12 @@ resource "vault_aws_secret_backend_role" "test_policy_inline_and_arns" {
   credential_type = "iam_user"
   backend = "${vault_aws_secret_backend.test.path}"
 }
-`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_updated, name, testAccAWSSecretBackendRolePolicyArn_updated, name, testAccAWSSecretBackendRolePolicyInline_updated, testAccAWSSecretBackendRolePolicyArn_updated)
+
+resource "vault_aws_secret_backend_role" "test_role_arns" {
+	name = "%s-role-arns"
+	role_arns = ["%s"]
+	credential_type = "assumed_role"
+	backend = "${vault_aws_secret_backend.test.path}"
+}
+`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_updated, name, testAccAWSSecretBackendRolePolicyArn_updated, name, testAccAWSSecretBackendRolePolicyInline_updated, testAccAWSSecretBackendRolePolicyArn_updated, name, testAccAWSSecretBackendRoleRoleArn_updated)
 }

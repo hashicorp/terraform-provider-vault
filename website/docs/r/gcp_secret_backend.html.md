@@ -43,10 +43,10 @@ not begin or end with a `/`. Defaults to `gcp`.
 * `description` - (Optional) A human-friendly description for this backend.
 
 * `default_lease_ttl_seconds` - (Optional) The default TTL for credentials
-issued by this backend. Defaults to '3600'.
+issued by this backend. Defaults to '0'.
 
 * `max_lease_ttl_seconds` - (Optional) The maximum TTL that can be requested
-for credentials issued by this backend. Defaults to '86400'.
+for credentials issued by this backend. Defaults to '0'.
 
 ## Attributes Reference
 

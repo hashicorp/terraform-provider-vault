@@ -117,6 +117,10 @@ func testOktaAuthBackend_InitialCheck(s *terraform.State) error {
 		return fmt.Errorf("incorrect ttl: %s", config.Data["ttl"])
 	}
 
+	if instanceState.Attributes["accessor"] != authMount.Accessor {
+		return fmt.Errorf("incorrect accessor: %s", instanceState.Attributes["accessor"])
+	}
+
 	return nil
 }
 

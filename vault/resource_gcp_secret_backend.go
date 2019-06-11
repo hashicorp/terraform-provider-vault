@@ -59,13 +59,13 @@ func gcpSecretBackendResource() *schema.Resource {
 			"default_lease_ttl_seconds": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Default:     "3600",
+				Default:     "",
 				Description: "Default lease duration for secrets in seconds",
 			},
 			"max_lease_ttl_seconds": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Default:     "86400",
+				Default:     "",
 				Description: "Maximum possible lease duration for secrets in seconds",
 			},
 		},

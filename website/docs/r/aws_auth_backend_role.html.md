@@ -107,7 +107,7 @@ The following arguments are supported:
   `inferred_entity_type` is set. This only applies when `auth_type` is set to
   `iam`.
 
-* `resolve_aws_unique_ids` - (Optional) If set to `true`, the
+* `resolve_aws_unique_ids` - (Optional, Forces new resource) If set to `true`, the
   `bound_iam_principal_arns` are resolved to [AWS Unique
   IDs](http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids)
   for the bound principal ARN. This field is ignored when a
@@ -115,9 +115,8 @@ The following arguments are supported:
   closely mimics the behavior of AWS services in that if an IAM user or role is
   deleted and a new one is recreated with the same name, those new users or
   roles won't get access to roles in Vault that were permissioned to the prior
-  principals of the same name. Defaults to `true`. Once set to `true`, this
-  cannot be changed to `false`--the role must be deleted and recreated, with
-  the value set to `true`.
+  principals of the same name. Defaults to `true`.
+  Once set to `true`, this cannot be changed to `false` without recreating the role.
 
 * `ttl` - (Optional) The TTL period of tokens issued using this role, provided
   as a number of seconds.
