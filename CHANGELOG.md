@@ -6,6 +6,7 @@ IMPROVEMENTS:
 * Updates the vendored version of Vault to 1.1.2 so features introduced since then can be added ([#413](https://github.com/terraform-providers/terraform-provider-vault/pull/413)).
 * Implements `accessor` attribute on the Okta auth backend ([#420](https://github.com/terraform-providers/terraform-provider-vault/pull/420)).
 * Allows the Vault token to be read from the environment ([#434](https://github.com/terraform-providers/terraform-provider-vault/pull/434)).
+* Supports `project_id` and `bound_projects` in the GCP auth backend's roles ([#411](https://github.com/terraform-providers/terraform-provider-vault/pull/411)).
 
 BUG FIXES:
 
