@@ -10,7 +10,6 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-* Fixes an issue with namespaces where a child token couldn't be created without root privileges ([#415](https://github.com/terraform-providers/terraform-provider-vault/pull/415) and [#433](https://github.com/terraform-providers/terraform-provider-vault/pull/433)).
 * Fixes a case on `vault_aws_auth_backend_role` where `resolve_aws_unique_ids` could not be updated from `true` to `false` without recreating the resource ([#382](https://github.com/terraform-providers/terraform-provider-vault/pull/382)).
 * Removes default TTL's from the GCP secret backend resource, letting them instead be set by Vault ([#426](https://github.com/terraform-providers/terraform-provider-vault/pull/426)).
 
