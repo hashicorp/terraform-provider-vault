@@ -146,6 +146,14 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
 		data["type"] = v.(string)
 	}
 
+	if v, ok := d.GetOk("project_id"); ok {
+		data["project_id"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("bound_projects"); ok {
+		data["bound_projects"] = v.(*schema.Set).List()
+	}
+
 	if v, ok := d.GetOk("ttl"); ok {
 		data["ttl"] = v.(string)
 	}
