@@ -107,7 +107,7 @@ func testGCPAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckF
 
 		attrs := map[string]string{
 			"type":                   "type",
-			"bound_projects":         "project_id",
+			"bound_projects":         "bound_projects",
 			"ttl":                    "ttl",
 			"max_ttl":                "max_ttl",
 			"period":                 "period",
@@ -206,7 +206,7 @@ resource "vault_gcp_auth_backend_role" "test" {
     role                   = "%s"
     type                   = "iam"
     bound_service_accounts = ["%s"]
-    project_id             = "%s"
+    bound_projects         = ["%s"]
     ttl                    = 300
     max_ttl                = 600
     policies               = ["policy_a", "policy_b"]
@@ -229,7 +229,7 @@ resource "vault_gcp_auth_backend_role" "test" {
     backend                = "${vault_auth_backend.gcp.path}"
     role                   = "%s"
     type                   = "gce"
-    project_id             = "%s"
+    bound_projects         = ["%s"]
     ttl                    = 300
     max_ttl                = 600
     policies               = ["policy_a", "policy_b"]

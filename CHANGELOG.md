@@ -1,4 +1,5 @@
-## 1.9.0 (Unreleased)
+## 1.10.0 (Unreleased)
+## 1.9.0 (June 12, 2019)
 
 IMPROVEMENTS:
 
@@ -6,10 +7,10 @@ IMPROVEMENTS:
 * Updates the vendored version of Vault to 1.1.2 so features introduced since then can be added ([#413](https://github.com/terraform-providers/terraform-provider-vault/pull/413)).
 * Implements `accessor` attribute on the Okta auth backend ([#420](https://github.com/terraform-providers/terraform-provider-vault/pull/420)).
 * Allows the Vault token to be read from the environment ([#434](https://github.com/terraform-providers/terraform-provider-vault/pull/434)).
+* Supports `project_id` and `bound_projects` in the GCP auth backend's roles ([#411](https://github.com/terraform-providers/terraform-provider-vault/pull/411)).
 
 BUG FIXES:
 
-* Fixes an issue with namespaces where a child token couldn't be created without root privileges ([#415](https://github.com/terraform-providers/terraform-provider-vault/pull/415) and [#433](https://github.com/terraform-providers/terraform-provider-vault/pull/433)).
 * Fixes a case on `vault_aws_auth_backend_role` where `resolve_aws_unique_ids` could not be updated from `true` to `false` without recreating the resource ([#382](https://github.com/terraform-providers/terraform-provider-vault/pull/382)).
 * Removes default TTL's from the GCP secret backend resource, letting them instead be set by Vault ([#426](https://github.com/terraform-providers/terraform-provider-vault/pull/426)).
 
