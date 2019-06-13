@@ -51,7 +51,7 @@ func genericSecretResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Attempt to read the token from Vault if true; if false, drift won't be detected.",
-				Deprecated:  "Please use disable_read instead.",
+				Removed:     "Use disable_read instead.",
 			},
 
 			"disable_read": {

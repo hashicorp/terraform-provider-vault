@@ -35,16 +35,14 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Optional:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"project_id"},
+				Optional: true,
+				ForceNew: true,
 			},
 			"project_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				Deprecated:    `Use "bound_projects"`,
-				ConflictsWith: []string{"bound_projects"},
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+				Removed:  `Use "bound_projects"`,
 			},
 			"ttl": {
 				Type:     schema.TypeString,

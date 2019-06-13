@@ -48,7 +48,7 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Optional:      true,
 				ConflictsWith: []string{"policy_document", "policy", "policy_arns"},
 				Description:   "ARN for an existing IAM policy the role should use.",
-				Deprecated:    `Use "policy_arns".`,
+				Removed:       `Use "policy_arns".`,
 			},
 			"policy_document": {
 				Type:             schema.TypeString,
@@ -63,7 +63,7 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				ConflictsWith:    []string{"policy_arns", "policy_arn", "policy_document"},
 				Description:      "IAM policy the role should use in JSON format.",
 				DiffSuppressFunc: util.JsonDiffSuppress,
-				Deprecated:       `Use "policy_document".`,
+				Removed:          `Use "policy_document".`,
 			},
 			"credential_type": {
 				Type:        schema.TypeString,
