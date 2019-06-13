@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -58,7 +59,9 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
-	t.Skip("skipping because remote environment isn't suitable for testing")
+	if os.Getenv("TF_AWS_META") == "" {
+		t.Skip("Not running on EC2 instance, can't test EC2 auth methods")
+	}
 
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
@@ -108,7 +111,9 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
-	t.Skip("skipping because remote environment isn't suitable for testing")
+	if os.Getenv("TF_AWS_META") == "" {
+		t.Skip("Not running on EC2 instance, can't test EC2 auth methods")
+	}
 
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
@@ -214,9 +219,9 @@ resource "vault_aws_auth_backend_role" "test" {
   role = "%s"
   auth_type = "ec2"
   policies = ["default"]
-  bound_ami_id = "%s"
-  bound_account_id = "%s"
-  bound_iam_instance_profile_arn = "%s"
+  bound_ami_ids = ["%s"]
+  bound_account_ids = ["%s"]
+  bound_iam_instance_profile_arns = ["%s"]
 
   depends_on = ["vault_aws_auth_backend_client.test"]
 }
@@ -248,9 +253,9 @@ resource "vault_aws_auth_backend_role" "test" {
   role = "%s"
   auth_type = "ec2"
   policies = ["default"]
-  bound_ami_id = "%s"
-  bound_account_id = "%s"
-  bound_iam_instance_profile_arn = "%s"
+  bound_ami_ids = ["%s"]
+  bound_account_ids = ["%s"]
+  bound_iam_instance_profile_arns = ["%s"]
 
   depends_on = ["vault_aws_auth_backend_client.test"]
 }
