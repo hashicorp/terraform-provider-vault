@@ -18,11 +18,12 @@ var (
 
 func awsAuthBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
-		Create: awsAuthBackendRoleCreate,
-		Read:   awsAuthBackendRoleRead,
-		Update: awsAuthBackendRoleUpdate,
-		Delete: awsAuthBackendRoleDelete,
-		Exists: awsAuthBackendRoleExists,
+		CustomizeDiff: resourceVaultAwsAuthBackendRoleCustomizeDiff,
+		Create:        awsAuthBackendRoleCreate,
+		Read:          awsAuthBackendRoleRead,
+		Update:        awsAuthBackendRoleUpdate,
+		Delete:        awsAuthBackendRoleDelete,
+		Exists:        awsAuthBackendRoleExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -239,6 +240,20 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			},
 		},
 	}
+}
+
+func resourceVaultAwsAuthBackendRoleCustomizeDiff(diff *schema.ResourceDiff, v interface{}) error {
+	if diff.HasChange("resolve_aws_unique_ids") {
+		o, n := diff.GetChange("resolve_aws_unique_ids")
+		// The resolve_aws_unique_ids field can be updated from false to true
+		// but cannot be updated from true to false without recreating.
+		if o.(bool) && !n.(bool) {
+			if err := diff.ForceNew("resolve_aws_unique_ids"); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func setSlice(d *schema.ResourceData, tfFieldName, vaultFieldName string, data map[string]interface{}) {
