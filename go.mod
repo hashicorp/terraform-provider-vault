@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/go-hclog v0.8.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/hashicorp/terraform v0.12.0
+	github.com/hashicorp/terraform v0.12.2
 	github.com/hashicorp/vault v0.11.1
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/mitchellh/go-homedir v1.0.0
