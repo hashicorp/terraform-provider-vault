@@ -23,31 +23,41 @@ func TestDataSourceGenericSecret(t *testing.T) {
 }
 
 func TestV2Secret(t *testing.T) {
-	path := acctest.RandomWithPrefix("secret/foo")
+	mount := acctest.RandomWithPrefix("tf-acctest-kv/")
+	path := acctest.RandomWithPrefix("foo")
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []r.TestStep{
 			{
-				Config: testv2DataSourceGenericSecret_config(path),
+				Config: testv2DataSourceGenericSecret_config(mount, path),
 				Check:  testDataSourceGenericSecret_check,
 			},
 			{
-				Config: testv2DataSourceGenericSecretUpdated_config(path),
+				Config: testv2DataSourceGenericSecretUpdated_config(mount, path),
 				Check:  testDataSourceGenericSecret_check,
 			},
 			{
-				Config: testv2DataSourceGenericSecretUpdatedLatest_config(path),
+				Config: testv2DataSourceGenericSecretUpdatedLatest_config(mount, path),
 				Check:  testDataSourceGenericSecretUpdated_check,
 			},
 		},
 	})
 }
 
-func testv2DataSourceGenericSecret_config(path string) string {
+func testv2DataSourceGenericSecret_config(mount, path string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path        = "%s"
+  type        = "kv"
+  description = "This is an example mount"
+  options = {
+    "version" = "2"
+  }
+}
+
 resource "vault_generic_secret" "test" {
-    path = "%s"
+    path = "${vault_mount.test.path}/%s"
     data_json = <<EOT
 {
     "zip": "zap"
@@ -59,13 +69,22 @@ data "vault_generic_secret" "test" {
     path = "${vault_generic_secret.test.path}"
     version = -1
 }
-`, path)
+`, mount, path)
 }
 
-func testv2DataSourceGenericSecretUpdated_config(path string) string {
+func testv2DataSourceGenericSecretUpdated_config(mount, path string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path        = "%s"
+  type        = "kv"
+  description = "This is an example mount"
+  options = {
+    "version" = "2"
+  }
+}
+
 resource "vault_generic_secret" "test" {
-    path = "%s"
+    path = "${vault_mount.test.path}/%s"
     data_json = <<EOT
 {
     "zip": "kablamo"
@@ -77,13 +96,22 @@ data "vault_generic_secret" "test" {
     path = "${vault_generic_secret.test.path}"
     version = 1
 }
-`, path)
+`, mount, path)
 }
 
-func testv2DataSourceGenericSecretUpdatedLatest_config(path string) string {
+func testv2DataSourceGenericSecretUpdatedLatest_config(mount, path string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path        = "%s"
+  type        = "kv"
+  description = "This is an example mount"
+  options = {
+    "version" = "2"
+  }
+}
+
 resource "vault_generic_secret" "test" {
-    path = "%s"
+    path = "${vault_mount.test.path}/%s"
     data_json = <<EOT
 {
     "zip": "kablamo"
@@ -95,7 +123,7 @@ data "vault_generic_secret" "test" {
     path = "${vault_generic_secret.test.path}"
     version = 0
 }
-`, path)
+`, mount, path)
 }
 
 var testDataSourceGenericSecret_config = `
