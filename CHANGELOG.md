@@ -1,4 +1,28 @@
-## 1.10.0 (Unreleased)
+## 2.0.0 (Unreleased)
+
+FEATURES:
+
+* Adds support for using the Vault provider with Terraform 0.12 [GH-446]
+
+BACKWARDS INCOMPATIBILITIES/NOTES:
+
+* `auth_backend`: the `path` field and `id` now no longer have a trailing slash [GH-446]
+* `database_secret_backend_role`: the `_statements` fields are now a list, not strings [GH-446]
+* `all`: deprecated fields are now removed [GH-446]
+* `pki_secret_backend_config_urls`: the certificate fields are now lists, not strings [GH-446]
+* `pki_secret_backend_role`: the certificate fields are now lists, not strings [GH-446]
+* `pki_secret_backend_sign`: the `ca_chain` field is now a list, not a string [GH-446]
+* `rabbitmq_secret_backend_role`: the `vhosts` field is now a `vhost` block [GH-446]
+
+IMPROVEMENTS:
+
+* `azure_auth_backend_role`: `client_secret` will now be set in state [GH-446]
+
+BUG FIXES:
+
+* `namespace`: namespaces will now be removed from state instead of erroring when they're not found [GH-446]
+
+
 ## 1.9.0 (June 12, 2019)
 
 IMPROVEMENTS:
