@@ -90,10 +90,11 @@ func oktaAuthBackendResource() *schema.Resource {
 			},
 
 			"group": {
-				Type:     schema.TypeSet,
-				Required: false,
-				Optional: true,
-				Computed: true,
+				Type:       schema.TypeSet,
+				Required:   false,
+				Optional:   true,
+				Computed:   true,
+				ConfigMode: schema.SchemaConfigModeAttr,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"group_name": {
@@ -133,10 +134,11 @@ func oktaAuthBackendResource() *schema.Resource {
 			},
 
 			"user": {
-				Type:     schema.TypeSet,
-				Required: false,
-				Optional: true,
-				Computed: true,
+				Type:       schema.TypeSet,
+				Required:   false,
+				Optional:   true,
+				Computed:   true,
+				ConfigMode: schema.SchemaConfigModeAttr,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"groups": {

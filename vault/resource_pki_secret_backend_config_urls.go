@@ -20,30 +20,25 @@ func pkiSecretBackendConfigUrlsResource() *schema.Resource {
 			"backend": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Optional:    false,
-				ForceNew:    false,
 				Description: "The path of the PKI secret backend the resource belongs to.",
 			},
 			"issuing_certificates": {
-				Type:        schema.TypeString,
-				Required:    false,
+				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "Specifies the URL values for the Issuing Certificate field. This can be a comma-separated string list.",
-				ForceNew:    false,
+				Description: "Specifies the URL values for the Issuing Certificate field.",
+				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"crl_distribution_points": {
-				Type:        schema.TypeString,
-				Required:    false,
+				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "Specifies the URL values for the CRL Distribution Points field. This can be a comma-separated string list.",
-				ForceNew:    false,
+				Description: "Specifies the URL values for the CRL Distribution Points field.",
+				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"ocsp_servers": {
-				Type:        schema.TypeString,
-				Required:    false,
+				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "Specifies the URL values for the OCSP Servers field. This can be a comma-separated string list.",
-				ForceNew:    false,
+				Description: "Specifies the URL values for the OCSP Servers field.",
+				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 		},
 	}
@@ -56,9 +51,9 @@ func pkiSecretBackendConfigUrlsCreate(d *schema.ResourceData, meta interface{}) 
 
 	path := pkiSecretBackendConfigUrlsPath(backend)
 
-	issuingCertificates := d.Get("issuing_certificates").(string)
-	crlDistributionsPoints := d.Get("crl_distribution_points").(string)
-	ocspServers := d.Get("ocsp_servers").(string)
+	issuingCertificates := d.Get("issuing_certificates")
+	crlDistributionsPoints := d.Get("crl_distribution_points")
+	ocspServers := d.Get("ocsp_servers")
 
 	data := map[string]interface{}{
 		"issuing_certificates":    issuingCertificates,
@@ -106,9 +101,9 @@ func pkiSecretBackendConfigUrlsUpdate(d *schema.ResourceData, meta interface{}) 
 
 	path := pkiSecretBackendConfigUrlsPath(backend)
 
-	issuingCertificates := d.Get("issuing_certificates").(string)
-	crlDistributionsPoints := d.Get("crl_distribution_points").(string)
-	ocspServers := d.Get("ocsp_servers").(string)
+	issuingCertificates := d.Get("issuing_certificates")
+	crlDistributionsPoints := d.Get("crl_distribution_points")
+	ocspServers := d.Get("ocsp_servers")
 
 	data := map[string]interface{}{
 		"issuing_certificates":    issuingCertificates,

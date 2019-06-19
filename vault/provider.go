@@ -64,7 +64,7 @@ func Provider() terraform.ResourceProvider {
 			"skip_tls_verify": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", ""),
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", false),
 				Description: "Set this to true only if the target Vault server is an insecure development instance.",
 			},
 			"max_lease_ttl_seconds": {
