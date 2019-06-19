@@ -2,7 +2,7 @@
 
 FEATURES:
 
-* Adds support for using the Vault provider with Terraform 0.12 [GH-446]
+* Adds support for using the Vault provider with Terraform 0.12. See the [upgrade guide](https://www.terraform.io/docs/providers/vault/version_2_upgrade.html) [GH-446]
 
 BACKWARDS INCOMPATIBILITIES/NOTES:
 
