@@ -6,9 +6,9 @@ FEATURES:
 
 BACKWARDS INCOMPATIBILITIES/NOTES:
 
+* `all`: deprecated fields are now removed [GH-446]
 * `auth_backend`: the `path` field and `id` now no longer have a trailing slash [GH-446]
 * `database_secret_backend_role`: the `_statements` fields are now a list, not strings [GH-446]
-* `all`: deprecated fields are now removed [GH-446]
 * `pki_secret_backend_config_urls`: the certificate fields are now lists, not strings [GH-446]
 * `pki_secret_backend_role`: the certificate fields are now lists, not strings [GH-446]
 * `pki_secret_backend_sign`: the `ca_chain` field is now a list, not a string [GH-446]
