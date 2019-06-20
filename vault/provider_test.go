@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/acctest"
+	"github.com/hashicorp/terraform/helper/pathorcontents"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
@@ -90,7 +91,12 @@ func getTestGCPCreds(t *testing.T) (string, string) {
 		t.Skip("GOOGLE_PROJECT not set")
 	}
 
-	return credentials, project
+	contents, _, err := pathorcontents.Read(credentials)
+	if err != nil {
+		t.Fatal("Error reading GOOGLE_CREDENTIALS: " + err.Error())
+	}
+
+	return string(contents), project
 }
 
 func getTestRMQCreds(t *testing.T) (string, string, string) {

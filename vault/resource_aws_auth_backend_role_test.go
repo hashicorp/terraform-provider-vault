@@ -355,7 +355,7 @@ resource "vault_aws_auth_backend_role" "role" {
   bound_account_ids = ["123456789012"]
   bound_vpc_ids = ["vpc-b61106d4"]
   bound_subnet_ids = ["vpc-a33128f1"]
-  bound_iam_role_arn = "arn:aws:iam::123456789012:role/S3Access"
+  bound_iam_role_arns = ["arn:aws:iam::123456789012:role/S3Access"]
   bound_iam_instance_profile_arns = ["arn:aws:iam::123456789012:instance-profile/Webserver"]
   bound_ec2_instance_ids = ["i-06bb291939760ba66"]
   inferred_entity_type = "ec2_instance"

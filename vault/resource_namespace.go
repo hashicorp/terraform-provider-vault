@@ -71,6 +71,12 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
+	if resp == nil {
+		log.Printf("[WARN] Names %q not found, removing from state.", path)
+		d.SetId("")
+		return nil
+	}
+
 	d.SetId(resp.Data["id"].(string))
 
 	return nil

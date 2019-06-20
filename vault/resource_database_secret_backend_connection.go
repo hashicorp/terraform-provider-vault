@@ -508,6 +508,9 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			}
 			if v, ok := data["password"]; ok {
 				result["password"] = v.(string)
+			} else if v, ok := d.GetOk("cassandra.0.password"); ok {
+				// keep the password we have in state/config if the API doesn't return one
+				result["password"] = v.(string)
 			}
 			if v, ok := data["tls"]; ok {
 				result["tls"] = v.(bool)
@@ -517,8 +520,12 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			}
 			if v, ok := data["pem_bundle"]; ok {
 				result["pem_bundle"] = v.(string)
+			} else if v, ok := d.GetOk("cassandra.0.pem_bundle"); ok {
+				result["pem_bundle"] = v.(string)
 			}
 			if v, ok := data["pem_json"]; ok {
+				result["pem_json"] = v.(string)
+			} else if v, ok := d.GetOk("cassandra.0.pem_json"); ok {
 				result["pem_json"] = v.(string)
 			}
 			if v, ok := data["protocol_version"]; ok {

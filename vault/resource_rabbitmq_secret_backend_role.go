@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -39,11 +40,34 @@ func rabbitmqSecretBackendRoleResource() *schema.Resource {
 				Default:     "",
 				Description: "Specifies a comma-separated RabbitMQ management tags.",
 			},
-			"vhosts": {
-				Type:        schema.TypeString,
+			"vhost": {
+				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Specifies a map of virtual hosts to permissions.",
-				Default:     "",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The vhost to set permissions for.",
+						},
+						"configure": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The configure permissions for this vhost.",
+						},
+						"read": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The read permissions for this vhost.",
+						},
+						"write": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The write permissions for this vhost.",
+						},
+					},
+				},
 			},
 		},
 	}
@@ -55,14 +79,40 @@ func rabbitmqSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
 	tags := d.Get("tags").(string)
-	vhosts := d.Get("vhosts").(string)
+	vhost := d.Get("vhost").([]interface{})
+
+	log.Printf("[DEBUG] Vhosts as list from ResourceData: %+v", vhost)
+
+	vhosts := make(map[string]interface{}, len(vhost))
+
+	for _, host := range vhost {
+		h := map[string]interface{}{}
+		var id string
+		for k, v := range host.(map[string]interface{}) {
+			if k == "host" {
+				id = v.(string)
+				continue
+			}
+			h[k] = v
+		}
+		vhosts[id] = h
+	}
+
+	log.Printf("[DEBUG] vhosts after munging: %+v", vhosts)
+
+	vhostsJSON, err := json.Marshal(vhosts)
+	if err != nil {
+		return fmt.Errorf("error serializing vhosts: %s", err)
+	}
+
+	log.Printf("[DEBUG] vhosts as JSON: %+v", vhostsJSON)
 
 	data := map[string]interface{}{
 		"tags":   tags,
-		"vhosts": vhosts,
+		"vhosts": string(vhostsJSON),
 	}
 	log.Printf("[DEBUG] Creating role %q on Rabbitmq backend %q", name, backend)
-	_, err := client.Logical().Write(backend+"/roles/"+name, data)
+	_, err = client.Logical().Write(backend+"/roles/"+name, data)
 	if err != nil {
 		return fmt.Errorf("error creating role %q for backend %q: %s", name, backend, err)
 	}
@@ -71,7 +121,7 @@ func rabbitmqSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 	d.SetId(backend + "/roles/" + name)
 	d.Set("name", name)
 	d.Set("tags", tags)
-	d.Set("vhosts", vhosts)
+	d.Set("vhost", vhost)
 	d.Set("backend", backend)
 	return rabbitmqSecretBackendRoleRead(d, meta)
 }
@@ -96,8 +146,23 @@ func rabbitmqSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 		d.SetId("")
 		return nil
 	}
+	var vhosts []map[string]interface{}
+	if v, ok := secret.Data["vhosts"]; ok && v != nil {
+		hosts := v.(map[string]interface{})
+		for id, val := range hosts {
+			vals := val.(map[string]interface{})
+			vhosts = append(vhosts, map[string]interface{}{
+				"host":      id,
+				"configure": vals["configure"],
+				"write":     vals["write"],
+				"read":      vals["read"],
+			})
+		}
+	}
 	d.Set("tags", secret.Data["tags"])
-	d.Set("vhosts", secret.Data["vhosts"])
+	if err := d.Set("vhost", vhosts); err != nil {
+		return fmt.Errorf("Error setting vhosts in state: %s", err)
+	}
 	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
 	d.Set("name", pathPieces[len(pathPieces)-1])
 	return nil

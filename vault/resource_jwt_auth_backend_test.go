@@ -2,12 +2,13 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
+	"testing"
+
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
-	"regexp"
-	"testing"
 )
 
 func TestAccJWTAuthBackend(t *testing.T) {
@@ -79,7 +80,7 @@ func TestAccJWTAuthBackend_negative(t *testing.T) {
 			{
 				Config:      testAccJWTAuthBackendConfig(path + "/"),
 				Destroy:     false,
-				ExpectError: regexp.MustCompile("vault_jwt_auth_backend\\.jwt: cannot write to a path ending in '/'"),
+				ExpectError: regexp.MustCompile("config is invalid: cannot write to a path ending in '/'"),
 			},
 			{
 				Config:      testAccJWTAuthBackendConfigFull(path, "https://myco.auth0.com/", "\"key\"", "api://default", ""),
@@ -124,7 +125,7 @@ resource "vault_jwt_auth_backend" "oidc" {
   path = "%s"
   type = "oidc"
   default_role = "api"
-  lifecycle = {
+  lifecycle {
 	ignore_changes = [
      # Ignore changes to odic_clie_secret inside the tests
      "oidc_client_secret"
