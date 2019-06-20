@@ -78,7 +78,7 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 
 		path := instanceState.ID
 
-		if path+"/" != instanceState.Attributes["path"] {
+		if path != instanceState.Attributes["path"] {
 			return fmt.Errorf("id doesn't match path")
 		}
 

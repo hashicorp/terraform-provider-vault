@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -137,7 +138,7 @@ func authBackendDelete(d *schema.ResourceData, meta interface{}) error {
 func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	targetPath := d.Id() + "/"
+	targetPath := d.Id()
 
 	auths, err := client.Sys().ListAuth()
 
@@ -146,6 +147,7 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	for path, auth := range auths {
+		path = strings.TrimSuffix(path, "/")
 		if path == targetPath {
 			d.Set("type", auth.Type)
 			d.Set("path", path)

@@ -35,7 +35,7 @@ func TestNamespace_basic(t *testing.T) {
 			{
 				Config:      testNamespaceConfig(namespacePath + "/"),
 				Destroy:     false,
-				ExpectError: regexp.MustCompile("vault_namespace\\.test: cannot write to a path ending in '/'"),
+				ExpectError: regexp.MustCompile("config is invalid: cannot write to a path ending in '/'"),
 			},
 			{
 				Config: testNestedNamespaceConfig(namespacePath, childPath),

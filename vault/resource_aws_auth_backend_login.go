@@ -215,9 +215,9 @@ func awsAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error {
 		// to help keep things straight, we prefix with the type of
 		// ID that's actually set
 		id = "nonce:" + nonce
+		d.Set("nonce", nonce)
 	}
 	d.SetId(id)
-	d.Set("lease_id", secret.LeaseID)
 	d.Set("lease_duration", secret.Auth.LeaseDuration)
 	d.Set("lease_start_time", time.Now().Format(time.RFC3339))
 	d.Set("renewable", secret.Auth.Renewable)
@@ -225,7 +225,6 @@ func awsAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("policies", secret.Auth.Policies)
 	d.Set("accessor", secret.Auth.Accessor)
 	d.Set("client_token", secret.Auth.ClientToken)
-	d.Set("nonce", nonce)
 
 	return nil
 }
