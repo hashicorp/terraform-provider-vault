@@ -48,7 +48,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Removed:     `Use "bound_ami_ids" as a list.`,
 			},
 			"bound_ami_ids": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances using this AMI ID will be permitted to log in.",
 				Elem: &schema.Schema{
@@ -62,7 +62,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Removed:     `Use "bound_account_ids" as a list.`,
 			},
 			"bound_account_ids": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances with this account ID in their identity document will be permitted to log in.",
 				Elem: &schema.Schema{
@@ -76,7 +76,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Removed:     `Use "bound_regions" as a list.`,
 			},
 			"bound_regions": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances in this region will be permitted to log in.",
 				Elem: &schema.Schema{
@@ -91,7 +91,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				ConflictsWith: []string{"bound_vpc_ids"},
 			},
 			"bound_vpc_ids": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances associated with this VPC ID will be permitted to log in.",
 				Elem: &schema.Schema{
@@ -105,7 +105,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Removed:     `Use "bound_subnet_ids" as a list.`,
 			},
 			"bound_subnet_ids": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances associated with this subnet ID will be permitted to log in.",
 				Elem: &schema.Schema{
@@ -119,7 +119,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Removed:     `Use "bound_iam_role_arns" as a list.`,
 			},
 			"bound_iam_role_arns": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances that match this IAM role ARN will be permitted to log in.",
 				Elem: &schema.Schema{
@@ -133,7 +133,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Removed:     `Use "bound_iam_instance_profile_arns" as a list.`,
 			},
 			"bound_iam_instance_profile_arns": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances associated with an IAM instance profile ARN that matches this value will be permitted to log in.",
 				Elem: &schema.Schema{
@@ -141,7 +141,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				},
 			},
 			"bound_ec2_instance_id": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances that match this instance ID will be permitted to log in.",
 				Elem: &schema.Schema{
@@ -150,7 +150,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Removed: `Use "bound_ec2_instance_ids".`,
 			},
 			"bound_ec2_instance_ids": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances that match this instance ID will be permitted to log in.",
 				Elem: &schema.Schema{
@@ -169,7 +169,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Removed:     `Use "bound_iam_principal_arns" as a list.`,
 			},
 			"bound_iam_principal_arns": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "The IAM principal that must be authenticated using the iam auth method.",
 				Elem: &schema.Schema{
@@ -208,7 +208,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Description: "If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this field. The maximum allowed lifetime of token issued using this role. Specified as a number of seconds.",
 			},
 			"policies": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -258,7 +258,7 @@ func resourceVaultAwsAuthBackendRoleCustomizeDiff(diff *schema.ResourceDiff, v i
 
 func setSlice(d *schema.ResourceData, tfFieldName, vaultFieldName string, data map[string]interface{}) {
 	if ifcValue, ok := d.GetOk(tfFieldName); ok {
-		ifcValues := ifcValue.([]interface{})
+		ifcValues := ifcValue.(*schema.Set).List()
 		strVals := make([]string, len(ifcValues))
 		for i, ifcVal := range ifcValues {
 			strVals[i] = ifcVal.(string)
@@ -276,11 +276,7 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	path := awsAuthBackendRolePath(backend, role)
 
 	log.Printf("[DEBUG] Writing AWS auth backend role %q", path)
-	iPolicies := d.Get("policies").([]interface{})
-	policies := make([]string, len(iPolicies))
-	for i, iPolicy := range iPolicies {
-		policies[i] = iPolicy.(string)
-	}
+	policies := d.Get("policies").(*schema.Set).List()
 
 	authType := d.Get("auth_type").(string)
 	inferred := d.Get("inferred_entity_type").(string)
@@ -513,11 +509,7 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating AWS auth backend role %q", path)
-	iPolicies := d.Get("policies").([]interface{})
-	policies := make([]string, len(iPolicies))
-	for i, iPolicy := range iPolicies {
-		policies[i] = iPolicy.(string)
-	}
+	policies := d.Get("policies").(*schema.Set).List()
 
 	authType := d.Get("auth_type").(string)
 	inferred := d.Get("inferred_entity_type").(string)
