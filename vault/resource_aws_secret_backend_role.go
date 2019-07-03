@@ -140,12 +140,21 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		data["role_arns"] = roleARNs
 	}
 
+	defaultStsTTL, defaultStsTTLOk := d.GetOk("default_sts_ttl")
+	maxStsTTL, maxStsTTLOk := d.GetOk("max_sts_ttl")
 	if credentialType == "assumed_role" || credentialType == "federation_token" {
-		if v, ok := d.GetOk("default_sts_ttl"); ok {
-			data["default_sts_ttl"] = strconv.Itoa(v.(int))
+		if defaultStsTTLOk {
+			data["default_sts_ttl"] = strconv.Itoa(defaultStsTTL.(int))
 		}
-		if v, ok := d.GetOk("max_sts_ttl"); ok {
-			data["max_sts_ttl"] = strconv.Itoa(v.(int))
+		if maxStsTTLOk {
+			data["max_sts_ttl"] = strconv.Itoa(maxStsTTL.(int))
+		}
+	} else {
+		if defaultStsTTLOk {
+			return fmt.Errorf("default_sts_ttl is only valid when credential_type is assumed_role or federation_token")
+		}
+		if maxStsTTLOk {
+			return fmt.Errorf("max_sts_ttl is only valid when credential_type is assumed_role or federation_token")
 		}
 	}
 

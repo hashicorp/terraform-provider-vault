@@ -240,7 +240,7 @@ resource "vault_aws_secret_backend_role" "test_policy_inline" {
   name = "%s-policy-inline"
   policy_document = %q
   credential_type = "assumed_role"
-	backend = "${vault_aws_secret_backend.test.path}"
+  backend = "${vault_aws_secret_backend.test.path}"
   default_sts_ttl = 3600
   max_sts_ttl = 21600
 }
