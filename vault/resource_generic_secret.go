@@ -65,6 +65,7 @@ func genericSecretResource() *schema.Resource {
 				Type:        schema.TypeMap,
 				Computed:    true,
 				Description: "Map of strings read from Vault.",
+				Sensitive:   true,
 			},
 		},
 	}
