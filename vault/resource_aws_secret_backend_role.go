@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -35,7 +36,7 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Description: "The path of the AWS Secret Backend the role belongs to.",
 			},
 			"policy_arns": {
-				Type:          schema.TypeList,
+				Type:          schema.TypeSet,
 				Optional:      true,
 				ConflictsWith: []string{"policy", "policy_arn", "role_arns"},
 				Description:   "ARN for an existing IAM policy the role should use.",
@@ -71,7 +72,7 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Description: "Role credential type.",
 			},
 			"role_arns": {
-				Type: schema.TypeList,
+				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -79,6 +80,18 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				ForceNew:      true,
 				ConflictsWith: []string{"policy", "policy_arn", "policy_arns"},
 				Description:   "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is 'assumed_role'",
+			},
+			"default_sts_ttl": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The default TTL in seconds for STS credentials. When a TTL is not specified when STS credentials are requested, and a default TTL is specified on the role, then this default TTL will be used. Valid only when credential_type is one of assumed_role or federation_token.",
+			},
+			"max_sts_ttl": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The max allowed TTL in seconds for STS credentials (credentials TTL are capped to max_sts_ttl). Valid only when credential_type is one of assumed_role or federation_token.",
 			},
 		},
 	}
@@ -91,15 +104,14 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	name := d.Get("name").(string)
 
 	policyARNsIfc, ok := d.GetOk("policy_arns")
-	var policyARNs []string
+	var policyARNs []interface{}
 	if !ok {
-		policyARN := d.Get("policy_arn").(string)
+		policyARN := d.Get("policy_arn")
 		if policyARN != "" {
 			policyARNs = append(policyARNs, policyARN)
 		}
-	}
-	for _, arnIfc := range policyARNsIfc.([]interface{}) {
-		policyARNs = append(policyARNs, arnIfc.(string))
+	} else {
+		policyARNs = policyARNsIfc.(*schema.Set).List()
 	}
 
 	policy, ok := d.GetOk("policy_document")
@@ -107,18 +119,16 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		policy = d.Get("policy")
 	}
 
-	var roleARNs []string
-	roleARNsIfc := d.Get("role_arns")
-	for _, roleIfc := range roleARNsIfc.([]interface{}) {
-		roleARNs = append(roleARNs, roleIfc.(string))
-	}
+	roleARNs := d.Get("role_arns").(*schema.Set).List()
 
 	if policy == "" && len(policyARNs) == 0 && len(roleARNs) == 0 {
 		return fmt.Errorf("either policy, policy_arns, or role_arns must be set")
 	}
 
+	credentialType := d.Get("credential_type").(string)
+
 	data := map[string]interface{}{
-		"credential_type": d.Get("credential_type").(string),
+		"credential_type": credentialType,
 	}
 	if policy != "" {
 		data["policy_document"] = policy
@@ -128,6 +138,24 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	}
 	if len(roleARNs) != 0 {
 		data["role_arns"] = roleARNs
+	}
+
+	defaultStsTTL, defaultStsTTLOk := d.GetOk("default_sts_ttl")
+	maxStsTTL, maxStsTTLOk := d.GetOk("max_sts_ttl")
+	if credentialType == "assumed_role" || credentialType == "federation_token" {
+		if defaultStsTTLOk {
+			data["default_sts_ttl"] = strconv.Itoa(defaultStsTTL.(int))
+		}
+		if maxStsTTLOk {
+			data["max_sts_ttl"] = strconv.Itoa(maxStsTTL.(int))
+		}
+	} else {
+		if defaultStsTTLOk {
+			return fmt.Errorf("default_sts_ttl is only valid when credential_type is assumed_role or federation_token")
+		}
+		if maxStsTTLOk {
+			return fmt.Errorf("max_sts_ttl is only valid when credential_type is assumed_role or federation_token")
+		}
 	}
 
 	log.Printf("[DEBUG] Creating role %q on AWS backend %q", name, backend)
@@ -180,6 +208,12 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("credential_type", secret.Data["credential_type"])
 	d.Set("role_arns", secret.Data["role_arns"])
+	if v, ok := secret.Data["default_sts_ttl"]; ok {
+		d.Set("default_sts_ttl", v)
+	}
+	if v, ok := secret.Data["max_sts_ttl"]; ok {
+		d.Set("max_sts_ttl", v)
+	}
 	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
 	d.Set("name", pathPieces[len(pathPieces)-1])
 	return nil
