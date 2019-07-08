@@ -122,7 +122,7 @@ func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 	// set the backend to the original passed path (without config/client at the end)
 	idPieces := strings.Split(d.Id(), "/")
-	d.Set("backend", idPieces[1:len(idPieces)-2])
+	d.Set("backend", strings.Join(idPieces[1:len(idPieces)-2], "/"))
 
 	d.Set("access_key", secret.Data["access_key"])
 	d.Set("ec2_endpoint", secret.Data["endpoint"])
