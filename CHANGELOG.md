@@ -1,4 +1,15 @@
-## 2.0.1 (Unreleased)
+## 2.1.0 (July 05, 2019)
+
+IMPROVEMENTS:
+
+* For `aws_secret_backend_role`, adds support for `default_sts_ttl` and `max_sts_ttl` ([#444](https://github.com/terraform-providers/terraform-provider-vault/pull/444)).
+
+BUG FIXES:
+
+* Fixes ordering issues with `aws_auth_backend_role` and `aws_auth_backend_role_tags` ([#439](https://github.com/terraform-providers/terraform-provider-vault/pull/439)).
+* Supports providing lists for `bound_claims` ([#455](https://github.com/terraform-providers/terraform-provider-vault/pull/455)).
+* Resolves issue with persistent diffs on `vault_generic_secret` ([#456](https://github.com/terraform-providers/terraform-provider-vault/pull/456)).
+
 ## 2.0.0 (June 19, 2019)
 
 FEATURES:

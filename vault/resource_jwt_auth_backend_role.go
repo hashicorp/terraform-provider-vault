@@ -117,7 +117,7 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			"bound_claims": {
 				Type:        schema.TypeMap,
 				Optional:    true,
-				Description: "Map of claims/values to match against. The expected value may be a single string or a list of strings.",
+				Description: "Map of claims/values to match against. The expected value may be a single string or a comma-separated string list.",
 			},
 			"claim_mappings": {
 				Type:        schema.TypeMap,
@@ -278,7 +278,19 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if resp.Data["bound_claims"] != nil {
-		d.Set("bound_claims", resp.Data["bound_claims"])
+		boundClaims := make(map[string]interface{})
+		respBoundClaims := resp.Data["bound_claims"].(map[string]interface{})
+		for k, v := range respBoundClaims {
+			switch boundClaimVal := v.(type) {
+			case []interface{}:
+				boundClaims[k] = strings.Join(util.JsonStringArrayToStringArray(boundClaimVal), ",")
+			case string:
+				boundClaims[k] = boundClaimVal
+			default:
+				return fmt.Errorf("bound claim is not a string or list: %v", v)
+			}
+		}
+		d.Set("bound_claims", boundClaims)
 	}
 
 	if resp.Data["claim_mappings"] != nil {
@@ -427,7 +439,20 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData) map[string]interface{
 	}
 
 	if v, ok := d.GetOk("bound_claims"); ok {
-		data["bound_claims"] = v
+		boundClaims := make(map[string]interface{})
+		for key, val := range v.(map[string]interface{}) {
+			valStr := val.(string)
+			if strings.Contains(valStr, ",") {
+				vals := strings.Split(valStr, ",")
+				for i := range vals {
+					vals[i] = strings.TrimSpace(vals[i])
+				}
+				boundClaims[key] = vals
+			} else {
+				boundClaims[key] = valStr
+			}
+		}
+		data["bound_claims"] = boundClaims
 	}
 
 	if v, ok := d.GetOk("claim_mappings"); ok {

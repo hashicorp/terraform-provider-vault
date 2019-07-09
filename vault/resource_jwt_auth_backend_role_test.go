@@ -286,7 +286,7 @@ func TestAccJWTAuthBackendRoleOIDC_full(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"bound_claims.%", "2"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
-						"bound_claims.department", "engineering"),
+						"bound_claims.department", "engineering,admin"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"bound_claims.sector", "7g"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
@@ -503,7 +503,7 @@ resource "vault_jwt_auth_backend_role" "role" {
   num_uses = 12
   max_ttl = 7200
   bound_claims = {
-    department = "engineering",
+    department = "engineering,admin"
     sector = "7g"
   }
   claim_mappings = {
