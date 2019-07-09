@@ -33,6 +33,8 @@ The following arguments are supported:
 
 * `max_lease_ttl_seconds` - (Optional) Maximum possible lease duration for tokens and secrets in seconds
 
+* `local` - (Optional) Boolean flag that can be explicitly set to true to enforce local mount in HA environment
+
 * `options` - (Optional) Specifies mount type specific options that are passed to the backend
 
 ## Attributes Reference
