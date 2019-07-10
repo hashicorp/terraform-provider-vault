@@ -1,3 +1,9 @@
+## 2.2.0 (Unreleased)
+
+BUG FIXES:
+
+* `resource/aws_auth_backend_client`: Backend supports nested paths [#461]
+
 ## 2.1.0 (July 05, 2019)
 
 IMPROVEMENTS:
