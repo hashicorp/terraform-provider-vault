@@ -50,6 +50,25 @@ func TestAccAWSAuthBackendClient_basic(t *testing.T) {
 	})
 }
 
+func TestAccAWSAuthBackendClient_nested(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws") + "/nested"
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendClientConfig_basic(backend),
+				Check:  testAccAWSAuthBackendClientCheck_attrs(backend),
+			},
+			{
+				Config: testAccAWSAuthBackendClientConfig_updated(backend),
+				Check:  testAccAWSAuthBackendClientCheck_attrs(backend),
+			},
+		},
+	})
+}
+
 func testAccCheckAWSAuthBackendClientDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
