@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -121,8 +122,11 @@ func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// set the backend to the original passed path (without config/client at the end)
-	idPieces := strings.Split(d.Id(), "/")
-	d.Set("backend", strings.Join(idPieces[1:len(idPieces)-2], "/"))
+	re := regexp.MustCompile(`^auth/(.*)/config/client$`)
+	if !re.MatchString(d.Id()) {
+		return fmt.Errorf("`config/client` has not been appended to the ID (%s)", d.Id())
+	}
+	d.Set("backend", re.FindStringSubmatch(d.Id())[1])
 
 	d.Set("access_key", secret.Data["access_key"])
 	d.Set("ec2_endpoint", secret.Data["endpoint"])
