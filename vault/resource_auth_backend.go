@@ -73,6 +73,15 @@ func authBackendResource() *schema.Resource {
 				Description: "Specifies whether to show this mount in the UI-specific listing endpoint",
 			},
 
+			"token_type": {
+				Type:        schema.TypeString,
+				Required:    false,
+				ForceNew:    true,
+				Optional:    true,
+				Computed:    true,
+				Description: "Specifies the token type",
+			},
+
 			"local": {
 				Type:        schema.TypeBool,
 				ForceNew:    true,
@@ -102,6 +111,7 @@ func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 			DefaultLeaseTTL:   fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 			MaxLeaseTTL:       fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
 			ListingVisibility: d.Get("listing_visibility").(string),
+			TokenType:         d.Get("token_type").(string),
 		},
 		Local: d.Get("local").(bool),
 	}
@@ -155,6 +165,7 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 			d.Set("default_lease_ttl_seconds", auth.Config.DefaultLeaseTTL)
 			d.Set("max_lease_ttl_seconds", auth.Config.MaxLeaseTTL)
 			d.Set("listing_visibility", auth.Config.ListingVisibility)
+			d.Set("token_type", auth.Config.TokenType)
 			d.Set("local", auth.Local)
 			d.Set("accessor", auth.Accessor)
 			return nil

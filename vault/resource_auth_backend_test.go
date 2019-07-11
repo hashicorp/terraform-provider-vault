@@ -59,6 +59,7 @@ resource "vault_auth_backend" "test" {
 	description = "Test auth backend"
 	default_lease_ttl_seconds = 3600
 	max_lease_ttl_seconds = 86400
+	token_type = "service"
 	listing_visibility = "unauth"
 	local = true
 }`, path)
@@ -102,6 +103,10 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 			return fmt.Errorf("unexpected auth max_lease_ttl_seconds")
 		}
 
+		if instanceState.Attributes["token_type"] != "service" {
+			return fmt.Errorf("unexpected auth token_type")
+		}
+
 		if instanceState.Attributes["listing_visibility"] != "unauth" {
 			return fmt.Errorf("unexpected auth listing_visibility")
 		}
@@ -132,6 +137,9 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 				}
 				if serverAuth.Config.MaxLeaseTTL != 86400 {
 					return fmt.Errorf("unexpected auth max_lease_ttl_seconds")
+				}
+				if serverAuth.Config.TokenType != "service" {
+					return fmt.Errorf("unexpected auth token_type")
 				}
 				if serverAuth.Config.ListingVisibility != "unauth" {
 					return fmt.Errorf("unexpected auth listing_visibility")
