@@ -33,6 +33,8 @@ The following arguments are supported:
 
 * `listing_visibility` - (Optional) Speficies whether to show this mount in the UI-specific listing endpoint.
 
+* `token_type` - (Optional) Specifies the token type.
+
 * `local` - (Optional) Specifies if the auth method is local only.
 
 ## Attributes Reference
