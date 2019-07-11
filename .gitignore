@@ -30,5 +30,6 @@ website/vendor
 !command/test-fixtures/**/*.tfstate
 !command/test-fixtures/**/.terraform/
 
-# Binary
+# Binaries
 terraform-provider-vault
+/cmd/coverage/coverage

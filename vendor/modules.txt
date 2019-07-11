@@ -88,6 +88,8 @@ github.com/hashicorp/go-getter
 github.com/hashicorp/go-getter/helper/url
 # github.com/hashicorp/go-hclog v0.8.0
 github.com/hashicorp/go-hclog
+# github.com/hashicorp/go-immutable-radix v0.0.0-20180129170900-7f3cd4390caa
+github.com/hashicorp/go-immutable-radix
 # github.com/hashicorp/go-multierror v1.0.0
 github.com/hashicorp/go-multierror
 # github.com/hashicorp/go-plugin v1.0.1-0.20190610192547-a1bc61569a26
@@ -106,6 +108,7 @@ github.com/hashicorp/go-uuid
 # github.com/hashicorp/go-version v1.1.0
 github.com/hashicorp/go-version
 # github.com/hashicorp/golang-lru v0.5.1
+github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
 # github.com/hashicorp/hcl v1.0.0
 github.com/hashicorp/hcl
@@ -188,15 +191,31 @@ github.com/hashicorp/terraform/svchost/auth
 # github.com/hashicorp/terraform-config-inspect v0.0.0-20190327195015-8022a2663a70
 github.com/hashicorp/terraform-config-inspect/tfconfig
 # github.com/hashicorp/vault v1.1.2
+github.com/hashicorp/vault/logical/framework
 github.com/hashicorp/vault/api
 github.com/hashicorp/vault/command/config
+github.com/hashicorp/vault/helper/errutil
+github.com/hashicorp/vault/helper/jsonutil
+github.com/hashicorp/vault/helper/license
+github.com/hashicorp/vault/helper/logging
+github.com/hashicorp/vault/helper/parseutil
+github.com/hashicorp/vault/helper/salt
+github.com/hashicorp/vault/helper/strutil
+github.com/hashicorp/vault/helper/wrapping
+github.com/hashicorp/vault/logical
+github.com/hashicorp/vault/version
 github.com/hashicorp/vault/helper/consts
 github.com/hashicorp/vault/helper/hclutil
-github.com/hashicorp/vault/helper/jsonutil
-github.com/hashicorp/vault/helper/parseutil
 github.com/hashicorp/vault/command/token
 github.com/hashicorp/vault/helper/compressutil
-github.com/hashicorp/vault/helper/strutil
+github.com/hashicorp/vault/helper/pluginutil
+github.com/hashicorp/vault/physical
+github.com/hashicorp/vault/physical/inmem
+github.com/hashicorp/vault/helper/certutil
+github.com/hashicorp/vault/helper/mlock
+github.com/hashicorp/vault/helper/locksutil
+github.com/hashicorp/vault/helper/pathmanager
+github.com/hashicorp/vault/helper/cryptoutil
 # github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d
 github.com/hashicorp/yamux
 # github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af
@@ -295,6 +314,8 @@ golang.org/x/crypto/cast5
 golang.org/x/crypto/openpgp/elgamal
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/internal/subtle
+golang.org/x/crypto/pbkdf2
+golang.org/x/crypto/blake2b
 # golang.org/x/net v0.0.0-20190502183928-7f726cade0ab
 golang.org/x/net/http2
 golang.org/x/net/context
@@ -384,3 +405,8 @@ google.golang.org/grpc/credentials/internal
 google.golang.org/grpc/balancer/base
 google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/internal/syscall
+# gopkg.in/square/go-jose.v2 v2.3.1
+gopkg.in/square/go-jose.v2/jwt
+gopkg.in/square/go-jose.v2
+gopkg.in/square/go-jose.v2/json
+gopkg.in/square/go-jose.v2/cipher
