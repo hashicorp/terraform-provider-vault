@@ -42,3 +42,9 @@ jobs:
         command: |
           cd $GOPATH/src/github.com/terraform-providers/terraform-provider-vault
           go build
+    - run:
+        name: "Generate Coverage Report"
+        command: |
+          cd $GOPATH/src/github.com/terraform-providers/terraform-provider-vault/cmd/coverage
+          go build
+          ./coverage -openapi-doc=$GOPATH/src/github.com/terraform-providers/terraform-provider-vault/testdata/openapi.json
