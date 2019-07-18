@@ -1,0 +1,16 @@
+language: go
+go:
+  - 1.12.5
+script:
+  - make test
+  - make
+deploy:
+  - provider: script
+    skip_cleanup: true
+    script: curl -sL https://git.io/goreleaser | bash
+    on:
+      tags: true
+      condition: $TRAVIS_OS_NAME = linux
+env:
+  global:
+    secure: SlgtX+wDi9pYJPv2y24vSrcFPFAE8LmbSkNnaTygmflgnkwnxGGR8Rpz2ZFfXxM+UiHxg6wDSy0myeh8fu2LeO5OHlQkKI0aY8xH7RabblwUpwXbCdbWuFwXQal+wQeDc7zJvCzbv3mp96atpgHCpSbUccSn0bRvGs6SRb4LNqm7EyO7n2fNGYqCTeVUd/SIL/bEJSh5xzyFhErz2JFn67yGC42eGExyF+oy0j61DzCyunGs4M1MuRjcBYfPDD9qYLMQtehcbo820U/A8GVUm+Lm67KITvCAlAZ1v35/UMip8ai4BzpXI2ktCyZYMgjiyqPbckHnm0jm8wIf+WAPDUWNMqwfy/XPBWxtimmH5NEdRGpC5TqXANbG4Q1LFM3kyje/vyQ0tgReHCwJHyjGj2vr1Aed0DiZA6GSLenpgPloeJwVRNdlkcyLUvTEgBBSzhYpr3YXNBs2+CiYOGU72b9ntkM9bulVIr8Oq+KtmY1vFgrcClBoYtgSI2zJi8Uqw+oxxerqc6GPf5eJG7hfNu8ND2P3R4YHnkTtYQoElU3qrIAx19qL8MsyLvkryWjJ/Ob0f6TAm0JRH6OcbxNnLFsdhjW4OhxThw4LPU27+9efW/W367bblA5dh298LflhxY8Gt1pBX5ENsNInFFAHJann2n6qnH/F96lsICT/uuU=
