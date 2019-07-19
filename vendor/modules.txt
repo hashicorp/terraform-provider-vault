@@ -44,8 +44,10 @@ github.com/aws/aws-sdk-go/aws/credentials/endpointcreds
 github.com/aws/aws-sdk-go/private/protocol/rest
 github.com/aws/aws-sdk-go/private/protocol/query/queryutil
 github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
+github.com/aws/aws-sdk-go/service/ec2
 github.com/aws/aws-sdk-go/internal/sdkuri
 github.com/aws/aws-sdk-go/service/s3
+github.com/aws/aws-sdk-go/private/protocol/ec2query
 github.com/aws/aws-sdk-go/internal/s3err
 github.com/aws/aws-sdk-go/private/protocol/eventstream
 github.com/aws/aws-sdk-go/private/protocol/eventstream/eventstreamapi
@@ -60,6 +62,10 @@ github.com/blang/semver
 github.com/davecgh/go-spew/spew
 # github.com/fatih/color v1.7.0
 github.com/fatih/color
+# github.com/form3tech-oss/go-vault-client v2.0.0+incompatible
+github.com/form3tech-oss/go-vault-client/pkg/vaultclient
+# github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
+github.com/fullsailor/pkcs7
 # github.com/golang/protobuf v1.3.1
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes
@@ -88,6 +94,8 @@ github.com/hashicorp/go-getter
 github.com/hashicorp/go-getter/helper/url
 # github.com/hashicorp/go-hclog v0.8.0
 github.com/hashicorp/go-hclog
+# github.com/hashicorp/go-immutable-radix v1.1.0
+github.com/hashicorp/go-immutable-radix
 # github.com/hashicorp/go-multierror v1.0.0
 github.com/hashicorp/go-multierror
 # github.com/hashicorp/go-plugin v1.0.1-0.20190610192547-a1bc61569a26
@@ -106,6 +114,7 @@ github.com/hashicorp/go-uuid
 # github.com/hashicorp/go-version v1.1.0
 github.com/hashicorp/go-version
 # github.com/hashicorp/golang-lru v0.5.1
+github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
 # github.com/hashicorp/hcl v1.0.0
 github.com/hashicorp/hcl
@@ -190,13 +199,32 @@ github.com/hashicorp/terraform-config-inspect/tfconfig
 # github.com/hashicorp/vault v1.1.2
 github.com/hashicorp/vault/api
 github.com/hashicorp/vault/command/config
+github.com/hashicorp/vault/builtin/credential/aws
 github.com/hashicorp/vault/helper/consts
 github.com/hashicorp/vault/helper/hclutil
 github.com/hashicorp/vault/helper/jsonutil
 github.com/hashicorp/vault/helper/parseutil
 github.com/hashicorp/vault/command/token
-github.com/hashicorp/vault/helper/compressutil
+github.com/hashicorp/vault/helper/awsutil
+github.com/hashicorp/vault/helper/policyutil
 github.com/hashicorp/vault/helper/strutil
+github.com/hashicorp/vault/logical
+github.com/hashicorp/vault/logical/framework
+github.com/hashicorp/vault/helper/compressutil
+github.com/hashicorp/vault/helper/license
+github.com/hashicorp/vault/helper/logging
+github.com/hashicorp/vault/helper/pluginutil
+github.com/hashicorp/vault/helper/wrapping
+github.com/hashicorp/vault/physical
+github.com/hashicorp/vault/physical/inmem
+github.com/hashicorp/vault/helper/errutil
+github.com/hashicorp/vault/helper/salt
+github.com/hashicorp/vault/version
+github.com/hashicorp/vault/helper/certutil
+github.com/hashicorp/vault/helper/mlock
+github.com/hashicorp/vault/helper/locksutil
+github.com/hashicorp/vault/helper/pathmanager
+github.com/hashicorp/vault/helper/cryptoutil
 # github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d
 github.com/hashicorp/yamux
 # github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af
@@ -225,6 +253,8 @@ github.com/mitchellh/mapstructure
 github.com/mitchellh/reflectwalk
 # github.com/oklog/run v1.0.0
 github.com/oklog/run
+# github.com/patrickmn/go-cache v2.1.0+incompatible
+github.com/patrickmn/go-cache
 # github.com/pierrec/lz4 v2.0.5+incompatible
 github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
@@ -295,6 +325,8 @@ golang.org/x/crypto/cast5
 golang.org/x/crypto/openpgp/elgamal
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/internal/subtle
+golang.org/x/crypto/pbkdf2
+golang.org/x/crypto/blake2b
 # golang.org/x/net v0.0.0-20190502183928-7f726cade0ab
 golang.org/x/net/http2
 golang.org/x/net/context
@@ -384,3 +416,8 @@ google.golang.org/grpc/credentials/internal
 google.golang.org/grpc/balancer/base
 google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/internal/syscall
+# gopkg.in/square/go-jose.v2 v2.3.1
+gopkg.in/square/go-jose.v2/jwt
+gopkg.in/square/go-jose.v2
+gopkg.in/square/go-jose.v2/json
+gopkg.in/square/go-jose.v2/cipher
