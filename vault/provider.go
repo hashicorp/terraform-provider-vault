@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
@@ -44,9 +45,14 @@ func Provider() terraform.ResourceProvider {
 			},
 			"token": {
 				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN", ""),
+				Optional:    true,
 				Description: "Token to use to authenticate to Vault.",
+			},
+			"token_env_var": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "VAULT_TOKEN",
+				Description: "Environment variable containing the token.",
 			},
 			"ca_cert_file": {
 				Type:        schema.TypeString,
@@ -452,6 +458,11 @@ var (
 func providerToken(d *schema.ResourceData) (string, error) {
 	if token := d.Get("token").(string); token != "" {
 		return token, nil
+	}
+	if envVar := d.Get("token_env_var").(string); envVar != "" {
+		if token := os.Getenv(envVar); token != "" {
+			return token, nil
+		}
 	}
 	// Use ~/.vault-token, or the configured token helper.
 	tokenHelper, err := config.DefaultTokenHelper()
