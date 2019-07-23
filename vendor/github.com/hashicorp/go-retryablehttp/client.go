@@ -36,7 +36,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-cleanhttp"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 )
 
 var (
@@ -79,6 +79,28 @@ type Request struct {
 func (r *Request) WithContext(ctx context.Context) *Request {
 	r.Request = r.Request.WithContext(ctx)
 	return r
+}
+
+// BodyBytes allows accessing the request body. It is an analogue to
+// http.Request's Body variable, but it returns a copy of the underlying data
+// rather than consuming it.
+//
+// This function is not thread-safe; do not call it at the same time as another
+// call, or at the same time this request is being used with Client.Do.
+func (r *Request) BodyBytes() ([]byte, error) {
+	if r.body == nil {
+		return nil, nil
+	}
+	body, err := r.body()
+	if err != nil {
+		return nil, err
+	}
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(body)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 // NewRequest creates a new wrapped request.
@@ -363,9 +385,9 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 				return resp, err
 			}
 			if c, ok := body.(io.ReadCloser); ok {
-				req.Request.Body = c
+				req.Body = c
 			} else {
-				req.Request.Body = ioutil.NopCloser(body)
+				req.Body = ioutil.NopCloser(body)
 			}
 		}
 
@@ -380,7 +402,7 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 		}
 
 		// Check if we should continue with retries.
-		checkOK, checkErr := c.CheckRetry(req.Request.Context(), resp, err)
+		checkOK, checkErr := c.CheckRetry(req.Context(), resp, err)
 
 		if err != nil {
 			if c.Logger != nil {
@@ -423,7 +445,11 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 		if c.Logger != nil {
 			c.Logger.Printf("[DEBUG] %s: retrying in %s (%d left)", desc, wait, remain)
 		}
-		time.Sleep(wait)
+		select {
+		case <-req.Context().Done():
+			return nil, req.Context().Err()
+		case <-time.After(wait):
+		}
 	}
 
 	if c.ErrorHandler != nil {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/acctest"
@@ -168,7 +169,7 @@ func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
 						"bound_iam_principal_arns.#", "1"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"bound_iam_principal_arns.0", "arn:aws:iam::123456789012:role/MyRole/*"),
+						"bound_iam_principal_arns.3878455414", "arn:aws:iam::123456789012:role/MyRole/*"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
 						"ttl", "30"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
@@ -176,9 +177,9 @@ func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
 						"policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"policies.0", "default"),
+						"policies.1971754988", "default"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"policies.1", "dev"),
+						"policies.326271447", "dev"),
 				),
 			},
 			{
@@ -267,9 +268,9 @@ func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestChe
 			} else if _, ok := instanceState.Attributes[attr.PreviousNameInProvider]; ok {
 				providerValIsArray = false
 				stateAttr = attr.PreviousNameInProvider
-			} else if _, ok := instanceState.Attributes[attr.NameInProvider+".0"]; ok {
+			} else if _, ok := instanceState.Attributes[attr.NameInProvider+".#"]; ok {
 				stateAttr = attr.NameInProvider
-			} else if _, ok := instanceState.Attributes[attr.PreviousNameInProvider+".0"]; ok {
+			} else if _, ok := instanceState.Attributes[attr.PreviousNameInProvider+".#"]; ok {
 				stateAttr = attr.PreviousNameInProvider
 			}
 			stateAttrVal := instanceState.Attributes[stateAttr]
@@ -323,9 +324,17 @@ func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestChe
 						return fmt.Errorf("expected %s to have %d entries in state, has %d", stateAttr, len(vaultRespVal), count)
 					}
 					for i := 0; i < count; i++ {
-						stateData := instanceState.Attributes[stateAttr+"."+strconv.Itoa(i)]
-						if stateData != vaultRespVal[i] {
-							return fmt.Errorf("expected item %d of %s (%s in state) of %q to be %q, got %q", i, attr.NameInVault, stateAttr, endpoint, stateData, vaultRespVal[i])
+						found := false
+						for stateKey, stateValue := range instanceState.Attributes {
+							if strings.HasPrefix(stateKey, stateAttr) {
+								if vaultRespVal[i] == stateValue {
+									found = true
+									break
+								}
+							}
+						}
+						if !found {
+							return fmt.Errorf("Expected item %d of %s (%s in state) of %q to be in state but wasn't", i, attr.NameInVault, stateAttr, vaultRespVal[i])
 						}
 					}
 					match = true
@@ -355,7 +364,7 @@ resource "vault_aws_auth_backend_role" "role" {
   bound_account_ids = ["123456789012"]
   bound_vpc_ids = ["vpc-b61106d4"]
   bound_subnet_ids = ["vpc-a33128f1"]
-  bound_iam_role_arn = "arn:aws:iam::123456789012:role/S3Access"
+  bound_iam_role_arns = ["arn:aws:iam::123456789012:role/S3Access"]
   bound_iam_instance_profile_arns = ["arn:aws:iam::123456789012:instance-profile/Webserver"]
   bound_ec2_instance_ids = ["i-06bb291939760ba66"]
   inferred_entity_type = "ec2_instance"

@@ -39,7 +39,7 @@ The following arguments are supported:
 * `role` - (Required) The name of the role.
 
 * `bound_service_principal_ids` - (Optional) If set, defines a constraint on the
-  service principals that can perform the login operation that they should be posess
+  service principals that can perform the login operation that they should be possess
   the ids specified by this field.
 
 * `bound_group_ids` - (Optional) If set, defines a constraint on the groups

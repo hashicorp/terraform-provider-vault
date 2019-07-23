@@ -2,8 +2,9 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform/terraform"
 	"testing"
+
+	"github.com/hashicorp/terraform/terraform"
 
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
@@ -12,8 +13,6 @@ import (
 
 const testAccRabbitmqSecretBackendRoleTags_basic = `management`
 const testAccRabbitmqSecretBackendRoleTags_updated = `management,policymaker`
-const testAccRabbitmqSecretBackendRoleVhost_basic = "{\"/\": {\"configure\":\"\", \"write\":\"\", \"read\": \".*\"}}"
-const testAccRabbitmqSecretBackendRoleVhost_updated = "{\"/\": {\"configure\":\".*\", \"write\":\".*\", \"read\": \".*\"}}"
 
 func TestAccRabbitmqSecretBackendRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
@@ -30,7 +29,10 @@ func TestAccRabbitmqSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "name", fmt.Sprintf("%s", name)),
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "tags", testAccRabbitmqSecretBackendRoleTags_basic),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost", testAccRabbitmqSecretBackendRoleVhost_basic),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.host", "/"),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.configure", ""),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.read", ".*"),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.write", ""),
 				),
 			},
 			{
@@ -39,7 +41,10 @@ func TestAccRabbitmqSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "name", fmt.Sprintf("%s", name)),
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "tags", testAccRabbitmqSecretBackendRoleTags_updated),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost", testAccRabbitmqSecretBackendRoleVhost_updated),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.host", "/"),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.configure", ".*"),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.read", ".*"),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.write", ".*"),
 				),
 			},
 		},
@@ -61,7 +66,10 @@ func TestAccRabbitmqSecretBackendRole_import(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "name", fmt.Sprintf("%s", name)),
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "tags", testAccRabbitmqSecretBackendRoleTags_basic),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost", testAccRabbitmqSecretBackendRoleVhost_basic),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.host", "/"),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.configure", ""),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.read", ".*"),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.write", ""),
 				),
 			},
 			{
@@ -88,7 +96,10 @@ func TestAccRabbitmqSecretBackendRole_nested(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "name", fmt.Sprintf("%s", name)),
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "tags", testAccRabbitmqSecretBackendRoleTags_basic),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost", testAccRabbitmqSecretBackendRoleVhost_basic),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.host", "/"),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.configure", ""),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.read", ".*"),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.write", ""),
 				),
 			},
 			{
@@ -97,7 +108,10 @@ func TestAccRabbitmqSecretBackendRole_nested(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "name", fmt.Sprintf("%s", name)),
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "tags", testAccRabbitmqSecretBackendRoleTags_updated),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost", testAccRabbitmqSecretBackendRoleVhost_updated),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.host", "/"),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.configure", ".*"),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.read", ".*"),
+					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend_role.test", "vhost.0.write", ".*"),
 				),
 			},
 		},
@@ -135,12 +149,17 @@ resource "vault_rabbitmq_secret_backend" "test" {
 }
 
 resource "vault_rabbitmq_secret_backend_role" "test" {
-  backend = "%s"
+  backend = "${vault_rabbitmq_secret_backend.test.path}"
   name = "%s"
   tags = %q
-  vhosts = %q
+  vhost {
+    host = "/"
+    configure = ""
+    read = ".*"
+    write = ""
+  }
 }
-`, path, connectionUri, username, password, path, name, testAccRabbitmqSecretBackendRoleTags_basic, testAccRabbitmqSecretBackendRoleVhost_basic)
+`, path, connectionUri, username, password, name, testAccRabbitmqSecretBackendRoleTags_basic)
 }
 
 func testAccRabbitmqSecretBackendRoleConfig_updated(name, path, connectionUri, username, password string) string {
@@ -156,10 +175,15 @@ resource "vault_rabbitmq_secret_backend" "test" {
 }
 
 resource "vault_rabbitmq_secret_backend_role" "test" {
-  backend = "%s"
+  backend = "${vault_rabbitmq_secret_backend.test.path}"
   name = "%s"
   tags = %q
-  vhosts = %q
+  vhost {
+    host = "/"
+    configure = ".*"
+    read = ".*"
+    write = ".*"
+  }
 }
-`, path, connectionUri, username, password, path, name, testAccRabbitmqSecretBackendRoleTags_updated, testAccRabbitmqSecretBackendRoleVhost_updated)
+`, path, connectionUri, username, password, name, testAccRabbitmqSecretBackendRoleTags_updated)
 }

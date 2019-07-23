@@ -27,9 +27,9 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 			{
 				Config: testPkiSecretBackendCertConfigUrlsConfig_basic(rootPath, issuingCertificates, crlDistributionPoints, ocspServers),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_config_urls.test", "issuing_certificates", issuingCertificates),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_config_urls.test", "crl_distribution_points", crlDistributionPoints),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_config_urls.test", "ocsp_servers", ocspServers),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_config_urls.test", "issuing_certificates.0", issuingCertificates),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_config_urls.test", "crl_distribution_points.0", crlDistributionPoints),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_config_urls.test", "ocsp_servers.0", ocspServers),
 				),
 			},
 		},
@@ -73,9 +73,9 @@ resource "vault_pki_secret_backend_config_urls" "test" {
 
   backend = "${vault_pki_secret_backend.test-root.path}"
 
-  issuing_certificates = "%s"
-  crl_distribution_points = "%s"
-  ocsp_servers = "%s"
+  issuing_certificates = ["%s"]
+  crl_distribution_points = ["%s"]
+  ocsp_servers = ["%s"]
 } 
 
 `, rootPath, issuingCertificates, crlDistributionPoints, ocspServers)

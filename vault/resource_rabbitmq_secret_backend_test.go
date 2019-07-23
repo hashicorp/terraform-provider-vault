@@ -4,11 +4,12 @@ import (
 	"testing"
 
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
-	"strings"
 )
 
 func TestAccRabbitmqSecretBackend_basic(t *testing.T) {
@@ -72,7 +73,7 @@ func TestAccRabbitmqSecretBackend_import(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				// the API can't serve these fields, so ignore them
-				ImportStateVerifyIgnore: []string{"connection_uri", "username", "password"},
+				ImportStateVerifyIgnore: []string{"connection_uri", "username", "password", "verify_connection"},
 			},
 		},
 	})

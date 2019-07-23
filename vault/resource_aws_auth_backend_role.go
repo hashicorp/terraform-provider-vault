@@ -18,11 +18,12 @@ var (
 
 func awsAuthBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
-		Create: awsAuthBackendRoleCreate,
-		Read:   awsAuthBackendRoleRead,
-		Update: awsAuthBackendRoleUpdate,
-		Delete: awsAuthBackendRoleDelete,
-		Exists: awsAuthBackendRoleExists,
+		CustomizeDiff: resourceVaultAwsAuthBackendRoleCustomizeDiff,
+		Create:        awsAuthBackendRoleCreate,
+		Read:          awsAuthBackendRoleRead,
+		Update:        awsAuthBackendRoleUpdate,
+		Delete:        awsAuthBackendRoleDelete,
+		Exists:        awsAuthBackendRoleExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -41,135 +42,120 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				ForceNew:    true,
 			},
 			"bound_ami_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Description:   "Only EC2 instances using this AMI ID will be permitted to log in.",
-				Deprecated:    `"bound_ami_id" is deprecated, please use "bound_ami_ids" as a list.`,
-				ConflictsWith: []string{"bound_ami_ids"},
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Only EC2 instances using this AMI ID will be permitted to log in.",
+				Removed:     `Use "bound_ami_ids" as a list.`,
 			},
 			"bound_ami_ids": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances using this AMI ID will be permitted to log in.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				ConflictsWith: []string{"bound_ami_id"},
 			},
 			"bound_account_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Description:   "Only EC2 instances with this account ID in their identity document will be permitted to log in.",
-				Deprecated:    `"bound_account_id" is deprecated, please use "bound_account_ids" as a list.`,
-				ConflictsWith: []string{"bound_account_ids"},
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Only EC2 instances with this account ID in their identity document will be permitted to log in.",
+				Removed:     `Use "bound_account_ids" as a list.`,
 			},
 			"bound_account_ids": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances with this account ID in their identity document will be permitted to log in.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				ConflictsWith: []string{"bound_account_id"},
 			},
 			"bound_region": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Description:   "Only EC2 instances in this region will be permitted to log in.",
-				Deprecated:    `"bound_region" is deprecated, please use "bound_regions" as a list.`,
-				ConflictsWith: []string{"bound_regions"},
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Only EC2 instances in this region will be permitted to log in.",
+				Removed:     `Use "bound_regions" as a list.`,
 			},
 			"bound_regions": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances in this region will be permitted to log in.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				ConflictsWith: []string{"bound_region"},
 			},
 			"bound_vpc_id": {
 				Type:          schema.TypeString,
 				Optional:      true,
 				Description:   "Only EC2 instances associated with this VPC ID will be permitted to log in.",
-				Deprecated:    `"bound_vpc_id" is deprecated, please use "bound_vpc_ids" as a list.`,
+				Removed:       `Use "bound_vpc_ids" as a list.`,
 				ConflictsWith: []string{"bound_vpc_ids"},
 			},
 			"bound_vpc_ids": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances associated with this VPC ID will be permitted to log in.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				ConflictsWith: []string{"bound_vpc_id"},
 			},
 			"bound_subnet_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Description:   "Only EC2 instances associated with this subnet ID will be permitted to log in.",
-				Deprecated:    `"bound_subnet_id" is deprecated, please use "bound_subnet_ids" as a list.`,
-				ConflictsWith: []string{"bound_subnet_ids"},
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Only EC2 instances associated with this subnet ID will be permitted to log in.",
+				Removed:     `Use "bound_subnet_ids" as a list.`,
 			},
 			"bound_subnet_ids": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances associated with this subnet ID will be permitted to log in.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				ConflictsWith: []string{"bound_subnet_id"},
 			},
 			"bound_iam_role_arn": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Description:   "Only EC2 instances that match this IAM role ARN will be permitted to log in.",
-				Deprecated:    `"bound_iam_role_arn" is deprecated, please use "bound_iam_role_arns" as a list.`,
-				ConflictsWith: []string{"bound_iam_role_arns"},
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Only EC2 instances that match this IAM role ARN will be permitted to log in.",
+				Removed:     `Use "bound_iam_role_arns" as a list.`,
 			},
 			"bound_iam_role_arns": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances that match this IAM role ARN will be permitted to log in.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				ConflictsWith: []string{"bound_iam_role_arn"},
 			},
 			"bound_iam_instance_profile_arn": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Description:   "Only EC2 instances associated with an IAM instance profile ARN that matches this value will be permitted to log in.",
-				Deprecated:    `"bound_iam_instance_profile_arn" is deprecated, please use "bound_iam_instance_profile_arns" as a list.`,
-				ConflictsWith: []string{"bound_iam_instance_profile_arns"},
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Only EC2 instances associated with an IAM instance profile ARN that matches this value will be permitted to log in.",
+				Removed:     `Use "bound_iam_instance_profile_arns" as a list.`,
 			},
 			"bound_iam_instance_profile_arns": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances associated with an IAM instance profile ARN that matches this value will be permitted to log in.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				ConflictsWith: []string{"bound_iam_instance_profile_arn"},
 			},
 			"bound_ec2_instance_id": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances that match this instance ID will be permitted to log in.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Deprecated:    `"bound_ec2_instance_id" is deprecated, please use "bound_ec2_instance_ids".`,
-				ConflictsWith: []string{"bound_ec2_instance_ids"},
+				Removed: `Use "bound_ec2_instance_ids".`,
 			},
 			"bound_ec2_instance_ids": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Only EC2 instances that match this instance ID will be permitted to log in.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				ConflictsWith: []string{"bound_ec2_instance_id"},
 			},
 			"role_tag": {
 				Type:        schema.TypeString,
@@ -177,20 +163,18 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Description: "The key of the tag on EC2 instance to use for role tags.",
 			},
 			"bound_iam_principal_arn": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Description:   "The IAM principal that must be authenticated using the iam auth method.",
-				Deprecated:    `"bound_iam_principal_arn" is deprecated, please use "bound_iam_principal_arns" as a list.`,
-				ConflictsWith: []string{"bound_iam_principal_arns"},
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The IAM principal that must be authenticated using the iam auth method.",
+				Removed:     `Use "bound_iam_principal_arns" as a list.`,
 			},
 			"bound_iam_principal_arns": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "The IAM principal that must be authenticated using the iam auth method.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				ConflictsWith: []string{"bound_iam_principal_arn"},
 			},
 			"inferred_entity_type": {
 				Type:        schema.TypeString,
@@ -224,7 +208,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Description: "If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this field. The maximum allowed lifetime of token issued using this role. Specified as a number of seconds.",
 			},
 			"policies": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -258,9 +242,23 @@ func awsAuthBackendRoleResource() *schema.Resource {
 	}
 }
 
+func resourceVaultAwsAuthBackendRoleCustomizeDiff(diff *schema.ResourceDiff, v interface{}) error {
+	if diff.HasChange("resolve_aws_unique_ids") {
+		o, n := diff.GetChange("resolve_aws_unique_ids")
+		// The resolve_aws_unique_ids field can be updated from false to true
+		// but cannot be updated from true to false without recreating.
+		if o.(bool) && !n.(bool) {
+			if err := diff.ForceNew("resolve_aws_unique_ids"); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func setSlice(d *schema.ResourceData, tfFieldName, vaultFieldName string, data map[string]interface{}) {
 	if ifcValue, ok := d.GetOk(tfFieldName); ok {
-		ifcValues := ifcValue.([]interface{})
+		ifcValues := ifcValue.(*schema.Set).List()
 		strVals := make([]string, len(ifcValues))
 		for i, ifcVal := range ifcValues {
 			strVals[i] = ifcVal.(string)
@@ -278,11 +276,7 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	path := awsAuthBackendRolePath(backend, role)
 
 	log.Printf("[DEBUG] Writing AWS auth backend role %q", path)
-	iPolicies := d.Get("policies").([]interface{})
-	policies := make([]string, len(iPolicies))
-	for i, iPolicy := range iPolicies {
-		policies[i] = iPolicy.(string)
-	}
+	policies := d.Get("policies").(*schema.Set).List()
 
 	authType := d.Get("auth_type").(string)
 	inferred := d.Get("inferred_entity_type").(string)
@@ -311,9 +305,9 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 			setSlice(d, "bound_ami_ids", "bound_ami_id", data)
 		}
 
-		if v, ok := d.GetOk("bound_account_id"); ok {
-			data["bound_account_id"] = v.(string)
-		} else if _, ok := d.GetOk("bound_account_ids"); ok {
+		if v, ok := data["bound_account_id"].(string); ok {
+			d.Set("bound_account_ids", []string{v})
+		} else {
 			setSlice(d, "bound_account_ids", "bound_account_id", data)
 		}
 
@@ -370,12 +364,11 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 			data["inferred_entity_type"] = inferred
 		}
 
-		if v, ok := d.GetOk("bound_iam_principal_arn"); ok {
-			data["bound_iam_principal_arn"] = v.(string)
-		} else if _, ok := d.GetOk("bound_iam_principal_arns"); ok {
+		if v, ok := data["bound_iam_principal_arns"].(string); ok {
+			d.Set("bound_iam_principal_arns", []string{v})
+		} else {
 			setSlice(d, "bound_iam_principal_arns", "bound_iam_principal_arn", data)
 		}
-
 		if v, ok := d.GetOk("inferred_aws_region"); ok {
 			data["inferred_aws_region"] = v.(string)
 		}
@@ -443,56 +436,56 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("role", role)
 	d.Set("auth_type", resp.Data["auth_type"])
 
-	if _, ok := d.GetOk("bound_account_id"); ok {
-		d.Set("bound_account_id", resp.Data["bound_account_id"])
+	if v, ok := resp.Data["bound_account_id"].(string); ok {
+		d.Set("bound_account_ids", []string{v})
 	} else {
 		d.Set("bound_account_ids", resp.Data["bound_account_id"])
 	}
 
-	if _, ok := d.GetOk("bound_ami_id"); ok {
-		d.Set("bound_ami_id", resp.Data["bound_ami_id"])
+	if v, ok := resp.Data["bound_ami_id"].(string); ok {
+		d.Set("bound_ami_ids", []string{v})
 	} else {
 		d.Set("bound_ami_ids", resp.Data["bound_ami_id"])
 	}
 
-	if _, ok := d.GetOk("bound_ec2_instance_id"); ok {
-		d.Set("bound_ec2_instance_id", resp.Data["bound_ec2_instance_id"])
+	if v, ok := resp.Data["bound_ec2_instance_id"].(string); ok {
+		d.Set("bound_ec2_instance_ids", []string{v})
 	} else {
 		d.Set("bound_ec2_instance_ids", resp.Data["bound_ec2_instance_id"])
 	}
 
-	if _, ok := d.GetOk("bound_iam_instance_profile_arn"); ok {
-		d.Set("bound_iam_instance_profile_arn", resp.Data["bound_iam_instance_profile_arn"])
+	if v, ok := resp.Data["bound_iam_instance_profile_arn"].(string); ok {
+		d.Set("bound_iam_instance_profile_arns", []string{v})
 	} else {
 		d.Set("bound_iam_instance_profile_arns", resp.Data["bound_iam_instance_profile_arn"])
 	}
 
-	if _, ok := d.GetOk("bound_iam_role_arn"); ok {
-		d.Set("bound_iam_role_arn", resp.Data["bound_iam_role_arn"])
+	if v, ok := resp.Data["bound_iam_role_arn"].(string); ok {
+		d.Set("bound_iam_role_arns", []string{v})
 	} else {
 		d.Set("bound_iam_role_arns", resp.Data["bound_iam_role_arn"])
 	}
 
-	if _, ok := d.GetOk("bound_subnet_id"); ok {
-		d.Set("bound_subnet_id", resp.Data["bound_subnet_id"])
+	if v, ok := resp.Data["bound_subnet_id"].(string); ok {
+		d.Set("bound_subnet_ids", []string{v})
 	} else {
 		d.Set("bound_subnet_ids", resp.Data["bound_subnet_id"])
 	}
 
-	if _, ok := d.GetOk("bound_vpc_id"); ok {
-		d.Set("bound_vpc_id", resp.Data["bound_vpc_id"])
+	if v, ok := resp.Data["bound_vpc_id"].(string); ok {
+		d.Set("bound_vpc_ids", []string{v})
 	} else {
 		d.Set("bound_vpc_ids", resp.Data["bound_vpc_id"])
 	}
 
-	if _, ok := d.GetOk("bound_region"); ok {
-		d.Set("bound_region", resp.Data["bound_region"])
+	if v, ok := resp.Data["bound_region"].(string); ok {
+		d.Set("bound_regions", []string{v})
 	} else {
 		d.Set("bound_regions", resp.Data["bound_region"])
 	}
 
-	if _, ok := d.GetOk("bound_iam_principal_arn"); ok {
-		d.Set("bound_iam_principal_arn", resp.Data["bound_iam_principal_arn"])
+	if v, ok := resp.Data["bound_iam_principal_arn"].(string); ok {
+		d.Set("bound_iam_principal_arns", []string{v})
 	} else {
 		d.Set("bound_iam_principal_arns", resp.Data["bound_iam_principal_arn"])
 	}
@@ -516,11 +509,7 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating AWS auth backend role %q", path)
-	iPolicies := d.Get("policies").([]interface{})
-	policies := make([]string, len(iPolicies))
-	for i, iPolicy := range iPolicies {
-		policies[i] = iPolicy.(string)
-	}
+	policies := d.Get("policies").(*schema.Set).List()
 
 	authType := d.Get("auth_type").(string)
 	inferred := d.Get("inferred_entity_type").(string)

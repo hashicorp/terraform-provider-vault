@@ -62,9 +62,23 @@ role. Either `policy_document` or `policy_arns` must be specified.
 * `policy_arns` - (Optional) The ARN for a pre-existing policy to associate
 with this role. Either `policy_document` or `policy_arns` must be specified.
 
-* `credential_type` - (Required) Specifies the type of credential to be used when 
-retrieving credentials from the role. Must be one of `iam_user`, `assumed_role`, or 
+* `role_arns` - (Optional) Specifies the ARNs of the AWS roles this Vault role
+is allowed to assume. Required when `credential_type` is `assumed_role` and
+prohibited otherwise.
+
+* `credential_type` - (Required) Specifies the type of credential to be used when
+retrieving credentials from the role. Must be one of `iam_user`, `assumed_role`, or
 `federation_token`.
+
+* `default_sts_ttl` - (Optional) The default TTL in seconds for STS credentials.
+  When a TTL is not specified when STS credentials are requested,
+  and a default TTL is specified on the role,
+  then this default TTL will be used. Valid only when `credential_type` is one of
+  `assumed_role` or `federation_token`.
+
+* `max_sts_ttl` - (Optional) The max allowed TTL in seconds for STS credentials
+  (credentials TTL are capped to `max_sts_ttl`). Valid only when `credential_type` is
+  one of `assumed_role` or `federation_token`.
 
 ## Attributes Reference
 
