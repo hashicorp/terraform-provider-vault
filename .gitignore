@@ -29,7 +29,10 @@ website/vendor
 # Test exclusions
 !command/test-fixtures/**/*.tfstate
 !command/test-fixtures/**/.terraform/
+/cmd/coverage/coverage
 
 # Binaries
 terraform-provider-vault
-/cmd/coverage/coverage
+
+# Goreleaser
+dist
