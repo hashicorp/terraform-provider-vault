@@ -1,0 +1,10 @@
+builds:
+  - binary: terraform-provider-vault_v{{.Version}}
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+archive:
+  format: zip

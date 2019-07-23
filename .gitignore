@@ -32,3 +32,6 @@ website/vendor
 
 # Binary
 terraform-provider-vault
+
+# Goreleaser
+dist
