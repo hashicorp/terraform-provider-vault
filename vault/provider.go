@@ -1,11 +1,11 @@
 package vault
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"strings"
 
+	"github.com/form3tech-oss/go-vault-client/pkg/vaultclient"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform/helper/logging"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -44,9 +44,42 @@ func Provider() terraform.ResourceProvider {
 			},
 			"token": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN", ""),
 				Description: "Token to use to authenticate to Vault.",
+			},
+			"iam_role": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_ROLE", ""),
+				Description: "IAM role to use to authenticate to Vault.",
+			},
+			"app_role": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "App role credentials to authenticate to Vault.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:        schema.TypeString,
+							Required:    true,
+							DefaultFunc: schema.EnvDefaultFunc("VAULT_APP_ROLE", ""),
+							Description: "Vault app role name",
+						},
+						"id": {
+							Type:        schema.TypeString,
+							Required:    true,
+							DefaultFunc: schema.EnvDefaultFunc("VAULT_APP_ROLE_ID", ""),
+							Description: "Vault app role name",
+						},
+						"secret_id": {
+							Type:        schema.TypeString,
+							Required:    true,
+							DefaultFunc: schema.EnvDefaultFunc("VAULT_APP_SECRET_ID", ""),
+							Description: "Vault app role name",
+						},
+					},
+				},
 			},
 			"ca_cert_file": {
 				Type:        schema.TypeString,
@@ -466,12 +499,20 @@ func providerToken(d *schema.ResourceData) (string, error) {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	clientConfig := api.DefaultConfig()
+	token := d.Get("token").(string)
+	iamRole := d.Get("iam_role").(string)
+	appRole := d.Get("app_role").([]interface{})
+
+	clientConfig := vaultclient.BaseConfig()
+	if clientConfig.Error !=
+		nil {
+		return nil, fmt.Errorf("failed to get new default config: %s", clientConfig.Error)
+	}
+
 	addr := d.Get("address").(string)
 	if addr != "" {
 		clientConfig.Address = addr
 	}
-
 	clientAuthI := d.Get("client_auth").([]interface{})
 	if len(clientAuthI) > 1 {
 		return nil, fmt.Errorf("client_auth block may appear only once")
@@ -499,69 +540,94 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	clientConfig.HttpClient.Transport = logging.NewTransport("Vault", clientConfig.HttpClient.Transport)
 
-	client, err := api.NewClient(clientConfig)
+	// NOTE: Precedence is App Role > IAM Role > Token
+	if len(appRole) == 1 {
+		appRoleConfig := appRole[0].(map[string]interface{})
+
+		appRoleName := appRoleConfig["name"].(string)
+		appRoleId := appRoleConfig["id"].(string)
+		appRoleSecretId := appRoleConfig["secret_id"].(string)
+
+		clientConfig.AuthType = vaultclient.AppRole
+		clientConfig.AppRole = appRoleName
+		clientConfig.AppRoleId = appRoleId
+		clientConfig.AppRoleSecretId = appRoleSecretId
+	} else if iamRole != "" {
+		clientConfig.AuthType = vaultclient.Iam
+		clientConfig.IamRole = iamRole
+	} else if token != "" {
+		clientConfig.AuthType = vaultclient.Token
+		clientConfig.Token = token
+
+		// In order to enforce our relatively-short lease TTL, we derive a
+		// temporary child token that inherits all of the policies of the
+		// token we were given but expires after max_lease_ttl_seconds.
+		//
+		// The intent here is that Terraform will need to re-fetch any
+		// secrets on each run and so we limit the exposure risk of secrets
+		// that end up stored in the Terraform state, assuming that they are
+		// credentials that Vault is able to revoke.
+		//
+		// Caution is still required with state files since not all secrets
+		// can explicitly be revoked, and this limited scope won't apply to
+		// any secrets that are *written* by Terraform to Vault.
+
+		// Set the namespace to the token's namespace only for the
+		// child token creation
+		v, err := vaultclient.NewVaultAuth(clientConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get new vault auth with root token: %s", err)
+		}
+
+		client, err := v.VaultClient()
+		if err != nil {
+			return nil, fmt.Errorf("error initialising Vault client with root token: %s", err)
+		}
+
+		tokenInfo, err := client.Auth().Token().LookupSelf()
+		if err != nil {
+			return nil, err
+		}
+		if tokenNamespaceRaw, ok := tokenInfo.Data["namespace_path"]; ok {
+			tokenNamespace := tokenNamespaceRaw.(string)
+			if tokenNamespace != "" {
+				client.SetNamespace(tokenNamespace)
+			}
+		}
+
+		renewable := false
+		childTokenLease, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			DisplayName:    "terraform",
+			TTL:            fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
+			ExplicitMaxTTL: fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
+			Renewable:      &renewable,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create limited child token: %s", err)
+		}
+
+		childToken := childTokenLease.Auth.ClientToken
+		policies := childTokenLease.Auth.Policies
+
+		log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
+
+		// Set the token to the generated child token
+		clientConfig.Token = childToken
+	} else {
+		return nil, fmt.Errorf("one of 'token', 'iam_role', 'app_role' must be set exactly once")
+	}
+
+	v, err := vaultclient.NewVaultAuth(clientConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
+		return nil, fmt.Errorf("failed to get new vault auth: %s", err)
+	}
+
+	client, err := v.VaultClient()
+	if err != nil {
+		return nil, fmt.Errorf("error initialising Vault client: %s", err)
 	}
 
 	client.SetMaxRetries(d.Get("max_retries").(int))
-
-	// Try an get the token from the config or token helper
-	token, err := providerToken(d)
-	if err != nil {
-		return nil, err
-	}
-	if token != "" {
-		client.SetToken(token)
-	}
-	if client.Token() == "" {
-		return nil, errors.New("no vault token found")
-	}
-
-	// In order to enforce our relatively-short lease TTL, we derive a
-	// temporary child token that inherits all of the policies of the
-	// token we were given but expires after max_lease_ttl_seconds.
-	//
-	// The intent here is that Terraform will need to re-fetch any
-	// secrets on each run and so we limit the exposure risk of secrets
-	// that end up stored in the Terraform state, assuming that they are
-	// credentials that Vault is able to revoke.
-	//
-	// Caution is still required with state files since not all secrets
-	// can explicitly be revoked, and this limited scope won't apply to
-	// any secrets that are *written* by Terraform to Vault.
-
-	// Set the namespace to the token's namespace only for the
-	// child token creation
-	tokenInfo, err := client.Auth().Token().LookupSelf()
-	if err != nil {
-		return nil, err
-	}
-	if tokenNamespaceRaw, ok := tokenInfo.Data["namespace_path"]; ok {
-		tokenNamespace := tokenNamespaceRaw.(string)
-		if tokenNamespace != "" {
-			client.SetNamespace(tokenNamespace)
-		}
-	}
-
-	renewable := false
-	childTokenLease, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		DisplayName:    "terraform",
-		TTL:            fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
-		ExplicitMaxTTL: fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
-		Renewable:      &renewable,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create limited child token: %s", err)
-	}
-
-	childToken := childTokenLease.Auth.ClientToken
-	policies := childTokenLease.Auth.Policies
-
-	log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
-
-	// Set tht token to the generated child token
-	client.SetToken(childToken)
 
 	// Set the namespace to the requested namespace, if provided
 	namespace := d.Get("namespace").(string)

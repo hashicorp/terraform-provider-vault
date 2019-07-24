@@ -4,6 +4,11 @@ BUG FIXES:
 
 * `resource/aws_auth_backend_client`: Backend supports nested paths [#461]
 
+## 2.1.1 (July 24, 2019)
+
+* Update provider to support additional authentication methods: EC2 (IAM) and AppRole.
+* `token` is no longer a required parameter.
+
 ## 2.1.0 (July 05, 2019)
 
 IMPROVEMENTS:
@@ -164,7 +169,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-* Fixes issue with `vault_database_secret_backend_connection` always updating the connection URL ([#217](https://github.com/terraform-providers/terraform-provider-vault/pull/217)) 
+* Fixes issue with `vault_database_secret_backend_connection` always updating the connection URL ([#217](https://github.com/terraform-providers/terraform-provider-vault/pull/217))
 
 ## 1.3.1 (November 06, 2018)
 
