@@ -446,6 +446,10 @@ var (
 			Resource:      pkiSecretBackendSignResource(),
 			PathInventory: []string{"/pki/sign/{role}"},
 		},
+		"vault_transit_secret_backend": {
+			Resource:      transitSecretBackendResource(),
+			PathInventory: []string{UnknownPath},
+		},
 	}
 )
 
