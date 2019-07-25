@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/vault/api"
 )
 
 func JsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
@@ -140,4 +141,145 @@ func ShortDur(d time.Duration) string {
 		s = s[:len(s)-2]
 	}
 	return s
+}
+
+func CommonTokenFields() []string {
+	return []string{
+		"token_bound_cidrs",
+		"token_explicit_max_ttl",
+		"token_no_default_policy",
+		"token_no_default_policy",
+		"token_period",
+		"token_policies",
+		"token_type",
+		"token_ttl",
+		"token_num_uses",
+	}
+}
+
+type AddTokenFieldsConfig struct {
+	TokenPoliciesConflict []string
+	TokenPeriodConflict   []string
+}
+
+// Common field schemas for Auth Backends
+func AddTokenFields(fields map[string]*schema.Schema, config *AddTokenFieldsConfig) {
+	fields["token_bound_cidrs"] = &schema.Schema{
+		Type: schema.TypeSet,
+		Elem: &schema.Schema{
+			Type: schema.TypeString,
+		},
+		Description: "Specifies the blocks of IP addresses which are allowed to use the generated token",
+		Optional:    true,
+		Computed:    true,
+	}
+
+	fields["token_explicit_max_ttl"] = &schema.Schema{
+		Type:        schema.TypeInt,
+		Description: "Generated Token's Explicit Maximum TTL in seconds",
+		Optional:    true,
+		Computed:    true,
+	}
+
+	fields["token_max_ttl"] = &schema.Schema{
+		Type:        schema.TypeInt,
+		Description: "The maximum lifetime of the generated token",
+		Optional:    true,
+		Computed:    true,
+	}
+
+	fields["token_no_default_policy"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Description: "If true, the 'default' policy will not automatically be added to generated tokens",
+		Optional:    true,
+		Computed:    true,
+	}
+
+	fields["token_period"] = &schema.Schema{
+		Type:          schema.TypeInt,
+		Description:   "Generated Token's Period",
+		Optional:      true,
+		Computed:      true,
+		ConflictsWith: config.TokenPeriodConflict,
+	}
+
+	fields["token_policies"] = &schema.Schema{
+		Type:     schema.TypeSet,
+		Optional: true,
+		Computed: true,
+		Elem: &schema.Schema{
+			Type: schema.TypeString,
+		},
+		Description:   "Generated Token's Policies",
+		ConflictsWith: config.TokenPoliciesConflict,
+	}
+
+	fields["token_type"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Description: "The type of token to generate, service or batch",
+		Optional:    true,
+		Computed:    true,
+	}
+
+	fields["token_ttl"] = &schema.Schema{
+		Type:        schema.TypeInt,
+		Description: "The initial ttl of the token to generate in seconds",
+		Optional:    true,
+		Computed:    true,
+	}
+
+	fields["token_num_uses"] = &schema.Schema{
+		Type:        schema.TypeInt,
+		Description: "The maximum number of times a token may be used, a value of zero means unlimited",
+		Optional:    true,
+		Computed:    true,
+	}
+}
+
+func UpdateTokenFields(d *schema.ResourceData, data map[string]interface{}) {
+	if v, ok := d.GetOk("token_bound_cidrs"); ok {
+		data["token_bound_cidrs"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("token_explicit_max_ttl"); ok {
+		data["token_explicit_max_ttl"] = v.(int)
+	}
+
+	if v, ok := d.GetOk("token_max_ttl"); ok {
+		data["token_max_ttl"] = v.(int)
+	}
+
+	if v, ok := d.GetOk("token_no_default_policy"); ok {
+		data["token_no_default_policy"] = v.(bool)
+	}
+
+	if v, ok := d.GetOk("token_period"); ok {
+		data["token_period"] = v.(int)
+	}
+
+	if v, ok := d.GetOk("token_policies"); ok {
+		data["token_policies"] = v.(*schema.Set).List()
+	}
+
+	if v, ok := d.GetOk("token_type"); ok {
+		data["token_type"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("token_ttl"); ok {
+		data["token_ttl"] = v.(int)
+	}
+
+	if v, ok := d.GetOk("token_num_uses"); ok {
+		data["token_num_uses"] = v.(int)
+	}
+}
+
+func ReadTokenFields(d *schema.ResourceData, resp *api.Secret) error {
+	for _, k := range []string{"token_bound_cidrs", "token_explicit_max_ttl", "token_max_ttl", "token_no_default_policy", "token_period", "token_policies", "token_type", "token_ttl", "token_num_uses"} {
+		if err := d.Set(k, resp.Data[k]); err != nil {
+			return fmt.Errorf("error setting state key \"%s\": %s", k, err)
+		}
+	}
+
+	return nil
 }
