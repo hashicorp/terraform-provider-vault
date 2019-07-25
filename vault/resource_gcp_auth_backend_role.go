@@ -35,16 +35,14 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Optional:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"project_id"},
+				Optional: true,
+				ForceNew: true,
 			},
 			"project_id": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				Deprecated:    `Use "bound_projects"`,
-				ConflictsWith: []string{"bound_projects"},
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+				Removed:  `Use "bound_projects"`,
 			},
 			"ttl": {
 				Type:     schema.TypeString,
@@ -144,6 +142,14 @@ func gcpRoleResourcePath(backend, role string) string {
 func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
 	if v, ok := d.GetOk("type"); ok {
 		data["type"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("project_id"); ok {
+		data["project_id"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("bound_projects"); ok {
+		data["bound_projects"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("ttl"); ok {

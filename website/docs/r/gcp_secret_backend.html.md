@@ -30,7 +30,7 @@ resource "vault_gcp_secret_backend" "gcp" {
 
 The following arguments are supported:
 
-* `credentials` - (Optional) The GCP service account credentails in JSON format.
+* `credentials` - (Optional) The GCP service account credentials in JSON format.
 
 ~> **Important** Because Vault does not support reading the configured
 credentials back from the API, Terraform cannot detect and correct drift
@@ -43,10 +43,10 @@ not begin or end with a `/`. Defaults to `gcp`.
 * `description` - (Optional) A human-friendly description for this backend.
 
 * `default_lease_ttl_seconds` - (Optional) The default TTL for credentials
-issued by this backend. Defaults to '3600'.
+issued by this backend. Defaults to '0'.
 
 * `max_lease_ttl_seconds` - (Optional) The maximum TTL that can be requested
-for credentials issued by this backend. Defaults to '86400'.
+for credentials issued by this backend. Defaults to '0'.
 
 ## Attributes Reference
 

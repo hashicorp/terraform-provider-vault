@@ -31,7 +31,7 @@ func awsAuthBackendRoleTagResource() *schema.Resource {
 				ForceNew:    true,
 			},
 			"policies": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Policies to be associated with the tag.",
 				Elem: &schema.Schema{
@@ -85,7 +85,7 @@ func awsAuthBackendRoleTagResourceCreate(d *schema.ResourceData, meta interface{
 	data := map[string]interface{}{}
 
 	if v, ok := d.GetOk("policies"); ok {
-		data["policies"] = v
+		data["policies"] = v.(*schema.Set).List()
 	}
 	if v, ok := d.GetOk("max_ttl"); ok {
 		data["max_ttl"] = v

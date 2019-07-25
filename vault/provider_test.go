@@ -2,18 +2,18 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform/helper/acctest"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
 
+	"github.com/hashicorp/terraform/helper/acctest"
+	"github.com/hashicorp/terraform/helper/pathorcontents"
 	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/vault/command/config"
-	homedir "github.com/mitchellh/go-homedir"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/vault/command/config"
+	homedir "github.com/mitchellh/go-homedir"
 )
 
 // How to run the acceptance tests for this provider:
@@ -91,7 +91,12 @@ func getTestGCPCreds(t *testing.T) (string, string) {
 		t.Skip("GOOGLE_PROJECT not set")
 	}
 
-	return credentials, project
+	contents, _, err := pathorcontents.Read(credentials)
+	if err != nil {
+		t.Fatal("Error reading GOOGLE_CREDENTIALS: " + err.Error())
+	}
+
+	return string(contents), project
 }
 
 func getTestRMQCreds(t *testing.T) (string, string, string) {
@@ -127,7 +132,9 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 		Schema: rootProvider.Schema,
 	}
 	rootProviderData := rootProviderResource.TestResourceData()
-	providerConfigure(rootProviderData)
+	if _, err := providerConfigure(rootProviderData); err != nil {
+		t.Fatal(err)
+	}
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
 
@@ -150,10 +157,10 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 		Schema: nsProvider.Schema,
 	}
 	nsProviderData := nsProviderResource.TestResourceData()
-	// We auth to the root namespace, but will configure resources in the test namespace
-	nsProviderData.Set("token_namespace", "/")
 	nsProviderData.Set("namespace", namespacePath)
-	providerConfigure(nsProviderData)
+	if _, err := providerConfigure(nsProviderData); err != nil {
+		t.Fatal(err)
+	}
 
 	// Create a policy with sudo permissions and an orphaned periodic token within the test namespace
 	resource.Test(t, resource.TestCase{
@@ -211,18 +218,18 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 			return fmt.Errorf("token resource has no primary instance")
 		}
 
-		vaultToken := tokenResourceState.Primary.Attributes["token"]
+		vaultToken := tokenResourceState.Primary.Attributes["client_token"]
 
 		ns2Provider := Provider().(*schema.Provider)
 		ns2ProviderResource := &schema.Resource{
 			Schema: ns2Provider.Schema,
 		}
 		ns2ProviderData := ns2ProviderResource.TestResourceData()
-		//We use the token created above to auth against the namespace (instead of root)
-		ns2ProviderData.Set("token_namespace", namespacePath)
 		ns2ProviderData.Set("namespace", namespacePath)
 		ns2ProviderData.Set("token", vaultToken)
-		providerConfigure(ns2ProviderData)
+		if _, err := providerConfigure(ns2ProviderData); err != nil {
+			t.Fatal(err)
+		}
 
 		ns2Path := acctest.RandomWithPrefix("test-namespace2")
 
