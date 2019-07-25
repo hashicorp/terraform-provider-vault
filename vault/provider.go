@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform/helper/logging"
+	"github.com/hashicorp/terraform/helper/mutexkv"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
@@ -24,6 +25,9 @@ const (
 	// versions of Vault.
 	UnknownPath = "unknown"
 )
+
+// This is a global MutexKV for use within this plugin.
+var vaultMutexKV = mutexkv.NewMutexKV()
 
 func Provider() terraform.ResourceProvider {
 	dataSourcesMap, err := parse(DataSourceRegistry)
@@ -399,6 +403,22 @@ var (
 		"vault_identity_group_policies": {
 			Resource:      identityGroupPoliciesResource(),
 			PathInventory: []string{"/identity/lookup/group"},
+		},
+		"vault_identity_oidc": {
+			Resource:      identityOidc(),
+			PathInventory: []string{"/identity/oidc/config"},
+		},
+		"vault_identity_oidc_key": {
+			Resource:      identityOidcKey(),
+			PathInventory: []string{"/identity/oidc/key/{name}"},
+		},
+		"vault_identity_oidc_key_allowed_client_id": {
+			Resource:      identityOidcKeyAllowedClientId(),
+			PathInventory: []string{"/identity/oidc/key/{key_name}"},
+		},
+		"vault_identity_oidc_role": {
+			Resource:      identityOidcRole(),
+			PathInventory: []string{"/identity/oidc/role/{name}"},
 		},
 		"vault_rabbitmq_secret_backend": {
 			Resource: rabbitmqSecretBackendResource(),
