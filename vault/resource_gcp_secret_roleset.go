@@ -121,7 +121,7 @@ func gcpSecretRolesetCreate(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return fmt.Errorf("Error writing GCP Secrets backend roleset %q: %s", path, err)
 	}
-	log.Printf("[DEBUG] Wrote GCP Secrets backend rolese %q: %s", path, err)
+	log.Printf("[DEBUG] Wrote GCP Secrets backend roleset %q", path)
 
 	return gcpSecretRolesetRead(d, meta)
 }
