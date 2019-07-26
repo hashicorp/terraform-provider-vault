@@ -24,6 +24,9 @@ func transitSecretBackendKeyResource() *schema.Resource {
 		Update: transitSecretBackendKeyUpdate,
 		Delete: transitSecretBackendKeyDelete,
 		Exists: transitSecretBackendKeyExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: map[string]*schema.Schema{
 			"backend": {
 				Type:        schema.TypeString,

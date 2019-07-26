@@ -64,6 +64,11 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
+	backend := acctest.RandomWithPrefix("transit")
+	name := acctest.RandomWithPrefix("key")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -108,6 +113,31 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "exportable", "true"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "allow_plaintext_backup", "true"),
 				),
+			},
+		},
+	})
+}
+
+func TestTransitSecretBackendKey_import(t *testing.T) {
+	backend := acctest.RandomWithPrefix("transit")
+	name := acctest.RandomWithPrefix("key")
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testTransitSecretBackendKeyConfig_basic(name, backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "backend", backend),
+					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "name", name),
+					resource.TestCheckResourceAttrSet("vault_transit_secret_backend_key.test", "keys.#"),
+				),
+			},
+			{
+				ResourceName:      "vault_transit_secret_backend_key.test",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
