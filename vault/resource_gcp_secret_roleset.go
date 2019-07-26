@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/terraform/helper/customdiff"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -62,7 +63,7 @@ func gcpSecretRolesetResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "Name of the GCP project that this roleset's service account will belong to. ",
+				Description: "Name of the GCP project that this roleset's service account will belong to.",
 			},
 			"token_scopes": {
 				Type: schema.TypeSet,
@@ -100,6 +101,11 @@ func gcpSecretRolesetResource() *schema.Resource {
 				Description: "Email of the service account created by Vault for this Roleset",
 			},
 		},
+
+		CustomizeDiff: customdiff.ComputedIf("service_account_email", func(d *schema.ResourceDiff, meta interface{}) bool {
+			log.Printf("[DEBUG] Checking if GCP Secrets backend roleset has changes in `token_scopes` or `binding`")
+			return d.HasChange("token_scopes") || d.HasChange("binding")
+		}),
 	}
 }
 
