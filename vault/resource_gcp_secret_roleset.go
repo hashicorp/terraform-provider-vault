@@ -104,7 +104,13 @@ func gcpSecretRolesetResource() *schema.Resource {
 
 		CustomizeDiff: customdiff.ComputedIf("service_account_email", func(d *schema.ResourceDiff, meta interface{}) bool {
 			log.Printf("[DEBUG] Checking if GCP Secrets backend roleset has changes in `token_scopes` or `binding`")
-			return d.HasChange("token_scopes") || d.HasChange("binding")
+			// Due to https://github.com/hashicorp/terraform/issues/17411
+			// we cannot use d.HasChange("binding") directly
+			oldBinding, newBinding := d.GetChange("binding")
+			oldHcl := renderBindingsFromData(oldBinding)
+			newHcl := renderBindingsFromData(newBinding)
+
+			return d.HasChange("token_scopes") || oldHcl != newHcl
 		}),
 	}
 }
@@ -255,25 +261,7 @@ func gcpSecretRolesetUpdateFields(d *schema.ResourceData, data map[string]interf
 	}
 
 	if v, ok := d.GetOk("binding"); ok {
-		rawBindings := v.(*schema.Set).List()
-
-		bindings := make([]*Binding, len(rawBindings))
-
-		for i, binding := range rawBindings {
-			rawRoles := binding.(map[string]interface{})["roles"].(*schema.Set).List()
-			roles := make([]string, len(rawRoles))
-			for j, role := range rawRoles {
-				roles[j] = role.(string)
-			}
-
-			binding := &Binding{
-				Resource: binding.(map[string]interface{})["resource"].(string),
-				Roles:    roles,
-			}
-			bindings[i] = binding
-		}
-
-		bindingsHCL := renderBindings(bindings)
+		bindingsHCL := renderBindingsFromData(v)
 		log.Printf("[DEBUG] Rendered GCP Secrets backend roleset bindings HCL:\n%s", bindingsHCL)
 		data["bindings"] = bindingsHCL
 	}
@@ -357,4 +345,26 @@ func renderBindings(bindings []*Binding) string {
 	}
 
 	return output
+}
+
+func renderBindingsFromData(v interface{}) string {
+	rawBindings := v.(*schema.Set).List()
+
+	bindings := make([]*Binding, len(rawBindings))
+
+	for i, binding := range rawBindings {
+		rawRoles := binding.(map[string]interface{})["roles"].(*schema.Set).List()
+		roles := make([]string, len(rawRoles))
+		for j, role := range rawRoles {
+			roles[j] = role.(string)
+		}
+
+		binding := &Binding{
+			Resource: binding.(map[string]interface{})["resource"].(string),
+			Roles:    roles,
+		}
+		bindings[i] = binding
+	}
+
+	return renderBindings(bindings)
 }
