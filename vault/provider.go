@@ -450,6 +450,10 @@ var (
 			Resource:      transitSecretBackendResource(),
 			PathInventory: []string{UnknownPath},
 		},
+		"vault_transit_secret_backend_key": {
+			Resource:      transitSecretBackendKeyResource(),
+			PathInventory: []string{"/transit/keys/{name}"},
+		},
 	}
 )
 
