@@ -95,7 +95,7 @@ func approleAuthBackendRoleResource() *schema.Resource {
 		},
 	}
 
-	AddTokenFields(fields, &AddTokenFieldsConfig{
+	addTokenFields(fields, &addTokenFieldsConfig{
 		TokenPoliciesConflict: []string{"policies"},
 		TokenPeriodConflict:   []string{"period"},
 	})
@@ -113,44 +113,66 @@ func approleAuthBackendRoleResource() *schema.Resource {
 	}
 }
 
-func approleAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
-	UpdateTokenFields(d, data)
+func approleAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, create bool) {
+	updateTokenFields(d, data, create)
 
-	if v, ok := d.GetOkExists("bind_secret_id"); ok {
-		data["bind_secret_id"] = v.(bool)
-	}
+	if create {
+		if v, ok := d.GetOkExists("bind_secret_id"); ok {
+			data["bind_secret_id"] = v.(bool)
+		}
 
-	if v, ok := d.GetOk("secret_id_num_uses"); ok {
-		data["secret_id_num_uses"] = v.(int)
-	}
+		if v, ok := d.GetOk("secret_id_num_uses"); ok {
+			data["secret_id_num_uses"] = v.(int)
+		}
 
-	if v, ok := d.GetOk("secret_id_ttl"); ok {
-		data["secret_id_ttl"] = v.(int)
-	}
+		if v, ok := d.GetOk("secret_id_ttl"); ok {
+			data["secret_id_ttl"] = v.(int)
+		}
 
-	if v, ok := d.GetOk("secret_id_bound_cidrs"); ok {
-		boundCidr := v.(*schema.Set).List()
-		if len(boundCidr) > 0 {
+		if v, ok := d.GetOk("secret_id_bound_cidrs"); ok {
 			data["secret_id_bound_cidrs"] = v.(*schema.Set).List()
 		}
-	}
 
-	// Deprecated Fields
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(int)
-	}
+		// Deprecated Fields
+		if v, ok := d.GetOk("period"); ok {
+			data["period"] = v.(int)
+		}
 
-	if v, ok := d.GetOk("policies"); ok {
-		policies := v.(*schema.Set).List()
-		if len(policies) > 0 {
+		if v, ok := d.GetOk("policies"); ok {
 			data["policies"] = v.(*schema.Set).List()
 		}
-	}
 
-	if v, ok := d.GetOk("bound_cidr_list"); ok {
-		boundCidr := v.(*schema.Set).List()
-		if len(boundCidr) > 0 {
+		if v, ok := d.GetOk("bound_cidr_list"); ok {
 			data["bound_cidr_list"] = v.(*schema.Set).List()
+		}
+	} else {
+		if d.HasChange("bind_secret_id") {
+			data["bind_secret_id"] = d.Get("bind_secret_id").(bool)
+		}
+
+		if d.HasChange("secret_id_num_uses") {
+			data["secret_id_num_uses"] = d.Get("secret_id_num_uses").(int)
+		}
+
+		if d.HasChange("secret_id_ttl") {
+			data["secret_id_ttl"] = d.Get("secret_id_ttl").(int)
+		}
+
+		if d.HasChange("secret_id_bound_cidrs") {
+			data["secret_id_bound_cidrs"] = d.Get("secret_id_bound_cidrs").(*schema.Set).List()
+		}
+
+		// Deprecated Fields
+		if d.HasChange("period") {
+			data["period"] = d.Get("period").(int)
+		}
+
+		if d.HasChange("policies") {
+			data["policies"] = d.Get("policies").(*schema.Set).List()
+		}
+
+		if d.HasChange("bound_cidr_list") {
+			data["bound_cidr_list"] = d.Get("bound_cidr_list").(*schema.Set).List()
 		}
 	}
 }
@@ -166,7 +188,7 @@ func approleAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 	log.Printf("[DEBUG] Writing AppRole auth backend role %q", path)
 
 	data := map[string]interface{}{}
-	approleAuthBackendRoleUpdateFields(d, data)
+	approleAuthBackendRoleUpdateFields(d, data, true)
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -217,7 +239,7 @@ func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 
 	d.Set("backend", backend)
 	d.Set("role_name", role)
-	ReadTokenFields(d, resp)
+	readTokenFields(d, resp)
 
 	// Backward Compatability for Vault < 1.2
 	// Check if the user is using the deprecated `bound_cidr_list`
@@ -277,7 +299,7 @@ func approleAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) erro
 	log.Printf("[DEBUG] Updating AppRole auth backend role %q", path)
 
 	data := map[string]interface{}{}
-	approleAuthBackendRoleUpdateFields(d, data)
+	approleAuthBackendRoleUpdateFields(d, data, false)
 
 	_, err := client.Logical().Write(path, data)
 

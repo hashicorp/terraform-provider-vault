@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
@@ -17,6 +16,114 @@ var (
 )
 
 func azureAuthBackendRoleResource() *schema.Resource {
+	fields := map[string]*schema.Schema{
+		"role": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "Name of the role.",
+			ForceNew:    true,
+		},
+		"bound_service_principal_ids": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Description: "The list of Service Principal IDs that login is restricted to.",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+		},
+		"bound_group_ids": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Description: "The list of group ids that login is restricted to.",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+		},
+		"bound_locations": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Description: "The list of locations that login is restricted to.",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+		},
+		"bound_subscription_ids": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Description: "The list of subscription IDs that login is restricted to.",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+		},
+		"bound_resource_groups": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Description: "The list of resource groups that login is restricted to.",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+		},
+		"bound_scale_sets": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Description: "The list of scale set names that the login is restricted to.",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+		},
+		"backend": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Unique name of the auth backend to configure.",
+			ForceNew:    true,
+			Default:     "azure",
+			// standardise on no beginning or trailing slashes
+			StateFunc: func(v interface{}) string {
+				return strings.Trim(v.(string), "/")
+			},
+		},
+
+		// Deprecated
+		"ttl": {
+			Type:          schema.TypeInt,
+			Optional:      true,
+			Description:   "The TTL period of tokens issued using this role, provided as the number of seconds.",
+			Deprecated:    "use `token_ttl` instead",
+			ConflictsWith: []string{"token_ttl"},
+		},
+		"max_ttl": {
+			Type:          schema.TypeInt,
+			Optional:      true,
+			Description:   "The maximum allowed lifetime of tokens issued using this role, provided as the number of seconds.",
+			Deprecated:    "use `token_max_ttl` instead",
+			ConflictsWith: []string{"token_max_ttl"},
+		},
+		"period": {
+			Type:          schema.TypeInt,
+			Optional:      true,
+			Description:   "If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this field. The maximum allowed lifetime of token issued using this role. Specified as a number of seconds.",
+			Deprecated:    "use `token_period` instead",
+			ConflictsWith: []string{"token_period"},
+		},
+		"policies": {
+			Type:     schema.TypeList,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Description:   "Policies to be set on tokens issued using this role.",
+			Deprecated:    "use `token_policies` instead",
+			ConflictsWith: []string{"token_policies"},
+		},
+	}
+
+	addTokenFields(fields, &addTokenFieldsConfig{
+		TokenMaxTTLConflict:   []string{"max_ttl"},
+		TokenPoliciesConflict: []string{"policies"},
+		TokenPeriodConflict:   []string{"period"},
+		TokenTTLConflict:      []string{"ttl"},
+	})
+
 	return &schema.Resource{
 		Create: azureAuthBackendRoleCreate,
 		Read:   azureAuthBackendRoleRead,
@@ -26,96 +133,7 @@ func azureAuthBackendRoleResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		Schema: map[string]*schema.Schema{
-			"role": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Name of the role.",
-				ForceNew:    true,
-			},
-			"bound_service_principal_ids": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "The list of Service Principal IDs that login is restricted to.",
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-			},
-			"bound_group_ids": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "The list of group ids that login is restricted to.",
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-			},
-			"bound_locations": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "The list of locations that login is restricted to.",
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-			},
-			"bound_subscription_ids": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "The list of subscription IDs that login is restricted to.",
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-			},
-			"bound_resource_groups": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "The list of resource groups that login is restricted to.",
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-			},
-			"bound_scale_sets": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "The list of scale set names that the login is restricted to.",
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-			},
-			"ttl": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Description: "The TTL period of tokens issued using this role, provided as the number of seconds.",
-			},
-			"max_ttl": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Description: "The maximum allowed lifetime of tokens issued using this role, provided as the number of seconds.",
-			},
-			"period": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Description: "If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this field. The maximum allowed lifetime of token issued using this role. Specified as a number of seconds.",
-			},
-			"policies": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Description: "Policies to be set on tokens issued using this role.",
-			},
-			"backend": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Unique name of the auth backend to configure.",
-				ForceNew:    true,
-				Default:     "azure",
-				// standardise on no beginning or trailing slashes
-				StateFunc: func(v interface{}) string {
-					return strings.Trim(v.(string), "/")
-				},
-			},
-		},
+		Schema: fields,
 	}
 }
 
@@ -128,14 +146,11 @@ func azureAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 	path := azureAuthBackendRolePath(backend, role)
 
 	log.Printf("[DEBUG] Writing Azure auth backend role %q", path)
-	iPolicies := d.Get("policies").([]interface{})
-	policies := make([]string, len(iPolicies))
-	for i, iPolicy := range iPolicies {
-		policies[i] = iPolicy.(string)
-	}
 
 	data := map[string]interface{}{}
+	updateTokenFields(d, data, true)
 
+	// Deprecated Fields
 	if v, ok := d.GetOk("ttl"); ok {
 		data["ttl"] = v.(int)
 	}
@@ -145,8 +160,8 @@ func azureAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 	if v, ok := d.GetOk("period"); ok {
 		data["period"] = v.(int)
 	}
-	if len(policies) > 0 {
-		data["policies"] = policies
+	if v, ok := d.GetOk("policies"); ok {
+		data["policies"] = v.([]interface{})
 	}
 
 	if _, ok := d.GetOk("bound_service_principal_ids"); ok {
@@ -238,25 +253,61 @@ func azureAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-	iPolicies := resp.Data["policies"].([]interface{})
-	policies := make([]string, len(iPolicies))
-	for i, iPolicy := range iPolicies {
-		policies[i] = iPolicy.(string)
+
+	readTokenFields(d, resp)
+
+	// Check if the user is using the deprecated `policies`
+	if _, deprecated := d.GetOk("policies"); deprecated {
+		// Then we see if `token_policies` was set and unset it
+		// Vault will still return `policies`
+		if _, ok := d.GetOk("token_policies"); ok {
+			d.Set("token_policies", nil)
+		}
+
+		if v, ok := resp.Data["policies"]; ok {
+			d.Set("policies", v)
+		}
+
 	}
 
-	ttl, err := resp.Data["ttl"].(json.Number).Int64()
-	if err != nil {
-		return fmt.Errorf("expected ttl %q to be a number, isn't", resp.Data["ttl"])
+	// Check if the user is using the deprecated `period`
+	if _, deprecated := d.GetOk("period"); deprecated {
+		// Then we see if `token_period` was set and unset it
+		// Vault will still return `period`
+		if _, ok := d.GetOk("token_period"); ok {
+			d.Set("token_period", nil)
+		}
+
+		if v, ok := resp.Data["period"]; ok {
+			d.Set("period", v)
+		}
 	}
 
-	maxTTL, err := resp.Data["max_ttl"].(json.Number).Int64()
-	if err != nil {
-		return fmt.Errorf("expected max_ttl %q to be a number, isn't", resp.Data["max_ttl"])
+	// Check if the user is using the deprecated `ttl`
+	if _, deprecated := d.GetOk("ttl"); deprecated {
+		// Then we see if `token_ttl` was set and unset it
+		// Vault will still return `ttl`
+		if _, ok := d.GetOk("token_ttl"); ok {
+			d.Set("token_ttl", nil)
+		}
+
+		if v, ok := resp.Data["ttl"]; ok {
+			d.Set("ttl", v)
+		}
+
 	}
 
-	period, err := resp.Data["period"].(json.Number).Int64()
-	if err != nil {
-		return fmt.Errorf("expected period %q to be a number, isn't", resp.Data["period"])
+	// Check if the user is using the deprecated `max_ttl`
+	if _, deprecated := d.GetOk("max_ttl"); deprecated {
+		// Then we see if `token_max_ttl` was set and unset it
+		// Vault will still return `max_ttl`
+		if _, ok := d.GetOk("token_max_ttl"); ok {
+			d.Set("token_max_ttl", nil)
+		}
+
+		if v, ok := resp.Data["max_ttl"]; ok {
+			d.Set("max_ttl", v)
+		}
 	}
 
 	d.Set("backend", backend)
@@ -286,11 +337,6 @@ func azureAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("bound_scale_sets", resp.Data["bound_scale_sets"])
 	}
 
-	d.Set("ttl", ttl)
-	d.Set("max_ttl", maxTTL)
-	d.Set("period", period)
-	d.Set("policies", policies)
-
 	return nil
 }
 
@@ -299,25 +345,24 @@ func azureAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating Azure auth backend role %q", path)
-	iPolicies := d.Get("policies").([]interface{})
-	policies := make([]string, len(iPolicies))
-	for i, iPolicy := range iPolicies {
-		policies[i] = iPolicy.(string)
-	}
 
 	data := map[string]interface{}{}
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(int)
+	updateTokenFields(d, data, false)
+
+	// Deprecated Fields
+	if d.HasChange("ttl") {
+		data["ttl"] = d.Get("ttl").(int)
 	}
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(int)
+	if d.HasChange("max_ttl") {
+		data["max_ttl"] = d.Get("max_ttl").(int)
 	}
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(int)
+	if d.HasChange("period") {
+		data["period"] = d.Get("period").(int)
 	}
-	if len(policies) > 0 {
-		data["policies"] = policies
+	if d.HasChange("policies") {
+		data["policies"] = d.Get("policies").([]interface{})
 	}
+
 	if _, ok := d.GetOk("bound_service_principal_ids"); ok {
 		iSPI := d.Get("bound_service_principal_ids").([]interface{})
 		bound_service_principal_ids := make([]string, len(iSPI))
