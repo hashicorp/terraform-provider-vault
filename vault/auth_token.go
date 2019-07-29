@@ -152,6 +152,7 @@ func updateTokenFields(d *schema.ResourceData, data map[string]interface{}, crea
 		if d.HasChange("token_policies") {
 			data["token_policies"] = d.Get("token_policies").(*schema.Set).List()
 		}
+
 		if d.HasChange("token_explicit_max_ttl") {
 			data["token_explicit_max_ttl"] = d.Get("token_explicit_max_ttl").(int)
 		}
