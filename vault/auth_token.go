@@ -69,7 +69,7 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 		Description:   "Generated Token's Period",
 		Optional:      true,
 		Computed:      true,
-		ConflictsWith: append(config.TokenPeriodConflict, []string{"token_ttl"}...),
+		ConflictsWith: config.TokenPeriodConflict,
 	}
 
 	fields["token_policies"] = &schema.Schema{
@@ -95,7 +95,7 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 		Description:   "The initial ttl of the token to generate in seconds",
 		Optional:      true,
 		Computed:      true,
-		ConflictsWith: append(config.TokenTTLConflict, []string{"token_period"}...),
+		ConflictsWith: config.TokenTTLConflict,
 	}
 
 	fields["token_num_uses"] = &schema.Schema{

@@ -153,9 +153,9 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 		TokenBoundCidrsConflict: []string{"bound_cidrs"},
 		TokenMaxTTLConflict:     []string{"max_ttl"},
 		TokenNumUsesConflict:    []string{"num_uses"},
-		TokenPeriodConflict:     []string{"period", "ttl"},
+		TokenPeriodConflict:     []string{"period", "ttl", "token_ttl"},
 		TokenPoliciesConflict:   []string{"policies"},
-		TokenTTLConflict:        []string{"ttl", "period"},
+		TokenTTLConflict:        []string{"ttl", "period", "token_ttl"},
 	})
 
 	return &schema.Resource{
