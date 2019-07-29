@@ -11,7 +11,7 @@ func commonTokenFields() []string {
 	return []string{
 		"token_bound_cidrs",
 		"token_explicit_max_ttl",
-		"token_no_default_policy",
+		"token_max_ttl",
 		"token_no_default_policy",
 		"token_period",
 		"token_policies",
@@ -22,16 +22,23 @@ func commonTokenFields() []string {
 }
 
 type addTokenFieldsConfig struct {
-	TokenBoundCidrsConflict []string
-	TokenMaxTTLConflict     []string
-	TokenNumUsesConflict    []string
-	TokenPeriodConflict     []string
-	TokenPoliciesConflict   []string
-	TokenTTLConflict        []string
+	TokenBoundCidrsConflict     []string
+	TokenExplicitMaxTTLConflict []string
+	TokenMaxTTLConflict         []string
+	TokenNumUsesConflict        []string
+	TokenPeriodConflict         []string
+	TokenPoliciesConflict       []string
+	TokenTTLConflict            []string
+
+	TokenTypeDefault string
 }
 
 // Common field schemas for Auth Backends
 func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConfig) {
+	if config.TokenTypeDefault == "" {
+		config.TokenTypeDefault = "default"
+	}
+
 	fields["token_bound_cidrs"] = &schema.Schema{
 		Type: schema.TypeSet,
 		Elem: &schema.Schema{
@@ -39,21 +46,19 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 		},
 		Description: "Specifies the blocks of IP addresses which are allowed to use the generated token",
 		Optional:    true,
-		Computed:    true,
 	}
 
 	fields["token_explicit_max_ttl"] = &schema.Schema{
-		Type:        schema.TypeInt,
-		Description: "Generated Token's Explicit Maximum TTL in seconds",
-		Optional:    true,
-		Computed:    true,
+		Type:          schema.TypeInt,
+		Description:   "Generated Token's Explicit Maximum TTL in seconds",
+		Optional:      true,
+		ConflictsWith: config.TokenExplicitMaxTTLConflict,
 	}
 
 	fields["token_max_ttl"] = &schema.Schema{
 		Type:          schema.TypeInt,
 		Description:   "The maximum lifetime of the generated token",
 		Optional:      true,
-		Computed:      true,
 		ConflictsWith: config.TokenMaxTTLConflict,
 	}
 
@@ -61,21 +66,18 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 		Type:        schema.TypeBool,
 		Description: "If true, the 'default' policy will not automatically be added to generated tokens",
 		Optional:    true,
-		Computed:    true,
 	}
 
 	fields["token_period"] = &schema.Schema{
 		Type:          schema.TypeInt,
 		Description:   "Generated Token's Period",
 		Optional:      true,
-		Computed:      true,
 		ConflictsWith: config.TokenPeriodConflict,
 	}
 
 	fields["token_policies"] = &schema.Schema{
 		Type:     schema.TypeSet,
 		Optional: true,
-		Computed: true,
 		Elem: &schema.Schema{
 			Type: schema.TypeString,
 		},
@@ -87,14 +89,13 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 		Type:        schema.TypeString,
 		Description: "The type of token to generate, service or batch",
 		Optional:    true,
-		Computed:    true,
+		Default:     config.TokenTypeDefault,
 	}
 
 	fields["token_ttl"] = &schema.Schema{
 		Type:          schema.TypeInt,
 		Description:   "The initial ttl of the token to generate in seconds",
 		Optional:      true,
-		Computed:      true,
 		ConflictsWith: config.TokenTTLConflict,
 	}
 
@@ -102,9 +103,91 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 		Type:          schema.TypeInt,
 		Description:   "The maximum number of times a token may be used, a value of zero means unlimited",
 		Optional:      true,
-		Computed:      true,
 		ConflictsWith: config.TokenNumUsesConflict,
 	}
+}
+
+func setTokenFields(d *schema.ResourceData, data map[string]interface{}, config *addTokenFieldsConfig) {
+	data["token_no_default_policy"] = d.Get("token_no_default_policy").(bool)
+	data["token_type"] = d.Get("token_type").(string)
+
+	conflicted := false
+	for _, k := range config.TokenExplicitMaxTTLConflict {
+		if _, ok := d.GetOk(k); ok {
+			conflicted = true
+			break
+		}
+	}
+	if !conflicted {
+		data["token_explicit_max_ttl"] = d.Get("token_explicit_max_ttl").(int)
+	}
+
+	conflicted = false
+	for _, k := range config.TokenMaxTTLConflict {
+		if _, ok := d.GetOk(k); ok {
+			conflicted = true
+			break
+		}
+	}
+	if !conflicted {
+		data["token_max_ttl"] = d.Get("token_max_ttl").(int)
+	}
+
+	conflicted = false
+	for _, k := range config.TokenPeriodConflict {
+		if _, ok := d.GetOk(k); ok {
+			conflicted = true
+			break
+		}
+	}
+	if !conflicted {
+		data["token_period"] = d.Get("token_period").(int)
+	}
+
+	conflicted = false
+	for _, k := range config.TokenPoliciesConflict {
+		if _, ok := d.GetOk(k); ok {
+			conflicted = true
+			break
+		}
+	}
+	if !conflicted {
+		data["token_policies"] = d.Get("token_policies").(*schema.Set).List()
+	}
+
+	conflicted = false
+	for _, k := range config.TokenTTLConflict {
+		if _, ok := d.GetOk(k); ok {
+			conflicted = true
+			break
+		}
+	}
+	if !conflicted {
+		data["token_ttl"] = d.Get("token_ttl").(int)
+	}
+
+	conflicted = false
+	for _, k := range config.TokenNumUsesConflict {
+		if _, ok := d.GetOk(k); ok {
+			conflicted = true
+			break
+		}
+	}
+	if !conflicted {
+		data["token_num_uses"] = d.Get("token_num_uses").(int)
+	}
+
+	conflicted = false
+	for _, k := range config.TokenBoundCidrsConflict {
+		if _, ok := d.GetOk(k); ok {
+			conflicted = true
+			break
+		}
+	}
+	if !conflicted {
+		data["token_bound_cidrs"] = d.Get("token_bound_cidrs").(*schema.Set).List()
+	}
+
 }
 
 func updateTokenFields(d *schema.ResourceData, data map[string]interface{}, create bool) {

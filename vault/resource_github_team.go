@@ -9,6 +9,12 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+func githubTeamTokenConfig() *addTokenFieldsConfig {
+	return &addTokenFieldsConfig{
+		TokenPoliciesConflict: []string{"policies"},
+	}
+}
+
 func githubTeamResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
 		"backend": {
@@ -39,9 +45,7 @@ func githubTeamResource() *schema.Resource {
 		},
 	}
 
-	addTokenFields(fields, &addTokenFieldsConfig{
-		TokenPoliciesConflict: []string{"policies"},
-	})
+	addTokenFields(fields, githubTeamTokenConfig())
 
 	return &schema.Resource{
 		Create: githubTeamCreate,
@@ -56,8 +60,7 @@ func githubTeamResource() *schema.Resource {
 }
 
 func githubTeamUpdateFields(d *schema.ResourceData, data map[string]interface{}) error {
-	// Always in "create" mode because this endpoint unsets fields that are omitted during updates
-	updateTokenFields(d, data, true)
+	setTokenFields(d, data, githubTeamTokenConfig())
 
 	data["key"] = d.Get("team").(string)
 	if v, ok := d.GetOk("policies"); ok {

@@ -190,6 +190,18 @@ func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 						"token_policies.#", "0"),
 				),
 			},
+			{
+				Config: testAccAWSAuthBackendRoleConfig_Unset(backend, role),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAWSAuthBackendRoleCheck_attrs(backend, role),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
+						"token_policies.#", "0"),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
+						"token_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
+						"token_max_ttl", "0"),
+				),
+			},
 		},
 	})
 }
@@ -467,7 +479,21 @@ resource "vault_aws_auth_backend_role" "role" {
   resolve_aws_unique_ids = true
   token_ttl = 30
   token_max_ttl = 60
-  token_policies = []
+}`, backend, role)
+}
+
+func testAccAWSAuthBackendRoleConfig_Unset(backend, role string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+}
+resource "vault_aws_auth_backend_role" "role" {
+  backend = "${vault_auth_backend.aws.path}"
+  role = "%s"
+  auth_type = "iam"
+  bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/MyRole/*"]
+  resolve_aws_unique_ids = true
 }`, backend, role)
 }
 

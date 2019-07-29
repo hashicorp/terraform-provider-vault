@@ -26,7 +26,27 @@ func TestGCPAuthBackendRole_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendRoleConfig_basic(backend, name, serviceAccount, projectId),
-				Check:  testGCPAuthBackendRoleCheck_attrs(backend, name),
+				Check: resource.ComposeTestCheckFunc(
+					testGCPAuthBackendRoleCheck_attrs(backend, name),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
+						"token_ttl", "300"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
+						"token_max_ttl", "600"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
+						"token_policies.#", "2"),
+				),
+			},
+			{
+				Config: testGCPAuthBackendRoleConfig_unset(backend, name, serviceAccount, projectId),
+				Check: resource.ComposeTestCheckFunc(
+					testGCPAuthBackendRoleCheck_attrs(backend, name),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
+						"token_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
+						"token_max_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
+						"token_policies.#", "0"),
+				),
 			},
 		},
 	})
@@ -236,6 +256,27 @@ resource "vault_gcp_auth_backend_role" "test" {
     token_ttl              = 300
     token_max_ttl          = 600
     token_policies         = ["policy_a", "policy_b"]
+    add_group_aliases      = true
+}
+`, backend, name, serviceAccount, projectId)
+
+}
+
+func testGCPAuthBackendRoleConfig_unset(backend, name, serviceAccount, projectId string) string {
+
+	return fmt.Sprintf(`
+
+resource "vault_auth_backend" "gcp" {
+    path = "%s"
+    type = "gcp"
+}
+
+resource "vault_gcp_auth_backend_role" "test" {
+    backend                = "${vault_auth_backend.gcp.path}"
+    role                   = "%s"
+    type                   = "iam"
+    bound_service_accounts = ["%s"]
+    bound_projects         = ["%s"]
     add_group_aliases      = true
 }
 `, backend, name, serviceAccount, projectId)

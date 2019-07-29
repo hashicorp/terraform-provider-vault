@@ -15,7 +15,7 @@ jobs:
     - run:
         name: "Start Vault OSS"
         command: |
-          docker run --detach --cap-add=IPC_LOCK -e 'VAULT_DEV_ROOT_TOKEN_ID=root' --name=vault -p 8200:8200 vault:1.2.0-beta2
+          docker run --detach --cap-add=IPC_LOCK -e 'VAULT_DEV_ROOT_TOKEN_ID=root' --name=vault -p 8200:8200 vault:latest
           sleep 5
           docker port vault
           docker logs vault
