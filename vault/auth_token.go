@@ -22,10 +22,12 @@ func commonTokenFields() []string {
 }
 
 type addTokenFieldsConfig struct {
-	TokenMaxTTLConflict   []string
-	TokenPoliciesConflict []string
-	TokenPeriodConflict   []string
-	TokenTTLConflict      []string
+	TokenBoundCidrsConflict []string
+	TokenMaxTTLConflict     []string
+	TokenNumUsesConflict    []string
+	TokenPeriodConflict     []string
+	TokenPoliciesConflict   []string
+	TokenTTLConflict        []string
 }
 
 // Common field schemas for Auth Backends
@@ -67,7 +69,7 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 		Description:   "Generated Token's Period",
 		Optional:      true,
 		Computed:      true,
-		ConflictsWith: config.TokenPeriodConflict,
+		ConflictsWith: append(config.TokenPeriodConflict, []string{"token_ttl"}...),
 	}
 
 	fields["token_policies"] = &schema.Schema{
@@ -93,14 +95,15 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 		Description:   "The initial ttl of the token to generate in seconds",
 		Optional:      true,
 		Computed:      true,
-		ConflictsWith: config.TokenTTLConflict,
+		ConflictsWith: append(config.TokenTTLConflict, []string{"token_period"}...),
 	}
 
 	fields["token_num_uses"] = &schema.Schema{
-		Type:        schema.TypeInt,
-		Description: "The maximum number of times a token may be used, a value of zero means unlimited",
-		Optional:    true,
-		Computed:    true,
+		Type:          schema.TypeInt,
+		Description:   "The maximum number of times a token may be used, a value of zero means unlimited",
+		Optional:      true,
+		Computed:      true,
+		ConflictsWith: config.TokenNumUsesConflict,
 	}
 }
 
