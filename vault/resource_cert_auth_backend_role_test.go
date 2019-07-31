@@ -65,7 +65,7 @@ bwvTJuiSbAHkhG+eM/04PpWPMo6skek10KmIBvGveHM8R89gbA1Fgw==
 -----END RSA PRIVATE KEY-----
 `
 
-func TestCertAuthBackend_basic(t *testing.T) {
+func TestCertAuthBackend(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
 	name := acctest.RandomWithPrefix("tf-test-cert-name")
 
@@ -80,7 +80,73 @@ func TestCertAuthBackend_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testCertAuthBackendConfig_basic(backend, name, testCertificate, allowedNames),
-				Check:  testCertAuthBackendCheck_attrs(backend, name),
+				Check: resource.ComposeTestCheckFunc(
+					testCertAuthBackendCheck_attrs(backend, name),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"backend", backend),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"name", name),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"token_policies.#", "2"),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"token_ttl", "300"),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"token_max_ttl", "600"),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"allowed_names.#", "2"),
+				),
+			},
+			{
+				Config: testCertAuthBackendConfig_unset(backend, name, testCertificate, allowedNames),
+				Check: resource.ComposeTestCheckFunc(
+					testCertAuthBackendCheck_attrs(backend, name),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"backend", backend),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"name", name),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"token_policies.#", "0"),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"token_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"token_max_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"allowed_names.#", "2"),
+				),
+			},
+		},
+	})
+}
+
+func TestCertAuthBackend_deprecated(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
+	name := acctest.RandomWithPrefix("tf-test-cert-name")
+
+	allowedNames := []string{
+		acctest.RandomWithPrefix("tf-ident-1"),
+		acctest.RandomWithPrefix("tf-ident-2")}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testCertAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testCertAuthBackendConfig_deprecated(backend, name, testCertificate, allowedNames),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"backend", backend),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"name", name),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"policies.#", "2"),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"ttl", "300"),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"max_ttl", "600"),
+					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
+						"allowed_names.#", "2"),
+				),
 			},
 		},
 	})
@@ -149,12 +215,12 @@ func testCertAuthBackendCheck_attrs(backend, name string) resource.TestCheckFunc
 			"allowed_uri_sans":           "allowed_uri_sans",
 			"allowed_organization_units": "allowed_organization_units",
 			"required_extensions":        "required_extensions",
-			"period":                     "period",
-			"policies":                   "policies",
+			"token_period":               "token_period",
+			"token_policies":             "token_policies",
 			"certificate":                "certificate",
-			"ttl":                        "ttl",
-			"max_ttl":                    "max_ttl",
-			"bound_cidrs":                "bound_cidrs",
+			"token_ttl":                  "token_ttl",
+			"token_max_ttl":              "token_max_ttl",
+			"token_bound_cidrs":          "token_bound_cidrs",
 		}
 
 		for stateAttr, apiAttr := range attrs {
@@ -249,11 +315,66 @@ resource "vault_cert_auth_backend_role" "test" {
     certificate   = <<__CERTIFICATE__
 %s
 __CERTIFICATE__
-    allowed_names = [%s]
-    backend       = "${vault_auth_backend.cert.path}"
-    ttl           = 300
-    max_ttl       = 600
-    policies      = ["test_policy_1", "test_policy_2"]
+    allowed_names  = [%s]
+    backend        = "${vault_auth_backend.cert.path}"
+    token_ttl      = 300
+    token_max_ttl  = 600
+    token_policies = ["test_policy_1", "test_policy_2"]
+}
+
+`, backend, name, certificate, strings.Join(quotedNames, ", "))
+
+}
+
+func testCertAuthBackendConfig_unset(backend, name, certificate string, allowedNames []string) string {
+	quotedNames := make([]string, len(allowedNames))
+	for idx, name := range allowedNames {
+		quotedNames[idx] = fmt.Sprintf(`"%s"`, name)
+	}
+
+	return fmt.Sprintf(`
+
+resource "vault_auth_backend" "cert" {
+    path = "%s"
+    type = "cert"
+}
+
+resource "vault_cert_auth_backend_role" "test" {
+    name          = "%s"
+    certificate   = <<__CERTIFICATE__
+%s
+__CERTIFICATE__
+    allowed_names  = [%s]
+    backend        = "${vault_auth_backend.cert.path}"
+}
+
+`, backend, name, certificate, strings.Join(quotedNames, ", "))
+
+}
+
+func testCertAuthBackendConfig_deprecated(backend, name, certificate string, allowedNames []string) string {
+	quotedNames := make([]string, len(allowedNames))
+	for idx, name := range allowedNames {
+		quotedNames[idx] = fmt.Sprintf(`"%s"`, name)
+	}
+
+	return fmt.Sprintf(`
+
+resource "vault_auth_backend" "cert" {
+    path = "%s"
+    type = "cert"
+}
+
+resource "vault_cert_auth_backend_role" "test" {
+    name          = "%s"
+    certificate   = <<__CERTIFICATE__
+%s
+__CERTIFICATE__
+    allowed_names  = [%s]
+    backend        = "${vault_auth_backend.cert.path}"
+    ttl            = 300
+    max_ttl        = 600
+    policies       = ["test_policy_1", "test_policy_2"]
 }
 
 `, backend, name, certificate, strings.Join(quotedNames, ", "))

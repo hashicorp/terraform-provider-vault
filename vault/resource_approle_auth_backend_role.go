@@ -55,16 +55,6 @@ func approleAuthBackendRoleResource() *schema.Resource {
 			},
 			ConflictsWith: []string{"bound_cidr_list"},
 		},
-		"policies": {
-			Type:     schema.TypeSet,
-			Optional: true,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Description:   "Policies to be set on tokens issued using this AppRole.",
-			Deprecated:    "use `token_policies` instead",
-			ConflictsWith: []string{"token_policies"},
-		},
 		"secret_id_num_uses": {
 			Type:        schema.TypeInt,
 			Optional:    true,
@@ -74,13 +64,6 @@ func approleAuthBackendRoleResource() *schema.Resource {
 			Type:        schema.TypeInt,
 			Optional:    true,
 			Description: "Number of seconds a SecretID remains valid for.",
-		},
-		"period": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "Number of seconds to set the TTL to for issued tokens upon renewal. Makes the token a periodic token, which will never expire as long as it is renewed before the TTL each period.",
-			Deprecated:    "use `token_period` instead",
-			ConflictsWith: []string{"token_period"},
 		},
 		"backend": {
 			Type:        schema.TypeString,
@@ -92,6 +75,25 @@ func approleAuthBackendRoleResource() *schema.Resource {
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
 			},
+		},
+
+		// Deprecated
+		"policies": {
+			Type:     schema.TypeSet,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Description:   "Policies to be set on tokens issued using this AppRole.",
+			Deprecated:    "use `token_policies` instead",
+			ConflictsWith: []string{"token_policies"},
+		},
+		"period": {
+			Type:          schema.TypeInt,
+			Optional:      true,
+			Description:   "Number of seconds to set the TTL to for issued tokens upon renewal. Makes the token a periodic token, which will never expire as long as it is renewed before the TTL each period.",
+			Deprecated:    "use `token_period` instead",
+			ConflictsWith: []string{"token_period"},
 		},
 	}
 
