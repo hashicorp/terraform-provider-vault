@@ -276,6 +276,10 @@ var (
 			Resource:      consulSecretBackendResource(),
 			PathInventory: []string{"/consul/config/access"},
 		},
+		"vault_consul_secret_backend_role": {
+			Resource:      consulSecretBackendRoleResource(),
+			PathInventory: []string{"/consul/roles/{name}"},
+		},
 		"vault_database_secret_backend_connection": {
 			Resource:      databaseSecretBackendConnectionResource(),
 			PathInventory: []string{"/database/config/{name}"},
