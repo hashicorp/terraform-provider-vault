@@ -9,7 +9,7 @@ import (
 	"os"
 	"sort"
 
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/terraform-providers/terraform-provider-vault/vault"
 )
 

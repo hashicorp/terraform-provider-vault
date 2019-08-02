@@ -27,9 +27,9 @@ func TestAccGithubUser_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/map/users/"+user),
 					resource.TestCheckResourceAttr(resName, "backend", backend),
 					resource.TestCheckResourceAttr(resName, "user", "john_doe"),
-					resource.TestCheckResourceAttr(resName, "policies.#", "2"),
-					resource.TestCheckResourceAttr(resName, "policies.0", "admin"),
-					resource.TestCheckResourceAttr(resName, "policies.1", "security"),
+					resource.TestCheckResourceAttr(resName, "token_policies.#", "2"),
+					resource.TestCheckResourceAttr(resName, "token_ttl", "300"),
+					resource.TestCheckResourceAttr(resName, "token_max_ttl", "1800"),
 				),
 			},
 			{
@@ -38,7 +38,9 @@ func TestAccGithubUser_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/map/users/"+user),
 					resource.TestCheckResourceAttr(resName, "backend", backend),
 					resource.TestCheckResourceAttr(resName, "user", "john_doe"),
-					resource.TestCheckResourceAttr(resName, "policies.#", "0"),
+					resource.TestCheckResourceAttr(resName, "token_policies.#", "0"),
+					resource.TestCheckResourceAttr(resName, "token_ttl", "300"),
+					resource.TestCheckResourceAttr(resName, "token_max_ttl", "1800"),
 				),
 			},
 		},
@@ -107,7 +109,9 @@ resource "vault_github_auth_backend" "gh" {
 resource "vault_github_user" "user" {
 	backend = "${vault_github_auth_backend.gh.id}"
 	user = "%s"
-	policies = %s
+	token_policies = %s
+	token_ttl = 300
+	token_max_ttl = 1800
 }
 `, backend, user, p)
 }
