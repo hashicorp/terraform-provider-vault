@@ -240,6 +240,10 @@ var (
 			Resource:      awsSecretBackendRoleResource(),
 			PathInventory: []string{"/aws/roles/{name}"},
 		},
+		"vault_azure_secret_backend": {
+			Resource:      azureSecretBackendResource(),
+			PathInventory: []string{"/azure/config"},
+		},
 		"vault_azure_auth_backend_config": {
 			Resource:      azureAuthBackendConfigResource(),
 			PathInventory: []string{"/auth/azure/config"},
