@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/terraform/helper/customdiff"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -62,7 +63,7 @@ func gcpSecretRolesetResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "Name of the GCP project that this roleset's service account will belong to. ",
+				Description: "Name of the GCP project that this roleset's service account will belong to.",
 			},
 			"token_scopes": {
 				Type: schema.TypeSet,
@@ -100,6 +101,17 @@ func gcpSecretRolesetResource() *schema.Resource {
 				Description: "Email of the service account created by Vault for this Roleset",
 			},
 		},
+
+		CustomizeDiff: customdiff.ComputedIf("service_account_email", func(d *schema.ResourceDiff, meta interface{}) bool {
+			log.Printf("[DEBUG] Checking if GCP Secrets backend roleset has changes in `token_scopes` or `binding`")
+			// Due to https://github.com/hashicorp/terraform/issues/17411
+			// we cannot use d.HasChange("binding") directly
+			oldBinding, newBinding := d.GetChange("binding")
+			oldHcl := renderBindingsFromData(oldBinding)
+			newHcl := renderBindingsFromData(newBinding)
+
+			return d.HasChange("token_scopes") || oldHcl != newHcl
+		}),
 	}
 }
 
@@ -121,7 +133,7 @@ func gcpSecretRolesetCreate(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return fmt.Errorf("Error writing GCP Secrets backend roleset %q: %s", path, err)
 	}
-	log.Printf("[DEBUG] Wrote GCP Secrets backend rolese %q: %s", path, err)
+	log.Printf("[DEBUG] Wrote GCP Secrets backend roleset %q", path)
 
 	return gcpSecretRolesetRead(d, meta)
 }
@@ -249,25 +261,7 @@ func gcpSecretRolesetUpdateFields(d *schema.ResourceData, data map[string]interf
 	}
 
 	if v, ok := d.GetOk("binding"); ok {
-		rawBindings := v.(*schema.Set).List()
-
-		bindings := make([]*Binding, len(rawBindings))
-
-		for i, binding := range rawBindings {
-			rawRoles := binding.(map[string]interface{})["roles"].(*schema.Set).List()
-			roles := make([]string, len(rawRoles))
-			for j, role := range rawRoles {
-				roles[j] = role.(string)
-			}
-
-			binding := &Binding{
-				Resource: binding.(map[string]interface{})["resource"].(string),
-				Roles:    roles,
-			}
-			bindings[i] = binding
-		}
-
-		bindingsHCL := renderBindings(bindings)
+		bindingsHCL := renderBindingsFromData(v)
 		log.Printf("[DEBUG] Rendered GCP Secrets backend roleset bindings HCL:\n%s", bindingsHCL)
 		data["bindings"] = bindingsHCL
 	}
@@ -351,4 +345,26 @@ func renderBindings(bindings []*Binding) string {
 	}
 
 	return output
+}
+
+func renderBindingsFromData(v interface{}) string {
+	rawBindings := v.(*schema.Set).List()
+
+	bindings := make([]*Binding, len(rawBindings))
+
+	for i, binding := range rawBindings {
+		rawRoles := binding.(map[string]interface{})["roles"].(*schema.Set).List()
+		roles := make([]string, len(rawRoles))
+		for j, role := range rawRoles {
+			roles[j] = role.(string)
+		}
+
+		binding := &Binding{
+			Resource: binding.(map[string]interface{})["resource"].(string),
+			Roles:    roles,
+		}
+		bindings[i] = binding
+	}
+
+	return renderBindings(bindings)
 }
