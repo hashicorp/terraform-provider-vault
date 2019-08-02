@@ -252,6 +252,10 @@ var (
 			Resource:      azureSecretBackendResource(),
 			PathInventory: []string{"/azure/config"},
 		},
+		"vault_azure_secret_backend_role": {
+			Resource:      azureSecretBackendRoleResource(),
+			PathInventory: []string{"/azure/roles/{name}"},
+		},
 		"vault_azure_auth_backend_config": {
 			Resource:      azureAuthBackendConfigResource(),
 			PathInventory: []string{"/auth/azure/config"},
