@@ -354,6 +354,11 @@ var (
 			PathInventory:  []string{"/sys/policies/rgp/{name}"},
 			EnterpriseOnly: true,
 		},
+		"vault_mfa_duo": {
+			Resource:       mfaDuoResource(),
+			PathInventory:  []string{"/sys/mfa/method/duo/{name}"},
+			EnterpriseOnly: true,
+		},
 		"vault_mount": {
 			Resource:      mountResource(),
 			PathInventory: []string{"/sys/mounts/{path}"},
