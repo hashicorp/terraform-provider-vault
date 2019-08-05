@@ -3,11 +3,11 @@ module github.com/terraform-providers/terraform-provider-vault
 go 1.12
 
 require (
-	github.com/aws/aws-sdk-go v1.20.19
+	github.com/aws/aws-sdk-go v1.21.7
 	github.com/gosimple/slug v1.4.1
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/hashicorp/terraform v0.12.5
+	github.com/hashicorp/terraform v0.12.6
 	github.com/hashicorp/vault v1.2.0
 	github.com/hashicorp/vault/api v1.0.5-0.20190730042357-746c0b111519
 	github.com/hashicorp/vault/sdk v0.1.14-0.20190730042320-0dc007d98cc8

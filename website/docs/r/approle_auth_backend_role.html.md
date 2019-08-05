@@ -20,9 +20,9 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "example" {
-  backend   = "${vault_auth_backend.approle.path}"
-  role_name = "test-role"
-  policies  = ["default", "dev", "prod"]
+  backend        = vault_auth_backend.approle.path
+  role_name      = "test-role"
+  token_policies = ["default", "dev", "prod"]
 }
 ```
 
@@ -38,11 +38,8 @@ The following arguments are supported:
 * `bind_secret_id` - (Optional) Whether or not to require `secret_id` to be
   presented when logging in using this AppRole. Defaults to `true`.
 
-* `bound_cidr_list` - (Optional) If set, specifies blocks of IP addresses which
-  can perform the login operation.
-
-* `policies` - (Optional) An array of strings specifying the policies to be set
-  on tokens issued using this role.
+* `secret_id_bound_cidrs` - (Optional) If set,
+  specifies blocks of IP addresses which can perform the login operation.
 
 * `secret_id_num_uses` - (Optional) The number of times any particular SecretID
   can be used to fetch a token from this AppRole, after which the SecretID will
@@ -51,23 +48,60 @@ The following arguments are supported:
 * `secret_id_ttl` - (Optional) The number of seconds after which any SecretID
   expires.
 
-* `token_num_uses` - (Optional) The number of times issued tokens can be used.
-  A value of 0 means unlimited uses.
-
-* `token_ttl` - (Optional) The TTL period of tokens issued using this role,
-  provided as a number of seconds.
-
-* `token_max_ttl` - (Optional) The maximum allowed lifetime of tokens issued
-  using this role, provided as a number of seconds.
-
-* `period` - (Optional) If set, indicates that the token generated using this
-  role should never expire. The token should be renewed within the duration
-  specified by this value. At each renewal, the token's TTL will be set to the
-  value of this field. The maximum allowed lifetime of token issued using this
-  role. Specified as a number of seconds.
-
 * `backend` - (Optional) The unique name of the auth backend to configure.
   Defaults to `approle`.
+
+### Common Token Arguments
+
+These arguments are common across several Authentication Token resources since Vault 1.2.
+
+* `token_ttl` - (Optional) The incremental lifetime for generated tokens in number of seconds.
+  Its current value will be referenced at renewal time.
+
+* `token_max_ttl` - (Optional) The maximum lifetime for generated tokens in number of seconds.
+  Its current value will be referenced at renewal time.
+
+* `token_policies` - (Optional) List of policies to encode onto generated tokens. Depending
+  on the auth method, this list may be supplemented by user/group/other values.
+
+* `token_bound_cidrs` - (Optional) List of CIDR blocks; if set, specifies blocks of IP
+  addresses which can authenticate successfully, and ties the resulting token to these blocks
+  as well.
+
+* `token_explicit_max_ttl` - (Optional) If set, will encode an
+  [explicit max TTL](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls)
+  onto the token in number of seconds. This is a hard cap even if `token_ttl` and
+  `token_max_ttl` would otherwise allow a renewal.
+
+* `token_no_default_policy` - (Optional) If set, the default policy will not be set on
+  generated tokens; otherwise it will be added to the policies set in token_policies.
+
+* `token_num_uses` - (Optional) The
+  [period](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
+  if any, in number of seconds to set on the token.
+
+* `token_type` - (Optional) The type of token that should be generated. Can be `service`,
+  `batch`, or `default` to use the mount's tuned default (which unless changed will be
+  `service` tokens). For token store roles, there are two additional possibilities:
+  `default-service` and `default-batch` which specify the type to return unless the client
+  requests a different type at generation time.
+
+### Deprecated Arguments
+
+* `bound_cidr_list` - (Optional; Deprecated, use `secret_id_bound_cidrs` instead) If set,
+  specifies blocks of IP addresses which can perform the login operation.
+
+These arguments are deprecated since Vault 1.2 in favour of the common token arguments
+documented above.
+
+* `policies` - (Optional; Deprecated, use `token_policies` instead) An array of strings
+  specifying the policies to be set on tokens issued using this role.
+
+* `period` - (Optional; Deprecated, use `token_period` instead) If set, indicates that the
+  token generated using this role should never expire. The token should be renewed within the
+  duration specified by this value. At each renewal, the token's TTL will be set to the
+  value of this field. The maximum allowed lifetime of token issued using this
+  role. Specified as a number of seconds.
 
 ## Attributes Reference
 
