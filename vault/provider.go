@@ -22,6 +22,7 @@ const (
 	// UnknownPath is used for inventorying paths that have no obvious
 	// current endpoint they serve in Vault, and may relate to previous
 	// versions of Vault.
+	// We aim to deprecate items in this category.
 	UnknownPath = "unknown"
 )
 
