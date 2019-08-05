@@ -50,13 +50,6 @@ func identityOidcKey() *schema.Resource {
 				Computed:    true,
 				ForceNew:    true,
 			},
-
-			"allowed_client_ids": {
-				Type:        schema.TypeSet,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "The value that will be included in the `aud` field of all the OIDC identity tokens issued by this role",
-				Computed:    true,
-			},
 		},
 	}
 }
@@ -136,7 +129,7 @@ func identityOidcKeyRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Set("name", name)
-	for _, k := range []string{"rotation_period", "verification_ttl", "algorithm", "allowed_client_ids"} {
+	for _, k := range []string{"rotation_period", "verification_ttl", "algorithm"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return fmt.Errorf("error setting state key \"%s\" on IdentityOidcKey %q: %s", k, path, err)
 		}

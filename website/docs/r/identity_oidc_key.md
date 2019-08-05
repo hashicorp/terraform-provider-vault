@@ -44,8 +44,6 @@ In addition to all arguments above, the following attributes are exported:
 
 * `id` - The name of the created key.
 
-* `allowed_client_ids`: The list of Client IDs that are allowed to use this role. A Client ID   is tied to a Identity OIDC role.
-
 ## Import
 
 The key can be imported with the key name, for example:

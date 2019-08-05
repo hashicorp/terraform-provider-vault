@@ -32,9 +32,9 @@ resource "vault_identity_oidc_role" "role" {
 
 The following arguments are supported:
 
-* `name` - (Required; Forces new resource) Name of the OIDC Key to create.
+* `name` - (Required; Forces new resource) Name of the OIDC Role to create.
 
-* `rotation_period` - (Optional) How often to generate a new signing key in number of seconds
+* `key` - (Required; Forces new resource) A configured named key, the key must already exist.
 
 * `template` - (Optional) The template string to use for generating tokens. This may be in
   string-ified JSON or base64 format. See the

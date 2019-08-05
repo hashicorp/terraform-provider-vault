@@ -110,10 +110,9 @@ func testAccIdentityOidcRoleCheckAttrs() resource.TestCheckFunc {
 		}
 
 		attrs := map[string]string{
-			"key":       "key",
-			"template":  "template",
-			"ttl":       "ttl",
-			"client_id": "client_id",
+			"key":      "key",
+			"template": "template",
+			"ttl":      "ttl",
 		}
 		for stateAttr, apiAttr := range attrs {
 			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
