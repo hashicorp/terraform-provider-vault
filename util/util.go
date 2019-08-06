@@ -144,7 +144,7 @@ func ShortDur(d time.Duration) string {
 
 func SliceHasElement(list []interface{}, search interface{}) (bool, int) {
 	for i, ele := range list {
-		if ele == search {
+		if reflect.DeepEqual(ele, search) {
 			return true, i
 		}
 	}
@@ -159,6 +159,7 @@ func SliceAppendIfMissing(list []interface{}, search interface{}) []interface{} 
 	return list
 }
 
+// Warning: Slice order will be modified
 func SliceRemoveIfPresent(list []interface{}, search interface{}) []interface{} {
 	if found, index := SliceHasElement(list, search); found {
 		// Set the index we found to be the last item
