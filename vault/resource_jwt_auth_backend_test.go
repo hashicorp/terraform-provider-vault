@@ -182,3 +182,37 @@ func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
 		return nil
 	}
 }
+
+func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
+	path := acctest.RandomWithPrefix("jwt")
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
+					path = "%s"
+					oidc_discovery_url = ""
+				}`, path),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided"),
+			},
+			{
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
+					path = "%s"
+					jwks_url = ""
+				}`, path),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided"),
+			},
+			{
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
+					path = "%s"
+					jwt_validation_pubkeys = []
+				}`, path),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided"),
+			},
+		},
+	})
+}

@@ -130,7 +130,7 @@ func jwtCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 	_, jwksUrlExists = d.GetOk("jwks_url")
 	_, jwtPubKeysExists = d.GetOk("jwt_validation_pubkeys")
 
-	if (discUrlExists && (jwksUrlExists || jwtPubKeysExists)) || (jwksUrlExists && (discUrlExists || jwtPubKeysExists)) || (jwtPubKeysExists && (discUrlExists || jwksUrlExists)) {
+	if !(discUrlExists || jwksUrlExists || jwtPubKeysExists) {
 		return errors.New("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided")
 	}
 
@@ -138,6 +138,7 @@ func jwtCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 }
 
 var (
+	// TODO: build this from the Resource Schema?
 	matchingJwtMountConfigOptions = []string{
 		"oidc_discovery_url",
 		"oidc_discovery_ca_pem",
@@ -235,7 +236,10 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	configuration := map[string]interface{}{}
 	for _, configOption := range matchingJwtMountConfigOptions {
-		configuration[configOption] = d.Get(configOption)
+		// Set the configuration if the user has specified it, or the attribute is in the Diff
+		if _, ok := d.GetOkExists(configOption); ok || d.HasChange(configOption) {
+			configuration[configOption] = d.Get(configOption)
+		}
 	}
 
 	_, err := client.Logical().Write(jwtConfigEndpoint(path), configuration)
