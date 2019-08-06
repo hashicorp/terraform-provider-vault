@@ -30,7 +30,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccJWTAuthBackendConfigODIC(path, "https://myco.auth0.com/", "api://default", "\"RS512\""),
+				Config: testAccJWTAuthBackendConfigFullODIC(path, "https://myco.auth0.com/", "api://default", "\"RS512\""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", "api://default"),
@@ -39,7 +39,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccJWTAuthBackendConfigODIC(path, "https://myco.auth0.com/", "api://default", "\"RS256\",\"RS512\""),
+				Config: testAccJWTAuthBackendConfigFullODIC(path, "https://myco.auth0.com/", "api://default", "\"RS256\",\"RS512\""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", "api://default"),
@@ -108,7 +108,7 @@ resource "vault_jwt_auth_backend" "jwt" {
 `, path)
 }
 
-func testAccJWTAuthBackendConfigOIDC(path string, oidcDiscoveryUrl string, boundIssuer string, supportedAlgs string) string {
+func testAccJWTAuthBackendConfigFullODIC(path string, oidcDiscoveryUrl string, boundIssuer string, supportedAlgs string) string {
 	return fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "jwt" {
   description = "JWT backend"
@@ -192,8 +192,15 @@ func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 			{
 				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
 					path = "%s"
-					oidc_discovery_url = ""
 				}`, path),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided"),
+			},
+			{
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
+						path = "%s"
+						oidc_discovery_url = ""
+					}`, path),
 				Destroy:     false,
 				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided"),
 			},
