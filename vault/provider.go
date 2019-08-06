@@ -26,7 +26,10 @@ const (
 	UnknownPath = "unknown"
 )
 
-// This is a global MutexKV for use within this plugin.
+// This is a global MutexKV for use within this provider.
+// Use this when you need to have multiple resources or even multiple instances
+// of the same resource write to the same path in Vault.
+// The key of the mutex should be the path in Vault.
 var vaultMutexKV = mutexkv.NewMutexKV()
 
 func Provider() terraform.ResourceProvider {
