@@ -55,9 +55,8 @@ func identityOidcKeyAllowedClientIdWrite(d *schema.ResourceData, meta interface{
 	d.SetId(identityOidcKeyAllowedClientIdStateId(name, clientID))
 	clientIDs := data["allowed_client_ids"].([]interface{})
 	clientIDs = util.SliceAppendIfMissing(clientIDs, clientID)
-	data["allowed_client_ids"] = clientIDs
 
-	err = identityOidcKeyApiWrite(name, data, client)
+	err = identityOidcKeyApiWrite(name, map[string]interface{}{"allowed_client_ids": clientIDs}, client)
 	if err != nil {
 		return fmt.Errorf("error updating Allowed Client ID %s for key %s: %q", clientID, name, err)
 	}
@@ -113,10 +112,9 @@ func identityOidcKeyAllowedClientIdDelete(d *schema.ResourceData, meta interface
 
 	clientIDs := data["allowed_client_ids"].([]interface{})
 	clientIDs = util.SliceRemoveIfPresent(clientIDs, clientID)
-	data["allowed_client_ids"] = clientIDs
 
 	log.Printf("[DEBUG] Removing allowed_client_id %s for IdentityOidcKey %s", clientID, name)
-	err = identityOidcKeyApiWrite(name, data, client)
+	err = identityOidcKeyApiWrite(name, map[string]interface{}{"allowed_client_ids": clientIDs}, client)
 	if err != nil {
 		return fmt.Errorf("error removing Allowed Client ID %s for key %s: %q", clientID, name, err)
 	}

@@ -74,7 +74,10 @@ func identityOidcKeyUpdateFields(d *schema.ResourceData, data map[string]interfa
 	data["rotation_period"] = d.Get("rotation_period").(int)
 	data["verification_ttl"] = d.Get("verification_ttl").(int)
 	data["algorithm"] = d.Get("algorithm").(string)
-	data["allowed_client_ids"] = d.Get("allowed_client_ids").(*schema.Set).List()
+
+	if d.IsNewResource() || d.HasChange("allowed_client_ids") {
+		data["allowed_client_ids"] = d.Get("allowed_client_ids").(*schema.Set).List()
+	}
 }
 
 func identityOidcKeyCreate(d *schema.ResourceData, meta interface{}) error {

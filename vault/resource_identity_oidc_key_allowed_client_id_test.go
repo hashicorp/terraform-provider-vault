@@ -28,7 +28,13 @@ func TestAccIdentityOidcKeyAllowedClientId(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccIdentityOidcKeyAllowedClientIdUpdate(name),
+				Config: testAccIdentityOidcKeyAllowedClientIdRemove(name),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityOidcKeyAllowedClientIdCheckAttrs("vault_identity_oidc_key_allowed_client_id.role_one", 1),
+				),
+			},
+			{
+				Config: testAccIdentityOidcKeyAllowedClientIdRecreate(name),
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityOidcKeyAllowedClientIdCheckAttrs("vault_identity_oidc_key_allowed_client_id.role", 1),
 				),
@@ -74,7 +80,7 @@ func testAccIdentityOidcKeyAllowedClientIdCheckAttrs(clientIDResource string, cl
 		}
 
 		if clientIDExpectedLength != len(resp.Data["allowed_client_ids"].([]interface{})) {
-			return fmt.Errorf("Exoected to find %d `allowed_client_ids` of key %s but found %d", clientIDExpectedLength, id, len(resp.Data["allowed_client_ids"].([]interface{})))
+			return fmt.Errorf("Expected to find %d `allowed_client_ids` of key %s but found %d", clientIDExpectedLength, id, len(resp.Data["allowed_client_ids"].([]interface{})))
 		}
 		return nil
 	}
@@ -119,7 +125,29 @@ resource "vault_identity_oidc_key_allowed_client_id" "role_three" {
 `, entityName, entityName, entityName, entityName)
 }
 
-func testAccIdentityOidcKeyAllowedClientIdUpdate(entityName string) string {
+func testAccIdentityOidcKeyAllowedClientIdRemove(entityName string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_oidc_key" "key" {
+  name = "%s"
+	algorithm = "RS256"
+
+	rotation_period  = 3600
+	verification_ttl = 3600
+}
+
+resource "vault_identity_oidc_role" "role_one" {
+  name = "%s-1"
+  key = vault_identity_oidc_key.key.name
+}
+
+resource "vault_identity_oidc_key_allowed_client_id" "role_one" {
+  key_name = vault_identity_oidc_key.key.name
+  allowed_client_id = vault_identity_oidc_role.role_one.client_id
+}
+`, entityName, entityName)
+}
+
+func testAccIdentityOidcKeyAllowedClientIdRecreate(entityName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_oidc_key" "key" {
   name = "%s"
