@@ -145,12 +145,13 @@ func TestTransitSecretBackendKey_import(t *testing.T) {
 
 func testTransitSecretBackendKeyConfig_basic(name, path string) string {
 	return fmt.Sprintf(`
-resource "vault_transit_secret_backend" "transit" {
+resource "vault_mount" "transit" {
   path = "%s"
+  type = "transit"
 }
 
 resource "vault_transit_secret_backend_key" "test" {
-  backend = "${vault_transit_secret_backend.transit.path}"
+  backend = "${vault_mount.transit.path}"
   name = "%s"
   deletion_allowed = true
 }
@@ -159,12 +160,13 @@ resource "vault_transit_secret_backend_key" "test" {
 
 func testTransitSecretBackendKeyConfig_rsa4096(name, path string) string {
 	return fmt.Sprintf(`
-resource "vault_transit_secret_backend" "transit" {
+resource "vault_mount" "transit" {
   path = "%s"
+  type = "transit"
 }
 
 resource "vault_transit_secret_backend_key" "test" {
-  backend = "${vault_transit_secret_backend.transit.path}"
+  backend = "${vault_mount.transit.path}"
   name = "%s"
   deletion_allowed = true
   type = "rsa-4096"
@@ -174,12 +176,13 @@ resource "vault_transit_secret_backend_key" "test" {
 
 func testTransitSecretBackendKeyConfig_rsa4096updated(name, path string) string {
 	return fmt.Sprintf(`
-resource "vault_transit_secret_backend" "transit" {
+resource "vault_mount" "transit" {
   path = "%s"
+  type = "transit"
 }
 
 resource "vault_transit_secret_backend_key" "test" {
-  backend = "${vault_transit_secret_backend.transit.path}"
+  backend = "${vault_mount.transit.path}"
   name = "%s"
   deletion_allowed = true
   type = "rsa-4096"
@@ -193,12 +196,13 @@ resource "vault_transit_secret_backend_key" "test" {
 
 func testTransitSecretBackendKeyConfig_updated(name, path string) string {
 	return fmt.Sprintf(`
-resource "vault_transit_secret_backend" "transit" {
+resource "vault_mount" "transit" {
   path = "%s"
+  type = "transit"
 }
 
 resource "vault_transit_secret_backend_key" "test" {
-  backend = "${vault_transit_secret_backend.transit.path}"
+  backend = "${vault_mount.transit.path}"
   name = "%s"
   min_decryption_version = 1
   min_encryption_version = 1
@@ -211,12 +215,13 @@ resource "vault_transit_secret_backend_key" "test" {
 
 func testTransitSecretBackendKeyConfig_invalidUpdates(name, path string) string {
 	return fmt.Sprintf(`
-resource "vault_transit_secret_backend" "transit" {
+resource "vault_mount" "transit" {
   path = "%s"
+  type = "transit"
 }
 
 resource "vault_transit_secret_backend_key" "test" {
-  backend = "${vault_transit_secret_backend.transit.path}"
+  backend = "${vault_mount.transit.path}"
   name = "%s"
   min_decryption_version = 1
   min_encryption_version = 1
