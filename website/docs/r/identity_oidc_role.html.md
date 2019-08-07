@@ -27,6 +27,36 @@ a conflict of the list of Allowed Client IDs for the named Key.
 
 ## Example Usage
 
+You need to create a role with a [named key]((identity_oidc_key.html)).
+At creation time, the key can be created independently of the role. However, the key must
+exist before the role can be used to issue tokens. You must also configure the key with the
+role's Client ID to allow the role to use the key.
+
+```hcl
+variable "key" {
+  description = "Name of the OIDC Key"
+  default     = "key"
+}
+
+resource "vault_identity_oidc_key" "key" {
+  name      = var.key
+  algorithm = "RS256"
+
+  allowed_client_ids = [
+    vault_identity_oidc_role.role.client_id
+  ]
+}
+
+resource "vault_identity_oidc_role" "role" {
+  name = "role"
+  key  = var.key
+}
+```
+
+If you want to create the key first before creating the role, you can use a separate
+[resource]((identity_oidc_key_allowed_client_id.html)) to configure the allowed Client ID on
+the key.
+
 ```hcl
 resource "vault_identity_oidc_key" "key" {
   name      = "key"
@@ -50,7 +80,8 @@ The following arguments are supported:
 
 * `name` - (Required; Forces new resource) Name of the OIDC Role to create.
 
-* `key` - (Required; Forces new resource) A configured named key, the key must already exist.
+* `key` - (Required; Forces new resource) A configured named key, the key must already exist
+  before tokens can be issued.
 
 * `template` - (Optional) The template string to use for generating tokens. This may be in
   string-ified JSON or base64 format. See the
