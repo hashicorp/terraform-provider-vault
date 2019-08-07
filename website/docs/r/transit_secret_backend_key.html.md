@@ -13,8 +13,9 @@ Creates an Encryption Keyring on a Transit Secret Backend for Vault.
 ## Example Usage
 
 ```hcl
-resource "vault_transit_secret_backend" "transit" {
-  path = "%s"
+resource "vault_mount" "transit" {
+  path = "transit"
+  type = "transit"
   description = "Example description"
   default_lease_ttl_seconds = 3600
   max_lease_ttl_seconds = 86400
