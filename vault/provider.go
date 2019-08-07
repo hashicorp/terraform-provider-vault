@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform/helper/logging"
+	"github.com/hashicorp/terraform/helper/mutexkv"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
@@ -25,6 +26,12 @@ const (
 	// We aim to deprecate items in this category.
 	UnknownPath = "unknown"
 )
+
+// This is a global MutexKV for use within this provider.
+// Use this when you need to have multiple resources or even multiple instances
+// of the same resource write to the same path in Vault.
+// The key of the mutex should be the path in Vault.
+var vaultMutexKV = mutexkv.NewMutexKV()
 
 func Provider() terraform.ResourceProvider {
 	dataSourcesMap, err := parse(DataSourceRegistry)
