@@ -30,9 +30,7 @@ func identityOidc() *schema.Resource {
 }
 
 func identityOidcUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
-	if v, ok := d.GetOk("issuer"); ok {
-		data["issuer"] = v
-	}
+	data["issuer"] = d.Get("issuer").(string)
 }
 
 func identityOidcCreate(d *schema.ResourceData, meta interface{}) error {

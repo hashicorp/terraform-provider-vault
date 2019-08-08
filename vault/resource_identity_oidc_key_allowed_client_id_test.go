@@ -17,7 +17,7 @@ func TestAccIdentityOidcKeyAllowedClientId(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityOidcRoleDestroy,
+		CheckDestroy: testAccCheckIdentityOidcKeyAllowedClientIdDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcKeyAllowedClientIdConfig(name),
@@ -43,6 +43,29 @@ func TestAccIdentityOidcKeyAllowedClientId(t *testing.T) {
 	})
 }
 
+func testAccCheckIdentityOidcKeyAllowedClientIdDestroy(s *terraform.State) error {
+	client := testProvider.Meta().(*api.Client)
+
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "vault_identity_oidc_key_allowed_client_id" {
+			continue
+		}
+		resp, err := identityOidcKeyApiRead(rs.Primary.ID, client)
+		if err != nil {
+			return err
+		}
+		if resp != nil {
+			clientIDs := resp["allowed_client_ids"].([]interface{})
+			clientID := rs.Primary.Attributes["allowed_client_id"]
+
+			if found, _ := util.SliceHasElement(clientIDs, clientID); found {
+				return fmt.Errorf("identity oidc key %s still has allowed_client_id %s", rs.Primary.ID, clientID)
+			}
+		}
+	}
+	return nil
+}
+
 func testAccIdentityOidcKeyAllowedClientIdCheckAttrs(clientIDResource string, clientIDExpectedLength int) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_identity_oidc_key.key"]
@@ -56,12 +79,10 @@ func testAccIdentityOidcKeyAllowedClientIdCheckAttrs(clientIDResource string, cl
 		}
 
 		id := instanceState.ID
-
-		path := identityOidcKeyPath(id)
 		client := testProvider.Meta().(*api.Client)
-		resp, err := client.Logical().Read(path)
+		resp, err := identityOidcKeyApiRead(id, client)
 		if err != nil {
-			return fmt.Errorf("%q doesn't exist", path)
+			return err
 		}
 
 		clientIDResource := s.Modules[0].Resources[clientIDResource]
@@ -75,12 +96,12 @@ func testAccIdentityOidcKeyAllowedClientIdCheckAttrs(clientIDResource string, cl
 
 		clientID := clientIDResourceState.Attributes["allowed_client_id"]
 
-		if found, _ := util.SliceHasElement(resp.Data["allowed_client_ids"].([]interface{}), clientID); !found {
+		if found, _ := util.SliceHasElement(resp["allowed_client_ids"].([]interface{}), clientID); !found {
 			return fmt.Errorf("Expected to find %q in the `allowed_client_ids` of key %s but did not", clientID, id)
 		}
 
-		if clientIDExpectedLength != len(resp.Data["allowed_client_ids"].([]interface{})) {
-			return fmt.Errorf("Expected to find %d `allowed_client_ids` of key %s but found %d", clientIDExpectedLength, id, len(resp.Data["allowed_client_ids"].([]interface{})))
+		if clientIDExpectedLength != len(resp["allowed_client_ids"].([]interface{})) {
+			return fmt.Errorf("Expected to find %d `allowed_client_ids` of key %s but found %d", clientIDExpectedLength, id, len(resp["allowed_client_ids"].([]interface{})))
 		}
 		return nil
 	}

@@ -84,15 +84,15 @@ func testAccCheckIdentityOidcRoleDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_identity_oidc_key" {
+		if rs.Type != "vault_identity_oidc_role" {
 			continue
 		}
-		secret, err := client.Logical().Read(identityEntityIDPath(rs.Primary.ID))
+		secret, err := client.Logical().Read(identityOidcRolePath(rs.Primary.ID))
 		if err != nil {
-			return fmt.Errorf("error checking for identity oidc key %q: %s", rs.Primary.ID, err)
+			return fmt.Errorf("error checking for identity oidc role %q: %s", rs.Primary.ID, err)
 		}
 		if secret != nil {
-			return fmt.Errorf("identity oidc key %q still exists", rs.Primary.ID)
+			return fmt.Errorf("identity oidc role %q still exists", rs.Primary.ID)
 		}
 	}
 	return nil

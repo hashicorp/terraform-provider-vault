@@ -41,19 +41,20 @@ func TestAccIdentityOidc(t *testing.T) {
 
 func testAccCheckIdentityOidcDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
+	path := identityOidcPathTemplate
 
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_identity_oidc_key" {
-			continue
-		}
-		secret, err := client.Logical().Read(identityEntityIDPath(rs.Primary.ID))
-		if err != nil {
-			return fmt.Errorf("error checking for identity oidc key %q: %s", rs.Primary.ID, err)
-		}
-		if secret != nil {
-			return fmt.Errorf("identity oidc key %q still exists", rs.Primary.ID)
-		}
+	resp, err := client.Logical().Read(path)
+	if err != nil {
+		return fmt.Errorf("error reading IdentityOidc: %s", err)
 	}
+	if resp == nil {
+		return fmt.Errorf("error reading IdentityOidc: %s", err)
+	}
+
+	if resp.Data["issuer"] != "" {
+		return fmt.Errorf("expected OIDC issuer to be reset to empty but got %q", resp.Data["issuer"])
+	}
+
 	return nil
 }
 
