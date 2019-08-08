@@ -412,6 +412,22 @@ var (
 			Resource:      identityGroupPoliciesResource(),
 			PathInventory: []string{"/identity/lookup/group"},
 		},
+		"vault_identity_oidc": {
+			Resource:      identityOidc(),
+			PathInventory: []string{"/identity/oidc/config"},
+		},
+		"vault_identity_oidc_key": {
+			Resource:      identityOidcKey(),
+			PathInventory: []string{"/identity/oidc/key/{name}"},
+		},
+		"vault_identity_oidc_key_allowed_client_id": {
+			Resource:      identityOidcKeyAllowedClientId(),
+			PathInventory: []string{"/identity/oidc/key/{key_name}"},
+		},
+		"vault_identity_oidc_role": {
+			Resource:      identityOidcRole(),
+			PathInventory: []string{"/identity/oidc/role/{name}"},
+		},
 		"vault_rabbitmq_secret_backend": {
 			Resource: rabbitmqSecretBackendResource(),
 			PathInventory: []string{
