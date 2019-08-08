@@ -115,7 +115,7 @@ func identityOidcDelete(d *schema.ResourceData, meta interface{}) error {
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error Resetting IdentityOidc %q", addr)
+		return fmt.Errorf("error resetting IdentityOidc %s, %s", addr, err)
 	}
 	log.Printf("[DEBUG] Finished resetting IdentityOidc for %q", addr)
 

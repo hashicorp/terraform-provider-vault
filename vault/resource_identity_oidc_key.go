@@ -122,7 +122,6 @@ func identityOidcKeyRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	name := d.Id()
 
-	log.Printf("[DEBUG] Reading IdentityOidcKey %s", name)
 	resp, err := identityOidcKeyApiRead(name, client)
 	if err != nil {
 		return fmt.Errorf("error reading IdentityOidcKey %s: %s", name, err)
@@ -154,7 +153,7 @@ func identityOidcKeyDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleting IdentityOidcKey %q", name)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("error IdentityOidcKey %q", name)
+		return fmt.Errorf("error deleting IdentityOidcKey %s: %s", name, err)
 	}
 	log.Printf("[DEBUG] Deleted IdentityOidcKey %q", name)
 
@@ -184,14 +183,14 @@ func identityOidcKeyApiRead(name string, client *api.Client) (map[string]interfa
 	path := identityOidcKeyPath(name)
 	resp, err := client.Logical().Read(path)
 
-	log.Printf("[DEBUG] Read IdentityOidcKey %s", name)
+	log.Printf("[DEBUG] Reading IdentityOidcKey %s", name)
 
 	// Vault incorrectly returns 400 for deleted key. In the meantime, we will look into
 	// the error string to check this.
 	// Fixed by https://github.com/hashicorp/vault/pull/7267 and slated for Vault 1.2.2
 	if err != nil {
 		if !strings.Contains(err.Error(), "no named key found") {
-			return nil, fmt.Errorf("error reading IdentityOidcKey %s: %s", name, err)
+			return nil, fmt.Errorf("error reading IdentityOidcKey %s: %q", name, err)
 		}
 		// Key was not found and we set `resp` to nil
 		resp = nil
@@ -208,6 +207,7 @@ func identityOidcKeyApiRead(name string, client *api.Client) (map[string]interfa
 func identityOidcKeyApiWrite(name string, data map[string]interface{}, client *api.Client) error {
 	path := identityOidcKeyPath(name)
 
+	log.Printf("[DEBUG] Writing IdentityOidcKey %s at %s", name, path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		return fmt.Errorf("error writing IdentityOidcKey %s: %s", name, err)

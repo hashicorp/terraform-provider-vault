@@ -141,7 +141,7 @@ func identityOidcRoleDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleting IdentityOidcRole %q", name)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("error IdentityOidcRole %q", name)
+		return fmt.Errorf("error deleting IdentityOidcRole %s: %s", name, err)
 	}
 	log.Printf("[DEBUG] Deleted IdentityOidcRole %q", name)
 

@@ -70,7 +70,6 @@ func identityOidcKeyAllowedClientIdRead(d *schema.ResourceData, meta interface{}
 	name := d.Get("key_name").(string)
 	clientID := d.Get("allowed_client_id").(string)
 
-	log.Printf("[DEBUG] Reading IdentityOidcKey %s", name)
 	data, err := identityOidcKeyApiRead(name, client)
 	if err != nil {
 		return fmt.Errorf("error reading IdentityOidcKey %s: %s", name, err)
@@ -120,7 +119,7 @@ func identityOidcKeyAllowedClientIdDelete(d *schema.ResourceData, meta interface
 	}
 	log.Printf("[DEBUG] Removed allowed_client_id %s for IdentityOidcKey %s", clientID, name)
 
-	return identityOidcKeyAllowedClientIdRead(d, meta)
+	return nil
 }
 
 func identityOidcKeyAllowedClientIdStateId(key_name, clientID string) string {
