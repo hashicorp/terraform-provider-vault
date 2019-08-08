@@ -210,7 +210,7 @@ resource "vault_auth_backend" "ldap" {
 resource "vault_ldap_auth_backend_group" "test" {
     backend   = "${vault_auth_backend.ldap.path}"
     groupname = "%s"
-    policies  = [%s]
+    policies  = %s
 }
 `, backend, groupname, util.ArrayToTerraformList(policies))
 

@@ -34,8 +34,8 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allow_any_name", "false"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "enforce_hostnames", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allow_ip_sans", "true"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_uri_sans", "uri.test.domain"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_other_sans", "1.2.3.4.5.5;UTF8:test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_uri_sans.0", "uri.test.domain"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_other_sans.0", "1.2.3.4.5.5;UTF8:test"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "server_flag", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "client_flag", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "code_signing_flag", "false"),
@@ -51,13 +51,13 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "ext_key_usage.#", "0"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "use_csr_common_name", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "use_csr_sans", "true"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "ou", "test"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "organization", "test"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "country", "test"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "locality", "test"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "province", "test"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "street_address", "123 test"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "postal_code", "12345"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "ou.0", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "organization.0", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "country.0", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "locality.0", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "province.0", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "street_address.0", "123 test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "postal_code.0", "12345"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "generate_lease", "false"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "no_store", "false"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "require_cn", "true"),
@@ -82,8 +82,8 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allow_any_name", "false"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "enforce_hostnames", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allow_ip_sans", "true"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_uri_sans", "uri.test.domain"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_other_sans", "1.2.3.4.5.5;UTF8:test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_uri_sans.0", "uri.test.domain"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_other_sans.0", "1.2.3.4.5.5;UTF8:test"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "server_flag", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "client_flag", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "code_signing_flag", "false"),
@@ -97,13 +97,13 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "ext_key_usage.#", "0"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "use_csr_common_name", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "use_csr_sans", "true"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "ou", "test"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "organization", "test"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "country", "test"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "locality", "test"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "province", "test"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "street_address", "123 test"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "postal_code", "12345"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "ou.0", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "organization.0", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "country.0", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "locality.0", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "province.0", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "street_address.0", "123 test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "postal_code.0", "12345"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "generate_lease", "false"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "no_store", "false"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "require_cn", "true"),
@@ -136,8 +136,8 @@ resource "vault_pki_secret_backend_role" "test" {
   allow_any_name = false
   enforce_hostnames = true
   allow_ip_sans = true
-  allowed_uri_sans = "uri.test.domain"
-  allowed_other_sans = "1.2.3.4.5.5;UTF8:test"
+  allowed_uri_sans = ["uri.test.domain"]
+  allowed_other_sans = ["1.2.3.4.5.5;UTF8:test"]
   server_flag = true
   client_flag = true
   code_signing_flag = false
@@ -148,13 +148,13 @@ resource "vault_pki_secret_backend_role" "test" {
   ext_key_usage = []
   use_csr_common_name = true
   use_csr_sans = true
-  ou = "test"
-  organization = "test"
-  country = "test"
-  locality = "test"
-  province = "test"
-  street_address = "123 test"
-  postal_code = "12345"
+  ou = ["test"]
+  organization = ["test"]
+  country = ["test"]
+  locality = ["test"]
+  province = ["test"]
+  street_address = ["123 test"]
+  postal_code = ["12345"]
   generate_lease = false
   no_store = false
   require_cn = true
@@ -183,8 +183,8 @@ resource "vault_pki_secret_backend_role" "test" {
   allow_any_name = false
   enforce_hostnames = true
   allow_ip_sans = true
-  allowed_uri_sans = "uri.test.domain"
-  allowed_other_sans = "1.2.3.4.5.5;UTF8:test"
+  allowed_uri_sans = ["uri.test.domain"]
+  allowed_other_sans = ["1.2.3.4.5.5;UTF8:test"]
   server_flag = true
   client_flag = true
   code_signing_flag = false
@@ -195,13 +195,13 @@ resource "vault_pki_secret_backend_role" "test" {
   ext_key_usage = []
   use_csr_common_name = true
   use_csr_sans = true
-  ou = "test"
-  organization = "test"
-  country = "test"
-  locality = "test"
-  province = "test"
-  street_address = "123 test"
-  postal_code = "12345"
+  ou = ["test"]
+  organization = ["test"]
+  country = ["test"]
+  locality = ["test"]
+  province = ["test"]
+  street_address = ["123 test"]
+  postal_code = ["12345"]
   generate_lease = false
   no_store = false
   require_cn = true

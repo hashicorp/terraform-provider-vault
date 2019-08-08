@@ -1,4 +1,74 @@
-## 1.9.0 (Unreleased)
+## 2.2.0 (Unreleased)
+
+FEATURES:
+
+* Adds support for the "/sys/mfa/method/duo/{name}" endpoint ([#443](https://github.com/terraform-providers/terraform-provider-vault/pull/443)).
+* Adds support for the "/azure/config" endpoint ([#481](https://github.com/terraform-providers/terraform-provider-vault/pull/481)).
+
+IMPROVEMENTS:
+
+* Adds support for new common token fields on roles that were introduced in Vault 1.2.0 ([#478](https://github.com/terraform-providers/terraform-provider-vault/pull/478) and [#487](https://github.com/terraform-providers/terraform-provider-vault/pull/487)).
+* Adds the ability to run a coverage report to learn what Vault OpenAPI endpoints are and aren't supported ([#466](https://github.com/terraform-providers/terraform-provider-vault/pull/466)).
+* Exposes the "local" flag on the `vault_mount` resource ([#462](https://github.com/terraform-providers/terraform-provider-vault/pull/462)).
+
+BUG FIXES:
+
+* `resource/aws_auth_backend_client`: Backend supports nested paths [#461]
+* Adds "ForceNew" to the "groupname" parameter on the LDAP auth groups endpoint so if there's a change, the old group is deleted ([#465](https://github.com/terraform-providers/terraform-provider-vault/pull/465)).
+* Fixes issue with a permanent diff in `vault_gcp_secret_roleset` ([#476](https://github.com/terraform-providers/terraform-provider-vault/pull/476)).
+
+## 2.1.0 (July 05, 2019)
+
+IMPROVEMENTS:
+
+* For `aws_secret_backend_role`, adds support for `default_sts_ttl` and `max_sts_ttl` ([#444](https://github.com/terraform-providers/terraform-provider-vault/pull/444)).
+
+BUG FIXES:
+
+* Fixes ordering issues with `aws_auth_backend_role` and `aws_auth_backend_role_tags` ([#439](https://github.com/terraform-providers/terraform-provider-vault/pull/439)).
+* Supports providing lists for `bound_claims` ([#455](https://github.com/terraform-providers/terraform-provider-vault/pull/455)).
+* Resolves issue with persistent diffs on `vault_generic_secret` ([#456](https://github.com/terraform-providers/terraform-provider-vault/pull/456)).
+
+## 2.0.0 (June 19, 2019)
+
+FEATURES:
+
+* Adds support for using the Vault provider with Terraform 0.12. See the [upgrade guide](https://www.terraform.io/docs/providers/vault/version_2_upgrade.html) ([#446](https://github.com/terraform-providers/terraform-provider-vault/issues/446))
+
+BACKWARDS INCOMPATIBILITIES/NOTES:
+
+* `all`: deprecated fields are now removed ([#446](https://github.com/terraform-providers/terraform-provider-vault/issues/446))
+* `auth_backend`: the `path` field and `id` now no longer have a trailing slash ([#446](https://github.com/terraform-providers/terraform-provider-vault/issues/446))
+* `database_secret_backend_role`: the `_statements` fields are now a list, not strings ([#446](https://github.com/terraform-providers/terraform-provider-vault/issues/446))
+* `pki_secret_backend_config_urls`: the certificate fields are now lists, not strings ([#446](https://github.com/terraform-providers/terraform-provider-vault/issues/446))
+* `pki_secret_backend_role`: the certificate fields are now lists, not strings ([#446](https://github.com/terraform-providers/terraform-provider-vault/issues/446))
+* `pki_secret_backend_sign`: the `ca_chain` field is now a list, not a string ([#446](https://github.com/terraform-providers/terraform-provider-vault/issues/446))
+* `rabbitmq_secret_backend_role`: the `vhosts` field is now a `vhost` block ([#446](https://github.com/terraform-providers/terraform-provider-vault/issues/446))
+
+IMPROVEMENTS:
+
+* `azure_auth_backend_role`: `client_secret` will now be set in state ([#446](https://github.com/terraform-providers/terraform-provider-vault/issues/446))
+
+BUG FIXES:
+
+* `namespace`: namespaces will now be removed from state instead of erroring when they're not found ([#446](https://github.com/terraform-providers/terraform-provider-vault/issues/446))
+
+
+## 1.9.0 (June 12, 2019)
+
+IMPROVEMENTS:
+
+* Adds support for `role_arns` on `aws_secret_backend_role`([#407](https://github.com/terraform-providers/terraform-provider-vault/pull/407)).
+* Updates the vendored version of Vault to 1.1.2 so features introduced since then can be added ([#413](https://github.com/terraform-providers/terraform-provider-vault/pull/413)).
+* Implements `accessor` attribute on the Okta auth backend ([#420](https://github.com/terraform-providers/terraform-provider-vault/pull/420)).
+* Allows the Vault token to be read from the environment ([#434](https://github.com/terraform-providers/terraform-provider-vault/pull/434)).
+* Supports `project_id` and `bound_projects` in the GCP auth backend's roles ([#411](https://github.com/terraform-providers/terraform-provider-vault/pull/411)).
+
+BUG FIXES:
+
+* Fixes a case on `vault_aws_auth_backend_role` where `resolve_aws_unique_ids` could not be updated from `true` to `false` without recreating the resource ([#382](https://github.com/terraform-providers/terraform-provider-vault/pull/382)).
+* Removes default TTL's from the GCP secret backend resource, letting them instead be set by Vault ([#426](https://github.com/terraform-providers/terraform-provider-vault/pull/426)).
+
 ## 1.8.0 (May 07, 2019)
 
 FEATURES:

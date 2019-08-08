@@ -66,6 +66,15 @@ func mountResource() *schema.Resource {
 				Description: "Accessor of the mount",
 			},
 
+			"local": {
+				Type:        schema.TypeBool,
+				Required:    false,
+				Optional:    true,
+				Computed:    false,
+				ForceNew:    true,
+				Description: "Local mount flag that can be explicitly set to true to enforce local mount in HA environment",
+			},
+
 			"options": {
 				Type:        schema.TypeMap,
 				Required:    false,
@@ -88,6 +97,7 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
 		},
+		Local:   d.Get("local").(bool),
 		Options: opts(d),
 	}
 
@@ -180,6 +190,7 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
 	d.Set("accessor", mount.Accessor)
+	d.Set("local", mount.Local)
 	d.Set("options", mount.Options)
 
 	return nil

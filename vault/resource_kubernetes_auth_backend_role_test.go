@@ -38,19 +38,19 @@ func TestAccKubernetesAuthBackendRole_import(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"bound_service_account_namespaces.#", "1"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.1971754988", "default"),
+						"token_policies.1971754988", "default"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.326271447", "dev"),
+						"token_policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.232240223", "prod"),
+						"token_policies.232240223", "prod"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.#", "3"),
+						"token_policies.#", "3"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"ttl", strconv.Itoa(ttl)),
+						"token_ttl", strconv.Itoa(ttl)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"max_ttl", strconv.Itoa(maxTTL)),
+						"token_max_ttl", strconv.Itoa(maxTTL)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"period", "900"),
+						"token_period", "900"),
 				),
 			},
 			{
@@ -88,15 +88,15 @@ func TestAccKubernetesAuthBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"bound_service_account_namespaces.#", "1"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.1971754988", "default"),
+						"token_policies.1971754988", "default"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.326271447", "dev"),
+						"token_policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.232240223", "prod"),
+						"token_policies.232240223", "prod"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.#", "3"),
+						"token_policies.#", "3"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"ttl", "3600"),
+						"token_ttl", "3600"),
 				),
 			},
 		},
@@ -130,15 +130,15 @@ func TestAccKubernetesAuthBackendRole_update(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"bound_service_account_namespaces.#", "1"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.1971754988", "default"),
+						"token_policies.1971754988", "default"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.326271447", "dev"),
+						"token_policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.232240223", "prod"),
+						"token_policies.232240223", "prod"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.#", "3"),
+						"token_policies.#", "3"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"ttl", strconv.Itoa(oldTTL)),
+						"token_ttl", strconv.Itoa(oldTTL)),
 				),
 			},
 			{
@@ -157,15 +157,15 @@ func TestAccKubernetesAuthBackendRole_update(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"bound_service_account_namespaces.#", "1"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.1971754988", "default"),
+						"token_policies.1971754988", "default"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.326271447", "dev"),
+						"token_policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.232240223", "prod"),
+						"token_policies.232240223", "prod"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.#", "3"),
+						"token_policies.#", "3"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"ttl", strconv.Itoa(newTTL)),
+						"token_ttl", strconv.Itoa(newTTL)),
 				),
 			},
 		},
@@ -199,19 +199,19 @@ func TestAccKubernetesAuthBackendRole_full(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"bound_service_account_namespaces.#", "1"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.1971754988", "default"),
+						"token_policies.1971754988", "default"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.326271447", "dev"),
+						"token_policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.232240223", "prod"),
+						"token_policies.232240223", "prod"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"policies.#", "3"),
+						"token_policies.#", "3"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"ttl", strconv.Itoa(ttl)),
+						"token_ttl", strconv.Itoa(ttl)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"max_ttl", strconv.Itoa(maxTTL)),
+						"token_max_ttl", strconv.Itoa(maxTTL)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
-						"period", "900"),
+						"token_period", "900"),
 				),
 			},
 		},
@@ -247,6 +247,148 @@ func TestAccKubernetesAuthBackendRole_fullUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"bound_service_account_namespaces.#", "1"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.1971754988", "default"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.232240223", "prod"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.#", "3"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_ttl", strconv.Itoa(oldTTL)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_max_ttl", strconv.Itoa(oldMaxTTL)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_period", "900"),
+				),
+			},
+			{
+				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, newTTL, newMaxTTL),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"backend", backend),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"role_name", role),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_names.64447719", "example"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_names.#", "1"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_namespaces.64447719", "example"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_namespaces.#", "1"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.1971754988", "default"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.232240223", "prod"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.#", "3"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_ttl", strconv.Itoa(newTTL)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_max_ttl", strconv.Itoa(newMaxTTL)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_period", "900"),
+				),
+			},
+			{
+				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, newTTL, newMaxTTL),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"backend", backend),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"role_name", role),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_names.64447719", "example"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_names.#", "1"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_namespaces.64447719", "example"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_namespaces.#", "1"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.1971754988", "default"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.232240223", "prod"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.#", "3"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_ttl", strconv.Itoa(newTTL)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_max_ttl", strconv.Itoa(newMaxTTL)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_period", "900"),
+				),
+			},
+			// Unset `token_max_ttl`
+			{
+				Config: testAccKubernetesAuthBackendRoleConfig_basic(backend, role, newTTL),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"backend", backend),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"role_name", role),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_names.64447719", "example"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_names.#", "1"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_namespaces.64447719", "example"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_namespaces.#", "1"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.1971754988", "default"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.232240223", "prod"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_policies.#", "3"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_ttl", strconv.Itoa(newTTL)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_max_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"token_period", "0"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesAuthBackendRole_fullDeprecated(t *testing.T) {
+	backend := acctest.RandomWithPrefix("kubernetes")
+	role := acctest.RandomWithPrefix("test-role")
+	oldTTL := 3600
+	newTTL := oldTTL * 2
+	oldMaxTTL := 3600
+	newMaxTTL := oldMaxTTL * 2
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckKubernetesAuthBackendRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesAuthBackendRoleConfig_fullDeprecated(backend, role, oldTTL, oldMaxTTL),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"backend", backend),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"role_name", role),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_names.64447719", "example"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_names.#", "1"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_namespaces.64447719", "example"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"bound_service_account_namespaces.#", "1"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"policies.1971754988", "default"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"policies.326271447", "dev"),
@@ -263,7 +405,7 @@ func TestAccKubernetesAuthBackendRole_fullUpdate(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, newTTL, newMaxTTL),
+				Config: testAccKubernetesAuthBackendRoleConfig_fullDeprecated(backend, role, newTTL, newMaxTTL),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -327,12 +469,31 @@ resource "vault_kubernetes_auth_backend_role" "role" {
   role_name = %q
   bound_service_account_names = ["example"]
   bound_service_account_namespaces = ["example"]
-  ttl = %d
-  policies = ["default", "dev", "prod"]
+  token_ttl = %d
+  token_policies = ["default", "dev", "prod"]
 }`, backend, role, ttl)
 }
 
 func testAccKubernetesAuthBackendRoleConfig_full(backend, role string, ttl, maxTTL int) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "kubernetes" {
+  type = "kubernetes"
+  path = %q
+}
+
+resource "vault_kubernetes_auth_backend_role" "role" {
+  backend = "${vault_auth_backend.kubernetes.path}"
+  role_name = %q
+  bound_service_account_names = ["example"]
+  bound_service_account_namespaces = ["example"]
+  token_ttl = %d
+  token_max_ttl = %d
+  token_period = 900
+  token_policies = ["default", "dev", "prod"]
+}`, backend, role, ttl, maxTTL)
+}
+
+func testAccKubernetesAuthBackendRoleConfig_fullDeprecated(backend, role string, ttl, maxTTL int) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "kubernetes" {
   type = "kubernetes"

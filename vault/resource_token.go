@@ -44,6 +44,7 @@ func tokenResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
+				Computed:    true,
 				Description: "Flag to create a token without parent.",
 			},
 			"no_default_policy": {
@@ -55,9 +56,9 @@ func tokenResource() *schema.Resource {
 			},
 			"renewable": {
 				Type:        schema.TypeBool,
-				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
+				Computed:    true,
 				Description: "Flag to allow the token to be renewed",
 			},
 			"ttl": {
@@ -90,9 +91,9 @@ func tokenResource() *schema.Resource {
 			},
 			"num_uses": {
 				Type:        schema.TypeInt,
-				Required:    false,
 				Optional:    true,
 				ForceNew:    true,
+				Computed:    true,
 				Description: "The number of allowed uses of the token.",
 			},
 			"period": {
@@ -287,8 +288,8 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Set("policies", policies)
-	d.Set("no_parent", fmt.Sprintf("%v", resp.Data["orphan"]))
-	d.Set("renewable", fmt.Sprintf("%v", resp.Data["renewable"]))
+	d.Set("no_parent", resp.Data["orphan"])
+	d.Set("renewable", resp.Data["renewable"])
 	d.Set("display_name", strings.TrimPrefix(resp.Data["display_name"].(string), "token-"))
 	d.Set("num_uses", resp.Data["num_uses"])
 

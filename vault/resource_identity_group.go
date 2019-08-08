@@ -130,6 +130,9 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 
 	path := identityGroupPath
 
+	vaultMutexKV.Lock(path)
+	defer vaultMutexKV.Unlock(path)
+
 	data := map[string]interface{}{
 		"name": name,
 		"type": typeValue,
@@ -157,6 +160,9 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Updating IdentityGroup %q", id)
 	path := identityGroupIDPath(id)
+
+	vaultMutexKV.Lock(path)
+	defer vaultMutexKV.Unlock(path)
 
 	data := map[string]interface{}{}
 
