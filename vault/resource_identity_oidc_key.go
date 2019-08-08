@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -182,11 +183,20 @@ func identityOidcKeyPath(name string) string {
 func identityOidcKeyApiRead(name string, client *api.Client) (map[string]interface{}, error) {
 	path := identityOidcKeyPath(name)
 	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading IdentityOidcKey %s: %s", name, err)
-	}
 
 	log.Printf("[DEBUG] Read IdentityOidcKey %s", name)
+
+	// Vault incorrectly returns 400 for deleted key. In the meantime, we will look into
+	// the error string to check this.
+	// Fixed by https://github.com/hashicorp/vault/pull/7267 and slated for Vault 1.2.2
+	if err != nil {
+		if !strings.Contains(err.Error(), "no named key found") {
+			return nil, fmt.Errorf("error reading IdentityOidcKey %s: %s", name, err)
+		}
+		// Key was not found and we set `resp` to nil
+		resp = nil
+	}
+
 	if resp == nil {
 		log.Printf("[WARN] IdentityOidcKey %s not found", name)
 		return nil, nil

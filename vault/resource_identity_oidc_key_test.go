@@ -86,11 +86,12 @@ func testAccCheckIdentityOidcKeyDestroy(s *terraform.State) error {
 		if rs.Type != "vault_identity_oidc_key" {
 			continue
 		}
-		secret, err := client.Logical().Read(identityEntityIDPath(rs.Primary.ID))
+		resp, err := identityOidcKeyApiRead(rs.Primary.Attributes["name"], client)
+
 		if err != nil {
 			return fmt.Errorf("error checking for identity oidc key %q: %s", rs.Primary.ID, err)
 		}
-		if secret != nil {
+		if resp != nil {
 			return fmt.Errorf("identity oidc key %q still exists", rs.Primary.ID)
 		}
 	}
@@ -110,12 +111,11 @@ func testAccIdentityOidcKeyCheckAttrs() resource.TestCheckFunc {
 		}
 
 		id := instanceState.ID
-
 		path := identityOidcKeyPath(id)
 		client := testProvider.Meta().(*api.Client)
-		resp, err := client.Logical().Read(path)
+		resp, err := identityOidcKeyApiRead(id, client)
 		if err != nil {
-			return fmt.Errorf("%q doesn't exist", path)
+			return fmt.Errorf("%q doesn't exist", id)
 		}
 
 		attrs := map[string]string{
@@ -125,15 +125,15 @@ func testAccIdentityOidcKeyCheckAttrs() resource.TestCheckFunc {
 			"allowed_client_ids": "allowed_client_ids",
 		}
 		for stateAttr, apiAttr := range attrs {
-			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
+			if resp[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
 				continue
 			}
 			var match bool
-			switch resp.Data[apiAttr].(type) {
+			switch resp[apiAttr].(type) {
 			case json.Number:
-				apiData, err := resp.Data[apiAttr].(json.Number).Int64()
+				apiData, err := resp[apiAttr].(json.Number).Int64()
 				if err != nil {
-					return fmt.Errorf("expected API field %s to be an int, was %q", apiAttr, resp.Data[apiAttr])
+					return fmt.Errorf("expected API field %s to be an int, was %q", apiAttr, resp[apiAttr])
 				}
 				stateData, err := strconv.ParseInt(instanceState.Attributes[stateAttr], 10, 64)
 				if err != nil {
@@ -141,20 +141,20 @@ func testAccIdentityOidcKeyCheckAttrs() resource.TestCheckFunc {
 				}
 				match = apiData == stateData
 			case bool:
-				if _, ok := resp.Data[apiAttr]; !ok && instanceState.Attributes[stateAttr] == "" {
+				if _, ok := resp[apiAttr]; !ok && instanceState.Attributes[stateAttr] == "" {
 					match = true
 				} else {
 					stateData, err := strconv.ParseBool(instanceState.Attributes[stateAttr])
 					if err != nil {
 						return fmt.Errorf("expected state field %s to be a bool, was %q", stateAttr, instanceState.Attributes[stateAttr])
 					}
-					match = resp.Data[apiAttr] == stateData
+					match = resp[apiAttr] == stateData
 				}
 			case []interface{}:
-				apiData := resp.Data[apiAttr].([]interface{})
+				apiData := resp[apiAttr].([]interface{})
 				length := instanceState.Attributes[stateAttr+".#"]
 				if length == "" {
-					if len(resp.Data[apiAttr].([]interface{})) != 0 {
+					if len(resp[apiAttr].([]interface{})) != 0 {
 						return fmt.Errorf("expected state field %s to have %d entries, had 0", stateAttr, len(apiData))
 					}
 					match = true
@@ -184,10 +184,10 @@ func testAccIdentityOidcKeyCheckAttrs() resource.TestCheckFunc {
 					match = true
 				}
 			default:
-				match = resp.Data[apiAttr] == instanceState.Attributes[stateAttr]
+				match = resp[apiAttr] == instanceState.Attributes[stateAttr]
 			}
 			if !match {
-				return fmt.Errorf("expected %s (%s in state) of %q to be %q, got %q", apiAttr, stateAttr, path, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
+				return fmt.Errorf("expected %s (%s in state) of %q to be %q, got %q", apiAttr, stateAttr, path, instanceState.Attributes[stateAttr], resp[apiAttr])
 			}
 		}
 		return nil
