@@ -154,6 +154,14 @@ var (
 			Resource:      approleAuthBackendRoleIDDataSource(),
 			PathInventory: []string{"/auth/approle/role/{role_name}/role-id"},
 		},
+		"vault_identity_entity": {
+			Resource:      identityEntityDataSource(),
+			PathInventory: []string{"/identity/lookup/entity"},
+		},
+		"vault_identity_group": {
+			Resource:      identityGroupDataSource(),
+			PathInventory: []string{"/identity/lookup/group"},
+		},
 		"vault_kubernetes_auth_backend_config": {
 			Resource:      kubernetesAuthBackendConfigDataSource(),
 			PathInventory: []string{"/auth/kubernetes/config"},
