@@ -259,7 +259,6 @@ func TestResourceToken_renew(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
 				),
-				ExpectNonEmptyPlan: true,
 			},
 			{
 				Config:  testResourceTokenConfig_renew(),
