@@ -68,6 +68,9 @@ func identityGroupPoliciesCreate(d *schema.ResourceData, meta interface{}) error
 
 	path := identityGroupPath
 
+	vaultMutexKV.Lock(path)
+	defer vaultMutexKV.Unlock(path)
+
 	data := map[string]interface{}{
 		"id": groupId,
 	}
@@ -94,6 +97,9 @@ func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error
 
 	log.Printf("[DEBUG] Updating IdentityGroupPolicies %q", id)
 	path := identityGroupIDPath(id)
+
+	vaultMutexKV.Lock(path)
+	defer vaultMutexKV.Unlock(path)
 
 	presentPolicies, err := readIdentityGroupPolicies(client, id)
 	if err != nil {

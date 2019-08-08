@@ -23,6 +23,7 @@ const (
 	// UnknownPath is used for inventorying paths that have no obvious
 	// current endpoint they serve in Vault, and may relate to previous
 	// versions of Vault.
+	// We aim to deprecate items in this category.
 	UnknownPath = "unknown"
 )
 
@@ -246,6 +247,10 @@ var (
 		"vault_aws_secret_backend_role": {
 			Resource:      awsSecretBackendRoleResource(),
 			PathInventory: []string{"/aws/roles/{name}"},
+		},
+		"vault_azure_secret_backend": {
+			Resource:      azureSecretBackendResource(),
+			PathInventory: []string{"/azure/config"},
 		},
 		"vault_azure_auth_backend_config": {
 			Resource:      azureAuthBackendConfigResource(),
@@ -473,6 +478,10 @@ var (
 		"vault_pki_secret_backend_sign": {
 			Resource:      pkiSecretBackendSignResource(),
 			PathInventory: []string{"/pki/sign/{role}"},
+		},
+		"vault_transit_secret_backend_key": {
+			Resource:      transitSecretBackendKeyResource(),
+			PathInventory: []string{"/transit/keys/{name}"},
 		},
 	}
 )
