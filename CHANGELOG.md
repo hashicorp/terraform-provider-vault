@@ -1,4 +1,4 @@
-## 2.2.0 (Unreleased)
+## 2.2.0 (August 09, 2019)
 
 FEATURES:
 
