@@ -255,7 +255,7 @@ func readIdentityGroupPolicies(client *api.Client, groupID string) ([]interface{
 		return nil, err
 	}
 	if resp == nil {
-		return nil, fmt.Errorf("error reading IdentityGroup does not exist: %s", groupID)
+		return nil, fmt.Errorf("error IdentityGroup %s does not exist", groupID)
 	}
 
 	if v, ok := resp.Data["policies"]; ok && v != nil {
@@ -264,6 +264,7 @@ func readIdentityGroupPolicies(client *api.Client, groupID string) ([]interface{
 	return make([]interface{}, 0), nil
 }
 
+// This function may return `nil` for the IdentityGroup if it does not exist
 func readIdentityGroup(client *api.Client, groupID string) (*api.Secret, error) {
 	path := identityGroupIDPath(groupID)
 	log.Printf("[DEBUG] Reading IdentityGroup %s from %q", groupID, path)
