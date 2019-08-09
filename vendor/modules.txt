@@ -148,6 +148,7 @@ github.com/hashicorp/terraform/terraform
 github.com/hashicorp/terraform/helper/customdiff
 github.com/hashicorp/terraform/helper/hashcode
 github.com/hashicorp/terraform/helper/logging
+github.com/hashicorp/terraform/helper/mutexkv
 github.com/hashicorp/terraform/helper/validation
 github.com/hashicorp/terraform/configs/configschema
 github.com/hashicorp/terraform/helper/plugin
