@@ -249,23 +249,29 @@ func identityGroupIDPath(id string) string {
 	return fmt.Sprintf("%s/id/%s", identityGroupPath, id)
 }
 
-func readIdentityGroupPolicies(client *api.Client, groupId string) ([]interface{}, error) {
-	var presentPolicies []interface{}
-	if resp, err := readIdentityGroup(client, groupId); err != nil {
-		return nil, fmt.Errorf("error reading IdentityGroup policies %q: %s", groupId, err)
-	} else {
-		presentPolicies = resp.Data["policies"].([]interface{})
+func readIdentityGroupPolicies(client *api.Client, groupID string) ([]interface{}, error) {
+	resp, err := readIdentityGroup(client, groupID)
+	if err != nil {
+		return nil, err
 	}
-	return presentPolicies, nil
+	if resp == nil {
+		return nil, fmt.Errorf("error IdentityGroup %s does not exist", groupID)
+	}
+
+	if v, ok := resp.Data["policies"]; ok && v != nil {
+		return v.([]interface{}), nil
+	}
+	return make([]interface{}, 0), nil
 }
 
-func readIdentityGroup(client *api.Client, groupId string) (*api.Secret, error) {
-	path := identityGroupIDPath(groupId)
-	log.Printf("[DEBUG] Reading IdentityGroup %s from %q", groupId, path)
+// This function may return `nil` for the IdentityGroup if it does not exist
+func readIdentityGroup(client *api.Client, groupID string) (*api.Secret, error) {
+	path := identityGroupIDPath(groupID)
+	log.Printf("[DEBUG] Reading IdentityGroup %s from %q", groupID, path)
 
-	if resp, err := client.Logical().Read(path); err != nil {
-		return resp, fmt.Errorf("failed reading IdentityGroup %s from %s", groupId, path)
-	} else {
-		return resp, nil
+	resp, err := client.Logical().Read(path)
+	if err != nil {
+		return resp, fmt.Errorf("failed reading IdentityGroup %s from %s", groupID, path)
 	}
+	return resp, nil
 }
