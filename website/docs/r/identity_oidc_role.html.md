@@ -27,7 +27,7 @@ a conflict of the list of Allowed Client IDs for the named Key.
 
 ## Example Usage
 
-You need to create a role with a [named key]((identity_oidc_key.html)).
+You need to create a role with a [named key](identity_oidc_key.html).
 At creation time, the key can be created independently of the role. However, the key must
 exist before the role can be used to issue tokens. You must also configure the key with the
 role's Client ID to allow the role to use the key.
@@ -54,7 +54,7 @@ resource "vault_identity_oidc_role" "role" {
 ```
 
 If you want to create the key first before creating the role, you can use a separate
-[resource]((identity_oidc_key_allowed_client_id.html)) to configure the allowed Client ID on
+[resource](identity_oidc_key_allowed_client_id.html) to configure the allowed Client ID on
 the key.
 
 ```hcl

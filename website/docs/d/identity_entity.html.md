@@ -22,7 +22,7 @@ for more details.
 
 ```hcl
 data "vault_identity_entity" "entity" {
-  name = "entity_12345"
+  entity_name = "entity_12345"
 }
 ```
 
