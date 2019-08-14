@@ -86,7 +86,8 @@ func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 		"mount_accessor": resp.Data["mount_accessor"],
 		"canonical_id":   resp.Data["canonical_id"],
 	}
-
+	
+	// Added this because the change in the `name` attribute didn't update it in vault. This caused issue inside vault, also forced TF to find changes on every apply.
 	if name, ok := d.GetOk("name"); ok {
 		data["name"] = name
 	}
