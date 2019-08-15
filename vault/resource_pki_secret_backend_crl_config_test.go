@@ -16,7 +16,7 @@ func TestPkiSecretBackendCrlConfig_basic(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 
 	expiry := "72h"
-	disabled := true
+	disable := true
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -24,10 +24,10 @@ func TestPkiSecretBackendCrlConfig_basic(t *testing.T) {
 		CheckDestroy: testPkiSecretBackendCrlConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendCrlConfigConfig_basic(rootPath, expiry, disabled),
+				Config: testPkiSecretBackendCrlConfigConfig_basic(rootPath, expiry, disable),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_crl_config.test", "expiry.0", expiry),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_crl_config.test", "disabled", "true"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_crl_config.test", "disable", "true"),
 				),
 			},
 		},
@@ -57,7 +57,7 @@ func testPkiSecretBackendCrlConfigDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testPkiSecretBackendCrlConfigConfig_basic(rootPath string, expiry string, disabled bool) string {
+func testPkiSecretBackendCrlConfigConfig_basic(rootPath string, expiry string, disable bool) string {
 	return fmt.Sprintf(`
 resource "vault_pki_secret_backend" "test-root" {
   path = "%s"
@@ -72,8 +72,8 @@ resource "vault_pki_secret_backend_crl_config" "test" {
   backend = "${vault_pki_secret_backend.test-root.path}"
 
   expiry = ["%s"]
-  disabled = ["%t"]
+  disable = ["%t"]
 } 
 
-`, rootPath, expiry, disabled)
+`, rootPath, expiry, disable)
 }
