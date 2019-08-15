@@ -459,6 +459,10 @@ var (
 			Resource:      pkiSecretBackendCertResource(),
 			PathInventory: []string{"/pki/issue/{role}"},
 		},
+		"vault_pki_secret_backend_crl_config": {
+			Resource:      pkiSecretBackendCrlConfigResource(),
+			PathInventory: []string{"/pki/config/crl"},
+		},
 		"vault_pki_secret_backend_config_ca": {
 			Resource:      pkiSecretBackendConfigCAResource(),
 			PathInventory: []string{"/pki/config/ca"},
