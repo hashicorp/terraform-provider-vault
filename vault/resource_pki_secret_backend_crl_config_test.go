@@ -67,7 +67,7 @@ resource "vault_mount" "test-root" {
 resource "vault_pki_secret_backend_root_cert" "test-ca" {
 	backend    = vault_mount.test-root.path
 	depends_on = ["vault_mount.test-root"]
-  
+
 	type                 = "internal"
 	common_name          = "test-ca.example.com"
 	ttl                  = "8640000"
@@ -80,7 +80,7 @@ resource "vault_pki_secret_backend_root_cert" "test-ca" {
 }
 
 resource "vault_pki_secret_backend_crl_config" "test" {
-  depends_on = [ "vault_mount.test-root" ]
+  depends_on = ["vault_mount.test-root","vault_pki_secret_backend_root_cert.test-ca"]
 
   backend = "${vault_mount.test-root.path}"
 
