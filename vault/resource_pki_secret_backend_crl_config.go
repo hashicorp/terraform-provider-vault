@@ -42,7 +42,7 @@ func pkiSecretBackendCrlConfigCreate(d *schema.ResourceData, meta interface{}) e
 
 	backend := d.Get("backend").(string)
 
-	path := pkiSecretBackendConfigUrlsPath(backend)
+	path := pkiSecretBackendCrlConfigPath(backend)
 
 	expiry := d.Get("expiry")
 	disable := d.Get("disable")
@@ -59,7 +59,7 @@ func pkiSecretBackendCrlConfigCreate(d *schema.ResourceData, meta interface{}) e
 	}
 	log.Printf("[DEBUG] Created CRL config on PKI secret backend %q", backend)
 
-	d.SetId(fmt.Sprintf("%s/config/crl", backend))
+	d.SetId(path)
 	return pkiSecretBackendCrlConfigRead(d, meta)
 }
 
@@ -87,9 +87,8 @@ func pkiSecretBackendCrlConfigRead(d *schema.ResourceData, meta interface{}) err
 func pkiSecretBackendCrlConfigUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	backend := d.Id()
-
-	path := pkiSecretBackendCrlConfigPath(backend)
+	path := d.Id()
+	backend := pkiSecretBackendCrlConfigPath(path)
 
 	expiry := d.Get("expiry")
 	disable := d.Get("disable")

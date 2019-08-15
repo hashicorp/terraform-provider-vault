@@ -15,18 +15,15 @@ import (
 func TestPkiSecretBackendCrlConfig_basic(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 
-	expiry := "72h"
-	disable := true
-
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testPkiSecretBackendCrlConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendCrlConfigConfig_basic(rootPath, expiry, disable),
+				Config: testPkiSecretBackendCrlConfigConfig_basic(rootPath),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_crl_config.test", "expiry.0", expiry),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_crl_config.test", "expiry", "72h"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_crl_config.test", "disable", "true"),
 				),
 			},
@@ -57,23 +54,39 @@ func testPkiSecretBackendCrlConfigDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testPkiSecretBackendCrlConfigConfig_basic(rootPath string, expiry string, disable bool) string {
+func testPkiSecretBackendCrlConfigConfig_basic(rootPath string) string {
 	return fmt.Sprintf(`
-resource "vault_pki_secret_backend" "test-root" {
+resource "vault_mount" "test-root" {
   path = "%s"
+  type = "pki"
   description = "test root"
   default_lease_ttl_seconds = "8640000"
   max_lease_ttl_seconds = "8640000"
 }
 
+resource "vault_pki_secret_backend_root_cert" "test-ca" {
+	backend    = vault_mount.test-root.path
+	depends_on = ["vault_mount.test-root"]
+  
+	type                 = "internal"
+	common_name          = "test-ca.example.com"
+	ttl                  = "8640000"
+	format               = "pem"
+	private_key_format   = "der"
+	key_type             = "rsa"
+	key_bits             = 4096
+	ou                   = "Test OU"
+	organization         = "ACME Ltd"
+}
+
 resource "vault_pki_secret_backend_crl_config" "test" {
-  depends_on = [ "vault_pki_secret_backend.test-root" ]
+  depends_on = [ "vault_mount.test-root" ]
 
-  backend = "${vault_pki_secret_backend.test-root.path}"
+  backend = "${vault_mount.test-root.path}"
 
-  expiry = ["%s"]
-  disable = ["%t"]
+  expiry = "72h"
+  disable = true
 } 
 
-`, rootPath, expiry, disable)
+`, rootPath)
 }
