@@ -6,7 +6,7 @@ description: |-
   Sets the CRL config on an PKI Secret Backend for Vault.
 ---
 
-# vault\_pki\_secret\_backend\_crl_config
+# vault\_pki\_secret\_backend\_crl\_config
 
 Allows setting the duration for which the generated CRL should be marked valid. If the CRL is disabled, it will return a signed but zero-length CRL for any request. If enabled, it will re-build the CRL.
 
