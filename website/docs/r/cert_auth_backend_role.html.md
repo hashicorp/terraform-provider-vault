@@ -47,7 +47,7 @@ The following arguments are supported:
 
 * `allowed_uri_sans` - (Optional) Allowed URIs for authenticated client certificates
 
-* `allowed_organization_units` - (Optional) Allowed organization units for authenticated client certificates
+* `allowed_organizational_units` - (Optional) Allowed organization units for authenticated client certificates
 
 * `required_extensions` - (Optional) TLS extensions required on client certificates
 
