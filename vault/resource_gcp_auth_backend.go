@@ -24,10 +24,10 @@ func gcpAuthBackendResource() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"credentials": {
 				Type:         schema.TypeString,
-				Required:     true,
 				StateFunc:    NormalizeCredentials,
 				ValidateFunc: ValidateCredentials,
 				Sensitive:    true,
+				Optional:     true,
 			},
 			"description": {
 				Type:     schema.TypeString,
