@@ -97,7 +97,7 @@ func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) er
 func pkiSecretBackendConfigUrlsUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	backend := d.Id()
+	backend := d.Get("backend").(string)
 
 	path := pkiSecretBackendConfigUrlsPath(backend)
 
