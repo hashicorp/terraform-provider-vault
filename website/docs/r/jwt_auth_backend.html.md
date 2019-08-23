@@ -53,17 +53,23 @@ The following arguments are supported:
 
 * `oidc_discovery_url` - (Optional) The OIDC Discovery URL, without any .well-known component (base path). Cannot be used in combination with `jwt_validation_pubkeys`
 
+* `oidc_discovery_ca_pem` - (Optional) The CA certificate or chain of certificates, in PEM format, to use to validate connections to the OIDC Discovery URL. If not set, system certificates are used
+
 * `oidc_client_id` - (Optional) Client ID used for OIDC backends
 
 * `oidc_client_secret` - (Optional) Client Secret used for OIDC backends
 
-* `bound_issuer` - (Optional) The value against which to match the iss claim in a JWT
+* `jwks_url` - (Optional) JWKS URL to use to authenticate signatures. Cannot be used with "oidc_discovery_url" or "jwt_validation_pubkeys".
 
-* `oidc_discovery_ca_pem` - (Optional) The CA certificate or chain of certificates, in PEM format, to use to validate connections to the OIDC Discovery URL. If not set, system certificates are used
+* `jwks_ca_pem` - (Optional) The CA certificate or chain of certificates, in PEM format, to use to validate connections to the JWKS URL. If not set, system certificates are used.
 
 * `jwt_validation_pubkeys` - (Optional) A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used in combination with `oidc_discovery_url`
 
+* `bound_issuer` - (Optional) The value against which to match the iss claim in a JWT
+
 * `jwt_supported_algs` - (Optional) A list of supported signing algorithms. Vault 1.1.0 defaults to [RS256] but future or past versions of Vault may differ
+
+* `default_role` - (Optional) The default role to use if none is provided during login
 
 The `tune` block is used to tune the auth backend:
 
