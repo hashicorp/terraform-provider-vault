@@ -108,7 +108,7 @@ resource "vault_jwt_auth_backend" "jwt" {
 `, path)
 }
 
-func testAccJWTAuthBackendConfigFullODIC(path string, oidcDiscoveryUrl string, boundIssuer string, supportedAlgs string) string {
+func testAccJWTAuthBackendConfigFullOIDC(path string, oidcDiscoveryUrl string, boundIssuer string, supportedAlgs string) string {
 	return fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "jwt" {
   description = "JWT backend"
