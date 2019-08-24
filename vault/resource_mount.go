@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -111,7 +112,7 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 
 	d.SetId(path)
 
-	return nil
+	return mountRead(d, meta)
 }
 
 func mountUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -145,7 +146,7 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error updating Vault: %s", err)
 	}
 
-	return nil
+	return mountRead(d, meta)
 }
 
 func mountDelete(d *schema.ResourceData, meta interface{}) error {
@@ -184,16 +185,40 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
+	// kv-v2 is an alias for kv, version 2. Vault will report it back as such
+	// and requires special handling to avoid perpetual drift. In all other cases,
+	// update the state values for 'type' and 'options'.
+	if !kvv2SkipUpdate(d, mount) {
+		d.Set("type", mount.Type)
+		d.Set("options", mount.Options)
+	}
+
 	d.Set("path", path)
-	d.Set("type", mount.Type)
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
 	d.Set("accessor", mount.Accessor)
 	d.Set("local", mount.Local)
-	d.Set("options", mount.Options)
 
 	return nil
+}
+
+// kvv2SkipUpdate will return whether 'type' and 'options' should not be updated
+// with current values. The update should be skipped if the following are true:
+//
+// * configuration is requesting type "kv-v2" and resource is reporting type "kv"
+// * mount options are equal, or the config mount options aren't specified and
+//   the resource is reporting "version": "2"
+func kvv2SkipUpdate(d *schema.ResourceData, mount *api.MountOutput) bool {
+	if d.Get("type").(string) != "kv-v2" || mount.Type != "kv" {
+		return false
+	}
+
+	hasV2MountOptions := reflect.DeepEqual(mount.Options, map[string]string{"version": "2"})
+	_, hasCfgOptions := d.GetOk("options")
+	optionsEqual := reflect.DeepEqual(opts(d), mount.Options)
+
+	return optionsEqual || (!hasCfgOptions && hasV2MountOptions)
 }
 
 func opts(d *schema.ResourceData) map[string]string {
