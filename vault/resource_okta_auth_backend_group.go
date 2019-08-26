@@ -17,6 +17,10 @@ func oktaAuthBackendGroupResource() *schema.Resource {
 		Read:   oktaAuthBackendGroupRead,
 		Update: oktaAuthBackendGroupWrite,
 		Delete: oktaAuthBackendGroupDelete,
+		Exists: oktaAuthBackendGroupExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"path": {
@@ -86,23 +90,30 @@ func oktaAuthBackendGroupWrite(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("unable to write group %s to Vault: %s", groupName, err)
 	}
 
-	d.SetId(fmt.Sprintf("%s/%s", path, groupName))
+	d.SetId(oktaAuthBackendGroupID(path, groupName))
 
 	return oktaAuthBackendGroupRead(d, meta)
 }
 
 func oktaAuthBackendGroupRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
+	id := d.Id()
 
-	path := d.Get("path").(string)
-	name := d.Get("group_name").(string)
+	backend, err := oktaAuthBackendGroupPathFromID(id)
+	if err != nil {
+		return fmt.Errorf("invalid id %q for Okta auth bekcnd group: %s", id, err)
+	}
+	groupName, err := oktaAuthBackendGroupNameFromID(id)
+	if err != nil {
+		return fmt.Errorf("invalid id %q for Okta auth bekcnd group: %s", id, err)
+	}
 
-	log.Printf("[DEBUG] Reading group %s from Okta auth backend %s", name, path)
+	log.Printf("[DEBUG] Reading group %s from Okta auth backend %s", groupName, backend)
 
-	present, err := isOktaGroupPresent(client, path, name)
+	present, err := isOktaGroupPresent(client, backend, groupName)
 
 	if err != nil {
-		return fmt.Errorf("unable to read group %s from Vault: %s", name, err)
+		return fmt.Errorf("unable to read group %s from Vault: %s", groupName, err)
 	}
 
 	if !present {
@@ -111,13 +122,14 @@ func oktaAuthBackendGroupRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	group, err := readOktaGroup(client, path, name)
-
+	group, err := readOktaGroup(client, backend, groupName)
 	if err != nil {
-		return fmt.Errorf("unable to update group %s from Vault: %s", name, err)
+		return fmt.Errorf("unable to update group %s from Vault: %s", groupName, err)
 	}
 
 	d.Set("policies", group.Policies)
+	d.Set("group_name", group.Name)
+	d.Set("path", backend)
 
 	return nil
 }
@@ -137,4 +149,47 @@ func oktaAuthBackendGroupDelete(d *schema.ResourceData, meta interface{}) error 
 	d.SetId("")
 
 	return nil
+}
+
+func oktaAuthBackendGroupExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+	client := meta.(*api.Client)
+	id := d.Id()
+
+	backend, err := oktaAuthBackendGroupPathFromID(id)
+	if err != nil {
+		return false, fmt.Errorf("invalid id %q for Okta auth bekcnd group: %s", id, err)
+	}
+	groupName, err := oktaAuthBackendGroupNameFromID(id)
+	if err != nil {
+		return false, fmt.Errorf("invalid id %q for Okta auth bekcnd group: %s", id, err)
+	}
+
+	log.Printf("[DEBUG] Checking if Okta group %q exists", groupName)
+	present, err := isOktaGroupPresent(client, backend, groupName)
+	if err != nil {
+		return false, fmt.Errorf("error checking for existence of Okta group %q: %s", groupName, err)
+	}
+	log.Printf("[DEBUG] Checked if Okta group %q exists", groupName)
+
+	return present, nil
+}
+
+func oktaAuthBackendGroupID(path, groupName string) string {
+	return strings.Join([]string{path, groupName}, "/")
+}
+
+func oktaAuthBackendGroupPathFromID(id string) (string, error) {
+	var parts = strings.Split(id, "/")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("Expecdted 2 parts in ID '%s'", id)
+	}
+	return parts[0], nil
+}
+
+func oktaAuthBackendGroupNameFromID(id string) (string, error) {
+	var parts = strings.Split(id, "/")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("Expecdted 2 parts in ID '%s'", id)
+	}
+	return parts[1], nil
 }
