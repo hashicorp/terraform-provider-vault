@@ -1,4 +1,10 @@
 ## 2.3.0 (Unreleased)
+
+IMPROVEMENTS:
+
+* Add JWKS configuration options to the JWT resource ([#483](https://github.com/terraform-providers/terraform-provider-vault/pull/483)).
+
+
 ## 2.2.0 (August 09, 2019)
 
 FEATURES:
