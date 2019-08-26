@@ -30,7 +30,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccJWTAuthBackendConfigFullODIC(path, "https://myco.auth0.com/", "api://default", "\"RS512\""),
+				Config: testAccJWTAuthBackendConfigFullOIDC(path, "https://myco.auth0.com/", "api://default", "\"RS512\""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", "api://default"),
@@ -39,7 +39,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccJWTAuthBackendConfigFullODIC(path, "https://myco.auth0.com/", "api://default", "\"RS256\",\"RS512\""),
+				Config: testAccJWTAuthBackendConfigFullOIDC(path, "https://myco.auth0.com/", "api://default", "\"RS256\",\"RS512\""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", "api://default"),
