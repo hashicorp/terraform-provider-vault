@@ -51,9 +51,19 @@ The following arguments are supported:
 
 * `secret_id` - (Optional) The SecretID to be created. If set, uses "Push"
   mode.  Defaults to Vault auto-generating SecretIDs.
+  
+* `wrapping_ttl` - (Optional) If set, the SecretID response will be
+  [response-wrapped](https://www.vaultproject.io/docs/concepts/response-wrapping.html)
+  and available for the duration specified. Only a single unwrapping of the
+  token is allowed.
 
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
 
 * `accessor` - The unique ID for this SecretID that can be safely logged.
+
+* `wrapping_accessor` - The unique ID for the response-wrapped SecretID that can
+   be safely logged.
+   
+* `wrapping_token` - The token used to retrieve a response-wrapped SecretID.
