@@ -149,6 +149,10 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 		Update: gcpAuthResourceUpdate,
 		Read:   gcpAuthResourceRead,
 		Delete: gcpAuthResourceDelete,
+		Exists: gcpAuthResourceExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: fields,
 	}
 }
@@ -278,6 +282,17 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
+	backend, err := gcpAuthResourceBackendFromPath(path)
+	if err != nil {
+		return fmt.Errorf("invalid path %q for GCP auth backend role: %s", path, err)
+	}
+	d.Set("backend", backend)
+	role, err := gcpAuthResourceRoleFromPath(path)
+	if err != nil {
+		return fmt.Errorf("invalid path %q for GCP auth backend role: %s", path, err)
+	}
+	d.Set("role", role)
+
 	readTokenFields(d, resp)
 
 	// Check if the user is using the deprecated `policies`
@@ -366,4 +381,34 @@ func gcpAuthResourceDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleted GCP role %q", path)
 
 	return nil
+}
+
+func gcpAuthResourceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+	client := meta.(*api.Client)
+	path := d.Id()
+
+	log.Printf("[DEBUG] Checking if gcp auth role %q exists", path)
+	resp, err := client.Logical().Read(path)
+	if err != nil {
+		return true, fmt.Errorf("error checking for existence of gcp auth resource config %q: %s", path, err)
+	}
+	log.Printf("[DEBUG] Checked if gcp auth role %q exists", path)
+
+	return resp != nil, nil
+}
+
+func gcpAuthResourceBackendFromPath(path string) (string, error) {
+	var parts = strings.Split(path, "/")
+	if len(parts) != 4 {
+		return "", fmt.Errorf("Expecdted 4 parts in path '%s'", path)
+	}
+	return parts[1], nil
+}
+
+func gcpAuthResourceRoleFromPath(path string) (string, error) {
+	var parts = strings.Split(path, "/")
+	if len(parts) != 4 {
+		return "", fmt.Errorf("Expecdted 4 parts in path '%s'", path)
+	}
+	return parts[3], nil
 }

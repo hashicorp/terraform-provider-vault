@@ -37,3 +37,11 @@ In addition to the fields above, the following attributes are also exposed:
 * `project_id` - The GCP Project ID
 
 * `client_email` - The clients email associated with the credentials
+
+## Import
+
+GCP authentication backends can be imported using the backend name, e.g.
+
+```
+$ terraform import vault_gcp_auth_backend.gcp gcp
+```
