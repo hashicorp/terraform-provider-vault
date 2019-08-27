@@ -130,6 +130,11 @@ func ldapAuthBackendResource() *schema.Resource {
 					return strings.Trim(v.(string), "/")
 				},
 			},
+			"case_sensitive_names": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+			},
 
 			"accessor": {
 				Type:        schema.TypeString,
@@ -236,6 +241,9 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := d.GetOk("use_token_groups"); ok {
 		data["use_token_groups"] = v.(bool)
 	}
+	if v, ok := d.GetOkExists("case_sensitive_names"); ok {
+		data["case_sensitive_names"] = v.(bool)
+	}
 
 	log.Printf("[DEBUG] Writing LDAP config %q", path)
 	_, err := client.Logical().Write(path, data)
@@ -299,6 +307,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("groupdn", resp.Data["groupdn"])
 	d.Set("groupattr", resp.Data["groupattr"])
 	d.Set("use_token_groups", resp.Data["use_token_groups"])
+	d.Set("case_sensitive_names", resp.Data["case_sensitive_names"])
 
 	// `bindpass` cannot be read out from the API
 	// So... if they drift, they drift.
