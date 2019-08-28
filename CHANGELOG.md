@@ -3,6 +3,7 @@
 IMPROVEMENTS:
 
 * Add JWKS configuration options to the JWT resource ([#483](https://github.com/terraform-providers/terraform-provider-vault/pull/483)).
+* Add support for response wrapping AppRole secret IDs ([#518](https://github.com/terraform-providers/terraform-provider-vault/pull/518)).
 
 
 ## 2.2.0 (August 09, 2019)
