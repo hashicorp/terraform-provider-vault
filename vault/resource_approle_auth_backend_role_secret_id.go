@@ -198,6 +198,7 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 			return err
 		}
 		if !valid {
+			log.Printf("[WARN] AppRole auth backend role SecretID %q not found, removing from state", id)
 			d.SetId("")
 		}
 		return nil
