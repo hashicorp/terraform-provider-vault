@@ -85,6 +85,27 @@ func approleAuthBackendRoleSecretIDResource() *schema.Resource {
 				Computed:    true,
 				Description: "The unique ID used to access this SecretID.",
 			},
+
+			"wrapping_ttl": {
+				Type:        schema.TypeString,
+				Required:    false,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The TTL duration of the wrapped SecretID.",
+			},
+
+			"wrapping_token": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The wrapped SecretID token.",
+				Sensitive:   true,
+			},
+
+			"wrapping_accessor": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The wrapped SecretID accessor.",
+			},
 		},
 	}
 }
@@ -121,6 +142,21 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 		data["metadata"] = ""
 	}
 
+	wrappingTTL, wrapped := d.GetOk("wrapping_ttl")
+
+	if wrapped {
+		var err error
+
+		token := client.Token()
+		if client, err = client.Clone(); err != nil {
+			return fmt.Errorf("error cloning client: %s", err)
+		}
+		client.SetToken(token)
+		client.SetWrappingLookupFunc(func(_, _ string) string {
+			return wrappingTTL.(string)
+		})
+	}
+
 	resp, err := client.Logical().Write(path, data)
 
 	if err != nil {
@@ -128,10 +164,19 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	}
 	log.Printf("[DEBUG] Wrote AppRole auth backend role SecretID %q", path)
 
-	d.Set("secret_id", resp.Data["secret_id"])
-	d.Set("accessor", resp.Data["secret_id_accessor"])
+	var accessor string
 
-	d.SetId(approleAuthBackendRoleSecretIDID(backend, role, resp.Data["secret_id_accessor"].(string)))
+	if wrapped {
+		accessor = resp.WrapInfo.Accessor
+		d.Set("wrapping_token", resp.WrapInfo.Token)
+		d.Set("wrapping_accessor", accessor)
+	} else {
+		accessor = resp.Data["secret_id_accessor"].(string)
+		d.Set("secret_id", resp.Data["secret_id"])
+		d.Set("accessor", accessor)
+	}
+
+	d.SetId(approleAuthBackendRoleSecretIDID(backend, role, accessor, wrapped))
 
 	return approleAuthBackendRoleSecretIDRead(d, meta)
 }
@@ -140,9 +185,23 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	backend, role, accessor, err := approleAuthBackendRoleSecretIDParseID(id)
+	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)
 	if err != nil {
 		return fmt.Errorf("invalid ID %q for AppRole auth backend role SecretID: %s", id, err)
+	}
+
+	// If the ID is wrapped, there is no information available other than whether
+	// the wrapping token is still valid.
+	if wrapped {
+		valid, err := approleAuthBackendRoleSecretIDExists(d, meta)
+		if err != nil {
+			return err
+		}
+		if !valid {
+			log.Printf("[WARN] AppRole auth backend role SecretID %q not found, removing from state", id)
+			d.SetId("")
+		}
+		return nil
 	}
 
 	path := approleAuthBackendRolePath(backend, role) + "/secret-id-accessor/lookup"
@@ -201,16 +260,24 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 func approleAuthBackendRoleSecretIDDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
-	backend, role, accessor, err := approleAuthBackendRoleSecretIDParseID(id)
+	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)
 	if err != nil {
 		return fmt.Errorf("invalid ID %q for AppRole auth backend role SecretID: %s", id, err)
 	}
 
-	path := approleAuthBackendRolePath(backend, role) + "/secret-id-accessor/destroy"
+	var path, accessorParam string
+
+	if wrapped {
+		path = "auth/token/revoke-accessor"
+		accessorParam = "accessor"
+	} else {
+		path = approleAuthBackendRolePath(backend, role) + "/secret-id-accessor/destroy"
+		accessorParam = "secret_id_accessor"
+	}
 
 	log.Printf("[DEBUG] Deleting AppRole auth backend role SecretID %q", id)
 	_, err = client.Logical().Write(path, map[string]interface{}{
-		"secret_id_accessor": accessor,
+		accessorParam: accessor,
 	})
 	if err != nil {
 		return fmt.Errorf("error deleting AppRole auth backend role SecretID %q", id)
@@ -224,9 +291,21 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	backend, role, accessor, err := approleAuthBackendRoleSecretIDParseID(id)
+	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)
 	if err != nil {
 		return true, fmt.Errorf("invalid ID %q for AppRole auth backend role SecretID: %s", id, err)
+	}
+
+	if wrapped {
+		_, err := client.Logical().Write("auth/token/lookup-accessor", map[string]interface{}{
+			"accessor": accessor,
+		})
+		if err == nil {
+			return true, nil
+		} else if util.IsExpiredTokenErr(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("error reading AppRole auth backend wrapped SecretID %q exists: %v", accessor, err)
 	}
 
 	path := approleAuthBackendRolePath(backend, role) + "/secret-id-accessor/lookup"
@@ -247,17 +326,28 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 	return resp != nil, nil
 }
 
-func approleAuthBackendRoleSecretIDID(backend, role, accessor string) string {
+func approleAuthBackendRoleSecretIDID(backend, role, accessor string, wrapped bool) string {
+	if wrapped {
+		accessor = "wrapped-" + accessor
+	}
 	return fmt.Sprintf("backend=%s::role=%s::accessor=%s", strings.Trim(backend, "/"), strings.Trim(role, "/"), accessor)
 }
 
-func approleAuthBackendRoleSecretIDParseID(id string) (backend, role, accessor string, err error) {
+func approleAuthBackendRoleSecretIDParseID(id string) (backend, role, accessor string, wrapped bool, err error) {
 	if !approleAuthBackendRoleSecretIDIDRegex.MatchString(id) {
-		return "", "", "", fmt.Errorf("ID did not match pattern")
+		return "", "", "", false, fmt.Errorf("ID did not match pattern")
 	}
 	res := approleAuthBackendRoleSecretIDIDRegex.FindStringSubmatch(id)
 	if len(res) != 4 {
-		return "", "", "", fmt.Errorf("unexpected number of matches: %d", len(res))
+		return "", "", "", false, fmt.Errorf("unexpected number of matches: %d", len(res))
 	}
-	return res[1], res[2], res[3], nil
+
+	backend, role, accessor = res[1], res[2], res[3]
+
+	if strings.HasPrefix(accessor, "wrapped-") {
+		accessor = strings.TrimPrefix(accessor, "wrapped-")
+		wrapped = true
+	}
+
+	return
 }
