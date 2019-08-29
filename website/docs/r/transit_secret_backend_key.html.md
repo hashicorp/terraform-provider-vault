@@ -1,6 +1,6 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_key_secret_backend_key resource"
+page_title: "Vault: vault_transit_secret_backend_key resource"
 sidebar_current: "docs-vault-resource-transit-secret-backend-key"
 description: |-
   Create an Encryption Keyring on a Transit Secret Backend for Vault.
@@ -14,15 +14,15 @@ Creates an Encryption Keyring on a Transit Secret Backend for Vault.
 
 ```hcl
 resource "vault_mount" "transit" {
-  path = "transit"
-  type = "transit"
-  description = "Example description"
+  path                      = "transit"
+  type                      = "transit"
+  description               = "Example description"
   default_lease_ttl_seconds = 3600
-  max_lease_ttl_seconds = 86400
+  max_lease_ttl_seconds     = 86400
 }
 
 resource "vault_transit_secret_backend_key" "key" {
-  backend = "${vault_transit_secret_backend.transit.path}"
+  backend = "${vault_mount.transit.path}"
   name    = "my_key"
 }
 ```
