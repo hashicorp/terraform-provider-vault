@@ -22,7 +22,7 @@ for more details.
 
 ```hcl
 data "vault_identity_group" "group" {
-  name = "user"
+  group_name = "user"
 }
 ```
 
