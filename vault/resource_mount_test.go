@@ -10,6 +10,12 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+type mountConfig struct {
+	path      string
+	mountType string
+	version   string
+}
+
 func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
 	path := acctest.RandomWithPrefix("example")
 	resource.Test(t, resource.TestCase{
@@ -39,13 +45,18 @@ func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
 
 func TestResourceMount(t *testing.T) {
 	path := "example-" + acctest.RandString(10)
+	cfg := mountConfig{
+		path:      path,
+		mountType: "kv",
+		version:   "1",
+	}
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceMount_initialConfig(path),
-				Check:  testResourceMount_initialCheck(path),
+				Config: testResourceMount_initialConfig(cfg),
+				Check:  testResourceMount_initialCheck(cfg),
 			},
 			{
 				Config: testResourceMount_updateConfig,
@@ -75,11 +86,44 @@ func TestResourceMount_Local(t *testing.T) {
 	})
 }
 
-func testResourceMount_initialConfig(path string) string {
+func TestResourceMount_KVV2(t *testing.T) {
+	path := acctest.RandomWithPrefix("example")
+	kvv2Cfg := fmt.Sprintf(`
+			resource "vault_mount" "test" {
+				path = "%s"
+				type = "kv-v2"
+				description = "Example mount for testing"
+				default_lease_ttl_seconds = 3600
+				max_lease_ttl_seconds = 36000
+			}`, path)
+	resource.Test(t, resource.TestCase{
+
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: kvv2Cfg,
+
+				// Vault will store this and report it back as "kv", version 2
+				Check: testResourceMount_initialCheck(mountConfig{
+					path:      path,
+					mountType: "kv",
+					version:   "2",
+				}),
+			},
+			{
+				PlanOnly: true,
+				Config:   kvv2Cfg,
+			},
+		},
+	})
+}
+
+func testResourceMount_initialConfig(cfg mountConfig) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "kv"
+	type = "%s"
 	description = "Example mount for testing"
 	default_lease_ttl_seconds = 3600
 	max_lease_ttl_seconds = 36000
@@ -87,10 +131,10 @@ resource "vault_mount" "test" {
 		version = "1"
 	}
 }
-`, path)
+`, cfg.path, cfg.mountType)
 }
 
-func testResourceMount_initialCheck(expectedPath string) resource.TestCheckFunc {
+func testResourceMount_initialCheck(cfg mountConfig) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_mount.test"]
 		if resourceState == nil {
@@ -108,8 +152,8 @@ func testResourceMount_initialCheck(expectedPath string) resource.TestCheckFunc 
 			return fmt.Errorf("id %q doesn't match path %q", path, instanceState.Attributes["path"])
 		}
 
-		if path != expectedPath {
-			return fmt.Errorf("unexpected path %q, expected %q", path, expectedPath)
+		if path != cfg.path {
+			return fmt.Errorf("unexpected path %q, expected %q", path, cfg.path)
 		}
 
 		mount, err := findMount(path)
@@ -121,16 +165,20 @@ func testResourceMount_initialCheck(expectedPath string) resource.TestCheckFunc 
 			return fmt.Errorf("description is %v; wanted %v", mount.Description, wanted)
 		}
 
-		if wanted := "kv"; mount.Type != wanted {
-			return fmt.Errorf("type is %v; wanted %v", mount.Description, wanted)
+		if wanted := cfg.mountType; mount.Type != wanted {
+			return fmt.Errorf("type is %v; wanted %v", mount.Type, wanted)
 		}
 
 		if wanted := 3600; mount.Config.DefaultLeaseTTL != wanted {
-			return fmt.Errorf("default lease ttl is %v; wanted %v", mount.Description, wanted)
+			return fmt.Errorf("default lease ttl is %v; wanted %v", mount.Config.DefaultLeaseTTL, wanted)
 		}
 
 		if wanted := 36000; mount.Config.MaxLeaseTTL != wanted {
-			return fmt.Errorf("max lease ttl is %v; wanted %v", mount.Description, wanted)
+			return fmt.Errorf("max lease ttl is %v; wanted %v", mount.Config.MaxLeaseTTL, wanted)
+		}
+
+		if wanted := cfg.version; mount.Options["version"] != wanted {
+			return fmt.Errorf("version is %v; wanted %v", mount.Options["version"], wanted)
 		}
 
 		return nil

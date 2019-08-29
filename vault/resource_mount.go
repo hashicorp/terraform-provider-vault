@@ -111,7 +111,7 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 
 	d.SetId(path)
 
-	return nil
+	return mountRead(d, meta)
 }
 
 func mountUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -145,7 +145,7 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error updating Vault: %s", err)
 	}
 
-	return nil
+	return mountRead(d, meta)
 }
 
 func mountDelete(d *schema.ResourceData, meta interface{}) error {
@@ -182,6 +182,21 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 		log.Printf("[WARN] Mount %q not found, removing from state.", path)
 		d.SetId("")
 		return nil
+	}
+
+	cfgType := d.Get("type").(string)
+
+	// kv-v2 is an alias for kv, version 2. Vault will report it back as "kv"
+	// and requires special handling to avoid perpetual drift.
+	if cfgType == "kv-v2" && mount.Type == "kv" && mount.Options["version"] == "2" {
+		mount.Type = "kv-v2"
+
+		// The options block may be omitted when specifying kv-v2, but will always
+		// be present in Vault's response if version 2. Omit the version setting
+		// if it wasn't explicitly set in config.
+		if opts(d)["version"] == "" {
+			delete(mount.Options, "version")
+		}
 	}
 
 	d.Set("path", path)
