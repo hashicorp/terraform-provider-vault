@@ -5,6 +5,10 @@ IMPROVEMENTS:
 * Add JWKS configuration options to the JWT resource ([#483](https://github.com/terraform-providers/terraform-provider-vault/pull/483)).
 * Add support for response wrapping AppRole secret IDs ([#518](https://github.com/terraform-providers/terraform-provider-vault/pull/518)).
 
+BUG FIXES:
+
+* Fix issue where using mount type "kv-v2" would continuous recreate the resource ([#515](https://github.com/terraform-providers/terraform-provider-vault/pull/515))
+
 
 ## 2.2.0 (August 09, 2019)
 
