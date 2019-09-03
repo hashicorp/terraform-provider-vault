@@ -141,6 +141,27 @@ func ldapAuthBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The accessor of the LDAP auth backend",
 			},
+
+			"token_ttl": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+			"token_max_ttl": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+			"token_explicit_max_ttl": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+			"token_type": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -244,6 +265,18 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := d.GetOkExists("case_sensitive_names"); ok {
 		data["case_sensitive_names"] = v.(bool)
 	}
+	if v, ok := d.GetOkExists("token_ttl"); ok {
+		data["token_ttl"] = v.(string)
+	}
+	if v, ok := d.GetOkExists("token_max_ttl"); ok {
+		data["token_max_ttl"] = v.(string)
+	}
+	if v, ok := d.GetOkExists("token_explicit_max_ttl"); ok {
+		data["token_explicit_max_ttl"] = v.(string)
+	}
+	if v, ok := d.GetOkExists("token_type"); ok {
+		data["token_type"] = v.(string)
+	}
 
 	log.Printf("[DEBUG] Writing LDAP config %q", path)
 	_, err := client.Logical().Write(path, data)
@@ -308,6 +341,10 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("groupattr", resp.Data["groupattr"])
 	d.Set("use_token_groups", resp.Data["use_token_groups"])
 	d.Set("case_sensitive_names", resp.Data["case_sensitive_names"])
+	d.Set("token_ttl", resp.Data["token_ttl"])
+	d.Set("token_max_ttl", resp.Data["token_max_ttl"])
+	d.Set("token_explicit_max_ttl", resp.Data["token_explicit_max_ttl"])
+	d.Set("token_type", resp.Data["token_type"])
 
 	// `bindpass` cannot be read out from the API
 	// So... if they drift, they drift.
