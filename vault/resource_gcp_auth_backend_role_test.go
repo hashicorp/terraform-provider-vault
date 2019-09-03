@@ -48,6 +48,11 @@ func TestGCPAuthBackendRole_basic(t *testing.T) {
 						"token_policies.#", "0"),
 				),
 			},
+			{
+				ResourceName:      "vault_gcp_auth_backend_role.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }

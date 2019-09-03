@@ -123,3 +123,12 @@ documented above.
 ## Attribute Reference
 
 No additional attributes are exposed by this resource.
+
+
+## Import
+
+GCP authentication roles can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_gcp_auth_backend_role.my_role auth/gcp/role/my_role
+```
