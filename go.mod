@@ -15,3 +15,5 @@ require (
 	github.com/rainycape/unidecode v0.0.0-20150907023854-cb7f23ec59be // indirect
 	github.com/ulikunitz/xz v0.5.6 // indirect
 )
+
+replace git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
