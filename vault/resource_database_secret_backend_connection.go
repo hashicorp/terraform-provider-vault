@@ -51,6 +51,14 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"root_rotation_statements": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "A list of database statements to be executed to rotate the root user's credentials.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"data": {
 				Type:        schema.TypeMap,
 				Optional:    true,
@@ -441,6 +449,10 @@ func databaseSecretBackendConnectionCreate(d *schema.ResourceData, meta interfac
 		data["allowed_roles"] = strings.Join(roles, ",")
 	}
 
+	if v, ok := d.GetOkExists("root_rotation_statements"); ok {
+		data["root_rotation_statements"] = v
+	}
+
 	if m, ok := d.GetOkExists("data"); ok {
 		for k, v := range m.(map[string]interface{}) {
 			data[k] = v.(string)
@@ -584,6 +596,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	d.Set("allowed_roles", roles)
 	d.Set("backend", backend)
 	d.Set("name", name)
+	d.Set("root_rotation_statements", resp.Data["root_credentials_rotate_statements"])
 	if v, ok := resp.Data["verify_connection"]; ok {
 		d.Set("verify_connection", v.(bool))
 	}
@@ -614,6 +627,10 @@ func databaseSecretBackendConnectionUpdate(d *schema.ResourceData, meta interfac
 			roles = append(roles, role.(string))
 		}
 		data["allowed_roles"] = strings.Join(roles, ",")
+	}
+
+	if v, ok := d.GetOkExists("root_rotation_statements"); ok {
+		data["root_rotation_statements"] = v
 	}
 
 	if m, ok := d.GetOkExists("data"); ok {
