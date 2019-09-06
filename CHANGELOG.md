@@ -2,12 +2,17 @@
 
 IMPROVEMENTS:
 
-* Add JWKS configuration options to the JWT resource ([#483](https://github.com/terraform-providers/terraform-provider-vault/pull/483)).
-* Add support for response wrapping AppRole secret IDs ([#518](https://github.com/terraform-providers/terraform-provider-vault/pull/518)).
+* Adds support for importing roles in "vault_gcp_auth_backend_role" ([#517](https://github.com/terraform-providers/terraform-provider-vault/pull/517)).
+* Adds support for importing groups in "vault_okta_auth_backend_group" ([#514](https://github.com/terraform-providers/terraform-provider-vault/pull/514)).
+* Adds JWKS configuration options to "vault_jwt_auth_backend" ([#483](https://github.com/terraform-providers/terraform-provider-vault/pull/483)).
+* Adds support for response wrapping to "vault_approle_auth_backend_role_secret_id" ([#518](https://github.com/terraform-providers/terraform-provider-vault/pull/518)).
 
 BUG FIXES:
 
-* Fix issue where using mount type "kv-v2" would continuously recreate the resource ([#515](https://github.com/terraform-providers/terraform-provider-vault/pull/515))
+* Fixes an issue where using mount type "kv-v2" in "vault_mount" would continuously recreate the resource ([#515](https://github.com/terraform-providers/terraform-provider-vault/pull/515)).
+* Fixes an issue where the "vault_token" resource would try to renew the access token instead of the resource token ([#423](https://github.com/terraform-providers/terraform-provider-vault/pull/423)).
+* In the "vault_gcp_auth_backend", marks "credentials" as optional rather than required ([#509](https://github.com/terraform-providers/terraform-provider-vault/pull/509)).
+* Fixes an issue where "vault_pki_secret_backend_config_urls" was forming an invalid URL for updating ([#512](https://github.com/terraform-providers/terraform-provider-vault/pull/512)).
 
 
 ## 2.2.0 (August 09, 2019)
