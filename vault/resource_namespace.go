@@ -64,6 +64,9 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Get("path").(string)
+	if path == "" {
+		path = d.Id()
+	}
 
 	resp, err := client.Logical().Read("sys/namespaces/" + path)
 
@@ -78,6 +81,7 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.SetId(resp.Data["id"].(string))
+	d.Set("path", path)
 
 	return nil
 }
