@@ -21,6 +21,11 @@ func pkiSecretBackendCrlConfigResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The path of the PKI secret backend the resource belongs to.",
+				ForceNew:    true,
+				// standardise on no beginning or trailing slashes
+				StateFunc: func(v interface{}) string {
+					return strings.Trim(v.(string), "/")
+				},
 			},
 			"expiry": {
 				Type:        schema.TypeString,
@@ -29,7 +34,6 @@ func pkiSecretBackendCrlConfigResource() *schema.Resource {
 			},
 			"disable": {
 				Type:        schema.TypeBool,
-				Required:    false,
 				Optional:    true,
 				Description: "Disables or enables CRL building",
 			},
@@ -41,15 +45,14 @@ func pkiSecretBackendCrlConfigCreate(d *schema.ResourceData, meta interface{}) e
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
-
 	path := pkiSecretBackendCrlConfigPath(backend)
 
-	expiry := d.Get("expiry")
-	disable := d.Get("disable")
-
-	data := map[string]interface{}{
-		"expiry":  expiry,
-		"disable": disable,
+	data := make(map[string]interface{})
+	if expiry, ok := d.GetOk("expiry"); ok {
+		data["expiry"] = expiry
+	}
+	if disable, ok := d.GetOk("disable"); ok {
+		data["disable"] = disable
 	}
 
 	log.Printf("[DEBUG] Creating CRL config on PKI secret backend %q", backend)
@@ -90,12 +93,12 @@ func pkiSecretBackendCrlConfigUpdate(d *schema.ResourceData, meta interface{}) e
 	path := d.Id()
 	backend := pkiSecretBackendCrlConfigPath(path)
 
-	expiry := d.Get("expiry")
-	disable := d.Get("disable")
-
-	data := map[string]interface{}{
-		"expiry":  expiry,
-		"disable": disable,
+	data := make(map[string]interface{})
+	if expiry, ok := d.GetOk("expiry"); ok {
+		data["expiry"] = expiry
+	}
+	if disable, ok := d.GetOk("disable"); ok {
+		data["disable"] = disable
 	}
 
 	log.Printf("[DEBUG] Updating CRL config on PKI secret backend %q", backend)
