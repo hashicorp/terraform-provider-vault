@@ -156,6 +156,28 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
+	log.Printf("[DEBUG] Read AWS secret backend config/root %s", path)
+	resp, err := client.Logical().Read(path + "/config/root")
+	if err != nil {
+		return fmt.Errorf("error reading AWS secret backend config/root: %s", err)
+	}
+	if resp != nil {
+		if v, ok := resp.Data["access_key"].(string); ok {
+			d.Set("access_key", v)
+		}
+		// Terrible backwards compatibility hack. Previously, if no region was specified,
+		// this provider would just write a region of "us-east-1" into its state. Now that
+		// we're actually reading the region out from the backend, if it hadn't been set,
+		// it will return an empty string. This could potentially cause unexpected diffs
+		// for users of the provider, so to avoid it, we're doing something similar here
+		// and injecting a fake region of us-east-1 into the state.
+		if v, ok := resp.Data["region"].(string); ok && v != "" {
+			d.Set("region", v)
+		} else {
+			d.Set("region", "us-east-1")
+		}
+	}
+
 	d.Set("path", path)
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
