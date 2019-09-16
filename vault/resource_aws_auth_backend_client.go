@@ -75,7 +75,6 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	// if backend comes from the config, it won't have the StateFunc
 	// applied yet, so we need to apply it again.
 	backend := d.Get("backend").(string)
-	accessKey := d.Get("access_key").(string)
 	ec2Endpoint := d.Get("ec2_endpoint").(string)
 	iamEndpoint := d.Get("iam_endpoint").(string)
 	stsEndpoint := d.Get("sts_endpoint").(string)
@@ -84,7 +83,6 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	path := awsAuthBackendClientPath(backend)
 
 	data := map[string]interface{}{
-		"access_key":                 accessKey,
 		"endpoint":                   ec2Endpoint,
 		"iam_endpoint":               iamEndpoint,
 		"sts_endpoint":               stsEndpoint,
