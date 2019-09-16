@@ -76,7 +76,6 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	// applied yet, so we need to apply it again.
 	backend := d.Get("backend").(string)
 	accessKey := d.Get("access_key").(string)
-	secretKey := d.Get("secret_key").(string)
 	ec2Endpoint := d.Get("ec2_endpoint").(string)
 	iamEndpoint := d.Get("iam_endpoint").(string)
 	stsEndpoint := d.Get("sts_endpoint").(string)
@@ -86,11 +85,16 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 
 	data := map[string]interface{}{
 		"access_key":                 accessKey,
-		"secret_key":                 secretKey,
 		"endpoint":                   ec2Endpoint,
 		"iam_endpoint":               iamEndpoint,
 		"sts_endpoint":               stsEndpoint,
 		"iam_server_id_header_value": iamServerIDHeaderValue,
+	}
+
+	if d.HasChange("access_key") || d.HasChange("secret_key") {
+		log.Printf("[DEBUG] Updating AWS credentials at %q", path)
+		data["access_key"] = d.Get("access_key").(string)
+		data["secret_key"] = d.Get("secret_key").(string)
 	}
 
 	log.Printf("[DEBUG] Writing AWS auth backend client config to %q", path)
