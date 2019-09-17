@@ -10,6 +10,62 @@ import (
 )
 
 func githubAuthBackendResource() *schema.Resource {
+	fields := map[string]*schema.Schema{
+		"path": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			ForceNew:    true,
+			Description: "Path where the auth backend is mounted",
+			Default:     "github",
+			StateFunc: func(v interface{}) string {
+				return strings.Trim(v.(string), "/")
+			},
+		},
+		"organization": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "The organization users must be part of.",
+		},
+		"base_url": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Default:     "",
+			Description: "The API endpoint to use. Useful if you are running GitHub Enterprise or an API-compatible authentication server.",
+		},
+		"description": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Specifies the description of the mount. This overrides the current stored value, if any.",
+		},
+		"ttl": {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Description:   "Duration after which authentication will be expired, in seconds.",
+			ValidateFunc:  validateDuration,
+			Deprecated:    "use `token_ttl` instead",
+			ConflictsWith: []string{"token_ttl"},
+		},
+		"max_ttl": {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Description:   "Maximum duration after which authentication will be expired, in seconds.",
+			ValidateFunc:  validateDuration,
+			Deprecated:    "use `token_max_ttl` instead",
+			ConflictsWith: []string{"token_max_ttl"},
+		},
+		"accessor": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "The mount accessor related to the auth mount.",
+		},
+		"tune": authMountTuneSchema(),
+	}
+
+	addTokenFields(fields, &addTokenFieldsConfig{
+		TokenMaxTTLConflict: []string{"max_ttl"},
+		TokenTTLConflict:    []string{"ttl"},
+	})
+
 	return &schema.Resource{
 		Create: githubAuthBackendCreate,
 		Read:   githubAuthBackendRead,
@@ -18,55 +74,7 @@ func githubAuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-
-		Schema: map[string]*schema.Schema{
-			"path": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				ForceNew:    true,
-				Description: "Path where the auth backend is mounted",
-				Default:     "github",
-				StateFunc: func(v interface{}) string {
-					return strings.Trim(v.(string), "/")
-				},
-			},
-			"organization": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The organization users must be part of.",
-			},
-			"base_url": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "",
-				Description: "The API endpoint to use. Useful if you are running GitHub Enterprise or an API-compatible authentication server.",
-			},
-			"description": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Specifies the description of the mount. This overrides the current stored value, if any.",
-			},
-			"ttl": {
-				Type:         schema.TypeString,
-				Computed:     true,
-				Optional:     true,
-				Description:  "Duration after which authentication will be expired, in seconds.",
-				ValidateFunc: validateDuration,
-			},
-			"max_ttl": {
-				Type:         schema.TypeString,
-				Computed:     true,
-				Optional:     true,
-				Description:  "Maximum duration after which authentication will be expired, in seconds.",
-				ValidateFunc: validateDuration,
-			},
-			"accessor": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "The mount accessor related to the auth mount.",
-			},
-			"tune": authMountTuneSchema(),
-		},
+		Schema: fields,
 	}
 }
 
@@ -117,6 +125,26 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 	if v, ok := d.GetOk("max_ttl"); ok {
 		data["max_ttl"] = v.(string)
+	}
+
+	updateTokenFields(d, data, false)
+
+	// Check if the user is using the deprecated `ttl`
+	if _, deprecated := d.GetOk("ttl"); deprecated {
+		// Then we see if `token_ttl` was set and unset it
+		// Vault will still return `ttl`
+		if _, ok := d.GetOk("token_ttl"); ok {
+			d.Set("token_ttl", nil)
+		}
+	}
+
+	// Check if the user is using the deprecated `max_ttl`
+	if _, deprecated := d.GetOk("max_ttl"); deprecated {
+		// Then we see if `token_max_ttl` was set and unset it
+		// Vault will still return `max_ttl`
+		if _, ok := d.GetOk("token_max_ttl"); ok {
+			d.Set("token_max_ttl", nil)
+		}
 	}
 
 	log.Printf("[DEBUG] Writing github auth config to '%q'", configPath)
@@ -214,12 +242,34 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	ttlS := flattenVaultDuration(dt.Data["ttl"])
 	maxTtlS := flattenVaultDuration(dt.Data["max_ttl"])
 
+	readTokenFields(d, dt)
+
+	// Check if the user is using the deprecated `ttl`
+	if _, deprecated := d.GetOk("ttl"); deprecated {
+		// Then we see if `token_ttl` was set and unset it
+		// Vault will still return `ttl`
+		if _, ok := d.GetOk("token_ttl"); ok {
+			d.Set("token_ttl", nil)
+		}
+
+		d.Set("ttl", ttlS)
+	}
+
+	// Check if the user is using the deprecated `max_ttl`
+	if _, deprecated := d.GetOk("max_ttl"); deprecated {
+		// Then we see if `token_max_ttl` was set and unset it
+		// Vault will still return `max_ttl`
+		if _, ok := d.GetOk("token_max_ttl"); ok {
+			d.Set("token_max_ttl", nil)
+		}
+
+		d.Set("max_ttl", maxTtlS)
+	}
+
 	d.Set("path", d.Id())
 	d.Set("organization", dt.Data["organization"])
 	d.Set("base_url", dt.Data["base_url"])
 	d.Set("description", authMount.Description)
-	d.Set("ttl", ttlS)
-	d.Set("max_ttl", maxTtlS)
 	d.Set("accessor", mount.Accessor)
 
 	return nil

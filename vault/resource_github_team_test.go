@@ -17,7 +17,6 @@ func TestAccGithubTeam_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_github_team.team"
 	team := "my-team-slugified"
-
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -29,9 +28,9 @@ func TestAccGithubTeam_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/map/teams/"+team),
 					resource.TestCheckResourceAttr(resName, "backend", backend),
 					resource.TestCheckResourceAttr(resName, "team", "my-team-slugified"),
-					resource.TestCheckResourceAttr(resName, "token_policies.#", "2"),
-					resource.TestCheckResourceAttr(resName, "token_ttl", "300"),
-					resource.TestCheckResourceAttr(resName, "token_max_ttl", "1800"),
+					resource.TestCheckResourceAttr(resName, "policies.#", "2"),
+					resource.TestCheckResourceAttr(resName, "policies.0", "admin"),
+					resource.TestCheckResourceAttr(resName, "policies.1", "security"),
 				),
 			},
 			{
@@ -40,9 +39,7 @@ func TestAccGithubTeam_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/map/teams/"+team),
 					resource.TestCheckResourceAttr(resName, "backend", backend),
 					resource.TestCheckResourceAttr(resName, "team", "my-team-slugified"),
-					resource.TestCheckResourceAttr(resName, "token_policies.#", "0"),
-					resource.TestCheckResourceAttr(resName, "token_ttl", "300"),
-					resource.TestCheckResourceAttr(resName, "token_max_ttl", "1800"),
+					resource.TestCheckResourceAttr(resName, "policies.#", "0"),
 				),
 			},
 		},
@@ -120,16 +117,14 @@ func testAccGithubTeamConfig_basic(backend string, team string, policies []strin
 	p, _ := json.Marshal(policies)
 	return fmt.Sprintf(`
 resource "vault_github_auth_backend" "gh" {
-  path = "%s"
-  organization = "vault"
+	path = "%s"
+  	organization = "vault"
 }
 
 resource "vault_github_team" "team" {
 	backend = "${vault_github_auth_backend.gh.id}"
 	team = "%s"
-	token_policies = %s
-	token_ttl = 300
-	token_max_ttl = 1800
+	policies = %s
 }
 `, backend, team, p)
 }
