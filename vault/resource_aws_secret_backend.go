@@ -159,7 +159,16 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Read AWS secret backend config/root %s", path)
 	resp, err := client.Logical().Read(path + "/config/root")
 	if err != nil {
-		return fmt.Errorf("error reading AWS secret backend config/root: %s", err)
+		// This is here to support backwards compatibility with Vault. Read operations on the config/root
+		// endpoint were just added and haven't been released yet, and so in currently released versions
+		// the read operations return a 405 error. We'll gracefully revert back to the old behavior in that
+		// case to allow for a transition period.
+		respErr, ok := err.(*api.ResponseError)
+		if !ok || respErr.StatusCode != 405 {
+			return fmt.Errorf("error reading AWS secret backend config/root: %s", err)
+		}
+		log.Printf("[DEBUG] Unable to read config/root due to old version detected; skipping reading access_key and region parameters")
+		resp = nil
 	}
 	if resp != nil {
 		if v, ok := resp.Data["access_key"].(string); ok {
@@ -182,10 +191,6 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
-
-	// access key, secret key, and region, sadly, we can't read out
-	// the API doesn't support it
-	// So... if they drift, they drift.
 
 	return nil
 }
