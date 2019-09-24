@@ -101,11 +101,11 @@ func oktaAuthBackendGroupRead(d *schema.ResourceData, meta interface{}) error {
 
 	backend, err := oktaAuthBackendGroupPathFromID(id)
 	if err != nil {
-		return fmt.Errorf("invalid id %q for Okta auth bekcnd group: %s", id, err)
+		return fmt.Errorf("invalid id %q for Okta auth backend group: %s", id, err)
 	}
 	groupName, err := oktaAuthBackendGroupNameFromID(id)
 	if err != nil {
-		return fmt.Errorf("invalid id %q for Okta auth bekcnd group: %s", id, err)
+		return fmt.Errorf("invalid id %q for Okta auth backend group: %s", id, err)
 	}
 
 	log.Printf("[DEBUG] Reading group %s from Okta auth backend %s", groupName, backend)
@@ -157,11 +157,11 @@ func oktaAuthBackendGroupExists(d *schema.ResourceData, meta interface{}) (bool,
 
 	backend, err := oktaAuthBackendGroupPathFromID(id)
 	if err != nil {
-		return false, fmt.Errorf("invalid id %q for Okta auth bekcnd group: %s", id, err)
+		return false, fmt.Errorf("invalid id %q for Okta auth backend group: %s", id, err)
 	}
 	groupName, err := oktaAuthBackendGroupNameFromID(id)
 	if err != nil {
-		return false, fmt.Errorf("invalid id %q for Okta auth bekcnd group: %s", id, err)
+		return false, fmt.Errorf("invalid id %q for Okta auth backend group: %s", id, err)
 	}
 
 	log.Printf("[DEBUG] Checking if Okta group %q exists", groupName)
@@ -181,7 +181,7 @@ func oktaAuthBackendGroupID(path, groupName string) string {
 func oktaAuthBackendGroupPathFromID(id string) (string, error) {
 	var parts = strings.Split(id, "/")
 	if len(parts) != 2 {
-		return "", fmt.Errorf("Expecdted 2 parts in ID '%s'", id)
+		return "", fmt.Errorf("Expected 2 parts in ID '%s'", id)
 	}
 	return parts[0], nil
 }
@@ -189,7 +189,7 @@ func oktaAuthBackendGroupPathFromID(id string) (string, error) {
 func oktaAuthBackendGroupNameFromID(id string) (string, error) {
 	var parts = strings.Split(id, "/")
 	if len(parts) != 2 {
-		return "", fmt.Errorf("Expecdted 2 parts in ID '%s'", id)
+		return "", fmt.Errorf("Expected 2 parts in ID '%s'", id)
 	}
 	return parts[1], nil
 }
