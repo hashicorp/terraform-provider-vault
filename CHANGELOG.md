@@ -1,4 +1,10 @@
 ## 2.4.0 (Unreleased)
+
+BUG FIXES:
+
+* Fixes incorrect handling of user and team policies in the Github auth backend ([#543](https://github.com/terraform-providers/terraform-provider-vault/pull/543)).
+
+
 ## 2.3.0 (September 06, 2019)
 
 IMPROVEMENTS:
