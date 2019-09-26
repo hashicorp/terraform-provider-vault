@@ -107,6 +107,12 @@ variables in order to keep credential information out of the configuration.
   contains one or more certificate files that will be used to validate
   the certificate presented by the Vault server. May be set via the
   `VAULT_CAPATH` environment variable.
+  
+* `auth_login` - (Optional) A configuration block, described below, that 
+  attempts to authenticate using the `auth/<method>/login` path to 
+  aquire a token which Terraform will use. Terraform still issues itself
+  a limited child token using auth/token/create in order to enforce a short
+  TTL and limit exposure.
 
 * `client_auth` - (Optional) A configuration block, described below, that
   provides credentials used by Terraform to authenticate with the Vault
@@ -132,6 +138,20 @@ variables in order to keep credential information out of the configuration.
 
 * `namespace` - (Optional) Set the namespace to use. May be set via the
   `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
+  
+The `auth_login` configuration block accepts the following arguments:
+
+* `mount` - (Required) The path to the mount of the auth backend. Usually, 
+  this is the same as the auth method type. E.g. if you are authenticating via
+  `approle` and it is mounted at `auth/approle` set `mount` to `approle`.
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*
+
+* `parameters` - (Optional) A map of key-value parameters to send when authenticating
+  against the auth backend. Refer to [Vault API documentation](https://www.vaultproject.io/api/auth/index.html) for a particular auth method
+  to see what can go here.
 
 The `client_auth` configuration block accepts the following arguments:
 
