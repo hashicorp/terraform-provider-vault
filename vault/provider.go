@@ -68,6 +68,30 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_CAPATH", ""),
 				Description: "Path to directory containing CA certificate files to validate the server's certificate.",
 			},
+			"auth_login": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Login to vault with an existing auth method using auth/<mount>/login",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"mount": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"namespace": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"parameters": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
 			"client_auth": {
 				Type:        schema.TypeList,
 				Optional:    true,
@@ -557,6 +581,31 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	// Try an get the token from the config or token helper
 	token, err := providerToken(d)
+
+	// Attempt to use auth/<mount>login if 'auth_login' is provided in provider config
+	authLoginI := d.Get("auth_login").([]interface{})
+	if len(authLoginI) > 1 {
+		return "", fmt.Errorf("auth_login block may appear only once")
+	}
+
+	if len(authLoginI) == 1 {
+		authLogin := authLoginI[0].(map[string]interface{})
+		authLoginMount := authLogin["mount"].(string)
+		authLoginNamespace := ""
+		loginPath := fmt.Sprintf("auth/%s/login", authLoginMount)
+		if authLoginNamespaceI, ok := authLogin["namespace"]; ok {
+			authLoginNamespace = authLoginNamespaceI.(string)
+			loginPath = fmt.Sprintf("%s/auth/%s/login", authLoginNamespace, authLoginMount)
+		}
+		authLoginParameters := authLogin["parameters"].(map[string]interface{})
+
+		secret, err := client.Logical().Write(loginPath, authLoginParameters)
+		if err != nil {
+			return nil, err
+		}
+		token = secret.Auth.ClientToken
+	}
+
 	if err != nil {
 		return nil, err
 	}
