@@ -66,6 +66,15 @@ func mountResource() *schema.Resource {
 				Description: "Accessor of the mount",
 			},
 
+			"local": {
+				Type:        schema.TypeBool,
+				Required:    false,
+				Optional:    true,
+				Computed:    false,
+				ForceNew:    true,
+				Description: "Local mount flag that can be explicitly set to true to enforce local mount in HA environment",
+			},
+
 			"options": {
 				Type:        schema.TypeMap,
 				Required:    false,
@@ -88,6 +97,7 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
 		},
+		Local:   d.Get("local").(bool),
 		Options: opts(d),
 	}
 
@@ -101,7 +111,7 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 
 	d.SetId(path)
 
-	return nil
+	return mountRead(d, meta)
 }
 
 func mountUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -135,7 +145,7 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error updating Vault: %s", err)
 	}
 
-	return nil
+	return mountRead(d, meta)
 }
 
 func mountDelete(d *schema.ResourceData, meta interface{}) error {
@@ -174,12 +184,28 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
+	cfgType := d.Get("type").(string)
+
+	// kv-v2 is an alias for kv, version 2. Vault will report it back as "kv"
+	// and requires special handling to avoid perpetual drift.
+	if cfgType == "kv-v2" && mount.Type == "kv" && mount.Options["version"] == "2" {
+		mount.Type = "kv-v2"
+
+		// The options block may be omitted when specifying kv-v2, but will always
+		// be present in Vault's response if version 2. Omit the version setting
+		// if it wasn't explicitly set in config.
+		if opts(d)["version"] == "" {
+			delete(mount.Options, "version")
+		}
+	}
+
 	d.Set("path", path)
 	d.Set("type", mount.Type)
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
 	d.Set("accessor", mount.Accessor)
+	d.Set("local", mount.Local)
 	d.Set("options", mount.Options)
 
 	return nil

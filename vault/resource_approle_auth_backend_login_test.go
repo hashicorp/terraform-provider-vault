@@ -59,7 +59,7 @@ resource "vault_auth_backend" "approle" {
 resource "vault_approle_auth_backend_role" "role" {
   backend = "${vault_auth_backend.approle.path}"
   role_name = "%s"
-  policies = ["default", "dev", "prod"]
+  token_policies = ["default", "dev", "prod"]
 }
 
 resource "vault_approle_auth_backend_role_secret_id" "secret" {

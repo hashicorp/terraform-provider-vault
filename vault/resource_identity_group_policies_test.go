@@ -10,39 +10,45 @@ import (
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
-func TestAccidentityGroupPolicies(t *testing.T) {
+func TestAccidentityGroupPoliciesExclusive(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccidentityGroupPoliciesConfig(),
-				Check:  testAccidentityGroupPoliciesCheckAttrs(),
+				Config: testAccidentityGroupPoliciesConfigExclusive(),
+				Check:  testAccidentityGroupPoliciesCheckAttrs("vault_identity_group_policies.policies"),
+			},
+			{
+				Config: testAccidentityGroupPoliciesConfigExclusiveUpdate(),
+				Check: resource.ComposeTestCheckFunc(
+					testAccidentityGroupPoliciesCheckAttrs("vault_identity_group_policies.policies"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.#", "2"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.1785148924", "test"),
+				),
 			},
 		},
 	})
 }
 
-func TestAccidentityGroupPoliciesUpdate(t *testing.T) {
+func TestAccidentityGroupPoliciesNonExclusive(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccidentityGroupPoliciesConfig(),
-				Check:  testAccidentityGroupPoliciesCheckAttrs(),
-			},
-			{
-				Config: testAccidentityGroupPoliciesConfigUpdate(),
+				Config: testAccidentityGroupPoliciesConfigNonExclusive(),
 				Check: resource.ComposeTestCheckFunc(
-					testAccidentityGroupPoliciesCheckAttrs(),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.1785148924", "test"),
 				),
 			},
 		},
@@ -53,23 +59,43 @@ func testAccCheckidentityGroupPoliciesDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_identity_group" {
+		if rs.Type != "vault_identity_group_policies" {
 			continue
 		}
-		secret, err := client.Logical().Read(identityGroupIDPath(rs.Primary.ID))
+
+		group, err := readIdentityGroup(client, rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("error checking for identity group %q: %s", rs.Primary.ID, err)
+			return err
 		}
-		if secret != nil {
-			return fmt.Errorf("identity group role %q still exists", rs.Primary.ID)
+		if group == nil {
+			continue
+		}
+		apiPolicies, err := readIdentityGroupPolicies(client, rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+		length := rs.Primary.Attributes["policies.#"]
+
+		if length != "" {
+			count, err := strconv.Atoi(length)
+			if err != nil {
+				return fmt.Errorf("expected %s.# to be a number, got %q", "policies.#", length)
+			}
+
+			for i := 0; i < count; i++ {
+				resourcePolicy := rs.Primary.Attributes["policies."+strconv.Itoa(i)]
+				if found, _ := util.SliceHasElement(apiPolicies, resourcePolicy); found {
+					return fmt.Errorf("identity group %s still has policy %s", rs.Primary.ID, resourcePolicy)
+				}
+			}
 		}
 	}
 	return nil
 }
 
-func testAccidentityGroupPoliciesCheckAttrs() resource.TestCheckFunc {
+func testAccidentityGroupPoliciesCheckAttrs(resource string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_identity_group_policies.policies"]
+		resourceState := s.Modules[0].Resources[resource]
 		if resourceState == nil {
 			return fmt.Errorf("resource not found in state")
 		}
@@ -162,7 +188,7 @@ func testAccidentityGroupPoliciesCheckAttrs() resource.TestCheckFunc {
 	}
 }
 
-func testAccidentityGroupPoliciesConfig() string {
+func testAccidentityGroupPoliciesConfigExclusive() string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
   external_policies = true
@@ -174,7 +200,7 @@ resource "vault_identity_group_policies" "policies" {
 }`)
 }
 
-func testAccidentityGroupPoliciesConfigUpdate() string {
+func testAccidentityGroupPoliciesConfigExclusiveUpdate() string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
   external_policies = true
@@ -184,4 +210,25 @@ resource "vault_identity_group_policies" "policies" {
   group_id = "${vault_identity_group.group.id}"
   policies = ["dev", "test"]
 }`)
+}
+
+func testAccidentityGroupPoliciesConfigNonExclusive() string {
+	return fmt.Sprintf(`
+resource "vault_identity_group" "group" {
+  external_policies = true
+}
+
+resource "vault_identity_group_policies" "dev" {
+	group_id = "${vault_identity_group.group.id}"
+  exclusive = false
+  policies = ["dev"]
+}
+
+
+resource "vault_identity_group_policies" "test" {
+  group_id = "${vault_identity_group.group.id}"
+  exclusive = false
+  policies = ["test"]
+}
+`)
 }

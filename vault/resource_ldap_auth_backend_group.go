@@ -33,6 +33,7 @@ func ldapAuthBackendGroupResource() *schema.Resource {
 			"groupname": {
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 			"policies": {
 				Type: schema.TypeSet,

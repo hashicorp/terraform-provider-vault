@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+const secretIDResource = "vault_approle_auth_backend_role_secret_id.secret_id"
+
 func TestAccAppRoleAuthBackendRoleSecretID_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
@@ -22,12 +24,31 @@ func TestAccAppRoleAuthBackendRoleSecretID_basic(t *testing.T) {
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_basic(backend, role),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_approle_auth_backend_role_secret_id.secret_id",
-						"backend", backend),
-					resource.TestCheckResourceAttr("vault_approle_auth_backend_role_secret_id.secret_id",
-						"role_name", role),
-					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_role_secret_id.secret_id",
-						"accessor"),
+					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
+					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
+					resource.TestCheckResourceAttrSet(secretIDResource, "accessor"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccAppRoleAuthBackendRoleSecretID_wrapped(t *testing.T) {
+	backend := acctest.RandomWithPrefix("approle")
+	role := acctest.RandomWithPrefix("test-role")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
+					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
+					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_accessor"),
+					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_token"),
 				),
 			},
 		},
@@ -47,18 +68,12 @@ func TestAccAppRoleAuthBackendRoleSecretID_full(t *testing.T) {
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_full(backend, role, secretID),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_approle_auth_backend_role_secret_id.secret_id",
-						"backend", backend),
-					resource.TestCheckResourceAttr("vault_approle_auth_backend_role_secret_id.secret_id",
-						"role_name", role),
-					resource.TestCheckResourceAttr("vault_approle_auth_backend_role_secret_id.secret_id",
-						"secret_id", secretID),
-					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_role_secret_id.secret_id",
-						"accessor"),
-					resource.TestCheckResourceAttr("vault_approle_auth_backend_role_secret_id.secret_id",
-						"cidr_list.#", "2"),
-					resource.TestCheckResourceAttr("vault_approle_auth_backend_role_secret_id.secret_id",
-						"metadata", `{"hello":"world"}`),
+					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
+					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
+					resource.TestCheckResourceAttr(secretIDResource, "secret_id", secretID),
+					resource.TestCheckResourceAttrSet(secretIDResource, "accessor"),
+					resource.TestCheckResourceAttr(secretIDResource, "cidr_list.#", "2"),
+					resource.TestCheckResourceAttr(secretIDResource, "metadata", `{"hello":"world"}`),
 				),
 			},
 		},
@@ -93,7 +108,7 @@ resource "vault_auth_backend" "approle" {
 resource "vault_approle_auth_backend_role" "role" {
   backend = "${vault_auth_backend.approle.path}"
   role_name = "%s"
-  policies = ["default", "dev", "prod"]
+  token_policies = ["default", "dev", "prod"]
 }
 
 resource "vault_approle_auth_backend_role_secret_id" "secret_id" {
@@ -112,7 +127,7 @@ resource "vault_auth_backend" "approle" {
 resource "vault_approle_auth_backend_role" "role" {
   backend = "${vault_auth_backend.approle.path}"
   role_name = "%s"
-  policies = ["default", "dev", "prod"]
+  token_policies = ["default", "dev", "prod"]
 }
 
 resource "vault_approle_auth_backend_role_secret_id" "secret_id" {
@@ -127,4 +142,24 @@ EOF
 
   secret_id = "%s"
 }`, backend, role, secretID)
+}
+
+func testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "approle" {
+  type = "approle"
+  path = "%s"
+}
+
+resource "vault_approle_auth_backend_role" "role" {
+  backend = "${vault_auth_backend.approle.path}"
+  role_name = "%s"
+  token_policies = ["default", "dev", "prod"]
+}
+
+resource "vault_approle_auth_backend_role_secret_id" "secret_id" {
+  role_name = "${vault_approle_auth_backend_role.role.role_name}"
+  backend = "${vault_auth_backend.approle.path}"
+  wrapping_ttl = "60s"
+}`, backend, role)
 }

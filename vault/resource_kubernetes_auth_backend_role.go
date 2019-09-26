@@ -17,6 +17,97 @@ var (
 )
 
 func kubernetesAuthBackendRoleResource() *schema.Resource {
+	fields := map[string]*schema.Schema{
+		"role_name": {
+			Type:        schema.TypeString,
+			Required:    true,
+			ForceNew:    true,
+			Description: "Name of the role.",
+		},
+		"bound_service_account_names": {
+			Type:        schema.TypeSet,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Description: "List of service account names able to access this role. If set to `[\"*\"]` all names are allowed, both this and bound_service_account_namespaces can not be \"*\".",
+			Required:    true,
+		},
+		"bound_service_account_namespaces": {
+			Type:        schema.TypeSet,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Description: "List of namespaces allowed to access this role. If set to `[\"*\"]` all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
+			Required:    true,
+		},
+		"backend": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Unique name of the kubernetes backend to configure.",
+			ForceNew:    true,
+			Default:     "kubernetes",
+			// standardise on no beginning or trailing slashes
+			StateFunc: func(v interface{}) string {
+				return strings.Trim(v.(string), "/")
+			},
+		},
+
+		// Deprecated
+		"policies": {
+			Type:     schema.TypeSet,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Description:   "Policies to be set on tokens issued using this role.",
+			Deprecated:    "use `token_policies` instead",
+			ConflictsWith: []string{"token_policies"},
+		},
+		"ttl": {
+			Type:          schema.TypeInt,
+			Optional:      true,
+			Description:   "Default number of seconds to set as the TTL for issued tokens and at renewal time.",
+			ConflictsWith: []string{"token_ttl"},
+			Deprecated:    "use `token_ttl` instead",
+		},
+		"max_ttl": {
+			Type:          schema.TypeInt,
+			Optional:      true,
+			Description:   "Number of seconds after which issued tokens can no longer be renewed.",
+			Deprecated:    "use `token_max_ttl` instead",
+			ConflictsWith: []string{"token_max_ttl"},
+		},
+		"period": {
+			Type:          schema.TypeInt,
+			Optional:      true,
+			Description:   "Number of seconds to set the TTL to for issued tokens upon renewal. Makes the token a periodic token, which will never expire as long as it is renewed before the TTL each period.",
+			ConflictsWith: []string{"token_period"},
+			Deprecated:    "use `token_period` instead",
+		},
+		"num_uses": {
+			Type:          schema.TypeInt,
+			Optional:      true,
+			Description:   "Number of times issued tokens can be used. Setting this to 0 or leaving it unset means unlimited uses.",
+			Deprecated:    "use `token_num_uses` instead",
+			ConflictsWith: []string{"token_num_uses"},
+		},
+		"bound_cidrs": {
+			Type:        schema.TypeSet,
+			Optional:    true,
+			Description: "List of CIDRs valid as the source address for login requests. This value is also encoded into any resulting token.",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Deprecated:    "use `token_bound_cidrs` instead",
+			ConflictsWith: []string{"token_bound_cidrs"},
+		},
+	}
+
+	addTokenFields(fields, &addTokenFieldsConfig{
+		TokenBoundCidrsConflict: []string{"bound_cidrs"},
+		TokenMaxTTLConflict:     []string{"max_ttl"},
+		TokenNumUsesConflict:    []string{"num_uses"},
+		TokenPeriodConflict:     []string{"period"},
+		TokenPoliciesConflict:   []string{"policies"},
+		TokenTTLConflict:        []string{"ttl"},
+	})
+
 	return &schema.Resource{
 		Create: kubernetesAuthBackendRoleCreate,
 		Read:   kubernetesAuthBackendRoleRead,
@@ -27,69 +118,7 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 
-		Schema: map[string]*schema.Schema{
-			"role_name": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "Name of the role.",
-			},
-			"bound_cidrs": {
-				Type:        schema.TypeSet,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-				Optional:    true,
-				Description: "List of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.",
-			},
-			"bound_service_account_names": {
-				Type:        schema.TypeSet,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "List of service account names able to access this role. If set to `[\"*\"]` all names are allowed, both this and bound_service_account_namespaces can not be \"*\".",
-				Required:    true,
-			},
-			"bound_service_account_namespaces": {
-				Type:        schema.TypeSet,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "List of namespaces allowed to access this role. If set to `[\"*\"]` all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
-				Required:    true,
-			},
-			"ttl": {
-				Type:        schema.TypeInt,
-				Description: "The TTL period of tokens issued using this role in seconds.",
-				Optional:    true,
-			},
-			"max_ttl": {
-				Type:        schema.TypeInt,
-				Description: "The maximum allowed lifetime of tokens issued in seconds using this role.",
-				Optional:    true,
-			},
-			"num_uses": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Description: "Number of times issued tokens can be used. Setting this to 0 or leaving it unset means unlimited uses.",
-			},
-			"period": {
-				Type:        schema.TypeInt,
-				Description: "If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this parameter.",
-				Optional:    true,
-			},
-			"policies": {
-				Type:        schema.TypeSet,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "Policies to be set on tokens issued using this role.",
-				Optional:    true,
-			},
-			"backend": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Unique name of the kubernetes backend to configure.",
-				ForceNew:    true,
-				Default:     "kubernetes",
-				// standardise on no beginning or trailing slashes
-				StateFunc: func(v interface{}) string {
-					return strings.Trim(v.(string), "/")
-				},
-			},
-		},
+		Schema: fields,
 	}
 }
 
@@ -97,7 +126,9 @@ func kubernetesAuthBackendRolePath(backend, role string) string {
 	return "auth/" + strings.Trim(backend, "/") + "/role/" + strings.Trim(role, "/")
 }
 
-func kubernetesAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
+func kubernetesAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, create bool) {
+	updateTokenFields(d, data, create)
+
 	if boundServiceAccountNames, ok := d.GetOk("bound_service_account_names"); ok {
 		data["bound_service_account_names"] = boundServiceAccountNames.(*schema.Set).List()
 	}
@@ -156,7 +187,7 @@ func kubernetesAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[DEBUG] Writing Kubernetes auth backend role %q", path)
 
 	data := map[string]interface{}{}
-	kubernetesAuthBackendRoleUpdateFields(d, data)
+	kubernetesAuthBackendRoleUpdateFields(d, data, true)
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -194,10 +225,91 @@ func kubernetesAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 		return nil
 	}
 
+	readTokenFields(d, resp)
+
 	d.Set("backend", backend)
 	d.Set("role_name", role)
 
-	for _, k := range []string{"bound_cidrs", "bound_service_account_names", "bound_service_account_namespaces", "num_uses", "policies", "ttl", "max_ttl", "period"} {
+	// Check if the user is using the deprecated `policies`
+	if _, deprecated := d.GetOk("policies"); deprecated {
+		// Then we see if `token_policies` was set and unset it
+		// Vault will still return `policies`
+		if _, ok := d.GetOk("token_policies"); ok {
+			d.Set("token_policies", nil)
+		}
+
+		if v, ok := resp.Data["policies"]; ok {
+			d.Set("policies", v)
+		}
+	}
+
+	// Check if the user is using the deprecated `period`
+	if _, deprecated := d.GetOk("period"); deprecated {
+		// Then we see if `token_period` was set and unset it
+		// Vault will still return `period`
+		if _, ok := d.GetOk("token_period"); ok {
+			d.Set("token_period", nil)
+		}
+
+		if v, ok := resp.Data["period"]; ok {
+			d.Set("period", v)
+		}
+	}
+
+	// Check if the user is using the deprecated `ttl`
+	if _, deprecated := d.GetOk("ttl"); deprecated {
+		// Then we see if `token_ttl` was set and unset it
+		// Vault will still return `ttl`
+		if _, ok := d.GetOk("token_ttl"); ok {
+			d.Set("token_ttl", nil)
+		}
+
+		if v, ok := resp.Data["ttl"]; ok {
+			d.Set("ttl", v)
+		}
+
+	}
+
+	// Check if the user is using the deprecated `max_ttl`
+	if _, deprecated := d.GetOk("max_ttl"); deprecated {
+		// Then we see if `token_max_ttl` was set and unset it
+		// Vault will still return `max_ttl`
+		if _, ok := d.GetOk("token_max_ttl"); ok {
+			d.Set("token_max_ttl", nil)
+		}
+
+		if v, ok := resp.Data["max_ttl"]; ok {
+			d.Set("max_ttl", v)
+		}
+	}
+
+	// Check if the user is using the deprecated `num_uses`
+	if _, deprecated := d.GetOk("num_uses"); deprecated {
+		// Then we see if `token_num_uses` was set and unset it
+		// Vault will still return `num_uses`
+		if _, ok := d.GetOk("token_num_uses"); ok {
+			d.Set("token_num_uses", nil)
+		}
+
+		if v, ok := resp.Data["num_uses"]; ok {
+			d.Set("num_uses", v)
+		}
+	}
+
+	// Check if the user is using the deprecated `bound_cidrs`
+	if _, deprecated := d.GetOk("bound_cidrs"); deprecated {
+		// Then we see if `token_bound_cidrs` was set and unset it
+		// Vault will still return `bound_cidrs`
+		if _, ok := d.GetOk("token_bound_cidrs"); ok {
+			d.Set("token_bound_cidrs", nil)
+		}
+
+		if v, ok := resp.Data["bound_cidrs"]; ok {
+			d.Set("bound_cidrs", v)
+		}
+	}
+
+	for _, k := range []string{"bound_service_account_names", "bound_service_account_namespaces"} {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
 				return fmt.Errorf("error reading %s for Kubernetes Auth Backend Role %q: %q", k, path, err)
@@ -215,7 +327,7 @@ func kubernetesAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[DEBUG] Updating Kubernetes auth backend role %q", path)
 
 	data := map[string]interface{}{}
-	kubernetesAuthBackendRoleUpdateFields(d, data)
+	kubernetesAuthBackendRoleUpdateFields(d, data, false)
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {

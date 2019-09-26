@@ -39,3 +39,11 @@ The following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exposed by this resource.
+
+## Import
+
+Okta authentication backend groups can be imported using the format `backend/groupName` e.g.
+
+```
+$ terraform import vault_okta_auth_backend_group.foo okta/foo
+```

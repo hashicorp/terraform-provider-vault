@@ -11,14 +11,10 @@ import (
 
 func identityGroupPoliciesResource() *schema.Resource {
 	return &schema.Resource{
-		Create: identityGroupPoliciesCreate,
+		Create: identityGroupPoliciesUpdate,
 		Update: identityGroupPoliciesUpdate,
 		Read:   identityGroupPoliciesRead,
 		Delete: identityGroupPoliciesDelete,
-		Exists: identityGroupPoliciesExists,
-		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
-		},
 
 		Schema: map[string]*schema.Schema{
 			"policies": {
@@ -51,67 +47,40 @@ func identityGroupPoliciesResource() *schema.Resource {
 		},
 	}
 }
-func identityGroupPoliciesUpdateFields(d *schema.ResourceData, data map[string]interface{}, presentPolicies []interface{}) error {
-	o, n := d.GetChange("policies")
-	if d.Get("exclusive").(bool) {
-		data["policies"] = n.(*schema.Set).List()
-	} else {
-		data["policies"] = identityGroupPoliciesDetermineNew(presentPolicies, o.(*schema.Set).List(), n.(*schema.Set).List())
-	}
-	return nil
-}
-
-func identityGroupPoliciesCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
-	groupId := d.Get("group_id").(string)
-
-	path := identityGroupPath
-
-	data := map[string]interface{}{
-		"id": groupId,
-	}
-
-	if err := identityGroupPoliciesUpdateFields(d, data, []interface{}{}); err != nil {
-		return fmt.Errorf("error writing IdentityGroupPolicies to %q: %s", groupId, err)
-	}
-
-	_, err := client.Logical().Write(path, data)
-
-	if err != nil {
-		return fmt.Errorf("error writing IdentityGroupPolicies to %q: %s", groupId, err)
-	}
-	log.Printf("[DEBUG] Wrote IdentityGroupPolicies %q", groupId)
-
-	d.SetId(d.Get("group_id").(string))
-
-	return identityGroupPoliciesRead(d, meta)
-}
 
 func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	id := d.Id()
+	id := d.Get("group_id").(string)
 
 	log.Printf("[DEBUG] Updating IdentityGroupPolicies %q", id)
 	path := identityGroupIDPath(id)
 
-	presentPolicies, err := readIdentityGroupPolicies(client, id)
-	if err != nil {
-		return fmt.Errorf("error updating IdentityGroupPolicies %q - %s: %s", id, d.Get("policies"), err)
+	vaultMutexKV.Lock(path)
+	defer vaultMutexKV.Unlock(path)
+
+	data := make(map[string]interface{})
+	policies := d.Get("policies").(*schema.Set).List()
+
+	if d.Get("exclusive").(bool) {
+		data["policies"] = policies
+	} else {
+		apiPolicies, err := readIdentityGroupPolicies(client, id)
+		if err != nil {
+			return err
+		}
+		for _, policy := range policies {
+			apiPolicies = util.SliceAppendIfMissing(apiPolicies, policy)
+		}
+		data["policies"] = apiPolicies
 	}
 
-	data := map[string]interface{}{}
-
-	if err := identityGroupPoliciesUpdateFields(d, data, presentPolicies); err != nil {
-		return fmt.Errorf("error updating IdentityGroupPolicies %q: %s", id, err)
-	}
-
-	_, err = client.Logical().Write(path, data)
-
+	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		return fmt.Errorf("error updating IdentityGroupPolicies %q: %s", id, err)
 	}
 	log.Printf("[DEBUG] Updated IdentityGroupPolicies %q", id)
+
+	d.SetId(id)
 
 	return identityGroupPoliciesRead(d, meta)
 }
@@ -122,11 +91,7 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 
 	resp, err := readIdentityGroup(client, id)
 	if err != nil {
-		// We need to check if the secret_id has expired
-		if util.IsExpiredTokenErr(err) {
-			return nil
-		}
-		return fmt.Errorf("error reading IdentityGroupPolicies %q: %s", id, err)
+		return err
 	}
 	log.Printf("[DEBUG] Read IdentityGroupPolicies %s", id)
 	if resp == nil {
@@ -135,51 +100,56 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for responseKey, stateKey := range map[string]string{
-		"policies": "policies",
-		"id":       "group_id",
-		"name":     "group_name",
-	} {
-		if err := d.Set(stateKey, resp.Data[responseKey]); err != nil {
-			return fmt.Errorf("error setting state key \"%s\" on IdentityGroupPolicies %q: %s", stateKey, id, err)
+	d.Set("group_id", id)
+	d.Set("group_name", resp.Data["name"])
+
+	if d.Get("exclusive").(bool) {
+		d.Set("policies", resp.Data["policies"])
+	} else {
+		userPolicies := d.Get("policies").(*schema.Set).List()
+		newPolicies := make([]string, 0)
+		apiPolicies := resp.Data["policies"].([]interface{})
+
+		for _, policy := range userPolicies {
+			if found, _ := util.SliceHasElement(apiPolicies, policy); found {
+				newPolicies = append(newPolicies, policy.(string))
+			}
 		}
+		d.Set("policies", newPolicies)
 	}
 	return nil
 }
 
 func identityGroupPoliciesDelete(d *schema.ResourceData, meta interface{}) error {
-	if err := d.Set("policies", []string{}); err != nil {
-		return fmt.Errorf("failed setting policy to empty set: %s", err)
-	}
-	return identityGroupPoliciesUpdate(d, meta)
-}
-
-func identityGroupPoliciesExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client := meta.(*api.Client)
-	id := d.Id()
+	id := d.Get("group_id").(string)
 
-	resp, err := readIdentityGroup(client, id)
+	log.Printf("[DEBUG] Deleting IdentityGroupPolicies %q", id)
+	path := identityGroupIDPath(id)
+
+	vaultMutexKV.Lock(path)
+	defer vaultMutexKV.Unlock(path)
+
+	data := make(map[string]interface{})
+
+	if d.Get("exclusive").(bool) {
+		data["policies"] = make([]string, 0)
+	} else {
+		apiPolicies, err := readIdentityGroupPolicies(client, id)
+		if err != nil {
+			return err
+		}
+		for _, policy := range d.Get("policies").(*schema.Set).List() {
+			apiPolicies = util.SliceRemoveIfPresent(apiPolicies, policy)
+		}
+		data["policies"] = apiPolicies
+	}
+
+	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return true, fmt.Errorf("error checking if IdentityGroupPolicies %q exists: %s", id, err)
+		return fmt.Errorf("error updating IdentityGroupPolicies %q: %s", id, err)
 	}
-	log.Printf("[DEBUG] Checked if IdentityGroupPolicies %q exists", id)
+	log.Printf("[DEBUG] Updated IdentityGroupPolicies %q", id)
 
-	return resp != nil, nil
-}
-
-func identityGroupPoliciesDetermineNew(presentPolicies, oldStatePolicies, newStatePolicies []interface{}) []string {
-	policies := schema.NewSet(schema.HashString, presentPolicies)
-
-	for _, policy := range oldStatePolicies {
-		policies.Remove(policy)
-	}
-	for _, policy := range newStatePolicies {
-		policies.Add(policy)
-	}
-
-	var ret []string
-	for _, policy := range policies.List() {
-		ret = append(ret, policy.(string))
-	}
-	return ret
+	return nil
 }

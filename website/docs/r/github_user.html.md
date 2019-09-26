@@ -8,7 +8,7 @@ description: |-
 
 # vault\_github\_user
 
-Manages policy mappings for Github Users authenticated via Github. See the [Vault 
+Manages policy mappings for Github Users authenticated via Github. See the [Vault
 documentation](https://www.vaultproject.io/docs/auth/github.html) for more
 information.
 
@@ -20,9 +20,9 @@ resource "vault_github_auth_backend" "example" {
 }
 
 resource "vault_github_user" "tf_user" {
-  backend = "${vault_github_auth_backend.example.id}"
-  user = "john.doe"
-  policies = ["developer", "read-only"]
+  backend        = vault_github_auth_backend.example.id
+  user           = "john.doe"
+  token_policies = ["developer", "read-only"]
 }
 ```
 
@@ -30,12 +30,13 @@ resource "vault_github_user" "tf_user" {
 
 The following arguments are supported:
 
-* `backend` - (Required) Path where the github auth backend is mounted. Defaults to `github` 
+* `backend` - (Required) Path where the github auth backend is mounted. Defaults to `github`
   if not specified.
 
 * `user` - (Required) GitHub user name.
 
-* `policies` - (Optional) A list of policies to be assigned to this user.
+* `policies` - (Optional) An array of strings specifying the policies to be set on tokens issued
+   using this role.
 
 ## Attributes Reference
 

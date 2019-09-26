@@ -20,10 +20,11 @@ locals {
 }
 
 resource "vault_gcp_secret_backend" "gcp" {
+  path        = "gcp"
   credentials = "${file("credentials.json")}"
 }
 
-resource "vault_gcp_secret_roleset" "agent" {
+resource "vault_gcp_secret_roleset" "roleset" {
   backend      = "${vault_gcp_secret_backend.gcp.path}"
   roleset      = "project_viewer"
   secret_type  = "access_token"
@@ -67,3 +68,11 @@ The `binding` block supports:
 In addition to the fields above, the following attributes are also exposed:
 
 * `service_account_email` Email of the service account created by Vault for this Roleset.
+
+## Import
+
+A roleset can be imported using its Vault Path. For example, referencing the example above,
+
+```
+$ terraform import vault_gcp_secret_roleset.roleset gcp/roleset/project_viewer
+```

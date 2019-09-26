@@ -8,7 +8,7 @@ description: |-
 
 # vault\_github\_team
 
-Manages policy mappings for Github Teams authenticated via Github. See the [Vault 
+Manages policy mappings for Github Teams authenticated via Github. See the [Vault
 documentation](https://www.vaultproject.io/docs/auth/github.html) for more
 information.
 
@@ -20,9 +20,9 @@ resource "vault_github_auth_backend" "example" {
 }
 
 resource "vault_github_team" "tf_devs" {
-  backend = "${vault_github_auth_backend.example.id}"
-  team = "terraform-developers"
-  policies = ["developer", "read-only"]
+  backend        = vault_github_auth_backend.example.id
+  team           = "terraform-developers"
+  token_policies = ["developer", "read-only"]
 }
 ```
 
@@ -30,12 +30,14 @@ resource "vault_github_team" "tf_devs" {
 
 The following arguments are supported:
 
-* `backend` - (Required) Path where the github auth backend is mounted. Defaults to `github` 
+* `backend` - (Required) Path where the github auth backend is mounted. Defaults to `github`
   if not specified.
 
-* `team` - (Required) GitHub team name in "slugified" format, for example: Terraform Developers -> `terraform-developers`.
-
-* `policies` - (Optional) A list of policies to be assigned to this team.
+* `team` - (Required) GitHub team name in "slugified" format, for example: Terraform
+  Developers -> `terraform-developers`.
+  
+* `policies` - (Optional) An array of strings specifying the policies to be set on tokens
+  issued using this role.
 
 ## Attributes Reference
 

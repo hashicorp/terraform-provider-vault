@@ -41,7 +41,27 @@ func TestAzureAuthBackendRole(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAzureAuthBackendRoleConfig(backend, name),
-				Check:  testAzureAuthBackendRoleCheck_attrs(backend, name),
+				Check: resource.ComposeTestCheckFunc(
+					testAzureAuthBackendRoleCheck_attrs(backend, name),
+					resource.TestCheckResourceAttr("vault_azure_auth_backend_role.test",
+						"token_ttl", "300"),
+					resource.TestCheckResourceAttr("vault_azure_auth_backend_role.test",
+						"token_max_ttl", "600"),
+					resource.TestCheckResourceAttr("vault_azure_auth_backend_role.test",
+						"token_policies.#", "2"),
+				),
+			},
+			{
+				Config: testAzureAuthBackendRoleUnset(backend, name),
+				Check: resource.ComposeTestCheckFunc(
+					testAzureAuthBackendRoleCheck_attrs(backend, name),
+					resource.TestCheckResourceAttr("vault_azure_auth_backend_role.test",
+						"token_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_azure_auth_backend_role.test",
+						"token_max_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_azure_auth_backend_role.test",
+						"token_policies.#", "0"),
+				),
 			},
 		},
 	})
@@ -104,10 +124,10 @@ func testAzureAuthBackendRoleCheck_attrs(backend, name string) resource.TestChec
 
 		attrs := map[string]string{
 			"type":                        "role_type",
-			"ttl":                         "ttl",
-			"max_ttl":                     "max_ttl",
-			"period":                      "period",
-			"policies":                    "policies",
+			"token_ttl":                   "token_ttl",
+			"token_max_ttl":               "token_max_ttl",
+			"token_period":                "token_period",
+			"token_policies":              "token_policies",
 			"bound_service_principal_ids": "bound_service_principal_ids",
 			"bound_group_ids":             "bound_group_ids",
 			"bound_locations":             "bound_locations",
@@ -203,9 +223,9 @@ resource "vault_azure_auth_backend_role" "test" {
     role                        = "%s"
     bound_service_principal_ids = ["foo"]
     bound_resource_groups       = ["bar"]
-    ttl                         = 300
-    max_ttl                     = 600
-    policies                    = ["policy_a", "policy_b"]
+    token_ttl                   = 300
+    token_max_ttl               = 600
+    token_policies              = ["policy_a", "policy_b"]
 }
 `, backend, name)
 
@@ -223,10 +243,28 @@ resource "vault_auth_backend" "azure" {
 resource "vault_azure_auth_backend_role" "test" {
     backend                    = "${vault_auth_backend.azure.path}"
     role                       = "%s"
-    ttl                        = 300
-    max_ttl                    = 600
-    policies                   = ["policy_a", "policy_b"]
-    bound_locations	       = ["west us"]
+    token_ttl                  = 300
+    token_max_ttl              = 600
+    token_policies             = ["policy_a", "policy_b"]
+    bound_locations	           = ["west us"]
+    bound_resource_groups      = ["test"]
+}
+`, backend, name)
+}
+
+func testAzureAuthBackendRoleUnset(backend, name string) string {
+
+	return fmt.Sprintf(`
+
+resource "vault_auth_backend" "azure" {
+    path = "%s"
+    type = "azure"
+}
+
+resource "vault_azure_auth_backend_role" "test" {
+    backend                    = "${vault_auth_backend.azure.path}"
+    role                       = "%s"
+    bound_locations	           = ["west us"]
     bound_resource_groups      = ["test"]
 }
 `, backend, name)

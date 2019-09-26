@@ -11,76 +11,86 @@ import (
 )
 
 func kubernetesAuthBackendRoleDataSource() *schema.Resource {
-	return &schema.Resource{
-		Read: kubernetesAuthBackendRoleDataSourceRead,
-		Schema: map[string]*schema.Schema{
-			"backend": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Unique name of the kubernetes backend to configure.",
-				ForceNew:    true,
-				Default:     "kubernetes",
-				// standardise on no beginning or trailing slashes
-				StateFunc: func(v interface{}) string {
-					return strings.Trim(v.(string), "/")
-				},
-			},
-			"role_name": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "Name of the role.",
-			},
-			"bound_cidrs": {
-				Type:        schema.TypeSet,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "List of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.",
-				Computed:    true,
-			},
-			"bound_service_account_names": {
-				Type:        schema.TypeSet,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "List of service account names able to access this role. If set to \"*\" all names are allowed, both this and bound_service_account_namespaces can not be \"*\".",
-				Computed:    true,
-			},
-			"bound_service_account_namespaces": {
-				Type:        schema.TypeSet,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "List of namespaces allowed to access this role. If set to \"*\" all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
-				Computed:    true,
-			},
-			"ttl": {
-				Type:        schema.TypeInt,
-				Description: "The TTL period of tokens issued using this role in seconds.",
-				Computed:    true,
-				Optional:    true,
-			},
-			"max_ttl": {
-				Type:        schema.TypeInt,
-				Description: "The maximum allowed lifetime of tokens issued in seconds using this role.",
-				Computed:    true,
-				Optional:    true,
-			},
-			"num_uses": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Computed:    true,
-				Description: "Number of times issued tokens can be used. Setting this to 0 or leaving it unset means unlimited uses.",
-			},
-			"period": {
-				Type:        schema.TypeInt,
-				Description: "If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this parameter.",
-				Computed:    true,
-				Optional:    true,
-			},
-			"policies": {
-				Type:        schema.TypeSet,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "Policies to be set on tokens issued using this role.",
-				Computed:    true,
-				Optional:    true,
+	fields := map[string]*schema.Schema{
+		"backend": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Unique name of the kubernetes backend to configure.",
+			ForceNew:    true,
+			Default:     "kubernetes",
+			// standardise on no beginning or trailing slashes
+			StateFunc: func(v interface{}) string {
+				return strings.Trim(v.(string), "/")
 			},
 		},
+		"role_name": {
+			Type:        schema.TypeString,
+			Required:    true,
+			ForceNew:    true,
+			Description: "Name of the role.",
+		},
+		"bound_service_account_names": {
+			Type:        schema.TypeSet,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Description: "List of service account names able to access this role. If set to \"*\" all names are allowed, both this and bound_service_account_namespaces can not be \"*\".",
+			Computed:    true,
+		},
+		"bound_service_account_namespaces": {
+			Type:        schema.TypeSet,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Description: "List of namespaces allowed to access this role. If set to \"*\" all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
+			Computed:    true,
+		},
+		// Deprecated
+		"policies": {
+			Type:     schema.TypeSet,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Description: "Policies to be set on tokens issued using this role.",
+			Deprecated:  "use `token_policies` instead",
+		},
+		"ttl": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "Default number of seconds to set as the TTL for issued tokens and at renewal time.",
+			Deprecated:  "use `token_ttl` instead",
+		},
+		"max_ttl": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "Number of seconds after which issued tokens can no longer be renewed.",
+			Deprecated:  "use `token_max_ttl` instead",
+		},
+		"period": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "Number of seconds to set the TTL to for issued tokens upon renewal. Makes the token a periodic token, which will never expire as long as it is renewed before the TTL each period.",
+			Deprecated:  "use `token_period` instead",
+		},
+		"num_uses": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "Number of times issued tokens can be used. Setting this to 0 or leaving it unset means unlimited uses.",
+			Deprecated:  "use `token_num_uses` instead",
+		},
+		"bound_cidrs": {
+			Type:        schema.TypeSet,
+			Optional:    true,
+			Description: "List of CIDRs valid as the source address for login requests. This value is also encoded into any resulting token.",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Deprecated: "use `token_bound_cidrs` instead",
+		},
+	}
+
+	addTokenFields(fields, &addTokenFieldsConfig{})
+
+	return &schema.Resource{
+		Read:   kubernetesAuthBackendRoleDataSourceRead,
+		Schema: fields,
 	}
 }
 
@@ -103,6 +113,8 @@ func kubernetesAuthBackendRoleDataSourceRead(d *schema.ResourceData, meta interf
 		return nil
 	}
 	d.SetId(path)
+
+	readTokenFields(d, resp)
 
 	for _, k := range []string{"bound_cidrs", "bound_service_account_names", "bound_service_account_namespaces", "num_uses", "policies", "ttl", "max_ttl", "period"} {
 		d.Set(k, resp.Data[k])

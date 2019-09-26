@@ -21,7 +21,7 @@ resource "vault_pki_secret_backend" "pki" {
 
 resource "vault_pki_secret_backend_config_urls" "config_urls" {
   backend              = "${vault_pki_secret_backend.pki.path}"
-  issuing_certificates = "http://127.0.0.1:8200/v1/pki/ca"
+  issuing_certificates = ["http://127.0.0.1:8200/v1/pki/ca"]
 }
 ```
 
@@ -31,11 +31,11 @@ The following arguments are supported:
 
 * `backend` - (Required) The path the PKI secret backend is mounted at, with no leading or trailing `/`s.
 
-* `issuing_certificates` - (Optional) Specifies the URL values for the Issuing Certificate field. Comma-separated string if multiple.
+* `issuing_certificates` - (Optional) Specifies the URL values for the Issuing Certificate field.
 
-* `crl_distribution_points` - (Optional) Specifies the URL values for the CRL Distribution Points field. Comma-separated string if multiple.
+* `crl_distribution_points` - (Optional) Specifies the URL values for the CRL Distribution Points field.
 
-* `ocsp_servers` - (Optional) Specifies the URL values for the OCSP Servers field. Comma-separated string if multiple.
+* `ocsp_servers` - (Optional) Specifies the URL values for the OCSP Servers field.
 
 ## Attributes Reference
 

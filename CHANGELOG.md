@@ -1,8 +1,50 @@
-## 2.2.0 (Unreleased)
+## 2.4.0 (Unreleased)
+
+BUG FIXES:
+
+* Fixes incorrect handling of user and team policies in the Github auth backend ([#543](https://github.com/terraform-providers/terraform-provider-vault/pull/543)).
+
+
+## 2.3.0 (September 06, 2019)
+
+IMPROVEMENTS:
+
+* Adds support for importing roles in "vault_gcp_auth_backend_role" ([#517](https://github.com/terraform-providers/terraform-provider-vault/pull/517)).
+* Adds support for importing groups in "vault_okta_auth_backend_group" ([#514](https://github.com/terraform-providers/terraform-provider-vault/pull/514)).
+* Adds JWKS configuration options to "vault_jwt_auth_backend" ([#483](https://github.com/terraform-providers/terraform-provider-vault/pull/483)).
+* Adds support for response wrapping to "vault_approle_auth_backend_role_secret_id" ([#518](https://github.com/terraform-providers/terraform-provider-vault/pull/518)).
+
+BUG FIXES:
+
+* Fixes an issue where using mount type "kv-v2" in "vault_mount" would continuously recreate the resource ([#515](https://github.com/terraform-providers/terraform-provider-vault/pull/515)).
+* Fixes an issue where the "vault_token" resource would try to renew the access token instead of the resource token ([#423](https://github.com/terraform-providers/terraform-provider-vault/pull/423)).
+* In the "vault_gcp_auth_backend", marks "credentials" as optional rather than required ([#509](https://github.com/terraform-providers/terraform-provider-vault/pull/509)).
+* Fixes an issue where "vault_pki_secret_backend_config_urls" was forming an invalid URL for updating ([#512](https://github.com/terraform-providers/terraform-provider-vault/pull/512)).
+
+
+## 2.2.0 (August 09, 2019)
+
+FEATURES:
+
+* Adds a datasource for the "/identity/lookup/entity" and "/identity/lookup/group" endpoints ([#494](https://github.com/terraform-providers/terraform-provider-vault/pull/494)).
+* Adds a resource for the "/azure/roles/{name}" endpoint ([#493](https://github.com/terraform-providers/terraform-provider-vault/pull/493)).
+* Adds a resource for the "/identity/oidc/config", "/identity/oidc/key/{name}", "/identity/oidc/key/{key_name}", and "/identity/oidc/role/{name}" endpoints ([#488](https://github.com/terraform-providers/terraform-provider-vault/pull/488)).
+* Adds a resource for the "/transit/keys/{name}" endpoint ([#477](https://github.com/terraform-providers/terraform-provider-vault/pull/477)).
+* Adds a resource for the "/sys/mfa/method/duo/{name}" endpoint ([#443](https://github.com/terraform-providers/terraform-provider-vault/pull/443)).
+* Adds a resource for the "/azure/config" endpoint ([#481](https://github.com/terraform-providers/terraform-provider-vault/pull/481)).
+
+IMPROVEMENTS:
+
+* Adds a lock to prevent races in identity group resources ([#492](https://github.com/terraform-providers/terraform-provider-vault/pull/492) and [#495](https://github.com/terraform-providers/terraform-provider-vault/pull/495)).
+* Adds support for new common token fields on roles that were introduced in Vault 1.2.0 ([#478](https://github.com/terraform-providers/terraform-provider-vault/pull/478) and [#487](https://github.com/terraform-providers/terraform-provider-vault/pull/487)).
+* Adds the ability to run a coverage report to learn what Vault OpenAPI endpoints are and aren't supported ([#466](https://github.com/terraform-providers/terraform-provider-vault/pull/466)).
+* Exposes the "local" flag on the `vault_mount` resource ([#462](https://github.com/terraform-providers/terraform-provider-vault/pull/462)).
 
 BUG FIXES:
 
 * `resource/aws_auth_backend_client`: Backend supports nested paths [#461]
+* Adds "ForceNew" to the "groupname" parameter on the LDAP auth groups endpoint so if there's a change, the old group is deleted ([#465](https://github.com/terraform-providers/terraform-provider-vault/pull/465)).
+* Fixes issue with a permanent diff in `vault_gcp_secret_roleset` ([#476](https://github.com/terraform-providers/terraform-provider-vault/pull/476)).
 
 ## 2.1.0 (July 05, 2019)
 

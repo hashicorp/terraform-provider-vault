@@ -264,17 +264,18 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	id := d.Id()
+	id := d.Get("client_token").(string)
+	accessor := d.Id()
 
-	log.Printf("[DEBUG] Reading token accessor %q", id)
-	resp, err := client.Auth().Token().LookupAccessor(id)
+	log.Printf("[DEBUG] Reading token accessor %q", accessor)
+	resp, err := client.Auth().Token().LookupAccessor(accessor)
 	if err != nil {
 		log.Printf("[WARN] Token not found, removing from state")
 		d.SetId("")
 		return nil
 	}
 
-	log.Printf("[DEBUG] Read token accessor %q", id)
+	log.Printf("[DEBUG] Read token accessor %q", accessor)
 
 	iPolicies := resp.Data["policies"].([]interface{})
 	policies := make([]string, 0, len(iPolicies))
@@ -305,7 +306,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("lease_duration", int(expireTime.Sub(issueTime).Seconds()))
 
 	if d.Get("renewable").(bool) && tokenCheckLease(d) {
-		log.Printf("[DEBUG] Lease for token accessor %q expiring soon, renewing", d.Id())
+		log.Printf("[DEBUG] Lease for token accessor %q expiring soon, renewing", accessor)
 
 		increment := d.Get("lease_duration").(int)
 
@@ -313,15 +314,14 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 			increment = v.(int)
 		}
 
-		renewed, err := client.Auth().Token().RenewSelf(increment)
+		renewed, err := client.Auth().Token().Renew(id, increment)
 		if err != nil {
 			log.Printf("[DEBUG] Error renewing token, removing from state")
 			d.SetId("")
 			return nil
 		}
 
-		log.Printf("[DEBUG] Lease for token accessor %q renewed, new lease duration %d", d.Id(),
-			renewed.Auth.LeaseDuration)
+		log.Printf("[DEBUG] Lease for token accessor %q renewed, new lease duration %d", id, renewed.Auth.LeaseDuration)
 
 		d.Set("lease_duration", renewed.Data["lease_duration"])
 		d.Set("lease_started", time.Now().Format(time.RFC3339))
@@ -366,6 +366,8 @@ func tokenExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 }
 
 func tokenCheckLease(d *schema.ResourceData) bool {
+	accessor := d.Id()
+
 	startedStr := d.Get("lease_started").(string)
 	if startedStr == "" {
 		return false
@@ -373,8 +375,7 @@ func tokenCheckLease(d *schema.ResourceData) bool {
 
 	started, err := time.Parse(time.RFC3339, startedStr)
 	if err != nil {
-		log.Printf("[DEBUG] lease_started %q for token accessor %q is an invalid value, removing: %s", startedStr,
-			d.Id(), err)
+		log.Printf("[DEBUG] lease_started %q for token accessor %q is an invalid value, removing: %s", startedStr, accessor, err)
 		d.SetId("")
 
 		return false
@@ -384,7 +385,7 @@ func tokenCheckLease(d *schema.ResourceData) bool {
 
 	expireTime := started.Add(time.Second * time.Duration(leaseDuration))
 	if expireTime.Before(time.Now()) {
-		log.Printf("[DEBUG] token accessor %q has expired", d.Id())
+		log.Printf("[DEBUG] token accessor %q has expired", accessor)
 		d.SetId("")
 
 		return false
@@ -398,7 +399,7 @@ func tokenCheckLease(d *schema.ResourceData) bool {
 
 		renewTime := int(expireTime.Sub(time.Now()).Seconds())
 		if renewTime <= renewMinLease {
-			log.Printf("[DEBUG] token accessor %q must be renewed", d.Id())
+			log.Printf("[DEBUG] token accessor %q must be renewed", accessor)
 
 			return true
 		}

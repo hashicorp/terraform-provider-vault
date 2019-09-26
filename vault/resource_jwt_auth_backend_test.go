@@ -30,7 +30,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccJWTAuthBackendConfigFull(path, "https://myco.auth0.com/", "", "api://default", "\"RS512\""),
+				Config: testAccJWTAuthBackendConfigFullOIDC(path, "https://myco.auth0.com/", "api://default", "\"RS512\""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", "api://default"),
@@ -39,7 +39,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccJWTAuthBackendConfigFull(path, "https://myco.auth0.com/", "", "api://default", "\"RS256\",\"RS512\""),
+				Config: testAccJWTAuthBackendConfigFullOIDC(path, "https://myco.auth0.com/", "api://default", "\"RS256\",\"RS512\""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", "api://default"),
@@ -83,9 +83,16 @@ func TestAccJWTAuthBackend_negative(t *testing.T) {
 				ExpectError: regexp.MustCompile("config is invalid: cannot write to a path ending in '/'"),
 			},
 			{
-				Config:      testAccJWTAuthBackendConfigFull(path, "https://myco.auth0.com/", "\"key\"", "api://default", ""),
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "jwt" {
+				  description = "JWT backend"
+				  oidc_discovery_url = "%s"
+				  jwt_validation_pubkeys = [%s]
+				  bound_issuer = "%s"
+				  jwt_supported_algs = [%s]
+				  path = "%s"
+				}`, "https://myco.auth0.com/", "\"key\"", "api://default", "", path),
 				Destroy:     false,
-				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url and jwt_validation_pubkeys should be provided"),
+				ExpectError: regexp.MustCompile("config is invalid: 2 problems:"),
 			},
 		},
 	})
@@ -101,17 +108,40 @@ resource "vault_jwt_auth_backend" "jwt" {
 `, path)
 }
 
-func testAccJWTAuthBackendConfigFull(path string, oidcDiscoveryUrl string, validationPublicKeys string, boundIssuer string, supportedAlgs string) string {
+func testAccJWTAuthBackendConfigFullOIDC(path string, oidcDiscoveryUrl string, boundIssuer string, supportedAlgs string) string {
 	return fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "jwt" {
   description = "JWT backend"
   oidc_discovery_url = "%s"
+  bound_issuer = "%s"
+  jwt_supported_algs = [%s]
+  path = "%s"
+}
+`, oidcDiscoveryUrl, boundIssuer, supportedAlgs, path)
+}
+
+func testAccJWTAuthBackendConfigPubKeys(path string, validationPublicKeys string, boundIssuer string, supportedAlgs string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "jwt" {
+  description = "JWT backend"
   jwt_validation_pubkeys = [%s]
   bound_issuer = "%s"
   jwt_supported_algs = [%s]
   path = "%s"
 }
-`, oidcDiscoveryUrl, validationPublicKeys, boundIssuer, supportedAlgs, path)
+`, validationPublicKeys, boundIssuer, supportedAlgs, path)
+}
+
+func testAccJWTAuthBackendConfigJWKS(path string, jwks string, boundIssuer string, supportedAlgs string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "jwt" {
+  description = "JWT backend"
+  jwks_url = "%s"
+  bound_issuer = "%s"
+  jwt_supported_algs = [%s]
+  path = "%s"
+}
+`, jwks, boundIssuer, supportedAlgs, path)
 }
 
 func testAccJWTAuthBackendConfigOIDC(path string) string {
@@ -151,4 +181,45 @@ func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
 
 		return nil
 	}
+}
+
+func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
+	path := acctest.RandomWithPrefix("jwt")
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
+					path = "%s"
+				}`, path),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided"),
+			},
+			{
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
+						path = "%s"
+						oidc_discovery_url = ""
+					}`, path),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided"),
+			},
+			{
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
+					path = "%s"
+					jwks_url = ""
+				}`, path),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided"),
+			},
+			{
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "bad" {
+					path = "%s"
+					jwt_validation_pubkeys = []
+				}`, path),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided"),
+			},
+		},
+	})
 }

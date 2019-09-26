@@ -94,6 +94,4 @@ In addition to the fields above, the following attributes are exported:
 
 * `issuing_ca` - The issuing CA
 
-* `private_key` - The private key
-
 * `serial` - The serial

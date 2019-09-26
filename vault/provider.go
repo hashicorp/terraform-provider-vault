@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform/helper/logging"
+	"github.com/hashicorp/terraform/helper/mutexkv"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/api"
@@ -22,8 +23,15 @@ const (
 	// UnknownPath is used for inventorying paths that have no obvious
 	// current endpoint they serve in Vault, and may relate to previous
 	// versions of Vault.
+	// We aim to deprecate items in this category.
 	UnknownPath = "unknown"
 )
+
+// This is a global MutexKV for use within this provider.
+// Use this when you need to have multiple resources or even multiple instances
+// of the same resource write to the same path in Vault.
+// The key of the mutex should be the path in Vault.
+var vaultMutexKV = mutexkv.NewMutexKV()
 
 func Provider() terraform.ResourceProvider {
 	dataSourcesMap, err := parse(DataSourceRegistry)
@@ -146,6 +154,14 @@ var (
 			Resource:      approleAuthBackendRoleIDDataSource(),
 			PathInventory: []string{"/auth/approle/role/{role_name}/role-id"},
 		},
+		"vault_identity_entity": {
+			Resource:      identityEntityDataSource(),
+			PathInventory: []string{"/identity/lookup/entity"},
+		},
+		"vault_identity_group": {
+			Resource:      identityGroupDataSource(),
+			PathInventory: []string{"/identity/lookup/group"},
+		},
 		"vault_kubernetes_auth_backend_config": {
 			Resource:      kubernetesAuthBackendConfigDataSource(),
 			PathInventory: []string{"/auth/kubernetes/config"},
@@ -239,6 +255,14 @@ var (
 		"vault_aws_secret_backend_role": {
 			Resource:      awsSecretBackendRoleResource(),
 			PathInventory: []string{"/aws/roles/{name}"},
+		},
+		"vault_azure_secret_backend": {
+			Resource:      azureSecretBackendResource(),
+			PathInventory: []string{"/azure/config"},
+		},
+		"vault_azure_secret_backend_role": {
+			Resource:      azureSecretBackendRoleResource(),
+			PathInventory: []string{"/azure/roles/{name}"},
 		},
 		"vault_azure_auth_backend_config": {
 			Resource:      azureAuthBackendConfigResource(),
@@ -354,6 +378,11 @@ var (
 			PathInventory:  []string{"/sys/policies/rgp/{name}"},
 			EnterpriseOnly: true,
 		},
+		"vault_mfa_duo": {
+			Resource:       mfaDuoResource(),
+			PathInventory:  []string{"/sys/mfa/method/duo/{name}"},
+			EnterpriseOnly: true,
+		},
 		"vault_mount": {
 			Resource:      mountResource(),
 			PathInventory: []string{"/sys/mounts/{path}"},
@@ -394,6 +423,22 @@ var (
 		"vault_identity_group_policies": {
 			Resource:      identityGroupPoliciesResource(),
 			PathInventory: []string{"/identity/lookup/group"},
+		},
+		"vault_identity_oidc": {
+			Resource:      identityOidc(),
+			PathInventory: []string{"/identity/oidc/config"},
+		},
+		"vault_identity_oidc_key": {
+			Resource:      identityOidcKey(),
+			PathInventory: []string{"/identity/oidc/key/{name}"},
+		},
+		"vault_identity_oidc_key_allowed_client_id": {
+			Resource:      identityOidcKeyAllowedClientId(),
+			PathInventory: []string{"/identity/oidc/key/{key_name}"},
+		},
+		"vault_identity_oidc_role": {
+			Resource:      identityOidcRole(),
+			PathInventory: []string{"/identity/oidc/role/{name}"},
 		},
 		"vault_rabbitmq_secret_backend": {
 			Resource: rabbitmqSecretBackendResource(),
@@ -445,6 +490,10 @@ var (
 		"vault_pki_secret_backend_sign": {
 			Resource:      pkiSecretBackendSignResource(),
 			PathInventory: []string{"/pki/sign/{role}"},
+		},
+		"vault_transit_secret_backend_key": {
+			Resource:      transitSecretBackendKeyResource(),
+			PathInventory: []string{"/transit/keys/{name}"},
 		},
 	}
 )
