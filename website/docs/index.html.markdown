@@ -141,9 +141,9 @@ variables in order to keep credential information out of the configuration.
   
 The `auth_login` configuration block accepts the following arguments:
 
-* `mount` - (Required) The path to the mount of the auth backend. Usually, 
-  this is the same as the auth method type. E.g. if you are authenticating via
-  `approle` and it is mounted at `auth/approle` set `mount` to `approle`.
+* `path` - (Required) The login path of the auth backend. For example, login with
+  approle by setting this path to `auth/approle/login`. Additionally, some mounts use parameters
+  in the URL, like with `userpass`: `auth/userpass/login/:username`. 
 
 * `namespace` - (Optional) The path to the namespace that has the mounted auth method.
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
@@ -183,5 +183,38 @@ resource "vault_generic_secret" "example" {
   "pizza": "cheese"
 }
 EOT
+}
+```
+
+### Example `auth_login` Usage
+With the `userpass` backend:
+```hcl-terraform
+variable login_username {}
+variable login_password {}
+
+provider "vault" {
+  auth_login {
+    path = "auth/userpass/login/${var.login_username}"
+    
+    parameters = {
+      password = var.login_password
+    }
+  }
+}
+```
+Or, using approle:
+```hcl-terraform
+variable login_approle_role_id {}
+variable login_approle_secret_id {}
+
+provider "vault" {
+  auth_login {
+    path = "auth/approle/login"
+    
+    parameters = {
+      role_id   = var.login_approle_role_id
+      secret_id = var.login_approle_secret_id
+    }
+  }
 }
 ```
