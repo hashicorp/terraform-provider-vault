@@ -595,7 +595,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		loginPath := fmt.Sprintf("auth/%s/login", authLoginMount)
 		if authLoginNamespaceI, ok := authLogin["namespace"]; ok {
 			authLoginNamespace = authLoginNamespaceI.(string)
-			loginPath = fmt.Sprintf("%s/auth/%s/login", authLoginNamespace, authLoginMount)
+			client.SetNamespace(authLoginNamespace)
 		}
 		authLoginParameters := authLogin["parameters"].(map[string]interface{})
 
