@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/vault/api"
 	"io/ioutil"
 	"os"
 	"path"
@@ -270,21 +269,11 @@ func testResourceApproleLoginCheckAttrs(t *testing.T) resource.TestCheckFunc {
 			Schema: approleProvider.Schema,
 		}
 		approleProviderData := approleProviderResource.TestResourceData()
-		err := approleProviderData.Set("auth_login", authLoginData)
+		approleProviderData.Set("auth_login", authLoginData)
+		_, err := providerConfigure(approleProviderData)
 		if err != nil {
 			t.Fatal(err)
 		}
-		clientI, err := providerConfigure(approleProviderData)
-		if err != nil {
-			t.Fatal(err)
-		}
-		client := clientI.(*api.Client)
-		tokenInfo, err := client.Auth().Token().LookupSelf()
-		if err != nil {
-			t.Fatal(err)
-		}
-		fmt.Println(backendResourceState.Primary.Attributes["accessor"])
-		fmt.Println(tokenInfo.Data)
 		return nil
 	}
 }
