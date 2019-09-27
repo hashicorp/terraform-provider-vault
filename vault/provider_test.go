@@ -258,7 +258,7 @@ func testResourceApproleLoginCheckAttrs(t *testing.T) resource.TestCheckFunc {
 
 		authLoginData := []map[string]interface{}{
 			{
-				"mount": "approle",
+				"path": "auth/approle/login",
 				"parameters": map[string]interface{}{
 					"role_id":   roleId,
 					"secret_id": secretId,

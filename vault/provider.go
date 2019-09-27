@@ -74,7 +74,7 @@ func Provider() terraform.ResourceProvider {
 				Description: "Login to vault with an existing auth method using auth/<mount>/login",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"mount": {
+						"path": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -590,16 +590,15 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	if len(authLoginI) == 1 {
 		authLogin := authLoginI[0].(map[string]interface{})
-		authLoginMount := authLogin["mount"].(string)
+		authLoginPath := authLogin["path"].(string)
 		authLoginNamespace := ""
-		loginPath := fmt.Sprintf("auth/%s/login", authLoginMount)
 		if authLoginNamespaceI, ok := authLogin["namespace"]; ok {
 			authLoginNamespace = authLoginNamespaceI.(string)
 			client.SetNamespace(authLoginNamespace)
 		}
 		authLoginParameters := authLogin["parameters"].(map[string]interface{})
 
-		secret, err := client.Logical().Write(loginPath, authLoginParameters)
+		secret, err := client.Logical().Write(authLoginPath, authLoginParameters)
 		if err != nil {
 			return nil, err
 		}
