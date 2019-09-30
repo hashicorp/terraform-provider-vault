@@ -38,7 +38,6 @@ func transitSecretBackendCacheConfigUpdate(d *schema.ResourceData, meta interfac
 	backend := d.Get("backend").(string) + "/cache-config"
 
 	log.Printf("[DEBUG] Setting transit cache size to: %d", size)
-	d.SetId(backend)
 
 	data := map[string]interface{}{
 		"size": size,
@@ -56,6 +55,8 @@ func transitSecretBackendCacheConfigUpdate(d *schema.ResourceData, meta interfac
 	if err != nil {
 		return fmt.Errorf("error reloading transit plugin: %v", err)
 	}
+
+	d.SetId(backend)
 
 	return transitSecretBackendCacheConfigRead(d, meta)
 }
@@ -82,5 +83,6 @@ func transitSecretBackendCacheConfigRead(d *schema.ResourceData, meta interface{
 }
 
 func transitSecretBackendCacheConfigDelete(d *schema.ResourceData, meta interface{}) error {
+	// Deleting the cache configuration is not supported in the Vault API
 	return nil
 }

@@ -8,7 +8,7 @@ description: |-
 
 # vault\_transit\_secret\_backend\_cache\_config
 
-Configured the cache for the Transit Secret Backend in Vault.
+Configure the cache for the Transit Secret Backend in Vault.
 
 ## Example Usage
 
