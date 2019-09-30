@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/acctest"
@@ -59,6 +58,8 @@ func testAccConsulSecretBackendRoleCheckDestroy(path, name string) func(*terrafo
 				return fmt.Errorf("Role %q still exists", reqPath)
 			}
 		}
+
+		return nil
 	}
 }
 
@@ -74,7 +75,7 @@ resource "vault_consul_secret_backend_role" "test" {
 }`, path, name)
 }
 
-func testConsulSecretBackendRole_updateConfig(path, namestring) string {
+func testConsulSecretBackendRole_updateConfig(path, name string) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend_role" "test" {
   path = "%s"
