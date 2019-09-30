@@ -76,13 +76,13 @@ resource "vault_consul_secret_backend" "test" {
 }
 
 resource "vault_consul_secret_backend_role" "test" {
-  path = "%s"
+  path = "${vault_consul_secret_backend.test.path}"
   name = "%s"
 
   policies = [
     "foo"
   ]
-}`, path, token, path, name)
+}`, path, token, name)
 }
 
 func testConsulSecretBackendRole_updateConfig(path, name, token string) string {
@@ -97,12 +97,12 @@ resource "vault_consul_secret_backend" "test" {
 }
 
 resource "vault_consul_secret_backend_role" "test" {
-  path = "%s"
+  path = "${vault_consul_secret_backend.test.path}"
   name = "%s"
 
   policies = [
     "foo",
     "bar",
   ]
-}`, path, token, path, name)
+}`, path, token, name)
 }
