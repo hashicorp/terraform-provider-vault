@@ -35,7 +35,7 @@ resource vault_consul_secret_backend_role" "example" {
 
 The following arguments are supported:
 
-* `path` - (Required) The unique of an existing Consul secrets backend mount. Must not begin or end with a `/`.
+* `path` - (Required) The unique name of an existing Consul secrets backend mount. Must not begin or end with a `/`.
 
 * `name` - (Required) The name of the Consul secrets engine role to create.
 
