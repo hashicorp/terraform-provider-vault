@@ -22,17 +22,17 @@ func TestConsulSecretBackendRole(t *testing.T) {
 			{
 				Config: testConsulSecretBackendRole_initialConfig(path, name, token),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "path", path),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "name", name),
-					resource.TestCheckResourceAttrSet("vault_consul_secret_backend.test", "policies"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "path", path),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "name", name),
+					resource.TestCheckResourceAttrSet("vault_consul_secret_backend_role.test", "policies"),
 				),
 			},
 			{
 				Config: testConsulSecretBackendRole_updateConfig(path, name, token),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "path", path),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "name", name),
-					resource.TestCheckResourceAttrSet("vault_consul_secret_backend.test", "policies"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "path", path),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "name", name),
+					resource.TestCheckResourceAttrSet("vault_consul_secret_backend_role.test", "policies"),
 				),
 			},
 		},
