@@ -37,12 +37,20 @@ issue new credentials.
 * `secret_key` - (Required) The AWS Secret Key this backend should use to
 issue new credentials.
 
-~> **Important** Because Vault does not support reading the configured
-credentials back from the API, Terraform cannot detect and correct drift
+~> **Important** Vault version 1.2.3 and older does not support reading the configured
+credentials back from the API, With these older versions, Terraform cannot detect and correct drift
 on `access_key` or `secret_key`. Changing the values, however, _will_
-overwrite the previously stored values.
+overwrite the previously stored values. With versions of Vault newer than
+1.2.3, reading the `access_key` only is supported, and so drifts of the
+`access_key` will be detected and corrected, but drifts on the `secret_key`
+will not.
 
 * `region` - (Optional) The AWS region for API calls. Defaults to `us-east-1`.
+
+~> **Important** The same limitation noted above for the `access_key` parameter
+also applies to the `region` parameter. Vault versions 1.2.3 and older will not
+allow Terraform to detect (and thus correct) drift in the `region` parameter,
+while newer versions of Vault will.
 
 * `path` - (Optional) The unique path this backend should be mounted at. Must
 not begin or end with a `/`. Defaults to `aws`.

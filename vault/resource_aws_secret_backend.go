@@ -156,14 +156,41 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
+	log.Printf("[DEBUG] Read AWS secret backend config/root %s", path)
+	resp, err := client.Logical().Read(path + "/config/root")
+	if err != nil {
+		// This is here to support backwards compatibility with Vault. Read operations on the config/root
+		// endpoint were just added and haven't been released yet, and so in currently released versions
+		// the read operations return a 405 error. We'll gracefully revert back to the old behavior in that
+		// case to allow for a transition period.
+		respErr, ok := err.(*api.ResponseError)
+		if !ok || respErr.StatusCode != 405 {
+			return fmt.Errorf("error reading AWS secret backend config/root: %s", err)
+		}
+		log.Printf("[DEBUG] Unable to read config/root due to old version detected; skipping reading access_key and region parameters")
+		resp = nil
+	}
+	if resp != nil {
+		if v, ok := resp.Data["access_key"].(string); ok {
+			d.Set("access_key", v)
+		}
+		// Terrible backwards compatibility hack. Previously, if no region was specified,
+		// this provider would just write a region of "us-east-1" into its state. Now that
+		// we're actually reading the region out from the backend, if it hadn't been set,
+		// it will return an empty string. This could potentially cause unexpected diffs
+		// for users of the provider, so to avoid it, we're doing something similar here
+		// and injecting a fake region of us-east-1 into the state.
+		if v, ok := resp.Data["region"].(string); ok && v != "" {
+			d.Set("region", v)
+		} else {
+			d.Set("region", "us-east-1")
+		}
+	}
+
 	d.Set("path", path)
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
-
-	// access key, secret key, and region, sadly, we can't read out
-	// the API doesn't support it
-	// So... if they drift, they drift.
 
 	return nil
 }
