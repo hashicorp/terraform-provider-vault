@@ -1,5 +1,9 @@
 ## 2.4.0 (Unreleased)
 
+IMPROVEMENTS:
+
+* Adds support for Vault 1.2+ token fields to LDAP auth ([#553](https://github.com/terraform-providers/terraform-provider-vault/pull/553))
+
 BUG FIXES:
 
 * Fixes incorrect handling of user and team policies in the Github auth backend ([#543](https://github.com/terraform-providers/terraform-provider-vault/pull/543)).
