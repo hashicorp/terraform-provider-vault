@@ -581,6 +581,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	// Try an get the token from the config or token helper
 	token, err := providerToken(d)
+	if err != nil {
+		return nil, err
+	}
 
 	// Attempt to use auth/<mount>login if 'auth_login' is provided in provider config
 	authLoginI := d.Get("auth_login").([]interface{})
@@ -603,10 +606,6 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 			return nil, err
 		}
 		token = secret.Auth.ClientToken
-	}
-
-	if err != nil {
-		return nil, err
 	}
 	if token != "" {
 		client.SetToken(token)
