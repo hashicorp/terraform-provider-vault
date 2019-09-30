@@ -69,6 +69,33 @@ func TestAccAWSAuthBackendClient_nested(t *testing.T) {
 	})
 }
 
+func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendClientConfig_basicWithoutSecretKey(backend),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAWSAuthBackendClientCheck_attrs(backend),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", "access_key", "AWSACCESSKEY"),
+					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", "secret_key"),
+				),
+			},
+			{
+				Config: testAccAWSAuthBackendClientConfig_updatedWithoutSecretKey(backend),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAWSAuthBackendClientCheck_attrs(backend),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", "access_key", "AWSACCESSKEY"),
+					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", "secret_key"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckAWSAuthBackendClientDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
@@ -85,26 +112,6 @@ func testAccCheckAWSAuthBackendClientDestroy(s *terraform.State) error {
 		}
 	}
 	return nil
-}
-
-func testAccAWSAuthBackendClientConfig_basic(backend string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "aws" {
-  type = "aws"
-  path = "%s"
-  description = "Test auth backend for AWS backend client config"
-}
-
-resource "vault_aws_auth_backend_client" "client" {
-  backend = "${vault_auth_backend.aws.path}"
-  access_key = "AWSACCESSKEY"
-  secret_key = "AWSSECRETKEY"
-  ec2_endpoint = "http://vault.test/ec2"
-  iam_endpoint = "http://vault.test/iam"
-  sts_endpoint = "http://vault.test/sts"
-  iam_server_id_header_value = "vault.test"
-}
-`, backend)
 }
 
 func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFunc {
@@ -153,6 +160,26 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 	}
 }
 
+func testAccAWSAuthBackendClientConfig_basic(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  type = "aws"
+  path = "%s"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = "${vault_auth_backend.aws.path}"
+  access_key = "AWSACCESSKEY"
+  secret_key = "AWSSECRETKEY"
+  ec2_endpoint = "http://vault.test/ec2"
+  iam_endpoint = "http://vault.test/iam"
+  sts_endpoint = "http://vault.test/sts"
+  iam_server_id_header_value = "vault.test"
+}
+`, backend)
+}
+
 func testAccAWSAuthBackendClientConfig_updated(backend string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "aws" {
@@ -165,9 +192,45 @@ resource "vault_aws_auth_backend_client" "client" {
   backend = "${vault_auth_backend.aws.path}"
   access_key = "UPDATEDAWSACCESSKEY"
   secret_key = "UPDATEDAWSSECRETKEY"
-  ec2_endpoint = "http://upadted.vault.test/ec2"
+  ec2_endpoint = "http://updated.vault.test/ec2"
   iam_endpoint = "http://updated.vault.test/iam"
   sts_endpoint = "http://updated.vault.test/sts"
   iam_server_id_header_value = "updated.vault.test"
+}`, backend)
+}
+
+func testAccAWSAuthBackendClientConfig_basicWithoutSecretKey(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = "${vault_auth_backend.aws.path}"
+  access_key = "AWSACCESSKEY"
+  ec2_endpoint = "http://vault.test/ec2"
+  iam_endpoint = "http://vault.test/iam"
+  sts_endpoint = "http://vault.test/sts"
+  iam_server_id_header_value = "vault.test"
+}`, backend)
+}
+
+func testAccAWSAuthBackendClientConfig_updatedWithoutSecretKey(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = "${vault_auth_backend.aws.path}"
+  access_key = "AWSACCESSKEY"
+  ec2_endpoint = "http://updated2.vault.test/ec2"
+  iam_endpoint = "http://updated2.vault.test/iam"
+  sts_endpoint = "http://updated2.vault.test/sts"
+  iam_server_id_header_value = "updated2.vault.test"
 }`, backend)
 }
