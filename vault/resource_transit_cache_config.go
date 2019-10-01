@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -21,6 +22,9 @@ func transitSecretBackendCacheConfig() *schema.Resource {
 				Required:    true,
 				Description: "The Transit secret backend the resource belongs to.",
 				ForceNew:    true,
+				StateFunc: func(v interface{}) string {
+					return strings.Trim(v.(string), "/")
+				},
 			},
 			"size": {
 				Type:        schema.TypeInt,
@@ -47,6 +51,7 @@ func transitSecretBackendCacheConfigUpdate(d *schema.ResourceData, meta interfac
 		return fmt.Errorf("error writing transit cache-config: %v", err)
 	}
 	log.Printf("[DEBUG] Set transit cache size")
+	d.SetId(backend)
 
 	data = map[string]interface{}{
 		"mounts": []string{d.Get("backend").(string) + "/"},
@@ -56,15 +61,13 @@ func transitSecretBackendCacheConfigUpdate(d *schema.ResourceData, meta interfac
 		return fmt.Errorf("error reloading transit plugin: %v", err)
 	}
 
-	d.SetId(backend)
-
 	return transitSecretBackendCacheConfigRead(d, meta)
 }
 
 func transitSecretBackendCacheConfigRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	backend := d.Get("backend").(string) + "/cache-config"
+	backend := d.Id()
 
 	secret, err := client.Logical().Read(backend)
 	if err != nil {
