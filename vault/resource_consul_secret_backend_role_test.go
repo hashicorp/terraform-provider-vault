@@ -24,7 +24,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "path", path),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "name", name),
-					resource.TestCheckResourceAttrSet("vault_consul_secret_backend_role.test", "policies"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.0", "foo"),
 				),
 			},
 			{
@@ -32,7 +32,8 @@ func TestConsulSecretBackendRole(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "path", path),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "name", name),
-					resource.TestCheckResourceAttrSet("vault_consul_secret_backend_role.test", "policies"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.0", "foo"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.1", "bar"),
 				),
 			},
 		},
