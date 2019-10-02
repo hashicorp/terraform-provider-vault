@@ -499,6 +499,10 @@ var (
 			Resource:      transitSecretBackendKeyResource(),
 			PathInventory: []string{"/transit/keys/{name}"},
 		},
+		"vault_transit_secret_cache_config": {
+			Resource:      transitSecretBackendCacheConfig(),
+			PathInventory: []string{"/transit/cache-config"},
+		},
 	}
 )
 
