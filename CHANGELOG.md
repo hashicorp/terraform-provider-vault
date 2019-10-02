@@ -3,6 +3,7 @@
 IMPROVEMENTS:
 
 * Adds support for Vault 1.2+ token fields to LDAP auth ([#553](https://github.com/terraform-providers/terraform-provider-vault/pull/553))
+* Adds support for configuring the Transit cache ([#548](https://github.com/terraform-providers/terraform-provider-vault/pull/548))
 
 BUG FIXES:
 
