@@ -61,7 +61,7 @@ The `tune` block is used to tune the auth backend:
   a plugin to include them in the response.
 
 * `token_type` - (Optional) Specifies the type of tokens that should be returned by
-  the mount.
+  the mount. Valid values are "default-service", "default-batch", "service", "batch".
 
 ## Attributes Reference
 
