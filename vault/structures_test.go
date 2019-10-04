@@ -15,6 +15,8 @@ func TestExpandAuthMethodTune(t *testing.T) {
 			"audit_non_hmac_request_keys": []interface{}{"foo", "bar"},
 			"listing_visibility":          "unauth",
 			"passthrough_request_headers": []interface{}{"X-Custom", "X-Mas"},
+			"allowed_response_headers":    []interface{}{"X-Response-Custom", "X-Response-Mas"},
+			"token_type":                  "default-batch",
 		},
 	}
 	actual := expandAuthMethodTune(flattened)
@@ -25,6 +27,8 @@ func TestExpandAuthMethodTune(t *testing.T) {
 		AuditNonHMACResponseKeys:  nil,
 		ListingVisibility:         "unauth",
 		PassthroughRequestHeaders: []string{"X-Custom", "X-Mas"},
+		AllowedResponseHeaders:    []string{"X-Response-Custom", "X-Response-Mas"},
+		TokenType:                 "default-batch",
 	}
 
 	if !reflect.DeepEqual(actual, expected) {
@@ -42,6 +46,8 @@ func TestFlattenAuthMethodTune(t *testing.T) {
 		AuditNonHMACRequestKeys:   []string{"foo", "bar"},
 		ListingVisibility:         "",
 		PassthroughRequestHeaders: []string{"X-Custom", "X-Mas"},
+		AllowedResponseHeaders:    []string{"X-Response-Custom", "X-Response-Mas"},
+		TokenType:                 "default-service",
 	}
 
 	expected := map[string]interface{}{
@@ -50,6 +56,8 @@ func TestFlattenAuthMethodTune(t *testing.T) {
 		"audit_non_hmac_request_keys": []interface{}{"foo", "bar"},
 		"passthrough_request_headers": []interface{}{"X-Custom", "X-Mas"},
 		"listing_visibility":          "",
+		"allowed_response_headers":    []interface{}{"X-Response-Custom", "X-Response-Mas"},
+		"token_type":                  "default-service",
 	}
 
 	actual := flattenAuthMethodTune(expanded)
