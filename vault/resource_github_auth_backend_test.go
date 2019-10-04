@@ -76,6 +76,10 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "tune.2905546040.passthrough_request_headers.#", "2"),
 					resource.TestCheckResourceAttr(resName, "tune.2905546040.passthrough_request_headers.0", "X-Custom-Header"),
 					resource.TestCheckResourceAttr(resName, "tune.2905546040.passthrough_request_headers.1", "X-Forwarded-To"),
+					resource.TestCheckResourceAttr(resName, "tune.2905546040.allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resName, "tune.2905546040.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr(resName, "tune.2905546040.allowed_response_headers.1", "X-Forwarded-Response-To"),
+					resource.TestCheckResourceAttr(resName, "tune.2905546040.token_type", "batch"),
 				),
 			},
 			{
@@ -94,6 +98,11 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "tune.2753290056.passthrough_request_headers.0", "X-Custom-Header"),
 					resource.TestCheckResourceAttr(resName, "tune.2753290056.passthrough_request_headers.1", "X-Forwarded-To"),
 					resource.TestCheckResourceAttr(resName, "tune.2753290056.passthrough_request_headers.2", "X-Mas"),
+					resource.TestCheckResourceAttr(resName, "tune.2905546040.allowed_response_headers.#", "3"),
+					resource.TestCheckResourceAttr(resName, "tune.2905546040.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr(resName, "tune.2905546040.allowed_response_headers.1", "X-Forwarded-Response-To"),
+					resource.TestCheckResourceAttr(resName, "tune.2753290056.allowed_response_headers.2", "X-Mas-Response"),
+					resource.TestCheckResourceAttr(resName, "tune.2905546040.token_type", "default-batch"),
 				),
 			},
 		},
@@ -246,6 +255,8 @@ resource "vault_github_auth_backend" "gh" {
 		audit_non_hmac_request_keys = ["key1", "key2"]
 		audit_non_hmac_response_keys = ["key3", "key4"]
 		passthrough_request_headers = ["X-Custom-Header", "X-Forwarded-To"]
+		allowed_response_headers = ["X-Custom-Response-Header", "X-Forwared-Response-To"]
+		token_type = "batch"
 	}
 }
 `, backend)
@@ -263,6 +274,8 @@ resource "vault_github_auth_backend" "gh" {
 		audit_non_hmac_request_keys = ["key1"]
 		listing_visibility = "unauth"
 		passthrough_request_headers = ["X-Custom-Header", "X-Forwarded-To", "X-Mas"]
+		allowed_response_headers = ["X-Custom-Response-Header", "X-Forwared-Response-To", "X-Mas-Response"]
+		token_type = "default-batch"
 	}
 }
 `, backend)
