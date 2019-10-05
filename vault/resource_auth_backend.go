@@ -16,6 +16,7 @@ func authBackendResource() *schema.Resource {
 		Create: authBackendWrite,
 		Delete: authBackendDelete,
 		Read:   authBackendRead,
+		Update: authBackendUpdate,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -43,7 +44,6 @@ func authBackendResource() *schema.Resource {
 
 			"description": {
 				Type:        schema.TypeString,
-				ForceNew:    true,
 				Optional:    true,
 				Description: "The description of the auth backend",
 			},
@@ -53,7 +53,6 @@ func authBackendResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				Computed:    true,
-				ForceNew:    true,
 				Description: "Default lease duration in seconds",
 			},
 
@@ -62,13 +61,11 @@ func authBackendResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				Computed:    true,
-				ForceNew:    true,
 				Description: "Maximum possible lease duration in seconds",
 			},
 
 			"listing_visibility": {
 				Type:        schema.TypeString,
-				ForceNew:    true,
 				Optional:    true,
 				Description: "Specifies whether to show this mount in the UI-specific listing endpoint",
 			},
@@ -87,6 +84,64 @@ func authBackendResource() *schema.Resource {
 			},
 		},
 	}
+}
+
+func authBackendPath(path string) string {
+	return "auth/" + strings.Trim(path, "/")
+}
+
+func authBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+
+	path := d.Get("path").(string)
+	path = authBackendPath(path)
+
+	d.Partial(true)
+
+	if d.HasChange("listing_visibility") {
+		config := api.MountConfigInput{
+			ListingVisibility: d.Get("listing_visibility").(string),
+		}
+		log.Printf("[DEBUG] Updating listing visibility for %q", path)
+		err := client.Sys().TuneMount(path, config)
+		if err != nil {
+			return fmt.Errorf("error updating listing visibility for %q: %s", path, err)
+		}
+		log.Printf("[DEBUG] Updated listing visibility for %q", path)
+		d.SetPartial("listing_visibility")
+	}
+
+	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
+		config := api.MountConfigInput{
+			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
+			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
+		}
+		log.Printf("[DEBUG] Updating lease TTLs for %q", path)
+		err := client.Sys().TuneMount(path, config)
+		if err != nil {
+			return fmt.Errorf("error updating mount TTLs for %q: %s", path, err)
+		}
+		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
+		d.SetPartial("default_lease_ttl_seconds")
+		d.SetPartial("max_lease_ttl_seconds")
+	}
+
+	if d.HasChange("description") {
+		description := d.Get("description").(string)
+		config := api.MountConfigInput{
+			Description: &description,
+		}
+		log.Printf("[DEBUG] Updating description for %q", path)
+		err := client.Sys().TuneMount(path, config)
+		if err != nil {
+			return fmt.Errorf("error updating description for %q: %s", path, err)
+		}
+		log.Printf("[DEBUG] Updated description for %q", path)
+		d.SetPartial("description")
+	}
+
+	d.Partial(false)
+	return authBackendRead(d, meta)
 }
 
 func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
