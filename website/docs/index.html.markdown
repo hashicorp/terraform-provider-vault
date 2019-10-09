@@ -107,6 +107,12 @@ variables in order to keep credential information out of the configuration.
   contains one or more certificate files that will be used to validate
   the certificate presented by the Vault server. May be set via the
   `VAULT_CAPATH` environment variable.
+  
+* `auth_login` - (Optional) A configuration block, described below, that 
+  attempts to authenticate using the `auth/<method>/login` path to 
+  aquire a token which Terraform will use. Terraform still issues itself
+  a limited child token using auth/token/create in order to enforce a short
+  TTL and limit exposure.
 
 * `client_auth` - (Optional) A configuration block, described below, that
   provides credentials used by Terraform to authenticate with the Vault
@@ -132,6 +138,20 @@ variables in order to keep credential information out of the configuration.
 
 * `namespace` - (Optional) Set the namespace to use. May be set via the
   `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
+  
+The `auth_login` configuration block accepts the following arguments:
+
+* `path` - (Required) The login path of the auth backend. For example, login with
+  approle by setting this path to `auth/approle/login`. Additionally, some mounts use parameters
+  in the URL, like with `userpass`: `auth/userpass/login/:username`. 
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*
+
+* `parameters` - (Optional) A map of key-value parameters to send when authenticating
+  against the auth backend. Refer to [Vault API documentation](https://www.vaultproject.io/api/auth/index.html) for a particular auth method
+  to see what can go here.
 
 The `client_auth` configuration block accepts the following arguments:
 
@@ -163,5 +183,38 @@ resource "vault_generic_secret" "example" {
   "pizza": "cheese"
 }
 EOT
+}
+```
+
+### Example `auth_login` Usage
+With the `userpass` backend:
+```hcl-terraform
+variable login_username {}
+variable login_password {}
+
+provider "vault" {
+  auth_login {
+    path = "auth/userpass/login/${var.login_username}"
+    
+    parameters = {
+      password = var.login_password
+    }
+  }
+}
+```
+Or, using approle:
+```hcl-terraform
+variable login_approle_role_id {}
+variable login_approle_secret_id {}
+
+provider "vault" {
+  auth_login {
+    path = "auth/approle/login"
+    
+    parameters = {
+      role_id   = var.login_approle_role_id
+      secret_id = var.login_approle_secret_id
+    }
+  }
 }
 ```

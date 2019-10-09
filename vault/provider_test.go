@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/vault/command/config"
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/mitchellh/go-homedir"
 )
 
 // How to run the acceptance tests for this provider:
@@ -121,6 +121,30 @@ const tokenHelperScript = `
 echo "helper-token"
 `
 
+func TestAccAuthLoginProviderConfigure(t *testing.T) {
+	rootProvider := Provider().(*schema.Provider)
+	rootProviderResource := &schema.Resource{
+		Schema: rootProvider.Schema,
+	}
+	rootProviderData := rootProviderResource.TestResourceData()
+	if _, err := providerConfigure(rootProviderData); err != nil {
+		t.Fatal(err)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		Providers: map[string]terraform.ResourceProvider{
+			"vault": rootProvider,
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceApproleConfig_basic(),
+				Check:  testResourceApproleLoginCheckAttrs(t),
+			},
+		},
+	})
+}
+
 func TestAccNamespaceProviderConfigure(t *testing.T) {
 	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
 	if isEnterprise == "" {
@@ -158,6 +182,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	}
 	nsProviderData := nsProviderResource.TestResourceData()
 	nsProviderData.Set("namespace", namespacePath)
+	nsProviderData.Set("token", os.Getenv("VAULT_TOKEN"))
 	if _, err := providerConfigure(nsProviderData); err != nil {
 		t.Fatal(err)
 	}
@@ -176,6 +201,81 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 		},
 	})
 
+}
+
+func testResourceApproleConfig_basic() string {
+	return `
+resource "vault_auth_backend" "approle" {
+	type = "approle"
+	path = "approle"
+}
+
+resource "vault_policy" "admin" {
+    name = "admin"
+	policy = <<EOT
+path "*" { capabilities = ["create", "read", "update", "delete", "list", "sudo"] }
+EOT
+}
+
+resource "vault_approle_auth_backend_role" "admin" {
+    backend = vault_auth_backend.approle.path
+	role_name = "admin"
+	policies = [vault_policy.admin.name]
+}
+
+resource "vault_approle_auth_backend_role_secret_id" "admin" {
+	backend = vault_auth_backend.approle.path
+	role_name = vault_approle_auth_backend_role.admin.role_name
+}
+`
+}
+
+func testResourceApproleLoginCheckAttrs(t *testing.T) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["vault_approle_auth_backend_role_secret_id.admin"]
+		if resourceState == nil {
+			return fmt.Errorf("approle secret id resource not found in state")
+		}
+
+		roleResourceState := s.Modules[0].Resources["vault_approle_auth_backend_role.admin"]
+		if roleResourceState == nil {
+			return fmt.Errorf("approle role resource not found in state")
+		}
+
+		backendResourceState := s.Modules[0].Resources["vault_auth_backend.approle"]
+		if backendResourceState == nil {
+			return fmt.Errorf("approle mount resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return fmt.Errorf("approle secret id resource has no primary instance")
+		}
+
+		roleId := roleResourceState.Primary.Attributes["role_id"]
+		secretId := instanceState.Attributes["secret_id"]
+
+		authLoginData := []map[string]interface{}{
+			{
+				"path": "auth/approle/login",
+				"parameters": map[string]interface{}{
+					"role_id":   roleId,
+					"secret_id": secretId,
+				},
+			},
+		}
+		approleProvider := Provider().(*schema.Provider)
+		approleProviderResource := &schema.Resource{
+			Schema: approleProvider.Schema,
+		}
+		approleProviderData := approleProviderResource.TestResourceData()
+		approleProviderData.Set("auth_login", authLoginData)
+		_, err := providerConfigure(approleProviderData)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return nil
+	}
 }
 
 func testResourceAdminPeriodicOrphanTokenConfig_basic() string {
