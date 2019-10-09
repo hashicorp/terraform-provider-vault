@@ -51,6 +51,8 @@ The following arguments are supported:
 * `allowed_roles` - (Optional) A list of roles that are allowed to use this
   connection.
 
+* `root_rotation_statements` - (Optional) A list of database statements to be executed to rotate the root user's credentials.
+
 * `cassandra` - (Optional) A nested block containing configuration options for Cassandra connections.
 
 * `mongodb` - (Optional) A nested block containing configuration options for MongoDB connections.
