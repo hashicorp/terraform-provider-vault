@@ -61,7 +61,7 @@ func consulSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) err
 	d.SetId(path + "," + name)
 
 	if _, err := client.Logical().Write(reqPath, payload); err != nil {
-		return fmt.Errorf("Error writing role configuration for %q: %s", reqPath, err)
+		return fmt.Errorf("error writing role configuration for %q: %s", reqPath, err)
 	}
 	d.SetPartial("name")
 	d.SetPartial("path")
@@ -84,11 +84,11 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 
 	secret, err := client.Logical().Read(reqPath)
 	if err != nil {
-		return fmt.Errorf("Error reading role configuration for %q: %s", reqPath, err)
+		return fmt.Errorf("error reading role configuration for %q: %s", reqPath, err)
 	}
 
 	if secret == nil {
-		return fmt.Errorf("Resource not found")
+		return fmt.Errorf("resource not found")
 	}
 
 	data := secret.Data
@@ -118,7 +118,7 @@ func consulSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) err
 			"policies": policies,
 		}
 		if _, err := client.Logical().Write(reqPath, payload); err != nil {
-			return fmt.Errorf("Error writing role configuration for %q: %s", reqPath, err)
+			return fmt.Errorf("error writing role configuration for %q: %s", reqPath, err)
 		}
 		log.Printf("[DEBUG] Updated role configuration at %q", reqPath)
 		d.SetPartial("policies")
@@ -140,7 +140,7 @@ func consulSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) err
 	log.Printf("[DEBUG] Deleting Consul backend role at %q", reqPath)
 
 	if _, err := client.Logical().Delete(reqPath); err != nil {
-		return fmt.Errorf("Error deleting Consul backend role at %q: %s", reqPath, err)
+		return fmt.Errorf("error deleting Consul backend role at %q: %s", reqPath, err)
 	}
 	log.Printf("[DEBUG] Deleted Consul backend role at %q", reqPath)
 	return nil
@@ -159,7 +159,7 @@ func consulSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bo
 
 	secret, err := client.Logical().Read(reqPath)
 	if err != nil {
-		return false, fmt.Errorf("Error reading role configuration for %q: %s", reqPath, err)
+		return false, fmt.Errorf("error reading role configuration for %q: %s", reqPath, err)
 	}
 
 	return secret != nil, nil
