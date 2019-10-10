@@ -55,8 +55,6 @@ These arguments are common across several Authentication Token resources since V
 * `token_max_ttl` - (Optional) The maximum lifetime for generated tokens in number of seconds.
   Its current value will be referenced at renewal time.
 
-* `token_policies` - (Optional) List of policies to encode onto generated tokens. Depending
-  on the auth method, this list may be supplemented by user/group/other values.
 
 * `token_bound_cidrs` - (Optional) List of CIDR blocks; if set, specifies blocks of IP
   addresses which can authenticate successfully, and ties the resulting token to these blocks
