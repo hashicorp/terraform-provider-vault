@@ -1,14 +1,23 @@
 ## 2.4.0 (Unreleased)
 
+FEATURES:
+
+* Adds support for alternative auth methods using a method-agnostic implementation ([#552](https://github.com/terraform-providers/terraform-provider-vault/pull/552)).
+* Adds a resource for the "/consul/roles/{name}" endpoint ([#480](https://github.com/terraform-providers/terraform-provider-vault/pull/480)).
+* Adds a resource for the "/pki/config/crl" endpoint ([#506](https://github.com/terraform-providers/terraform-provider-vault/pull/506)).
+
 IMPROVEMENTS:
 
 * Adds support for Vault 1.2+ token fields to LDAP auth ([#553](https://github.com/terraform-providers/terraform-provider-vault/pull/553))
 * Adds support for configuring the Transit cache ([#548](https://github.com/terraform-providers/terraform-provider-vault/pull/548))
+* Adds support for updates to the identity group alias field ([#536](https://github.com/terraform-providers/terraform-provider-vault/pull/536)).
+* Adds support for reading the AWS access key and region from the AWS client config ([#539](https://github.com/terraform-providers/terraform-provider-vault/pull/539)).
+* In AWS auth, only updates the access key and secret if they've changed ([#540](https://github.com/terraform-providers/terraform-provider-vault/pull/540)).
+* Adds support for `"root_rotation_statements"` in the database secret engine's connection params ([#530](https://github.com/terraform-providers/terraform-provider-vault/pull/530)).
 
 BUG FIXES:
 
 * Fixes incorrect handling of user and team policies in the Github auth backend ([#543](https://github.com/terraform-providers/terraform-provider-vault/pull/543)).
-
 
 ## 2.3.0 (September 06, 2019)
 
