@@ -35,6 +35,12 @@ func expandAuthMethodTune(rawL []interface{}) api.MountConfigInput {
 	if v, ok := raw["passthrough_request_headers"]; ok {
 		data.PassthroughRequestHeaders = expandStringSliceWithEmpty(v.([]interface{}), true)
 	}
+	if v, ok := raw["allowed_response_headers"]; ok {
+		data.AllowedResponseHeaders = expandStringSliceWithEmpty(v.([]interface{}), true)
+	}
+	if v, ok := raw["token_type"]; ok {
+		data.TokenType = v.(string)
+	}
 	return data
 }
 
@@ -53,6 +59,10 @@ func flattenAuthMethodTune(dt *api.MountConfigOutput) map[string]interface{} {
 	if len(dt.PassthroughRequestHeaders) > 0 && dt.PassthroughRequestHeaders[0] != "" {
 		m["passthrough_request_headers"] = flattenStringSlice(dt.PassthroughRequestHeaders)
 	}
+	if len(dt.AllowedResponseHeaders) > 0 && dt.AllowedResponseHeaders[0] != "" {
+		m["allowed_response_headers"] = flattenStringSlice(dt.AllowedResponseHeaders)
+	}
+	m["token_type"] = dt.TokenType
 	return m
 }
 

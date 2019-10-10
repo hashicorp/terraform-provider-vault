@@ -14,7 +14,7 @@ Provides a resource for managing an
 ## Example Usage
 
 Manage JWT auth backend:
- 
+
 ```hcl
 resource "vault_jwt_auth_backend" "example" {
     description  = "Demonstration of the Terraform JWT auth backend"
@@ -25,7 +25,7 @@ resource "vault_jwt_auth_backend" "example" {
 ```
 
 Manage OIDC auth backend:
- 
+
 ```hcl
 resource "vault_jwt_auth_backend" "example" {
     description  = "Demonstration of the Terraform JWT auth backend"
@@ -73,25 +73,31 @@ The following arguments are supported:
 
 The `tune` block is used to tune the auth backend:
 
-* `default_lease_ttl` - (Optional) Specifies the default time-to-live. 
-  If set, this overrides the global default. 
-  Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
-
-* `max_lease_ttl` - (Optional) Specifies the maximum time-to-live. 
+* `default_lease_ttl` - (Optional) Specifies the default time-to-live.
   If set, this overrides the global default.
   Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
 
-* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will 
+* `max_lease_ttl` - (Optional) Specifies the maximum time-to-live.
+  If set, this overrides the global default.
+  Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+
+* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will
   not be HMAC'd by audit devices in the response data object.
 
-* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will 
+* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will
   not be HMAC'd by audit devices in the request data object.
 
-* `listing_visibility` - (Optional) Specifies whether to show this mount in 
+* `listing_visibility` - (Optional) Specifies whether to show this mount in
   the UI-specific listing endpoint. Valid values are "unauth" or "hidden".
 
-* `passthrough_request_headers` - (Optional) List of headers to whitelist and 
+* `passthrough_request_headers` - (Optional) List of headers to whitelist and
   pass from the request to the backend.
+
+* `allowed_response_headers` - (Optional) List of headers to whitelist and allowing
+  a plugin to include them in the response.
+
+* `token_type` - (Optional) Specifies the type of tokens that should be returned by
+  the mount. Valid values are "default-service", "default-batch", "service", "batch".
 
 ## Attributes Reference
 
