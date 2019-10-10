@@ -14,6 +14,7 @@ IMPROVEMENTS:
 * Adds support for reading the AWS access key and region from the AWS client config ([#539](https://github.com/terraform-providers/terraform-provider-vault/pull/539)).
 * In AWS auth, only updates the access key and secret if they've changed ([#540](https://github.com/terraform-providers/terraform-provider-vault/pull/540)).
 * Adds support for `"root_rotation_statements"` in the database secret engine's connection params ([#530](https://github.com/terraform-providers/terraform-provider-vault/pull/530)).
+* Adds support for `token_type` and `allowed_response_headers` in Github and JWT auth backends ([#556](https://github.com/terraform-providers/terraform-provider-vault/pull/556))
 
 BUG FIXES:
 
