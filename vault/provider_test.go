@@ -126,11 +126,6 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 	rootProviderResource := &schema.Resource{
 		Schema: rootProvider.Schema,
 	}
-	rootProviderData := rootProviderResource.TestResourceData()
-	if _, err := providerConfigure(rootProviderData); err != nil {
-		t.Fatal(err)
-	}
-
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
 		Providers: map[string]terraform.ResourceProvider{
@@ -143,6 +138,11 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 			},
 		},
 	})
+
+	rootProviderData := rootProviderResource.TestResourceData()
+	if _, err := providerConfigure(rootProviderData); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestAccNamespaceProviderConfigure(t *testing.T) {
