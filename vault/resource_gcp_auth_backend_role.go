@@ -107,20 +107,20 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 			Optional:      true,
 			Computed:      true,
 			ConflictsWith: []string{"token_ttl"},
-			Deprecated:    "use `token_ttl` instead",
+			Deprecated:    "use `token_ttl` instead if you are running Vault >= 1.2",
 		},
 		"max_ttl": {
 			Type:          schema.TypeString,
 			Optional:      true,
 			Computed:      true,
-			Deprecated:    "use `token_max_ttl` instead",
+			Deprecated:    "use `token_max_ttl` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_max_ttl"},
 		},
 		"period": {
 			Type:          schema.TypeString,
 			Optional:      true,
 			Computed:      true,
-			Deprecated:    "use `token_period` instead",
+			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_period"},
 		},
 		"policies": {
@@ -130,7 +130,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 			},
 			Optional:      true,
 			Computed:      true,
-			Deprecated:    "use `token_policies` instead",
+			Deprecated:    "use `token_policies` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_policies"},
 		},
 	}

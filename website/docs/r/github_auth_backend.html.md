@@ -115,7 +115,7 @@ documented above.
 * `ttl` - (Optional; Deprecated, use `token_ttl` isntead) The TTL period of tokens issued
   using this role. This must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration).
 
-* `max_ttl` - (Optional; Deprecated, use `token_max_ttl` instead) The maximum allowed lifetime of tokens
+* `max_ttl` - (Optional; Deprecated, use `token_max_ttl` instead if you are running Vault >= 1.2) The maximum allowed lifetime of tokens
   issued using this role. This must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration).
 
 ## Import
