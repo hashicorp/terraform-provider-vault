@@ -1,4 +1,9 @@
 ## 2.6.0 (Unreleased)
+
+IMPROVEMENTS:
+
+* Adds new JWT Auth role fields introduced with Vault 1.2 ([#566](https://github.com/terraform-providers/terraform-provider-vault/pull/566))
+
 ## 2.5.0 (October 17, 2019)
 
 IMPROVEMENTS:
