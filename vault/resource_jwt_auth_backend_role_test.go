@@ -57,6 +57,14 @@ func TestAccJWTAuthBackendRole_import(t *testing.T) {
 						"user_claim", "https://vault/user"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"groups_claim", "https://vault/groups"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"clock_skew_leeway", "120"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"expiration_leeway", "120"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"not_before_leeway", "120"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"verbose_oidc_logging", "true"),
 				),
 			},
 			{
@@ -225,6 +233,14 @@ func TestAccJWTAuthBackendRole_full(t *testing.T) {
 						"user_claim", "https://vault/user"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"groups_claim", "https://vault/groups"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"clock_skew_leeway", "120"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"expiration_leeway", "120"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"not_before_leeway", "120"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"verbose_oidc_logging", "true"),
 				),
 			},
 		},
@@ -295,6 +311,8 @@ func TestAccJWTAuthBackendRoleOIDC_full(t *testing.T) {
 						"claim_mappings.group", "group"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"claim_mappings.preferred_language", "language"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"verbose_oidc_logging", "true"),
 				),
 			},
 		},
@@ -349,6 +367,14 @@ func TestAccJWTAuthBackendRole_fullUpdate(t *testing.T) {
 						"user_claim", "https://vault/user"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"groups_claim", "https://vault/groups"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"clock_skew_leeway", "120"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"expiration_leeway", "120"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"not_before_leeway", "120"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"verbose_oidc_logging", "true"),
 				),
 			},
 			{
@@ -388,6 +414,14 @@ func TestAccJWTAuthBackendRole_fullUpdate(t *testing.T) {
 						"user_claim", "https://vault/updateuser"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"groups_claim", "https://vault/updategroups"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"clock_skew_leeway", "0"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"expiration_leeway", "0"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"not_before_leeway", "0"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"verbose_oidc_logging", "false"),
 				),
 			},
 		},
@@ -557,6 +591,12 @@ resource "vault_jwt_auth_backend_role" "role" {
   token_ttl = 3600
   token_num_uses = 12
   token_max_ttl = 7200
+
+  clock_skew_leeway = 120
+  expiration_leeway = 120
+  not_before_leeway = 120
+
+  verbose_oidc_logging = true
 }`, backend, role)
 }
 
@@ -569,7 +609,7 @@ resource "vault_jwt_auth_backend" "jwt" {
   oidc_client_id = "client"
   oidc_client_secret = "secret"
   lifecycle {
-	ignore_changes = [
+  ignore_changes = [
      # Ignore changes to odic_clie_secret inside the tests
      "oidc_client_secret"
     ]
@@ -599,6 +639,8 @@ resource "vault_jwt_auth_backend_role" "role" {
     preferred_language = "language",
     group = "group"
   }
+
+  verbose_oidc_logging = true
 }`, backend, role)
 }
 

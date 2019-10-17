@@ -44,6 +44,24 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			Required:    true,
 			Description: "The claim to use to uniquely identify the user; this will be used as the name for the Identity entity alias created due to a successful login.",
 		},
+		"clock_skew_leeway": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Default:     0,
+			Description: "The amount of leeway to add to all claims to account for clock skew, in seconds. Defaults to 60 seconds if set to 0 and can be disabled if set to -1. Only applicable with 'jwt' roles.",
+		},
+		"expiration_leeway": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Default:     0,
+			Description: "The amount of leeway to add to expiration (exp) claims to account for clock skew, in seconds. Defaults to 60 seconds if set to 0 and can be disabled if set to -1. Only applicable with 'jwt' roles.",
+		},
+		"not_before_leeway": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Default:     0,
+			Description: "The amount of leeway to add to not before (nbf) claims to account for clock skew, in seconds. Defaults to 150 seconds if set to 0 and can be disabled if set to -1. Only applicable with 'jwt' roles. ",
+		},
 		"allowed_redirect_uris": {
 			Type:     schema.TypeSet,
 			Optional: true,
@@ -85,6 +103,12 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			Optional:    true,
 			Description: "A pattern of delimiters used to allow the groups_claim to live outside of the top-level JWT structure. For instance, a groups_claim of meta/user.name/groups with this field set to // will expect nested structures named meta, user.name, and groups. If this field was set to /./ the groups information would expect to be via nested structures of meta, user, name, and groups.",
 			Deprecated:  "`groups_claim_delimiter_pattern` has been removed since Vault 1.1. If the groups claim is not at the top level, it can now be specified as a JSONPointer.",
+		},
+		"verbose_oidc_logging": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Log received OIDC tokens and claims when debug-level logging is active. Not recommended in production since sensitive information may be present in OIDC responses.",
 		},
 		"backend": {
 			Type:        schema.TypeString,
@@ -363,6 +387,19 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("groups_claim_delimiter_pattern", resp.Data["groups_claim_delimiter_pattern"].(string))
 	}
 
+	if v, ok := resp.Data["clock_skew_leeway"]; ok {
+		d.Set("clock_skew_leeway", v)
+	}
+	if v, ok := resp.Data["expiration_leeway"]; ok {
+		d.Set("expiration_leeway", v)
+	}
+	if v, ok := resp.Data["not_before_leeway"]; ok {
+		d.Set("not_before_leeway", v)
+	}
+	if v, ok := resp.Data["verbose_oidc_logging"]; ok {
+		d.Set("verbose_oidc_logging", v)
+	}
+
 	d.Set("backend", backend)
 	d.Set("role_name", role)
 
@@ -510,6 +547,12 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 	if v, ok := d.GetOkExists("groups_claim_delimiter_pattern"); ok {
 		data["groups_claim_delimiter_pattern"] = v.(string)
 	}
+
+	data["clock_skew_leeway"] = d.Get("clock_skew_leeway").(int)
+	data["expiration_leeway"] = d.Get("expiration_leeway").(int)
+	data["not_before_leeway"] = d.Get("not_before_leeway").(int)
+
+	data["verbose_oidc_logging"] = d.Get("verbose_oidc_logging").(bool)
 
 	// Deprecated Fields
 	if dataList := util.TerraformSetToStringArray(d.Get("policies")); len(dataList) > 0 {
