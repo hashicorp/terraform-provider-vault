@@ -1,4 +1,9 @@
 ## 2.5.0 (Unreleased)
+
+IMPROVEMENTS:
+
+* Migrates to using the standalone Terraform plugin SDK ([#558](https://github.com/terraform-providers/terraform-provider-vault/pull/558))
+
 ## 2.4.0 (October 11, 2019)
 
 FEATURES:
