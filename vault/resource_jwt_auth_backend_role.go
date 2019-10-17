@@ -47,19 +47,19 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 		"clock_skew_leeway": {
 			Type:        schema.TypeInt,
 			Optional:    true,
-			Default:     -1,
+			Default:     0,
 			Description: "The amount of leeway to add to all claims to account for clock skew, in seconds. Defaults to 60 seconds if set to 0 and can be disabled if set to -1. Only applicable with 'jwt' roles.",
 		},
 		"expiration_leeway": {
 			Type:        schema.TypeInt,
 			Optional:    true,
-			Default:     -1,
+			Default:     0,
 			Description: "The amount of leeway to add to expiration (exp) claims to account for clock skew, in seconds. Defaults to 60 seconds if set to 0 and can be disabled if set to -1. Only applicable with 'jwt' roles.",
 		},
 		"not_before_leeway": {
 			Type:        schema.TypeInt,
 			Optional:    true,
-			Default:     -1,
+			Default:     0,
 			Description: "The amount of leeway to add to not before (nbf) claims to account for clock skew, in seconds. Defaults to 150 seconds if set to 0 and can be disabled if set to -1. Only applicable with 'jwt' roles. ",
 		},
 		"allowed_redirect_uris": {
@@ -548,19 +548,11 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 		data["groups_claim_delimiter_pattern"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("clock_skew_leeway"); ok {
-		data["clock_skew_leeway"] = v.(int)
-	}
-	if v, ok := d.GetOk("expiration_leeway"); ok {
-		data["expiration_leeway"] = v.(int)
-	}
-	if v, ok := d.GetOk("not_before_leeway"); ok {
-		data["not_before_leeway"] = v.(int)
-	}
+	data["clock_skew_leeway"] = d.Get("clock_skew_leeway").(int)
+	data["expiration_leeway"] = d.Get("expiration_leeway").(int)
+	data["not_before_leeway"] = d.Get("not_before_leeway").(int)
 
-	if v, ok := d.GetOkExists("verbose_oidc_logging"); ok {
-		data["verbose_oidc_logging"] = v.(bool)
-	}
+	data["verbose_oidc_logging"] = d.Get("verbose_oidc_logging").(bool)
 
 	// Deprecated Fields
 	if dataList := util.TerraformSetToStringArray(d.Get("policies")); len(dataList) > 0 {
