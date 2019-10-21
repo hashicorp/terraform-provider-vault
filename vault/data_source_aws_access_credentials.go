@@ -118,13 +118,27 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	}
 
 	d.SetId(secret.LeaseID)
-	d.Set("access_key", secret.Data["access_key"])
-	d.Set("secret_key", secret.Data["secret_key"])
-	d.Set("security_token", secret.Data["security_token"])
-	d.Set("lease_id", secret.LeaseID)
-	d.Set("lease_duration", secret.LeaseDuration)
-	d.Set("lease_start_time", time.Now().Format(time.RFC3339))
-	d.Set("lease_renewable", secret.Renewable)
+	if err := d.Set("access_key", secret.Data["access_key"]); err != nil {
+		return err
+	}
+	if err := d.Set("secret_key", secret.Data["secret_key"]); err != nil {
+		return err
+	}
+	if err := d.Set("security_token", secret.Data["security_token"]); err != nil {
+		return err
+	}
+	if err := d.Set("lease_id", secret.LeaseID); err != nil {
+		return err
+	}
+	if err := d.Set("lease_duration", secret.LeaseDuration); err != nil {
+		return err
+	}
+	if err := d.Set("lease_start_time", time.Now().Format(time.RFC3339)); err != nil {
+		return err
+	}
+	if err := d.Set("lease_renewable", secret.Renewable); err != nil {
+		return err
+	}
 
 	awsConfig := &aws.Config{
 		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),
@@ -138,35 +152,45 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	iamconn := iam.New(sess)
 	stsconn := sts.New(sess)
 
-	for successes := 0; successes < 3; successes++ {
-		err = resource.Retry(1*time.Minute, func() *resource.RetryError {
-			if credType == "creds" {
-				log.Printf("[DEBUG] Checking if AWS creds %q are valid", secret.LeaseID)
-				_, err := iamconn.GetUser(nil)
-				if err != nil && isAWSAuthError(err) {
-					log.Printf("[DEBUG] AWS auth error checking if creds %q are valid, is retryable", secret.LeaseID)
-					return resource.RetryableError(err)
-				} else if err != nil {
-					log.Printf("[DEBUG] Error checking if creds %q are valid: %s", secret.LeaseID, err)
-					return resource.NonRetryableError(err)
-				}
-				log.Printf("[DEBUG] Checked if AWS creds %q are valid", secret.LeaseID)
-			} else {
-				log.Printf("[DEBUG] Checking if AWS sts token %q is valid", secret.LeaseID)
-				_, err := stsconn.GetCallerIdentity(&sts.GetCallerIdentityInput{})
-				if err != nil && isAWSAuthError(err) {
-					return resource.RetryableError(err)
-				} else if err != nil {
-					return resource.NonRetryableError(err)
-				}
-				log.Printf("[DEBUG] Checked if AWS sts token %q is valid", secret.LeaseID)
-			}
-			return nil
-		})
-		if err != nil {
+	if credType == "sts" {
+		// STS credentials are immediately consistent. Let's ensure they're working.
+		log.Printf("[DEBUG] Checking if AWS sts token %q is valid", secret.LeaseID)
+		if _, err := stsconn.GetCallerIdentity(&sts.GetCallerIdentityInput{}); err != nil {
+			return err
+		}
+		log.Printf("[DEBUG] Checked if AWS sts token %q is valid", secret.LeaseID)
+		return nil
+	}
+
+	// Other types of credentials are eventually consistent. Let's check credential
+	// validity and slow down to give credentials time to propagate before we return
+	// them. We'll wait for at least 5 sequential successes before giving creds back
+	// to the user.
+	sequentialSuccesses := 0
+
+	// validateCreds is a retry function, which will be retried until it succeeds.
+	validateCreds := func() *resource.RetryError {
+		log.Printf("[DEBUG] Checking if AWS creds %q are valid", secret.LeaseID)
+		if _, err := iamconn.GetUser(nil); err != nil && isAWSAuthError(err) {
+			sequentialSuccesses = 0
+			log.Printf("[DEBUG] AWS auth error checking if creds %q are valid, is retryable", secret.LeaseID)
+			return resource.RetryableError(err)
+		} else if err != nil {
+			log.Printf("[DEBUG] Error checking if creds %q are valid: %s", secret.LeaseID, err)
+			return resource.NonRetryableError(err)
+		}
+		sequentialSuccesses++
+		log.Printf("[DEBUG] Checked if AWS creds %q are valid", secret.LeaseID)
+		return nil
+	}
+	for sequentialSuccesses < 5 {
+		if err := resource.Retry(1*time.Minute, validateCreds); err != nil {
 			return fmt.Errorf("error checking if credentials are valid: %s", err)
 		}
 	}
+
+	log.Printf("[DEBUG] Waiting an additional 5 seconds for new credentials to propagate...")
+	time.Sleep(5 * time.Second)
 	return nil
 }
 
