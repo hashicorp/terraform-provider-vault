@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -24,6 +25,12 @@ func namespaceResource() *schema.Resource {
 				Required:     true,
 				Description:  "Path of the namespace.",
 				ValidateFunc: validateNoTrailingSlash,
+			},
+
+			"namespace_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID of the namepsace.",
 			},
 		},
 	}
@@ -63,7 +70,9 @@ func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
 func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	path := d.Get("path").(string)
+	upgradeNonPathdNamespaceID(d)
+
+	path := d.Id()
 
 	resp, err := client.Logical().Read("sys/namespaces/" + path)
 
@@ -77,7 +86,24 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	d.SetId(resp.Data["id"].(string))
+	d.SetId(resp.Data["path"].(string))
+	d.Set("namespace_id", resp.Data["id"])
+
+	noTrailingSlashPath := strings.TrimSuffix(path, "/")
+	d.Set("path", noTrailingSlashPath)
 
 	return nil
+}
+
+func upgradeNonPathdNamespaceID(d *schema.ResourceData) {
+	// Upgrade ID to path
+	id := d.Id()
+	oldID := d.Id()
+	path, ok := d.GetOk("path")
+	if id != path && ok {
+		log.Printf("[DEBUG] Upgrading old ID to path - %s to %s", id, path)
+		d.SetId(path.(string))
+		log.Printf("[DEBUG] Setting namespace_id to old ID - %s", oldID)
+		d.Set("namespace_id", oldID)
+	}
 }
