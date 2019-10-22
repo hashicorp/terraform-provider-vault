@@ -11,11 +11,29 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-
 	"github.com/hashicorp/vault/api"
+)
+
+const (
+	// sequentialSuccessesRequired is the number of times the test of an eventually consistent
+	// credential must succeed before we return it for use.
+	sequentialSuccessesRequired = 5
+
+	// sequentialSuccessTimeLimit is how long we'll wait for eventually consistent AWS creds
+	// to propagate before giving up. In real life, we've seen it take up to 15 seconds, so
+	// this is ample and if it's unsuccessful there's something else wrong.
+	sequentialSuccessTimeLimit = time.Minute
+
+	// retryTimeOut is how long we'll wait before timing out when we're retrying credentials.
+	// This corresponds to Vault's default 30-second request timeout.
+	retryTimeOut = 30 * time.Second
+
+	// propagationBuffer is the added buffer of time we'll wait after N sequential successes
+	// before returning credentials for use.
+	propagationBuffer = 5 * time.Second
 )
 
 func awsAccessCredentialsDataSource() *schema.Resource {
@@ -118,27 +136,13 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	}
 
 	d.SetId(secret.LeaseID)
-	if err := d.Set("access_key", secret.Data["access_key"]); err != nil {
-		return err
-	}
-	if err := d.Set("secret_key", secret.Data["secret_key"]); err != nil {
-		return err
-	}
-	if err := d.Set("security_token", secret.Data["security_token"]); err != nil {
-		return err
-	}
-	if err := d.Set("lease_id", secret.LeaseID); err != nil {
-		return err
-	}
-	if err := d.Set("lease_duration", secret.LeaseDuration); err != nil {
-		return err
-	}
-	if err := d.Set("lease_start_time", time.Now().Format(time.RFC3339)); err != nil {
-		return err
-	}
-	if err := d.Set("lease_renewable", secret.Renewable); err != nil {
-		return err
-	}
+	d.Set("access_key", secret.Data["access_key"])
+	d.Set("secret_key", secret.Data["secret_key"])
+	d.Set("security_token", secret.Data["security_token"])
+	d.Set("lease_id", secret.LeaseID)
+	d.Set("lease_duration", secret.LeaseDuration)
+	d.Set("lease_start_time", time.Now().Format(time.RFC3339))
+	d.Set("lease_renewable", secret.Renewable)
 
 	awsConfig := &aws.Config{
 		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),
@@ -152,13 +156,14 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	iamconn := iam.New(sess)
 	stsconn := sts.New(sess)
 
+	// Different types of AWS credentials have different behavior around consistency.
+	// See https://www.vaultproject.io/docs/secrets/aws/index.html#usage for more.
 	if credType == "sts" {
 		// STS credentials are immediately consistent. Let's ensure they're working.
 		log.Printf("[DEBUG] Checking if AWS sts token %q is valid", secret.LeaseID)
 		if _, err := stsconn.GetCallerIdentity(&sts.GetCallerIdentityInput{}); err != nil {
 			return err
 		}
-		log.Printf("[DEBUG] Checked if AWS sts token %q is valid", secret.LeaseID)
 		return nil
 	}
 
@@ -183,14 +188,19 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 		log.Printf("[DEBUG] Checked if AWS creds %q are valid", secret.LeaseID)
 		return nil
 	}
-	for sequentialSuccesses < 5 {
-		if err := resource.Retry(1*time.Minute, validateCreds); err != nil {
+
+	start := time.Now()
+	for sequentialSuccesses < sequentialSuccessesRequired {
+		if time.Now().Sub(start) > sequentialSuccessTimeLimit {
+			return fmt.Errorf("unable to get %d sequential successes within %.f seconds", sequentialSuccessesRequired, sequentialSuccessTimeLimit.Seconds())
+		}
+		if err := resource.Retry(retryTimeOut, validateCreds); err != nil {
 			return fmt.Errorf("error checking if credentials are valid: %s", err)
 		}
 	}
 
-	log.Printf("[DEBUG] Waiting an additional 5 seconds for new credentials to propagate...")
-	time.Sleep(5 * time.Second)
+	log.Printf("[DEBUG] Waiting an additional %.f seconds for new credentials to propagate...", propagationBuffer.Seconds())
+	time.Sleep(propagationBuffer)
 	return nil
 }
 
