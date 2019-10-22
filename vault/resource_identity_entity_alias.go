@@ -63,9 +63,22 @@ func identityEntityAliasCreate(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error writing IdentityEntityAlias to %q: %s", name, err)
 	}
-	log.Printf("[DEBUG] Wrote IdentityEntityAlias %q", name)
 
-	d.SetId(resp.Data["id"].(string))
+	if resp != nil {
+		d.SetId(resp.Data["id"].(string))
+	} else {
+		// A nil response is possible if the alias already exists and TF doesn't know about it.
+		// But we still need and don't have the alias ID, so a search is used to find it.
+		log.Printf("[DEBUG] Entity alias ID is unknown. Reading aliases for entity %q", canonicalID)
+
+		id, err := findAliasID(client, canonicalID, name, mountAccessor)
+		if err != nil {
+			return fmt.Errorf("error writing IdentityEntityAlias to %q: %s", name, err)
+		}
+		d.SetId(id)
+	}
+
+	log.Printf("[DEBUG] Wrote IdentityEntityAlias %q", name)
 
 	return identityEntityAliasRead(d, meta)
 }
@@ -177,4 +190,23 @@ func identityEntityAliasNamePath(name string) string {
 
 func identityEntityAliasIDPath(id string) string {
 	return fmt.Sprintf("%s/id/%s", identityEntityAliasPath, id)
+}
+
+func findAliasID(client *api.Client, canonicalID, name, mountAccessor string) (string, error) {
+	path := identityEntityIDPath(canonicalID)
+
+	resp, err := client.Logical().Read(path)
+	if err != nil {
+		return "", fmt.Errorf("error reading entity aliases: %s", err)
+	}
+
+	aliases := resp.Data["aliases"].([]interface{})
+	for _, aliasRaw := range aliases {
+		alias := aliasRaw.(map[string]interface{})
+		if alias["name"] == name && alias["mount_accessor"] == mountAccessor {
+			return alias["id"].(string), nil
+		}
+	}
+
+	return "", fmt.Errorf("unable to determine alias ID. canonical ID: %q  name: %q  mountAccessor: %q", canonicalID, name, mountAccessor)
 }

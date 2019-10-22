@@ -73,5 +73,14 @@ resource "vault_identity_entity_alias" "entity-alias" {
   name = "%s"
   mount_accessor = "${vault_auth_backend.githubA.accessor}"
   canonical_id = "${vault_identity_entity.entity.id}"
-}`, entityName, entityName, entityName, entityName)
+}
+
+// This duplicate alias tests the provider's handling of aliases that already exist but aren't
+// known to the provider.
+resource "vault_identity_entity_alias" "entity-alias-dupe" {
+  name = "%s"
+  mount_accessor = "${vault_auth_backend.githubA.accessor}"
+  canonical_id = "${vault_identity_entity.entity.id}"
+}
+`, entityName, entityName, entityName, entityName, entityName)
 }
