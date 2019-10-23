@@ -55,6 +55,11 @@ These arguments are common across several Authentication Token resources since V
 * `token_max_ttl` - (Optional) The maximum lifetime for generated tokens in number of seconds.
   Its current value will be referenced at renewal time.
 
+* `token_period` - (Optional) If set, indicates that the
+  token generated using this role should never expire. The token should be renewed within the
+  duration specified by this value. At each renewal, the token's TTL will be set to the
+  value of this field. The maximum allowed lifetime of token issued using this
+  role. Specified as a number of seconds.
 
 * `token_bound_cidrs` - (Optional) List of CIDR blocks; if set, specifies blocks of IP
   addresses which can authenticate successfully, and ties the resulting token to these blocks
