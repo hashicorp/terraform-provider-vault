@@ -34,7 +34,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "name", name),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "ttl", "120"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "max_ttl", "140"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "max_ttl", "240"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "local", "true"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "token_type", "client"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.0", "foo"),
