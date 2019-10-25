@@ -11,11 +11,29 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-
 	"github.com/hashicorp/vault/api"
+)
+
+const (
+	// sequentialSuccessesRequired is the number of times the test of an eventually consistent
+	// credential must succeed before we return it for use.
+	sequentialSuccessesRequired = 5
+
+	// sequentialSuccessTimeLimit is how long we'll wait for eventually consistent AWS creds
+	// to propagate before giving up. In real life, we've seen it take up to 15 seconds, so
+	// this is ample and if it's unsuccessful there's something else wrong.
+	sequentialSuccessTimeLimit = time.Minute
+
+	// retryTimeOut is how long we'll wait before timing out when we're retrying credentials.
+	// This corresponds to Vault's default 30-second request timeout.
+	retryTimeOut = 30 * time.Second
+
+	// propagationBuffer is the added buffer of time we'll wait after N sequential successes
+	// before returning credentials for use.
+	propagationBuffer = 5 * time.Second
 )
 
 func awsAccessCredentialsDataSource() *schema.Resource {
@@ -138,35 +156,51 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	iamconn := iam.New(sess)
 	stsconn := sts.New(sess)
 
-	for successes := 0; successes < 3; successes++ {
-		err = resource.Retry(1*time.Minute, func() *resource.RetryError {
-			if credType == "creds" {
-				log.Printf("[DEBUG] Checking if AWS creds %q are valid", secret.LeaseID)
-				_, err := iamconn.GetUser(nil)
-				if err != nil && isAWSAuthError(err) {
-					log.Printf("[DEBUG] AWS auth error checking if creds %q are valid, is retryable", secret.LeaseID)
-					return resource.RetryableError(err)
-				} else if err != nil {
-					log.Printf("[DEBUG] Error checking if creds %q are valid: %s", secret.LeaseID, err)
-					return resource.NonRetryableError(err)
-				}
-				log.Printf("[DEBUG] Checked if AWS creds %q are valid", secret.LeaseID)
-			} else {
-				log.Printf("[DEBUG] Checking if AWS sts token %q is valid", secret.LeaseID)
-				_, err := stsconn.GetCallerIdentity(&sts.GetCallerIdentityInput{})
-				if err != nil && isAWSAuthError(err) {
-					return resource.RetryableError(err)
-				} else if err != nil {
-					return resource.NonRetryableError(err)
-				}
-				log.Printf("[DEBUG] Checked if AWS sts token %q is valid", secret.LeaseID)
-			}
-			return nil
-		})
-		if err != nil {
+	// Different types of AWS credentials have different behavior around consistency.
+	// See https://www.vaultproject.io/docs/secrets/aws/index.html#usage for more.
+	if credType == "sts" {
+		// STS credentials are immediately consistent. Let's ensure they're working.
+		log.Printf("[DEBUG] Checking if AWS sts token %q is valid", secret.LeaseID)
+		if _, err := stsconn.GetCallerIdentity(&sts.GetCallerIdentityInput{}); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// Other types of credentials are eventually consistent. Let's check credential
+	// validity and slow down to give credentials time to propagate before we return
+	// them. We'll wait for at least 5 sequential successes before giving creds back
+	// to the user.
+	sequentialSuccesses := 0
+
+	// validateCreds is a retry function, which will be retried until it succeeds.
+	validateCreds := func() *resource.RetryError {
+		log.Printf("[DEBUG] Checking if AWS creds %q are valid", secret.LeaseID)
+		if _, err := iamconn.GetUser(nil); err != nil && isAWSAuthError(err) {
+			sequentialSuccesses = 0
+			log.Printf("[DEBUG] AWS auth error checking if creds %q are valid, is retryable", secret.LeaseID)
+			return resource.RetryableError(err)
+		} else if err != nil {
+			log.Printf("[DEBUG] Error checking if creds %q are valid: %s", secret.LeaseID, err)
+			return resource.NonRetryableError(err)
+		}
+		sequentialSuccesses++
+		log.Printf("[DEBUG] Checked if AWS creds %q are valid", secret.LeaseID)
+		return nil
+	}
+
+	start := time.Now()
+	for sequentialSuccesses < sequentialSuccessesRequired {
+		if time.Since(start) > sequentialSuccessTimeLimit {
+			return fmt.Errorf("unable to get %d sequential successes within %.f seconds", sequentialSuccessesRequired, sequentialSuccessTimeLimit.Seconds())
+		}
+		if err := resource.Retry(retryTimeOut, validateCreds); err != nil {
 			return fmt.Errorf("error checking if credentials are valid: %s", err)
 		}
 	}
+
+	log.Printf("[DEBUG] Waiting an additional %.f seconds for new credentials to propagate...", propagationBuffer.Seconds())
+	time.Sleep(propagationBuffer)
 	return nil
 }
 
