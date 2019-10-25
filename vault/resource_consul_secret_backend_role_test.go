@@ -11,27 +11,32 @@ import (
 )
 
 func TestConsulSecretBackendRole(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-path")
+	backend := acctest.RandomWithPrefix("tf-test-backend")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy(path, name),
+		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testConsulSecretBackendRole_initialConfig(path, name, token),
+				Config: testConsulSecretBackendRole_initialConfig(backend, name, token),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "path", path),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "name", name),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "ttl", "0"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.0", "foo"),
 				),
 			},
 			{
-				Config: testConsulSecretBackendRole_updateConfig(path, name, token),
+				Config: testConsulSecretBackendRole_updateConfig(backend, name, token),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "path", path),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "name", name),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "ttl", "120"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "max_ttl", "140"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "local", "true"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "token_type", "client"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.0", "foo"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.1", "bar"),
 				),
@@ -40,32 +45,25 @@ func TestConsulSecretBackendRole(t *testing.T) {
 	})
 }
 
-func testAccConsulSecretBackendRoleCheckDestroy(path, name string) func(*terraform.State) error {
-	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+func testAccConsulSecretBackendRoleCheckDestroy(s *terraform.State) error {
+	client := testProvider.Meta().(*api.Client)
 
-		for _, rs := range s.RootModule().Resources {
-			if rs.Type != "vault_consul_secret_backend_role" {
-				continue
-			}
-
-			reqPath := consulSecretBackendRolePath(path, name)
-
-			secret, err := client.Logical().Read(reqPath)
-			if err != nil {
-				return err
-			}
-
-			if secret != nil {
-				return fmt.Errorf("Role %q still exists", reqPath)
-			}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "vault_consul_secret_backend_role" {
+			continue
 		}
-
-		return nil
+		secret, err := client.Logical().Read(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+		if secret != nil {
+			return fmt.Errorf("role %q still exists", rs.Primary.ID)
+		}
 	}
+	return nil
 }
 
-func testConsulSecretBackendRole_initialConfig(path, name, token string) string {
+func testConsulSecretBackendRole_initialConfig(backend, name, token string) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -77,16 +75,16 @@ resource "vault_consul_secret_backend" "test" {
 }
 
 resource "vault_consul_secret_backend_role" "test" {
-  path = "${vault_consul_secret_backend.test.path}"
+  backend = vault_consul_secret_backend.test.path
   name = "%s"
 
   policies = [
     "foo"
   ]
-}`, path, token, name)
+}`, backend, token, name)
 }
 
-func testConsulSecretBackendRole_updateConfig(path, name, token string) string {
+func testConsulSecretBackendRole_updateConfig(backend, name, token string) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -98,12 +96,17 @@ resource "vault_consul_secret_backend" "test" {
 }
 
 resource "vault_consul_secret_backend_role" "test" {
-  path = "${vault_consul_secret_backend.test.path}"
+  backend = vault_consul_secret_backend.test.path
   name = "%s"
 
   policies = [
     "foo",
     "bar",
   ]
-}`, path, token, name)
+  ttl = 120
+  max_ttl = 240
+  local = true
+  token_type = "client"
+
+}`, backend, token, name)
 }
