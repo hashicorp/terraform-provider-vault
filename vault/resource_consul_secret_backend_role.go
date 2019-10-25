@@ -16,6 +16,9 @@ func consulSecretBackendRoleResource() *schema.Resource {
 		Update: consulSecretBackendRoleUpdate,
 		Delete: consulSecretBackendRoleDelete,
 		Exists: consulSecretBackendRoleExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
