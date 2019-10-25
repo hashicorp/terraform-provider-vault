@@ -191,7 +191,7 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 
 	start := time.Now()
 	for sequentialSuccesses < sequentialSuccessesRequired {
-		if time.Now().Sub(start) > sequentialSuccessTimeLimit {
+		if time.Since(start) > sequentialSuccessTimeLimit {
 			return fmt.Errorf("unable to get %d sequential successes within %.f seconds", sequentialSuccessesRequired, sequentialSuccessTimeLimit.Seconds())
 		}
 		if err := resource.Retry(retryTimeOut, validateCreds); err != nil {
