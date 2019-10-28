@@ -51,21 +51,25 @@ func consulSecretBackendRoleResource() *schema.Resource {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Maximum TTL for leases associated with this role, in seconds.",
+				Default:     0,
 			},
 			"ttl": {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Specifies the TTL for this role.",
+				Default:     0,
 			},
 			"token_type": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Specifies the type of token to create when using this role. Valid values are \"client\" or \"management\".",
+				Default:     "client",
 			},
 			"local": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Indicates that the token should not be replicated globally and instead be local to the current datacenter.",
+				Default:     false,
 			},
 		},
 	}
@@ -98,7 +102,6 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 		payload["local"] = v
 	}
 
-	d.Partial(true)
 	log.Printf("[DEBUG] Configuring Consul secrets backend role at %q", path)
 
 	if _, err := client.Logical().Write(path, payload); err != nil {
