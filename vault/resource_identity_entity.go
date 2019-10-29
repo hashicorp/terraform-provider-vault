@@ -46,6 +46,16 @@ func identityEntityResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Description: "Policies to be tied to the entity.",
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					return d.Get("external_policies").(bool)
+				},
+			},
+
+			"external_policies": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Manage policies externally through `vault_identity_entity_policies`.",
 			},
 
 			"disabled": {
@@ -62,8 +72,10 @@ func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interfac
 		data["name"] = name
 	}
 
-	if policies, ok := d.GetOk("policies"); ok {
-		data["policies"] = policies.(*schema.Set).List()
+	if externalPolicies, ok := d.GetOk("external_policies"); !(ok && externalPolicies.(bool)) {
+		if policies, ok := d.GetOk("policies"); ok {
+			data["policies"] = policies.(*schema.Set).List()
+		}
 	}
 
 	if metadata, ok := d.GetOk("metadata"); ok {
@@ -107,6 +119,9 @@ func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating IdentityEntity %q", id)
 	path := identityEntityIDPath(id)
 
+	vaultMutexKV.Lock(path)
+	defer vaultMutexKV.Unlock(path)
+
 	data := map[string]interface{}{}
 
 	identityEntityUpdateFields(d, data)
@@ -125,10 +140,7 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	path := identityEntityIDPath(id)
-
-	log.Printf("[DEBUG] Reading IdentityEntity %s from %q", id, path)
-	resp, err := client.Logical().Read(path)
+	resp, err := readIdentityEntity(client, id)
 	if err != nil {
 		// We need to check if the secret_id has expired
 		if util.IsExpiredTokenErr(err) {
@@ -156,6 +168,9 @@ func identityEntityDelete(d *schema.ResourceData, meta interface{}) error {
 	id := d.Id()
 
 	path := identityEntityIDPath(id)
+
+	vaultMutexKV.Lock(path)
+	defer vaultMutexKV.Unlock(path)
 
 	log.Printf("[DEBUG] Deleting IdentityEntitty %q", id)
 	_, err := client.Logical().Delete(path)
@@ -196,4 +211,31 @@ func identityEntityNamePath(name string) string {
 
 func identityEntityIDPath(id string) string {
 	return fmt.Sprintf("%s/id/%s", identityEntityPath, id)
+}
+
+func readIdentityEntityPolicies(client *api.Client, entityID string) ([]interface{}, error) {
+	resp, err := readIdentityEntity(client, entityID)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("error IdentityEntity %s does not exist", entityID)
+	}
+
+	if v, ok := resp.Data["policies"]; ok && v != nil {
+		return v.([]interface{}), nil
+	}
+	return make([]interface{}, 0), nil
+}
+
+// May return nil if entity does not exist
+func readIdentityEntity(client *api.Client, entityID string) (*api.Secret, error) {
+	path := identityEntityIDPath(entityID)
+	log.Printf("[DEBUG] Reading Entity %s from %q", entityID, path)
+
+	resp, err := client.Logical().Read(path)
+	if err != nil {
+		return resp, fmt.Errorf("failed reading IdentityEntity %s from %s", entityID, path)
+	}
+	return resp, nil
 }
