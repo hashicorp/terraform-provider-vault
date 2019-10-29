@@ -86,7 +86,7 @@ The following arguments are supported:
 
     If `true`, this resource will take exclusive control of the policies assigned to the group and will set it equal to what is specified in the resource.
 
-    If set to `false`, this resource will simply ensure that the policies specified in the resource is present in the group. When destroying the resource, the resource will ensure that the policies specified in the resource are removed.
+    If set to `false`, this resource will simply ensure that the policies specified in the resource are present in the group. When destroying the resource, the resource will ensure that the policies specified in the resource are removed.
 
 ## Attributes Reference
 
