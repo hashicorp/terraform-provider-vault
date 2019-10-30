@@ -5,7 +5,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
@@ -54,8 +53,6 @@ func TestAccDatabaseSecretBackendRole_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("role")
 	dbName := acctest.RandomWithPrefix("db")
 	testConf := testAccDatabaseSecretBackendRoleConfig_basic(name, dbName, backend, connURL)
-	hclog.Default().Info("testConf:")
-	hclog.Default().Info(testConf)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
