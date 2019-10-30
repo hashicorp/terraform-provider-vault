@@ -89,7 +89,7 @@ documented above.
 * `num_uses` - (Optional; Deprecated, use `token_num_uses` instead if you are running Vault >= 1.2) If set, puts a use-count
   limitation on the issued token.
 
-* `ttl` - (Optional; Deprecated, use `token_ttl` isntead) The TTL period of tokens issued
+* `ttl` - (Optional; Deprecated, use `token_ttl` instead if you are running Vault >= 1.2) The TTL period of tokens issued
   using this role, provided as a number of seconds.
 
 * `max_ttl` - (Optional; Deprecated, use `token_max_ttl` instead if you are running Vault >= 1.2) The maximum allowed lifetime of tokens

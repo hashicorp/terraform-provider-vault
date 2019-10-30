@@ -106,7 +106,7 @@ documented above.
 * `bound_cidrs` - (Optional; Deprecated, use `token_bound_cidrs` instead if you are running Vault >= 1.2) Restriction usage of the
   certificates to client IPs falling within the range of the specified CIDRs
 
-* `ttl` - (Optional; Deprecated, use `token_ttl` isntead) The TTL period of tokens issued
+* `ttl` - (Optional; Deprecated, use `token_ttl` instead if you are running Vault >= 1.2) The TTL period of tokens issued
   using this role, provided as a number of seconds.
 
 * `max_ttl` - (Optional; Deprecated, use `token_max_ttl` instead if you are running Vault >= 1.2) The maximum allowed lifetime of tokens
