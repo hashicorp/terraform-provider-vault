@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-hclog"
@@ -47,5 +48,7 @@ func PrepareMySQLTestContainer(t *testing.T) (func(), string) {
 		t.Fatalf("Could not connect to MySQL docker container: %s", err)
 	}
 	hclog.Default().Info("successfully connected to " + retURL)
+	// Wait one more second for the container to become fully reachable.
+	time.Sleep(time.Second)
 	return cleanup, retURL
 }
