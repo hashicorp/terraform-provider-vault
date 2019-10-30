@@ -1,10 +1,8 @@
-version: 2
+version: 2.1
 jobs:
   build:
-    jobs:
-      build:
-        machine: true
-          image: ubuntu-1604:201903-01
+    machine:
+      image: ubuntu-1604:201903-01
     working_directory: ~/src/github.com/terraform-providers/terraform-provider-vault
     steps:
     - checkout
