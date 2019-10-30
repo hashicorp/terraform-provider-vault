@@ -189,7 +189,7 @@ EOT
 ### Example `auth_login` Usage
 With the `userpass` backend:
 
-```hcl-terraform
+```hcl
 variable login_username {}
 variable login_password {}
 
@@ -206,7 +206,7 @@ provider "vault" {
 
 Or, using `approle`:
 
-```hcl-terraform
+```hcl
 variable login_approle_role_id {}
 variable login_approle_secret_id {}
 
