@@ -66,7 +66,7 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 			},
 			"rotation_statements": {
 				Type:        schema.TypeList,
-				Required:    true,
+				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Database statements to execute to rotate the password for the configured database user.",
 			},
@@ -86,7 +86,11 @@ func databaseSecretBackendStaticRoleWrite(d *schema.ResourceData, meta interface
 		"username":            d.Get("username"),
 		"rotation_period":     d.Get("rotation_period"),
 		"db_name":             d.Get("db_name"),
-		"rotation_statements": d.Get("rotation_statements"),
+		"rotation_statements": []string{},
+	}
+
+	if v, ok := d.GetOkExists("rotation_statements"); ok && v != "" {
+		data["rotation_statements"] = v
 	}
 
 	log.Printf("[DEBUG] Creating static role %q on database backend %q", name, backend)
@@ -152,7 +156,10 @@ func databaseSecretBackendStaticRoleRead(d *schema.ResourceData, meta interface{
 			rotation = append(rotation, cr.(string))
 		}
 	}
-	d.Set("rotation_statements", rotation)
+	err = d.Set("rotation_statements", rotation)
+	if err != nil {
+		return fmt.Errorf("unexpected value %q for rotation_statements of %s: %s", rotation, path, err)
+	}
 
 	return nil
 }

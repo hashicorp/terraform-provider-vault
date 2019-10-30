@@ -33,7 +33,6 @@ func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_static_role.test", "username", username),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_static_role.test", "db_name", dbName),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_static_role.test", "rotation_period", "3600"),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_static_role.test", "rotation_statements.0", "SELECT 1;"),
 				),
 			},
 			{
@@ -67,7 +66,6 @@ func TestAccDatabaseSecretBackendStaticRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_static_role.test", "username", username),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_static_role.test", "db_name", dbName),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_static_role.test", "rotation_period", "3600"),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_static_role.test", "rotation_statements.0", "SELECT 1;"),
 				),
 			},
 			{
@@ -78,7 +76,7 @@ func TestAccDatabaseSecretBackendStaticRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_static_role.test", "username", username),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_static_role.test", "db_name", dbName),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_static_role.test", "rotation_period", "1800"),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_static_role.test", "rotation_statements.0", "SELECT 2;"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_role.test", "rotation_statements.0", "SELECT 1;"),
 				),
 			},
 		},
@@ -126,7 +124,6 @@ resource "vault_database_secret_backend_static_role" "test" {
   name = "%s"
   username = "%s"
   rotation_period = 3600
-  rotation_statements = ["SELECT 1;"]
 }
 `, path, db, connURL, name, username)
 }
@@ -154,7 +151,7 @@ resource "vault_database_secret_backend_static_role" "test" {
   name = "%s"
   username = "%s"
   rotation_period = 1800
-  rotation_statements = ["SELECT 2;"]
+  rotation_statements = ["SELECT 1;"]
 }
 `, path, db, connURL, name, username)
 }
