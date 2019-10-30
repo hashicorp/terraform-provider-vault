@@ -58,8 +58,7 @@ These arguments are common across several Authentication Token resources since V
 * `token_period` - (Optional) If set, indicates that the
   token generated using this role should never expire. The token should be renewed within the
   duration specified by this value. At each renewal, the token's TTL will be set to the
-  value of this field. The maximum allowed lifetime of token issued using this
-  role. Specified as a number of seconds.
+  value of this field. Specified in seconds.
 
 * `token_bound_cidrs` - (Optional) List of CIDR blocks; if set, specifies blocks of IP
   addresses which can authenticate successfully, and ties the resulting token to these blocks
@@ -94,8 +93,7 @@ documented above.
 * `period` - (Optional; Deprecated, use `token_period` instead if you are running Vault >= 1.2) If set, indicates that the
   token generated using this role should never expire. The token should be renewed within the
   duration specified by this value. At each renewal, the token's TTL will be set to the
-  value of this field. The maximum allowed lifetime of token issued using this
-  role. Specified as a number of seconds.
+  value of this field. Specified in seconds.
 
 * `bound_cidrs` - (Optional; Deprecated, use `token_bound_cidrs` instead if you are running Vault >= 1.2) If set, a list of
   CIDRs valid as the source address for login requests. This value is also encoded into any resulting token.
