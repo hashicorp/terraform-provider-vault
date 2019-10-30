@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_aws_auth_backend_roletag_blacklist resource"
-sidebar_current: "docs-vault-resource-aws-auth-backend-roletag-blacklist
+sidebar_current: "docs-vault-resource-aws-auth-backend-roletag-blacklist"
 description: |-
   Configures the periodic tidying operation of the blacklisted role tag entries.
 ---
