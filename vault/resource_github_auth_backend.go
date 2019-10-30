@@ -42,7 +42,7 @@ func githubAuthBackendResource() *schema.Resource {
 			Optional:      true,
 			Description:   "Duration after which authentication will be expired, in seconds.",
 			ValidateFunc:  validateDuration,
-			Deprecated:    "use `token_ttl` instead",
+			Deprecated:    "use `token_ttl` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_ttl"},
 		},
 		"max_ttl": {
@@ -50,7 +50,7 @@ func githubAuthBackendResource() *schema.Resource {
 			Optional:      true,
 			Description:   "Maximum duration after which authentication will be expired, in seconds.",
 			ValidateFunc:  validateDuration,
-			Deprecated:    "use `token_max_ttl` instead",
+			Deprecated:    "use `token_max_ttl` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_max_ttl"},
 		},
 		"accessor": {

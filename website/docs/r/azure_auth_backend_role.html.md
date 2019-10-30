@@ -72,6 +72,11 @@ These arguments are common across several Authentication Token resources since V
 * `token_max_ttl` - (Optional) The maximum lifetime for generated tokens in number of seconds.
   Its current value will be referenced at renewal time.
 
+* `token_period` - (Optional) If set, indicates that the
+  token generated using this role should never expire. The token should be renewed within the
+  duration specified by this value. At each renewal, the token's TTL will be set to the
+  value of this field. Specified in seconds.
+
 * `token_policies` - (Optional) List of policies to encode onto generated tokens. Depending
   on the auth method, this list may be supplemented by user/group/other values.
 
@@ -102,20 +107,19 @@ These arguments are common across several Authentication Token resources since V
 These arguments are deprecated since Vault 1.2 in favour of the common token arguments
 documented above.
 
-* `ttl` - (Optional; Deprecated, use `token_ttl` isntead) The TTL period of tokens issued
+* `ttl` - (Optional; Deprecated, use `token_ttl` instead if you are running Vault >= 1.2) The TTL period of tokens issued
   using this role, provided as a number of seconds.
 
-* `max_ttl` - (Optional; Deprecated, use `token_max_ttl` instead) The maximum allowed lifetime of tokens
+* `max_ttl` - (Optional; Deprecated, use `token_max_ttl` instead if you are running Vault >= 1.2) The maximum allowed lifetime of tokens
   issued using this role, provided as a number of seconds.
 
-* `policies` - (Optional; Deprecated, use `token_policies` instead) An array of strings
+* `policies` - (Optional; Deprecated, use `token_policies` instead if you are running Vault >= 1.2) An array of strings
   specifying the policies to be set on tokens issued using this role.
 
-* `period` - (Optional; Deprecated, use `token_period` instead) If set, indicates that the
+* `period` - (Optional; Deprecated, use `token_period` instead if you are running Vault >= 1.2) If set, indicates that the
   token generated using this role should never expire. The token should be renewed within the
   duration specified by this value. At each renewal, the token's TTL will be set to the
-  value of this field. The maximum allowed lifetime of token issued using this
-  role. Specified as a number of seconds.
+  value of this field. Specified in seconds.
 
 ## Attributes Reference
 

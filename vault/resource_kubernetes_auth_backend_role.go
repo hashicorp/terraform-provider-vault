@@ -56,7 +56,7 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 			Description:   "Policies to be set on tokens issued using this role.",
-			Deprecated:    "use `token_policies` instead",
+			Deprecated:    "use `token_policies` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_policies"},
 		},
 		"ttl": {
@@ -64,13 +64,13 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 			Optional:      true,
 			Description:   "Default number of seconds to set as the TTL for issued tokens and at renewal time.",
 			ConflictsWith: []string{"token_ttl"},
-			Deprecated:    "use `token_ttl` instead",
+			Deprecated:    "use `token_ttl` instead if you are running Vault >= 1.2",
 		},
 		"max_ttl": {
 			Type:          schema.TypeInt,
 			Optional:      true,
 			Description:   "Number of seconds after which issued tokens can no longer be renewed.",
-			Deprecated:    "use `token_max_ttl` instead",
+			Deprecated:    "use `token_max_ttl` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_max_ttl"},
 		},
 		"period": {
@@ -78,13 +78,13 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 			Optional:      true,
 			Description:   "Number of seconds to set the TTL to for issued tokens upon renewal. Makes the token a periodic token, which will never expire as long as it is renewed before the TTL each period.",
 			ConflictsWith: []string{"token_period"},
-			Deprecated:    "use `token_period` instead",
+			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
 		},
 		"num_uses": {
 			Type:          schema.TypeInt,
 			Optional:      true,
 			Description:   "Number of times issued tokens can be used. Setting this to 0 or leaving it unset means unlimited uses.",
-			Deprecated:    "use `token_num_uses` instead",
+			Deprecated:    "use `token_num_uses` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_num_uses"},
 		},
 		"bound_cidrs": {
@@ -94,7 +94,7 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-			Deprecated:    "use `token_bound_cidrs` instead",
+			Deprecated:    "use `token_bound_cidrs` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_bound_cidrs"},
 		},
 	}

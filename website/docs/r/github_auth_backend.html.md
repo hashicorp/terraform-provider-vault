@@ -79,6 +79,11 @@ These arguments are common across several Authentication Token resources since V
 * `token_max_ttl` - (Optional) The maximum lifetime for generated tokens in number of seconds.
   Its current value will be referenced at renewal time.
 
+* `token_period` - (Optional) If set, indicates that the
+  token generated using this role should never expire. The token should be renewed within the
+  duration specified by this value. At each renewal, the token's TTL will be set to the
+  value of this field. Specified in seconds.
+
 * `token_policies` - (Optional) List of policies to encode onto generated tokens. Depending
   on the auth method, this list may be supplemented by user/group/other values.
 
@@ -112,10 +117,10 @@ These arguments are common across several Authentication Token resources since V
 These arguments are deprecated since Vault 1.2 in favour of the common token arguments
 documented above.
 
-* `ttl` - (Optional; Deprecated, use `token_ttl` isntead) The TTL period of tokens issued
+* `ttl` - (Optional; Deprecated, use `token_ttl` instead if you are running Vault >= 1.2) The TTL period of tokens issued
   using this role. This must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration).
 
-* `max_ttl` - (Optional; Deprecated, use `token_max_ttl` instead) The maximum allowed lifetime of tokens
+* `max_ttl` - (Optional; Deprecated, use `token_max_ttl` instead if you are running Vault >= 1.2) The maximum allowed lifetime of tokens
   issued using this role. This must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration).
 
 ## Import
