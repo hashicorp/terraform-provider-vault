@@ -14,7 +14,7 @@ import (
 	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
-func TestAccidentityEntityPoliciesExclusive(t *testing.T) {
+func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -22,13 +22,13 @@ func TestAccidentityEntityPoliciesExclusive(t *testing.T) {
 		CheckDestroy: testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccidentityEntityPoliciesConfigExclusive(entity),
-				Check:  testAccidentityEntityPoliciesCheckAttrs("vault_identity_entity_policies.policies"),
+				Config: testAccIdentityEntityPoliciesConfigExclusive(entity),
+				Check:  testAccIdentityEntityPoliciesCheckAttrs("vault_identity_entity_policies.policies"),
 			},
 			{
-				Config: testAccidentityEntityPoliciesConfigExclusiveUpdate(entity),
+				Config: testAccIdentityEntityPoliciesConfigExclusiveUpdate(entity),
 				Check: resource.ComposeTestCheckFunc(
-					testAccidentityEntityPoliciesCheckAttrs("vault_identity_entity_policies.policies"),
+					testAccIdentityEntityPoliciesCheckAttrs("vault_identity_entity_policies.policies"),
 					resource.TestCheckResourceAttr("vault_identity_entity_policies.policies", "policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_identity_entity_policies.policies", "policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_identity_entity_policies.policies", "policies.1785148924", "test"),
@@ -38,7 +38,7 @@ func TestAccidentityEntityPoliciesExclusive(t *testing.T) {
 	})
 }
 
-func TestAccidentityEntityPoliciesNonExclusive(t *testing.T) {
+func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -46,7 +46,7 @@ func TestAccidentityEntityPoliciesNonExclusive(t *testing.T) {
 		CheckDestroy: testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccidentityEntityPoliciesConfigNonExclusive(entity),
+				Config: testAccIdentityEntityPoliciesConfigNonExclusive(entity),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.#", "1"),
 					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.326271447", "dev"),
@@ -96,7 +96,7 @@ func testAccCheckidentityEntityPoliciesDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccidentityEntityPoliciesCheckAttrs(resource string) resource.TestCheckFunc {
+func testAccIdentityEntityPoliciesCheckAttrs(resource string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources[resource]
 		if resourceState == nil {
@@ -191,7 +191,7 @@ func testAccidentityEntityPoliciesCheckAttrs(resource string) resource.TestCheck
 	}
 }
 
-func testAccidentityEntityPoliciesConfigExclusive(entity string) string {
+func testAccIdentityEntityPoliciesConfigExclusive(entity string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "entity" {
   name = "%s"
@@ -204,7 +204,7 @@ resource "vault_identity_entity_policies" "policies" {
 }`, entity)
 }
 
-func testAccidentityEntityPoliciesConfigExclusiveUpdate(entity string) string {
+func testAccIdentityEntityPoliciesConfigExclusiveUpdate(entity string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "entity" {
   name = "%s"
@@ -217,7 +217,7 @@ resource "vault_identity_entity_policies" "policies" {
 }`, entity)
 }
 
-func testAccidentityEntityPoliciesConfigNonExclusive(entity string) string {
+func testAccIdentityEntityPoliciesConfigNonExclusive(entity string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "entity" {
   name = "%s"
