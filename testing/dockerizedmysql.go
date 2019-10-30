@@ -3,13 +3,11 @@ package testing
 import (
 	"database/sql"
 	"fmt"
-	"os"
-	"testing"
-	"time"
-
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-hclog"
 	"github.com/ory/dockertest"
+	"os"
+	"testing"
 )
 
 func PrepareMySQLTestContainer(t *testing.T) (func(), string) {
@@ -31,7 +29,7 @@ func PrepareMySQLTestContainer(t *testing.T) (func(), string) {
 		cleanupResource(t, pool, resource)
 	}
 
-	retURL := fmt.Sprintf("root:secret@(localhost:%s)/mysql?parseTime=true", resource.GetPort("3306/tcp"))
+	retURL := fmt.Sprintf("root:secret@tcp(localhost:%s)/mysql?parseTime=true", resource.GetPort("3306/tcp"))
 
 	// exponential backoff-retry
 	if err = pool.Retry(func() error {
@@ -48,7 +46,5 @@ func PrepareMySQLTestContainer(t *testing.T) (func(), string) {
 		t.Fatalf("Could not connect to MySQL docker container: %s", err)
 	}
 	hclog.Default().Info("successfully connected to " + retURL)
-	// Wait one more second for the container to become fully reachable.
-	time.Sleep(time.Second)
 	return cleanup, retURL
 }
