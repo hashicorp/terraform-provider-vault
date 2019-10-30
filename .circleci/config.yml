@@ -21,6 +21,11 @@ jobs:
           docker port vault
           docker logs vault
     - run:
+        name: "Start MySQL Container"
+        command: |
+          docker run --detach -e MYSQL_ROOT_PASSWORD=mysql --name mysql -p 3306:3306 mysql:latest
+          echo 'export MYSQL_URL="root:mysql@tcp(127.0.0.1:3306)/"' >> $BASH_ENV
+    - run:
         name: "Set Env Vars"
         command: |
           echo 'export VAULT_TOKEN="root"' >> $BASH_ENV

@@ -2,20 +2,21 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/go-hclog"
+	"os"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/vault/api"
-	tftest "github.com/terraform-providers/terraform-provider-vault/testing"
 )
 
 func TestAccDatabaseSecretBackendRole_import(t *testing.T) {
-	cleanup, connURL := tftest.PrepareMySQLTestContainer(t)
-	defer cleanup()
-
+	connURL := os.Getenv("MYSQL_URL")
+	if connURL == "" {
+		t.Skip("MYSQL_URL not set")
+	}
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	dbName := acctest.RandomWithPrefix("db")
 	name := acctest.RandomWithPrefix("role")
@@ -45,9 +46,10 @@ func TestAccDatabaseSecretBackendRole_import(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendRole_basic(t *testing.T) {
-	cleanup, connURL := tftest.PrepareMySQLTestContainer(t)
-	defer cleanup()
-
+	connURL := os.Getenv("MYSQL_URL")
+	if connURL == "" {
+		t.Skip("MYSQL_URL not set")
+	}
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("role")
 	dbName := acctest.RandomWithPrefix("db")
