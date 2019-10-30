@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/go-hclog"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
@@ -50,13 +51,16 @@ func TestAccDatabaseSecretBackendRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("role")
 	dbName := acctest.RandomWithPrefix("db")
+	testConf := testAccDatabaseSecretBackendRoleConfig_basic(name, dbName, backend, connURL)
+	hclog.Default().Info("testConf:")
+	hclog.Default().Info(testConf)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testAccDatabaseSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendRoleConfig_basic(name, dbName, backend, connURL),
+				Config: testConf,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_role.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_role.test", "backend", backend),
@@ -113,6 +117,7 @@ resource "vault_database_secret_backend_connection" "test" {
 
   mysql {
 	  connection_url = "%s"
+      verify_connection = false
   }
 }
 
@@ -141,6 +146,7 @@ resource "vault_database_secret_backend_connection" "test" {
 
   mysql {
 	  connection_url = "%s"
+      verify_connection = false
   }
 }
 
