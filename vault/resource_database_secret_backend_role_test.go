@@ -117,7 +117,6 @@ resource "vault_database_secret_backend_connection" "test" {
 
   mysql {
 	  connection_url = "%s"
-      verify_connection = false
   }
 }
 
@@ -146,7 +145,6 @@ resource "vault_database_secret_backend_connection" "test" {
 
   mysql {
 	  connection_url = "%s"
-      verify_connection = false
   }
 }
 
