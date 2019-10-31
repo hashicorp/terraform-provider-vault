@@ -9,7 +9,7 @@ jobs:
       - image: vault:latest
         environment:
           - VAULT_DEV_ROOT_TOKEN_ID=root
-    working_directory: ~/src/github.com/terraform-providers/terraform-provider-vault
+    working_directory: /go/src/github.com/terraform-providers/terraform-provider-vault
     steps:
       - checkout
       - run:
@@ -25,23 +25,15 @@ jobs:
             echo 'export GOBIN=$GOPATH/bin' >> $BASH_ENV
             echo 'export MYSQL_URL="root:mysql@tcp(127.0.0.1:3306)/"' >> $BASH_ENV
       - run:
-          name: "Move to GOPATH"
-          command: |
-            mkdir -p $GOPATH/src/github.com/terraform-providers/terraform-provider-vault
-            mv /home/circleci/src/github.com/terraform-providers/terraform-provider-vault/* $GOPATH/src/github.com/terraform-providers/terraform-provider-vault
-      - run:
           name: "Run Tests"
           command: |
-            cd $GOPATH/src/github.com/terraform-providers/terraform-provider-vault
             go test -v ./...
       - run:
           name: "Run Build"
           command: |
-            cd $GOPATH/src/github.com/terraform-providers/terraform-provider-vault
             go build
       - run:
           name: "Generate Coverage Report"
           command: |
-            cd $GOPATH/src/github.com/terraform-providers/terraform-provider-vault/cmd/coverage
             go build
-            ./coverage -openapi-doc=$GOPATH/src/github.com/terraform-providers/terraform-provider-vault/testdata/openapi.json
+            ./coverage -openapi-doc=/go/src/github.com/terraform-providers/terraform-provider-vault/testdata/openapi.json

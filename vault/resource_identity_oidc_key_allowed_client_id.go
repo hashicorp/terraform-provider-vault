@@ -11,6 +11,7 @@ import (
 
 func identityOidcKeyAllowedClientId() *schema.Resource {
 	return &schema.Resource{
+		DeprecationMessage: "This resource is a less-featured dupe and is being deprecated in favor of the `vault_identity_oidc_key` resource. Please update your configuration.",
 		Create: identityOidcKeyAllowedClientIdWrite,
 		Read:   identityOidcKeyAllowedClientIdRead,
 		Delete: identityOidcKeyAllowedClientIdDelete,
