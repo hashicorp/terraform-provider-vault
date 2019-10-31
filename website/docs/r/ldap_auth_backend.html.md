@@ -79,6 +79,11 @@ These arguments are common across several Authentication Token resources since V
 * `token_max_ttl` - (Optional) The maximum lifetime for generated tokens in number of seconds.
   Its current value will be referenced at renewal time.
 
+* `token_period` - (Optional) If set, indicates that the
+  token generated using this role should never expire. The token should be renewed within the
+  duration specified by this value. At each renewal, the token's TTL will be set to the
+  value of this field. Specified in seconds.
+
 * `token_policies` - (Optional) List of policies to encode onto generated tokens. Depending
   on the auth method, this list may be supplemented by user/group/other values.
 

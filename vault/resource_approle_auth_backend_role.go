@@ -85,14 +85,14 @@ func approleAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 			Description:   "Policies to be set on tokens issued using this AppRole.",
-			Deprecated:    "use `token_policies` instead",
+			Deprecated:    "use `token_policies` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_policies"},
 		},
 		"period": {
 			Type:          schema.TypeInt,
 			Optional:      true,
 			Description:   "Number of seconds to set the TTL to for issued tokens upon renewal. Makes the token a periodic token, which will never expire as long as it is renewed before the TTL each period.",
-			Deprecated:    "use `token_period` instead",
+			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_period"},
 		},
 	}

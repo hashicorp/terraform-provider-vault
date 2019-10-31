@@ -81,13 +81,13 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 			Optional:      true,
 			Description:   "Number of seconds to set the TTL to for issued tokens upon renewal. Makes the token a periodic token, which will never expire as long as it is renewed before the TTL each period.",
 			ConflictsWith: []string{"token_period", "token_ttl"},
-			Deprecated:    "use `token_period` instead",
+			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
 		},
 		"explicit_max_ttl": {
 			Type:          schema.TypeString,
 			Optional:      true,
 			Description:   "Number of seconds after which issued tokens can no longer be renewed.",
-			Deprecated:    "use `token_explicit_max_ttl` instead",
+			Deprecated:    "use `token_explicit_max_ttl` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_explicit_max_ttl"},
 		},
 		"bound_cidrs": {
@@ -97,7 +97,7 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-			Deprecated:    "use `token_bound_cidrs` instead",
+			Deprecated:    "use `token_bound_cidrs` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_bound_cidrs"},
 		},
 	}
