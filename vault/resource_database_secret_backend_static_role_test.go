@@ -12,9 +12,9 @@ import (
 )
 
 func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
-	connURL := os.Getenv("POSTGRES_URL")
+	connURL := os.Getenv("MYSQL_URL")
 	if connURL == "" {
-		t.Skip("POSTGRES_URL not set")
+		t.Skip("MYSQL_URL not set")
 	}
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	username := acctest.RandomWithPrefix("user")
@@ -45,9 +45,9 @@ func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendStaticRole_basic(t *testing.T) {
-	connURL := os.Getenv("POSTGRES_URL")
+	connURL := os.Getenv("MYSQL_URL")
 	if connURL == "" {
-		t.Skip("POSTGRES_URL not set")
+		t.Skip("MYSQL_URL not set")
 	}
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("staticrole")
@@ -113,7 +113,7 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["*"]
 
-  postgresql {
+  mysql {
 	  connection_url = "%s"
   }
 }
@@ -140,7 +140,7 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["*"]
 
-  postgresql {
+  mysql {
 	  connection_url = "%s"
   }
 }
