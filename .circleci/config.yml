@@ -13,12 +13,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: "Install dockerize"
-          command: |
-            wget https://github.com/jwilder/dockerize/releases/download/v0.6.1/dockerize-alpine-linux-amd64-v0.6.1.tar.gz
-            tar -C /usr/local/bin -xzvf dockerize-alpine-linux-amd64-v0.6.1.tar.gz
-            rm dockerize-alpine-linux-amd64-v0.6.1.tar.gz
-      - run:
           name: Wait for containers to starts
           command: dockerize -wait http://127.0.0.1:8200 -wait tcp://127.0.0.1:3306 -timeout 30s
       - run:
