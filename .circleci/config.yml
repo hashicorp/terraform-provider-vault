@@ -23,7 +23,7 @@ jobs:
             echo 'export TF_ACC="1"' >> $BASH_ENV
             echo 'GO111MODULE=on' >> $BASH_ENV
             echo 'export GOBIN=$GOPATH/bin' >> $BASH_ENV
-            export MYSQL_URL="root:mysql@tcp(127.0.0.1:3306)/"
+            echo 'export MYSQL_URL="root:mysql@tcp(127.0.0.1:3306)/"' >> $BASH_ENV
       - run:
           name: "Move to GOPATH"
           command: |
