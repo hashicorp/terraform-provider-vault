@@ -9,12 +9,12 @@ import (
 	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
-func identityGroupPoliciesResource() *schema.Resource {
+func identityEntityPoliciesResource() *schema.Resource {
 	return &schema.Resource{
-		Create: identityGroupPoliciesUpdate,
-		Update: identityGroupPoliciesUpdate,
-		Read:   identityGroupPoliciesRead,
-		Delete: identityGroupPoliciesDelete,
+		Create: identityEntityPoliciesUpdate,
+		Update: identityEntityPoliciesUpdate,
+		Read:   identityEntityPoliciesRead,
+		Delete: identityEntityPoliciesDelete,
 
 		Schema: map[string]*schema.Schema{
 			"policies": {
@@ -23,37 +23,37 @@ func identityGroupPoliciesResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "Policies to be tied to the group.",
+				Description: "Policies to be tied to the entity.",
 			},
 
 			"exclusive": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     true,
-				Description: "Should the resource manage policies exclusively? Beware of race conditions when disabling exclusive management",
+				Description: "Should the resource manage policies exclusively",
 			},
 
-			"group_id": {
+			"entity_id": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "ID of the group.",
+				Description: "ID of the entity.",
 			},
 
-			"group_name": {
+			"entity_name": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Name of the group.",
+				Description: "Name of the entity.",
 			},
 		},
 	}
 }
 
-func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error {
+func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	id := d.Get("group_id").(string)
+	id := d.Get("entity_id").(string)
 
-	log.Printf("[DEBUG] Updating IdentityGroupPolicies %q", id)
-	path := identityGroupIDPath(id)
+	log.Printf("[DEBUG] Updating IdentityEntityPolicies %q", id)
+	path := identityEntityIDPath(id)
 
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
@@ -64,7 +64,7 @@ func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error
 	if d.Get("exclusive").(bool) {
 		data["policies"] = policies
 	} else {
-		apiPolicies, err := readIdentityGroupPolicies(client, id)
+		apiPolicies, err := readIdentityEntityPolicies(client, id)
 		if err != nil {
 			return err
 		}
@@ -76,36 +76,36 @@ func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error updating IdentityGroupPolicies %q: %s", id, err)
+		return fmt.Errorf("error updating IdentityEntityPolicies %q: %s", id, err)
 	}
-	log.Printf("[DEBUG] Updated IdentityGroupPolicies %q", id)
+	log.Printf("[DEBUG] Updated IdentityEntityPolicies %q", id)
 
 	d.SetId(id)
 
-	return identityGroupPoliciesRead(d, meta)
+	return identityEntityPoliciesRead(d, meta)
 }
 
-func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
+func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	resp, err := readIdentityGroup(client, id)
+	resp, err := readIdentityEntity(client, id)
 	if err != nil {
 		return err
 	}
-	log.Printf("[DEBUG] Read IdentityGroupPolicies %s", id)
+	log.Printf("[DEBUG] Read IdentityEntityPolicies %s", id)
 	if resp == nil {
-		log.Printf("[WARN] IdentityGroupPolicies %q not found, removing from state", id)
+		log.Printf("[WARN] IdentityEntityPolicies %q not found, removing from state", id)
 		d.SetId("")
 		return nil
 	}
 
-	d.Set("group_id", id)
-	d.Set("group_name", resp.Data["name"])
+	d.Set("entity_id", id)
+	d.Set("entity_name", resp.Data["name"])
 
 	if d.Get("exclusive").(bool) {
 		if err = d.Set("policies", resp.Data["policies"]); err != nil {
-			return fmt.Errorf("error setting policies for IdentityGroupPolicies %q: %s", id, err)
+			return fmt.Errorf("error setting policies for IdentityEntityPolicies %q: %s", id, err)
 		}
 	} else {
 		userPolicies := d.Get("policies").(*schema.Set).List()
@@ -118,18 +118,18 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 			}
 		}
 		if err = d.Set("policies", newPolicies); err != nil {
-			return fmt.Errorf("error setting policies for IdentityGroupPolicies %q: %s", id, err)
+			return fmt.Errorf("error setting policies for IdentityEntityPolicies %q: %s", id, err)
 		}
 	}
 	return nil
 }
 
-func identityGroupPoliciesDelete(d *schema.ResourceData, meta interface{}) error {
+func identityEntityPoliciesDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	id := d.Get("group_id").(string)
+	id := d.Get("entity_id").(string)
 
-	log.Printf("[DEBUG] Deleting IdentityGroupPolicies %q", id)
-	path := identityGroupIDPath(id)
+	log.Printf("[DEBUG] Deleting IdentityEntityPolicies %q", id)
+	path := identityEntityIDPath(id)
 
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
@@ -139,7 +139,7 @@ func identityGroupPoliciesDelete(d *schema.ResourceData, meta interface{}) error
 	if d.Get("exclusive").(bool) {
 		data["policies"] = make([]string, 0)
 	} else {
-		apiPolicies, err := readIdentityGroupPolicies(client, id)
+		apiPolicies, err := readIdentityEntityPolicies(client, id)
 		if err != nil {
 			return err
 		}
@@ -151,9 +151,9 @@ func identityGroupPoliciesDelete(d *schema.ResourceData, meta interface{}) error
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error updating IdentityGroupPolicies %q: %s", id, err)
+		return fmt.Errorf("error updating IdentityEntityPolicies %q: %s", id, err)
 	}
-	log.Printf("[DEBUG] Updated IdentityGroupPolicies %q", id)
+	log.Printf("[DEBUG] Updated IdentityEntityPolicies %q", id)
 
 	return nil
 }

@@ -130,9 +130,6 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 
 	path := identityGroupPath
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
-
 	data := map[string]interface{}{
 		"name": name,
 		"type": typeValue,
@@ -214,6 +211,9 @@ func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
 	id := d.Id()
 
 	path := identityGroupIDPath(id)
+
+	vaultMutexKV.Lock(path)
+	defer vaultMutexKV.Unlock(path)
 
 	log.Printf("[DEBUG] Deleting IdentityGroup %q", id)
 	_, err := client.Logical().Delete(path)

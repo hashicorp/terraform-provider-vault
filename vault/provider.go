@@ -440,6 +440,10 @@ var (
 			Resource:      identityEntityAliasResource(),
 			PathInventory: []string{"/identity/entity-alias"},
 		},
+		"vault_identity_entity_policies": {
+			Resource:      identityEntityPoliciesResource(),
+			PathInventory: []string{"/identity/lookup/entity"},
+		},
 		"vault_identity_group": {
 			Resource:      identityGroupResource(),
 			PathInventory: []string{"/identity/group"},

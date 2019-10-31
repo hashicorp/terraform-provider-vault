@@ -41,6 +41,8 @@ The following arguments are supported:
 
 * `disabled` - (Optional) True/false Is this entity currently disabled. Defaults to `false`
 
+* `external_policies` - (Optional) `false` by default. If set to `true`, this resource will ignore any policies return from Vault or specified in the resource. You can use [`vault_identity_entity_policies`](identity_entity_policies.html) to manage policies for this entity in a decoupled manner.
+
 ## Attributes Reference
 
 * `id` - The `id` of the created entity.
