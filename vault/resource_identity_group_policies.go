@@ -104,7 +104,9 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("group_name", resp.Data["name"])
 
 	if d.Get("exclusive").(bool) {
-		d.Set("policies", resp.Data["policies"])
+		if err = d.Set("policies", resp.Data["policies"]); err != nil {
+			return fmt.Errorf("error setting policies for IdentityGroupPolicies %q: %s", id, err)
+		}
 	} else {
 		userPolicies := d.Get("policies").(*schema.Set).List()
 		newPolicies := make([]string, 0)
@@ -115,7 +117,9 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 				newPolicies = append(newPolicies, policy.(string))
 			}
 		}
-		d.Set("policies", newPolicies)
+		if err = d.Set("policies", newPolicies); err != nil {
+			return fmt.Errorf("error setting policies for IdentityGroupPolicies %q: %s", id, err)
+		}
 	}
 	return nil
 }
