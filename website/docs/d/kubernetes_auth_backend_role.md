@@ -38,28 +38,28 @@ The following arguments are supported:
 
 In addition to the above arguments, the following attributes are exported:
 
-* `bound_cirs` (Deprecated; use `token_bound_cidrs` instead) - List of CIDR blocks. If set,
+* `bound_cirs` (Deprecated; use `token_bound_cidrs` instead if you are running Vault >= 1.2) - List of CIDR blocks. If set,
   specifies the blocks of IP addresses which can perform the login operation.
 
 * `bound_service_account_names` - List of service account names able to access this role. If set to "*" all names are allowed, both this and bound_service_account_namespaces can not be "*".
 
 * `bound_service_account_namespaces` - List of namespaces allowed to access this role. If set to "*" all namespaces are allowed, both this and bound_service_account_names can not be set to "*".
 
-* `ttl` (Deprecated; use `token_ttl` instead) - The TTL period of tokens issued using this
+* `ttl` (Deprecated; use `token_ttl` instead if you are running Vault >= 1.2) - The TTL period of tokens issued using this
   role in seconds.
 
-* `max_ttl` (Deprecated; use `token_max_ttl` instead) - The maximum allowed lifetime of
+* `max_ttl` (Deprecated; use `token_max_ttl` instead if you are running Vault >= 1.2) - The maximum allowed lifetime of
   tokens issued in seconds using this role.
 
-* `num_uses` (Deprecated' use `token_num_uses` instead) - Number of times issued tokens can
+* `num_uses` (Deprecated; use `token_num_uses` instead if you are running Vault >= 1.2) - Number of times issued tokens can
   be used. Setting this to 0 or leaving it unset means unlimited uses.
 
-* `period` (Deprecated; use `token_period` instead) - If set, indicates that the token
+* `period` (Deprecated; use `token_period` instead if you are running Vault >= 1.2) - If set, indicates that the token
   generated using this role should never expire. The token should be renewed within the
   duration specified by this value. At each renewal, the token's TTL will be set to the value
   of this parameter.
 
-* `policies` (Deprecated; use `token_policies` instead) - Policies to be set on tokens issued
+* `policies` (Deprecated; use `token_policies` instead if you are running Vault >= 1.2) - Policies to be set on tokens issued
   using this role.
 
 ### Common Token Attributes
@@ -71,6 +71,11 @@ These attributes are common across several Authentication Token resources since 
 
 * `token_max_ttl` - The maximum lifetime for generated tokens in number of seconds.
   Its current value will be referenced at renewal time.
+
+* `token_period` - (Optional) If set, indicates that the
+  token generated using this role should never expire. The token should be renewed within the
+  duration specified by this value. At each renewal, the token's TTL will be set to the
+  value of this field. Specified in seconds.
 
 * `token_policies` - List of policies to encode onto generated tokens. Depending
   on the auth method, this list may be supplemented by user/group/other values.
