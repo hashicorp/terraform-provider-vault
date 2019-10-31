@@ -1,50 +1,47 @@
-version: 2
+version: 2.1
 jobs:
   build:
-    machine: true
+    docker:
+      - image: circleci/golang:1.12
+      - image: circleci/mysql:latest
+        environment:
+          - MYSQL_ROOT_PASSWORD=mysql
+      - image: vault:latest
+        environment:
+          - VAULT_DEV_ROOT_TOKEN_ID=root
     working_directory: ~/src/github.com/terraform-providers/terraform-provider-vault
     steps:
-    - checkout
-    - run:
-        name: "Update Go"
-        command: |
-          sudo rm -rf /usr/local/go
-          wget https://dl.google.com/go/go1.12.5.linux-amd64.tar.gz
-          sudo tar -xvf go1.12.5.linux-amd64.tar.gz
-          sudo mv go /usr/local
-    - run:
-        name: "Start Vault OSS"
-        command: |
-          docker run --detach --cap-add=IPC_LOCK -e 'VAULT_DEV_ROOT_TOKEN_ID=root' --name=vault -p 8200:8200 vault:latest
-          sleep 5
-          docker port vault
-          docker logs vault
-    - run:
-        name: "Set Env Vars"
-        command: |
-          echo 'export VAULT_TOKEN="root"' >> $BASH_ENV
-          echo 'export VAULT_ADDR="http://localhost:8200"' >> $BASH_ENV
-          echo 'export TF_ACC="1"' >> $BASH_ENV
-          echo 'GO111MODULE=on' >> $BASH_ENV
-          echo 'export GOBIN=$GOPATH/bin' >> $BASH_ENV
-    - run:
-        name: "Move to GOPATH"
-        command: |
-          mkdir -p $GOPATH/src/github.com/terraform-providers/terraform-provider-vault
-          mv /home/circleci/src/github.com/terraform-providers/terraform-provider-vault/* $GOPATH/src/github.com/terraform-providers/terraform-provider-vault
-    - run:
-        name: "Run Tests"
-        command: |
-          cd $GOPATH/src/github.com/terraform-providers/terraform-provider-vault
-          go test -v ./...
-    - run:
-        name: "Run Build"
-        command: |
-          cd $GOPATH/src/github.com/terraform-providers/terraform-provider-vault
-          go build
-    - run:
-        name: "Generate Coverage Report"
-        command: |
-          cd $GOPATH/src/github.com/terraform-providers/terraform-provider-vault/cmd/coverage
-          go build
-          ./coverage -openapi-doc=$GOPATH/src/github.com/terraform-providers/terraform-provider-vault/testdata/openapi.json
+      - checkout
+      - run:
+          name: Wait for containers to starts
+          command: dockerize -wait http://127.0.0.1:8200 -wait tcp://127.0.0.1:3306 -timeout 30s
+      - run:
+          name: "Set Environment Variables"
+          command: |
+            echo 'export VAULT_TOKEN="root"' >> $BASH_ENV
+            echo 'export VAULT_ADDR="http://127.0.0.1:8200"' >> $BASH_ENV
+            echo 'export TF_ACC="1"' >> $BASH_ENV
+            echo 'GO111MODULE=on' >> $BASH_ENV
+            echo 'export GOBIN=$GOPATH/bin' >> $BASH_ENV
+            echo 'export MYSQL_URL="root:mysql@tcp(127.0.0.1:3306)/"' >> $BASH_ENV
+      - run:
+          name: "Move to GOPATH"
+          command: |
+            mkdir -p $GOPATH/src/github.com/terraform-providers/terraform-provider-vault
+            mv /home/circleci/src/github.com/terraform-providers/terraform-provider-vault/* $GOPATH/src/github.com/terraform-providers/terraform-provider-vault
+      - run:
+          name: "Run Tests"
+          command: |
+            cd $GOPATH/src/github.com/terraform-providers/terraform-provider-vault
+            go test -v ./...
+      - run:
+          name: "Run Build"
+          command: |
+            cd $GOPATH/src/github.com/terraform-providers/terraform-provider-vault
+            go build
+      - run:
+          name: "Generate Coverage Report"
+          command: |
+            cd $GOPATH/src/github.com/terraform-providers/terraform-provider-vault/cmd/coverage
+            go build
+            ./coverage -openapi-doc=$GOPATH/src/github.com/terraform-providers/terraform-provider-vault/testdata/openapi.json
