@@ -312,6 +312,10 @@ var (
 			Resource:      databaseSecretBackendRoleResource(),
 			PathInventory: []string{"/database/roles/{name}"},
 		},
+		"vault_database_secret_backend_static_role": {
+			Resource:      databaseSecretBackendStaticRoleResource(),
+			PathInventory: []string{"/database/static-roles/{name}"},
+		},
 		"vault_github_auth_backend": {
 			Resource:      githubAuthBackendResource(),
 			PathInventory: []string{"/auth/github/config"},
