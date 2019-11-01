@@ -26,6 +26,8 @@ func TestConsulSecretBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "name", name),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "ttl", "0"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.0", "foo"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test_path", "path", backend),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test_path", "policies.0", "foo"),
 				),
 			},
 			{
@@ -39,6 +41,8 @@ func TestConsulSecretBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "token_type", "client"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.0", "foo"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.1", "bar"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test_path", "path", backend),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test_path", "ttl", "120"),
 				),
 			},
 		},
@@ -81,7 +85,16 @@ resource "vault_consul_secret_backend_role" "test" {
   policies = [
     "foo"
   ]
-}`, backend, token, name)
+}
+resource "vault_consul_secret_backend_role" "test_path" {
+  path = vault_consul_secret_backend.test.path
+  name = "%[2]s_path"
+
+  policies = [
+    "foo"
+  ]
+}
+`, backend, token, name)
 }
 
 func testConsulSecretBackendRole_updateConfig(backend, name, token string) string {
@@ -107,6 +120,15 @@ resource "vault_consul_secret_backend_role" "test" {
   max_ttl = 240
   local = true
   token_type = "client"
+}
+resource "vault_consul_secret_backend_role" "test_path" {
+  path = vault_consul_secret_backend.test.path
+  name = "%[2]s_path"
 
-}`, backend, token, name)
+  policies = [
+    "foo"
+  ]
+  ttl = 120
+}
+`, backend, token, name)
 }

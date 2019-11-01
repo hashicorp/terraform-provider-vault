@@ -33,11 +33,19 @@ func consulSecretBackendRoleResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "The name of an existing role against which to create this Consul credential",
 			},
+			"path": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The path of the Consul Secret Backend the role belongs to.",
+				Deprecated:    "use `backend` instead",
+				ConflictsWith: []string{"backend"},
+			},
 			"backend": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "The path of the Consul Secret Backend the role belongs to.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+				Description:   "The path of the Consul Secret Backend the role belongs to.",
+				ConflictsWith: []string{"path"},
 			},
 			"policies": {
 				Type:        schema.TypeList,
@@ -75,11 +83,25 @@ func consulSecretBackendRoleResource() *schema.Resource {
 	}
 }
 
+func consulSecretBackendRoleGetBackend(d *schema.ResourceData) string {
+	if v, ok := d.GetOk("backend"); ok {
+		return v.(string)
+	} else if v, ok := d.GetOk("path"); ok {
+		return v.(string)
+	} else {
+		return ""
+	}
+}
+
 func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
+
+	backend := consulSecretBackendRoleGetBackend(d)
+	if backend == "" {
+		return fmt.Errorf("No backend specified for Consul secret backend role %s", name)
+	}
 
 	path := consulSecretBackendRolePath(backend, name)
 
@@ -144,7 +166,11 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 
 	data := secret.Data
 	d.Set("name", name)
-	d.Set("backend", backend)
+	if _, ok := d.GetOk("path"); ok {
+		d.Set("path", backend)
+	} else {
+		d.Set("backend", backend)
+	}
 	d.Set("policies", data["policies"])
 	d.Set("max_ttl", data["max_ttl"])
 	d.Set("ttl", data["ttl"])
