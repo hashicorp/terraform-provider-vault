@@ -132,3 +132,47 @@ resource "vault_consul_secret_backend_role" "test_path" {
 }
 `, backend, token, name)
 }
+
+func TestConsulSecretBackendRoleNameFromPath(t *testing.T) {
+	{
+		name, err := consulSecretBackendRoleNameFromPath("foo/roles/bar")
+		if err != nil {
+			t.Fatalf("error getting name: %v", err)
+		}
+		if name != "bar" {
+			t.Fatalf("expected name 'bar', but got %s", name)
+		}
+	}
+
+	{
+		name, err := consulSecretBackendRoleNameFromPath("no match")
+		if err == nil {
+			t.Fatal("Expected error getting name but got nil")
+		}
+		if name != "" {
+			t.Fatalf("expected empty name, but got %s", name)
+		}
+	}
+}
+
+func TestConsulSecretBackendRoleBackendFromPath(t *testing.T) {
+	{
+		backend, err := consulSecretBackendRoleBackendFromPath("foo/roles/bar")
+		if err != nil {
+			t.Fatalf("error getting backend: %v", err)
+		}
+		if backend != "foo" {
+			t.Fatalf("expected backend 'foo', but got %s", backend)
+		}
+	}
+
+	{
+		backend, err := consulSecretBackendRoleBackendFromPath("no match")
+		if err == nil {
+			t.Fatal("Expected error getting backend but got nil")
+		}
+		if backend != "" {
+			t.Fatalf("expected empty backend, but got %s", backend)
+		}
+	}
+}
