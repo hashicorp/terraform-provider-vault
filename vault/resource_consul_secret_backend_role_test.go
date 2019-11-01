@@ -11,61 +11,63 @@ import (
 )
 
 func TestConsulSecretBackendRole(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-path")
+	backend := acctest.RandomWithPrefix("tf-test-backend")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy(path, name),
+		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testConsulSecretBackendRole_initialConfig(path, name, token),
+				Config: testConsulSecretBackendRole_initialConfig(backend, name, token),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "path", path),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "name", name),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "ttl", "0"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.0", "foo"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test_path", "path", backend),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test_path", "policies.0", "foo"),
 				),
 			},
 			{
-				Config: testConsulSecretBackendRole_updateConfig(path, name, token),
+				Config: testConsulSecretBackendRole_updateConfig(backend, name, token),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "path", path),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "name", name),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "ttl", "120"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "max_ttl", "240"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "local", "true"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "token_type", "client"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.0", "foo"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.1", "bar"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test_path", "path", backend),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test_path", "ttl", "120"),
 				),
 			},
 		},
 	})
 }
 
-func testAccConsulSecretBackendRoleCheckDestroy(path, name string) func(*terraform.State) error {
-	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+func testAccConsulSecretBackendRoleCheckDestroy(s *terraform.State) error {
+	client := testProvider.Meta().(*api.Client)
 
-		for _, rs := range s.RootModule().Resources {
-			if rs.Type != "vault_consul_secret_backend_role" {
-				continue
-			}
-
-			reqPath := consulSecretBackendRolePath(path, name)
-
-			secret, err := client.Logical().Read(reqPath)
-			if err != nil {
-				return err
-			}
-
-			if secret != nil {
-				return fmt.Errorf("Role %q still exists", reqPath)
-			}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "vault_consul_secret_backend_role" {
+			continue
 		}
-
-		return nil
+		secret, err := client.Logical().Read(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+		if secret != nil {
+			return fmt.Errorf("role %q still exists", rs.Primary.ID)
+		}
 	}
+	return nil
 }
 
-func testConsulSecretBackendRole_initialConfig(path, name, token string) string {
+func testConsulSecretBackendRole_initialConfig(backend, name, token string) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -77,16 +79,25 @@ resource "vault_consul_secret_backend" "test" {
 }
 
 resource "vault_consul_secret_backend_role" "test" {
-  path = "${vault_consul_secret_backend.test.path}"
+  backend = vault_consul_secret_backend.test.path
   name = "%s"
 
   policies = [
     "foo"
   ]
-}`, path, token, name)
+}
+resource "vault_consul_secret_backend_role" "test_path" {
+  path = vault_consul_secret_backend.test.path
+  name = "%[2]s_path"
+
+  policies = [
+    "foo"
+  ]
+}
+`, backend, token, name)
 }
 
-func testConsulSecretBackendRole_updateConfig(path, name, token string) string {
+func testConsulSecretBackendRole_updateConfig(backend, name, token string) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -98,12 +109,70 @@ resource "vault_consul_secret_backend" "test" {
 }
 
 resource "vault_consul_secret_backend_role" "test" {
-  path = "${vault_consul_secret_backend.test.path}"
+  backend = vault_consul_secret_backend.test.path
   name = "%s"
 
   policies = [
     "foo",
     "bar",
   ]
-}`, path, token, name)
+  ttl = 120
+  max_ttl = 240
+  local = true
+  token_type = "client"
+}
+resource "vault_consul_secret_backend_role" "test_path" {
+  path = vault_consul_secret_backend.test.path
+  name = "%[2]s_path"
+
+  policies = [
+    "foo"
+  ]
+  ttl = 120
+}
+`, backend, token, name)
+}
+
+func TestConsulSecretBackendRoleNameFromPath(t *testing.T) {
+	{
+		name, err := consulSecretBackendRoleNameFromPath("foo/roles/bar")
+		if err != nil {
+			t.Fatalf("error getting name: %v", err)
+		}
+		if name != "bar" {
+			t.Fatalf("expected name 'bar', but got %s", name)
+		}
+	}
+
+	{
+		name, err := consulSecretBackendRoleNameFromPath("no match")
+		if err == nil {
+			t.Fatal("Expected error getting name but got nil")
+		}
+		if name != "" {
+			t.Fatalf("expected empty name, but got %s", name)
+		}
+	}
+}
+
+func TestConsulSecretBackendRoleBackendFromPath(t *testing.T) {
+	{
+		backend, err := consulSecretBackendRoleBackendFromPath("foo/roles/bar")
+		if err != nil {
+			t.Fatalf("error getting backend: %v", err)
+		}
+		if backend != "foo" {
+			t.Fatalf("expected backend 'foo', but got %s", backend)
+		}
+	}
+
+	{
+		backend, err := consulSecretBackendRoleBackendFromPath("no match")
+		if err == nil {
+			t.Fatal("Expected error getting backend but got nil")
+		}
+		if backend != "" {
+			t.Fatalf("expected empty backend, but got %s", backend)
+		}
+	}
 }
