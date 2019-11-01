@@ -63,6 +63,17 @@ func identityEntityAliasCreate(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error writing IdentityEntityAlias to %q: %s", name, err)
 	}
+
+	if resp == nil {
+		aliasIDMsg := "Unable to determine alias id."
+
+		if aliasID, err := findAliasID(client, canonicalID, name, mountAccessor); err == nil {
+			aliasIDMsg = fmt.Sprintf("Alias resource ID %q may be imported.", aliasID)
+		}
+
+		return fmt.Errorf("IdentityEntityAlias %q already exists. %s", name, aliasIDMsg)
+	}
+
 	log.Printf("[DEBUG] Wrote IdentityEntityAlias %q", name)
 
 	d.SetId(resp.Data["id"].(string))
@@ -177,4 +188,25 @@ func identityEntityAliasNamePath(name string) string {
 
 func identityEntityAliasIDPath(id string) string {
 	return fmt.Sprintf("%s/id/%s", identityEntityAliasPath, id)
+}
+
+func findAliasID(client *api.Client, canonicalID, name, mountAccessor string) (string, error) {
+	path := identityEntityIDPath(canonicalID)
+
+	resp, err := client.Logical().Read(path)
+	if err != nil {
+		return "", fmt.Errorf("error reading entity aliases: %s", err)
+	}
+
+	if resp != nil {
+		aliases := resp.Data["aliases"].([]interface{})
+		for _, aliasRaw := range aliases {
+			alias := aliasRaw.(map[string]interface{})
+			if alias["name"] == name && alias["mount_accessor"] == mountAccessor {
+				return alias["id"].(string), nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("unable to determine alias ID. canonical ID: %q  name: %q  mountAccessor: %q", canonicalID, name, mountAccessor)
 }
