@@ -5,6 +5,10 @@ IMPROVEMENTS:
 * Improved deprecation notices for Vault 1.2 token.* fields ([#565](https://github.com/terraform-providers/terraform-provider-vault/pull/565))
 * Adds new JWT Auth role fields introduced with Vault 1.2 ([#566](https://github.com/terraform-providers/terraform-provider-vault/pull/566))
 
+BUG FIXES:
+
+* Fix panic when trying to write an entity alias that already exists ([#573](https://github.com/terraform-providers/terraform-provider-vault/pull/573))
+
 ## 2.5.0 (October 17, 2019)
 
 IMPROVEMENTS:
