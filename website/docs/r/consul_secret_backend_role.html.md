@@ -21,7 +21,7 @@ resource "vault_consul_secret_backend" "test" {
   token   = "4240861b-ce3d-8530-115a-521ff070dd29"
 }
 
-resource vault_consul_secret_backend_role" "example" {
+resource "vault_consul_secret_backend_role" "example" {
   name = "test-role"
   path = "${vault_consul_secret_backend.test.path}"
 
