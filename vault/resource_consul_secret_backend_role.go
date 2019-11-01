@@ -137,8 +137,9 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	path := d.Id()
+	upgradeOldID(d)
 
+	path := d.Id()
 	name, err := consulSecretBackendRoleNameFromPath(path)
 	if err != nil {
 		log.Printf("[WARN] Removing consul role %q because its ID is invalid", path)
@@ -197,6 +198,8 @@ func consulSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) err
 func consulSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client := meta.(*api.Client)
 
+	upgradeOldID(d)
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Checking Consul secrets backend role at %q", path)
@@ -207,6 +210,19 @@ func consulSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bo
 	}
 
 	return secret != nil, nil
+}
+
+func upgradeOldID(d *schema.ResourceData) {
+	// Upgrade old "{backend},{name}" ID format
+	id := d.Id()
+	s := strings.Split(id, ",")
+	if len(s) == 2 {
+		backend := s[0]
+		name := s[1]
+		path := consulSecretBackendRolePath(backend, name)
+		log.Printf("[DEBUG] Upgrading old ID %s to %s", id, path)
+		d.SetId(path)
+	}
 }
 
 func consulSecretBackendRolePath(backend, name string) string {
