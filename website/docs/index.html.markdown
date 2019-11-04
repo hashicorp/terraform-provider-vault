@@ -99,6 +99,11 @@ variables in order to keep credential information out of the configuration.
   the given token must have the update capability on the auth/token/create
   path in Vault in order to create child tokens.
 
+* `token_name` - (Optional) Token name, that will be used by Terraform when
+  creating the child token. This is useful to provide a reference of the
+  Terraform run traceable in vault audit log, e.g. commit hash or id of the CI/CD 
+  execution job. May be set via the `VAULT_TOKEN_NAME` environment variable.
+
 * `ca_cert_file` - (Optional) Path to a file on local disk that will be
   used to validate the certificate presented by the Vault server.
   May be set via the `VAULT_CACERT` environment variable.
