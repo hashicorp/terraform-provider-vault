@@ -468,8 +468,6 @@ var (
 			Resource:      identityOidcKey(),
 			PathInventory: []string{"/identity/oidc/key/{name}"},
 		},
-		// TODO: Strip in the next major release. This is a dupe of the above.
-		// Deprecation message has already been added.
 		"vault_identity_oidc_key_allowed_client_id": {
 			Resource:      identityOidcKeyAllowedClientId(),
 			PathInventory: []string{"/identity/oidc/key/{name}"},
