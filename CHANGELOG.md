@@ -2,8 +2,8 @@
 
 FEATURES:
 
-* Adds a resource for the "/database/static-roles/{name}" endpoint ([#577](https://github.com/terraform-providers/terraform-provider-vault/pull/577)).
-* Adds a resource for the "/identity/lookup/entity" endpoint ([#587](https://github.com/terraform-providers/terraform-provider-vault/pull/587)).
+* Adds a resource for the `/database/static-roles/{name}` endpoint ([#577](https://github.com/terraform-providers/terraform-provider-vault/pull/577)).
+* Adds a resource for the `/identity/lookup/entity` endpoint ([#587](https://github.com/terraform-providers/terraform-provider-vault/pull/587)).
 
 IMPROVEMENTS:
 
