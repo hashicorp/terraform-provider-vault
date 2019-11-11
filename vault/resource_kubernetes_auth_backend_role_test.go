@@ -17,13 +17,15 @@ func TestAccKubernetesAuthBackendRole_import(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 	ttl := 3600
 	maxTTL := 3600
+	audience := "vault"
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckKubernetesAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, ttl, maxTTL),
+				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, ttl, maxTTL, audience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -51,6 +53,8 @@ func TestAccKubernetesAuthBackendRole_import(t *testing.T) {
 						"token_max_ttl", strconv.Itoa(maxTTL)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_period", "900"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"audience", audience),
 				),
 			},
 			{
@@ -66,6 +70,7 @@ func TestAccKubernetesAuthBackendRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("kubernetes")
 	role := acctest.RandomWithPrefix("test-role")
 	ttl := 3600
+	audience := "vault"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -73,7 +78,7 @@ func TestAccKubernetesAuthBackendRole_basic(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendRoleConfig_basic(backend, role, ttl),
+				Config: testAccKubernetesAuthBackendRoleConfig_basic(backend, role, ttl, audience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -97,6 +102,8 @@ func TestAccKubernetesAuthBackendRole_basic(t *testing.T) {
 						"token_policies.#", "3"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_ttl", "3600"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"audience", audience),
 				),
 			},
 		},
@@ -108,6 +115,8 @@ func TestAccKubernetesAuthBackendRole_update(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 	oldTTL := 3600
 	newTTL := oldTTL * 2
+	oldAudience := "vault"
+	newAudience := "new-vault"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -115,7 +124,7 @@ func TestAccKubernetesAuthBackendRole_update(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendRoleConfig_basic(backend, role, oldTTL),
+				Config: testAccKubernetesAuthBackendRoleConfig_basic(backend, role, oldTTL, oldAudience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -139,10 +148,12 @@ func TestAccKubernetesAuthBackendRole_update(t *testing.T) {
 						"token_policies.#", "3"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_ttl", strconv.Itoa(oldTTL)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"audience", oldAudience),
 				),
 			},
 			{
-				Config: testAccKubernetesAuthBackendRoleConfig_basic(backend, role, newTTL),
+				Config: testAccKubernetesAuthBackendRoleConfig_basic(backend, role, newTTL, newAudience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -166,6 +177,8 @@ func TestAccKubernetesAuthBackendRole_update(t *testing.T) {
 						"token_policies.#", "3"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_ttl", strconv.Itoa(newTTL)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"audience", newAudience),
 				),
 			},
 		},
@@ -177,6 +190,7 @@ func TestAccKubernetesAuthBackendRole_full(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 	ttl := 3600
 	maxTTL := 3600
+	audience := "vault"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -184,7 +198,7 @@ func TestAccKubernetesAuthBackendRole_full(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, ttl, maxTTL),
+				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, ttl, maxTTL, audience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -212,6 +226,8 @@ func TestAccKubernetesAuthBackendRole_full(t *testing.T) {
 						"token_max_ttl", strconv.Itoa(maxTTL)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_period", "900"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"audience", audience),
 				),
 			},
 		},
@@ -225,6 +241,8 @@ func TestAccKubernetesAuthBackendRole_fullUpdate(t *testing.T) {
 	newTTL := oldTTL * 2
 	oldMaxTTL := 3600
 	newMaxTTL := oldMaxTTL * 2
+	oldAudience := "vault"
+	newAudience := "new-vault"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -232,7 +250,7 @@ func TestAccKubernetesAuthBackendRole_fullUpdate(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, oldTTL, oldMaxTTL),
+				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, oldTTL, oldMaxTTL, oldAudience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -260,10 +278,12 @@ func TestAccKubernetesAuthBackendRole_fullUpdate(t *testing.T) {
 						"token_max_ttl", strconv.Itoa(oldMaxTTL)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_period", "900"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"audience", oldAudience),
 				),
 			},
 			{
-				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, newTTL, newMaxTTL),
+				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, newTTL, newMaxTTL, newAudience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -291,10 +311,12 @@ func TestAccKubernetesAuthBackendRole_fullUpdate(t *testing.T) {
 						"token_max_ttl", strconv.Itoa(newMaxTTL)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_period", "900"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"audience", newAudience),
 				),
 			},
 			{
-				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, newTTL, newMaxTTL),
+				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, newTTL, newMaxTTL, newAudience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -322,11 +344,13 @@ func TestAccKubernetesAuthBackendRole_fullUpdate(t *testing.T) {
 						"token_max_ttl", strconv.Itoa(newMaxTTL)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_period", "900"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"audience", newAudience),
 				),
 			},
 			// Unset `token_max_ttl`
 			{
-				Config: testAccKubernetesAuthBackendRoleConfig_basic(backend, role, newTTL),
+				Config: testAccKubernetesAuthBackendRoleConfig_basic(backend, role, newTTL, newAudience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -354,6 +378,8 @@ func TestAccKubernetesAuthBackendRole_fullUpdate(t *testing.T) {
 						"token_max_ttl", "0"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_period", "0"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"audience", newAudience),
 				),
 			},
 		},
@@ -367,6 +393,8 @@ func TestAccKubernetesAuthBackendRole_fullDeprecated(t *testing.T) {
 	newTTL := oldTTL * 2
 	oldMaxTTL := 3600
 	newMaxTTL := oldMaxTTL * 2
+	oldAudience := "vault"
+	newAudience := "new-vault"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -374,7 +402,7 @@ func TestAccKubernetesAuthBackendRole_fullDeprecated(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendRoleConfig_fullDeprecated(backend, role, oldTTL, oldMaxTTL),
+				Config: testAccKubernetesAuthBackendRoleConfig_fullDeprecated(backend, role, oldTTL, oldMaxTTL, oldAudience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -402,10 +430,12 @@ func TestAccKubernetesAuthBackendRole_fullDeprecated(t *testing.T) {
 						"max_ttl", strconv.Itoa(oldMaxTTL)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"period", "900"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"audience", oldAudience),
 				),
 			},
 			{
-				Config: testAccKubernetesAuthBackendRoleConfig_fullDeprecated(backend, role, newTTL, newMaxTTL),
+				Config: testAccKubernetesAuthBackendRoleConfig_fullDeprecated(backend, role, newTTL, newMaxTTL, newAudience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -433,6 +463,8 @@ func TestAccKubernetesAuthBackendRole_fullDeprecated(t *testing.T) {
 						"max_ttl", strconv.Itoa(newMaxTTL)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"period", "900"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"audience", newAudience),
 				),
 			},
 		},
@@ -457,7 +489,7 @@ func testAccCheckKubernetesAuthBackendRoleDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccKubernetesAuthBackendRoleConfig_basic(backend, role string, ttl int) string {
+func testAccKubernetesAuthBackendRoleConfig_basic(backend, role string, ttl int, audience string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "kubernetes" {
   type = "kubernetes"
@@ -471,10 +503,11 @@ resource "vault_kubernetes_auth_backend_role" "role" {
   bound_service_account_namespaces = ["example"]
   token_ttl = %d
   token_policies = ["default", "dev", "prod"]
-}`, backend, role, ttl)
+  audience = %q
+}`, backend, role, ttl, audience)
 }
 
-func testAccKubernetesAuthBackendRoleConfig_full(backend, role string, ttl, maxTTL int) string {
+func testAccKubernetesAuthBackendRoleConfig_full(backend, role string, ttl, maxTTL int, audience string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "kubernetes" {
   type = "kubernetes"
@@ -490,10 +523,11 @@ resource "vault_kubernetes_auth_backend_role" "role" {
   token_max_ttl = %d
   token_period = 900
   token_policies = ["default", "dev", "prod"]
-}`, backend, role, ttl, maxTTL)
+  audience = %q
+}`, backend, role, ttl, maxTTL, audience)
 }
 
-func testAccKubernetesAuthBackendRoleConfig_fullDeprecated(backend, role string, ttl, maxTTL int) string {
+func testAccKubernetesAuthBackendRoleConfig_fullDeprecated(backend, role string, ttl, maxTTL int, audience string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "kubernetes" {
   type = "kubernetes"
@@ -509,5 +543,6 @@ resource "vault_kubernetes_auth_backend_role" "role" {
   max_ttl = %d
   period = 900
   policies = ["default", "dev", "prod"]
-}`, backend, role, ttl, maxTTL)
+  audience = %q
+}`, backend, role, ttl, maxTTL, audience)
 }

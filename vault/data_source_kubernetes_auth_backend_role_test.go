@@ -14,6 +14,7 @@ func TestAccKubernetesAuthBackendRoleDataSource_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("kubernetes")
 	role := acctest.RandomWithPrefix("test-role")
 	ttl := 3600
+	audience := "vault"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -21,7 +22,7 @@ func TestAccKubernetesAuthBackendRoleDataSource_basic(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendRoleConfig_basic(backend, role, ttl),
+				Config: testAccKubernetesAuthBackendRoleConfig_basic(backend, role, ttl, audience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -45,10 +46,12 @@ func TestAccKubernetesAuthBackendRoleDataSource_basic(t *testing.T) {
 						"token_policies.#", "3"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_ttl", "3600"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"audience", audience),
 				),
 			},
 			{
-				Config: testAccKubernetesAuthBackendRoleDataSourceConfig_basic(backend, role, ttl),
+				Config: testAccKubernetesAuthBackendRoleDataSourceConfig_basic(backend, role, ttl, audience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -78,6 +81,8 @@ func TestAccKubernetesAuthBackendRoleDataSource_basic(t *testing.T) {
 						"token_num_uses", "0"),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_role.role",
 						"token_period", "0"),
+					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_role.role",
+						"audience", audience),
 				),
 			},
 		},
@@ -89,6 +94,7 @@ func TestAccKubernetesAuthBackendRoleDataSource_full(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 	ttl := 3600
 	maxTTL := 3600
+	audience := "vault"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -96,7 +102,7 @@ func TestAccKubernetesAuthBackendRoleDataSource_full(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, ttl, maxTTL),
+				Config: testAccKubernetesAuthBackendRoleConfig_full(backend, role, ttl, maxTTL, audience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -124,10 +130,12 @@ func TestAccKubernetesAuthBackendRoleDataSource_full(t *testing.T) {
 						"token_max_ttl", strconv.Itoa(maxTTL)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
 						"token_period", "900"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_role.role",
+						"audience", audience),
 				),
 			},
 			{
-				Config: testAccKubernetesAuthBackendRoleDataSourceConfig_full(backend, role, ttl, maxTTL),
+				Config: testAccKubernetesAuthBackendRoleDataSourceConfig_full(backend, role, ttl, maxTTL, audience),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_role.role",
 						"backend", backend),
@@ -156,29 +164,29 @@ func TestAccKubernetesAuthBackendRoleDataSource_full(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_role.role",
 						"token_num_uses", "0"),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_role.role",
-						"token_period", "900"),
+						"audience", audience),
 				),
 			},
 		},
 	})
 }
 
-func testAccKubernetesAuthBackendRoleDataSourceConfig_basic(backend, role string, ttl int) string {
+func testAccKubernetesAuthBackendRoleDataSourceConfig_basic(backend, role string, ttl int, audience string) string {
 	return fmt.Sprintf(`
 %s
 
 data "vault_kubernetes_auth_backend_role" "role" {
   backend = %q
   role_name = %q
-}`, testAccKubernetesAuthBackendRoleConfig_basic(backend, role, ttl), backend, role)
+}`, testAccKubernetesAuthBackendRoleConfig_basic(backend, role, ttl, audience), backend, role)
 }
 
-func testAccKubernetesAuthBackendRoleDataSourceConfig_full(backend, role string, ttl, maxTTL int) string {
+func testAccKubernetesAuthBackendRoleDataSourceConfig_full(backend, role string, ttl, maxTTL int, audience string) string {
 	return fmt.Sprintf(`
 %s
 
 data "vault_kubernetes_auth_backend_role" "role" {
   backend = %q
   role_name = %q
-}`, testAccKubernetesAuthBackendRoleConfig_full(backend, role, ttl, maxTTL), backend, role)
+}`, testAccKubernetesAuthBackendRoleConfig_full(backend, role, ttl, maxTTL, audience), backend, role)
 }
