@@ -63,6 +63,7 @@ lRWEdZ9naFNIj9WsUcKHqRECAwEAAQ==
 func TestAccKubernetesAuthBackendConfig_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
+	issuer := "kubernetes/serviceaccount"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -70,7 +71,7 @@ func TestAccKubernetesAuthBackendConfig_import(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, jwt),
+				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -84,6 +85,8 @@ func TestAccKubernetesAuthBackendConfig_import(t *testing.T) {
 						"pem_keys.0", kubernetesPEMfile),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"pem_keys.#", "1"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"issuer", issuer),
 				),
 			},
 			{
@@ -184,6 +187,7 @@ func TestAccKubernetesAuthBackendConfig_update(t *testing.T) {
 func TestAccKubernetesAuthBackendConfig_full(t *testing.T) {
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
+	issuer := "api"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -191,7 +195,7 @@ func TestAccKubernetesAuthBackendConfig_full(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, jwt),
+				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -205,6 +209,8 @@ func TestAccKubernetesAuthBackendConfig_full(t *testing.T) {
 						"pem_keys.#", "1"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"pem_keys.0", kubernetesPEMfile),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"issuer", "api"),
 				),
 			},
 		},
@@ -215,6 +221,8 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 	backend := acctest.RandomWithPrefix("kubernetes")
 	oldJWT := kubernetesJWT
 	newJWT := kubernetesAnotherJWT
+	oldIssuer := "kubernetes/serviceaccount"
+	newIssuer := "api"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -222,7 +230,7 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, oldJWT),
+				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, oldJWT, oldIssuer),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -236,10 +244,12 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 						"pem_keys.#", "1"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"pem_keys.0", kubernetesPEMfile),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"issuer", oldIssuer),
 				),
 			},
 			{
-				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, newJWT),
+				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, newJWT, newIssuer),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -253,6 +263,8 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 						"pem_keys.#", "1"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"pem_keys.0", kubernetesPEMfile),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"issuer", newIssuer),
 				),
 			},
 		},
@@ -274,7 +286,7 @@ resource "vault_kubernetes_auth_backend_config" "config" {
 }`, backend, kubernetesCAcert, jwt)
 }
 
-func testAccKubernetesAuthBackendConfigConfig_full(backend, jwt string) string {
+func testAccKubernetesAuthBackendConfigConfig_full(backend, jwt string, issuer string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "kubernetes" {
   type = "kubernetes"
@@ -287,5 +299,6 @@ resource "vault_kubernetes_auth_backend_config" "config" {
   kubernetes_ca_cert = %q
   token_reviewer_jwt = %q
   pem_keys = [%q]
-}`, backend, kubernetesCAcert, jwt, kubernetesPEMfile)
+  issuer = %q
+}`, backend, kubernetesCAcert, jwt, kubernetesPEMfile, issuer)
 }
