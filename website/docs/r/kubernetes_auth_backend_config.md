@@ -24,6 +24,7 @@ resource "vault_kubernetes_auth_backend_config" "example" {
   kubernetes_host    = "http://example.com:443"
   kubernetes_ca_cert = "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----"
   token_reviewer_jwt = "ZXhhbXBsZQo="
+  issuer             = "api"
 }
 ```
 
@@ -37,7 +38,9 @@ The following arguments are supported:
 
 * `token_reviewer_jwt` - (Optional) A service account JWT used to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API.
 
-* `pem_keys` - (Optional) List of PEM-formatted public keys or certificates used to verify the signatures of Kubernetes service account JWTs. If a certificate is given, its public key will be extracted. Not every installation of Kubernetes exposes these keys. 
+* `pem_keys` - (Optional) List of PEM-formatted public keys or certificates used to verify the signatures of Kubernetes service account JWTs. If a certificate is given, its public key will be extracted. Not every installation of Kubernetes exposes these keys.
+
+* `issuer` - Optional JWT issuer. If no issuer is specified, `kubernetes.io/serviceaccount` will be used as the default issuer. 
 
 ## Attributes Reference
 

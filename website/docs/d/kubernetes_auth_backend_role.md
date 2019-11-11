@@ -61,6 +61,8 @@ In addition to the above arguments, the following attributes are exported:
 
 * `policies` (Deprecated; use `token_policies` instead if you are running Vault >= 1.2) - Policies to be set on tokens issued
   using this role.
+  
+* `audience` - (Optional) Audience claim to verify in the JWT.
 
 ### Common Token Attributes
 
