@@ -164,6 +164,8 @@ func TestAccKubernetesAuthBackendRoleDataSource_full(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_role.role",
 						"token_num_uses", "0"),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_role.role",
+						"token_period", "900"),
+					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_role.role",
 						"audience", audience),
 				),
 			},
