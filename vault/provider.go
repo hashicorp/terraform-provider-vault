@@ -206,6 +206,10 @@ var (
 			Resource:      policyDocumentDataSource(),
 			PathInventory: []string{"/sys/policy/{name}"},
 		},
+		"vault_auth_backend": {
+			Resource:      authBackendDataSource(),
+			PathInventory: []string{"/sys/auth"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
