@@ -513,3 +513,137 @@ func TestAccProviderToken(t *testing.T) {
 		})
 	}
 }
+
+func TestAccTokenName(t *testing.T) {
+
+	// unset VAULT_TOKEN_NAME
+	defer func() {
+		if err := os.Unsetenv("VAULT_TOKEN_NAME"); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	tests := []struct {
+		TokenNameEnv       string
+		UseTokenNameEnv    bool
+		TokenNameSchema    string
+		UseTokenNameSchema bool
+		WantTokenName      string
+	}{
+		{
+			UseTokenNameSchema: false,
+			UseTokenNameEnv:    false,
+			WantTokenName:      "token-terraform",
+		},
+		{
+			TokenNameEnv:    "MyTokenName",
+			UseTokenNameEnv: true,
+			WantTokenName:   "token-MyTokenName",
+		},
+		{
+			TokenNameEnv:    "",
+			UseTokenNameEnv: true,
+			WantTokenName:   "token-terraform",
+		},
+		{
+			TokenNameSchema:    "",
+			UseTokenNameSchema: true,
+			WantTokenName:      "token-terraform",
+		},
+		{
+			TokenNameEnv:    "My!TokenName",
+			UseTokenNameEnv: true,
+			WantTokenName:   "token-My-TokenName",
+		},
+		{
+			TokenNameEnv:    "My!Token+*#Name",
+			UseTokenNameEnv: true,
+			WantTokenName:   "token-My-Token---Name",
+		},
+		{
+			TokenNameSchema:    "MySchemaTokenName",
+			UseTokenNameSchema: true,
+			WantTokenName:      "token-MySchemaTokenName",
+		},
+		{
+			TokenNameEnv:       "MyEnvTokenName",
+			UseTokenNameEnv:    true,
+			TokenNameSchema:    "MySchemaTokenName",
+			UseTokenNameSchema: true,
+			WantTokenName:      "token-MySchemaTokenName",
+		},
+	}
+
+	for _, test := range tests {
+		resource.Test(t, resource.TestCase{
+			Providers: testProviders,
+			PreCheck:  func() { testAccPreCheck(t) },
+			Steps: []resource.TestStep{
+				{
+					PreConfig: func() {
+						if test.UseTokenNameEnv {
+							err := os.Setenv("VAULT_TOKEN_NAME", test.TokenNameEnv)
+							if err != nil {
+								t.Fatal(err)
+							}
+						} else {
+							err := os.Unsetenv("VAULT_TOKEN_NAME")
+							if err != nil {
+								t.Fatal(err)
+							}
+						}
+					},
+					Config: testTokenNameConfig(test.UseTokenNameSchema, test.TokenNameSchema),
+					Check:  testTokenName_check(test.WantTokenName),
+				},
+			},
+		})
+	}
+}
+
+// Using the data lookup generic_secret to inspect used token
+// by terraform (this enables check of token name)
+func testTokenNameConfig(tokenNameSchema bool, tokenName string) string {
+	testConfig := ""
+	providerConfig := `
+provider "vault" {
+    token_name = "` + tokenName + `"
+}`
+
+	dataConfig := `
+data "vault_generic_secret" "test" {
+    path = "/auth/token/lookup-self"
+}
+`
+	if tokenNameSchema {
+		testConfig = providerConfig + dataConfig
+	} else {
+		testConfig = dataConfig
+	}
+	return testConfig
+}
+
+func testTokenName_check(expectedTokenName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["data.vault_generic_secret.test"]
+		if resourceState == nil {
+			return fmt.Errorf("resource not found in state %v", s.Modules[0].Resources)
+		}
+
+		iState := resourceState.Primary
+		if iState == nil {
+			return fmt.Errorf("resource has no primary instance")
+		}
+
+		tokenName, ok := resourceState.Primary.Attributes["data.display_name"]
+		if !ok {
+			return fmt.Errorf("cannot access token [%s] for check", "display_name")
+		}
+
+		if tokenName != expectedTokenName {
+			return fmt.Errorf("token name [%s] expected, but got [%s]", expectedTokenName, tokenName)
+		}
+
+		return nil
+	}
+}

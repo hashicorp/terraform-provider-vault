@@ -641,6 +641,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	tokenName := d.Get("token_name").(string)
+	if tokenName == "" {
+		tokenName = "terraform"
+	}
 
 	// In order to enforce our relatively-short lease TTL, we derive a
 	// temporary child token that inherits all of the policies of the
