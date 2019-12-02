@@ -105,7 +105,7 @@ func TestResourceToken_full(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_token.test", "display_name", "test"),
 					resource.TestCheckResourceAttr("vault_token.test", "num_uses", "1"),
 					resource.TestCheckResourceAttr("vault_token.test", "period", "0"),
-					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "60"),
+					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "59"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
 				),
@@ -168,7 +168,6 @@ resource "vault_token" "test" {
 }
 
 func TestResourceToken_expire(t *testing.T) {
-
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -179,7 +178,7 @@ func TestResourceToken_expire(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testResourceTokenCheckExpireTime("vault_token.test"),
 					resource.TestCheckResourceAttr("vault_token.test", "ttl", "10s"),
-					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "10"),
+					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "9"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
 				),
@@ -204,7 +203,7 @@ func TestResourceToken_expire(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testResourceTokenCheckExpireTime("vault_token.test"),
 					resource.TestCheckResourceAttr("vault_token.test", "ttl", "10s"),
-					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "10"),
+					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "9"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
 				),
@@ -229,7 +228,6 @@ resource "vault_token" "test" {
 }
 
 func TestResourceToken_renew(t *testing.T) {
-
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -242,7 +240,7 @@ func TestResourceToken_renew(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_token.test", "ttl", "30s"),
 					resource.TestCheckResourceAttr("vault_token.test", "renew_min_lease", "10"),
 					resource.TestCheckResourceAttr("vault_token.test", "renew_increment", "30"),
-					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "30"),
+					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "29"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
 				),
@@ -271,7 +269,7 @@ func TestResourceToken_renew(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_token.test", "ttl", "30s"),
 					resource.TestCheckResourceAttr("vault_token.test", "renew_min_lease", "10"),
 					resource.TestCheckResourceAttr("vault_token.test", "renew_increment", "30"),
-					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "30"),
+					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "29"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
 				),
