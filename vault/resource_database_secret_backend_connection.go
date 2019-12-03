@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -541,11 +542,11 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 				result["pem_json"] = v.(string)
 			}
 			if v, ok := data["protocol_version"]; ok {
-				protocol, err := v.(json.Number).Int64()
+				protocol, err := strconv.Atoi(v.(string))
 				if err != nil {
 					return fmt.Errorf("unexpected non-number %q returned as protocol_version from Vault: %s", v, err)
 				}
-				result["protocol_version"] = protocol
+				result["protocol_version"] = int64(protocol)
 			}
 			if v, ok := data["connect_timeout"]; ok {
 				timeout, err := v.(json.Number).Int64()
