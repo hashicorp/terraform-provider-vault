@@ -37,6 +37,8 @@ The following arguments are supported:
 
 * `options` - (Optional) Specifies mount type specific options that are passed to the backend
 
+* `seal_wrap` - (Optional) Boolean flag that can be explicitly set to true to enable seal wrapping for the mount, causing values stored by the mount to be wrapped by the seal's encryption capability
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
