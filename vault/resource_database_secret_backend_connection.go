@@ -124,7 +124,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 						"protocol_version": {
 							Type:        schema.TypeInt,
 							Optional:    true,
-							Default:     4,
+							Default:     2,
 							Description: "The CQL protocol version to use.",
 						},
 						"connect_timeout": {
