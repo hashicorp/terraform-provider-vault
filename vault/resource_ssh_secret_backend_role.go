@@ -103,6 +103,10 @@ func sshSecretBackendRoleResource() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"allowed_user_key_lengths": {
+				Type:     schema.TypeMap,
+				Optional: true,
+			},
 			"max_ttl": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -168,6 +172,10 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("key_id_format"); ok {
 		data["key_id_format"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("allowed_user_key_lengths"); ok {
+		data["allowed_user_key_lengths"] = v
 	}
 
 	if v, ok := d.GetOk("max_ttl"); ok {
@@ -236,6 +244,7 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("allowed_users", role.Data["allowed_users"])
 	d.Set("default_user", role.Data["default_user"])
 	d.Set("key_id_format", role.Data["key_id_format"])
+	d.Set("allowed_user_key_lengths", role.Data["allowed_user_key_lengths"])
 	d.Set("max_ttl", role.Data["max_ttl"])
 	d.Set("ttl", role.Data["ttl"])
 

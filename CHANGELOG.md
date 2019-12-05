@@ -1,19 +1,28 @@
-## 2.6.0 (Unreleased)
+## 2.7.0 (Unreleased)
+## 2.6.0 (November 08, 2019)
+
+FEATURES:
+
+* Adds a resource for the `/database/static-roles/{name}` endpoint ([#577](https://github.com/terraform-providers/terraform-provider-vault/pull/577)).
+* Adds a resource for the `/identity/lookup/entity` endpoint ([#587](https://github.com/terraform-providers/terraform-provider-vault/pull/587)).
 
 IMPROVEMENTS:
 
-* Improved deprecation notices for Vault 1.2 token.* fields ([#565](https://github.com/terraform-providers/terraform-provider-vault/pull/565))
-* Adds new JWT Auth role fields introduced with Vault 1.2 ([#566](https://github.com/terraform-providers/terraform-provider-vault/pull/566))
+* Improved deprecation notices for Vault 1.2 token.* fields ([#565](https://github.com/terraform-providers/terraform-provider-vault/pull/565)).
+* Adds new JWT Auth role fields introduced with Vault 1.2 ([#566](https://github.com/terraform-providers/terraform-provider-vault/pull/566)).
+* Eliminates the need to add an outer delay while waiting for AWS creds to propagate ([#571](https://github.com/terraform-providers/terraform-provider-vault/pull/571)).
+* For the `/consul/roles/{name}` endpoint, adds support for `ttl`, `max_ttl`, `token_type`, and `local` fields ([#581](https://github.com/terraform-providers/terraform-provider-vault/pull/581)).
+* For the `/sys/namespaces/{path}` endpoint, uses the `path` for the namespace ID to allow imports ([#570](https://github.com/terraform-providers/terraform-provider-vault/pull/570)).
 
 BUG FIXES:
 
-* Fix panic when trying to write an entity alias that already exists ([#573](https://github.com/terraform-providers/terraform-provider-vault/pull/573))
+* Fix panic when trying to write an entity alias that already exists ([#573](https://github.com/terraform-providers/terraform-provider-vault/pull/573)).
 
 ## 2.5.0 (October 17, 2019)
 
 IMPROVEMENTS:
 
-* Migrates to using the standalone Terraform plugin SDK ([#558](https://github.com/terraform-providers/terraform-provider-vault/pull/558))
+* Migrates to using the standalone Terraform plugin SDK ([#558](https://github.com/terraform-providers/terraform-provider-vault/pull/558)).
 
 ## 2.4.0 (October 11, 2019)
 

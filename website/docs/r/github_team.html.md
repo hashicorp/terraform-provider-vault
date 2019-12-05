@@ -20,9 +20,9 @@ resource "vault_github_auth_backend" "example" {
 }
 
 resource "vault_github_team" "tf_devs" {
-  backend        = vault_github_auth_backend.example.id
-  team           = "terraform-developers"
-  token_policies = ["developer", "read-only"]
+  backend  = vault_github_auth_backend.example.id
+  team     = "terraform-developers"
+  policies = ["developer", "read-only"]
 }
 ```
 

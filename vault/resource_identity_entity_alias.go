@@ -99,6 +99,9 @@ func identityEntityAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 		"canonical_id":   resp.Data["canonical_id"],
 	}
 
+	if name, ok := d.GetOk("name"); ok {
+		data["name"] = name
+	}
 	if mountAccessor, ok := d.GetOk("mount_accessor"); ok {
 		data["mount_accessor"] = mountAccessor
 	}

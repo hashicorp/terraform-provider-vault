@@ -37,6 +37,7 @@ func TestAccSSHSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user", ""),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_id_format", ""),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_type", "ca"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_user_key_lengths.%", "0"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "max_ttl", "0"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "ttl", "0"),
 				),
@@ -60,6 +61,7 @@ func TestAccSSHSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user", "usr"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_id_format", "{{role_name}}-test"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_type", "ca"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_user_key_lengths.rsa", "1"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "max_ttl", "86400"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "ttl", "43200"),
 				),
@@ -117,6 +119,7 @@ func TestAccSSHSecretBackendRole_import(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user", "usr"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_id_format", "{{role_name}}-test"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_type", "ca"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_user_key_lengths.rsa", "1"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "max_ttl", "86400"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "ttl", "43200"),
 				),
@@ -189,6 +192,7 @@ resource "vault_ssh_secret_backend_role" "test_role" {
 	default_user             = "usr"
 	key_id_format            = "{{role_name}}-test"
 	key_type                 = "ca"
+	allowed_user_key_lengths = { "rsa" = 1 }
 	max_ttl                  = "86400"
 	ttl                      = "43200"
 }
