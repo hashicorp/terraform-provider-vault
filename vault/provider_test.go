@@ -516,13 +516,6 @@ func TestAccProviderToken(t *testing.T) {
 
 func TestAccTokenName(t *testing.T) {
 
-	// unset VAULT_TOKEN_NAME
-	defer func() {
-		if err := os.Unsetenv("VAULT_TOKEN_NAME"); err != nil {
-			t.Fatal(err)
-		}
-	}()
-
 	tests := []struct {
 		TokenNameEnv       string
 		UseTokenNameEnv    bool

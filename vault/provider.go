@@ -59,7 +59,7 @@ func Provider() terraform.ResourceProvider {
 			"token_name": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN_NAME", "terraform"),
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN_NAME", ""),
 				Description: "Token name to use for creating the Vault child token.",
 			},
 			"ca_cert_file": {
