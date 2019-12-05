@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -125,7 +124,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 						"protocol_version": {
 							Type:        schema.TypeInt,
 							Optional:    true,
-							Default:     2,
+							Default:     4,
 							Description: "The CQL protocol version to use.",
 						},
 						"connect_timeout": {
@@ -542,7 +541,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 				result["pem_json"] = v.(string)
 			}
 			if v, ok := data["protocol_version"]; ok {
-				protocol, err := strconv.Atoi(v.(string))
+				protocol, err := v.(json.Number).Int64()
 				if err != nil {
 					return fmt.Errorf("unexpected non-number %q returned as protocol_version from Vault: %s", v, err)
 				}
