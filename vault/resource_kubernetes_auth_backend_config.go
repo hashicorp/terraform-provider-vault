@@ -64,7 +64,6 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 			"issuer": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Default:     "kubernetes/serviceaccount",
 				Description: "Optional JWT issuer. If no issuer is specified, kubernetes.io/serviceaccount will be used as the default issuer.",
 			},
 		},

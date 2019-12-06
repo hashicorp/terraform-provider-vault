@@ -11,7 +11,6 @@ import (
 func TestAccKubernetesAuthBackendConfigDataSource_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
-	expectedDefaultIssuer := "kubernetes/serviceaccount"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -29,8 +28,6 @@ func TestAccKubernetesAuthBackendConfigDataSource_basic(t *testing.T) {
 						"kubernetes_ca_cert", kubernetesCAcert),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"token_reviewer_jwt", jwt),
-					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"issuer", expectedDefaultIssuer),
 				),
 			},
 			{
@@ -46,8 +43,6 @@ func TestAccKubernetesAuthBackendConfigDataSource_basic(t *testing.T) {
 						"kubernetes_ca_cert", kubernetesCAcert),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_config.config",
 						"pem_keys.#", "0"),
-					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_config.config",
-						"issuer", expectedDefaultIssuer),
 				),
 			},
 		},
