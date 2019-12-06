@@ -96,6 +96,26 @@ func TestAccKubernetesAuthBackendConfig_import(t *testing.T) {
 				// NOTE: The API can't serve these fields, so ignore them.
 				ImportStateVerifyIgnore: []string{"backend", "token_reviewer_jwt"},
 			},
+			{
+				Config: testAccKubernetesAuthBackendConfigConfig_basic(backend, jwt),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"backend", backend),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"kubernetes_host", "http://example.com:443"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"kubernetes_ca_cert", kubernetesCAcert),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"token_reviewer_jwt", jwt),
+				),
+			},
+			{
+				ResourceName:      "vault_kubernetes_auth_backend_config.config",
+				ImportState:       true,
+				ImportStateVerify: true,
+				// NOTE: The API can't serve these fields, so ignore them.
+				ImportStateVerifyIgnore: []string{"backend", "token_reviewer_jwt"},
+			},
 		},
 	})
 }
