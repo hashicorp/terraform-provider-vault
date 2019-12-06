@@ -61,6 +61,11 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 					return strings.Trim(v.(string), "/")
 				},
 			},
+			"issuer": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Optional JWT issuer. If no issuer is specified, kubernetes.io/serviceaccount will be used as the default issuer.",
+			},
 		},
 	}
 }
@@ -96,6 +101,9 @@ func kubernetesAuthBackendConfigCreate(d *schema.ResourceData, meta interface{})
 	}
 	data["kubernetes_host"] = d.Get("kubernetes_host").(string)
 
+	if v, ok := d.GetOk("issuer"); ok {
+		data["issuer"] = v.(string)
+	}
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		return fmt.Errorf("error writing Kubernetes auth backend config %q: %s", path, err)
@@ -146,6 +154,7 @@ func kubernetesAuthBackendConfigRead(d *schema.ResourceData, meta interface{}) e
 	d.Set("backend", backend)
 	d.Set("kubernetes_host", resp.Data["kubernetes_host"])
 	d.Set("kubernetes_ca_cert", resp.Data["kubernetes_ca_cert"])
+	d.Set("issuer", resp.Data["issuer"])
 
 	iPemKeys := resp.Data["pem_keys"].([]interface{})
 	pemKeys := make([]string, 0, len(iPemKeys))
@@ -183,6 +192,10 @@ func kubernetesAuthBackendConfigUpdate(d *schema.ResourceData, meta interface{})
 		data["pem_keys"] = strings.Join(pemKeys, ",")
 	}
 	data["kubernetes_host"] = d.Get("kubernetes_host").(string)
+
+	if v, ok := d.GetOk("issuer"); ok {
+		data["issuer"] = v.(string)
+	}
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {

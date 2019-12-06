@@ -43,6 +43,12 @@ func kubernetesAuthBackendConfigDataSource() *schema.Resource {
 				Description: "Optional list of PEM-formatted public keys or certificates used to verify the signatures of Kubernetes service account JWTs. If a certificate is given, its public key will be extracted. Not every installation of Kubernetes exposes these keys.",
 				Optional:    true,
 			},
+			"issuer": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Optional:    true,
+				Description: "Optional JWT issuer. If no issuer is specified, kubernetes.io/serviceaccount will be used as the default issuer.",
+			},
 		},
 	}
 }
@@ -75,6 +81,8 @@ func kubernetesAuthBackendConfigDataSourceRead(d *schema.ResourceData, meta inte
 	}
 
 	d.Set("pem_keys", pemKeys)
+
+	d.Set("issuer", resp.Data["issuer"])
 
 	return nil
 }

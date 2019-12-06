@@ -84,6 +84,12 @@ func kubernetesAuthBackendRoleDataSource() *schema.Resource {
 			},
 			Deprecated: "use `token_bound_cidrs` instead if you are running Vault >= 1.2",
 		},
+		"audience": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Default:     "",
+			Description: "Optional Audience claim to verify in the JWT.",
+		},
 	}
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
@@ -116,7 +122,7 @@ func kubernetesAuthBackendRoleDataSourceRead(d *schema.ResourceData, meta interf
 
 	readTokenFields(d, resp)
 
-	for _, k := range []string{"bound_cidrs", "bound_service_account_names", "bound_service_account_namespaces", "num_uses", "policies", "ttl", "max_ttl", "period"} {
+	for _, k := range []string{"bound_cidrs", "bound_service_account_names", "bound_service_account_namespaces", "num_uses", "policies", "ttl", "max_ttl", "period", "audience"} {
 		d.Set(k, resp.Data[k])
 	}
 	return nil

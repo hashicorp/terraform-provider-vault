@@ -52,6 +52,7 @@ func TestAccKubernetesAuthBackendConfigDataSource_basic(t *testing.T) {
 func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
+	issuer := "kubernetes/serviceaccount"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -59,7 +60,7 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, jwt),
+				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -72,10 +73,13 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"pem_keys.#", "1"),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
-						"pem_keys.0", kubernetesPEMfile)),
+						"pem_keys.0", kubernetesPEMfile),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"issuer", issuer),
+				),
 			},
 			{
-				Config: testAccKubernetesAuthBackendConfigDataSourceConfig_full(backend, jwt),
+				Config: testAccKubernetesAuthBackendConfigDataSourceConfig_full(backend, jwt, issuer),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -89,6 +93,8 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 						"pem_keys.#", "1"),
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_config.config",
 						"pem_keys.0", kubernetesPEMfile),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"issuer", issuer),
 				),
 			},
 		},
@@ -104,11 +110,11 @@ data "vault_kubernetes_auth_backend_config" "config" {
 }`, testAccKubernetesAuthBackendConfigConfig_basic(backend, jwt), backend)
 }
 
-func testAccKubernetesAuthBackendConfigDataSourceConfig_full(backend, jwt string) string {
+func testAccKubernetesAuthBackendConfigDataSourceConfig_full(backend, jwt string, issuer string) string {
 	return fmt.Sprintf(`
 %s
 
 data "vault_kubernetes_auth_backend_config" "config" {
   backend = "%s"
-}`, testAccKubernetesAuthBackendConfigConfig_full(backend, jwt), backend)
+}`, testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer), backend)
 }

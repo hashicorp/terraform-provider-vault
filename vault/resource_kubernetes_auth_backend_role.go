@@ -97,6 +97,12 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 			Deprecated:    "use `token_bound_cidrs` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_bound_cidrs"},
 		},
+		"audience": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Default:     "",
+			Description: "Optional Audience claim to verify in the JWT.",
+		},
 	}
 
 	addTokenFields(fields, &addTokenFieldsConfig{
@@ -151,6 +157,10 @@ func kubernetesAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[stri
 
 	if v, ok := d.GetOk("period"); ok {
 		data["period"] = v.(int)
+	}
+
+	if v, ok := d.GetOk("audience"); ok {
+		data["audience"] = v.(string)
 	}
 }
 
@@ -229,6 +239,10 @@ func kubernetesAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 
 	d.Set("backend", backend)
 	d.Set("role_name", role)
+
+	if v, ok := resp.Data["audience"]; ok {
+		d.Set("audience", v)
+	}
 
 	// Check if the user is using the deprecated `policies`
 	if _, deprecated := d.GetOk("policies"); deprecated {

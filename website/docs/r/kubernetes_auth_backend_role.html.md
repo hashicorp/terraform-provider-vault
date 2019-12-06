@@ -26,6 +26,7 @@ resource "vault_kubernetes_auth_backend_role" "example" {
   bound_service_account_namespaces = ["example"]
   token_ttl                        = 3600
   token_policies                   = ["default", "dev", "prod"]
+  audience                         = "vault"
 }
 ```
 
@@ -40,6 +41,8 @@ The following arguments are supported:
 * `bound_service_account_namespaces` - (Required) List of namespaces allowed to access this role. If set to `["*"]` all namespaces are allowed, both this and bound_service_account_names can not be set to "*".
 
 * `backend` - (Optional) Unique name of the kubernetes backend to configure.
+
+* `audience` - (Optional) Audience claim to verify in the JWT.
 
 ### Common Token Arguments
 
