@@ -85,7 +85,50 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.insecure_tls", "false"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.pem_bundle", ""),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.pem_json", ""),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.protocol_version", "2"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.protocol_version", "4"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.connect_timeout", "5"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
+	host := os.Getenv("CASSANDRA_HOST")
+	if host == "" {
+		t.Skip("CASSANDRA_HOST not set")
+	}
+
+	username := os.Getenv("CASSANDRA_USERNAME")
+	password := os.Getenv("CASSANDRA_PASSWORD")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_cassandraProtocol(name, backend, host, username, password),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.#", "1"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "verify_connection", "true"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.hosts.#", "1"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.hosts.0", host),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.port", "9042"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.username", username),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.password", password),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.tls", "false"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.insecure_tls", "false"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.pem_bundle", ""),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.pem_json", ""),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.protocol_version", "5"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "cassandra.0.connect_timeout", "5"),
 				),
 			},
@@ -365,6 +408,30 @@ resource "vault_database_secret_backend_connection" "test" {
     username = "%s"
     password = "%s"
     tls = false
+  }
+}
+`, path, name, host, username, password)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_cassandraProtocol(name, path, host, username, password string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = "${vault_mount.db.path}"
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  cassandra {
+    hosts = ["%s"]
+    username = "%s"
+    password = "%s"
+    tls = false
+    protocol_version = 5
   }
 }
 `, path, name, host, username, password)
