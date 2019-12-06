@@ -56,6 +56,12 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN", ""),
 				Description: "Token to use to authenticate to Vault.",
 			},
+			"token_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN_NAME", ""),
+				Description: "Token name to use for creating the Vault child token.",
+			},
 			"ca_cert_file": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -634,6 +640,11 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, errors.New("no vault token found")
 	}
 
+	tokenName := d.Get("token_name").(string)
+	if tokenName == "" {
+		tokenName = "terraform"
+	}
+
 	// In order to enforce our relatively-short lease TTL, we derive a
 	// temporary child token that inherits all of the policies of the
 	// token we were given but expires after max_lease_ttl_seconds.
@@ -662,7 +673,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	renewable := false
 	childTokenLease, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		DisplayName:    "terraform",
+		DisplayName:    tokenName,
 		TTL:            fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
 		ExplicitMaxTTL: fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
 		Renewable:      &renewable,

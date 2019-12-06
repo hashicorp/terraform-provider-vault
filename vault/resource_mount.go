@@ -83,6 +83,15 @@ func mountResource() *schema.Resource {
 				ForceNew:    false,
 				Description: "Specifies mount type specific options that are passed to the backend",
 			},
+
+			"seal_wrap": {
+				Type:        schema.TypeBool,
+				Required:    false,
+				Optional:    true,
+				ForceNew:    true,
+				Computed:    true,
+				Description: "Enable seal wrapping for the mount, causing values stored by the mount to be wrapped by the seal's encryption capability",
+			},
 		},
 	}
 }
@@ -97,8 +106,9 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
 		},
-		Local:   d.Get("local").(bool),
-		Options: opts(d),
+		Local:    d.Get("local").(bool),
+		Options:  opts(d),
+		SealWrap: d.Get("seal_wrap").(bool),
 	}
 
 	path := d.Get("path").(string)
@@ -207,6 +217,7 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("accessor", mount.Accessor)
 	d.Set("local", mount.Local)
 	d.Set("options", mount.Options)
+	d.Set("seal_wrap", mount.SealWrap)
 
 	return nil
 }
