@@ -1,4 +1,21 @@
 ## 2.7.0 (Unreleased)
+
+FEATURES:
+
+* For the `/sys/auth` endpoint, adds a new data source ([#606](https://github.com/terraform-providers/terraform-provider-vault/pull/606)).
+
+IMPROVEMENTS:
+
+* For the Vault child token created for Terraform to use during a run, adds a `token_name` field for easier identification in Vault ([#594](https://github.com/terraform-providers/terraform-provider-vault/pull/594)).
+* For the `/ssh/roles/{role}` endpoint, adds support for `allowed_user_key_lengths` ([#605](https://github.com/terraform-providers/terraform-provider-vault/pull/605)).
+* For the `/sys/mounts/{path}` endpoint, adds support for `seal_wrap` ([#616](https://github.com/terraform-providers/terraform-provider-vault/pull/616)).
+* For the `/auth/kubernetes/config` endpoints, adds support for `issuer` ([#601](https://github.com/terraform-providers/terraform-provider-vault/pull/601)).
+* For the `/auth/kubernetes/role/{name}` endpoints, adds support for `audience` ([#601](https://github.com/terraform-providers/terraform-provider-vault/pull/601)).
+
+BUG FIXES:
+
+* For the `/identity/entity-alias` endpoint, fixes updates to the `name` field ([#610](https://github.com/terraform-providers/terraform-provider-vault/pull/610)).
+
 ## 2.6.0 (November 08, 2019)
 
 FEATURES:
