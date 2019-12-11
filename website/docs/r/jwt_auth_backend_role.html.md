@@ -73,6 +73,10 @@ The following arguments are supported:
 * `bound_claims` - (Optional) If set, a map of claims/values to match against.
   The expected value may be a single string or a list of strings.
 
+* `bonud_claims_type` - (Optional) How to interpret values in the claims/values
+  map (`bound_claims`): can be either `string` (exact match) or `glob` (wildcard
+  match). Defaults to `string`.
+
 * `claim_mappings` - (Optional) If set, a map of claims (keys) to be copied
   to specified metadata fields (values).
 

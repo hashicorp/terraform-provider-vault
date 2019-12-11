@@ -300,6 +300,8 @@ func TestAccJWTAuthBackendRoleOIDC_full(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"allowed_redirect_uris.4240710842", "http://localhost:8080"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"bound_claims_type", "string"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"bound_claims.%", "2"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"bound_claims.department", "engineering,admin"),
@@ -414,6 +416,14 @@ func TestAccJWTAuthBackendRole_fullUpdate(t *testing.T) {
 						"user_claim", "https://vault/updateuser"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"groups_claim", "https://vault/updategroups"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"bound_claims_type", "glob"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"bound_claims.%", "2"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"bound_claims.department", "engineering-*-admin"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"bound_claims.sector", "7g"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"clock_skew_leeway", "0"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
@@ -665,6 +675,11 @@ resource "vault_jwt_auth_backend_role" "role" {
   token_ttl = 7200
   token_num_uses = 24
   token_max_ttl = 10800
+  bound_claims_type = "glob"
+  bound_claims = {
+    department = "engineering-*-admin"
+    sector = "7g"
+  }
 }`, backend, role)
 }
 
