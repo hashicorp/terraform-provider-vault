@@ -25,6 +25,7 @@ func TestGCPSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_gcp_secret_backend.test", "description", "test description"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_backend.test", "default_lease_ttl_seconds", "3600"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_backend.test", "max_lease_ttl_seconds", "0"),
+					resource.TestCheckResourceAttr("vault_gcp_secret_backend.test", "credentials", "{\"hello\":\"world\"}"),
 				),
 			},
 			{
@@ -34,6 +35,7 @@ func TestGCPSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_gcp_secret_backend.test", "description", "test description"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_backend.test", "default_lease_ttl_seconds", "1800"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_backend.test", "max_lease_ttl_seconds", "43200"),
+					resource.TestCheckResourceAttr("vault_gcp_secret_backend.test", "credentials", "{\"how\":\"goes\"}"),
 				),
 			},
 		},
@@ -83,7 +85,7 @@ resource "vault_gcp_secret_backend" "test" {
   path = "%s"
   credentials = <<EOF
 {
-  "hello": "world"
+  "how": "goes"
 }
 EOF
   description = "test description"
