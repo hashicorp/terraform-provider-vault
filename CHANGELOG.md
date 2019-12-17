@@ -1,4 +1,9 @@
 ## 2.8.0 (Unreleased)
+
+BUG FIXES:
+
+* Fix GCP Secrets issue where credentials weren't being updated when changed ([#635](https://github.com/terraform-providers/terraform-provider-vault/pull/635)).
+
 ## 2.7.0 (December 06, 2019)
 
 FEATURES:
