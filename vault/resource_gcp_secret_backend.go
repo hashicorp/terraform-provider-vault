@@ -170,6 +170,18 @@ func gcpSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		d.SetPartial("max_lease_ttl_seconds")
 	}
 
+	if d.HasChange("credentials") {
+		data := map[string]interface{}{
+			"credentials": d.Get("credentials"),
+		}
+		configPath := gcpSecretBackendConfigPath(path)
+		if _, err := client.Logical().Write(configPath, data); err != nil {
+			return fmt.Errorf("error writing GCP credentials for %q: %s", path, err)
+		}
+		log.Printf("[DEBUG] Updated credentials for %q", path)
+		d.SetPartial("credentials")
+	}
+
 	d.Partial(false)
 	return gcpSecretBackendRead(d, meta)
 }
