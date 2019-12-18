@@ -54,6 +54,16 @@ func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.1785148924", "test"),
 				),
 			},
+			{
+				Config: testAccIdentityEntityPoliciesConfigNonExclusiveUpdate(entity),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityEntityPoliciesCheckLogical("vault_identity_entity.entity", []string{"dev", "foo"}),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.804021650", "foo"),
+				),
+			},
 		},
 	})
 }
@@ -191,6 +201,57 @@ func testAccIdentityEntityPoliciesCheckAttrs(resource string) resource.TestCheck
 	}
 }
 
+func testAccIdentityEntityPoliciesCheckLogical(resource string, policies []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources[resource]
+		if resourceState == nil {
+			return fmt.Errorf("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return fmt.Errorf("resource not found in state")
+		}
+
+		id := instanceState.ID
+
+		path := identityEntityIDPath(id)
+		client := testProvider.Meta().(*api.Client)
+		resp, err := client.Logical().Read(path)
+		if err != nil {
+			return fmt.Errorf("%q doesn't exist", path)
+		}
+
+		if resp.Data["policies"] == nil && policies == nil {
+			return nil
+		}
+
+		apiPolicies := resp.Data["policies"].([]interface{})
+
+		if len(apiPolicies) != len(policies) {
+			return fmt.Errorf("expected entity %s to have %d policies, has %d", id, len(policies), len(apiPolicies))
+		}
+
+		for _, apiPolicyI := range apiPolicies {
+			apiPolicy := apiPolicyI.(string)
+
+			found := false
+			for _, policy := range policies {
+				if apiPolicy == policy {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				return fmt.Errorf("unexpected policy %s in entity %s", apiPolicy, id)
+			}
+		}
+
+		return nil
+	}
+}
+
 func testAccIdentityEntityPoliciesConfigExclusive(entity string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "entity" {
@@ -235,6 +296,28 @@ resource "vault_identity_entity_policies" "test" {
   entity_id = "${vault_identity_entity.entity.id}"
   exclusive = false
   policies = ["test"]
+}
+`, entity)
+}
+
+func testAccIdentityEntityPoliciesConfigNonExclusiveUpdate(entity string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_entity" "entity" {
+  name = "%s"
+  external_policies = true
+}
+
+resource "vault_identity_entity_policies" "dev" {
+	entity_id = "${vault_identity_entity.entity.id}"
+  exclusive = false
+  policies = ["dev"]
+}
+
+
+resource "vault_identity_entity_policies" "test" {
+  entity_id = "${vault_identity_entity.entity.id}"
+  exclusive = false
+  policies = ["foo"]
 }
 `, entity)
 }

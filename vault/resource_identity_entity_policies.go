@@ -68,6 +68,13 @@ func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) erro
 		if err != nil {
 			return err
 		}
+		if d.HasChange("policies") {
+			oldPoliciesI, _ := d.GetChange("policies")
+			oldPolicies := oldPoliciesI.(*schema.Set).List()
+			for _, policy := range oldPolicies {
+				apiPolicies = util.SliceRemoveIfPresent(apiPolicies, policy)
+			}
+		}
 		for _, policy := range policies {
 			apiPolicies = util.SliceAppendIfMissing(apiPolicies, policy)
 		}
