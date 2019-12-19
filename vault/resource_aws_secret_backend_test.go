@@ -43,6 +43,18 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "region", "us-west-1"),
 				),
 			},
+			{
+				Config: testAccAWSSecretBackendConfig_noCreds(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "path", path),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "description", "test description"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "default_lease_ttl_seconds", "1800"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "max_lease_ttl_seconds", "43200"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "access_key", ""),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "secret_key", ""),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "region", "us-west-1"),
+				),
+			},
 		},
 	})
 }
@@ -124,4 +136,15 @@ resource "vault_aws_secret_backend" "test" {
   secret_key = "%s"
   region = "us-west-1"
 }`, path, accessKey, secretKey)
+}
+
+func testAccAWSSecretBackendConfig_noCreds(path string) string {
+	return fmt.Sprintf(`
+resource "vault_aws_secret_backend" "test" {
+  path = "%s"
+  description = "test description"
+  default_lease_ttl_seconds = 1800
+  max_lease_ttl_seconds = 43200
+  region = "us-west-1"
+}`, path)
 }

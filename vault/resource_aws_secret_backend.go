@@ -59,13 +59,13 @@ func awsSecretBackendResource() *schema.Resource {
 			},
 			"access_key": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "The AWS Access Key ID to use when generating new credentials.",
 				Sensitive:   true,
 			},
 			"secret_key": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "The AWS Secret Access Key to use when generating new credentials.",
 				Sensitive:   true,
 			},

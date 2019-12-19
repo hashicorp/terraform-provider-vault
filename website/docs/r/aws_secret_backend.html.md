@@ -31,11 +31,11 @@ resource "vault_aws_secret_backend" "aws" {
 
 The following arguments are supported:
 
-* `access_key` - (Required) The AWS Access Key ID this backend should use to
-issue new credentials.
+* `access_key` - (Optional) The AWS Access Key ID this backend should use to
+issue new credentials. Vault uses the official AWS SDK to authenticate, and thus can also use standard AWS environment credentials, shared file credentials or IAM role/ECS task credentials.
 
-* `secret_key` - (Required) The AWS Secret Key this backend should use to
-issue new credentials.
+* `secret_key` - (Optional) The AWS Secret Key this backend should use to
+issue new credentials. Vault uses the official AWS SDK to authenticate, and thus can also use standard AWS environment credentials, shared file credentials or IAM role/ECS task credentials.
 
 ~> **Important** Vault version 1.2.3 and older does not support reading the configured
 credentials back from the API, With these older versions, Terraform cannot detect and correct drift
