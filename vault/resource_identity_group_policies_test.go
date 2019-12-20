@@ -13,20 +13,20 @@ import (
 	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
-func TestAccidentityGroupPoliciesExclusive(t *testing.T) {
+func TestAccIdentityGroupPoliciesExclusive(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccidentityGroupPoliciesConfigExclusive(),
-				Check:  testAccidentityGroupPoliciesCheckAttrs("vault_identity_group_policies.policies"),
+				Config: testAccIdentityGroupPoliciesConfigExclusive(),
+				Check:  testAccIdentityGroupPoliciesCheckAttrs("vault_identity_group_policies.policies"),
 			},
 			{
-				Config: testAccidentityGroupPoliciesConfigExclusiveUpdate(),
+				Config: testAccIdentityGroupPoliciesConfigExclusiveUpdate(),
 				Check: resource.ComposeTestCheckFunc(
-					testAccidentityGroupPoliciesCheckAttrs("vault_identity_group_policies.policies"),
+					testAccIdentityGroupPoliciesCheckAttrs("vault_identity_group_policies.policies"),
 					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.1785148924", "test"),
@@ -36,19 +36,29 @@ func TestAccidentityGroupPoliciesExclusive(t *testing.T) {
 	})
 }
 
-func TestAccidentityGroupPoliciesNonExclusive(t *testing.T) {
+func TestAccIdentityGroupPoliciesNonExclusive(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccidentityGroupPoliciesConfigNonExclusive(),
+				Config: testAccIdentityGroupPoliciesConfigNonExclusive(),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.#", "1"),
 					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.#", "1"),
 					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.1785148924", "test"),
+				),
+			},
+			{
+				Config: testAccIdentityGroupPoliciesConfigNonExclusiveUpdate(),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityGroupPoliciesCheckLogical("vault_identity_group.group", []string{"dev", "foo"}),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.804021650", "foo"),
 				),
 			},
 		},
@@ -93,7 +103,7 @@ func testAccCheckidentityGroupPoliciesDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccidentityGroupPoliciesCheckAttrs(resource string) resource.TestCheckFunc {
+func testAccIdentityGroupPoliciesCheckAttrs(resource string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources[resource]
 		if resourceState == nil {
@@ -188,7 +198,58 @@ func testAccidentityGroupPoliciesCheckAttrs(resource string) resource.TestCheckF
 	}
 }
 
-func testAccidentityGroupPoliciesConfigExclusive() string {
+func testAccIdentityGroupPoliciesCheckLogical(resource string, policies []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources[resource]
+		if resourceState == nil {
+			return fmt.Errorf("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return fmt.Errorf("resource not found in state")
+		}
+
+		id := instanceState.ID
+
+		path := identityGroupIDPath(id)
+		client := testProvider.Meta().(*api.Client)
+		resp, err := client.Logical().Read(path)
+		if err != nil {
+			return fmt.Errorf("%q doesn't exist", path)
+		}
+
+		if resp.Data["policies"] == nil && policies == nil {
+			return nil
+		}
+
+		apiPolicies := resp.Data["policies"].([]interface{})
+
+		if len(apiPolicies) != len(policies) {
+			return fmt.Errorf("expected group %s to have %d policies, has %d", id, len(policies), len(apiPolicies))
+		}
+
+		for _, apiPolicyI := range apiPolicies {
+			apiPolicy := apiPolicyI.(string)
+
+			found := false
+			for _, policy := range policies {
+				if apiPolicy == policy {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				return fmt.Errorf("unexpected policy %s in group %s", apiPolicy, id)
+			}
+		}
+
+		return nil
+	}
+}
+
+func testAccIdentityGroupPoliciesConfigExclusive() string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
   external_policies = true
@@ -200,7 +261,7 @@ resource "vault_identity_group_policies" "policies" {
 }`)
 }
 
-func testAccidentityGroupPoliciesConfigExclusiveUpdate() string {
+func testAccIdentityGroupPoliciesConfigExclusiveUpdate() string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
   external_policies = true
@@ -212,7 +273,7 @@ resource "vault_identity_group_policies" "policies" {
 }`)
 }
 
-func testAccidentityGroupPoliciesConfigNonExclusive() string {
+func testAccIdentityGroupPoliciesConfigNonExclusive() string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
   external_policies = true
@@ -229,6 +290,27 @@ resource "vault_identity_group_policies" "test" {
   group_id = "${vault_identity_group.group.id}"
   exclusive = false
   policies = ["test"]
+}
+`)
+}
+
+func testAccIdentityGroupPoliciesConfigNonExclusiveUpdate() string {
+	return fmt.Sprintf(`
+resource "vault_identity_group" "group" {
+  external_policies = true
+}
+
+resource "vault_identity_group_policies" "dev" {
+	group_id = "${vault_identity_group.group.id}"
+  exclusive = false
+  policies = ["dev"]
+}
+
+
+resource "vault_identity_group_policies" "test" {
+  group_id = "${vault_identity_group.group.id}"
+  exclusive = false
+  policies = ["foo"]
 }
 `)
 }
