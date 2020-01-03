@@ -1,8 +1,9 @@
-## 2.8.0 (Unreleased)
+## 2.7.1 (Unreleased)
 
 BUG FIXES:
 
-* Fix GCP Secrets issue where credentials weren't being updated when changed ([#635](https://github.com/terraform-providers/terraform-provider-vault/pull/635)).
+* For the `/gcp/config` endpoint, fixes issue where credentials weren't being updated when changed ([#635](https://github.com/terraform-providers/terraform-provider-vault/pull/635)).
+* For the `/aws/config/root` endpoint, no longer requires `access_key` or `secret_key` ([#634](https://github.com/terraform-providers/terraform-provider-vault/pull/634)).
 
 ## 2.7.0 (December 06, 2019)
 
