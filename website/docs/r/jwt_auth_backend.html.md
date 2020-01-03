@@ -35,7 +35,7 @@ resource "vault_jwt_auth_backend" "example" {
     oidc_client_id = "1234567890"
     oidc_client_secret = "secret123456"
     bound_issuer = "https://myco.auth0.com/"
-    tune = {
+    tune {
         listing_visibility = "unauth"
     }
 }
