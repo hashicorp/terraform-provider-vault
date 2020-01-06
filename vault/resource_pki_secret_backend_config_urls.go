@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -80,6 +81,10 @@ func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) er
 
 	log.Printf("[DEBUG] Reading URL config from PKI secret backend %q", backend)
 	config, err := client.Logical().Read(path)
+
+	if config == nil && err == nil {
+		err = errors.New("no URL config data found")
+	}
 
 	if err != nil {
 		log.Printf("[WARN] Removing path %q its ID is invalid", path)
