@@ -50,8 +50,7 @@ func testPkiSecretBackendConfigUrlsEmptyRead(s *terraform.State) error {
 	for _, path := range paths {
 		d := &schema.ResourceData{}
 		d.SetId(path)
-		if err := pkiSecretBackendConfigUrlsRead(d, testProvider.Meta()); err != nil &&
-			!strings.Contains(err.Error(), "no URL config data found") {
+		if err := pkiSecretBackendConfigUrlsRead(d, testProvider.Meta()); err != nil {
 			return err
 		}
 	}
