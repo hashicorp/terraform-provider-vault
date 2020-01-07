@@ -82,9 +82,13 @@ func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) er
 	config, err := client.Logical().Read(path)
 
 	if err != nil {
-		log.Printf("[WARN] Removing path %q its ID is invalid", path)
+		return fmt.Errorf("error reading URL config on PKI secret backend %q: %s", path, err)
+	}
+
+	if config == nil {
+		log.Printf("[WARN] Removing URL config path %q as its ID is invalid", path)
 		d.SetId("")
-		return fmt.Errorf("invalid path ID %q: %s", path, err)
+		return nil
 	}
 
 	d.Set("issuing_certificates", config.Data["issuing_certificates"])

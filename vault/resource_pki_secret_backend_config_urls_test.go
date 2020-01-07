@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/vault/api"
 )
@@ -25,6 +26,11 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 		CheckDestroy: testPkiSecretBackendConfigUrlsDestroy,
 		Steps: []resource.TestStep{
 			{
+				// Test that reading from an unconfigured mount succeeds
+				Config: testPkiSecretBackendCertConfigUrlsConfig_rootOnly(rootPath),
+				Check:  testPkiSecretBackendConfigUrlsEmptyRead,
+			},
+			{
 				Config: testPkiSecretBackendCertConfigUrlsConfig_basic(rootPath, issuingCertificates, crlDistributionPoints, ocspServers),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_config_urls.test", "issuing_certificates.0", issuingCertificates),
@@ -36,12 +42,41 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 	})
 }
 
+func testPkiSecretBackendConfigUrlsEmptyRead(s *terraform.State) error {
+	paths, err := listPkiPaths(s)
+	if err != nil {
+		return err
+	}
+	for _, path := range paths {
+		d := &schema.ResourceData{}
+		d.SetId(path)
+		if err := pkiSecretBackendConfigUrlsRead(d, testProvider.Meta()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func testPkiSecretBackendConfigUrlsDestroy(s *terraform.State) error {
+	paths, err := listPkiPaths(s)
+	if err != nil {
+		return err
+	}
+	for _, path := range paths {
+		return fmt.Errorf("mount %q still exists", path)
+	}
+
+	return nil
+}
+
+func listPkiPaths(s *terraform.State) ([]string, error) {
+	var paths []string
+
 	client := testProvider.Meta().(*api.Client)
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, rs := range s.RootModule().Resources {
@@ -52,11 +87,23 @@ func testPkiSecretBackendConfigUrlsDestroy(s *terraform.State) error {
 			path = strings.Trim(path, "/")
 			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
 			if mount.Type == "pki" && path == rsPath {
-				return fmt.Errorf("mount %q still exists", path)
+				paths = append(paths, path)
 			}
 		}
 	}
-	return nil
+
+	return paths, nil
+}
+
+func testPkiSecretBackendCertConfigUrlsConfig_rootOnly(rootPath string) string {
+	return fmt.Sprintf(`
+resource "vault_pki_secret_backend" "test-root" {
+  path = "%s"
+  description = "test root"
+  default_lease_ttl_seconds = "8640000"
+  max_lease_ttl_seconds = "8640000"
+}
+`, rootPath)
 }
 
 func testPkiSecretBackendCertConfigUrlsConfig_basic(rootPath string, issuingCertificates string, crlDistributionPoints string, ocspServers string) string {
