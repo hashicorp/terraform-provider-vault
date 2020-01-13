@@ -37,7 +37,7 @@ resource "vault_aws_auth_backend_role" "example" {
   bound_iam_instance_profile_arn = "arn:aws:iam::123456789012:instance-profile/MyProfile"
   ttl                            = 60
   max_ttl                        = 120
-  policies                       = ["default", "dev", "prod"]
+  token_policies                 = ["default", "dev", "prod"]
 
   depends_on                     = ["vault_aws_auth_backend_client.example"]
 }
