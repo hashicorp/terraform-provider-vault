@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
@@ -560,6 +561,20 @@ func providerToken(d *schema.ResourceData) (string, error) {
 	if token := d.Get("token").(string); token != "" {
 		return token, nil
 	}
+
+	if addr := d.Get("address").(string); addr != "" {
+		if current, exists := os.LookupEnv("VAULT_ADDR"); exists {
+			defer func() {
+				os.Setenv("VAULT_ADDR", current)
+			}()
+		} else {
+			defer func() {
+				os.Unsetenv("VAULT_ADDR")
+			}()
+		}
+		os.Setenv("VAULT_ADDR", addr)
+	}
+
 	// Use ~/.vault-token, or the configured token helper.
 	tokenHelper, err := config.DefaultTokenHelper()
 	if err != nil {
