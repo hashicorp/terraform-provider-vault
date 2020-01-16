@@ -33,7 +33,7 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 		},
 		"bound_audiences": {
 			Type:        schema.TypeSet,
-			Required:    true,
+			Optional:    true,
 			Description: "List of aud claims to match against. Any match is sufficient.",
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
