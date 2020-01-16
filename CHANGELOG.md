@@ -3,6 +3,7 @@
 BUG FIXES:
 
 * Fix panic when reading unconfigured PKI mount URLs ([#641](https://github.com/terraform-providers/terraform-provider-vault/pull/641)).
+* Update JWT bound_audiences to be optional ([649](https://github.com/terraform-providers/terraform-provider-vault/pull/649)).
 
 ## 2.7.1 (January 03, 2020)
 
