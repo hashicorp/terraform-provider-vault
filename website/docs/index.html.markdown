@@ -227,3 +227,23 @@ provider "vault" {
   }
 }
 ```
+
+## Example Multiple Namespace Support
+To leverage more than one namespace in Vault you can use a Terraform alias:
+
+```hcl
+provider "vault" {
+  alias = "ns1"
+  namespace = "ns1"
+}
+
+provider "vault" {
+  alias = "ns2"
+  namespace = "ns2"
+}
+
+resource "vault_generic_secret" {
+  provider = "vault.ns1"
+  ...
+}
+```
