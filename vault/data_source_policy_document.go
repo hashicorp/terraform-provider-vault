@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -234,8 +235,14 @@ func policyRenderListOfStrings(items []string) string {
 func policyRenderListOfMapsOfListToString(input map[string][]string) string {
 	output := fmt.Sprintf("{\n")
 
-	for k, v := range input {
-		output = fmt.Sprintf("%s    \"%s\" = %s\n", output, k, policyRenderListOfStrings(v))
+	keys := make([]string, 0, len(input))
+	for k := range input {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		output = fmt.Sprintf("%s    \"%s\" = %s\n", output, k, policyRenderListOfStrings(input[k]))
 	}
 
 	return fmt.Sprintf("%s  }", output)

@@ -9,7 +9,6 @@ import (
 )
 
 func TestDataSourcePolicyDocument(t *testing.T) {
-	t.Skip("this test fails intermittently and needs to be fixed")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
@@ -32,17 +31,22 @@ data "vault_policy_document" "test" {
     required_parameters = ["test_param1"]
 
     allowed_parameter {
-      key   = "eggs"
-      value = ["foo", "bar"]
-    }
-
-    allowed_parameter {
       key   = "spam"
       value = ["eggs"]
     }
 
+    allowed_parameter {
+      key   = "eggs"
+      value = ["foo", "bar"]
+    }
+
     denied_parameter {
-      key   = "*"
+      key   = "b"
+      value = ["eggs"]
+    }
+
+    denied_parameter {
+      key   = "a"
       value = ["spam"]
     }
 
@@ -65,6 +69,11 @@ data "vault_policy_document" "test" {
       value = []
     }
 
+    denied_parameter {
+      key   = "foo"
+      value = []
+    }
+
     min_wrapping_ttl = "1s"
   }
 
@@ -84,7 +93,8 @@ path "secret/test1/*" {
     "spam" = ["eggs"]
   }
   denied_parameters = {
-    "*" = ["spam"]
+    "a" = ["spam"]
+    "b" = ["eggs"]
   }
   max_wrapping_ttl = "1h"
 }
@@ -98,6 +108,7 @@ path "secret/test2/*" {
   }
   denied_parameters = {
     "*" = []
+    "foo" = []
   }
   min_wrapping_ttl = "1s"
 }
