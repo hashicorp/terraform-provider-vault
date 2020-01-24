@@ -24,7 +24,7 @@ resource "vault_jwt_auth_backend" "jwt" {
 resource "vault_jwt_auth_backend_role" "example" {
   backend         = vault_jwt_auth_backend.jwt.path
   role_name       = "test-role"
-  token+policies  = ["default", "dev", "prod"]
+  token_policies  = ["default", "dev", "prod"]
 
   bound_audiences = ["https://myco.test"]
   user_claim      = "https://vault/user"
