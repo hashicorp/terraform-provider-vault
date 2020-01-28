@@ -563,8 +563,12 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		data, ok := details.(map[string]interface{})
 		if ok {
 			result := map[string]interface{}{}
-			if v, ok := data["connection_url"]; ok {
+			if v, ok := d.GetOk("mongodb.0." + "connection_url"); ok {
 				result["connection_url"] = v.(string)
+			} else {
+				if v, ok := data["connection_url"]; ok {
+					result["connection_url"] = v.(string)
+				}
 			}
 			d.Set("mongodb", []map[string]interface{}{result})
 		}
