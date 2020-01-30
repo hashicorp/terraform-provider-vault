@@ -61,8 +61,13 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 					if value != "sts" && value != "creds" {
 						errs = append(errs, fmt.Errorf("type must be creds or sts"))
 					}
-					return
+					return nil, errs
 				},
+			},
+			"role_arn": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "ARN to use if multiple are available in the role. Required if the role has multiple ARNs.",
 			},
 			"access_key": {
 				Type:        schema.TypeString,
@@ -79,7 +84,7 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 			"security_token": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "AWS security token read from Vault. (Only returned if type is 'sts'.)",
+				Description: "AWS security token read from Vault. (Only returned if type is 'sts').",
 			},
 
 			"lease_id": {
@@ -117,8 +122,14 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	role := d.Get("role").(string)
 	path := backend + "/" + credType + "/" + role
 
-	log.Printf("[DEBUG] Reading %q from Vault", path)
-	secret, err := client.Logical().Read(path)
+	arn := d.Get("role_arn").(string)
+	// If the ARN is empty and only one is specified in the role definition, this should work without issue
+	data := map[string][]string{
+		"role_arn": {arn},
+	}
+
+	log.Printf("[DEBUG] Reading %q from Vault with data %#v", path, data)
+	secret, err := client.Logical().ReadWithData(path, data)
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
