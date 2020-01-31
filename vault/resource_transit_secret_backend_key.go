@@ -3,13 +3,14 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"regexp"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/hashicorp/vault/api"
-	"log"
-	"regexp"
-	"strings"
 )
 
 var (
@@ -75,10 +76,10 @@ func transitSecretBackendKeyResource() *schema.Resource {
 			"type": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Description:  "Specifies the type of key to create. The currently-supported types are: aes256-gcm96, chacha20-poly1305, ed25519, ecdsa-p256, rsa-2048, rsa-4096",
+				Description:  "Specifies the type of key to create. The currently-supported types are: aes128-gcm96, aes256-gcm96, chacha20-poly1305, ed25519, ecdsa-p256, ecdsa-p384, ecdsa-p521, rsa-2048, rsa-4096",
 				ForceNew:     true,
 				Default:      "aes256-gcm96",
-				ValidateFunc: validation.StringInSlice([]string{"aes256-gcm96", "chacha20-poly1305", "ed25519", "ecdsa-p256", "rsa-2048", "rsa-4096"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"aes128-gcm96", "aes256-gcm96", "chacha20-poly1305", "ed25519", "ecdsa-p256", "ecdsa-p384", "ecdsa-p521", "rsa-2048", "rsa-4096"}, false),
 			},
 			"keys": {
 				Type:        schema.TypeList,
