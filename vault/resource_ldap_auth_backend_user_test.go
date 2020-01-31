@@ -79,6 +79,56 @@ func TestLDAPAuthBackendUser_basic(t *testing.T) {
 	})
 }
 
+func TestLDAPAuthBackendUser_noGroups(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
+	username := acctest.RandomWithPrefix("tf-test-ldap-user")
+
+	policies := []string{}
+
+	groups := []string{}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testLDAPAuthBackendUserDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendUserConfig_basic(backend, username, policies, groups),
+				Check: resource.ComposeTestCheckFunc(
+					testLDAPAuthBackendUserCheck_attrs(backend, username),
+					testLDAPAuthBackendUserCheck_groups(backend, username, groups),
+				),
+			},
+		},
+	})
+}
+
+func TestLDAPAuthBackendUser_oneGroup(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
+	username := acctest.RandomWithPrefix("tf-test-ldap-user")
+
+	policies := []string{}
+
+	groups := []string{
+		acctest.RandomWithPrefix("group"),
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testLDAPAuthBackendUserDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendUserConfig_basic(backend, username, policies, groups),
+				Check: resource.ComposeTestCheckFunc(
+					testLDAPAuthBackendUserCheck_attrs(backend, username),
+					testLDAPAuthBackendUserCheck_groups(backend, username, groups),
+				),
+			},
+		},
+	})
+}
+
 func testLDAPAuthBackendUserDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
@@ -115,7 +165,12 @@ func testLDAPAuthBackendUserCheck_groups(backend, username string, groups []stri
 			return err
 		}
 
-		vaultGroups := strings.Split(resp.Data["groups"].(string), ",")
+		vaultGroups := []string{}
+		if resp.Data["groups"].(string) != "" {
+			for _, group := range strings.Split(resp.Data["groups"].(string), ",") {
+				vaultGroups = append(vaultGroups, group)
+			}
+		}
 
 		count, err := strconv.Atoi(instanceState.Attributes["groups.#"])
 		if err != nil {

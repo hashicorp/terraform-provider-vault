@@ -130,8 +130,13 @@ func ldapAuthBackendUserResourceRead(d *schema.ResourceData, meta interface{}) e
 			schema.HashString, resp.Data["policies"].([]interface{})))
 
 	groupSet := schema.NewSet(schema.HashString, []interface{}{})
-	for _, group := range strings.Split(resp.Data["groups"].(string), ",") {
-		groupSet.Add(group)
+	// Vault stores `groups` for an LDAP user as a string, not a list. We explicitly check
+	// for an empty string here because without it, there exists a logical mismatch between
+	// an empty set/list and the result of creating a list by splitting on an empty string.
+	if resp.Data["groups"].(string) != "" {
+		for _, group := range strings.Split(resp.Data["groups"].(string), ",") {
+			groupSet.Add(group)
+		}
 	}
 	d.Set("groups", groupSet)
 
