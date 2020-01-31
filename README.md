@@ -69,6 +69,8 @@ $ make test
 
 In order to run the full suite of Acceptance tests, you will need the following:
 
+*Note:* Acceptance tests create real resources, and often cost money to run.
+
 1. An instance of Vault running to run the tests against
 2. The following environment variables are set:
     - `VAULT_ADDR` - location of Vault
