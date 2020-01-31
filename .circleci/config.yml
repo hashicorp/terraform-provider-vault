@@ -7,6 +7,7 @@ jobs:
         environment:
           - MONGO_INITDB_ROOT_USERNAME: root
           - MONGO_INITDB_ROOT_PASSWORD: mongodb
+          - MONGO_INITDB_DATABASE: admin
       - image: circleci/mysql:latest
         environment:
           - MYSQL_ROOT_PASSWORD=mysql
@@ -28,7 +29,7 @@ jobs:
             echo 'GO111MODULE=on' >> $BASH_ENV
             echo 'export GOBIN=$GOPATH/bin' >> $BASH_ENV
             echo 'export MYSQL_URL="root:mysql@tcp(127.0.0.1:3306)/"' >> $BASH_ENV
-            echo 'export MONGODB_URL="mongodb://root:mongodb@mongodb.acme.com:27017/admin?ssl=true"' >> $BASH_ENV
+            echo 'export MONGODB_URL="mongodb://root:mongodb@tcp(127.0.0.1:27017)/admin?ssl=true"' >> $BASH_ENV
       - run:
           name: "Run Tests"
           command: |
