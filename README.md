@@ -67,10 +67,27 @@ In order to test the provider, you can simply run `make test`.
 $ make test
 ```
 
-In order to run the full suite of Acceptance tests, run `make testacc`.
+In order to run the full suite of Acceptance tests, you will need the following:
 
 *Note:* Acceptance tests create real resources, and often cost money to run.
 
+1. An instance of Vault running to run the tests against
+2. The following environment variables are set:
+    - `VAULT_ADDR` - location of Vault
+    - `VAULT_TOKEN` - token to use to query Vault. These tests do not attempt to read `~/.vault-token`.
+3. The following environment variables may need to be set depending on which acceptance tests you wish to run.
+There may be additional variables for specific tests. Consult the specific test(s) for more information.
+    - `AWS_ACCESS_KEY_ID`
+    - `AWS_SECRET_ACCESS_KEY`
+    - `GOOGLE_CREDENTIALS`
+    - `GOOGLE_PROJECT`
+    - `RMQ_CONNECTION_URI`
+    - `RMQ_USERNAME`
+    - `RMQ_PASSWORD`
+4. Run `make testacc`
+
+If you wish to run specific tests, use the `TESTARGS` environment variable:
+
 ```sh
-$ make testacc
+TESTARGS="--run DataSourceAWSAccessCredentials" make testacc
 ```

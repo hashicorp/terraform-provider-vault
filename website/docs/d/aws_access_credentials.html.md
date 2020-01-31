@@ -71,6 +71,10 @@ to `"creds"`, which just returns an AWS Access Key ID and Secret
 Key. Can also be set to `"sts"`, which will return a security token
 in addition to the keys.
 
+* `role_arn` - (Required if role has multiple ARNs) The specific AWS ARN to use
+from the configured role. If the role does not have multiple ARNs, this does
+not need to be specified.
+
 ## Attributes Reference
 
 In addition to the arguments above, the following attributes are exported:
