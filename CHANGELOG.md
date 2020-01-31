@@ -1,5 +1,9 @@
 ## 2.8.0 (Unreleased)
 
+IMPROVEMENTS:
+
+* Adds ability to choose a specific AWS ARN in vault_aws_access_credentials when a Vault role has multiple ARNs configured. ([#661](https://github.com/terraform-providers/terraform-provider-vault/pull/661)
+
 BUG FIXES:
 
 * Fix panic when reading unconfigured PKI mount URLs ([#641](https://github.com/terraform-providers/terraform-provider-vault/pull/641)).
