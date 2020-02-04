@@ -16,6 +16,7 @@ func authBackendResource() *schema.Resource {
 		Create: authBackendWrite,
 		Delete: authBackendDelete,
 		Read:   authBackendRead,
+		Update: authBackendUpdate,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -49,28 +50,35 @@ func authBackendResource() *schema.Resource {
 			},
 
 			"default_lease_ttl_seconds": {
-				Type:        schema.TypeInt,
-				Required:    false,
-				Optional:    true,
-				Computed:    true,
-				ForceNew:    true,
-				Description: "Default lease duration in seconds",
+				Type:          schema.TypeInt,
+				Required:      false,
+				Optional:      true,
+				Computed:      true,
+				ForceNew:      true,
+				ConflictsWith: []string{"tune.0.default_lease_ttl"},
+				Deprecated:    "Use the tune configuration block to avoid forcing creation of new resource on an update",
+				Description:   "Default lease duration in seconds",
 			},
 
 			"max_lease_ttl_seconds": {
-				Type:        schema.TypeInt,
-				Required:    false,
-				Optional:    true,
-				Computed:    true,
-				ForceNew:    true,
-				Description: "Maximum possible lease duration in seconds",
+				Type:          schema.TypeInt,
+				Required:      false,
+				Optional:      true,
+				Computed:      true,
+				ForceNew:      true,
+				ConflictsWith: []string{"tune.0.max_lease_ttl"},
+				Deprecated:    "Use the tune configuration block to avoid forcing creation of new resource on an update",
+				Description:   "Maximum possible lease duration in seconds",
 			},
 
 			"listing_visibility": {
-				Type:        schema.TypeString,
-				ForceNew:    true,
-				Optional:    true,
-				Description: "Specifies whether to show this mount in the UI-specific listing endpoint",
+				Type:          schema.TypeString,
+				ForceNew:      true,
+				Optional:      true,
+				Computed:      true,
+				ConflictsWith: []string{"tune.0.listing_visibility"},
+				Deprecated:    "Use the tune configuration block to avoid forcing creation of new resource on an update",
+				Description:   "Specifies whether to show this mount in the UI-specific listing endpoint",
 			},
 
 			"local": {
@@ -85,6 +93,8 @@ func authBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The accessor of the auth backend",
 			},
+
+			"tune": authMountTuneSchema(),
 		},
 	}
 }
@@ -118,7 +128,7 @@ func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 
 	d.SetId(path)
 
-	return authBackendRead(d, meta)
+	return authBackendUpdate(d, meta)
 }
 
 func authBackendDelete(d *schema.ResourceData, meta interface{}) error {
@@ -164,4 +174,29 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 	// If we fell out here then we didn't find our Auth in the list.
 	d.SetId("")
 	return nil
+}
+
+func authBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+
+	path := d.Id()
+	log.Printf("[DEBUG] Updating auth %s in Vault", path)
+
+	if d.HasChange("tune") {
+		log.Printf("[INFO] Auth '%q' tune configuration changed", d.Id())
+		if raw, ok := d.GetOk("tune"); ok {
+			backendType := d.Get("type")
+			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
+
+			err := authMountTune(client, "auth/"+path, raw)
+			if err != nil {
+				return nil
+			}
+
+			log.Printf("[INFO] Written %s auth tune to '%q'", backendType, path)
+			d.SetPartial("tune")
+		}
+	}
+
+	return authBackendRead(d, meta)
 }

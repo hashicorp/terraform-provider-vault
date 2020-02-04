@@ -39,35 +39,26 @@ func main() {
 
 	// Gather up all the paths/endpoints available in Vault, and have a bool to represent
 	// whether they've been "seen" yet in this provider.
-	vaultPaths := make(map[string]bool)
+	vaultPaths := map[string]map[string]bool{
+		"data source": make(map[string]bool),
+		"resource":    make(map[string]bool),
+		"all":         make(map[string]bool),
+	}
 	for path := range oasDoc.Paths {
-		vaultPaths[path] = false
+		vaultPaths["data source"][path] = false
+		vaultPaths["resource"][path] = false
+		vaultPaths["all"][path] = false
 	}
 
 	// Go through the registries and mark the paths/endpoints they support,
 	// remarking upon notable observations along the way.
-	for _, registry := range []map[string]*vault.Description{vault.DataSourceRegistry, vault.ResourceRegistry} {
-		for _, desc := range registry {
-			for _, path := range desc.PathInventory {
-				if path == vault.GenericPath || path == vault.UnknownPath {
-					continue
-				}
-				seenBefore, isCurrentlyInVault := vaultPaths[path]
-				if !isCurrentlyInVault && !desc.EnterpriseOnly {
-					fmt.Println(path + " is not currently in Vault")
-				}
-				if seenBefore {
-					fmt.Println(path + " is in the Terraform Vault Provider multiple times")
-				}
-				vaultPaths[path] = true
-			}
-		}
-	}
+	checkRegistry("data source", vault.DataSourceRegistry, vaultPaths)
+	checkRegistry("resource", vault.ResourceRegistry, vaultPaths)
 
 	// Separate what's supported from what isn't to make our report more readable.
 	supportedVaultEndpoints := []string{}
 	unSupportedVaultEndpoints := []string{}
-	for path, seen := range vaultPaths {
+	for path, seen := range vaultPaths["all"] {
 		if seen {
 			supportedVaultEndpoints = append(supportedVaultEndpoints, path)
 		} else {
@@ -75,12 +66,10 @@ func main() {
 		}
 	}
 
-	// Surely this output could be done more gracefully with a template,
-	// but this is quick and very easy to edit or maintain.
 	fmt.Println(" ")
-	fmt.Printf("%.0f percent coverage\n", float64(len(supportedVaultEndpoints))/float64(len(vaultPaths))*100)
-	fmt.Printf("%d of %d vault paths are supported\n", len(supportedVaultEndpoints), len(vaultPaths))
-	fmt.Printf("%d of %d vault paths are unsupported\n", len(unSupportedVaultEndpoints), len(vaultPaths))
+	fmt.Printf("%.0f percent coverage\n", float64(len(supportedVaultEndpoints))/float64(len(vaultPaths["all"]))*100)
+	fmt.Printf("%d of %d vault paths are supported\n", len(supportedVaultEndpoints), len(vaultPaths["all"]))
+	fmt.Printf("%d of %d vault paths are unsupported\n", len(unSupportedVaultEndpoints), len(vaultPaths["all"]))
 
 	fmt.Println(" ")
 	fmt.Println("SUPPORTED")
@@ -94,5 +83,24 @@ func main() {
 	sort.Strings(unSupportedVaultEndpoints)
 	for _, path := range unSupportedVaultEndpoints {
 		fmt.Println("    " + path)
+	}
+}
+
+func checkRegistry(registryType string, registry map[string]*vault.Description, vaultPaths map[string]map[string]bool) {
+	for _, desc := range registry {
+		for _, path := range desc.PathInventory {
+			if path == vault.GenericPath || path == vault.UnknownPath {
+				continue
+			}
+			seenBefore, isCurrentlyInVault := vaultPaths[registryType][path]
+			if !isCurrentlyInVault && !desc.EnterpriseOnly {
+				fmt.Println(path + " is not currently in Vault")
+			}
+			if seenBefore {
+				fmt.Printf("%s is in the %s registry multiple times\n", path, registryType)
+			}
+			vaultPaths[registryType][path] = true
+			vaultPaths["all"][path] = true
+		}
 	}
 }
