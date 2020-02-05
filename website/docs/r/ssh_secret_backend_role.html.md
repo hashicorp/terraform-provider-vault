@@ -75,9 +75,9 @@ The following arguments are supported:
 
 * `allowed_user_key_lengths` - (Optional) Specifies a map of ssh key types and their expected sizes which are allowed to be signed by the CA type.
 
-* `max_ttl` - (Optional) Specifies the Time To Live value.
+* `max_ttl` - (Optional) Specifies the maximum Time To Live value.
 
-* `ttl` - (Optional) Specifies the maximum Time To Live value.
+* `ttl` - (Optional) Specifies the Time To Live value.
 
 
 ## Attributes Reference
