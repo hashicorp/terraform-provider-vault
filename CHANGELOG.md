@@ -3,11 +3,16 @@
 IMPROVEMENTS:
 
 * Adds ability to choose a specific AWS ARN in vault_aws_access_credentials when a Vault role has multiple ARNs configured. ([#661](https://github.com/terraform-providers/terraform-provider-vault/pull/661)
+* Updates to Go 1.13 ([#642](https://github.com/terraform-providers/terraform-provider-vault/pull/642)).
+* Adds doc on multiple namespace support ([#654](https://github.com/terraform-providers/terraform-provider-vault/pull/654)).
+* Sorts `vault_policy_document` data source allowed/denied parameters by key name [#656](https://github.com/terraform-providers/terraform-provider-vault/pull/656).
 
 BUG FIXES:
 
 * Fix panic when reading unconfigured PKI mount URLs ([#641](https://github.com/terraform-providers/terraform-provider-vault/pull/641)).
 * Update JWT bound_audiences to be optional ([649](https://github.com/terraform-providers/terraform-provider-vault/pull/649)).
+* Solves permanent diff with the Mongo database connection URL ([#659](https://github.com/terraform-providers/terraform-provider-vault/pull/659) and [#662](https://github.com/terraform-providers/terraform-provider-vault/pull/662)).
+* Fixes an issue where the "vault_ldap_auth_backend_user" resource did not respect an empty `groups` value ([#655](https://github.com/terraform-providers/terraform-provider-vault/pull/655)).
 
 ## 2.7.1 (January 03, 2020)
 
