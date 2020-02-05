@@ -2,10 +2,10 @@
 
 IMPROVEMENTS:
 
-* Adds ability to choose a specific AWS ARN in vault_aws_access_credentials when a Vault role has multiple ARNs configured. ([#661](https://github.com/terraform-providers/terraform-provider-vault/pull/661)
+* Adds ability to choose a specific AWS ARN in vault_aws_access_credentials when a Vault role has multiple ARNs configured ([#661](https://github.com/terraform-providers/terraform-provider-vault/pull/661)).
 * Updates to Go 1.13 ([#642](https://github.com/terraform-providers/terraform-provider-vault/pull/642)).
 * Adds doc on multiple namespace support ([#654](https://github.com/terraform-providers/terraform-provider-vault/pull/654)).
-* Sorts `vault_policy_document` data source allowed/denied parameters by key name [#656](https://github.com/terraform-providers/terraform-provider-vault/pull/656).
+* Sorts `vault_policy_document` data source allowed/denied parameters by key name ([#656](https://github.com/terraform-providers/terraform-provider-vault/pull/656)).
 
 BUG FIXES:
 
