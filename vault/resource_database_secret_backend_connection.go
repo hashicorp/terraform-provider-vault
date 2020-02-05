@@ -140,18 +140,10 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			},
 
 			"mongodb": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "Connection parameters for the mongodb-database-plugin plugin.",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"connection_url": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "Connection string to use to connect to the database.",
-						},
-					},
-				},
+				Type:          schema.TypeList,
+				Optional:      true,
+				Description:   "Connection parameters for the mongodb-database-plugin plugin.",
+				Elem:          connectionStringResource(),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("mongodb", dbBackendTypes),
 			},
@@ -346,9 +338,7 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case "hana-database-plugin":
 		setDatabaseConnectionData(d, "hana.0.", data)
 	case "mongodb-database-plugin":
-		if v, ok := d.GetOk("mongodb.0.connection_url"); ok {
-			data["connection_url"] = v.(string)
-		}
+		setDatabaseConnectionData(d, "mongodb.0.", data)
 	case "mssql-database-plugin":
 		setDatabaseConnectionData(d, "mssql.0.", data)
 	case "mysql-database-plugin":
@@ -559,19 +549,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case "hana-database-plugin":
 		d.Set("hana", getConnectionDetailsFromResponse(d, "hana.0.", resp))
 	case "mongodb-database-plugin":
-		details := resp.Data["connection_details"]
-		data, ok := details.(map[string]interface{})
-		if ok {
-			result := map[string]interface{}{}
-			if v, ok := d.GetOk("mongodb.0." + "connection_url"); ok {
-				result["connection_url"] = v.(string)
-			} else {
-				if v, ok := data["connection_url"]; ok {
-					result["connection_url"] = v.(string)
-				}
-			}
-			d.Set("mongodb", []map[string]interface{}{result})
-		}
+		d.Set("mongodb", getConnectionDetailsFromResponse(d, "mongodb.0.", resp))
 	case "mssql-database-plugin":
 		d.Set("mssql", getConnectionDetailsFromResponse(d, "mssql.0.", resp))
 	case "mysql-database-plugin":
