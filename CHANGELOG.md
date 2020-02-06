@@ -7,6 +7,7 @@ IMPROVEMENTS:
 * Updates to Go 1.13 ([#642](https://github.com/terraform-providers/terraform-provider-vault/pull/642)).
 * Adds doc on multiple namespace support ([#654](https://github.com/terraform-providers/terraform-provider-vault/pull/654)).
 * Sorts `vault_policy_document` data source allowed/denied parameters by key name ([#656](https://github.com/terraform-providers/terraform-provider-vault/pull/656)).
+* Adds support to `vault_auth_backend` for common backend tune parameters. Also allows updating Max TTL, Default TTL and Visibility Listing tuning settings on `vault_auth_backend` without forcing a new resource ([#650](https://github.com/terraform-providers/terraform-provider-vault/pull/650)).
 
 BUG FIXES:
 
