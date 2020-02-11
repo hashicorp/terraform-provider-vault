@@ -66,7 +66,7 @@ The following arguments are supported:
 
 Use of this resource requires the `create` or `update` capability
 (depending on whether the resource already exists) on the given path,
-the `delete` capbility if the resource is removed from configuration,
+the `delete` capability if the resource is removed from configuration,
 and the `read` capability for drift detection (by default).
 
 ### Drift Detection
