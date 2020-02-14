@@ -236,7 +236,7 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["groupattr"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("use_token_groups"); ok {
+	if v, ok := d.GetOkExists("use_token_groups"); ok {
 		data["use_token_groups"] = v.(bool)
 	}
 
