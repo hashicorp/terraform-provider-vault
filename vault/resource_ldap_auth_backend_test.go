@@ -223,9 +223,9 @@ resource "vault_ldap_auth_backend" "test" {
     bindpass               = "supersecurepassword"
     discoverdn             = false
     deny_null_bind         = true
-		description            = "example"
+    description            = "example"
 
-		use_token_groups = %s
+    use_token_groups = %s
 }
 `, path, use_token_groups)
 
