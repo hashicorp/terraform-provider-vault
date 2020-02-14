@@ -219,6 +219,10 @@ var (
 	}
 
 	ResourceRegistry = map[string]*Description{
+		"vault_alicloud_auth_backend_role": {
+			Resource:      alicloudAuthBackendRoleResource(),
+			PathInventory: []string{"/auth/alicloud/role/{name}"},
+		},
 		"vault_approle_auth_backend_login": {
 			Resource:      approleAuthBackendLoginResource(),
 			PathInventory: []string{"/auth/approle/login"},
