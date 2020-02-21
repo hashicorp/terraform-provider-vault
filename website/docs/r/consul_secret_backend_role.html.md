@@ -22,7 +22,7 @@ resource "vault_consul_secret_backend" "test" {
 }
 
 resource "vault_consul_secret_backend_role" "example" {
-  name = "test-role"
+  name    = "test-role"
   backend = vault_consul_secret_backend.test.path
 
   policies = [
