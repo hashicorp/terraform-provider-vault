@@ -66,15 +66,16 @@ The following arguments are supported:
 
 Use of this resource requires the `create` or `update` capability
 (depending on whether the resource already exists) on the given path,
-along with the `delete` capbility if the resource is removed from
-configuration.
+the `delete` capability if the resource is removed from configuration,
+and the `read` capability for drift detection (by default).
 
-This resource does not *read* the secret data back from Terraform
-on refresh by default. This avoids the need for `read` access on the given
-path, but it means that Terraform is not able to detect and repair
-"drift" on this resource should the data be updated or deleted outside
-of Terraform. This limitation can be negated by setting `allow_read` to
-true
+### Drift Detection
+
+This resource does not necessarily need to *read* the secret data back from
+Terraform on refresh. To avoid the need for `read` access on the given path
+set the `disable_read` argument to `true`. This means that Terraform *will not*
+be able to detect and repair "drift" on this resource,
+should the data be updated or deleted outside of Terraform.
 
 ## Attributes Reference
 
