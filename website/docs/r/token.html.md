@@ -49,7 +49,7 @@ The following arguments are supported:
 
 * `policies` - (Optional) List of policies to attach to this token
 
-* `metadata` - (Optional) A map of string to string valued metadata to be set on the tokens
+* `metadata` - (Optional) A map of string to string valued metadata to be set on the token
 
 * `no_parent` - (Optional) Flag to create a token without parent
 
