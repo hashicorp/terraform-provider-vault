@@ -141,6 +141,7 @@ github.com/hashicorp/terraform-config-inspect/tfconfig
 # github.com/hashicorp/terraform-plugin-sdk v1.4.1
 github.com/hashicorp/terraform-plugin-sdk/helper/acctest
 github.com/hashicorp/terraform-plugin-sdk/helper/customdiff
+github.com/hashicorp/terraform-plugin-sdk/helper/encryption
 github.com/hashicorp/terraform-plugin-sdk/helper/hashcode
 github.com/hashicorp/terraform-plugin-sdk/helper/logging
 github.com/hashicorp/terraform-plugin-sdk/helper/mutexkv
@@ -182,6 +183,9 @@ github.com/hashicorp/terraform-plugin-sdk/internal/states
 github.com/hashicorp/terraform-plugin-sdk/internal/states/statefile
 github.com/hashicorp/terraform-plugin-sdk/internal/tfdiags
 github.com/hashicorp/terraform-plugin-sdk/internal/tfplugin5
+github.com/hashicorp/terraform-plugin-sdk/internal/vault/helper/pgpkeys
+github.com/hashicorp/terraform-plugin-sdk/internal/vault/sdk/helper/compressutil
+github.com/hashicorp/terraform-plugin-sdk/internal/vault/sdk/helper/jsonutil
 github.com/hashicorp/terraform-plugin-sdk/internal/version
 github.com/hashicorp/terraform-plugin-sdk/meta
 github.com/hashicorp/terraform-plugin-sdk/plugin
@@ -222,6 +226,20 @@ github.com/hashicorp/vault/sdk/version
 github.com/hashicorp/yamux
 # github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af
 github.com/jmespath/go-jmespath
+# github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
+github.com/keybase/go-crypto/brainpool
+github.com/keybase/go-crypto/cast5
+github.com/keybase/go-crypto/curve25519
+github.com/keybase/go-crypto/ed25519
+github.com/keybase/go-crypto/ed25519/internal/edwards25519
+github.com/keybase/go-crypto/openpgp
+github.com/keybase/go-crypto/openpgp/armor
+github.com/keybase/go-crypto/openpgp/ecdh
+github.com/keybase/go-crypto/openpgp/elgamal
+github.com/keybase/go-crypto/openpgp/errors
+github.com/keybase/go-crypto/openpgp/packet
+github.com/keybase/go-crypto/openpgp/s2k
+github.com/keybase/go-crypto/rsa
 # github.com/mattn/go-colorable v0.1.1
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.5
