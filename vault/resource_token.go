@@ -145,10 +145,9 @@ func tokenResource() *schema.Resource {
 				Sensitive:   true,
 			},
 			"pgp_key": {
-				Type:          schema.TypeString,
-				ForceNew:      true,
-				Optional:      true,
-				ConflictsWith: []string{"renewable"},
+				Type:     schema.TypeString,
+				ForceNew: true,
+				Optional: true,
 			},
 			"encrypted_client_token": {
 				Type:        schema.TypeString,
@@ -341,6 +340,11 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("lease_duration", int(expireTime.Sub(issueTime).Seconds()))
 
 	if d.Get("renewable").(bool) && tokenCheckLease(d) {
+		if id == "" {
+			log.Printf("[DEBUG] Lease for token access %q cannot be renewed as it's been encrypted.", accessor)
+			return nil
+		}
+
 		log.Printf("[DEBUG] Lease for token accessor %q expiring soon, renewing", accessor)
 
 		increment := d.Get("lease_duration").(int)
