@@ -38,8 +38,8 @@ func oktaAuthBackendGroupResource() *schema.Resource {
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
 					value := v.(string)
 					// No comma as it'll become part of a comma separate list
-					if strings.Contains(value, ",") || strings.Contains(value, "/") {
-						errs = append(errs, errors.New("group name cannot contain ',' or '/'"))
+					if strings.Contains(value, ",") {
+						errs = append(errs, errors.New("group name cannot contain ','"))
 					}
 					return
 				},
@@ -179,7 +179,7 @@ func oktaAuthBackendGroupID(path, groupName string) string {
 }
 
 func oktaAuthBackendGroupPathFromID(id string) (string, error) {
-	var parts = strings.Split(id, "/")
+	var parts = strings.SplitN(id, "/", 2)
 	if len(parts) != 2 {
 		return "", fmt.Errorf("Expected 2 parts in ID '%s'", id)
 	}
@@ -187,7 +187,7 @@ func oktaAuthBackendGroupPathFromID(id string) (string, error) {
 }
 
 func oktaAuthBackendGroupNameFromID(id string) (string, error) {
-	var parts = strings.Split(id, "/")
+	var parts = strings.SplitN(id, "/", 2)
 	if len(parts) != 2 {
 		return "", fmt.Errorf("Expected 2 parts in ID '%s'", id)
 	}
