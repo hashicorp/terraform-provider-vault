@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/helper/encryption"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
@@ -143,6 +144,18 @@ func tokenResource() *schema.Resource {
 				Description: "The client wrapping accessor.",
 				Sensitive:   true,
 			},
+			"pgp_key": {
+				Type:          schema.TypeString,
+				ForceNew:      true,
+				Optional:      true,
+				ConflictsWith: []string{"renewable"},
+			},
+			"encrypted_client_token": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The client token encrypted using the provided PGP key.",
+				Sensitive:   true,
+			},
 		},
 	}
 }
@@ -253,7 +266,23 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		d.Set("wrapped_token", resp.WrapInfo.Token)
 		d.Set("wrapping_accessor", resp.WrapInfo.Accessor)
 	} else {
-		d.Set("client_token", resp.Auth.ClientToken)
+		if v, ok := d.GetOk("pgp_key"); ok {
+			pgpKey := v.(string)
+			encryptionKey, err := encryption.RetrieveGPGKey(pgpKey)
+			if err != nil {
+				return err
+			}
+			_, encrypted, err := encryption.EncryptValue(encryptionKey, resp.Auth.ClientToken, "Vault Token")
+			if err != nil {
+				return err
+			}
+			d.Set("client_token", "")
+			d.Set("encrypted_client_token", encrypted)
+		} else {
+			d.Set("pgp_key", "")
+			d.Set("client_token", resp.Auth.ClientToken)
+			d.Set("encrypted_client_token", "")
+		}
 	}
 
 	d.SetId(accessor)
