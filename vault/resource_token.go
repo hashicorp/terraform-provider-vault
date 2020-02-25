@@ -321,6 +321,12 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("renewable", resp.Data["renewable"])
 	d.Set("display_name", strings.TrimPrefix(resp.Data["display_name"].(string), "token-"))
 	d.Set("num_uses", resp.Data["num_uses"])
+	if _, ok := d.GetOk("pgp_key"); !ok {
+		d.Set("pgp_key", "")
+	}
+	if _, ok := d.GetOk("encrypted_client_token"); !ok {
+		d.Set("encrypted_client_token", "")
+	}
 
 	issueTime, err := time.Parse(time.RFC3339Nano, resp.Data["issue_time"].(string))
 	if err != nil {
