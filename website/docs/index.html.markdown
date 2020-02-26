@@ -32,7 +32,7 @@ This webinar walks you through how to protect secrets when using Terraform with 
 
 ## Configuring and Populating Vault
 
-Terraform can be used by the Vault adminstrators to configure Vault and
+Terraform can be used by the Vault administrators to configure Vault and
 populate it with secrets. In this case, the state and any plans associated
 with the configuration must be stored and communicated with care, since they
 will contain in cleartext any values that were written into Vault.
