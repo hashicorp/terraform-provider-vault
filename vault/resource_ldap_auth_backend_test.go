@@ -22,7 +22,7 @@ func TestLDAPAuthBackend_import(t *testing.T) {
 		CheckDestroy: testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_basic(path),
+				Config: testLDAPAuthBackendConfig_basic(path, "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 			{
@@ -44,7 +44,15 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 		CheckDestroy: testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_basic(path),
+				Config: testLDAPAuthBackendConfig_basic(path, "true"),
+				Check:  testLDAPAuthBackendCheck_attrs(path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_basic(path, "false"),
+				Check:  testLDAPAuthBackendCheck_attrs(path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_basic(path, "true"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 		},
@@ -201,7 +209,7 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 	}
 }
 
-func testLDAPAuthBackendConfig_basic(path string) string {
+func testLDAPAuthBackendConfig_basic(path, use_token_groups string) string {
 
 	return fmt.Sprintf(`
 resource "vault_ldap_auth_backend" "test" {
@@ -216,7 +224,9 @@ resource "vault_ldap_auth_backend" "test" {
     discoverdn             = false
     deny_null_bind         = true
     description            = "example"
+
+    use_token_groups = %s
 }
-`, path)
+`, path, use_token_groups)
 
 }
