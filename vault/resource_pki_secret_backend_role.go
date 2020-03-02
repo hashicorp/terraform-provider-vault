@@ -303,6 +303,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Optional:     true,
 				Description:  "Specifies the duration by which to backdate the NotBefore property.",
 				ValidateFunc: validateDuration,
+				Default:      "30s",
 			},
 		},
 	}
@@ -462,6 +463,8 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		policyIdentifiers = append(policyIdentifiers, iIdentifier.(string))
 	}
 
+	notBeforeDuration := flattenVaultDuration(secret.Data["not_before_duration"])
+
 	d.Set("backend", backend)
 	d.Set("name", name)
 	d.Set("ttl", secret.Data["ttl"])
@@ -498,8 +501,6 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("require_cn", secret.Data["require_cn"])
 	d.Set("policy_identifiers", policyIdentifiers)
 	d.Set("basic_constraints_valid_for_non_ca", secret.Data["basic_constraints_valid_for_non_ca"])
-
-	notBeforeDuration := flattenVaultDuration(secret.Data["not_before_duration"])
 	d.Set("not_before_duration", notBeforeDuration)
 
 	return nil
