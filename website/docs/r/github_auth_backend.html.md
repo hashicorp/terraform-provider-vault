@@ -35,6 +35,8 @@ The following arguments are supported:
 * `description` - (Optional) Specifies the description of the mount.
   This overrides the current stored value, if any.
 
+* tune - (Optional) Extra configuration block. Structure is documented below.
+
 The `tune` block is used to tune the auth backend:
 
 * `default_lease_ttl` - (Optional) Specifies the default time-to-live.
