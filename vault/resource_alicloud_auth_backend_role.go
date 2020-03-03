@@ -56,7 +56,7 @@ func alicloudAuthBackendRolePath(backend, role string) string {
 func alicloudAuthBackendFromPath(path string) (string, error) {
 	var parts = strings.Split(path, "/")
 	if len(parts) != 4 {
-		return "", fmt.Errorf("Expecdted 4 parts in path '%s'", path)
+		return "", fmt.Errorf("expected 4 parts in path '%s'", path)
 	}
 	return parts[1], nil
 }
@@ -64,7 +64,7 @@ func alicloudAuthBackendFromPath(path string) (string, error) {
 func alicloudAuthRoleFromPath(path string) (string, error) {
 	var parts = strings.Split(path, "/")
 	if len(parts) != 4 {
-		return "", fmt.Errorf("Expecdted 4 parts in path '%s'", path)
+		return "", fmt.Errorf("expected 4 parts in path '%s'", path)
 	}
 	return parts[3], nil
 }
@@ -97,7 +97,7 @@ func alicloudAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) err
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing AliCloud auth role %q: %s", path, err)
+		return fmt.Errorf("error writing AliCloud auth role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote role %q to AliCloud auth backend", path)
 
@@ -114,7 +114,7 @@ func alicloudAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) err
 	log.Printf("[DEBUG] Updating role %q in AliCloud auth backend", path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error updating AliCloud auth role %q: %s", path, err)
+		return fmt.Errorf("error updating AliCloud auth role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated role %q to AliCloud auth backend", path)
 
@@ -128,7 +128,7 @@ func alicloudAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[DEBUG] Reading AliCloud role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading AliCloud role %q: %s", path, err)
+		return fmt.Errorf("error reading AliCloud role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read AliCloud role %q", path)
 
@@ -169,7 +169,7 @@ func alicloudAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) err
 	log.Printf("[DEBUG] Deleting AliCloud role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting AliCloud role %q", path)
+		return fmt.Errorf("error deleting AliCloud role %q", path)
 	}
 	log.Printf("[DEBUG] Deleted AliCloud role %q", path)
 
