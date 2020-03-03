@@ -304,7 +304,6 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Computed:     true,
 				Description:  "Specifies the duration by which to backdate the NotBefore property.",
 				ValidateFunc: validateDuration,
-				Default:      "30s",
 			},
 		},
 	}
