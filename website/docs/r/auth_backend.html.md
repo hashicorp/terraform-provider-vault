@@ -14,6 +14,11 @@ description: |-
 ```hcl
 resource "vault_auth_backend" "example" {
   type = "github"
+
+  tune {
+    max_lease_ttl      = "90000s"
+    listing_visibility = "unauth"
+  }
 }
 ```
 
@@ -27,13 +32,41 @@ The following arguments are supported:
 
 * `description` - (Optional) A description of the auth method
 
-* `default_lease_ttl_seconds` - (Optional) The default lease duration in seconds.
+* `default_lease_ttl_seconds` - (Optional; Deprecated, use the `tune` block's `default_lease_ttl` attribute instead) The default lease duration in seconds.
 
-* `max_lease_ttl_seconds` - (Optional) The maximum lease duration in seconds.
+* `max_lease_ttl_seconds` - (Optional; Deprecated, use the `tune` block's `max_lease_ttl` attribute instead) The maximum lease duration in seconds.
 
-* `listing_visibility` - (Optional) Speficies whether to show this mount in the UI-specific listing endpoint.
+* `listing_visibility` - (Optional; Deprecated, use the `tune` block's `listing_visibility` attribute instead) Specifies whether to show this mount in the UI-specific listing endpoint.
 
 * `local` - (Optional) Specifies if the auth method is local only.
+
+The `tune` block is used to tune the auth backend:
+
+* `default_lease_ttl` - (Optional) Specifies the default time-to-live.
+  If set, this overrides the global default.
+  Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+
+* `max_lease_ttl` - (Optional) Specifies the maximum time-to-live.
+  If set, this overrides the global default.
+  Must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration)
+
+* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will
+  not be HMAC'd by audit devices in the response data object.
+
+* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will
+  not be HMAC'd by audit devices in the request data object.
+
+* `listing_visibility` - (Optional) Specifies whether to show this mount in
+  the UI-specific listing endpoint. Valid values are "unauth" or "hidden".
+
+* `passthrough_request_headers` - (Optional) List of headers to whitelist and
+  pass from the request to the backend.
+
+* `allowed_response_headers` - (Optional) List of headers to whitelist and allowing
+  a plugin to include them in the response.
+
+* `token_type` - (Optional) Specifies the type of tokens that should be returned by
+  the mount. Valid values are "default-service", "default-batch", "service", "batch".
 
 ## Attributes Reference
 
