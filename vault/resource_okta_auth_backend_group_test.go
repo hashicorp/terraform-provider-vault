@@ -14,6 +14,7 @@ import (
 // This is light on testing as most of the code is covered by `resource_okta_auth_backend_test.go`
 func TestAccOktaAuthBackendGroup(t *testing.T) {
 	path := "okta-" + strconv.Itoa(acctest.RandInt())
+	organization := "dummy"
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -21,7 +22,7 @@ func TestAccOktaAuthBackendGroup(t *testing.T) {
 		CheckDestroy: testAccOktaAuthBackendGroup_Destroyed(path, "foo"),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOktaAuthGroupConfig(path),
+				Config: testAccOktaAuthGroupConfig(path, organization),
 				Check: resource.ComposeTestCheckFunc(
 					testAccOktaAuthBackendGroup_InitialCheck,
 					testAccOktaAuthBackend_GroupsCheck(path, "foo", []string{"one", "two", "default"}),
@@ -36,11 +37,11 @@ func TestAccOktaAuthBackendGroup(t *testing.T) {
 	})
 }
 
-func testAccOktaAuthGroupConfig(path string) string {
+func testAccOktaAuthGroupConfig(path string, organization string) string {
 	return fmt.Sprintf(`
 resource "vault_okta_auth_backend" "test" {
     path = "%s"
-    organization = "dummy"
+    organization = "%s"
 }
 
 resource "vault_okta_auth_backend_group" "test" {
@@ -48,7 +49,7 @@ resource "vault_okta_auth_backend_group" "test" {
     group_name = "foo"
     policies = ["one", "two", "default"]
 }
-`, path)
+`, path, organization)
 }
 
 func testAccOktaAuthBackendGroup_InitialCheck(s *terraform.State) error {

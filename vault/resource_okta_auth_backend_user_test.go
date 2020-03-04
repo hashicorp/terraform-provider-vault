@@ -13,6 +13,7 @@ import (
 // This is light on testing as most of the code is covered by `resource_okta_auth_backend_test.go`
 func TestAccOktaAuthBackendUser(t *testing.T) {
 	path := "okta-" + strconv.Itoa(acctest.RandInt())
+	organization := "dummy"
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -20,7 +21,7 @@ func TestAccOktaAuthBackendUser(t *testing.T) {
 		CheckDestroy: testAccOktaAuthBackendUser_Destroyed(path, "user_test"),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOktaAuthUserConfig(path),
+				Config: testAccOktaAuthUserConfig(path, organization),
 				Check: resource.ComposeTestCheckFunc(
 					testAccOktaAuthBackendUser_InitialCheck,
 					testAccOktaAuthBackend_UsersCheck(path, "user_test", []string{"one", "two"}, []string{"three"}),
@@ -30,11 +31,11 @@ func TestAccOktaAuthBackendUser(t *testing.T) {
 	})
 }
 
-func testAccOktaAuthUserConfig(path string) string {
+func testAccOktaAuthUserConfig(path string, organization string) string {
 	return fmt.Sprintf(`
 resource "vault_okta_auth_backend" "test" {
     path = "%s"
-    organization = "dummy"
+    organization = "%s"
 }
 
 resource "vault_okta_auth_backend_user" "test" {
@@ -43,7 +44,7 @@ resource "vault_okta_auth_backend_user" "test" {
     groups = ["one", "two"]
     policies = ["three"]
 }
-`, path)
+`, path, organization)
 }
 
 func testAccOktaAuthBackendUser_InitialCheck(s *terraform.State) error {
