@@ -106,8 +106,9 @@ func TestResourceToken_full(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_token.test", "num_uses", "1"),
 					resource.TestCheckResourceAttr("vault_token.test", "period", "0"),
 					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "59"),
-					resource.TestCheckResourceAttr("vault_token.test", "metadata.foo", "bar"),
-					resource.TestCheckResourceAttr("vault_token.test", "metadata.baz", "qux"),
+					resource.TestCheckResourceAttr("vault_token.test", "meta.foo", "bar"),
+					resource.TestCheckResourceAttr("vault_token.test", "meta.baz", "qux"),
+					resource.TestCheckResourceAttr("vault_token.test", "meta.number", "1"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
 				),
@@ -133,9 +134,10 @@ resource "vault_token" "test" {
 	ttl = "60s"
     explicit_max_ttl = "1h"
     display_name = "test"
-    metadata = {
+    meta = {
         foo = "bar"
         baz = "qux"
+        number = 1
     }
     num_uses = 1
 	period = 0

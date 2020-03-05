@@ -89,7 +89,7 @@ func tokenResource() *schema.Resource {
 				Default:     "token",
 				Description: "The display name of the token.",
 			},
-			"metadata": {
+			"meta": {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				ForceNew:    true,
@@ -196,7 +196,7 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		createRequest.DisplayName = v.(string)
 	}
 
-	if v, ok := d.GetOk("metadata"); ok {
+	if v, ok := d.GetOk("meta"); ok {
 		metadata := metaFromMap(v.(map[string]interface{}))
 		createRequest.Metadata = metadata
 	}
@@ -302,7 +302,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("no_parent", resp.Data["orphan"])
 	d.Set("renewable", resp.Data["renewable"])
 	d.Set("display_name", strings.TrimPrefix(resp.Data["display_name"].(string), "token-"))
-	d.Set("metadata", resp.Data["meta"])
+	d.Set("meta", resp.Data["meta"])
 	d.Set("num_uses", resp.Data["num_uses"])
 
 	issueTime, err := time.Parse(time.RFC3339Nano, resp.Data["issue_time"].(string))
