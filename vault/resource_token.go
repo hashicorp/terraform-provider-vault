@@ -93,7 +93,7 @@ func tokenResource() *schema.Resource {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "A map of string to string valued metadata.",
+				Description: "A map of string to string valued metadata. This is passed through to the audit devices.",
 			},
 			"num_uses": {
 				Type:        schema.TypeInt,
