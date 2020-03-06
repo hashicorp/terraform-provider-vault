@@ -1,6 +1,6 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_auth_backend resource"
+page_title: "Vault: vault_gcp_auth_backend_role resource"
 sidebar_current: "docs-vault-resource-gcp-auth-backend-role"
 description: |-
   Managing roles in an GCP auth backend in Vault
@@ -19,7 +19,7 @@ resource "vault_auth_backend" "gcp" {
 }
 
 resource "vault_gcp_auth_backend_role" "gcp" {
-    backend                = vault_auth_backend.cert.path
+    backend                = vault_auth_backend.gcp.path
     project_id             = "foo-bar-baz"
     bound_service_accounts = ["database-server@foo-bar-baz.iam.gserviceaccount.com"]
     token_policies         = ["database-server"]
