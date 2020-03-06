@@ -75,6 +75,8 @@ The following arguments are supported:
 
 * `oracle` - (Optional) A nested block containing configuration options for Oracle connections.
 
+* `elasticsearch` - (Optional) A nested block containing configuration options for Elasticsearch connections.
+
 Exactly one of the nested blocks of configuration options must be supplied.
 
 ### Cassandra Configuration Options
@@ -189,6 +191,15 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
+
+### Elasticsearch Configuration Options
+
+* `url` - (Required) The URL for Elasticsearch's API. https requires certificate
+  by trusted CA if used.
+
+* `username` - (Required) The username to be used in the connection.
+
+* `password` - (Required) The password to be used in the connection.
 
 ## Attributes Reference
 
