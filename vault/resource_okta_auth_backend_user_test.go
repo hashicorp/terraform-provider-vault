@@ -11,30 +11,31 @@ import (
 )
 
 // This is light on testing as most of the code is covered by `resource_okta_auth_backend_test.go`
-func TestOktaAuthBackendUser(t *testing.T) {
+func TestAccOktaAuthBackendUser(t *testing.T) {
 	path := "okta-" + strconv.Itoa(acctest.RandInt())
+	organization := "dummy"
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testOktaAuthBackendUser_Destroyed(path, "user_test"),
+		CheckDestroy: testAccOktaAuthBackendUser_Destroyed(path, "user_test"),
 		Steps: []resource.TestStep{
 			{
-				Config: initialOktaAuthUserConfig(path),
+				Config: testAccOktaAuthUserConfig(path, organization),
 				Check: resource.ComposeTestCheckFunc(
-					testOktaAuthBackendUser_InitialCheck,
-					testOktaAuthBackend_UsersCheck(path, "user_test", []string{"one", "two"}, []string{"three"}),
+					testAccOktaAuthBackendUser_InitialCheck,
+					testAccOktaAuthBackend_UsersCheck(path, "user_test", []string{"one", "two"}, []string{"three"}),
 				),
 			},
 		},
 	})
 }
 
-func initialOktaAuthUserConfig(path string) string {
+func testAccOktaAuthUserConfig(path string, organization string) string {
 	return fmt.Sprintf(`
 resource "vault_okta_auth_backend" "test" {
     path = "%s"
-    organization = "dummy"
+    organization = "%s"
 }
 
 resource "vault_okta_auth_backend_user" "test" {
@@ -43,10 +44,10 @@ resource "vault_okta_auth_backend_user" "test" {
     groups = ["one", "two"]
     policies = ["three"]
 }
-`, path)
+`, path, organization)
 }
 
-func testOktaAuthBackendUser_InitialCheck(s *terraform.State) error {
+func testAccOktaAuthBackendUser_InitialCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["vault_okta_auth_backend_user.test"]
 	if resourceState == nil {
 		return fmt.Errorf("resource not found in state")
@@ -60,7 +61,7 @@ func testOktaAuthBackendUser_InitialCheck(s *terraform.State) error {
 	return nil
 }
 
-func testOktaAuthBackendUser_Destroyed(path, userName string) resource.TestCheckFunc {
+func testAccOktaAuthBackendUser_Destroyed(path, userName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*api.Client)
 

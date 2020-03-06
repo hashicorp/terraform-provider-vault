@@ -14,39 +14,40 @@ import (
 	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
-func TestOktaAuthBackend(t *testing.T) {
+func TestAccOktaAuthBackend(t *testing.T) {
 	path := "okta-" + strconv.Itoa(acctest.RandInt())
+	organization := "example"
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testOktaAuthBackend_Destroyed(path),
+		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
-				Config: initialOktaAuthConfig(path),
+				Config: testAccOktaAuthConfig_basic(path, organization),
 				Check: resource.ComposeTestCheckFunc(
-					testOktaAuthBackend_InitialCheck,
-					testOktaAuthBackend_GroupsCheck(path, "dummy", []string{"one", "two", "default"}),
-					testOktaAuthBackend_UsersCheck(path, "foo", []string{"dummy"}, []string{}),
+					testAccOktaAuthBackend_InitialCheck,
+					testAccOktaAuthBackend_GroupsCheck(path, "dummy", []string{"one", "two", "default"}),
+					testAccOktaAuthBackend_UsersCheck(path, "foo", []string{"dummy"}, []string{}),
 				),
 			},
 			{
-				Config: updatedOktaAuthConfig(path),
+				Config: testAccOktaAuthConfig_updated(path, organization),
 				Check: resource.ComposeTestCheckFunc(
-					testOktaAuthBackend_GroupsCheck(path, "example", []string{"three", "four", "default"}),
-					testOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{}),
+					testAccOktaAuthBackend_GroupsCheck(path, "example", []string{"three", "four", "default"}),
+					testAccOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{}),
 				),
 			},
 		},
 	})
 }
 
-func initialOktaAuthConfig(path string) string {
+func testAccOktaAuthConfig_basic(path string, organization string) string {
 	return fmt.Sprintf(`
 resource "vault_okta_auth_backend" "test" {
     description = "Testing the Terraform okta auth backend"
-    organization = "example"
     path = "%s"
+    organization = "%s"
     token = "this must be kept secret"
     ttl = "1h"
     group {
@@ -58,10 +59,29 @@ resource "vault_okta_auth_backend" "test" {
         groups = ["dummy"]
     }
 }
-`, path)
+`, path, organization)
 }
 
-func testOktaAuthBackend_InitialCheck(s *terraform.State) error {
+func testAccOktaAuthConfig_updated(path string, organization string) string {
+	return fmt.Sprintf(`
+resource "vault_okta_auth_backend" "test" {
+    description = "Testing the Terraform okta auth backend"
+    path = "%s"
+    organization = "%s"
+    token = "this must be kept secret"
+    group {
+        group_name = "example"
+        policies = ["three", "four", "default"]
+    }
+    user {
+        username = "bar"
+        groups = ["example"]
+    }
+}
+`, path, organization)
+}
+
+func testAccOktaAuthBackend_InitialCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["vault_okta_auth_backend.test"]
 	if resourceState == nil {
 		return fmt.Errorf("resource not found in state")
@@ -124,7 +144,7 @@ func testOktaAuthBackend_InitialCheck(s *terraform.State) error {
 	return nil
 }
 
-func testOktaAuthBackend_GroupsCheck(path, groupName string, expectedPolicies []string) resource.TestCheckFunc {
+func testAccOktaAuthBackend_GroupsCheck(path, groupName string, expectedPolicies []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*api.Client)
 
@@ -165,7 +185,7 @@ func testOktaAuthBackend_GroupsCheck(path, groupName string, expectedPolicies []
 
 }
 
-func testOktaAuthBackend_UsersCheck(path, userName string, expectedGroups, expectedPolicies []string) resource.TestCheckFunc {
+func testAccOktaAuthBackend_UsersCheck(path, userName string, expectedGroups, expectedPolicies []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*api.Client)
 
@@ -229,26 +249,7 @@ func testOktaAuthBackend_UsersCheck(path, userName string, expectedGroups, expec
 
 }
 
-func updatedOktaAuthConfig(path string) string {
-	return fmt.Sprintf(`
-resource "vault_okta_auth_backend" "test" {
-    description = "Testing the Terraform okta auth backend"
-    organization = "example"
-    path = "%s"
-    token = "this must be kept secret"
-    group {
-        group_name = "example"
-        policies = ["three", "four", "default"]
-    }
-    user {
-        username = "bar"
-        groups = ["example"]
-    }
-}
-`, path)
-}
-
-func testOktaAuthBackend_Destroyed(path string) resource.TestCheckFunc {
+func testAccOktaAuthBackend_Destroyed(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 
 		client := testProvider.Meta().(*api.Client)

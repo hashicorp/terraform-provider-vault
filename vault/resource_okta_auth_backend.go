@@ -104,8 +104,8 @@ func oktaAuthBackendResource() *schema.Resource {
 							ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
 								value := v.(string)
 								// No comma as it'll become part of a comma separate list
-								if strings.Contains(value, ",") || strings.Contains(value, "/") {
-									errs = append(errs, errors.New("group cannot contain ',' or '/'"))
+								if strings.Contains(value, ",") {
+									errs = append(errs, errors.New("group cannot contain ','"))
 								}
 								return
 							},
@@ -150,8 +150,8 @@ func oktaAuthBackendResource() *schema.Resource {
 								ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
 									value := v.(string)
 									// No comma as it'll become part of a comma separate list
-									if strings.Contains(value, ",") || strings.Contains(value, "/") {
-										errs = append(errs, errors.New("group cannot contain ',' or '/'"))
+									if strings.Contains(value, ",") {
+										errs = append(errs, errors.New("group cannot contain ','"))
 									}
 									return
 								},

@@ -12,19 +12,20 @@ import (
 )
 
 // This is light on testing as most of the code is covered by `resource_okta_auth_backend_test.go`
-func TestOktaAuthBackendGroup(t *testing.T) {
+func TestAccOktaAuthBackendGroup_basic(t *testing.T) {
 	path := "okta-" + strconv.Itoa(acctest.RandInt())
+	organization := "dummy"
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testOktaAuthBackendGroup_Destroyed(path, "foo"),
+		CheckDestroy: testAccOktaAuthBackendGroup_Destroyed(path, "foo"),
 		Steps: []resource.TestStep{
 			{
-				Config: initialOktaAuthGroupConfig(path),
+				Config: testAccOktaAuthGroupConfig_basic(path, organization),
 				Check: resource.ComposeTestCheckFunc(
-					testOktaAuthBackendGroup_InitialCheck,
-					testOktaAuthBackend_GroupsCheck(path, "foo", []string{"one", "two", "default"}),
+					testAccOktaAuthBackendGroup_InitialCheck,
+					testAccOktaAuthBackend_GroupsCheck(path, "foo", []string{"one", "two", "default"}),
 				),
 			},
 			{
@@ -36,11 +37,37 @@ func TestOktaAuthBackendGroup(t *testing.T) {
 	})
 }
 
-func initialOktaAuthGroupConfig(path string) string {
+/* Test config which contains a special character "/" in the group name */
+func TestAccOktaAuthBackendGroup_specialChar(t *testing.T) {
+	path := "okta-" + strconv.Itoa(acctest.RandInt())
+	organization := "dummy"
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccOktaAuthBackendGroup_Destroyed(path, "foo/bar"),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOktaAuthGroupConfig_specialChar(path, organization),
+				Check: resource.ComposeTestCheckFunc(
+					testAccOktaAuthBackendGroup_InitialCheck,
+					testAccOktaAuthBackend_GroupsCheck(path, "foo/bar", []string{"one", "two", "default"}),
+				),
+			},
+			{
+				ResourceName:      "vault_okta_auth_backend_group.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func testAccOktaAuthGroupConfig_basic(path string, organization string) string {
 	return fmt.Sprintf(`
 resource "vault_okta_auth_backend" "test" {
     path = "%s"
-    organization = "dummy"
+    organization = "%s"
 }
 
 resource "vault_okta_auth_backend_group" "test" {
@@ -48,10 +75,25 @@ resource "vault_okta_auth_backend_group" "test" {
     group_name = "foo"
     policies = ["one", "two", "default"]
 }
-`, path)
+`, path, organization)
 }
 
-func testOktaAuthBackendGroup_InitialCheck(s *terraform.State) error {
+func testAccOktaAuthGroupConfig_specialChar(path string, organization string) string {
+	return fmt.Sprintf(`
+resource "vault_okta_auth_backend" "test" {
+    path = "%s"
+    organization = "%s"
+}
+
+resource "vault_okta_auth_backend_group" "test" {
+    path = "${vault_okta_auth_backend.test.path}"
+    group_name = "foo/bar"
+    policies = ["one", "two", "default"]
+}
+`, path, organization)
+}
+
+func testAccOktaAuthBackendGroup_InitialCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["vault_okta_auth_backend_group.test"]
 	if resourceState == nil {
 		return fmt.Errorf("resource not found in state")
@@ -65,7 +107,7 @@ func testOktaAuthBackendGroup_InitialCheck(s *terraform.State) error {
 	return nil
 }
 
-func testOktaAuthBackendGroup_Destroyed(path, groupName string) resource.TestCheckFunc {
+func testAccOktaAuthBackendGroup_Destroyed(path, groupName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*api.Client)
 
