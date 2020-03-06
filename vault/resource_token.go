@@ -145,9 +145,10 @@ func tokenResource() *schema.Resource {
 				Sensitive:   true,
 			},
 			"pgp_key": {
-				Type:     schema.TypeString,
-				ForceNew: true,
-				Optional: true,
+				Type:        schema.TypeString,
+				ForceNew:    true,
+				Optional:    true,
+				Description: "The PGP key (base64 encoded) to encrypt the token.",
 			},
 			"encrypted_client_token": {
 				Type:        schema.TypeString,
