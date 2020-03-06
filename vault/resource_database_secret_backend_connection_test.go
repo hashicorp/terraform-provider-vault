@@ -372,6 +372,38 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
+	connURL := os.Getenv("ELASTIC_URL")
+	if connURL == "" {
+		t.Skip("ELASTIC_URL not set")
+	}
+
+	username := os.Getenv("ELASTIC_USERNAME")
+	password := os.Getenv("ELASTIC_PASSWORD")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_elasticsearch(name, backend, connURL, username, password),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "verify_connection", "true"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "elasticsearch.0.url", connURL),
+				),
+			},
+		},
+	})
+}
+
 func testAccDatabaseSecretBackendConnectionCheckDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
@@ -432,6 +464,28 @@ resource "vault_database_secret_backend_connection" "test" {
     password = "%s"
     tls = false
     protocol_version = 5
+  }
+}
+`, path, name, host, username, password)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_elasticsearch(name, path, host, username, password string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = "${vault_mount.db.path}"
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  elasticsearch {
+    url = "%s"
+    username = "%s"
+    password = "%s"
   }
 }
 `, path, name, host, username, password)
