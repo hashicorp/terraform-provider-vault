@@ -101,6 +101,8 @@ The following arguments are supported:
 
 * `basic_constraints_valid_for_non_ca` - (Optional) Flag to mark basic constraints valid when issuing non-CA certificates
 
+* `not_before_duration` - (Optional) Specifies the duration by which to backdate the NotBefore property.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
