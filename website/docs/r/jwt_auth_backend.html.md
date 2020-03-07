@@ -71,6 +71,8 @@ The following arguments are supported:
 
 * `default_role` - (Optional) The default role to use if none is provided during login
 
+* tune - (Optional) Extra configuration block. Structure is documented below.
+
 The `tune` block is used to tune the auth backend:
 
 * `default_lease_ttl` - (Optional) Specifies the default time-to-live.

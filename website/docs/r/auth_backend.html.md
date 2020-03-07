@@ -32,13 +32,9 @@ The following arguments are supported:
 
 * `description` - (Optional) A description of the auth method
 
-* `default_lease_ttl_seconds` - (Optional; Deprecated, use the `tune` block's `default_lease_ttl` attribute instead) The default lease duration in seconds.
-
-* `max_lease_ttl_seconds` - (Optional; Deprecated, use the `tune` block's `max_lease_ttl` attribute instead) The maximum lease duration in seconds.
-
-* `listing_visibility` - (Optional; Deprecated, use the `tune` block's `listing_visibility` attribute instead) Specifies whether to show this mount in the UI-specific listing endpoint.
-
 * `local` - (Optional) Specifies if the auth method is local only.
+
+* `tune` - (Optional) Extra configuration block. Structure is documented below.
 
 The `tune` block is used to tune the auth backend:
 
@@ -73,6 +69,17 @@ The `tune` block is used to tune the auth backend:
 In addition to the fields above, the following attributes are exported:
 
 * `accessor` - The accessor for this auth method
+
+### Deprecated Arguments
+
+These arguments are deprecated since version 1.8 of the provider in favour of the `tune` block
+arguments documented above.
+
+* `default_lease_ttl_seconds` - (Optional; Deprecated, use `tune.default_lease_ttl` if you are using Vault provider version >= 1.8) The default lease duration in seconds.
+
+* `max_lease_ttl_seconds` - (Optional; Deprecated, use `tune.max_lease_ttl` if you are using Vault provider version >= 1.8) The maximum lease duration in seconds.
+
+* `listing_visibility` - (Optional; Deprecated, use `tune.listing_visibility` if you are using Vault provider version >= 1.8) Speficies whether to show this mount in the UI-specific listing endpoint.
 
 ## Import
 
