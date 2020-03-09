@@ -112,3 +112,11 @@ documented above.
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+Kubernetes auth backend role can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_kubernetes_auth_backend_role.foo auth/kubernetes/role/foo
+```
