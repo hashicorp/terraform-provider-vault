@@ -51,6 +51,12 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_ADDR", nil),
 				Description: "URL of the root of the target Vault server.",
 			},
+			"add_address_to_env": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     false,
+				Description: "If true, adds the value of the `address` argument to the Terraform process environment.",
+			},
 			"token": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -562,17 +568,19 @@ func providerToken(d *schema.ResourceData) (string, error) {
 		return token, nil
 	}
 
-	if addr := d.Get("address").(string); addr != "" {
-		if current, exists := os.LookupEnv("VAULT_ADDR"); exists {
-			defer func() {
-				os.Setenv("VAULT_ADDR", current)
-			}()
-		} else {
-			defer func() {
-				os.Unsetenv("VAULT_ADDR")
-			}()
+	if addAddr := d.Get("add_address_to_env").(string); addAddr == "true" {
+		if addr := d.Get("address").(string); addr != "" {
+			if current, exists := os.LookupEnv("VAULT_ADDR"); exists {
+				defer func() {
+					os.Setenv("VAULT_ADDR", current)
+				}()
+			} else {
+				defer func() {
+					os.Unsetenv("VAULT_ADDR")
+				}()
+			}
+			os.Setenv("VAULT_ADDR", addr)
 		}
-		os.Setenv("VAULT_ADDR", addr)
 	}
 
 	// Use ~/.vault-token, or the configured token helper.
