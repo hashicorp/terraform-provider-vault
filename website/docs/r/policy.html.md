@@ -17,7 +17,7 @@ resource "vault_policy" "example" {
 
   policy = <<EOT
 path "secret/my_app" {
-  policy = "write"
+  capabilities = ["write"]
 }
 EOT
 }
