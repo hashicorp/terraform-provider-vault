@@ -1,4 +1,19 @@
 ## 2.9.0 (Unreleased)
+
+FEATURES:
+
+* Add `vault_alicloud_auth_backend_role` resource ([#673](https://github.com/terraform-providers/terraform-provider-vault/pull/673)).
+
+IMPROVEMENTS:
+
+* Allow `/` character in the group_name field of the `okta_auth_backend_group` resource ([#687](https://github.com/terraform-providers/terraform-provider-vault/pull/687)).
+* Support `not_before_duration` property in `pki_secret_backend_role` ([#698](https://github.com/terraform-providers/terraform-provider-vault/pull/698)).
+
+BUG FIXES:
+
+* Fix `vault_cert_auth_backend_role` deletion ([#690](https://github.com/terraform-providers/terraform-provider-vault/pull/690)).
+* Fix `use_token_groups` changes not being applied properly in `vault_ldap_auth_backend` resource ([#674](https://github.com/terraform-providers/terraform-provider-vault/pull/674)).
+
 ## 2.8.0 (February 05, 2020)
 
 IMPROVEMENTS:
