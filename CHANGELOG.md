@@ -1,4 +1,9 @@
 ## 2.10.0 (Unreleased)
+
+IMPROVEMENTS:
+
+* Add `add_address_to_env` argument to set the value of the provider's address argument as the VAULT_ADDR environment variable in the Terraform process, enabling VAULT_ADDR external token helpers to work with this provider ([#651](https://github.com/terraform-providers/terraform-provider-vault/pull/651)).
+
 ## 2.9.0 (March 13, 2020)
 
 FEATURES:
@@ -305,7 +310,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-* Fixes issue with `vault_database_secret_backend_connection` always updating the connection URL ([#217](https://github.com/terraform-providers/terraform-provider-vault/pull/217)) 
+* Fixes issue with `vault_database_secret_backend_connection` always updating the connection URL ([#217](https://github.com/terraform-providers/terraform-provider-vault/pull/217))
 
 ## 1.3.1 (November 06, 2018)
 
