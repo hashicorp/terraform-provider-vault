@@ -79,6 +79,31 @@ func getTestAWSCreds(t *testing.T) (string, string) {
 	return accessKey, secretKey
 }
 
+func getTestAzureCreds(t *testing.T) (subscriptionID, tenantID, clientID, clientSecret, scope string) {
+	subscriptionID = os.Getenv("AZURE_SUBSCRIPTION_ID")
+	tenantID = os.Getenv("AZURE_TENANT_ID")
+	clientID = os.Getenv("AZURE_CLIENT_ID")
+	clientSecret = os.Getenv("AZURE_CLIENT_SECRET")
+	scope = os.Getenv("AZURE_ROLE_SCOPE")
+
+	if subscriptionID == "" {
+		t.Skip("AZURE_SUBSCRIPTION_ID not set")
+	}
+	if tenantID == "" {
+		t.Skip("AZURE_TENANT_ID not set")
+	}
+	if clientID == "" {
+		t.Skip("AZURE_CLIENT_ID not set")
+	}
+	if clientSecret == "" {
+		t.Skip("AZURE_CLIENT_SECRET not set")
+	}
+	if scope == "" {
+		t.Skip("AZURE_ROLE_SCOPE not set")
+	}
+	return subscriptionID, tenantID, clientID, clientSecret, scope
+}
+
 func getTestGCPCreds(t *testing.T) (string, string) {
 	credentials := os.Getenv("GOOGLE_CREDENTIALS")
 	project := os.Getenv("GOOGLE_PROJECT")
