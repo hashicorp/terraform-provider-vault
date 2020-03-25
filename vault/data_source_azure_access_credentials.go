@@ -103,10 +103,7 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	role := d.Get("role").(string)
 	path := backend + "/creds/" + role
 
-	data := make(map[string][]string)
-
-	log.Printf("[DEBUG] Reading %q from Vault with data %#v", path, data)
-	secret, err := client.Logical().ReadWithData(path, data)
+	secret, err := client.Logical().Read(path)
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
@@ -146,19 +143,19 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 
 	// You can't directly pass in a client ID and secret.
 	// The closest thing you can do is provide them through the environment.
-	revert, err := setAndPrepareReversion(auth.TenantID, tenantID)
+	revert, err := setEnv(auth.TenantID, tenantID)
 	if err != nil {
 		return err
 	}
 	defer revert()
 
-	revert, err = setAndPrepareReversion(auth.ClientID, clientID)
+	revert, err = setEnv(auth.ClientID, clientID)
 	if err != nil {
 		return err
 	}
 	defer revert()
 
-	revert, err = setAndPrepareReversion(auth.ClientSecret, clientSecret)
+	revert, err = setEnv(auth.ClientSecret, clientSecret)
 	if err != nil {
 		return err
 	}
@@ -224,7 +221,7 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	return nil
 }
 
-func setAndPrepareReversion(envVar, newVal string) (func(), error) {
+func setEnv(envVar, newVal string) (revert func(), err error) {
 	origVal := os.Getenv(envVar)
 	if err := os.Setenv(envVar, newVal); err != nil {
 		return nil, err
