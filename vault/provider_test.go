@@ -79,29 +79,34 @@ func getTestAWSCreds(t *testing.T) (string, string) {
 	return accessKey, secretKey
 }
 
-func getTestAzureCreds(t *testing.T) (subscriptionID, tenantID, clientID, clientSecret, scope string) {
-	subscriptionID = os.Getenv("AZURE_SUBSCRIPTION_ID")
-	tenantID = os.Getenv("AZURE_TENANT_ID")
-	clientID = os.Getenv("AZURE_CLIENT_ID")
-	clientSecret = os.Getenv("AZURE_CLIENT_SECRET")
-	scope = os.Getenv("AZURE_ROLE_SCOPE")
+type azureTestConf struct {
+	SubscriptionID, TenantID, ClientID, ClientSecret, Scope string
+}
 
-	if subscriptionID == "" {
+func getTestAzureConf(t *testing.T) *azureTestConf {
+	conf := &azureTestConf{
+		SubscriptionID: os.Getenv("AZURE_SUBSCRIPTION_ID"),
+		TenantID:       os.Getenv("AZURE_TENANT_ID"),
+		ClientID:       os.Getenv("AZURE_CLIENT_ID"),
+		ClientSecret:   os.Getenv("AZURE_CLIENT_SECRET"),
+		Scope:          os.Getenv("AZURE_ROLE_SCOPE"),
+	}
+	if conf.SubscriptionID == "" {
 		t.Skip("AZURE_SUBSCRIPTION_ID not set")
 	}
-	if tenantID == "" {
+	if conf.TenantID == "" {
 		t.Skip("AZURE_TENANT_ID not set")
 	}
-	if clientID == "" {
+	if conf.ClientID == "" {
 		t.Skip("AZURE_CLIENT_ID not set")
 	}
-	if clientSecret == "" {
+	if conf.ClientSecret == "" {
 		t.Skip("AZURE_CLIENT_SECRET not set")
 	}
-	if scope == "" {
+	if conf.Scope == "" {
 		t.Skip("AZURE_ROLE_SCOPE not set")
 	}
-	return subscriptionID, tenantID, clientID, clientSecret, scope
+	return conf
 }
 
 func getTestGCPCreds(t *testing.T) (string, string) {

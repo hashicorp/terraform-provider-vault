@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -15,24 +17,28 @@ func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
 		t.SkipNow()
 	}
 	mountPath := acctest.RandomWithPrefix("tf-test-azure")
-	subscriptionID, tenantID, clientID, clientSecret, scope := getTestAzureCreds(t)
+	conf := getTestAzureConf(t)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, subscriptionID, tenantID, clientID, clientSecret, scope),
+				Config: testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, conf, 2, 20),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.vault_azure_access_credentials.test", "client_id"),
 					resource.TestCheckResourceAttrSet("data.vault_azure_access_credentials.test", "client_secret"),
 					resource.TestCheckResourceAttrSet("data.vault_azure_access_credentials.test", "lease_id"),
 				),
 			},
+			{
+				Config:      testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, conf, 1000, 5),
+				ExpectError: regexp.MustCompile(`despite trying for 5 seconds, 1 seconds apart, we were never able to get 1000 successes in a row`),
+			},
 		},
 	})
 }
 
-func testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, subscriptionID, tenantID, clientID, clientSecret, scope string) string {
+func testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath string, conf *azureTestConf, numSuccesses, maxSecs int) string {
 	template := `
 resource "vault_azure_secret_backend" "test" {
 	path = "{{mountPath}}"
@@ -57,18 +63,20 @@ data "vault_azure_access_credentials" "test" {
     backend = "${vault_azure_secret_backend.test.path}"
     role = "${vault_azure_secret_backend_role.test.role}"
     validate_creds = true
-	num_sequential_successes = 2
+	num_sequential_successes = {{numSequentialSuccesses}}
 	num_seconds_between_tests = 1
-	max_cred_validation_seconds = 20
+	max_cred_validation_seconds = {{maxCredValidationSeconds}}
 	subscription_id = "{{subscriptionID}}"
 	tenant_id = "{{tenantID}}"
 }`
 
 	parsed := strings.Replace(template, "{{mountPath}}", mountPath, -1)
-	parsed = strings.Replace(parsed, "{{subscriptionID}}", subscriptionID, -1)
-	parsed = strings.Replace(parsed, "{{tenantID}}", tenantID, -1)
-	parsed = strings.Replace(parsed, "{{clientID}}", clientID, -1)
-	parsed = strings.Replace(parsed, "{{clientSecret}}", clientSecret, -1)
-	parsed = strings.Replace(parsed, "{{scope}}", scope, -1)
+	parsed = strings.Replace(parsed, "{{subscriptionID}}", conf.SubscriptionID, -1)
+	parsed = strings.Replace(parsed, "{{tenantID}}", conf.TenantID, -1)
+	parsed = strings.Replace(parsed, "{{clientID}}", conf.ClientID, -1)
+	parsed = strings.Replace(parsed, "{{clientSecret}}", conf.ClientSecret, -1)
+	parsed = strings.Replace(parsed, "{{scope}}", conf.Scope, -1)
+	parsed = strings.Replace(parsed, "{{numSequentialSuccesses}}", strconv.Itoa(numSuccesses), -1)
+	parsed = strings.Replace(parsed, "{{maxCredValidationSeconds}}", strconv.Itoa(maxSecs), -1)
 	return parsed
 }
