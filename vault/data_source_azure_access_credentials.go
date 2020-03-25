@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2017-09-01/network"
@@ -140,30 +139,9 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 
 	// Let's, test the credentials before returning them.
 	vnetClient := network.NewVirtualNetworksClient(subscriptionID)
-
-	// You can't directly pass in a client ID and secret.
-	// The closest thing you can do is provide them through the environment.
-	revert, err := setEnv(auth.TenantID, tenantID)
+	authorizer, err := auth.NewClientCredentialsConfig(clientID, clientSecret, tenantID).Authorizer()
 	if err != nil {
-		return err
-	}
-	defer revert()
-
-	revert, err = setEnv(auth.ClientID, clientID)
-	if err != nil {
-		return err
-	}
-	defer revert()
-
-	revert, err = setEnv(auth.ClientSecret, clientSecret)
-	if err != nil {
-		return err
-	}
-	defer revert()
-
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		return err
+		return nil
 	}
 	vnetClient.Authorizer = authorizer
 
@@ -219,16 +197,4 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 			credValidationTimeoutSecs, secBetweenTests, sequentialSuccessesRequired)
 	}
 	return nil
-}
-
-func setEnv(envVar, newVal string) (revert func(), err error) {
-	origVal := os.Getenv(envVar)
-	if err := os.Setenv(envVar, newVal); err != nil {
-		return nil, err
-	}
-	return func() {
-		if err := os.Setenv(envVar, origVal); err != nil {
-			log.Printf("[DEBUG] Unable to revert %s to original value due to %s", envVar, err)
-		}
-	}, nil
 }
