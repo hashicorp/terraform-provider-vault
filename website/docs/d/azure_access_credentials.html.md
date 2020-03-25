@@ -69,8 +69,7 @@ credentials from, with no leading or trailing `/`s.
 * `validate_creds` - (Optional) Whether generated credentials should be 
 validated before being returned. Defaults to `false`, which returns 
 credentials without checking whether they have fully propagated throughout
-Azure Active Directory. Designating `true` activates testing. Defaults
-to `false`.
+Azure Active Directory. Designating `true` activates testing.
 
 * `num_sequential_successes` - (Optional) If 'validate_creds' is true, 
 the number of sequential successes required to validate generated 
