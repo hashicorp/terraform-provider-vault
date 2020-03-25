@@ -88,7 +88,7 @@ to 1,200 (20 minutes).
 the subscription id to use to test whether the client ID and secret are valid.
 
 * `tenant_id` - (Required if `validate_creds`) If 'validate_creds' is true, 
-the tenant id  to use to test whether the client ID and secret are valid.
+the tenant id to use to test whether the client ID and secret are valid.
 
 ## Attributes Reference
 
