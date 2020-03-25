@@ -170,14 +170,6 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	}
 	vnetClient.Authorizer = authorizer
 
-	// By default, this loop will test credentials every 7 seconds. It will
-	// require 8 sequential successes before returning them. It may retry for
-	// up to 20 minutes.
-	// This is because a colleague with Azure experience has seen an acceptable
-	// success rate with these settings. That colleague has also observed creds
-	// taking up to 15 minutes to fully propagate.
-	// However, this will vary widely depending on the size of a user's Azure
-	// Active Directory. Thus, these settings are fully configurable.
 	credValidationTimeoutSecs := d.Get("max_cred_validation_seconds").(int)
 	sequentialSuccessesRequired := d.Get("num_sequential_successes").(int)
 	secBetweenTests := d.Get("num_seconds_between_tests").(int)
@@ -189,6 +181,8 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	// have propagated to the Azure server receiving the call.
 	u := fmt.Sprintf("https://management.azure.com/subscriptions/%s/providers?api-version=2019-10-01", subscriptionID)
 
+	// Please see this data source's documentation for an explanation of the
+	// default parameters used here and why they were selected.
 	sequentialSuccesses := 0
 	overallSuccess := false
 	for {
