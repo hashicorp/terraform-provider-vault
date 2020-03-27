@@ -32,10 +32,10 @@ If `validate_creds` is used, by default, credentials will be validated by
 making a test call to Azure every 7 seconds. When we have received 8 
 successes in a row, the credentials will be returned. We have seen propagation 
 times take up to 15 minutes, so the maximum length of time for the check defaults 
-to 20 minutes.
-
-However, propagation times will vary widely based on each company's Azure
+to 20 minutes. However, propagation times will vary widely based on each company's Azure
 usage, so all these settings are configurable.
+
+Credentials are tested by attempting to refresh a client token with them.
 
 ## Example Usage
 
@@ -46,8 +46,6 @@ data "vault_azure_access_credentials" "creds" {
   num_sequential_successes = 8
   num_seconds_between_tests = 7
   max_cred_validation_seconds = 1200 // 20 minutes
-  subscription_id = "291bba3f-e0a5-47bc-a099-3bdcbexample"
-  tenant_id = "291bba3f-e0a5-47bc-a099-3bdcbexample"
 }
 
 provider "azure" {
@@ -82,12 +80,6 @@ Defaults to 7.
 * `max_cred_validation_seconds` - (Optional) If 'validate_creds' is true, 
 the number of seconds after which to give up validating credentials. Defaults
 to 1,200 (20 minutes).
-
-* `subscription_id` - (Required if `validate_creds`) If 'validate_creds' is true, 
-the subscription id to use to test whether the client ID and secret are valid.
-
-* `tenant_id` - (Required if `validate_creds`) If 'validate_creds' is true, 
-the tenant id to use to test whether the client ID and secret are valid.
 
 ## Attributes Reference
 

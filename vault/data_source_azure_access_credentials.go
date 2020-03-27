@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2017-09-01/network"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -51,16 +53,6 @@ func azureAccessCredentialsDataSource() *schema.Resource {
 				Default:     20 * 60, // 20 minutes
 				Description: `If 'validate_creds' is true, the number of seconds after which to give up validating credentials.`,
 			},
-			"subscription_id": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: `If 'validate_creds' is true, the subscription id to use to test whether the client ID and secret are valid.`,
-			},
-			"tenant_id": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: `If 'validate_creds' is true, the tenant id  to use to test whether the client ID and secret are valid.`,
-			},
 			"client_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -100,16 +92,18 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
-	path := backend + "/creds/" + role
 
-	secret, err := client.Logical().Read(path)
+	configPath := backend + "/config"
+	credsPath := backend + "/creds/" + role
+
+	secret, err := client.Logical().Read(credsPath)
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
-	log.Printf("[DEBUG] Read %q from Vault", path)
+	log.Printf("[DEBUG] Read %q from Vault", credsPath)
 
 	if secret == nil {
-		return fmt.Errorf("no role found at path %q", path)
+		return fmt.Errorf("no role found at credsPath %q", credsPath)
 	}
 
 	clientID := secret.Data["client_id"].(string)
@@ -123,9 +117,6 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	_ = d.Set("lease_start_time", time.Now().Format(time.RFC3339))
 	_ = d.Set("lease_renewable", secret.Renewable)
 
-	subscriptionID := d.Get("subscription_id").(string)
-	tenantID := d.Get("tenant_id").(string)
-
 	// If we're not supposed to validate creds, or we don't have enough
 	// information to do it, there's nothing further to do here.
 	validateCreds := d.Get("validate_creds").(bool)
@@ -133,13 +124,45 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 		// We're done.
 		return nil
 	}
-	if subscriptionID == "" || tenantID == "" {
-		return fmt.Errorf(`if 'validate_creds' is true, both 'subscription_id' and 'tenant_id' must also be provided`)
+
+	secret, err = client.Logical().Read(configPath)
+	if err != nil {
+		return fmt.Errorf("error reading from Vault: %s", err)
+	}
+	log.Printf("[DEBUG] Read %q from Vault", configPath)
+
+	subscriptionID := ""
+	if subscriptionIDIfc, ok := secret.Data["subscription_id"]; ok {
+		subscriptionID = subscriptionIDIfc.(string)
+	}
+	if subscriptionID == "" {
+		return fmt.Errorf(`unable to parse 'subscription_id' from %s`, configPath)
+	}
+
+	tenantID := ""
+	if tenantIDIfc, ok := secret.Data["tenant_id"]; ok {
+		tenantID = tenantIDIfc.(string)
+	}
+	if tenantID == "" {
+		return fmt.Errorf(`unable to parse 'tenant_id' from %s`, configPath)
+	}
+
+	environment := ""
+	if environmentIfc, ok := secret.Data["environment"]; ok {
+		environment = environmentIfc.(string)
 	}
 
 	// Let's, test the credentials before returning them.
 	vnetClient := network.NewVirtualNetworksClient(subscriptionID)
-	authorizer, err := auth.NewClientCredentialsConfig(clientID, clientSecret, tenantID).Authorizer()
+	config := auth.NewClientCredentialsConfig(clientID, clientSecret, tenantID)
+	if environment != "" {
+		env, err := azure.EnvironmentFromName(environment)
+		if err != nil {
+			return err
+		}
+		config.AADEndpoint = env.ActiveDirectoryEndpoint
+	}
+	authorizer, err := config.Authorizer()
 	if err != nil {
 		return nil
 	}
@@ -151,10 +174,6 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 
 	startTime := time.Now()
 	endTime := startTime.Add(time.Duration(credValidationTimeoutSecs) * time.Second)
-
-	// This URL merely lists providers, and should return a 200 if the credentials
-	// have propagated to the Azure server receiving the call.
-	u := fmt.Sprintf("https://management.azure.com/subscriptions/%s/providers?api-version=2019-10-01", subscriptionID)
 
 	// Please see this data source's documentation for an explanation of the
 	// default parameters used here and why they were selected.
@@ -168,22 +187,14 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 		log.Printf("[DEBUG] %d sequential successes obtained, waiting %d seconds to next test client ID and secret", sequentialSuccesses, secBetweenTests)
 		time.Sleep(time.Duration(secBetweenTests) * time.Second)
 
-		req, err := http.NewRequest(http.MethodGet, u, nil)
-		if err != nil {
-			return err
-		}
-
-		resp, err := vnetClient.Do(req)
-		if err != nil {
-			// We receive errors here if the credentials haven't propagated
-			// because inside the Do call, there's a call that attempts to
-			// refresh the token.
+		// The request we provide here is immaterial because the client is only going to refresh the
+		// token it's using for calls.
+		if _, err := autorest.Prepare(&http.Request{}, vnetClient.WithAuthorization(), vnetClient.WithInspection()); err != nil {
+			// If the creds haven't propagated, we receive an error showing we failed to refresh token.
 			sequentialSuccesses = 0
 			continue
 		}
-		if err := resp.Body.Close(); err != nil {
-			return err
-		}
+		// If the creds have propagated to the server where we're checking, we receive no error from the above Prepare call.
 		sequentialSuccesses++
 		if sequentialSuccesses == sequentialSuccessesRequired {
 			overallSuccess = true

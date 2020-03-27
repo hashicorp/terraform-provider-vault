@@ -66,8 +66,6 @@ data "vault_azure_access_credentials" "test" {
 	num_sequential_successes = {{numSequentialSuccesses}}
 	num_seconds_between_tests = 1
 	max_cred_validation_seconds = {{maxCredValidationSeconds}}
-	subscription_id = "{{subscriptionID}}"
-	tenant_id = "{{tenantID}}"
 }`
 
 	parsed := strings.Replace(template, "{{mountPath}}", mountPath, -1)
