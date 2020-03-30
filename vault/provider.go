@@ -204,6 +204,10 @@ var (
 			Resource:      awsAccessCredentialsDataSource(),
 			PathInventory: []string{"/aws/creds"},
 		},
+		"vault_azure_access_credentials": {
+			Resource:      azureAccessCredentialsDataSource(),
+			PathInventory: []string{"/azure/creds/{role}"},
+		},
 		"vault_generic_secret": {
 			Resource:      genericSecretDataSource(),
 			PathInventory: []string{"/secret/data/{path}"},
