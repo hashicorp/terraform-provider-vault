@@ -146,8 +146,7 @@ func getTestRMQCreds(t *testing.T) (string, string, string) {
 }
 
 // A basic token helper script.
-const tokenHelperScript = `
-#!/usr/bin/env bash
+const tokenHelperScript = `#!/usr/bin/env bash
 echo "helper-token"
 `
 
@@ -417,17 +416,8 @@ func TestAccProviderToken(t *testing.T) {
 	}
 
 	// Clear the config file env var and restore it after the test.
-	origConfigPath, ok := os.LookupEnv(config.ConfigPathEnv)
-	if ok {
-		// A config path env var was set; ensure we restore it.
-		defer func() {
-			err := os.Setenv(config.ConfigPathEnv, origConfigPath)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}()
-	}
-	err = os.Unsetenv(config.ConfigPathEnv)
+	reset, err := tempUnsetenv(config.ConfigPathEnv)
+	defer failIfErr(t, reset)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -492,38 +482,8 @@ func TestAccProviderToken(t *testing.T) {
 
 			// Set up the custom helper token.
 			if tc.helperToken {
-				// Use a temp dir for test files.
-				dir, err := ioutil.TempDir("", "terraform-provider-vault")
-				if err != nil {
-					t.Fatal(err)
-				}
-				defer func() {
-					if err := os.RemoveAll(dir); err != nil {
-						t.Fatal(err)
-					}
-				}()
-				// Write out the config file and helper script file.
-				configPath := path.Join(dir, "vault-config")
-				helperPath := path.Join(dir, "helper-script")
-				configStr := fmt.Sprintf(`token_helper = "%s"`, helperPath)
-				err = ioutil.WriteFile(configPath, []byte(configStr), 0666)
-				if err != nil {
-					t.Fatal(err)
-				}
-				err = ioutil.WriteFile(helperPath, []byte(tokenHelperScript), 0777)
-				if err != nil {
-					t.Fatal(err)
-				}
-				// Point Vault at the config file.
-				os.Setenv(config.ConfigPathEnv, configPath)
-				if err != nil {
-					t.Fatal(err)
-				}
-				defer func() {
-					if err := os.Unsetenv(config.ConfigPathEnv); err != nil {
-						t.Fatal(err)
-					}
-				}()
+				cleanup := setupTestTokenHelper(t, tokenHelperScript)
+				defer cleanup()
 			}
 
 			d := providerResource.TestResourceData()
@@ -668,5 +628,208 @@ func testTokenName_check(expectedTokenName string) resource.TestCheckFunc {
 		}
 
 		return nil
+	}
+}
+
+// A token helper script that echos back the VAULT_ADDR value
+const echoBackTokenHelperScript = `#!/usr/bin/env bash
+printenv VAULT_ADDR
+`
+
+func TestAccProviderVaultAddrEnv(t *testing.T) {
+	// This is an acceptance test because it requires filesystem and env var
+	// changes that could interfere with other Vault operations.
+	if os.Getenv(resource.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf(
+			"Acceptance tests skipped unless env '%s' set",
+			resource.TestEnvVar))
+	}
+
+	// Clear the config file env var and restore it after the test.
+	resetConfigPathEnv, err := tempUnsetenv(config.ConfigPathEnv)
+	defer failIfErr(t, resetConfigPathEnv)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// clear BASH_ENV for this test so any cmd.Exec invocations do not source the BASH_ENV
+	// file which is configured with a VAULT_ADDR here:
+	// https://github.com/terraform-providers/terraform-provider-vault/blob/f42716aae3aebc8daf9702dfa20ce3f8d09d9f4d/.circleci/config.yml#L27
+	// All values set in that BASH_ENV file will still be in the process environment of this
+	// test, they just won't clobber any values this test modifies in the process environment
+	// when the ExternalTokenHelper's command is formatted into a shell invocation to exec here:
+	// https://github.com/hashicorp/vault/blob/master/command/token/helper_external.go#L117-L132
+	//
+	resetBashEnvEnv, err := tempUnsetenv("BASH_ENV")
+	defer failIfErr(t, resetBashEnvEnv)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name string
+		// vaultAddrEnv is set prior to the provider being instantiated or called
+		// simulating any value the user or program may have in its existing environment
+		vaultAddrEnv            string
+		providerAddress         string
+		providerAddAddressToEnv string
+		expectedToken           string
+	}{
+		{
+			// If add_address_to_env is not configured at all, do not add the address to the env
+			name:                    "AddAddressToEnvNotConfigured",
+			providerAddAddressToEnv: "",
+			providerAddress:         "https://provider.example.com",
+			vaultAddrEnv:            "https://pretest-env-var.example.com",
+			expectedToken:           "https://pretest-env-var.example.com",
+		},
+		{
+			name:                    "AddAddressToEnvIsFalse",
+			providerAddAddressToEnv: "false",
+			providerAddress:         "https://provider.example.com",
+			vaultAddrEnv:            "https://pretest-env-var.example.com",
+			expectedToken:           "https://pretest-env-var.example.com",
+		},
+		{
+			name:                    "AddAddressToEnvIsTrue",
+			providerAddAddressToEnv: "true",
+			providerAddress:         "https://provider.example.com",
+			vaultAddrEnv:            "https://pretest-env-var.example.com",
+			expectedToken:           "https://provider.example.com",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+
+			if tc.vaultAddrEnv != "" {
+				unset, err := tempSetenv("VAULT_ADDR", tc.vaultAddrEnv)
+				defer failIfErr(t, unset)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			cleanup := setupTestTokenHelper(t, echoBackTokenHelperScript)
+			defer cleanup()
+
+			d, err := newTestResourceData(tc.providerAddress, tc.providerAddAddressToEnv)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Get and check the provider token.
+			token, err := providerToken(d)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if token != tc.expectedToken {
+				t.Errorf("bad token value: want %#v, got %#v", tc.expectedToken, token)
+			}
+		})
+	}
+}
+
+func newTestResourceData(address string, addAddressToEnv string) (*schema.ResourceData, error) {
+	// Create a "resource" we can use for constructing ResourceData.
+	provider := Provider().(*schema.Provider)
+	providerResource := &schema.Resource{
+		Schema: provider.Schema,
+		// this needs to be configured with and without add_Address_to_env
+	}
+
+	d := providerResource.TestResourceData()
+	err := d.Set("address", address)
+	if err != nil {
+		return nil, err
+	}
+
+	if addAddressToEnv != "" {
+		err = d.Set("add_address_to_env", addAddressToEnv)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return d, nil
+}
+
+func failIfErr(t *testing.T, f func() error) {
+	if err := f(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// tempUnsetenv is the equivalent of calling `os.Unsetenv` but returns
+// a function that be called to restore the modified environment variable
+// to its state prior to this function being called.
+// The reset function will never be nil.
+func tempUnsetenv(key string) (reset func() error, err error) {
+	reset = resetEnvFunc(key)
+	err = os.Unsetenv(key)
+	return reset, err
+}
+
+// tempSetenv is the equivalent of calling `os.Setenv` but returns
+// a function that be called to restore the modified environment variable
+// to its state prior to this function being called.
+// The reset function will never be nil.
+func tempSetenv(key string, value string) (reset func() error, err error) {
+	reset = resetEnvFunc(key)
+	err = os.Setenv(key, value)
+	return reset, err
+}
+
+// resetEnvFunc returns a func that will reset the state of
+// the environment variable named `key` when it is called to the
+// state captured at the time the function was created
+func resetEnvFunc(key string) (reset func() error) {
+	if current, exists := os.LookupEnv(key); exists {
+		return func() error {
+			return os.Setenv(key, current)
+		}
+	} else {
+		return func() error {
+			return os.Unsetenv(key)
+		}
+	}
+}
+
+// setupTestTokenHelper creates a temporary vault config that uses the provided
+// script as a token helper and returns a cleanup function that should be deferred and
+// called to set back the environment to how it was were pre test.
+func setupTestTokenHelper(t *testing.T, script string) (cleanup func()) {
+	// Use a temp dir for test files.
+	dir, err := ioutil.TempDir("", "terraform-provider-vault")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write out the config file and helper script file.
+	configPath := path.Join(dir, "vault-config")
+	helperPath := path.Join(dir, "helper-script")
+	configStr := fmt.Sprintf(`token_helper = "%s"`, helperPath)
+	err = ioutil.WriteFile(configPath, []byte(configStr), 0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(helperPath, []byte(script), 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Point Vault at the config file.
+	os.Setenv(config.ConfigPathEnv, configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return func() {
+		if err := os.Unsetenv(config.ConfigPathEnv); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := os.RemoveAll(dir); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

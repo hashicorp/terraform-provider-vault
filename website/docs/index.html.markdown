@@ -90,6 +90,10 @@ variables in order to keep credential information out of the configuration.
   with a scheme, a hostname and a port but with no path. May be set
   via the `VAULT_ADDR` environment variable.
 
+* `add_address_to_env` - (Optional) If `true` the environment variable
+  `VAULT_ADDR` in the Terraform process environment will be set to the
+  value of the `address` argument from this provider. By default, this is false.
+
 * `token` - (Required) Vault token that will be used by Terraform to
   authenticate. May be set via the `VAULT_TOKEN` environment variable.
   If none is otherwise supplied, Terraform will attempt to read it from
@@ -101,7 +105,7 @@ variables in order to keep credential information out of the configuration.
 
 * `token_name` - (Optional) Token name, that will be used by Terraform when
   creating the child token (`display_name`). This is useful to provide a reference of the
-  Terraform run traceable in vault audit log, e.g. commit hash or id of the CI/CD 
+  Terraform run traceable in vault audit log, e.g. commit hash or id of the CI/CD
   execution job. May be set via the `VAULT_TOKEN_NAME` environment variable.
   Default value will be `terraform` if not set or empty.
 
@@ -113,9 +117,9 @@ variables in order to keep credential information out of the configuration.
   contains one or more certificate files that will be used to validate
   the certificate presented by the Vault server. May be set via the
   `VAULT_CAPATH` environment variable.
-  
-* `auth_login` - (Optional) A configuration block, described below, that 
-  attempts to authenticate using the `auth/<method>/login` path to 
+
+* `auth_login` - (Optional) A configuration block, described below, that
+  attempts to authenticate using the `auth/<method>/login` path to
   aquire a token which Terraform will use. Terraform still issues itself
   a limited child token using auth/token/create in order to enforce a short
   TTL and limit exposure.
@@ -144,12 +148,12 @@ variables in order to keep credential information out of the configuration.
 
 * `namespace` - (Optional) Set the namespace to use. May be set via the
   `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
-  
+
 The `auth_login` configuration block accepts the following arguments:
 
 * `path` - (Required) The login path of the auth backend. For example, login with
   approle by setting this path to `auth/approle/login`. Additionally, some mounts use parameters
-  in the URL, like with `userpass`: `auth/userpass/login/:username`. 
+  in the URL, like with `userpass`: `auth/userpass/login/:username`.
 
 * `namespace` - (Optional) The path to the namespace that has the mounted auth method.
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
@@ -202,7 +206,7 @@ variable login_password {}
 provider "vault" {
   auth_login {
     path = "auth/userpass/login/${var.login_username}"
-    
+
     parameters = {
       password = var.login_password
     }
@@ -219,7 +223,7 @@ variable login_approle_secret_id {}
 provider "vault" {
   auth_login {
     path = "auth/approle/login"
-    
+
     parameters = {
       role_id   = var.login_approle_role_id
       secret_id = var.login_approle_secret_id
