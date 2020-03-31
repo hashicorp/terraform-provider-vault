@@ -38,7 +38,7 @@ func awsSecretBackendRoleResource() *schema.Resource {
 			"policy_arns": {
 				Type:          schema.TypeSet,
 				Optional:      true,
-				ConflictsWith: []string{"policy", "policy_arn", "role_arns"},
+				ConflictsWith: []string{"policy", "policy_arn"},
 				Description:   "ARN for an existing IAM policy the role should use.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -78,7 +78,7 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				},
 				Optional:      true,
 				ForceNew:      true,
-				ConflictsWith: []string{"policy", "policy_arn", "policy_arns"},
+				ConflictsWith: []string{"policy", "policy_arn"},
 				Description:   "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is 'assumed_role'",
 			},
 			"default_sts_ttl": {

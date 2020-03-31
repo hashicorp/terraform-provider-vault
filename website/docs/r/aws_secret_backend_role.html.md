@@ -29,7 +29,7 @@ resource "vault_aws_secret_backend" "aws" {
 resource "vault_aws_secret_backend_role" "role" {
   backend = "${vault_aws_secret_backend.aws.path}"
   name    = "deploy"
-  credential_type = "assumed_role"
+  credential_type = "iam_user"
 
   policy_document = <<EOT
 {
@@ -56,19 +56,27 @@ with no leading or trailing `/`s.
 * `name` - (Required) The name to identify this role within the backend.
 Must be unique within the backend.
 
-* `policy_document` - (Optional) The JSON-formatted policy to associate with this
-role. Either `policy_document` or `policy_arns` must be specified.
-
-* `policy_arns` - (Optional) The ARN for a pre-existing policy to associate
-with this role. Either `policy_document` or `policy_arns` must be specified.
+* `credential_type` - (Required) Specifies the type of credential to be used when
+retrieving credentials from the role. Must be one of `iam_user`, `assumed_role`, or
+`federation_token`.
 
 * `role_arns` - (Optional) Specifies the ARNs of the AWS roles this Vault role
 is allowed to assume. Required when `credential_type` is `assumed_role` and
 prohibited otherwise.
 
-* `credential_type` - (Required) Specifies the type of credential to be used when
-retrieving credentials from the role. Must be one of `iam_user`, `assumed_role`, or
-`federation_token`.
+* `policy_arns` - (Optional) Specifies a list of AWS managed policy ARNs. The
+behavior depends on the credential type. With `iam_user`, the policies will be
+attached to IAM users when they are requested. With `assumed_role` and
+`federation_token`, the policy ARNs will act as a filter on what the credentials
+can do, similar to `policy_document`. When `credential_type` is `iam_user` or
+`federation_token`, at least one of `policy_document` or `policy_arns` must
+be specified.
+
+* `policy_document` - (Optional) The IAM policy document for the role. The
+behavior depends on the credential type. With `iam_user`, the policy document
+will be attached to the IAM user generated and augment the permissions the IAM
+user has. With `assumed_role` and `federation_token`, the policy document will
+act as a filter on what the credentials can do, similar to `policy_arns`.
 
 * `default_sts_ttl` - (Optional) The default TTL in seconds for STS credentials.
   When a TTL is not specified when STS credentials are requested,
