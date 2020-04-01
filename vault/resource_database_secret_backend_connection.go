@@ -74,17 +74,17 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"url": {
 							Type:        schema.TypeString,
-							Optional:    true,
+							Required:    true,
 							Description: "The URL for Elasticsearch's API",
 						},
 						"username": {
 							Type:        schema.TypeString,
-							Optional:    true,
+							Required:    true,
 							Description: "The username to be used in the connection URL",
 						},
 						"password": {
 							Type:        schema.TypeString,
-							Optional:    true,
+							Required:    true,
 							Description: "The password to be used in the connection URL",
 							Sensitive:   true,
 						},
