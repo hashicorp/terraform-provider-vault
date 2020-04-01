@@ -21,3 +21,12 @@ services:
       MYSQL_DATABASE: "main"
       MYSQL_USER: "vault"
       MYSQL_PASSWORD: "vault"
+
+  elastic:
+    image: elasticsearch:7.6.0
+    ports:
+    - "9200:9200"
+    environment:
+      "discovery.type": "single-node"
+      "xpack.security.enabled": "true"
+      "ELASTIC_PASSWORD": "elastic"
