@@ -1,8 +1,18 @@
 ## 2.10.0 (Unreleased)
 
+FEATURES:
+
+* Add `vault_azure_access_credentials` data source that retries creds before returning them ([#713](https://github.com/terraform-providers/terraform-provider-vault/pull/713)).
+* To `vault_database_secret_backend_connection`, add support for the `elasticsearch-database-plugin` ([#704](https://github.com/terraform-providers/terraform-provider-vault/pull/704)).
+
 IMPROVEMENTS:
 
 * Add `add_address_to_env` argument to set the value of the provider's address argument as the VAULT_ADDR environment variable in the Terraform process, enabling VAULT_ADDR external token helpers to work with this provider ([#651](https://github.com/terraform-providers/terraform-provider-vault/pull/651)).
+* Provide the ability to encrypt generated tokens using Keybase when using `/auth/token/create`, `/auth/token/create-orphan`, or `/auth/token/create/{role_name}` ([#686](https://github.com/terraform-providers/terraform-provider-vault/pull/686)).
+
+BUG FIXES:
+
+* In `vault_aws_auth_backend_role`, allow `role_arns` and `policy_arns` to be used together ([#710](https://github.com/terraform-providers/terraform-provider-vault/pull/710)).
 
 ## 2.9.0 (March 13, 2020)
 
