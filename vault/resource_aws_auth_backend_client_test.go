@@ -82,6 +82,7 @@ func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 					testAccAWSAuthBackendClientCheck_attrs(backend),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", "access_key", "AWSACCESSKEY"),
 					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", "secret_key"),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", "sts_region", "us-west-2"),
 				),
 			},
 			{
@@ -146,6 +147,7 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 			"ec2_endpoint":               "endpoint",
 			"iam_endpoint":               "iam_endpoint",
 			"sts_endpoint":               "sts_endpoint",
+			"sts_region":                 "sts_region",
 			"iam_server_id_header_value": "iam_server_id_header_value",
 		}
 		for stateAttr, apiAttr := range attrs {
@@ -175,6 +177,7 @@ resource "vault_aws_auth_backend_client" "client" {
   ec2_endpoint = "http://vault.test/ec2"
   iam_endpoint = "http://vault.test/iam"
   sts_endpoint = "http://vault.test/sts"
+  sts_region = "us-west-2"
   iam_server_id_header_value = "vault.test"
 }
 `, backend)
@@ -195,6 +198,7 @@ resource "vault_aws_auth_backend_client" "client" {
   ec2_endpoint = "http://updated.vault.test/ec2"
   iam_endpoint = "http://updated.vault.test/iam"
   sts_endpoint = "http://updated.vault.test/sts"
+  sts_region = "us-west-2"
   iam_server_id_header_value = "updated.vault.test"
 }`, backend)
 }
@@ -213,6 +217,7 @@ resource "vault_aws_auth_backend_client" "client" {
   ec2_endpoint = "http://vault.test/ec2"
   iam_endpoint = "http://vault.test/iam"
   sts_endpoint = "http://vault.test/sts"
+  sts_region = "us-west-2"
   iam_server_id_header_value = "vault.test"
 }`, backend)
 }
@@ -231,6 +236,7 @@ resource "vault_aws_auth_backend_client" "client" {
   ec2_endpoint = "http://updated2.vault.test/ec2"
   iam_endpoint = "http://updated2.vault.test/iam"
   sts_endpoint = "http://updated2.vault.test/sts"
+  sts_region = "us-west-2"
   iam_server_id_header_value = "updated2.vault.test"
 }`, backend)
 }

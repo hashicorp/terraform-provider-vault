@@ -60,6 +60,12 @@ func awsAuthBackendClientResource() *schema.Resource {
 				Optional:    true,
 				Description: "URL to override the default generated endpoint for making AWS STS API calls.",
 			},
+			"sts_region": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: `Region to override the default region for making AWS STS API calls. Should only be set 
+if sts_endpoint is set. If so, should be set to the region in which the custom sts_endpoint resides.`,
+			},
 			"iam_server_id_header_value": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -78,6 +84,7 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	ec2Endpoint := d.Get("ec2_endpoint").(string)
 	iamEndpoint := d.Get("iam_endpoint").(string)
 	stsEndpoint := d.Get("sts_endpoint").(string)
+	stsRegion := d.Get("sts_region").(string)
 	iamServerIDHeaderValue := d.Get("iam_server_id_header_value").(string)
 
 	path := awsAuthBackendClientPath(backend)
@@ -86,6 +93,7 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		"endpoint":                   ec2Endpoint,
 		"iam_endpoint":               iamEndpoint,
 		"sts_endpoint":               stsEndpoint,
+		"sts_region":                 stsRegion,
 		"iam_server_id_header_value": iamServerIDHeaderValue,
 	}
 
@@ -134,6 +142,7 @@ func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("ec2_endpoint", secret.Data["endpoint"])
 	d.Set("iam_endpoint", secret.Data["iam_endpoint"])
 	d.Set("sts_endpoint", secret.Data["sts_endpoint"])
+	d.Set("sts_region", secret.Data["sts_region"])
 	d.Set("iam_server_id_header_value", secret.Data["iam_server_id_header_value"])
 	return nil
 }
