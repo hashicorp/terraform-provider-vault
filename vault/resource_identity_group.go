@@ -78,7 +78,6 @@ func identityGroupResource() *schema.Resource {
 			"member_entity_ids": {
 				Type:     schema.TypeSet,
 				Optional: true,
-				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -114,7 +113,7 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 		}
 	}
 
-	if externalMemberEntityIds, ok := d.GetOk("external_member_entity_ids"); ok && !externalMemberEntityIds.(bool) {
+	if externalMemberEntityIds, ok := d.GetOk("external_member_entity_ids"); !(ok && externalMemberEntityIds.(bool)) {
 		if memberEntityIDs, ok := d.GetOk("member_entity_ids"); ok && d.Get("type").(string) == "internal" {
 			data["member_entity_ids"] = memberEntityIDs.(*schema.Set).List()
 		}
