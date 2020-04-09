@@ -16,7 +16,7 @@ import (
 var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
-	dbBackendTypes                                      = []string{"cassandra", "hana", "mongodb", "mssql", "mysql", "mysql_rds", "mysql_aurora", "mysql_legacy", "postgresql", "oracle"}
+	dbBackendTypes                                      = []string{"cassandra", "hana", "mongodb", "mssql", "mysql", "mysql_rds", "mysql_aurora", "mysql_legacy", "postgresql", "oracle", "elasticsearch"}
 )
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
@@ -64,6 +64,34 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Optional:    true,
 				Description: "A map of sensitive data to pass to the endpoint. Useful for templated connection strings.",
 				Sensitive:   true,
+			},
+
+			"elasticsearch": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the elasticsearch-database-plugin.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"url": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The URL for Elasticsearch's API",
+						},
+						"username": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The username to be used in the connection URL",
+						},
+						"password": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The password to be used in the connection URL",
+							Sensitive:   true,
+						},
+					},
+				},
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith("elasticsearch", dbBackendTypes),
 			},
 
 			"cassandra": {
@@ -281,6 +309,8 @@ func getDatabasePluginName(d *schema.ResourceData) (string, error) {
 		return "oracle-database-plugin", nil
 	case len(d.Get("postgresql").([]interface{})) > 0:
 		return "postgresql-database-plugin", nil
+	case len(d.Get("elasticsearch").([]interface{})) > 0:
+		return "elasticsearch-database-plugin", nil
 	default:
 		return "", fmt.Errorf("at least one database plugin must be configured")
 	}
@@ -353,6 +383,8 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		setDatabaseConnectionData(d, "oracle.0.", data)
 	case "postgresql-database-plugin":
 		setDatabaseConnectionData(d, "postgresql.0.", data)
+	case "elasticsearch-database-plugin":
+		setElasticsearchDatabaseConnectionData(d, "elasticsearch.0.", data)
 	}
 
 	return data, nil
@@ -399,6 +431,34 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 	return []map[string]interface{}{result}
 }
 
+func getElasticsearchConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	result := map[string]interface{}{}
+	if v, ok := d.GetOk(prefix + "url"); ok {
+		result["url"] = v.(string)
+	} else {
+		if v, ok := data["url"]; ok {
+			result["url"] = v.(string)
+		}
+	}
+
+	if v, ok := data["username"]; ok {
+		result["username"] = v.(string)
+	}
+	if v, ok := data["password"]; ok {
+		result["password"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "password"); ok {
+		// keep the password we have in state/config if the API doesn't return one
+		result["password"] = v.(string)
+	}
+
+	return []map[string]interface{}{result}
+}
+
 func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	if v, ok := d.GetOk(prefix + "connection_url"); ok {
 		data["connection_url"] = v.(string)
@@ -411,6 +471,20 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	}
 	if v, ok := d.GetOkExists(prefix + "max_connection_lifetime"); ok {
 		data["max_connection_lifetime"] = fmt.Sprintf("%ds", v)
+	}
+}
+
+func setElasticsearchDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	if v, ok := d.GetOk(prefix + "url"); ok {
+		data["url"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		data["password"] = v.(string)
 	}
 }
 
@@ -564,6 +638,8 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		d.Set("oracle", getConnectionDetailsFromResponse(d, "oracle.0.", resp))
 	case "postgresql-database-plugin":
 		d.Set("postgresql", getConnectionDetailsFromResponse(d, "postgresql.0.", resp))
+	case "elasticsearch-database-plugin":
+		d.Set("elasticsearch", getElasticsearchConnectionDetailsFromResponse(d, "elasticsearch.0.", resp))
 	}
 
 	if err != nil {
