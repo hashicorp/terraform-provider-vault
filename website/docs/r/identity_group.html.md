@@ -60,6 +60,8 @@ The following arguments are supported:
 
 * `external_policies` - (Optional) `false` by default. If set to `true`, this resource will ignore any policies return from Vault or specified in the resource. You can use [`vault_identity_group_policies`](identity_group_policies.html) to manage policies for this group in a decoupled manner.
 
+* `external_member_entity_ids` - (Optional) `false` by default. If set to `true`, this resource will ignore any policies return from Vault or specified in the resource. You can use [`vault_identity_group_member_entity_ids`](identity_group_member_entity_ids.html) to manage member entities for this group in a decoupled manner.
+
 ## Attributes Reference
 
 In addition to all arguments above, the following attributes are exported:

@@ -86,11 +86,18 @@ func identityGroupResource() *schema.Resource {
 				// Suppress the diff if group type is "external" because we cannot manage
 				// group members
 				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					if d.Get("type").(string) == "external" {
+					if d.Get("type").(string) == "external" || d.Get("external_member_entity_ids").(bool) == true {
 						return true
 					}
 					return false
 				},
+			},
+
+			"external_member_entity_ids": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Manage member entities externally through `vault_identity_group_policies_member_entity_ids`",
 			},
 		},
 	}
@@ -107,8 +114,10 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 		}
 	}
 
-	if memberEntityIDs, ok := d.GetOk("member_entity_ids"); ok && d.Get("type").(string) == "internal" {
-		data["member_entity_ids"] = memberEntityIDs.(*schema.Set).List()
+	if externalMemberEntityIds, ok := d.GetOk("external_member_entity_ids"); ok && !externalMemberEntityIds.(bool) {
+		if memberEntityIDs, ok := d.GetOk("member_entity_ids"); ok && d.Get("type").(string) == "internal" {
+			data["member_entity_ids"] = memberEntityIDs.(*schema.Set).List()
+		}
 	}
 
 	if memberGroupIDs, ok := d.GetOk("member_group_ids"); ok {

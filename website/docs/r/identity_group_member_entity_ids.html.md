@@ -18,6 +18,7 @@ Manages member entities for an Identity Group for Vault. The [Identity secrets e
 resource "vault_identity_group" "internal" {
   name     = "internal"
   type     = "internal"
+  external_member_entity_ids = true
 
   metadata = {
     version = "2"
@@ -42,6 +43,7 @@ resource "vault_identity_group_member_entity_ids" "members" {
 resource "vault_identity_group" "internal" {
   name     = "internal"
   type     = "internal"
+  external_member_entity_ids = true
 
   metadata = {
     version = "2"

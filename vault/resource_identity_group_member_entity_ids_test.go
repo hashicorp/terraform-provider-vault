@@ -317,6 +317,7 @@ func testAccIdentityGroupMemberEntityIdsCheckLogical(resource string, member_ent
 func testAccIdentityGroupMemberEntityIdsConfigExclusive(devEntityName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
+	external_member_entity_ids = true
 }
 
 resource "vault_identity_entity" "dev" {
@@ -335,6 +336,7 @@ resource "vault_identity_group_member_entity_ids" "member_entity_ids" {
 func testAccIdentityGroupMemberEntityIdsConfigExclusiveUpdate(devEntityName, testEntityName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
+	external_member_entity_ids = true
 }
 
 resource "vault_identity_entity" "dev" {
@@ -360,6 +362,7 @@ resource "vault_identity_group_member_entity_ids" "member_entity_ids" {
 func testAccIdentityGroupMemberEntityIdsConfigNonExclusive(devEntityName, testEntityName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
+	external_member_entity_ids = true
 }
 
 resource "vault_identity_entity" "dev_entity" {
@@ -394,6 +397,7 @@ resource "vault_identity_group_member_entity_ids" "test" {
 func testAccIdentityGroupMemberEntityIdsConfigNonExclusiveUpdate(devEntityName, fooEntityName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
+	external_member_entity_ids = true
 }
 
 resource "vault_identity_entity" "dev_entity" {
