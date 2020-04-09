@@ -470,6 +470,10 @@ var (
 			Resource:      identityGroupAliasResource(),
 			PathInventory: []string{"/identity/group-alias"},
 		},
+		"vault_identity_group_member_entity_ids": {
+			Resource:      identityGroupMemberEntityIdsResource(),
+			PathInventory: []string{"/identity/lookup/group"},
+		},
 		"vault_identity_group_policies": {
 			Resource:      identityGroupPoliciesResource(),
 			PathInventory: []string{"/identity/lookup/group"},

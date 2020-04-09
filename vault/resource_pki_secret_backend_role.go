@@ -501,15 +501,6 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("require_cn", secret.Data["require_cn"])
 	d.Set("policy_identifiers", policyIdentifiers)
 	d.Set("basic_constraints_valid_for_non_ca", secret.Data["basic_constraints_valid_for_non_ca"])
-<<<<<<< HEAD
-<<<<<<< HEAD
-	d.Set("not_before_duration", notBeforeDuration)
-
-	notBeforeDuration := flattenVaultDuration(secret.Data["not_before_duration"])
-=======
->>>>>>> Add default value for not_before_duration
-=======
->>>>>>> 6027e9fd5f9511e01d53199c7ab47226cd624f7b
 	d.Set("not_before_duration", notBeforeDuration)
 
 	return nil
