@@ -41,7 +41,7 @@ The following arguments are supported:
 
 * `backend` - (Optional) Path to the authentication backend
 
-For more details on the usage of each argument consult the [Vault LDAP API documentation](https://www.vaultproject.io/api/auth/ldap/index.html).
+For more details on the usage of each argument consult the [Vault LDAP API documentation](https://www.vaultproject.io/api-docs/auth/ldap).
 
 ## Attribute Reference
 

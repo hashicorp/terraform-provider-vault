@@ -63,7 +63,7 @@ The following parameters are only valid when the role is of type `"gce"`:
 
 * `bound_projects` - (Optional) GCP Projects that the role exists within
 
-For more details on the usage of each argument consult the [Vault GCP API documentation](https://www.vaultproject.io/api/auth/gcp/index.html).
+For more details on the usage of each argument consult the [Vault GCP API documentation](https://www.vaultproject.io/api-docs/auth/gcp).
 
 ### Common Token Arguments
 
