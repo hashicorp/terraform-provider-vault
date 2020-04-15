@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 
@@ -156,6 +157,25 @@ func Provider() terraform.ResourceProvider {
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
 				Description: "The namespace to use. Available only for Vault Enterprise",
+			},
+			"headers": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "The headers to send with each Vault request.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"key": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The header key",
+						},
+						"value": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The header value",
+						},
+					},
+				},
 			},
 		},
 		ConfigureFunc:  providerConfigure,
@@ -637,6 +657,17 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
 	}
+	// Set headers if provided
+	headers := d.Get("headers").([]interface{})
+	parsedHeaders := make(http.Header)
+
+	for _, headerKVPair := range headers {
+		header := headerKVPair.(map[string]interface{})
+		if key, ok := header["key"]; ok {
+			parsedHeaders.Add(key.(string), header["value"].(string))
+		}
+	}
+	client.SetHeaders(parsedHeaders)
 
 	client.SetMaxRetries(d.Get("max_retries").(int))
 
