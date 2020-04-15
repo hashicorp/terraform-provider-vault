@@ -164,10 +164,10 @@ func Provider() terraform.ResourceProvider {
 				Description: "The headers to send with each Vault request.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"key": {
+						"name": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "The header key",
+							Description: "The header name",
 						},
 						"value": {
 							Type:        schema.TypeString,
@@ -661,10 +661,10 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	headers := d.Get("headers").([]interface{})
 	parsedHeaders := make(http.Header)
 
-	for _, headerKVPair := range headers {
-		header := headerKVPair.(map[string]interface{})
-		if key, ok := header["key"]; ok {
-			parsedHeaders.Add(key.(string), header["value"].(string))
+	for _, h := range headers {
+		header := h.(map[string]interface{})
+		if name, ok := header["name"]; ok {
+			parsedHeaders.Add(name.(string), header["value"].(string))
 		}
 	}
 	client.SetHeaders(parsedHeaders)
