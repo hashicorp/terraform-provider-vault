@@ -659,7 +659,11 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 	// Set headers if provided
 	headers := d.Get("headers").([]interface{})
-	parsedHeaders := make(http.Header)
+	parsedHeaders := client.Headers().Clone()
+
+	if parsedHeaders == nil {
+		parsedHeaders = make(http.Header)
+	}
 
 	for _, h := range headers {
 		header := h.(map[string]interface{})
