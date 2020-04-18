@@ -88,6 +88,8 @@ github.com/dgrijalva/jwt-go
 github.com/dimchansky/utfbom
 # github.com/fatih/color v1.7.0
 github.com/fatih/color
+# github.com/go-sql-driver/mysql v1.5.0
+github.com/go-sql-driver/mysql
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/jsonpb
 github.com/golang/protobuf/proto

@@ -1,10 +1,13 @@
 package vault
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"testing"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
@@ -20,6 +23,11 @@ func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
 	username := acctest.RandomWithPrefix("user")
 	dbName := acctest.RandomWithPrefix("db")
 	name := acctest.RandomWithPrefix("staticrole")
+
+	if err := createTestUser(connURL, username); err != nil {
+		t.Fatal(err)
+	}
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -53,6 +61,11 @@ func TestAccDatabaseSecretBackendStaticRole_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("staticrole")
 	username := acctest.RandomWithPrefix("user")
 	dbName := acctest.RandomWithPrefix("db")
+
+	if err := createTestUser(connURL, username); err != nil {
+		t.Fatal(err)
+	}
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -101,6 +114,32 @@ func testAccDatabaseSecretBackendStaticRoleCheckDestroy(s *terraform.State) erro
 	return nil
 }
 
+func createTestUser(connURL, username string) error {
+	ctx := context.Background()
+	db, err := sql.Open("mysql", connURL)
+	if err != nil {
+		return err
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+	stmt, err := tx.PrepareContext(ctx, fmt.Sprintf("CREATE USER '%s'@'localhost' IDENTIFIED BY 'password';", username))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+	if _, err := stmt.ExecContext(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
 func testAccDatabaseSecretBackendStaticRoleConfig_basic(name, username, db, path, connURL string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
@@ -124,6 +163,7 @@ resource "vault_database_secret_backend_static_role" "test" {
   name = "%s"
   username = "%s"
   rotation_period = 3600
+  rotation_statements = ["ALTER USER '{{username}}'@'localhost' IDENTIFIED BY '{{password}}';"]
 }
 `, path, db, connURL, name, username)
 }
