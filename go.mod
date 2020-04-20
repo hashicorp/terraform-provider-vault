@@ -9,6 +9,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gosimple/slug v1.4.1
 	github.com/hashicorp/go-cleanhttp v0.5.1
+	github.com/hashicorp/go-hclog v0.9.2
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/terraform-plugin-sdk v1.4.1
 	github.com/hashicorp/vault v1.2.0

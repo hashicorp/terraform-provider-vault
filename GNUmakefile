@@ -8,6 +8,10 @@ default: build
 build: fmtcheck
 	go install
 
+generate:
+	cd generated && find . -type f -not -name '*_test.go' | xargs rm && cd -
+	go run cmd/generate/main.go -openapi-doc=testdata/openapi.json
+
 test: fmtcheck
 	go test -i $(TEST) || exit 1
 	echo $(TEST) | \

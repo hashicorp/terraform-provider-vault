@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 
@@ -169,4 +170,15 @@ func SliceRemoveIfPresent(list []interface{}, search interface{}) []interface{} 
 	}
 
 	return list
+}
+
+// TODO testme
+var doubleCurlyBracedFields = regexp.MustCompile(`(\{\{.*?\}\})`)
+
+func ReplacePathParameters(path string, d *schema.ResourceData) string {
+	fieldNames := doubleCurlyBracedFields.FindAllString(path, -1)
+	for _, fieldName := range fieldNames {
+		path = strings.Replace(path, fmt.Sprintf("{{%s}}", fieldName), d.Get(fieldName).(string), -1)
+	}
+	return path
 }
