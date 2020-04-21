@@ -246,7 +246,7 @@ provider "vault" {
   namespace = "ns2"
 }
 
-resource "vault_generic_secret" {
+resource "vault_generic_secret" "secret"{
   provider = "vault.ns1"
   ...
 }
