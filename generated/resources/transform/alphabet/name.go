@@ -35,6 +35,7 @@ func NameResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The name of the alphabet.",
+			ForceNew:    true,
 		},
 	}
 	return &schema.Resource{

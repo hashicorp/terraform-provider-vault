@@ -105,23 +105,28 @@ func parseTemplate(logger hclog.Logger, writer io.Writer, fileType FileType, par
 	return tmpl.Execute(writer, tmplFriendly)
 }
 
-// templateFriendly is a convenience struct that plays nicely with Go's
+// templateFriendlyPathItem is a convenience struct that plays nicely with Go's
 // template package.
-type templateFriendly struct {
+type templateFriendlyPathItem struct {
 	Endpoint           string
 	DirName            string
 	ExportedFuncPrefix string
 	PrivateFuncPrefix  string
-	Parameters         []framework.OASParameter
+	Parameters         []*templateFriendlyParameter
 	SupportsRead       bool
 	SupportsWrite      bool
 	SupportsDelete     bool
 }
 
+type templateFriendlyParameter struct {
+	*framework.OASParameter
+	ForceNew bool
+}
+
 // toTemplateFriendly does a bunch of work to format the given data into a
 // struct that has fields that will be idiomatic to use with Go's templating
 // language.
-func toTemplateFriendly(logger hclog.Logger, path, parentDir string, pathItem *framework.OASPathItem) (*templateFriendly, error) {
+func toTemplateFriendly(logger hclog.Logger, path, parentDir string, pathItem *framework.OASPathItem) (*templateFriendlyPathItem, error) {
 	// Isolate the last field in the path and use it to prefix functions
 	// to prevent naming collisions if there are multiple files in the same
 	// directory.
@@ -135,13 +140,12 @@ func toTemplateFriendly(logger hclog.Logger, path, parentDir string, pathItem *f
 	// We don't want snake case for the field name in Go code.
 	prefix = strings.Replace(prefix, "_", "", -1)
 
-	// Move the call parameters located in the "post" call to the top
-	// level so we can just iterate over all the parameters at once
-	// in the template.
-	appendPostParamsToTopLevel(pathItem)
+	// Make the parameters easier to work with in Go's templating
+	// language.
+	friendlyParams := toTemplateFriendlyParameters(pathItem)
 
 	// Validate that we don't have any unsupported types of parameters.
-	for _, param := range pathItem.Parameters {
+	for _, param := range friendlyParams {
 		if !strutil.StrListContains(supportedParamTypes, param.Schema.Type) {
 			logger.Error(fmt.Sprintf(`can't generate %q because parameter type of %q for %s is unsupported'`, path, param.Schema.Type, param.Name))
 			return nil, ErrUnsupported
@@ -150,15 +154,15 @@ func toTemplateFriendly(logger hclog.Logger, path, parentDir string, pathItem *f
 
 	// Sort the parameters by name so they won't shift every time
 	// new files are generated due to having originated in maps.
-	sort.Slice(pathItem.Parameters, func(i, j int) bool {
-		return pathItem.Parameters[i].Name < pathItem.Parameters[j].Name
+	sort.Slice(friendlyParams, func(i, j int) bool {
+		return friendlyParams[i].Name < friendlyParams[j].Name
 	})
-	return &templateFriendly{
+	return &templateFriendlyPathItem{
 		Endpoint:           path,
 		DirName:            parentDir[strings.LastIndex(parentDir, "/")+1:],
 		ExportedFuncPrefix: strings.Title(strings.ToLower(prefix)),
 		PrivateFuncPrefix:  strings.ToLower(prefix),
-		Parameters:         pathItem.Parameters,
+		Parameters:         friendlyParams,
 		SupportsRead:       pathItem.Get != nil,
 		SupportsWrite:      pathItem.Post != nil,
 		SupportsDelete:     pathItem.Delete != nil,
@@ -168,18 +172,12 @@ func toTemplateFriendly(logger hclog.Logger, path, parentDir string, pathItem *f
 // Parameters can be buried deep in the post request body. For
 // convenience during templating, we dig down and grab those,
 // and just put them at the top level with the rest.
-func appendPostParamsToTopLevel(pathItem *framework.OASPathItem) {
-	if pathItem.Post == nil {
-		return
-	}
-	if pathItem.Post.RequestBody == nil {
-		return
-	}
-	if pathItem.Post.RequestBody.Content == nil {
-		return
-	}
-	// There also can be dupes, so let's track all they keys we've
-	// seen before putting new ones in.
+func toTemplateFriendlyParameters(pathItem *framework.OASPathItem) []*templateFriendlyParameter {
+	var result []*templateFriendlyParameter
+
+	// There can be dupe parameters at the top level and inside the post
+	// body. Top level parameters are path parameters, whereas the added
+	// ones in the post body are not.
 	unique := make(map[string]bool)
 	for _, param := range pathItem.Parameters {
 		// We can assume these are already unique because they originated
@@ -192,7 +190,22 @@ func appendPostParamsToTopLevel(pathItem *framework.OASPathItem) {
 		if param.Schema.DisplayAttrs == nil {
 			param.Schema.DisplayAttrs = &framework.DisplayAttributes{}
 		}
+		result = append(result, &templateFriendlyParameter{
+			OASParameter: &param,
+			// All top-level parameters are path parameters, so if they change
+			// we're talking about something entirely new/else.
+			ForceNew: true,
+		})
 		unique[param.Name] = true
+	}
+	if pathItem.Post == nil {
+		return result
+	}
+	if pathItem.Post.RequestBody == nil {
+		return result
+	}
+	if pathItem.Post.RequestBody.Content == nil {
+		return result
 	}
 	for _, mediaTypeObject := range pathItem.Post.RequestBody.Content {
 		if mediaTypeObject.Schema == nil {
@@ -213,15 +226,19 @@ func appendPostParamsToTopLevel(pathItem *framework.OASPathItem) {
 			if schema.DisplayAttrs == nil {
 				schema.DisplayAttrs = &framework.DisplayAttributes{}
 			}
-			pathItem.Parameters = append(pathItem.Parameters, framework.OASParameter{
-				Name:        propertyName,
-				Description: schema.Description,
-				In:          "post",
-				Schema:      schema,
+			result = append(result, &templateFriendlyParameter{
+				OASParameter: &framework.OASParameter{
+					Name:        propertyName,
+					Description: schema.Description,
+					In:          "post",
+					Schema:      schema,
+				},
+				ForceNew: false,
 			})
 			unique[propertyName] = true
 		}
 	}
+	return result
 }
 
 // replaceSlashesWithDashes converts a path like "/transform/transformation/{name}"

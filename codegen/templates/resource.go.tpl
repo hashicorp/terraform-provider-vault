@@ -55,6 +55,9 @@ func {{ .ExportedFuncPrefix }}Resource() *schema.Resource {
 			Sensitive:   true,
 			{{- end }}
 			Description: "{{ .Description }}",
+			{{- if .ForceNew }}
+			ForceNew: true,
+			{{- end}}
 		},
 		{{- end }}
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/config"
+	"github.com/terraform-providers/terraform-provider-vault/generated/resources/transform/role"
 )
 
 const (
@@ -563,6 +564,11 @@ var (
 		"vault_transit_secret_cache_config": {
 			Resource:      transitSecretBackendCacheConfig(),
 			PathInventory: []string{"/transit/cache-config"},
+		},
+		"vault_transform_role_name": {
+			Resource:       role.NameResource(),
+			EnterpriseOnly: true,
+			PathInventory:  []string{"/transform/role/{name}"},
 		},
 	}
 )

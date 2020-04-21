@@ -41,6 +41,7 @@ func NameResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The name of the transformation.",
+			ForceNew:    true,
 		},
 		"template": {
 			Type:        schema.TypeString,

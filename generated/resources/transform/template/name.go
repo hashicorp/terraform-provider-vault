@@ -35,6 +35,7 @@ func NameResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The name of the template.",
+			ForceNew:    true,
 		},
 		"pattern": {
 			Type:        schema.TypeString,
