@@ -5,6 +5,10 @@ PKG_NAME=vault
 
 default: build
 
+dev: fmtcheck
+	go build -o terraform-provider-vault
+	mv terraform-provider-vault ~/.terraform.d/plugins
+
 build: fmtcheck
 	go install
 

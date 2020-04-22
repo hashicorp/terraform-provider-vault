@@ -54,7 +54,7 @@ func NameResource() *schema.Resource {
 func nameCreateResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	backend := d.Get("path").(string)
+	path := d.Get("path").(string)
 
 	data := map[string]interface{}{}
 	if v, ok := d.GetOkExists("name"); ok {
@@ -64,9 +64,8 @@ func nameCreateResource(d *schema.ResourceData, meta interface{}) error {
 		data["transformations"] = v
 	}
 
-	path := util.ReplacePathParameters(backend+nameEndpoint, d)
 	log.Printf("[DEBUG] Writing %q", path)
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().Write(util.ParsePath(path, nameEndpoint, d), data)
 	if err != nil {
 		return fmt.Errorf("error writing %q: %s", path, err)
 	}
@@ -80,7 +79,7 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading %q", path)
-	resp, err := client.Logical().Read(path)
+	resp, err := client.Logical().Read(util.ParsePath(path, nameEndpoint, d))
 	if err != nil {
 		return fmt.Errorf("error reading %q: %s", path, err)
 	}
@@ -90,10 +89,18 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-	if err := d.Set("name", resp.Data["name"]); err != nil {
+	val, ok := resp.Data["name"]
+	if !ok {
+		continue
+	}
+	if err := d.Set("name", val); err != nil {
 		return fmt.Errorf("error setting state key 'name': %s", err)
 	}
-	if err := d.Set("transformations", resp.Data["transformations"]); err != nil {
+	val, ok := resp.Data["transformations"]
+	if !ok {
+		continue
+	}
+	if err := d.Set("transformations", val); err != nil {
 		return fmt.Errorf("error setting state key 'transformations': %s", err)
 	}
 	return nil
@@ -115,7 +122,7 @@ func nameUpdateResource(d *schema.ResourceData, meta interface{}) error {
 	defer func() {
 		d.SetId(path)
 	}()
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().Write(util.ParsePath(path, nameEndpoint, d), data)
 	if err != nil {
 		return fmt.Errorf("error updating template auth backend role %q: %s", path, err)
 	}

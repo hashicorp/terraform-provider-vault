@@ -40,7 +40,7 @@ func transformationReadResource(d *schema.ResourceData, meta interface{}) error 
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading %q", path)
-	resp, err := client.Logical().Read(path)
+	resp, err := client.Logical().Read(util.ParsePath(path, nameEndpoint, d))
 	if err != nil {
 		return fmt.Errorf("error reading %q: %s", path, err)
 	}

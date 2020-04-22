@@ -74,7 +74,7 @@ func NameResource() *schema.Resource {
 func nameCreateResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	backend := d.Get("path").(string)
+	path := d.Get("path").(string)
 
 	data := map[string]interface{}{}
 	if v, ok := d.GetOkExists("allowed_roles"); ok {
@@ -96,9 +96,8 @@ func nameCreateResource(d *schema.ResourceData, meta interface{}) error {
 		data["type"] = v
 	}
 
-	path := util.ReplacePathParameters(backend+nameEndpoint, d)
 	log.Printf("[DEBUG] Writing %q", path)
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().Write(util.ParsePath(path, nameEndpoint, d), data)
 	if err != nil {
 		return fmt.Errorf("error writing %q: %s", path, err)
 	}
@@ -112,7 +111,7 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading %q", path)
-	resp, err := client.Logical().Read(path)
+	resp, err := client.Logical().Read(util.ParsePath(path, nameEndpoint, d))
 	if err != nil {
 		return fmt.Errorf("error reading %q: %s", path, err)
 	}
@@ -122,22 +121,46 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-	if err := d.Set("allowed_roles", resp.Data["allowed_roles"]); err != nil {
+	val, ok := resp.Data["allowed_roles"]
+	if !ok {
+		continue
+	}
+	if err := d.Set("allowed_roles", val); err != nil {
 		return fmt.Errorf("error setting state key 'allowed_roles': %s", err)
 	}
-	if err := d.Set("masking_character", resp.Data["masking_character"]); err != nil {
+	val, ok := resp.Data["masking_character"]
+	if !ok {
+		continue
+	}
+	if err := d.Set("masking_character", val); err != nil {
 		return fmt.Errorf("error setting state key 'masking_character': %s", err)
 	}
-	if err := d.Set("name", resp.Data["name"]); err != nil {
+	val, ok := resp.Data["name"]
+	if !ok {
+		continue
+	}
+	if err := d.Set("name", val); err != nil {
 		return fmt.Errorf("error setting state key 'name': %s", err)
 	}
-	if err := d.Set("template", resp.Data["template"]); err != nil {
+	val, ok := resp.Data["template"]
+	if !ok {
+		continue
+	}
+	if err := d.Set("template", val); err != nil {
 		return fmt.Errorf("error setting state key 'template': %s", err)
 	}
-	if err := d.Set("tweak_source", resp.Data["tweak_source"]); err != nil {
+	val, ok := resp.Data["tweak_source"]
+	if !ok {
+		continue
+	}
+	if err := d.Set("tweak_source", val); err != nil {
 		return fmt.Errorf("error setting state key 'tweak_source': %s", err)
 	}
-	if err := d.Set("type", resp.Data["type"]); err != nil {
+	val, ok := resp.Data["type"]
+	if !ok {
+		continue
+	}
+	if err := d.Set("type", val); err != nil {
 		return fmt.Errorf("error setting state key 'type': %s", err)
 	}
 	return nil
@@ -171,7 +194,7 @@ func nameUpdateResource(d *schema.ResourceData, meta interface{}) error {
 	defer func() {
 		d.SetId(path)
 	}()
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().Write(util.ParsePath(path, nameEndpoint, d), data)
 	if err != nil {
 		return fmt.Errorf("error updating template auth backend role %q: %s", path, err)
 	}

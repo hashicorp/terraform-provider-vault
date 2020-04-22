@@ -84,7 +84,7 @@ func {{ .ExportedFuncPrefix }}Resource() *schema.Resource {
 func {{ .PrivateFuncPrefix }}CreateResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	backend := d.Get("path").(string)
+	path := d.Get("path").(string)
 
 	data := map[string]interface{}{}
 	{{- range .Parameters }}
@@ -93,9 +93,8 @@ func {{ .PrivateFuncPrefix }}CreateResource(d *schema.ResourceData, meta interfa
 	}
 	{{- end }}
 
-	path := util.ReplacePathParameters(backend + {{ .PrivateFuncPrefix }}Endpoint, d)
 	log.Printf("[DEBUG] Writing %q", path)
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().Write(util.ParsePath(path, nameEndpoint, d), data)
 	if err != nil {
 		return fmt.Errorf("error writing %q: %s", path, err)
 	}
@@ -111,7 +110,7 @@ func {{ .PrivateFuncPrefix }}ReadResource(d *schema.ResourceData, meta interface
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading %q", path)
-	resp, err := client.Logical().Read(path)
+	resp, err := client.Logical().Read(util.ParsePath(path, nameEndpoint, d))
 	if err != nil {
 		return fmt.Errorf("error reading %q: %s", path, err)
 	}
@@ -122,7 +121,11 @@ func {{ .PrivateFuncPrefix }}ReadResource(d *schema.ResourceData, meta interface
 		return nil
 	}
 	{{- range .Parameters }}
-	if err := d.Set("{{ .Name }}", resp.Data["{{ .Name }}"]); err != nil {
+	val, ok := resp.Data["{{ .Name }}"]
+	if !ok {
+	    continue
+	}
+	if err := d.Set("{{ .Name }}", val); err != nil {
 		return fmt.Errorf("error setting state key '{{ .Name }}': %s", err)
 	}
 	{{- end }}
@@ -146,7 +149,7 @@ func {{ .PrivateFuncPrefix }}UpdateResource(d *schema.ResourceData, meta interfa
 	defer func() {
 		d.SetId(path)
 	}()
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().Write(util.ParsePath(path, nameEndpoint, d), data)
 	if err != nil {
 		return fmt.Errorf("error updating template auth backend role %q: %s", path, err)
 	}

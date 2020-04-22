@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"reflect"
 	"testing"
 )
@@ -144,5 +145,17 @@ func TestSliceRemoveIfPresent_struct(t *testing.T) {
 	removed = SliceRemoveIfPresent(slice, testingStruct{foobar: false, list: []string{"hello", "world"}})
 	if !reflect.DeepEqual(expected, removed) {
 		t.Errorf("Slice should be modified")
+	}
+}
+
+func TestParsePath(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+		"name": {Type: schema.TypeString},
+	}, map[string]interface{}{
+		"name": "foo",
+	})
+	result := ParsePath("transform", "/transform/role/{name}", d)
+	if result != "/transform/role/foo" {
+		t.Fatalf("received unexpected result: %s", result)
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"reflect"
-	"regexp"
 	"strings"
 	"time"
 
@@ -172,13 +171,35 @@ func SliceRemoveIfPresent(list []interface{}, search interface{}) []interface{} 
 	return list
 }
 
-// TODO testme
-var doubleCurlyBracedFields = regexp.MustCompile(`(\{\{.*?\}\})`)
+// Example data:
+//   - userSuppliedPath = "transform"
+//   - endpoint = "/transform/role/{name}"
+//   - parameters will include path parameters
+func ParsePath(userSuppliedPath, endpoint string, d *schema.ResourceData) string {
+	fields := strings.Split(endpoint, "/")
+	// The second field should be the one the user supplied rather
+	// than the default one shown.
+	fields[1] = userSuppliedPath
 
-func ReplacePathParameters(path string, d *schema.ResourceData) string {
-	fieldNames := doubleCurlyBracedFields.FindAllString(path, -1)
-	for _, fieldName := range fieldNames {
-		path = strings.Replace(path, fmt.Sprintf("{{%s}}", fieldName), d.Get(fieldName).(string), -1)
+	// Since endpoints start with a "/", the first field is always
+	// an extraneous "" and should be dropped.
+	recomprised := "/" + strings.Join(fields[1:], "/")
+
+	// For a recomprised string like "/my-transform/role/{name}",
+	// this will return the fields of "/transform/role/" and
+	// "name".
+	fields = strings.FieldsFunc(recomprised, func(c rune) bool {
+		return c == '{' || c == '}'
+	})
+	for _, field := range fields {
+		valRaw, ok := d.GetOk(field)
+		if !ok {
+			continue
+		}
+		// All path parameters must be strings so it's safe to
+		// assume here.
+		val := valRaw.(string)
+		recomprised = strings.Replace(recomprised, fmt.Sprintf("{%s}", field), val, -1)
 	}
-	return path
+	return recomprised
 }
