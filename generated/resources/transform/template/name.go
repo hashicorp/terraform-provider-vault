@@ -104,33 +104,25 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-	val, ok := resp.Data["alphabet"]
-	if !ok {
-		continue
+	if val, ok := resp.Data["alphabet"]; ok {
+		if err := d.Set("alphabet", val); err != nil {
+			return fmt.Errorf("error setting state key 'alphabet': %s", err)
+		}
 	}
-	if err := d.Set("alphabet", val); err != nil {
-		return fmt.Errorf("error setting state key 'alphabet': %s", err)
+	if val, ok := resp.Data["name"]; ok {
+		if err := d.Set("name", val); err != nil {
+			return fmt.Errorf("error setting state key 'name': %s", err)
+		}
 	}
-	val, ok := resp.Data["name"]
-	if !ok {
-		continue
+	if val, ok := resp.Data["pattern"]; ok {
+		if err := d.Set("pattern", val); err != nil {
+			return fmt.Errorf("error setting state key 'pattern': %s", err)
+		}
 	}
-	if err := d.Set("name", val); err != nil {
-		return fmt.Errorf("error setting state key 'name': %s", err)
-	}
-	val, ok := resp.Data["pattern"]
-	if !ok {
-		continue
-	}
-	if err := d.Set("pattern", val); err != nil {
-		return fmt.Errorf("error setting state key 'pattern': %s", err)
-	}
-	val, ok := resp.Data["type"]
-	if !ok {
-		continue
-	}
-	if err := d.Set("type", val); err != nil {
-		return fmt.Errorf("error setting state key 'type': %s", err)
+	if val, ok := resp.Data["type"]; ok {
+		if err := d.Set("type", val); err != nil {
+			return fmt.Errorf("error setting state key 'type': %s", err)
+		}
 	}
 	return nil
 }

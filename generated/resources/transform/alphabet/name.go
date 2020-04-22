@@ -88,19 +88,15 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-	val, ok := resp.Data["alphabet"]
-	if !ok {
-		continue
+	if val, ok := resp.Data["alphabet"]; ok {
+		if err := d.Set("alphabet", val); err != nil {
+			return fmt.Errorf("error setting state key 'alphabet': %s", err)
+		}
 	}
-	if err := d.Set("alphabet", val); err != nil {
-		return fmt.Errorf("error setting state key 'alphabet': %s", err)
-	}
-	val, ok := resp.Data["name"]
-	if !ok {
-		continue
-	}
-	if err := d.Set("name", val); err != nil {
-		return fmt.Errorf("error setting state key 'name': %s", err)
+	if val, ok := resp.Data["name"]; ok {
+		if err := d.Set("name", val); err != nil {
+			return fmt.Errorf("error setting state key 'name': %s", err)
+		}
 	}
 	return nil
 }

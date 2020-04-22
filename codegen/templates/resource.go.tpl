@@ -121,13 +121,11 @@ func {{ .PrivateFuncPrefix }}ReadResource(d *schema.ResourceData, meta interface
 		return nil
 	}
 	{{- range .Parameters }}
-	val, ok := resp.Data["{{ .Name }}"]
-	if !ok {
-	    continue
-	}
-	if err := d.Set("{{ .Name }}", val); err != nil {
-		return fmt.Errorf("error setting state key '{{ .Name }}': %s", err)
-	}
+	if val, ok := resp.Data["{{ .Name }}"]; ok {
+        if err := d.Set("{{ .Name }}", val); err != nil {
+            return fmt.Errorf("error setting state key '{{ .Name }}': %s", err)
+        }
+    }
 	{{- end }}
 	return nil
 }
