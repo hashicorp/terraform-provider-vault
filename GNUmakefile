@@ -8,6 +8,10 @@ default: build
 build: fmtcheck
 	go install
 
+dev: fmtcheck
+	go build -o terraform-provider-vault
+	mv terraform-provider-vault ~/.terraform.d/plugins
+
 test: fmtcheck
 	go test -i $(TEST) || exit 1
 	echo $(TEST) | \
