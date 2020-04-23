@@ -53,16 +53,81 @@ func GenerateFiles(logger hclog.Logger, fileType FileType, vaultPath string, vau
 
 // generateCode generates the code for either one resource, or one data source.
 func generateCode(logger hclog.Logger, fileType FileType, path string, pathItem *framework.OASPathItem) error {
-	pathToFile := stripCurlyBraces(fmt.Sprintf("%s/generated/%s%s.go", pathToHomeDir, fileType.String(), path))
+	pathToFile := codeFilePath(fileType, path)
 	return generateFile(logger, pathToFile, fileType, path, pathItem)
+}
+
+/*
+codeFilePath creates a directory structure inside the "generated" folder that's
+intended to make it easy to find the file for each endpoint in Vault, even if
+we eventually cover all >500 of them and add tests.
+
+	terraform-provider-vault/generated$ tree
+	.
+	├── datasources
+	│   └── transform
+	│       ├── decode
+	│       │   └── role_name.go
+	│       └── encode
+	│           └── role_name.go
+	└── resources
+		└── transform
+			├── alphabet
+			│   └── name.go
+			├── alphabet.go
+			├── role
+			│   └── name.go
+			├── role.go
+			├── template
+			│   └── name.go
+			├── template.go
+			├── transformation
+			│   └── name.go
+			└── transformation.go
+*/
+func codeFilePath(fileType FileType, path string) string {
+	return stripCurlyBraces(fmt.Sprintf("%s/generated/%s%s.go", pathToHomeDir, fileType.String(), path))
 }
 
 // generateDoc generates the doc for a resource or data source.
 // The file is incomplete with a number of placeholders for the author to fill in
 // additional information.
 func generateDoc(logger hclog.Logger, fileType FileType, path string, pathItem *framework.OASPathItem) error {
-	pathToFile := stripCurlyBraces(fmt.Sprintf("%s/website/docs/generated/%s/%s.md", pathToHomeDir, fileType.String(), replaceSlashesWithDashes(path)))
+	pathToFile := docFilePath(fileType, path)
 	return generateFile(logger, pathToFile, FileTypeDoc, path, pathItem)
+}
+
+/*
+docFilePath creates a directory structure inside the "website/docs/generated" folder
+that's intended to make it easy to find the file for each endpoint in Vault, even if
+we eventually cover all >500 of them and add tests.
+
+	terraform-provider-vault/website/docs/generated$ tree
+	.
+	├── datasources
+	│   └── transform
+	│       ├── decode
+	│       │   └── role_name.md
+	│       └── encode
+	│           └── role_name.md
+	└── resources
+		└── transform
+			├── alphabet
+			│   └── name.md
+			├── alphabet.md
+			├── role
+			│   └── name.md
+			├── role.md
+			├── template
+			│   └── name.md
+			├── template.md
+			├── transformation
+			│   └── name.md
+			└── transformation.md
+ */
+func docFilePath(fileType FileType, path string) string {
+	result := fmt.Sprintf("%s/website/docs/generated/%s/%s.md", pathToHomeDir, fileType.String(), path)
+	return stripCurlyBraces(result)
 }
 
 func generateFile(logger hclog.Logger, pathToFile string, fileType FileType, vaultPath string, vaultPathDesc *framework.OASPathItem) error {
