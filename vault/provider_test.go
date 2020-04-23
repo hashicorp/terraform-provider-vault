@@ -43,7 +43,7 @@ import (
 // start over with a fresh Vault. (Remember to reset VAULT_TOKEN.)
 
 func TestProvider(t *testing.T) {
-	if err := Provider().(*schema.Provider).InternalValidate(); err != nil {
+	if err := Provider().InternalValidate(); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 }
@@ -52,7 +52,7 @@ var testProvider *schema.Provider
 var testProviders map[string]terraform.ResourceProvider
 
 func init() {
-	testProvider = Provider().(*schema.Provider)
+	testProvider = Provider()
 	testProviders = map[string]terraform.ResourceProvider{
 		"vault": testProvider,
 	}
@@ -151,7 +151,7 @@ echo "helper-token"
 `
 
 func TestAccAuthLoginProviderConfigure(t *testing.T) {
-	rootProvider := Provider().(*schema.Provider)
+	rootProvider := Provider()
 	rootProviderResource := &schema.Resource{
 		Schema: rootProvider.Schema,
 	}
@@ -180,7 +180,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
 	}
 
-	rootProvider := Provider().(*schema.Provider)
+	rootProvider := Provider()
 	rootProviderResource := &schema.Resource{
 		Schema: rootProvider.Schema,
 	}
@@ -205,7 +205,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 		},
 	})
 
-	nsProvider := Provider().(*schema.Provider)
+	nsProvider := Provider()
 	nsProviderResource := &schema.Resource{
 		Schema: nsProvider.Schema,
 	}
@@ -293,7 +293,7 @@ func testResourceApproleLoginCheckAttrs(t *testing.T) resource.TestCheckFunc {
 				},
 			},
 		}
-		approleProvider := Provider().(*schema.Provider)
+		approleProvider := Provider()
 		approleProviderResource := &schema.Resource{
 			Schema: approleProvider.Schema,
 		}
@@ -349,7 +349,7 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 
 		vaultToken := tokenResourceState.Primary.Attributes["client_token"]
 
-		ns2Provider := Provider().(*schema.Provider)
+		ns2Provider := Provider()
 		ns2ProviderResource := &schema.Resource{
 			Schema: ns2Provider.Schema,
 		}
@@ -423,7 +423,7 @@ func TestAccProviderToken(t *testing.T) {
 	}
 
 	// Create a "resource" we can use for constructing ResourceData.
-	provider := Provider().(*schema.Provider)
+	provider := Provider()
 	providerResource := &schema.Resource{
 		Schema: provider.Schema,
 	}
@@ -732,7 +732,7 @@ func TestAccProviderVaultAddrEnv(t *testing.T) {
 
 func newTestResourceData(address string, addAddressToEnv string) (*schema.ResourceData, error) {
 	// Create a "resource" we can use for constructing ResourceData.
-	provider := Provider().(*schema.Provider)
+	provider := Provider()
 	providerResource := &schema.Resource{
 		Schema: provider.Schema,
 		// this needs to be configured with and without add_Address_to_env
