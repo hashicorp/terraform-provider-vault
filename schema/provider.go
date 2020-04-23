@@ -1,11 +1,11 @@
-package provider
+package schema
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
-func New(seed *schema.Provider) *Provider {
+func NewProvider(seed *schema.Provider) *Provider {
 	return &Provider{
 		provider: seed,
 	}
