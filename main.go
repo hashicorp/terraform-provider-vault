@@ -3,12 +3,12 @@ package main
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/plugin"
 	"github.com/terraform-providers/terraform-provider-vault/generated"
-	"github.com/terraform-providers/terraform-provider-vault/provider"
+	"github.com/terraform-providers/terraform-provider-vault/schema"
 	"github.com/terraform-providers/terraform-provider-vault/vault"
 )
 
 func main() {
-	p := provider.NewProvider(vault.Provider())
+	p := schema.NewProvider(vault.Provider())
 	for name, resource := range generated.ResourceRegistry {
 		p.RegisterResource(name, resource)
 	}
