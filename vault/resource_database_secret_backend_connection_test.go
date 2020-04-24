@@ -361,7 +361,7 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 	// MYSQL_TEMPLATED_URL is the template URL to be used in vault
 	testConnURL := os.Getenv("MYSQL_TEMPLATED_URL")
 	if testConnURL == "" {
-		t.Skip("MYSQL_TEMPLATED_URL not set")
+		testConnURL = connURL
 	}
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
