@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"html/template"
 	"io"
 	"os"
 	"sort"
@@ -159,15 +158,11 @@ func generateFile(logger hclog.Logger, pathToFile string, fileType FileType, vau
 // parseTemplate takes one pathItem and uses a template to generate text
 // for it. This template is written to the given writer.
 func parseTemplate(logger hclog.Logger, writer io.Writer, fileType FileType, parentDir string, vaultPath string, vaultPathDesc *framework.OASPathItem) error {
-	tmpl, err := template.New(fileType.String()).Parse(templates[fileType])
-	if err != nil {
-		return err
-	}
 	tmplFriendly, err := toTemplateFriendly(logger, vaultPath, parentDir, vaultPathDesc)
 	if err != nil {
 		return err
 	}
-	return tmpl.Execute(writer, tmplFriendly)
+	return templates[fileType].Execute(writer, tmplFriendly)
 }
 
 // templateFriendlyPathItem is a convenience struct that plays nicely with Go's
@@ -183,6 +178,8 @@ type templateFriendlyPathItem struct {
 	SupportsDelete     bool
 }
 
+// templateFriendlyParameter mainly just reuses the OASParameter,
+// but adds on a ForceNew bool.
 type templateFriendlyParameter struct {
 	*framework.OASParameter
 	ForceNew bool
