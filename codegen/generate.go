@@ -3,6 +3,7 @@ package codegen
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -43,8 +44,8 @@ we eventually cover all >500 of them and add tests.
 			│   └── name.go
 			└── transformation.go
 */
-func codeFilePath(tmplType templateType, path string) string {
-	filename := fmt.Sprintf("%s%s.go", tmplType.String(), path)
+func codeFilePath(tmplType templateType, endpoint string) string {
+	filename := fmt.Sprintf("%s%s.go", tmplType.String(), endpoint)
 	path := filepath.Join(pathToHomeDir, "generated", filename)
 	return stripCurlyBraces(path)
 }
@@ -76,8 +77,8 @@ we eventually cover all >500 of them and add tests.
 			│   └── name.md
 			└── transformation.md
 */
-func docFilePath(tmplType templateType, path string) string {
-	filename := fmt.Sprintf("%s%s.md", tmplType.String(), path)
+func docFilePath(tmplType templateType, endpoint string) string {
+	filename := fmt.Sprintf("%s%s.md", tmplType.String(), endpoint)
 	path := filepath.Join(pathToHomeDir, "website", "docs", "generated", filename)
 	return stripCurlyBraces(path)
 }
