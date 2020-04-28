@@ -10,7 +10,7 @@ build: fmtcheck
 
 dev: fmtcheck
 	go build -o terraform-provider-vault
-	mv terraform-provider-vault ~/.terraform.d/plugins
+	mv terraform-provider-vault ~/.terraform.d/plugins/
 
 test: fmtcheck
 	go test -i $(TEST) || exit 1
