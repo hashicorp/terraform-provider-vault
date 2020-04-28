@@ -44,7 +44,9 @@ we eventually cover all >500 of them and add tests.
 			└── transformation.go
 */
 func codeFilePath(tmplType templateType, path string) string {
-	return stripCurlyBraces(fmt.Sprintf("%s/generated/%s%s.go", pathToHomeDir, tmplType.String(), path))
+	filename := fmt.Sprintf("%s%s.go", tmplType.String(), path)
+	path := filepath.Join(pathToHomeDir, "generated", filename)
+	return stripCurlyBraces(path)
 }
 
 /*
