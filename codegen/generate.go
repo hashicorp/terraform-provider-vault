@@ -86,7 +86,7 @@ func docFilePath(tmplType templateType, path string) string {
 // "generated/resources/transform-transformation-{name}.go"
 // to "generated/resources/transform-transformation-name.go".
 func stripCurlyBraces(path string) string {
-	path = strings.Replace(path, "{", "", -1)
-	path = strings.Replace(path, "}", "", -1)
+	path = strings.ReplaceAll(path, "{", "")
+	path = strings.ReplaceAll(path, "}", "")
 	return path
 }
