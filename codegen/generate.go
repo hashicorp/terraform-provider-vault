@@ -77,8 +77,9 @@ we eventually cover all >500 of them and add tests.
 			└── transformation.md
 */
 func docFilePath(tmplType templateType, path string) string {
-	result := fmt.Sprintf("%s/website/docs/generated/%s%s.md", pathToHomeDir, tmplType.String(), path)
-	return stripCurlyBraces(result)
+	filename := fmt.Sprintf("%s%s.md", tmplType.String(), path)
+	path := filepath.Join(pathToHomeDir, "website", "docs", "generated", filename)
+	return stripCurlyBraces(path)
 }
 
 // stripCurlyBraces converts a path like
