@@ -44,7 +44,9 @@ we eventually cover all >500 of them and add tests.
 			└── transformation.go
 */
 func codeFilePath(tmplType templateType, path string) string {
-	return stripCurlyBraces(fmt.Sprintf("%s/generated/%s%s.go", pathToHomeDir, tmplType.String(), path))
+	filename := fmt.Sprintf("%s%s.go", tmplType.String(), path)
+	path := filepath.Join(pathToHomeDir, "generated", filename)
+	return stripCurlyBraces(path)
 }
 
 /*
@@ -75,15 +77,16 @@ we eventually cover all >500 of them and add tests.
 			└── transformation.md
 */
 func docFilePath(tmplType templateType, path string) string {
-	result := fmt.Sprintf("%s/website/docs/generated/%s%s.md", pathToHomeDir, tmplType.String(), path)
-	return stripCurlyBraces(result)
+	filename := fmt.Sprintf("%s%s.md", tmplType.String(), path)
+	path := filepath.Join(pathToHomeDir, "website", "docs", "generated", filename)
+	return stripCurlyBraces(path)
 }
 
 // stripCurlyBraces converts a path like
 // "generated/resources/transform-transformation-{name}.go"
 // to "generated/resources/transform-transformation-name.go".
 func stripCurlyBraces(path string) string {
-	path = strings.Replace(path, "{", "", -1)
-	path = strings.Replace(path, "}", "", -1)
+	path = strings.ReplaceAll(path, "{", "")
+	path = strings.ReplaceAll(path, "}", "")
 	return path
 }
