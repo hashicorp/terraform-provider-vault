@@ -3,7 +3,8 @@ package codegen
 type templateType int
 
 const (
-	templateTypeDataSource templateType = iota
+	templateTypeUnset templateType = iota
+	templateTypeDataSource
 	templateTypeResource
 	templateTypeDoc
 )
@@ -14,6 +15,8 @@ func (t templateType) String() string {
 		return "datasources"
 	case templateTypeResource:
 		return "resources"
+	case templateTypeDoc:
+		return "docs"
 	}
-	return "docs"
+	return "unset"
 }
