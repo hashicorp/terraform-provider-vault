@@ -264,6 +264,9 @@ func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 		if _, ok := d.GetOk("token_policies"); ok {
 			d.Set("token_policies", nil)
 		}
+		if v, ok := resp.Data["policies"]; ok {
+			d.Set("policies", v)
+		}
 	}
 
 	// Check if the user is using the deprecated `period`
@@ -273,9 +276,12 @@ func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 		if _, ok := d.GetOk("token_period"); ok {
 			d.Set("token_period", nil)
 		}
+		if v, ok := resp.Data["period"]; ok {
+			d.Set("period", v)
+		}
 	}
 
-	for _, k := range []string{"bind_secret_id", "secret_id_num_uses", "secret_id_ttl", "policies", "period"} {
+	for _, k := range []string{"bind_secret_id", "secret_id_num_uses", "secret_id_ttl"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return fmt.Errorf("error setting state key \"%s\": %s", k, err)
 		}
