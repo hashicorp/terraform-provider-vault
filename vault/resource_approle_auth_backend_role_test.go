@@ -348,7 +348,7 @@ func TestAccAppRoleAuthBackendRole_deprecatedFullUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"secret_id_num_uses", "5"),
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
-						"period", "0"),
+						"token_period", "0"),
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"bind_secret_id", "false"),
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
@@ -377,7 +377,7 @@ func TestAccAppRoleAuthBackendRole_deprecatedFullUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"secret_id_num_uses", "10"),
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
-						"period", "0"),
+						"token_period", "0"),
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
 						"bind_secret_id", "true"),
 					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
@@ -519,4 +519,87 @@ resource "vault_approle_auth_backend_role" "role" {
   token_ttl = 7200
   token_max_ttl = 10800
 }`, backend, role, roleID)
+}
+
+// TestAccAppRoleAuthBackendRole_token_policy_update is a regression test for
+// https://github.com/terraform-providers/terraform-provider-vault/issues/533
+func TestAccAppRoleAuthBackendRole_token_policy_update(t *testing.T) {
+	backend := acctest.RandomWithPrefix("approle")
+	role := acctest.RandomWithPrefix("test-role")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckAppRoleAuthBackendRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAppRoleAuthBackendRole_policy(backend, role),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"backend", backend),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"role_name", role),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"policies.#", "3"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"period", "86400"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"token_policies.#", "0"),
+					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_role.role",
+						"role_id"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"token_period", "0"),
+				),
+			},
+			{
+				Config: testAccAppRoleAuthBackendRole_token_policy(backend, role),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"backend", backend),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"role_name", role),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"policies.#", "0"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"period", "0"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"token_policies.#", "3"),
+					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_role.role",
+						"role_id"),
+					resource.TestCheckResourceAttr("vault_approle_auth_backend_role.role",
+						"token_period", "86400"),
+				),
+			},
+		},
+	})
+}
+
+func testAccAppRoleAuthBackendRole_policy(backend, role string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "approle" {
+  type = "approle"
+  path = "%s"
+}
+
+resource "vault_approle_auth_backend_role" "role" {
+  backend = "${vault_auth_backend.approle.path}"
+  role_name = "%s"
+  policies = ["default", "dev", "prod"]
+	period = 86400
+}`, backend, role)
+}
+
+func testAccAppRoleAuthBackendRole_token_policy(backend, role string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "approle" {
+  type = "approle"
+  path = "%s"
+}
+
+resource "vault_approle_auth_backend_role" "role" {
+  backend = "${vault_auth_backend.approle.path}"
+  role_name = "%s"
+  token_policies = ["default", "dev", "prod"]
+	token_period = 86400
+}`, backend, role)
 }
