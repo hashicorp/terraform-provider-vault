@@ -440,7 +440,7 @@ var (
 			EnterpriseOnly: true,
 		},
 		"vault_mount": {
-			Resource:      mountResource(),
+			Resource:      MountResource(),
 			PathInventory: []string{"/sys/mounts/{path}"},
 		},
 		"vault_namespace": {

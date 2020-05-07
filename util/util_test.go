@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"reflect"
 	"testing"
 )
@@ -144,5 +145,69 @@ func TestSliceRemoveIfPresent_struct(t *testing.T) {
 	removed = SliceRemoveIfPresent(slice, testingStruct{foobar: false, list: []string{"hello", "world"}})
 	if !reflect.DeepEqual(expected, removed) {
 		t.Errorf("Slice should be modified")
+	}
+}
+
+func TestParsePath(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+		"name": {Type: schema.TypeString},
+	}, map[string]interface{}{
+		"name": "foo",
+	})
+	result := ParsePath("my/transform/hello", "/transform/role/{name}", d)
+	if result != "/my/transform/hello/role/foo" {
+		t.Fatalf("received unexpected result: %s", result)
+	}
+}
+
+func TestLastField(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{
+			input:    "/transform/alphabet",
+			expected: "alphabet",
+		},
+		{
+			input:    "/transform/alphabet/{name}",
+			expected: "{name}",
+		},
+		{
+			input:    "/transform/decode/{role_name}",
+			expected: "{role_name}",
+		},
+		{
+			input:    "/transit/datakey/{plaintext}/{name}",
+			expected: "{name}",
+		},
+		{
+			input:    "/transit/export/{type}/{name}/{version}",
+			expected: "{version}",
+		},
+		{
+			input:    "/unlikely",
+			expected: "unlikely",
+		},
+	}
+	for _, testCase := range testCases {
+		actual := LastField(testCase.input)
+		if actual != testCase.expected {
+			t.Fatalf("input: %q; expected: %q; actual: %q", testCase.input, testCase.expected, actual)
+		}
+	}
+}
+
+func TestPathParameters(t *testing.T) {
+	result, err := PathParameters("/transform/role/{name}", "/transform-56614161/foo7306072804/role/test-role-54539268/foo87766695434")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := map[string]string{
+		"path": "transform-56614161/foo7306072804",
+		"name": "test-role-54539268/foo87766695434",
+	}
+	if !reflect.DeepEqual(result, expected) {
+		t.Fatalf("expected %+v but received %+v", expected, result)
 	}
 }

@@ -91,3 +91,49 @@ func TestDocFilePath(t *testing.T) {
 		}
 	}
 }
+
+func TestStripCurlyBraces(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{
+			input:    "{test}",
+			expected: "test",
+		},
+		{
+			input:    "{{name}}",
+			expected: "name",
+		},
+		{
+			input:    "name",
+			expected: "name",
+		},
+		{
+			input:    "{name",
+			expected: "name",
+		},
+	}
+	for _, testCase := range testCases {
+		actual := stripCurlyBraces(testCase.input)
+		if actual != testCase.expected {
+			t.Fatalf("expected %q but received %q", actual, testCase.expected)
+		}
+	}
+}
+
+func TestParentDir(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{input: "/transform/alphabet", expected: "/transform"},
+		{input: "/transform/alphabet/{name}", expected: "/transform/alphabet"},
+	}
+	for _, testCase := range testCases {
+		actual := parentDir(testCase.input)
+		if actual != testCase.expected {
+			t.Fatalf("expected %q but received %q", testCase.expected, actual)
+		}
+	}
+}
