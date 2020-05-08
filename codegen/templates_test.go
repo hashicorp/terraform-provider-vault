@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 )
 
-func TestClean(t *testing.T) {
+func TestFormat(t *testing.T) {
 	testCases := []struct {
 		input    string
 		expected string
@@ -27,7 +27,7 @@ func TestClean(t *testing.T) {
 		},
 		{
 			input:    "{role_name}",
-			expected: "rolename",
+			expected: "roleName",
 		},
 		{
 			input:    "{name}",
@@ -43,7 +43,7 @@ func TestClean(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		actual := clean(testCase.input)
+		actual := format(testCase.input)
 		if actual != testCase.expected {
 			t.Fatalf("input: %q; expected: %q; actual: %q", testCase.input, testCase.expected, actual)
 		}
@@ -166,14 +166,14 @@ func TestValidate(t *testing.T) {
 							Schema: &framework.OASSchema{
 								Type: "array",
 								Items: &framework.OASSchema{
-									Type: "object",
+									Type: "boolean",
 								},
 							},
 						},
 					},
 				},
 			},
-			expectedErr: "unsupported array type of object for foo",
+			expectedErr: "unsupported array type of boolean for foo",
 		},
 	}
 	for _, testCase := range testCases {

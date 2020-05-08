@@ -43,8 +43,13 @@ func {{ .UpperCaseDifferentiator }}Resource() *schema.Resource {
 			{{- end }}
 			{{- if (eq .Schema.Type "array") }}
 			Type:        schema.TypeList,
+			{{- if (eq .Schema.Items.Type "string") }}
 			Elem:        &schema.Schema{Type: schema.TypeString},
-			{{- end }}
+			{{- end }} {{/* end if item type string */}}
+			{{- if (eq .Schema.Items.Type "object") }}
+            Elem:        &schema.Schema{Type: schema.TypeMap},
+            {{- end }} {{/* end if item type object */}}
+			{{- end }} {{/* end if array */}}
 			{{- if .Required }}
 			Required:    true,
 			{{- else }}
