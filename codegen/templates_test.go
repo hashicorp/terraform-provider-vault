@@ -317,7 +317,7 @@ func TestCollectParameters(t *testing.T) {
 	if err := json.Unmarshal([]byte(testEndpoint), endpointInfo); err != nil {
 		t.Fatal(err)
 	}
-	parameters := collectParameters(endpointInfo)
+	parameters := collectParameters(endpointInfo, &additionalInfo{})
 	for i := 0; i < len(parameters); i++ {
 		switch i {
 		case 0:
@@ -344,7 +344,7 @@ func TestTemplateHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 	buf := bytes.NewBuffer([]byte{})
-	if err := h.Write(buf, templateTypeResource, "role", "/transform/role/{name}", endpointInfo); err != nil {
+	if err := h.Write(buf, "role", "/transform/role/{name}", endpointInfo, &additionalInfo{TemplateType: templateTypeResource}); err != nil {
 		t.Fatal(err)
 	}
 	result := ""

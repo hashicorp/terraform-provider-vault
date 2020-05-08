@@ -63,27 +63,27 @@ type templateHandler struct {
 // Write takes one endpoint and uses a template to generate text
 // for it. This template is written to the given writer. It's exported
 // because it's the only method intended to be called by external callers.
-func (h *templateHandler) Write(wr io.Writer, tmplType templateType, parentDir string, endpoint string, endpointInfo *framework.OASPathItem) error {
+func (h *templateHandler) Write(wr io.Writer, parentDir string, endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
 	templatable, ok := h.templatableEndpoints[endpoint]
 	if !ok {
 		// Since each endpoint will have a code file and a doc file, let's cache
 		// the template-friendly version of the endpoint so it doesn't have to be
 		// converted into that format twice.
-		t, err := h.toTemplatable(parentDir, endpoint, endpointInfo)
+		t, err := h.toTemplatable(parentDir, endpoint, endpointInfo, addedInfo)
 		if err != nil {
 			return err
 		}
 		templatable = t
 		h.templatableEndpoints[endpoint] = t
 	}
-	return h.templates[tmplType].Execute(wr, templatable)
+	return h.templates[addedInfo.TemplateType].Execute(wr, templatable)
 }
 
 // toTemplatable does a bunch of work to format the given data into a
 // struct that has fields that will be idiomatic to use with Go's templating
 // language.
-func (h *templateHandler) toTemplatable(parentDir, endpoint string, endpointInfo *framework.OASPathItem) (*templatableEndpoint, error) {
-	parameters := collectParameters(endpointInfo)
+func (h *templateHandler) toTemplatable(parentDir, endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) (*templatableEndpoint, error) {
+	parameters := collectParameters(endpointInfo, addedInfo)
 
 	// Sort the parameters by name so they won't shift every time
 	// new files are generated due to having originated in maps.
@@ -132,8 +132,11 @@ func (h *templateHandler) toTemplatable(parentDir, endpoint string, endpointInfo
 // collectParameters walks a PathItem and looks for all the parameters
 // described. Some are at the top level of the path, indicating they are
 // path parameters. Others are only in the post body.
-func collectParameters(endpointInfo *framework.OASPathItem) []*templatableParam {
+func collectParameters(endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) []*templatableParam {
 	var result []*templatableParam
+	for _, param := range addedInfo.AdditionalParameters {
+		result = append(result, param)
+	}
 	for _, param := range endpointInfo.Parameters {
 		result = append(result, toTemplatableParam(param, true))
 	}
@@ -171,6 +174,7 @@ func collectParameters(endpointInfo *framework.OASPathItem) []*templatableParam 
 type templatableParam struct {
 	*framework.OASParameter
 	IsPathParam bool
+	Computed    bool
 }
 
 func toTemplatableParam(param framework.OASParameter, isPathParameter bool) *templatableParam {

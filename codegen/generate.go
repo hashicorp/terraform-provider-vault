@@ -43,9 +43,9 @@ func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
 		templateHandler: h,
 	}
 	createdCount := 0
-	for endpoint, templateType := range endpointRegistry {
-		logger.Info(fmt.Sprintf("generating %s for %s\n", templateType.String(), endpoint))
-		if err := fCreator.GenerateCode(endpoint, paths[endpoint], templateType); err != nil {
+	for endpoint, addedInfo := range endpointRegistry {
+		logger.Info(fmt.Sprintf("generating %s for %s\n", addedInfo.TemplateType.String(), endpoint))
+		if err := fCreator.GenerateCode(endpoint, paths[endpoint], addedInfo); err != nil {
 			if err == errUnsupported {
 				logger.Warn(fmt.Sprintf("couldn't generate %s, continuing", endpoint))
 				continue
@@ -66,21 +66,21 @@ type fileCreator struct {
 }
 
 // GenerateCode is exported because it's the only non-internal method on the fileCreator.
-func (c *fileCreator) GenerateCode(endpoint string, endpointInfo *framework.OASPathItem, tmplType templateType) error {
-	pathToFile := codeFilePath(tmplType, endpoint)
-	return c.writeFile(pathToFile, tmplType, endpoint, endpointInfo)
+func (c *fileCreator) GenerateCode(endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
+	pathToFile := codeFilePath(addedInfo.TemplateType, endpoint)
+	return c.writeFile(pathToFile, endpoint, endpointInfo, addedInfo)
 }
 
 // TODO in a separate PR - add a GenerateDoc method.
 
-func (c *fileCreator) writeFile(pathToFile string, tmplType templateType, endpoint string, endpointInfo *framework.OASPathItem) error {
+func (c *fileCreator) writeFile(pathToFile string, endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
 	parentDir := parentDir(pathToFile)
 	wr, closer, err := c.createFileWriter(pathToFile, parentDir)
 	if err != nil {
 		return err
 	}
 	defer closer()
-	return c.templateHandler.Write(wr, tmplType, parentDir, endpoint, endpointInfo)
+	return c.templateHandler.Write(wr, parentDir, endpoint, endpointInfo, addedInfo)
 }
 
 // createFileWriter creates a file and returns its writer for the caller to use in templating.

@@ -50,6 +50,9 @@ func {{ .UpperCaseDifferentiator }}Resource() *schema.Resource {
 			{{- else }}
 			Optional:    true,
 			{{- end }}
+			{{- if .Computed }}
+            Computed:    true,
+            {{- end }}
 			{{- if .Schema.DisplayAttrs.Sensitive }}
 			Sensitive:   true,
 			{{- end }}
@@ -89,11 +92,16 @@ func create{{ .UpperCaseDifferentiator }}Resource(d *schema.ResourceData, meta i
 	data := map[string]interface{}{}
 	{{- range .Parameters }}
 	{{- if .IsPathParam}}
-	    data["{{ .Name }}"] = d.Get("{{ .Name }}")
-	{{- else }}
-	if v, ok := d.GetOkExists("{{ .Name }}"); ok {
-		data["{{ .Name }}"] = v
-	}
+	  {{- if not .Computed }}
+    data["{{ .Name }}"] = d.Get("{{ .Name }}")
+	  {{- end }}
+	{{- end }}
+	{{- if not .IsPathParam }}
+	  {{- if not .Computed }}
+    if v, ok := d.GetOkExists("{{ .Name }}"); ok {
+        data["{{ .Name }}"] = v
+    }
+	  {{- end }}
 	{{- end }}
 	{{- end }}
 
@@ -153,11 +161,13 @@ func update{{ .UpperCaseDifferentiator }}Resource(d *schema.ResourceData, meta i
 
 	data := map[string]interface{}{}
 	{{- range .Parameters }}
-	{{- if not .IsPathParam}}
+	{{- if not .IsPathParam }}
+	  {{- if not .Computed }}
 	if d.HasChange("{{ .Name }}") {
 		data["{{ .Name }}"] = d.Get("{{ .Name }}")
 	}
-	{{- end}}
+	  {{- end }}
+	{{- end }}
 	{{- end }}
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
 		return fmt.Errorf("error updating template auth backend role %q: %s", vaultPath, err)
