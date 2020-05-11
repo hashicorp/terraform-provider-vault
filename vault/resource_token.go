@@ -330,7 +330,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 	issueTimeStr, ok := resp.Data["issue_time"].(string)
 	if !ok {
-		return fmt.Errorf("error issue_time is not a string, got %v", resp.Data["issue_time"])
+		return fmt.Errorf("error issue_time is not a string, got %T", resp.Data["issue_time"])
 	}
 
 	issueTime, err := time.Parse(time.RFC3339Nano, issueTimeStr)
