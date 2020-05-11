@@ -1,4 +1,9 @@
 ## 2.11.0 (Unreleased)
+
+BUG FIXES:
+
+* `vault_approle_auth_backend_role`: Fix perpetual diff when `policies` and `period` are updated to be `token_policies` and `token_period` ([#744](https://github.com/terraform-providers/terraform-provider-vault/pull/744)).
+
 ## 2.10.0 (April 03, 2020)
 
 FEATURES:

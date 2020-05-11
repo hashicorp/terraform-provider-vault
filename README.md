@@ -10,7 +10,7 @@ Terraform Provider
 Maintainers
 -----------
 
-This provider plugin is maintained by the Terraform team at [HashiCorp](https://www.hashicorp.com/).
+This provider plugin is maintained by the Vault team at [HashiCorp](https://www.hashicorp.com/).
 
 Best Practices
 --------------
