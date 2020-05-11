@@ -328,13 +328,23 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("encrypted_client_token", "")
 	}
 
-	issueTime, err := time.Parse(time.RFC3339Nano, resp.Data["issue_time"].(string))
+	issueTimeStr, ok := resp.Data["issue_time"].(string)
+	if !ok {
+		return fmt.Errorf("error issue_time is not a string, got %T", resp.Data["issue_time"])
+	}
+
+	issueTime, err := time.Parse(time.RFC3339Nano, issueTimeStr)
 	if err != nil {
-		return fmt.Errorf("error parsing issue_time: %s", err)
+		return fmt.Errorf("error parsing issue_time: %s, please format string like '2006-01-02T15:04:05.999999999Z07:00'", err)
 	}
 	d.Set("lease_started", issueTime.Format(time.RFC3339))
 
-	expireTime, err := time.Parse(time.RFC3339Nano, resp.Data["expire_time"].(string))
+	expireTimeStr, ok := resp.Data["expire_time"].(string)
+	if !ok {
+		return fmt.Errorf("error expire_time is %T", resp.Data["expire_time"])
+	}
+
+	expireTime, err := time.Parse(time.RFC3339Nano, expireTimeStr)
 	if err != nil {
 		return fmt.Errorf("error parsing expire_time: %s", err)
 	}
