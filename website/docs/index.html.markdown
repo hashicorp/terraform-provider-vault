@@ -160,7 +160,7 @@ The `auth_login` configuration block accepts the following arguments:
   *Available only for Vault Enterprise*
 
 * `parameters` - (Optional) A map of key-value parameters to send when authenticating
-  against the auth backend. Refer to [Vault API documentation](https://www.vaultproject.io/api/auth/index.html) for a particular auth method
+  against the auth backend. Refer to [Vault API documentation](https://www.vaultproject.io/api-docs/auth) for a particular auth method
   to see what can go here.
 
 The `client_auth` configuration block accepts the following arguments:
