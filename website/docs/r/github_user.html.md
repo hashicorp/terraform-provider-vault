@@ -9,7 +9,7 @@ description: |-
 # vault\_github\_user
 
 Manages policy mappings for Github Users authenticated via Github. See the [Vault
-documentation](https://www.vaultproject.io/docs/auth/github.html) for more
+documentation](https://www.vaultproject.io/docs/auth/github/) for more
 information.
 
 ## Example Usage
