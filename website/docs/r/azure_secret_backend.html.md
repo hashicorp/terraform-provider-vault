@@ -40,6 +40,7 @@ The following arguments are supported:
 - `client_id` (`string:""`) - The OAuth2 client id to connect to Azure.
 - `client_secret` (`string:""`) - The OAuth2 client secret to connect to Azure.
 - `environment` (`string:""`) - The Azure environment.
+- `path` (`string: <optional>`) - The unique path this backend should be mounted at. Defaults to `azure`.
 
 ## Attributes Reference
 
