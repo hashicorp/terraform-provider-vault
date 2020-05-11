@@ -341,7 +341,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 	expireTimeStr, ok := resp.Data["expire_time"].(string)
 	if !ok {
-		return fmt.Errorf("error expire_time is %v", resp.Data["expire_time"])
+		return fmt.Errorf("error expire_time is %T", resp.Data["expire_time"])
 	}
 
 	expireTime, err := time.Parse(time.RFC3339Nano, expireTimeStr)
