@@ -9,7 +9,7 @@ description: |-
 # vault\_approle\_auth\_backend\_role
 
 Manages an AppRole auth backend role in a Vault server. See the [Vault
-documentation](https://www.vaultproject.io/docs/auth/approle.html) for more
+documentation](https://www.vaultproject.io/docs/auth/approle) for more
 information.
 
 ## Example Usage
