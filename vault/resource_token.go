@@ -335,7 +335,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 	issueTime, err := time.Parse(time.RFC3339Nano, issueTimeStr)
 	if err != nil {
-		return fmt.Errorf("error parsing issue_time is not a string, got %s", err)
+		return fmt.Errorf("error parsing issue_time: %s, please format string like '2006-01-02T15:04:05.999999999Z07:00'", err)
 	}
 	d.Set("lease_started", issueTime.Format(time.RFC3339))
 
