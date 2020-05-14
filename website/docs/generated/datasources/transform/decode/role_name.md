@@ -16,7 +16,7 @@ It decodes the provided value using a named role.
 
 ```hcl
 resource "vault_mount" "transform" {
-  path = "%s"
+  path = "transform"
   type = "transform"
 }
 resource "vault_transform_transformation_name" "ccn-fpe" {

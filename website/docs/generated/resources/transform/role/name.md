@@ -17,13 +17,13 @@ If the role exists, it will be updated with the new attributes.
 
 ```hcl
 resource "vault_mount" "mount_transform" {
-  path = "%s"
+  path = "transform"
   type = "transform"
 }
 resource "vault_transform_role_name" "test" {
   path = vault_mount.mount_transform.path
-  name = "%s"
-  transformations = ["%s"]
+  name = "payments"
+  transformations = ["ccn-fpe"]
 }
 ```
 

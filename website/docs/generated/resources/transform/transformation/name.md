@@ -17,17 +17,16 @@ it will be created. If the transformation exists, it will be updated with the ne
 
 ```hcl
 resource "vault_mount" "mount_transform" {
-  path = "%s"
+  path = "transform"
   type = "transform"
 }
 resource "vault_transform_transformation_name" "test" {
   path = vault_mount.mount_transform.path
-  name = "%s"
-  type = "%s"
-  template = "%s"
-  tweak_source = "%s"
-  allowed_roles = ["%s"]
-  masking_character = "%s"
+  name = "ccn-fpe"
+  type = "fpe"
+  template = "ccn"
+  tweak_source = "internal"
+  allowed_roles = ["payments"]
 }
 ```
 
