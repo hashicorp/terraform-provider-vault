@@ -78,6 +78,12 @@ func (c *fileCreator) GenerateCode(endpoint string, endpointInfo *framework.OASP
 // GenerateDoc is exported to indicate it's intended to be directly used.
 func (c *fileCreator) GenerateDoc(endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
 	pathToFile := docFilePath(addedInfo.TemplateType, endpoint)
+	// If the doc already exists, no need to generate a new one, especially
+	// since these get hand-edited after being first created.
+	if _, err := os.Stat(pathToFile); err == nil {
+		// The file already exists, nothing further to do here.
+		return nil
+	}
 	// From here on, addedInfo will be used to select the template to
 	// use. Since we want it to be for docs, we need to update that now.
 	addedInfo.TemplateType = templateTypeDoc

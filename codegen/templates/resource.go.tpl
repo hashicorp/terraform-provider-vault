@@ -13,7 +13,7 @@ import (
 	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
-{{- if .SupportsWrite }}
+{{- if or .SupportsRead .SupportsWrite }}
 const {{ .LowerCaseDifferentiator }}Endpoint = "{{ .Endpoint }}"
 {{- else }}
 // This resource supports "{{ .Endpoint }}".
@@ -91,7 +91,7 @@ func {{ .UpperCaseDifferentiator }}Resource() *schema.Resource {
 func create{{ .UpperCaseDifferentiator }}Resource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Get("path").(string)
-	vaultPath := util.ParsePath(path, nameEndpoint, d)
+	vaultPath := util.ParsePath(path, {{ .LowerCaseDifferentiator }}Endpoint, d)
 	log.Printf("[DEBUG] Creating %q", vaultPath)
 
 	data := map[string]interface{}{}
@@ -136,7 +136,7 @@ func read{{ .UpperCaseDifferentiator }}Resource(d *schema.ResourceData, meta int
 		d.SetId("")
 		return nil
 	}
-	pathParams, err := util.PathParameters(nameEndpoint, vaultPath)
+	pathParams, err := util.PathParameters({{ .LowerCaseDifferentiator }}Endpoint, vaultPath)
     if err != nil {
         return err
     }
