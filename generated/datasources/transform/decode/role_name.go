@@ -38,7 +38,7 @@ func RoleNameDataSource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
-				Description: "The resulting value from the decode operation.",
+				Description: "The result of decoding.",
 			},
 			"role_name": {
 				Type:        schema.TypeString,

@@ -8,6 +8,22 @@ import "github.com/hashicorp/vault/sdk/framework"
 // IMPORTANT NOTE: To support high quality, only add one
 // endpoint per PR.
 var endpointRegistry = map[string]*additionalInfo{
+	"/transform/decode/{role_name}": {
+		TemplateType: templateTypeDataSource,
+		AdditionalParameters: []*templatableParam{
+			{
+				OASParameter: &framework.OASParameter{
+					Name:        "decoded_value",
+					Description: "The result of decoding.",
+					Schema: &framework.OASSchema{
+						Type:         "string",
+						DisplayAttrs: &framework.DisplayAttributes{},
+					},
+				},
+				Computed: true,
+			},
+		},
+	},
 	"/transform/role/{name}": {
 		TemplateType: templateTypeResource,
 	},
