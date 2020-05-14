@@ -220,6 +220,18 @@ func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 				Destroy:     false,
 				ExpectError: regexp.MustCompile("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided"),
 			},
+			{
+				// oidc_discovery_url will be unknown until apply time
+				Config: fmt.Sprintf(`
+				resource "vault_identity_oidc_key" "key" {
+					name = "key"
+				}
+
+				resource "vault_jwt_auth_backend" "unknown" {
+					path = "%s"
+					oidc_discovery_url = coalesce("https://myco.auth0.com/", vault_identity_oidc_key.key.id)
+				}`, path),
+			},
 		},
 	})
 }
