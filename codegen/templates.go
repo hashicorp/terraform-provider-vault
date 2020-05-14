@@ -16,8 +16,8 @@ import (
 var (
 	// templateRegistry holds templates for each type of file.
 	templateRegistry = map[templateType]string{
-		// TODO in separate PR - add templateTypeDoc
 		templateTypeDataSource: "/codegen/templates/datasource.go.tpl",
+		templateTypeDoc:        "/codegen/templates/doc.go.tpl",
 		templateTypeResource:   "/codegen/templates/resource.go.tpl",
 	}
 

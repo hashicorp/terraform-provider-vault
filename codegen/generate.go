@@ -53,8 +53,12 @@ func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
 			logger.Error(err.Error())
 			os.Exit(1)
 		}
-		// TODO in separate PR - add fCreator.GenerateDoc() method
-		createdCount++
+		logger.Info(fmt.Sprintf("generating %s for %s\n", templateTypeDoc.String(), endpoint))
+		if err := fCreator.GenerateDoc(endpoint, paths[endpoint], addedInfo); err != nil {
+			logger.Error(err.Error())
+			os.Exit(1)
+		}
+		createdCount += 2
 	}
 	logger.Info(fmt.Sprintf("generated %d files\n", createdCount))
 	return nil
@@ -65,13 +69,20 @@ type fileCreator struct {
 	templateHandler *templateHandler
 }
 
-// GenerateCode is exported because it's the only non-internal method on the fileCreator.
+// GenerateCode is exported to indicate it's intended to be directly used.
 func (c *fileCreator) GenerateCode(endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
 	pathToFile := codeFilePath(addedInfo.TemplateType, endpoint)
 	return c.writeFile(pathToFile, endpoint, endpointInfo, addedInfo)
 }
 
-// TODO in a separate PR - add a GenerateDoc method.
+// GenerateDoc is exported to indicate it's intended to be directly used.
+func (c *fileCreator) GenerateDoc(endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
+	pathToFile := docFilePath(addedInfo.TemplateType, endpoint)
+	// From here on, addedInfo will be used to select the template to
+	// use. Since we want it to be for docs, we need to update that now.
+	addedInfo.TemplateType = templateTypeDoc
+	return c.writeFile(pathToFile, endpoint, endpointInfo, addedInfo)
+}
 
 func (c *fileCreator) writeFile(pathToFile string, endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
 	parentDir := parentDir(pathToFile)
