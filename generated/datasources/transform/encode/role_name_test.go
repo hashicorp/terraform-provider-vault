@@ -1,4 +1,4 @@
-package decode
+package encode
 
 import (
 	"fmt"
@@ -20,11 +20,11 @@ var roleNameTestProvider = func() *schema.Provider {
 	p.RegisterResource("vault_mount", vault.MountResource())
 	p.RegisterResource("vault_transform_transformation_name", transformation.NameResource())
 	p.RegisterResource("vault_transform_role_name", role.NameResource())
-	p.RegisterDataSource("vault_transform_decode_role_name", RoleNameDataSource())
+	p.RegisterDataSource("vault_transform_encode_role_name", RoleNameDataSource())
 	return p
 }()
 
-func TestDecodeRoleNameBasic(t *testing.T) {
+func TestEncodeRoleNameBasic(t *testing.T) {
 	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
 	if isEnterprise == "" {
 		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
@@ -39,7 +39,7 @@ func TestDecodeRoleNameBasic(t *testing.T) {
 			{
 				Config: basicConfig(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.vault_transform_decode_role_name.test", "decoded_value"),
+					resource.TestCheckResourceAttrSet("data.vault_transform_encode_role_name.test", "encoded_value"),
 				),
 			},
 		},
@@ -65,15 +65,15 @@ resource "vault_transform_role_name" "payments" {
   name = "payments"
   transformations = ["ccn-fpe"]
 }
-data "vault_transform_decode_role_name" "test" {
+data "vault_transform_encode_role_name" "test" {
     path      = vault_transform_role_name.payments.path
     role_name = "payments"
-    value     = "9300-3376-4943-8903"
+    value     = "1111-2222-3333-4444"
 }
 `, path)
 }
 
-func TestDecodeRoleNameBatch(t *testing.T) {
+func TestEncodeRoleNameBatch(t *testing.T) {
 	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
 	if isEnterprise == "" {
 		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
@@ -88,8 +88,8 @@ func TestDecodeRoleNameBatch(t *testing.T) {
 			{
 				Config: batchConfig(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vault_transform_decode_role_name.test", "batch_results.#", "1"),
-					resource.TestCheckResourceAttrSet("data.vault_transform_decode_role_name.test", "batch_results.0.decoded_value"),
+					resource.TestCheckResourceAttr("data.vault_transform_encode_role_name.test", "batch_results.#", "1"),
+					resource.TestCheckResourceAttrSet("data.vault_transform_encode_role_name.test", "batch_results.0.encoded_value"),
 				),
 			},
 		},
@@ -115,10 +115,10 @@ resource "vault_transform_role_name" "payments" {
   name = "payments"
   transformations = ["ccn-fpe"]
 }
-data "vault_transform_decode_role_name" "test" {
+data "vault_transform_encode_role_name" "test" {
     path      = vault_transform_role_name.payments.path
     role_name = "payments"
-    batch_input = [{"value":"9300-3376-4943-8903"}]
+    batch_input = [{"value":"1111-2222-3333-4444"}]
 }
 `, path)
 }
