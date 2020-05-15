@@ -12,10 +12,11 @@ import (
 
 func jwtAuthBackendResource() *schema.Resource {
 	return &schema.Resource{
-		Create: jwtAuthBackendWrite,
-		Delete: jwtAuthBackendDelete,
-		Read:   jwtAuthBackendRead,
-		Update: jwtAuthBackendUpdate,
+		DeprecationMessage: "Use 'vault_auth_jwt_config' instead.",
+		Create:             jwtAuthBackendWrite,
+		Delete:             jwtAuthBackendDelete,
+		Read:               jwtAuthBackendRead,
+		Update:             jwtAuthBackendUpdate,
 
 		CustomizeDiff: jwtCustomizeDiff,
 

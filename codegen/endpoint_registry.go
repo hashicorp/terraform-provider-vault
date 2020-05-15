@@ -8,6 +8,9 @@ import "github.com/hashicorp/vault/sdk/framework"
 // IMPORTANT NOTE: To support high quality, only add one
 // endpoint per PR.
 var endpointRegistry = map[string]*additionalInfo{
+	"/auth/jwt/config": {
+		TemplateType: templateTypeResource,
+	},
 	"/transform/alphabet/{name}": {
 		TemplateType: templateTypeResource,
 	},

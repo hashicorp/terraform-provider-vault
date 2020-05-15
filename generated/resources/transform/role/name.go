@@ -29,14 +29,14 @@ func NameResource() *schema.Resource {
 		"name": {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: "The name of the role.",
+			Description: `The name of the role.`,
 			ForceNew:    true,
 		},
 		"transformations": {
 			Type:        schema.TypeList,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Optional:    true,
-			Description: "A comma separated string or slice of transformations to use.",
+			Description: `A comma separated string or slice of transformations to use.`,
 		},
 	}
 	return &schema.Resource{

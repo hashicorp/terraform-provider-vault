@@ -29,12 +29,12 @@ func NameResource() *schema.Resource {
 		"alphabet": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "A string of characters that contains the alphabet set.",
+			Description: `A string of characters that contains the alphabet set.`,
 		},
 		"name": {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: "The name of the alphabet.",
+			Description: `The name of the alphabet.`,
 			ForceNew:    true,
 		},
 	}

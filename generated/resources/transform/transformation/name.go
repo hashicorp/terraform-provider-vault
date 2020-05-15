@@ -30,40 +30,40 @@ func NameResource() *schema.Resource {
 			Type:        schema.TypeList,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Optional:    true,
-			Description: "The set of roles allowed to perform this transformation.",
+			Description: `The set of roles allowed to perform this transformation.`,
 		},
 		"masking_character": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The character used to replace data when in masking mode",
+			Description: `The character used to replace data when in masking mode`,
 		},
 		"name": {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: "The name of the transformation.",
+			Description: `The name of the transformation.`,
 			ForceNew:    true,
 		},
 		"template": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The name of the template to use.",
+			Description: `The name of the template to use.`,
 		},
 		"templates": {
 			Type:        schema.TypeList,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Optional:    true,
 			Computed:    true,
-			Description: "Templates configured for transformation.",
+			Description: `Templates configured for transformation.`,
 		},
 		"tweak_source": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The source of where the tweak value comes from. Only valid when in FPE mode.",
+			Description: `The source of where the tweak value comes from. Only valid when in FPE mode.`,
 		},
 		"type": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The type of transformation to perform.",
+			Description: `The type of transformation to perform.`,
 		},
 	}
 	return &schema.Resource{

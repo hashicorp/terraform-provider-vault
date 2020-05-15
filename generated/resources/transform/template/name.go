@@ -29,23 +29,23 @@ func NameResource() *schema.Resource {
 		"alphabet": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The alphabet to use for this template. This is only used during FPE transformations.",
+			Description: `The alphabet to use for this template. This is only used during FPE transformations.`,
 		},
 		"name": {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: "The name of the template.",
+			Description: `The name of the template.`,
 			ForceNew:    true,
 		},
 		"pattern": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The pattern used for matching. Currently, only regular expression pattern is supported.",
+			Description: `The pattern used for matching. Currently, only regular expression pattern is supported.`,
 		},
 		"type": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The pattern type to use for match detection. Currently, only regex is supported.",
+			Description: `The pattern type to use for match detection. Currently, only regex is supported.`,
 		},
 	}
 	return &schema.Resource{

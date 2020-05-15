@@ -61,7 +61,7 @@ func {{ .UpperCaseDifferentiator }}Resource() *schema.Resource {
 			{{- if .Schema.DisplayAttrs.Sensitive }}
 			Sensitive:   true,
 			{{- end }}
-			Description: "{{ .Description }}",
+			Description: `{{ .Description }}`,
 			{{- if .IsPathParam }}
 			ForceNew: true,
 			{{- end}}
