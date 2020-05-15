@@ -43,9 +43,11 @@ func TestClean(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		actual := clean(testCase.input)
-		if actual != testCase.expected {
-			t.Fatalf("input: %q; expected: %q; actual: %q", testCase.input, testCase.expected, actual)
+		t.Run(testCase.input, func(t *testing.T) {
+			actual := clean(testCase.input)
+			if actual != testCase.expected {
+				t.Fatalf("input: %q; expected: %q; actual: %q", testCase.input, testCase.expected, actual)
+			}
 		}
 	}
 }
