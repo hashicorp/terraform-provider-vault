@@ -28,6 +28,8 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_cert.test", "backend", intermediatePath),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_cert.test", "common_name", "cert.test.my.domain"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_cert.test", "ttl", "720h"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_cert.test", "uri_sans.#", "1"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_cert.test", "uri_sans.0", "spiffe://test.my.domain"),
 				),
 			},
 		},
@@ -132,6 +134,7 @@ resource "vault_pki_secret_backend_cert" "test" {
   backend = "${vault_pki_secret_backend.test-intermediate.path}"
   name = "${vault_pki_secret_backend_role.test.name}"
   common_name = "cert.test.my.domain"
+  uri_sans = ["spiffe://test.my.domain"]
   ttl = "720h"
   min_seconds_remaining = 60
 }`, rootPath, intermediatePath)
