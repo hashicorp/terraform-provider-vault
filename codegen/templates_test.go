@@ -179,15 +179,17 @@ func TestValidate(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		shouldErr := testCase.expectedErr != ""
-		err := testCase.input.Validate()
-		if err != nil {
-			if err.Error() != testCase.expectedErr {
-				t.Fatalf("input: %+v; expected err: %q; actual: %q", testCase.input, testCase.expectedErr, err)
-			}
-		} else {
-			if shouldErr {
-				t.Fatalf("expected an error for %+v", testCase.input)
+		t.Run(testCase.input, func(t *testing.T) {
+			shouldErr := testCase.expectedErr != ""
+			err := testCase.input.Validate()
+			if err != nil {
+				if err.Error() != testCase.expectedErr {
+					t.Fatalf("input: %+v; expected err: %q; actual: %q", testCase.input, testCase.expectedErr, err)
+				}
+			} else {
+				if shouldErr {
+					t.Fatalf("expected an error for %+v", testCase.input)
+				}
 			}
 		}
 	}
