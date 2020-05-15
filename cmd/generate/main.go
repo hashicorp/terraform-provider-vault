@@ -23,7 +23,7 @@ func main() {
 	}
 	doc, err := ioutil.ReadFile(*pathToOpenAPIDoc)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Error("Unable to read file [%s]: %s", *pathToOpenAPIDoc, err.Error())
 		os.Exit(1)
 	}
 
