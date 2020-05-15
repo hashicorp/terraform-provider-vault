@@ -161,6 +161,7 @@ func Provider() terraform.ResourceProvider {
 			"headers": {
 				Type:        schema.TypeList,
 				Optional:    true,
+				Sensitive:   true,
 				Description: "The headers to send with each Vault request.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
