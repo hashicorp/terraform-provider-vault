@@ -35,7 +35,7 @@ func main() {
 	}
 
 	if err := codegen.Run(logger, oasDoc.Paths); err != nil {
-		logger.Error(err.Error())
+		logger.Error("Failed to generate code: %s", err.Error())
 		os.Exit(1)
 	}
 }
