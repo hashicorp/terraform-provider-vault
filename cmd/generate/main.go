@@ -30,7 +30,7 @@ func main() {
 	// Read in Vault's description of all the supported endpoints, their methods, and more.
 	oasDoc := &framework.OASDocument{}
 	if err := json.NewDecoder(bytes.NewBuffer(doc)).Decode(oasDoc); err != nil {
-		logger.Error(err.Error())
+		logger.Error("Failed to decode JSON from file [%s]: %s", *pathToOpenAPIDoc, err.Error())
 		os.Exit(1)
 	}
 
