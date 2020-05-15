@@ -23,8 +23,6 @@ var nameTestProvider = func() *schema.Provider {
 	return p
 }()
 
-// TODO, in the doc note that this pattern is actually "(\d{4})-(\d{4})-(\d{4})-(\d{4})" but backslashes are escaped.
-// pattern "(\\d{4})-(\\d{4})-(\\d{4})-(\\d{4})"
 func TestTemplateName(t *testing.T) {
 	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
 	if isEnterprise == "" {
