@@ -115,9 +115,11 @@ func TestStripCurlyBraces(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		actual := stripCurlyBraces(testCase.input)
-		if actual != testCase.expected {
-			t.Fatalf("expected %q but received %q", actual, testCase.expected)
+		t.Run(testCase.input, func(t *testing.T) {
+			actual := stripCurlyBraces(testCase.input)
+			if actual != testCase.expected {
+				t.Fatalf("expected %q but received %q", actual, testCase.expected)
+			}
 		}
 	}
 }
