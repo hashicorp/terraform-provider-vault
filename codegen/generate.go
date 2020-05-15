@@ -65,7 +65,9 @@ type fileCreator struct {
 	templateHandler *templateHandler
 }
 
-// GenerateCode is exported because it's the only non-internal method on the fileCreator.
+// GenerateCode is exported because it's the only method intended to be used by
+// other objects. Unexported methods may be available to other code in this package,
+// but they're not intended to be used by anything but the fileCreator.
 func (c *fileCreator) GenerateCode(endpoint string, endpointInfo *framework.OASPathItem, tmplType templateType) error {
 	pathToFile := codeFilePath(tmplType, endpoint)
 	return c.writeFile(pathToFile, tmplType, endpoint, endpointInfo)

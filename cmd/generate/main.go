@@ -18,7 +18,7 @@ func main() {
 	logger := hclog.Default()
 	flag.Parse()
 	if pathToOpenAPIDoc == nil || *pathToOpenAPIDoc == "" {
-		logger.Info("'openapi-doc' is required")
+		logger.Error("'openapi-doc' is required")
 		os.Exit(1)
 	}
 	doc, err := ioutil.ReadFile(*pathToOpenAPIDoc)
