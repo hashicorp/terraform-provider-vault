@@ -74,6 +74,9 @@ var endpointRegistry = map[string]*additionalInfo{
 	"/transform/role/{name}": {
 		TemplateType: templateTypeResource,
 	},
+	"/transform/template/{name}": {
+		TemplateType: templateTypeResource,
+	},
 	"/transform/transformation/{name}": {
 		TemplateType: templateTypeResource,
 		AdditionalParameters: []*templatableParam{

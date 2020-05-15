@@ -24,7 +24,7 @@ var roleNameTestProvider = func() *schema.Provider {
 	return p
 }()
 
-func TestDecodeRoleNameBasic(t *testing.T) {
+func TestDecodeBasic(t *testing.T) {
 	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
 	if isEnterprise == "" {
 		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
@@ -73,7 +73,7 @@ data "vault_transform_decode_role_name" "test" {
 `, path)
 }
 
-func TestDecodeRoleNameBatch(t *testing.T) {
+func TestDecodeBatch(t *testing.T) {
 	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
 	if isEnterprise == "" {
 		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
