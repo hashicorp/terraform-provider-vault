@@ -520,8 +520,8 @@ var (
 			},
 		},
 		"vault_nomad_secret_backend_role": {
-			Resource:      rabbitmqSecretBackendRoleResource(),
-			PathInventory: []string{"/access/roles/{name}"},
+			Resource:      nomadSecretBackendRoleResource(),
+			PathInventory: []string{"/access/role/{name}"},
 		},
 		"vault_pki_secret_backend": {
 			Resource:      pkiSecretBackendResource(),
