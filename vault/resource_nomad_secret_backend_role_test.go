@@ -4,94 +4,45 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
-const testAccNomadSecretBackendRoleTags_basic = `management`
-const testAccNomadSecretBackendRoleTags_updated = `management,policymaker`
-
-func TestAccNomadSecretBackendRole_basic(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-nomad")
-	name := acctest.RandomWithPrefix("tf-test-nomad")
-	address, token := getTestNomadCreds(t)
+func TestNomadSecretBackendRole(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-backend")
+	name := acctest.RandomWithPrefix("tf-test-name")
+	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testAccNomadSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccNomadSecretBackendRoleConfig_basic(name, backend, address, token),
+				Config: testNomadSecretBackendRole_initialConfig(backend, name, token),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "name", fmt.Sprintf("%s", name)),
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "backend", backend),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "policies", "readonly"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "name", name),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "ttl", "0"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "policies.0", "foo"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test_path", "path", backend),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test_path", "policies.0", "foo"),
 				),
 			},
 			{
-				Config: testAccNomadSecretBackendRoleConfig_updated(name, backend, address, token),
+				Config: testNomadSecretBackendRole_updateConfig(backend, name, token),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "name", fmt.Sprintf("%s", name)),
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "backend", backend),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "policies", "readonly"),
-				),
-			},
-		},
-	})
-}
-
-func TestAccNomadSecretBackendRole_import(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-nomad")
-	name := acctest.RandomWithPrefix("tf-test-nomad")
-	address, token := getTestNomadCreds(t)
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testAccNomadSecretBackendRoleCheckDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccNomadSecretBackendRoleConfig_basic(name, backend, address, token),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "name", fmt.Sprintf("%s", name)),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "backend", backend),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "policies", "readonly"),
-				),
-			},
-			{
-				ResourceName:      "vault_nomad_secret_backend_role.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
-func TestAccNomadSecretBackendRole_nested(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-nomad")
-	name := acctest.RandomWithPrefix("tf-test-nomad")
-	address, token, password := getTestNomadCreds(t)
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testAccNomadSecretBackendRoleCheckDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccNomadSecretBackendRoleConfig_basic(name, backend, address, token, password),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "name", fmt.Sprintf("%s", name)),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "backend", backend),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "policies", "readonly"),
-				),
-			},
-			{
-				Config: testAccNomadSecretBackendRoleConfig_updated(name, backend, address, token, password),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "name", fmt.Sprintf("%s", name)),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "backend", backend),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "policies", "readonly"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "name", name),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "ttl", "120"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "max_ttl", "240"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "local", "true"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "token_type", "client"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "policies.0", "foo"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test", "policies.1", "bar"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test_path", "path", backend),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend_role.test_path", "ttl", "120"),
 				),
 			},
 		},
@@ -116,42 +67,112 @@ func testAccNomadSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccNomadSecretBackendRoleConfig_basic(name, path, address, token string) string {
+func testNomadSecretBackendRole_initialConfig(backend, name, token string) string {
 	return fmt.Sprintf(`
 resource "vault_nomad_secret_backend" "test" {
   path = "%s"
   description = "test description"
   default_lease_ttl_seconds = 3600
   max_lease_ttl_seconds = 86400
-  address = "%s"
+  address = "127.0.0.1:4646"
   token = "%s"
 }
 
 resource "vault_nomad_secret_backend_role" "test" {
-  backend = "${vault_nomad_secret_backend.test.path}"
+  backend = vault_nomad_secret_backend.test.path
   name = "%s"
-  tags = %q
-  policies = "readonly"
+
+  policies = [
+    "foo"
+  ]
 }
-`, path, address, token, name, testAccNomadSecretBackendRoleTags_basic)
+resource "vault_nomad_secret_backend_role" "test_path" {
+  path = vault_nomad_secret_backend.test.path
+  name = "%[2]s_path"
+
+  policies = [
+    "foo"
+  ]
+}
+`, backend, token, name)
 }
 
-func testAccNomadSecretBackendRoleConfig_updated(name, path, address, token string) string {
+func testNomadSecretBackendRole_updateConfig(backend, name, token string) string {
 	return fmt.Sprintf(`
 resource "vault_nomad_secret_backend" "test" {
   path = "%s"
   description = "test description"
-  default_lease_ttl_seconds = 1800
-  max_lease_ttl_seconds = 43200
-  address = "%s"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds = 86400
+  address = "127.0.0.1:4646"
   token = "%s"
-  policies = "readonly"
 }
 
 resource "vault_nomad_secret_backend_role" "test" {
-  backend = "${vault_nomad_secret_backend.test.path}"
+  backend = vault_nomad_secret_backend.test.path
   name = "%s"
-  policies = "readonly"
+
+  policies = [
+    "foo",
+    "bar",
+  ]
+  ttl = 120
+  max_ttl = 240
+  local = true
+  token_type = "client"
 }
-`, path, address, token, name, testAccNomadSecretBackendRoleTags_updated)
+resource "vault_nomad_secret_backend_role" "test_path" {
+  path = vault_nomad_secret_backend.test.path
+  name = "%[2]s_path"
+
+  policies = [
+    "foo"
+  ]
+  ttl = 120
+}
+`, backend, token, name)
+}
+
+func TestNomadSecretBackendRoleNameFromPath(t *testing.T) {
+	{
+		name, err := nomadSecretBackendRoleNameFromPath("foo/role/bar")
+		if err != nil {
+			t.Fatalf("error getting name: %v", err)
+		}
+		if name != "bar" {
+			t.Fatalf("expected name 'bar', but got %s", name)
+		}
+	}
+
+	{
+		name, err := nomadSecretBackendRoleNameFromPath("no match")
+		if err == nil {
+			t.Fatal("Expected error getting name but got nil")
+		}
+		if name != "" {
+			t.Fatalf("expected empty name, but got %s", name)
+		}
+	}
+}
+
+func TestNomadSecretBackendRoleBackendFromPath(t *testing.T) {
+	{
+		backend, err := nomadSecretBackendRoleBackendFromPath("foo/role/bar")
+		if err != nil {
+			t.Fatalf("error getting backend: %v", err)
+		}
+		if backend != "foo" {
+			t.Fatalf("expected backend 'foo', but got %s", backend)
+		}
+	}
+
+	{
+		backend, err := nomadSecretBackendRoleBackendFromPath("no match")
+		if err == nil {
+			t.Fatal("Expected error getting backend but got nil")
+		}
+		if backend != "" {
+			t.Fatalf("expected empty backend, but got %s", backend)
+		}
+	}
 }

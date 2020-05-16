@@ -1,22 +1,27 @@
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
-func rabbitmqSecretBackendRoleResource() *schema.Resource {
+var (
+	nomadSecretBackendRoleBackendFromPathRegex = regexp.MustCompile("^(.+)/role/.+$")
+	nomadSecretBackendRoleNameFromPathRegex    = regexp.MustCompile("^.+/role/(.+$)")
+)
+
+func nomadSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
-		Create: rabbitmqSecretBackendRoleWrite,
-		Read:   rabbitmqSecretBackendRoleRead,
-		Update: rabbitmqSecretBackendRoleWrite,
-		Delete: rabbitmqSecretBackendRoleDelete,
-		Exists: rabbitmqSecretBackendRoleExists,
+		Create: nomadSecretBackendRoleWrite,
+		Read:   nomadSecretBackendRoleRead,
+		Update: nomadSecretBackendRoleWrite,
+		Delete: nomadSecretBackendRoleDelete,
+		Exists: nomadSecretBackendRoleExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -29,167 +34,195 @@ func rabbitmqSecretBackendRoleResource() *schema.Resource {
 				Description: "Unique name for the role.",
 			},
 			"backend": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "The path of the Rabbitmq Secret Backend the role belongs to.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				ForceNew:      true,
+				Description:   "The path of the Nomad Secret Backend the role belongs to.",
+				ConflictsWith: []string{"path"},
 			},
-			"tags": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "",
-				Description: "Specifies a comma-separated RabbitMQ management tags.",
-			},
-			"vhost": {
+			"policies": {
 				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "Specifies a map of virtual hosts to permissions.",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"host": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The vhost to set permissions for.",
-						},
-						"configure": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The configure permissions for this vhost.",
-						},
-						"read": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The read permissions for this vhost.",
-						},
-						"write": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The write permissions for this vhost.",
-						},
-					},
+				Required:    true,
+				Description: "List of Nomad policies to associate with this role",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
 				},
+			},
+			"max_ttl": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "Maximum TTL for leases associated with this role, in seconds.",
+				Default:     0,
+			},
+			"ttl": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "Specifies the TTL for this role.",
+				Default:     0,
+			},
+			"token_type": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the type of token to create when using this role. Valid values are \"client\" or \"management\".",
+				Default:     "client",
+			},
+			"local": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Indicates that the token should not be replicated globally and instead be local to the current datacenter.",
+				Default:     false,
 			},
 		},
 	}
 }
 
-func rabbitmqSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
+func nomadSecretBackendRoleGetBackend(d *schema.ResourceData) string {
+	if v, ok := d.GetOk("backend"); ok {
+		return v.(string)
+	} else if v, ok := d.GetOk("path"); ok {
+		return v.(string)
+	} else {
+		return ""
+	}
+}
+
+func nomadSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
-	tags := d.Get("tags").(string)
-	vhost := d.Get("vhost").([]interface{})
 
-	log.Printf("[DEBUG] Vhosts as list from ResourceData: %+v", vhost)
-
-	vhosts := make(map[string]interface{}, len(vhost))
-
-	for _, host := range vhost {
-		h := map[string]interface{}{}
-		var id string
-		for k, v := range host.(map[string]interface{}) {
-			if k == "host" {
-				id = v.(string)
-				continue
-			}
-			h[k] = v
-		}
-		vhosts[id] = h
+	backend := nomadSecretBackendRoleGetBackend(d)
+	if backend == "" {
+		return fmt.Errorf("No backend specified for Nomad secret backend role %s", name)
 	}
 
-	log.Printf("[DEBUG] vhosts after munging: %+v", vhosts)
+	path := nomadSecretBackendRolePath(backend, name)
 
-	vhostsJSON, err := json.Marshal(vhosts)
-	if err != nil {
-		return fmt.Errorf("error serializing vhosts: %s", err)
+	policies := d.Get("policies").([]interface{})
+
+	payload := map[string]interface{}{
+		"policies": policies,
 	}
 
-	log.Printf("[DEBUG] vhosts as JSON: %+v", vhostsJSON)
-
-	data := map[string]interface{}{
-		"tags":   tags,
-		"vhosts": string(vhostsJSON),
+	if v, ok := d.GetOkExists("max_ttl"); ok {
+		payload["max_ttl"] = v
 	}
-	log.Printf("[DEBUG] Creating role %q on Rabbitmq backend %q", name, backend)
-	_, err = client.Logical().Write(backend+"/roles/"+name, data)
-	if err != nil {
-		return fmt.Errorf("error creating role %q for backend %q: %s", name, backend, err)
+	if v, ok := d.GetOkExists("ttl"); ok {
+		payload["ttl"] = v
 	}
-	log.Printf("[DEBUG] Created role %q on Rabbitmq backend %q", name, backend)
+	if v, ok := d.GetOkExists("token_type"); ok {
+		payload["token_type"] = v
+	}
+	if v, ok := d.GetOkExists("local"); ok {
+		payload["local"] = v
+	}
 
-	d.SetId(backend + "/roles/" + name)
-	d.Set("name", name)
-	d.Set("tags", tags)
-	d.Set("vhost", vhost)
-	d.Set("backend", backend)
-	return rabbitmqSecretBackendRoleRead(d, meta)
+	log.Printf("[DEBUG] Configuring Nomad secrets backend role at %q", path)
+
+	if _, err := client.Logical().Write(path, payload); err != nil {
+		return fmt.Errorf("error writing role configuration for %q: %s", path, err)
+	}
+
+	d.SetId(path)
+	return nomadSecretBackendRoleRead(d, meta)
 }
 
-func rabbitmqSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
+func nomadSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
-	pathPieces := strings.Split(path, "/")
-	if len(pathPieces) < 3 || pathPieces[len(pathPieces)-2] != "roles" {
-		return fmt.Errorf("invalid id %q; must be {backend}/roles/{name}", path)
-	}
-
-	log.Printf("[DEBUG] Reading role from %q", path)
-	secret, err := client.Logical().Read(path)
+	name, err := nomadSecretBackendRoleNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("error reading role %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Read role from %q", path)
-	if secret == nil {
-		log.Printf("[WARN] Role %q not found, removing from state", path)
+		log.Printf("[WARN] Removing nomad role %q because its ID is invalid", path)
 		d.SetId("")
-		return nil
+		return fmt.Errorf("invalid role ID %q: %s", path, err)
 	}
-	var vhosts []map[string]interface{}
-	if v, ok := secret.Data["vhosts"]; ok && v != nil {
-		hosts := v.(map[string]interface{})
-		for id, val := range hosts {
-			vals := val.(map[string]interface{})
-			vhosts = append(vhosts, map[string]interface{}{
-				"host":      id,
-				"configure": vals["configure"],
-				"write":     vals["write"],
-				"read":      vals["read"],
-			})
-		}
-	}
-	d.Set("tags", secret.Data["tags"])
-	if err := d.Set("vhost", vhosts); err != nil {
-		return fmt.Errorf("Error setting vhosts in state: %s", err)
-	}
-	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
-	d.Set("name", pathPieces[len(pathPieces)-1])
-	return nil
-}
 
-func rabbitmqSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
-	path := d.Id()
-	log.Printf("[DEBUG] Deleting role %q", path)
-	_, err := client.Logical().Delete(path)
+	backend, err := nomadSecretBackendRoleBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("error deleting role %q: %s", path, err)
+		log.Printf("[WARN] Removing nomad role %q because its ID is invalid", path)
+		d.SetId("")
+		return fmt.Errorf("invalid role ID %q: %s", path, err)
 	}
-	log.Printf("[DEBUG] Deleted role %q", path)
-	return nil
-}
 
-func rabbitmqSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	log.Printf("[DEBUG] Reading Nomad secrets backend role at %q", path)
 
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if %q exists", path)
 	secret, err := client.Logical().Read(path)
 	if err != nil {
-		return true, fmt.Errorf("error checking if %q exists: %s", path, err)
+		return fmt.Errorf("error reading role configuration for %q: %s", path, err)
 	}
-	log.Printf("[DEBUG] Checked if %q exists", path)
+
+	if secret == nil {
+		return fmt.Errorf("resource not found")
+	}
+
+	data := secret.Data
+	d.Set("name", name)
+	if _, ok := d.GetOk("path"); ok {
+		d.Set("path", backend)
+	} else {
+		d.Set("backend", backend)
+	}
+	d.Set("policies", data["policies"])
+	d.Set("max_ttl", data["max_ttl"])
+	d.Set("ttl", data["ttl"])
+	d.Set("token_type", data["token_type"])
+	d.Set("local", data["local"])
+
+	return nil
+}
+
+func nomadSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+
+	path := d.Id()
+
+	log.Printf("[DEBUG] Deleting Nomad backend role at %q", path)
+
+	if _, err := client.Logical().Delete(path); err != nil {
+		return fmt.Errorf("error deleting Nomad backend role at %q: %s", path, err)
+	}
+	log.Printf("[DEBUG] Deleted Nomad backend role at %q", path)
+	return nil
+}
+
+func nomadSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+	client := meta.(*api.Client)
+
+	path := d.Id()
+
+	log.Printf("[DEBUG] Checking Nomad secrets backend role at %q", path)
+
+	secret, err := client.Logical().Read(path)
+	if err != nil {
+		return false, fmt.Errorf("error reading role configuration for %q: %s", path, err)
+	}
+
 	return secret != nil, nil
+}
+
+func nomadSecretBackendRolePath(backend, name string) string {
+	return strings.Trim(backend, "/") + "/role/" + name
+}
+
+func nomadSecretBackendRoleNameFromPath(path string) (string, error) {
+	if !nomadSecretBackendRoleNameFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no name found")
+	}
+	res := nomadSecretBackendRoleNameFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for name", len(res))
+	}
+	return res[1], nil
+}
+
+func nomadSecretBackendRoleBackendFromPath(path string) (string, error) {
+	if !nomadSecretBackendRoleBackendFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no backend found")
+	}
+	res := nomadSecretBackendRoleBackendFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
+	}
+	return res[1], nil
 }

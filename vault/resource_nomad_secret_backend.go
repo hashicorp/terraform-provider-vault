@@ -31,6 +31,9 @@ func nomadSecretBackendResource() *schema.Resource {
 				StateFunc: func(v interface{}) string {
 					return strings.Trim(v.(string), "/")
 				},
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					return old+"/" == new || new+"/" == old
+				},
 			},
 			"description": {
 				Type:        schema.TypeString,
