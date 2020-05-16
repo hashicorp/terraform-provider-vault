@@ -512,6 +512,17 @@ var (
 			Resource:      rabbitmqSecretBackendRoleResource(),
 			PathInventory: []string{"/rabbitmq/roles/{name}"},
 		},
+		"vault_nomad_secret_backend": {
+			Resource: nomadSecretBackendResource(),
+			PathInventory: []string{
+				"/nomad/config/access",
+				"/nomad/config/lease",
+			},
+		},
+		"vault_nomad_secret_backend_role": {
+			Resource:      rabbitmqSecretBackendRoleResource(),
+			PathInventory: []string{"/access/roles/{name}"},
+		},
 		"vault_pki_secret_backend": {
 			Resource:      pkiSecretBackendResource(),
 			PathInventory: []string{UnknownPath},
