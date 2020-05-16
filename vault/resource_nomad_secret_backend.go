@@ -56,7 +56,7 @@ func nomadSecretBackendResource() *schema.Resource {
 			"address": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Specifies the address of the Nomad instance, provided as \"host:port\" like \"127.0.0.1:4646\".", //TODO: is 4646 the right port?
+				Description: "Specifies the address of the Nomad instance, provided as \"host:port\" like \"127.0.0.1:4646\".",
 			},
 			"token": {
 				Type:        schema.TypeString,
@@ -87,7 +87,7 @@ func nomadSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Partial(true)
-	log.Printf("[DEBUG] Mounting Consul backend at %q", path)
+	log.Printf("[DEBUG] Mounting Nomad backend at %q", path)
 
 	if err := client.Sys().Mount(path, info); err != nil {
 		return fmt.Errorf("Error mounting to %q: %s", path, err)
@@ -114,7 +114,6 @@ func nomadSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	d.SetPartial("token")
 	d.Partial(false)
 	return nil
-	// return nomadSecretBackendRead(d, meta) //TODO: Why is this set in rabbit but not consul?
 }
 
 func nomadSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
@@ -165,7 +164,7 @@ func nomadSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
-	configPath := consulSecretBackendConfigPath(path)
+	configPath := nomadSecretBackendConfigPath(path)
 
 	d.Partial(true)
 
