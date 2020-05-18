@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+	"github.com/hashicorp/go-multierror"
 	"io"
 	"io/ioutil"
 	"path"
@@ -204,42 +205,47 @@ func (e *templatableEndpoint) Validate() error {
 	if e == nil {
 		return fmt.Errorf("endpoint is nil")
 	}
+	var errs error
 	if e.Endpoint == "" {
-		return fmt.Errorf("endpoint cannot be blank for %#v", e)
+		errs = multierror.Append(errs, fmt.Errorf("endpoint cannot be blank for %#v", e))
 	}
 	if e.DirName == "" {
-		return fmt.Errorf("dirname cannot be blank for %#v", e)
+		errs = multierror.Append(errs, fmt.Errorf("dirname cannot be blank for %#v", e))
 	}
 	if e.UpperCaseDifferentiator == "" {
-		return fmt.Errorf("exported function prefix cannot be blank for %#v", e)
+		errs = multierror.Append(errs, fmt.Errorf("exported function prefix cannot be blank for %#v", e))
 	}
 	if e.LowerCaseDifferentiator == "" {
-		return fmt.Errorf("private function prefix cannot be blank for %#v", e)
+		errs = multierror.Append(errs, fmt.Errorf("private function prefix cannot be blank for %#v", e))
 	}
 	for _, parameter := range e.Parameters {
-		isSupported := false
-		for _, supportedType := range supportedParamTypes {
-			if parameter.Schema.Type == supportedType {
-				if parameter.Schema.Type != "array" {
-					isSupported = true
-					break
-				}
+		if err := validateParameter(parameter); err != nil {
+			errs = multierror.Append(errs, fmt.Errorf("error validating "+parameter.Name+": {{err}}", err))
+		}
+	}
+	return errs
+}
+
+func validateParameter(parameter *templatableParam) error {
+	for _, supportedType := range supportedParamTypes {
+		if parameter.Schema.Type == supportedType {
+			if parameter.Schema.Type != "array" {
+				// We have a match, and if the type isn't an array, we don't
+				// need to look into its element types to see if they're
+				// supported.
+				return nil
+			}
+			if parameter.Schema.Items.Type == "string" {
 				// Right now, our templates assume that all array types are strings.
 				// If we allow other types of arrays, we will need to also go into
 				// each template and add additional logic supporting the new array
 				// type.
-				if parameter.Schema.Items.Type != "string" {
-					return fmt.Errorf("unsupported array type of %s for %s", parameter.Schema.Items.Type, parameter.Name)
-				}
-				isSupported = true
-				break
+				return nil
 			}
-		}
-		if !isSupported {
-			return fmt.Errorf("unsupported type of %s for %s", parameter.Schema.Type, parameter.Name)
+			return fmt.Errorf("unsupported array type of %s for %s", parameter.Schema.Items.Type, parameter.Name)
 		}
 	}
-	return nil
+	return fmt.Errorf("unsupported parameter type of %s for %s", parameter.Schema.Type, parameter.Name)
 }
 
 // clean takes a field like "{role_name}" and returns
