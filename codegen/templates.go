@@ -9,6 +9,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/terraform-providers/terraform-provider-vault/util"
@@ -22,7 +23,7 @@ var (
 		templateTypeResource: "/codegen/templates/resource.go.tpl",
 	}
 
-	// These are the types of fields that OpenAPI has that we support
+	// These are the types of fields that OpenAPI 3 has that we support
 	// converting into Terraform fields.
 	supportedParamTypes = []string{
 		"array",
@@ -45,11 +46,11 @@ func newTemplateHandler(logger hclog.Logger) (*templateHandler, error) {
 		pathToFile := filepath.Join(homeDirPath, pathFromHomeDir)
 		templateBytes, err := ioutil.ReadFile(pathToFile)
 		if err != nil {
-			return nil, err
+			return nil, errwrap.Wrapf("error reading " + pathToFile + ": {{err}}", err)
 		}
 		t, err := template.New(tmplType.String()).Parse(string(templateBytes))
 		if err != nil {
-			return nil, err
+			return nil, errwrap.Wrapf("error parsing " + tmplType.String() + ": {{err}}", err)
 		}
 		templates[tmplType] = t
 	}
