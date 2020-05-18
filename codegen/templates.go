@@ -142,20 +142,11 @@ func collectParameters(endpointInfo *framework.OASPathItem) []*templatableParam 
 	for _, param := range endpointInfo.Parameters {
 		result = append(result, toTemplatableParam(param, true))
 	}
-	if endpointInfo.Post == nil {
-		return result
-	}
-	if endpointInfo.Post.RequestBody == nil {
-		return result
-	}
-	if endpointInfo.Post.RequestBody.Content == nil {
+	if endpointInfo.Post == nil || endpointInfo.Post.RequestBody == nil || endpointInfo.Post.RequestBody.Content == nil {
 		return result
 	}
 	for _, mediaTypeObject := range endpointInfo.Post.RequestBody.Content {
-		if mediaTypeObject.Schema == nil {
-			continue
-		}
-		if mediaTypeObject.Schema.Properties == nil {
+		if mediaTypeObject.Schema == nil || mediaTypeObject.Schema.Properties == nil {
 			continue
 		}
 		for paramName, schema := range mediaTypeObject.Schema.Properties {
