@@ -216,17 +216,6 @@ func ParsePath(userSuppliedPath, endpoint string, d *schema.ResourceData) string
 	return recomprised
 }
 
-// For an endpoint like "/transform/role/{name}", returns
-// "{name}".
-func LastField(endpoint string) string {
-	endpointFields := strings.Split(endpoint, "/")
-	lastFieldPosition := len(endpointFields) - 1
-	if lastFieldPosition < 0 {
-		lastFieldPosition = 0
-	}
-	return endpointFields[lastFieldPosition]
-}
-
 // PathParameters is just like regexp FindStringSubmatch,
 // but it validates that the match is different from the string passed
 // in, and that there's only one result.

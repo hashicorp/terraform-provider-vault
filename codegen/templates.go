@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 var (
@@ -85,9 +85,8 @@ func (h *templateHandler) Write(wr io.Writer, tmplType templateType, endpoint st
 	return h.templates[tmplType].Execute(wr, templatable)
 }
 
-// toTemplatable does a bunch of work to format the given data into a
-// struct that has fields that will be idiomatic to use with Go's templating
-// language.
+// toTemplatable converts the provided data into a struct that the template
+// can easily interpret.
 func (h *templateHandler) toTemplatable(endpoint string, endpointInfo *framework.OASPathItem) (*templatableEndpoint, error) {
 	parameters := collectParameters(endpointInfo)
 
@@ -118,19 +117,19 @@ func (h *templateHandler) toTemplatable(endpoint string, endpointInfo *framework
 	// or "roles" or whatever is at the end of an endpoint's path.
 	// This is used to differentiate generated variable or function names
 	// so they don't collide with the other ones in the same package.
-	lastEndpointField := clean(util.LastField(endpoint))
+	tmplName := clean(path.Base(endpoint))
 	t := &templatableEndpoint{
 		Endpoint:                endpoint,
-		DirName:                 clean(util.LastField(filepath.Dir(endpoint))),
-		UpperCaseDifferentiator: strings.Title(strings.ToLower(lastEndpointField)),
-		LowerCaseDifferentiator: strings.ToLower(lastEndpointField),
+		DirName:                 clean(path.Base(filepath.Dir(endpoint))),
+		UpperCaseDifferentiator: strings.Title(strings.ToLower(tmplName)),
+		LowerCaseDifferentiator: strings.ToLower(tmplName),
 		Parameters:              parameters,
 		SupportsRead:            endpointInfo.Get != nil,
 		SupportsWrite:           endpointInfo.Post != nil,
 		SupportsDelete:          endpointInfo.Delete != nil,
 	}
 	if err := t.Validate(); err != nil {
-		return nil, err
+		return nil, errwrap.Wrapf("failed to validate templatable data for "+endpoint+": {{err}}", err)
 	}
 	return t, nil
 }
