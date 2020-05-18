@@ -33,11 +33,16 @@ var (
 )
 
 func newTemplateHandler(logger hclog.Logger) (*templateHandler, error) {
+	homeDirPath, err := pathToHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
 	// Read in the template for each template type in the registry and
 	// cache them to be used repeatedly.
 	templates := make(map[templateType]*template.Template, len(templateRegistry))
 	for tmplType, pathFromHomeDir := range templateRegistry {
-		pathToFile := filepath.Join(pathToHomeDir, pathFromHomeDir)
+		pathToFile := filepath.Join(homeDirPath, pathFromHomeDir)
 		templateBytes, err := ioutil.ReadFile(pathToFile)
 		if err != nil {
 			return nil, err

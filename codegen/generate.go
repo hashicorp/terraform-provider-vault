@@ -18,16 +18,6 @@ const generatedDirPerms os.FileMode = 0775
 
 var (
 	errUnsupported = errors.New("code and doc generation for this item is unsupported")
-
-	// pathToHomeDir yields the path to the terraform-vault-provider
-	// home directory on the machine on which it's running.
-	// ex. /home/your-name/go/src/github.com/terraform-providers/terraform-provider-vault
-	pathToHomeDir = func() string {
-		repoName := "terraform-provider-vault"
-		wd, _ := os.Getwd()
-		pathParts := strings.Split(wd, repoName)
-		return pathParts[0] + repoName
-	}()
 )
 
 func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
@@ -69,7 +59,10 @@ type fileCreator struct {
 // other objects. Unexported methods may be available to other code in this package,
 // but they're not intended to be used by anything but the fileCreator.
 func (c *fileCreator) GenerateCode(endpoint string, endpointInfo *framework.OASPathItem, tmplType templateType) error {
-	pathToFile := codeFilePath(tmplType, endpoint)
+	pathToFile, err := codeFilePath(tmplType, endpoint)
+	if err != nil {
+		return err
+	}
 	return c.writeFile(pathToFile, tmplType, endpoint, endpointInfo)
 }
 
@@ -146,10 +139,14 @@ we eventually cover all >500 of them and add tests.
 			│   └── name.go
 			└── transformation.go
 */
-func codeFilePath(tmplType templateType, endpoint string) string {
+func codeFilePath(tmplType templateType, endpoint string) (string, error) {
 	filename := fmt.Sprintf("%s%s.go", tmplType.String(), endpoint)
-	path := filepath.Join(pathToHomeDir, "generated", filename)
-	return stripCurlyBraces(path)
+	homeDirPath, err := pathToHomeDir()
+	if err != nil {
+		return "", err
+	}
+	path := filepath.Join(homeDirPath, "generated", filename)
+	return stripCurlyBraces(path), nil
 }
 
 /*
@@ -180,10 +177,14 @@ we eventually cover all >500 of them and add tests.
 			│   └── name.md
 			└── transformation.md
 */
-func docFilePath(tmplType templateType, endpoint string) string {
+func docFilePath(tmplType templateType, endpoint string) (string, error) {
 	filename := fmt.Sprintf("%s%s.md", tmplType.String(), endpoint)
-	path := filepath.Join(pathToHomeDir, "website", "docs", "generated", filename)
-	return stripCurlyBraces(path)
+	homeDirPath, err := pathToHomeDir()
+	if err != nil {
+		return "", err
+	}
+	path := filepath.Join(homeDirPath, "website", "docs", "generated", filename)
+	return stripCurlyBraces(path), nil
 }
 
 // stripCurlyBraces converts a path like
@@ -201,4 +202,17 @@ func stripCurlyBraces(path string) string {
 func parentDir(pathToFile string) string {
 	lastSlash := strings.LastIndex(pathToFile, "/")
 	return pathToFile[:lastSlash]
+}
+
+// pathToHomeDir yields the path to the terraform-vault-provider
+// home directory on the machine on which it's running.
+// ex. /home/your-name/go/src/github.com/terraform-providers/terraform-provider-vault
+func pathToHomeDir() (string, error) {
+	repoName := "terraform-provider-vault"
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	pathParts := strings.Split(wd, repoName)
+	return pathParts[0] + repoName, nil
 }

@@ -5,6 +5,10 @@ import (
 )
 
 func TestCodeFilePath(t *testing.T) {
+	homeDirPath, err := pathToHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
 	testCases := []struct {
 		input                      string
 		expectedDataSourceFilePath string
@@ -37,18 +41,29 @@ func TestCodeFilePath(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		actualDataSourceFilePath := codeFilePath(templateTypeDataSource, testCase.input)
-		if actualDataSourceFilePath != pathToHomeDir+testCase.expectedDataSourceFilePath {
-			t.Fatalf("testCases %q but received %q", pathToHomeDir+testCase.expectedDataSourceFilePath, actualDataSourceFilePath)
+		actualDataSourceFilePath, err := codeFilePath(templateTypeDataSource, testCase.input)
+		if err != nil {
+			t.Fatal(err)
 		}
-		actualResourceFilePath := codeFilePath(templateTypeResource, testCase.input)
-		if actualResourceFilePath != pathToHomeDir+testCase.expectedResourceFilePath {
-			t.Fatalf("testCases %q but received %q", pathToHomeDir+testCase.expectedResourceFilePath, actualResourceFilePath)
+		if actualDataSourceFilePath != homeDirPath+testCase.expectedDataSourceFilePath {
+			t.Fatalf("testCases %q but received %q", homeDirPath+testCase.expectedDataSourceFilePath, actualDataSourceFilePath)
+		}
+		actualResourceFilePath, err := codeFilePath(templateTypeResource, testCase.input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if actualResourceFilePath != homeDirPath+testCase.expectedResourceFilePath {
+			t.Fatalf("testCases %q but received %q", homeDirPath+testCase.expectedResourceFilePath, actualResourceFilePath)
 		}
 	}
 }
 
 func TestDocFilePath(t *testing.T) {
+	homeDirPath, err := pathToHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	testCases := []struct {
 		input                      string
 		expectedDataSourceFilePath string
@@ -81,13 +96,19 @@ func TestDocFilePath(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		actualDataSourceDocPath := docFilePath(templateTypeDataSource, testCase.input)
-		if actualDataSourceDocPath != pathToHomeDir+testCase.expectedDataSourceFilePath {
-			t.Fatalf("testCases %q but received %q", pathToHomeDir+testCase.expectedDataSourceFilePath, actualDataSourceDocPath)
+		actualDataSourceDocPath, err := docFilePath(templateTypeDataSource, testCase.input)
+		if err != nil {
+			t.Fatal(err)
 		}
-		actualResourceDocPath := docFilePath(templateTypeResource, testCase.input)
-		if actualResourceDocPath != pathToHomeDir+testCase.expectedResourceFilePath {
-			t.Fatalf("testCases %q but received %q", pathToHomeDir+testCase.expectedResourceFilePath, actualResourceDocPath)
+		if actualDataSourceDocPath != homeDirPath+testCase.expectedDataSourceFilePath {
+			t.Fatalf("testCases %q but received %q", homeDirPath+testCase.expectedDataSourceFilePath, actualDataSourceDocPath)
+		}
+		actualResourceDocPath, err := docFilePath(templateTypeResource, testCase.input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if actualResourceDocPath != homeDirPath+testCase.expectedResourceFilePath {
+			t.Fatalf("testCases %q but received %q", homeDirPath+testCase.expectedResourceFilePath, actualResourceDocPath)
 		}
 	}
 }
