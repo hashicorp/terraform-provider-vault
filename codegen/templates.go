@@ -70,12 +70,12 @@ func (h *templateHandler) Write(wr io.Writer, tmplType templateType, parentDir s
 		// Since each endpoint will have a code file and a doc file, let's cache
 		// the template-friendly version of the endpoint so it doesn't have to be
 		// converted into that format twice.
-		t, err := h.toTemplatable(parentDir, endpoint, endpointInfo)
+		var err error
+		templatable, err = h.toTemplatable(parentDir, endpoint, endpointInfo)
 		if err != nil {
 			return err
 		}
-		templatable = t
-		h.templatableEndpoints[endpoint] = t
+		h.templatableEndpoints[endpoint] = templatable
 	}
 	return h.templates[tmplType].Execute(wr, templatable)
 }
