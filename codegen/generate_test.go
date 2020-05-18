@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -155,7 +156,7 @@ func TestParentDir(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.input, func(t *testing.T) {
-			actual := parentDir(testCase.input)
+			actual := filepath.Dir(testCase.input)
 			if actual != testCase.expected {
 				t.Fatalf("expected %q but received %q", testCase.expected, actual)
 			}

@@ -355,7 +355,7 @@ func TestTemplateHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 	buf := bytes.NewBuffer([]byte{})
-	if err := h.Write(buf, templateTypeResource, "role", "/transform/role/{name}", endpointInfo); err != nil {
+	if err := h.Write(buf, templateTypeResource, "/transform/role/{name}", endpointInfo); err != nil {
 		t.Fatal(err)
 	}
 	result := ""

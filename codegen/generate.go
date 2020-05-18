@@ -46,7 +46,7 @@ func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
 		// TODO in separate PR - add fCreator.GenerateDoc() method
 		createdCount++
 	}
-	logger.Info("generated %d files\n", createdCount)
+	logger.Info(fmt.Sprintf("generated %d files\n", createdCount))
 	return nil
 }
 
@@ -69,18 +69,17 @@ func (c *fileCreator) GenerateCode(endpoint string, endpointInfo *framework.OASP
 // TODO in a separate PR - add a GenerateDoc method.
 
 func (c *fileCreator) writeFile(pathToFile string, tmplType templateType, endpoint string, endpointInfo *framework.OASPathItem) error {
-	parentDir := parentDir(pathToFile)
-	wr, closer, err := c.createFileWriter(pathToFile, parentDir)
+	wr, closer, err := c.createFileWriter(pathToFile)
 	if err != nil {
 		return err
 	}
 	defer closer()
-	return c.templateHandler.Write(wr, tmplType, parentDir, endpoint, endpointInfo)
+	return c.templateHandler.Write(wr, tmplType, endpoint, endpointInfo)
 }
 
 // createFileWriter creates a file and returns its writer for the caller to use in templating.
 // The closer will only be populated if the err is nil.
-func (c *fileCreator) createFileWriter(pathToFile, parentDir string) (wr *bufio.Writer, closer func(), err error) {
+func (c *fileCreator) createFileWriter(pathToFile string) (wr *bufio.Writer, closer func(), err error) {
 	var cleanups []func() error
 	closer = func() {
 		for _, cleanup := range cleanups {
@@ -91,7 +90,7 @@ func (c *fileCreator) createFileWriter(pathToFile, parentDir string) (wr *bufio.
 	}
 
 	// Make the directory and file.
-	if err := os.MkdirAll(parentDir, generatedDirPerms); err != nil {
+	if err := os.MkdirAll(filepath.Dir(pathToFile), generatedDirPerms); err != nil {
 		return nil, nil, err
 	}
 	f, err := os.Create(pathToFile)
@@ -194,14 +193,6 @@ func stripCurlyBraces(path string) string {
 	path = strings.ReplaceAll(path, "{", "")
 	path = strings.ReplaceAll(path, "}", "")
 	return path
-}
-
-// parentDir returns the directory containing the given file.
-// ex. generated/resources/transform-transformation-name.go
-// returns generated/resources/
-func parentDir(pathToFile string) string {
-	lastSlash := strings.LastIndex(pathToFile, "/")
-	return pathToFile[:lastSlash]
 }
 
 // pathToHomeDir yields the path to the terraform-vault-provider

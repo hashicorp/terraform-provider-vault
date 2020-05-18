@@ -46,11 +46,11 @@ func newTemplateHandler(logger hclog.Logger) (*templateHandler, error) {
 		pathToFile := filepath.Join(homeDirPath, pathFromHomeDir)
 		templateBytes, err := ioutil.ReadFile(pathToFile)
 		if err != nil {
-			return nil, errwrap.Wrapf("error reading " + pathToFile + ": {{err}}", err)
+			return nil, errwrap.Wrapf("error reading "+pathToFile+": {{err}}", err)
 		}
 		t, err := template.New(tmplType.String()).Parse(string(templateBytes))
 		if err != nil {
-			return nil, errwrap.Wrapf("error parsing " + tmplType.String() + ": {{err}}", err)
+			return nil, errwrap.Wrapf("error parsing "+tmplType.String()+": {{err}}", err)
 		}
 		templates[tmplType] = t
 	}
@@ -68,16 +68,15 @@ type templateHandler struct {
 }
 
 // Write takes one endpoint and uses a template to generate text
-// for it. This template is written to the given writer. It's exported
-// because it's the only method intended to be called by external callers.
-func (h *templateHandler) Write(wr io.Writer, tmplType templateType, parentDir string, endpoint string, endpointInfo *framework.OASPathItem) error {
+// for it. This template is written to the given writer.
+func (h *templateHandler) Write(wr io.Writer, tmplType templateType, endpoint string, endpointInfo *framework.OASPathItem) error {
 	templatable, ok := h.templatableEndpoints[endpoint]
 	if !ok {
 		// Since each endpoint will have a code file and a doc file, let's cache
 		// the template-friendly version of the endpoint so it doesn't have to be
 		// converted into that format twice.
 		var err error
-		templatable, err = h.toTemplatable(parentDir, endpoint, endpointInfo)
+		templatable, err = h.toTemplatable(endpoint, endpointInfo)
 		if err != nil {
 			return err
 		}
@@ -89,7 +88,7 @@ func (h *templateHandler) Write(wr io.Writer, tmplType templateType, parentDir s
 // toTemplatable does a bunch of work to format the given data into a
 // struct that has fields that will be idiomatic to use with Go's templating
 // language.
-func (h *templateHandler) toTemplatable(parentDir, endpoint string, endpointInfo *framework.OASPathItem) (*templatableEndpoint, error) {
+func (h *templateHandler) toTemplatable(endpoint string, endpointInfo *framework.OASPathItem) (*templatableEndpoint, error) {
 	parameters := collectParameters(endpointInfo)
 
 	// Sort the parameters by name so they won't shift every time
@@ -122,7 +121,7 @@ func (h *templateHandler) toTemplatable(parentDir, endpoint string, endpointInfo
 	lastEndpointField := clean(util.LastField(endpoint))
 	t := &templatableEndpoint{
 		Endpoint:                endpoint,
-		DirName:                 clean(util.LastField(parentDir)),
+		DirName:                 clean(util.LastField(filepath.Dir(endpoint))),
 		UpperCaseDifferentiator: strings.Title(strings.ToLower(lastEndpointField)),
 		LowerCaseDifferentiator: strings.ToLower(lastEndpointField),
 		Parameters:              parameters,
