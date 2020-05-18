@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"path/filepath"
 	"sort"
 	"strings"
 	"text/template"
@@ -209,16 +210,16 @@ func (e *templatableEndpoint) Validate() error {
 		return fmt.Errorf("endpoint is nil")
 	}
 	if e.Endpoint == "" {
-		return fmt.Errorf("endpoint cannot be blank for %+v", e)
+		return fmt.Errorf("endpoint cannot be blank for %#v", e)
 	}
 	if e.DirName == "" {
-		return fmt.Errorf("dirname cannot be blank for %+v", e)
+		return fmt.Errorf("dirname cannot be blank for %#v", e)
 	}
 	if e.UpperCaseDifferentiator == "" {
-		return fmt.Errorf("exported function prefix cannot be blank for %+v", e)
+		return fmt.Errorf("exported function prefix cannot be blank for %#v", e)
 	}
 	if e.LowerCaseDifferentiator == "" {
-		return fmt.Errorf("private function prefix cannot be blank for %+v", e)
+		return fmt.Errorf("private function prefix cannot be blank for %#v", e)
 	}
 	for _, parameter := range e.Parameters {
 		isSupported := false

@@ -120,7 +120,7 @@ func TestStripCurlyBraces(t *testing.T) {
 			if actual != testCase.expected {
 				t.Fatalf("expected %q but received %q", actual, testCase.expected)
 			}
-		}
+		})
 	}
 }
 

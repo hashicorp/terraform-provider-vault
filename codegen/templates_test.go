@@ -48,45 +48,52 @@ func TestClean(t *testing.T) {
 			if actual != testCase.expected {
 				t.Fatalf("input: %q; expected: %q; actual: %q", testCase.input, testCase.expected, actual)
 			}
-		}
+		})
 	}
 }
 
 func TestValidate(t *testing.T) {
 	testCases := []struct {
+		testName    string
 		input       *templatableEndpoint
 		expectedErr string
 	}{
 		{
+			testName:    "nil inputs error",
 			input:       nil,
 			expectedErr: "endpoint is nil",
 		},
 		{
+			testName:    "blank endpoints error",
 			input:       &templatableEndpoint{},
-			expectedErr: "endpoint cannot be blank for &{Endpoint: DirName: UpperCaseDifferentiator: LowerCaseDifferentiator: Parameters:[] SupportsRead:false SupportsWrite:false SupportsDelete:false}",
+			expectedErr: `endpoint cannot be blank for &codegen.templatableEndpoint{Endpoint:"", DirName:"", UpperCaseDifferentiator:"", LowerCaseDifferentiator:"", Parameters:[]*codegen.templatableParam(nil), SupportsRead:false, SupportsWrite:false, SupportsDelete:false}`,
 		},
 		{
+			testName: "blank dirnames error",
 			input: &templatableEndpoint{
 				Endpoint: "foo",
 			},
-			expectedErr: "dirname cannot be blank for &{Endpoint:foo DirName: UpperCaseDifferentiator: LowerCaseDifferentiator: Parameters:[] SupportsRead:false SupportsWrite:false SupportsDelete:false}",
+			expectedErr: `dirname cannot be blank for &codegen.templatableEndpoint{Endpoint:"foo", DirName:"", UpperCaseDifferentiator:"", LowerCaseDifferentiator:"", Parameters:[]*codegen.templatableParam(nil), SupportsRead:false, SupportsWrite:false, SupportsDelete:false}`,
 		},
 		{
+			testName: "blank upper case differentiators error",
 			input: &templatableEndpoint{
 				Endpoint: "foo",
 				DirName:  "foo",
 			},
-			expectedErr: "exported function prefix cannot be blank for &{Endpoint:foo DirName:foo UpperCaseDifferentiator: LowerCaseDifferentiator: Parameters:[] SupportsRead:false SupportsWrite:false SupportsDelete:false}",
+			expectedErr: `exported function prefix cannot be blank for &codegen.templatableEndpoint{Endpoint:"foo", DirName:"foo", UpperCaseDifferentiator:"", LowerCaseDifferentiator:"", Parameters:[]*codegen.templatableParam(nil), SupportsRead:false, SupportsWrite:false, SupportsDelete:false}`,
 		},
 		{
+			testName: "blank lower case differentiators error",
 			input: &templatableEndpoint{
 				Endpoint:                "foo",
 				DirName:                 "foo",
 				UpperCaseDifferentiator: "foo",
 			},
-			expectedErr: "private function prefix cannot be blank for &{Endpoint:foo DirName:foo UpperCaseDifferentiator:foo LowerCaseDifferentiator: Parameters:[] SupportsRead:false SupportsWrite:false SupportsDelete:false}",
+			expectedErr: `private function prefix cannot be blank for &codegen.templatableEndpoint{Endpoint:"foo", DirName:"foo", UpperCaseDifferentiator:"foo", LowerCaseDifferentiator:"", Parameters:[]*codegen.templatableParam(nil), SupportsRead:false, SupportsWrite:false, SupportsDelete:false}`,
 		},
 		{
+			testName: "valid endpoint",
 			input: &templatableEndpoint{
 				Endpoint:                "foo",
 				DirName:                 "foo",
@@ -96,6 +103,7 @@ func TestValidate(t *testing.T) {
 			expectedErr: "",
 		},
 		{
+			testName: "bad parameter type",
 			input: &templatableEndpoint{
 				Endpoint:                "foo",
 				DirName:                 "foo",
@@ -115,6 +123,7 @@ func TestValidate(t *testing.T) {
 			expectedErr: "unsupported type of foo for some-param",
 		},
 		{
+			testName: "good parameter type",
 			input: &templatableEndpoint{
 				Endpoint:                "foo",
 				DirName:                 "foo",
@@ -134,6 +143,7 @@ func TestValidate(t *testing.T) {
 			expectedErr: "",
 		},
 		{
+			testName: "array of strings param",
 			input: &templatableEndpoint{
 				Endpoint:                "foo",
 				DirName:                 "foo",
@@ -156,6 +166,7 @@ func TestValidate(t *testing.T) {
 			expectedErr: "",
 		},
 		{
+			testName: "array of objects param",
 			input: &templatableEndpoint{
 				Endpoint:                "foo",
 				DirName:                 "foo",
@@ -179,19 +190,19 @@ func TestValidate(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		t.Run(testCase.input, func(t *testing.T) {
+		t.Run(testCase.testName, func(t *testing.T) {
 			shouldErr := testCase.expectedErr != ""
 			err := testCase.input.Validate()
 			if err != nil {
 				if err.Error() != testCase.expectedErr {
-					t.Fatalf("input: %+v; expected err: %q; actual: %q", testCase.input, testCase.expectedErr, err)
+					t.Fatalf("input: %#v; expected err: %q; actual: %q", testCase.input, testCase.expectedErr, err)
 				}
 			} else {
 				if shouldErr {
-					t.Fatalf("expected an error for %+v", testCase.input)
+					t.Fatalf("expected an error for %#v", testCase.input)
 				}
 			}
-		}
+		})
 	}
 }
 
@@ -311,7 +322,7 @@ func TestToTemplatableParam(t *testing.T) {
 	for _, testCase := range testCases {
 		actual := toTemplatableParam(testCase.input.param, testCase.input.isPathParameter)
 		if !reflect.DeepEqual(testCase.expected, actual) {
-			t.Fatalf("expected %+v but received %+v", testCase.expected, actual)
+			t.Fatalf("expected %#v but received %#v", testCase.expected, actual)
 		}
 	}
 }
