@@ -317,64 +317,14 @@ func TestToTemplatableParam(t *testing.T) {
 }
 
 func TestCollectParameters(t *testing.T) {
-	endpointInfo := &framework.OASPathItem{}
-	if err := json.Unmarshal([]byte(testEndpoint), endpointInfo); err != nil {
-		t.Fatal(err)
-	}
-	parameters := collectParameters(endpointInfo)
-	for i := 0; i < len(parameters); i++ {
-		switch i {
-		case 0:
-			if parameters[0].Name != "name" {
-				t.Fatalf("expected 'name' but received %q", parameters[0].Name)
-			}
-		case 1:
-			if parameters[1].Name != "transformations" {
-				t.Fatalf("expected 'transformations' but received %q", parameters[1].Name)
-			}
-		default:
-			t.Fatalf("expected 2 parameters but received %d", len(parameters))
-		}
-	}
-}
-
-func TestTemplateHandler(t *testing.T) {
-	h, err := newTemplateHandler(hclog.Default())
-	if err != nil {
-		t.Fatal(err)
-	}
-	endpointInfo := &framework.OASPathItem{}
-	if err := json.Unmarshal([]byte(testEndpoint), endpointInfo); err != nil {
-		t.Fatal(err)
-	}
-	buf := bytes.NewBuffer([]byte{})
-	if err := h.Write(buf, templateTypeResource, "/transform/role/{name}", endpointInfo); err != nil {
-		t.Fatal(err)
-	}
-	result := ""
-	chunk := make([]byte, 500)
-	for {
-		_, err := buf.Read(chunk)
-		if err != nil {
-			if err == io.EOF {
-				result += string(chunk)
-				break
-			}
-			t.Fatal(err)
-		}
-		result += string(chunk)
-	}
-	// We only spot check here because resources will be covered by their
-	// own tests fully testing validity. This test is mainly to make sure
-	// we're getting something that looks correct back rather than an empty
-	// string.
-	if !strings.Contains(result, "resourceNameExists") {
-		t.Fatalf("unexpected result: %s", result)
-	}
-}
-
-// based on "/transform/role/{name}"
-const testEndpoint = `{
+	testCases := []struct {
+		testName       string
+		endpointInfo   string
+		expectedParams []string
+	}{
+		{
+			testName: "/transform/role/{name}",
+			endpointInfo: `{
 	"description": "Read, write, and delete roles.",
 	"parameters": [{
 		"name": "name",
@@ -437,4 +387,189 @@ const testEndpoint = `{
 			}
 		}
 	}
-}`
+}`,
+			expectedParams: []string{"name", "transformations"},
+		},
+		{
+			testName: "/transform/alphabet/{name}",
+			endpointInfo: `{
+	"description": "Read, write, and delete alphabets.",
+	"parameters": [{
+		"name": "name",
+		"description": "The name of the alphabet.",
+		"in": "path",
+		"schema": {
+			"type": "string"
+		},
+		"required": true
+	}],
+	"x-vault-createSupported": true,
+	"get": {
+		"operationId": "getTransformAlphabetName",
+		"tags": [
+			"secrets"
+		],
+		"responses": {
+			"200": {
+				"description": "OK"
+			}
+		}
+	},
+	"post": {
+		"operationId": "postTransformAlphabetName",
+		"tags": [
+			"secrets"
+		],
+		"requestBody": {
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"properties": {
+							"alphabet": {
+								"type": "string",
+								"description": "A string of characters that contains the alphabet set."
+							}
+						}
+					}
+				}
+			}
+		},
+		"responses": {
+			"200": {
+				"description": "OK"
+			}
+		}
+	},
+	"delete": {
+		"operationId": "deleteTransformAlphabetName",
+		"tags": [
+			"secrets"
+		],
+		"responses": {
+			"204": {
+				"description": "empty body"
+			}
+		}
+	}
+}`,
+			expectedParams: []string{"name", "alphabet"},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.testName, func(t *testing.T) {
+			endpointInfo := &framework.OASPathItem{}
+			if err := json.Unmarshal([]byte(testCase.endpointInfo), endpointInfo); err != nil {
+				t.Fatal(err)
+			}
+			parameters := collectParameters(endpointInfo)
+			if len(parameters) != len(testCase.expectedParams) {
+				t.Fatalf("expected %d parameters but received %d", len(testCase.expectedParams), len(parameters))
+			}
+			for i := 0; i < len(parameters); i++ {
+				if parameters[i].Name != testCase.expectedParams[i] {
+					t.Fatalf("expected %q but received %q", testCase.expectedParams[i], parameters[i].Name)
+				}
+			}
+		})
+	}
+}
+
+func TestTemplateHandler(t *testing.T) {
+	h, err := newTemplateHandler(hclog.Default())
+	if err != nil {
+		t.Fatal(err)
+	}
+	endpointInfo := &framework.OASPathItem{}
+	if err := json.Unmarshal([]byte(`{
+	"description": "Read, write, and delete roles.",
+	"parameters": [{
+		"name": "name",
+		"description": "The name of the role.",
+		"in": "path",
+		"schema": {
+			"type": "string"
+		},
+		"required": true
+	}],
+	"x-vault-createSupported": true,
+	"get": {
+		"operationId": "getTransformRoleName",
+		"tags": [
+			"secrets"
+		],
+		"responses": {
+			"200": {
+				"description": "OK"
+			}
+		}
+	},
+	"post": {
+		"operationId": "postTransformRoleName",
+		"tags": [
+			"secrets"
+		],
+		"requestBody": {
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"properties": {
+							"transformations": {
+								"type": "array",
+								"description": "A comma separated string or slice of transformations to use.",
+								"items": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"responses": {
+			"200": {
+				"description": "OK"
+			}
+		}
+	},
+	"delete": {
+		"operationId": "deleteTransformRoleName",
+		"tags": [
+			"secrets"
+		],
+		"responses": {
+			"204": {
+				"description": "empty body"
+			}
+		}
+	}
+}`), endpointInfo); err != nil {
+		t.Fatal(err)
+	}
+	buf := bytes.NewBuffer([]byte{})
+	if err := h.Write(buf, templateTypeResource, "/transform/role/{name}", endpointInfo); err != nil {
+		t.Fatal(err)
+	}
+	result := ""
+	chunk := make([]byte, 500)
+	for {
+		_, err := buf.Read(chunk)
+		if err != nil {
+			if err == io.EOF {
+				result += string(chunk)
+				break
+			}
+			t.Fatal(err)
+		}
+		result += string(chunk)
+	}
+	// We only spot check here because resources will be covered by their
+	// own tests fully testing validity. This test is mainly to make sure
+	// we're getting something that looks correct back rather than an empty
+	// string.
+	if !strings.Contains(result, "resourceNameExists") {
+		t.Fatalf("unexpected result: %s", result)
+	}
+}
