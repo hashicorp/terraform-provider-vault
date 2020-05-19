@@ -1,7 +1,6 @@
 package codegen
 
 import (
-	"path/filepath"
 	"testing"
 )
 
@@ -141,24 +140,6 @@ func TestStripCurlyBraces(t *testing.T) {
 			actual := stripCurlyBraces(testCase.input)
 			if actual != testCase.expected {
 				t.Fatalf("expected %q but received %q", actual, testCase.expected)
-			}
-		})
-	}
-}
-
-func TestParentDir(t *testing.T) {
-	testCases := []struct {
-		input    string
-		expected string
-	}{
-		{input: "/transform/alphabet", expected: "/transform"},
-		{input: "/transform/alphabet/{name}", expected: "/transform/alphabet"},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.input, func(t *testing.T) {
-			actual := filepath.Dir(testCase.input)
-			if actual != testCase.expected {
-				t.Fatalf("expected %q but received %q", testCase.expected, actual)
 			}
 		})
 	}
