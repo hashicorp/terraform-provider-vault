@@ -203,53 +203,48 @@ func TestValidate(t *testing.T) {
 }
 
 func TestToTemplatableParam(t *testing.T) {
-	type input struct {
+	testCases := []struct {
 		param           framework.OASParameter
 		isPathParameter bool
-	}
-	testCases := []struct {
-		input    *input
-		expected *templatableParam
+		expected        *templatableParam
 	}{
 		{
-			input: &input{
-				param: framework.OASParameter{
-					Name:        "name",
+			param: framework.OASParameter{
+				Name:        "name",
+				Description: "description",
+				In:          "in",
+				Schema: &framework.OASSchema{
+					Type:        "type",
 					Description: "description",
-					In:          "in",
-					Schema: &framework.OASSchema{
-						Type:        "type",
-						Description: "description",
-						Properties: map[string]*framework.OASSchema{
-							"something": {Description: "schema"},
-						},
-						Required: []string{"a"},
-						Items: &framework.OASSchema{
-							Description: "schema",
-						},
-						Format:           "format",
-						Pattern:          "pattern",
-						Enum:             []interface{}{"enum"},
-						Default:          "default",
-						Example:          "example",
-						Deprecated:       true,
-						DisplayValue:     "displayvalue",
-						DisplaySensitive: true,
-						DisplayGroup:     "displaygroup",
-						DisplayAttrs: &framework.DisplayAttributes{
-							Name:       "foo",
-							Value:      true,
-							Sensitive:  true,
-							Navigation: true,
-							Group:      "group",
-							Action:     "action",
-						},
+					Properties: map[string]*framework.OASSchema{
+						"something": {Description: "schema"},
 					},
-					Required:   true,
-					Deprecated: true,
+					Required: []string{"a"},
+					Items: &framework.OASSchema{
+						Description: "schema",
+					},
+					Format:           "format",
+					Pattern:          "pattern",
+					Enum:             []interface{}{"enum"},
+					Default:          "default",
+					Example:          "example",
+					Deprecated:       true,
+					DisplayValue:     "displayvalue",
+					DisplaySensitive: true,
+					DisplayGroup:     "displaygroup",
+					DisplayAttrs: &framework.DisplayAttributes{
+						Name:       "foo",
+						Value:      true,
+						Sensitive:  true,
+						Navigation: true,
+						Group:      "group",
+						Action:     "action",
+					},
 				},
-				isPathParameter: true,
+				Required:   true,
+				Deprecated: true,
 			},
+			isPathParameter: true,
 			expected: &templatableParam{
 				OASParameter: &framework.OASParameter{
 					Name:        "name",
@@ -290,16 +285,14 @@ func TestToTemplatableParam(t *testing.T) {
 			},
 		},
 		{
-			input: &input{
-				param: framework.OASParameter{
-					Name:        "",
-					Description: "",
-					In:          "",
-					Required:    false,
-					Deprecated:  false,
-				},
-				isPathParameter: false,
+			param: framework.OASParameter{
+				Name:        "",
+				Description: "",
+				In:          "",
+				Required:    false,
+				Deprecated:  false,
 			},
+			isPathParameter: false,
 			expected: &templatableParam{
 				OASParameter: &framework.OASParameter{
 					Name:        "",
@@ -316,7 +309,7 @@ func TestToTemplatableParam(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		actual := toTemplatableParam(testCase.input.param, testCase.input.isPathParameter)
+		actual := toTemplatableParam(testCase.param, testCase.isPathParameter)
 		if !reflect.DeepEqual(testCase.expected, actual) {
 			t.Fatalf("expected %#v but received %#v", testCase.expected, actual)
 		}
