@@ -1,16 +1,16 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_transform_decode_role_name data source"
-sidebar_current: "docs-vault-datasource-transform-decode"
+page_title: "Vault: vault_transform_encode_role_name data source"
+sidebar_current: "docs-vault-datasource-transform-encode"
 description: |-
-  "/transform/decode/{role_name}"
+  "/transform/encode/{role_name}"
 ---
 
-# vault\_transform\_decode\_role\_name
+# vault\_transform\_encode\_role\_name
 
-This data source supports the "/transform/decode/{role_name}" Vault endpoint.
+This data source supports the "/transform/encode/{role_name}" Vault endpoint.
 
-It decodes the provided value using a named role.
+It encodes the provided value using a named role.
 
 ## Example Usage
 
@@ -32,10 +32,10 @@ resource "vault_transform_role_name" "payments" {
   name = "payments"
   transformations = ["ccn-fpe"]
 }
-data "vault_transform_decode_role_name" "test" {
+data "vault_transform_encode_role_name" "test" {
     path      = vault_transform_role_name.payments.path
     role_name = "payments"
-    value     = "9300-3376-4943-8903"
+    batch_input = [{"value":"1111-2222-3333-4444"}]
 }
 ```
 
@@ -43,10 +43,10 @@ data "vault_transform_decode_role_name" "test" {
 
 The following arguments are supported:
 * `path` - (Required) Path to where the back-end is mounted within Vault.
-* `batch_input` - (Optional) Specifies a list of items to be decoded in a single batch. If this parameter is set, the top-level parameters 'value', 'transformation' and 'tweak' will be ignored. Each batch item within the list can specify these parameters instead.
-* `batch_results` - (Optional) The result of decoding a batch.
-* `decoded_value` - (Optional) The result of decoding a value.
+* `batch_input` - (Optional) Specifies a list of items to be encoded in a single batch. If this parameter is set, the parameters 'value', 'transformation' and 'tweak' will be ignored. Each batch item within the list can specify these parameters instead.
+* `batch_results` - (Optional) The result of encoding a batch.
+* `encoded_value` - (Optional) The result of encoding a value.
 * `role_name` - (Required) The name of the role.
 * `transformation` - (Optional) The transformation to perform. If no value is provided and the role contains a single transformation, this value will be inferred from the role.
 * `tweak` - (Optional) The tweak value to use. Only applicable for FPE transformations
-* `value` - (Optional) The value in which to decode.
+* `value` - (Optional) The value in which to encode.
