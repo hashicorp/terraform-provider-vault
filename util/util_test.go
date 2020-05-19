@@ -161,15 +161,61 @@ func TestParsePath(t *testing.T) {
 }
 
 func TestPathParameters(t *testing.T) {
-	result, err := PathParameters("/transform/role/{name}", "/transform-56614161/foo7306072804/role/test-role-54539268/foo87766695434")
-	if err != nil {
-		t.Fatal(err)
+	testCases := []struct {
+		endpoint, vaultPath string
+		expected            map[string]string
+	}{
+		{
+			endpoint:  "/transform/role/{name}",
+			vaultPath: "/transform-56614161/foo7306072804/role/test-role-54539268/foo87766695434",
+			expected: map[string]string{
+				"path": "transform-56614161/foo7306072804",
+				"name": "test-role-54539268/foo87766695434",
+			},
+		},
+		{
+			endpoint:  "/transit/sign/{name}/{urlalgorithm}",
+			vaultPath: "/transit/sign/my-key/sha2-512",
+			expected: map[string]string{
+				"path":         "transit",
+				"name":         "my-key",
+				"urlalgorithm": "sha2-512",
+			},
+		},
+		{
+			endpoint:  "/transit/sign/{name}/{urlalgorithm}",
+			vaultPath: "/my-transit/sign/my-key/sha2-512",
+			expected: map[string]string{
+				"path":         "my-transit",
+				"name":         "my-key",
+				"urlalgorithm": "sha2-512",
+			},
+		},
+		{
+			endpoint:  "/auth/approle/tidy/secret-id",
+			vaultPath: "/auth/my-approle/tidy/secret-id",
+			expected: map[string]string{
+				"path": "my-approle",
+			},
+		},
+		{
+			endpoint:  "/sys/mfa/method/totp/{name}/admin-generate",
+			vaultPath: "/sys/mfa/method/totp/my_totp/admin-generate",
+			expected: map[string]string{
+				"path": "sys",
+				"name": "my_totp",
+			},
+		},
 	}
-	expected := map[string]string{
-		"path": "transform-56614161/foo7306072804",
-		"name": "test-role-54539268/foo87766695434",
-	}
-	if !reflect.DeepEqual(result, expected) {
-		t.Fatalf("expected %+v but received %+v", expected, result)
+	for _, testCase := range testCases {
+		t.Run(testCase.endpoint, func(t *testing.T) {
+			result, err := PathParameters(testCase.endpoint, testCase.vaultPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(result, testCase.expected) {
+				t.Fatalf("expected %+v but received %+v", testCase.expected, result)
+			}
+		})
 	}
 }
