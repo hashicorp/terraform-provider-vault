@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"reflect"
 	"testing"
 )
@@ -144,5 +145,77 @@ func TestSliceRemoveIfPresent_struct(t *testing.T) {
 	removed = SliceRemoveIfPresent(slice, testingStruct{foobar: false, list: []string{"hello", "world"}})
 	if !reflect.DeepEqual(expected, removed) {
 		t.Errorf("Slice should be modified")
+	}
+}
+
+func TestParsePath(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+		"name": {Type: schema.TypeString},
+	}, map[string]interface{}{
+		"name": "foo",
+	})
+	result := ParsePath("my/transform/hello", "/transform/role/{name}", d)
+	if result != "/my/transform/hello/role/foo" {
+		t.Fatalf("received unexpected result: %s", result)
+	}
+}
+
+func TestPathParameters(t *testing.T) {
+	testCases := []struct {
+		endpoint, vaultPath string
+		expected            map[string]string
+	}{
+		{
+			endpoint:  "/transform/role/{name}",
+			vaultPath: "/transform-56614161/foo7306072804/role/test-role-54539268/foo87766695434",
+			expected: map[string]string{
+				"path": "transform-56614161/foo7306072804",
+				"name": "test-role-54539268/foo87766695434",
+			},
+		},
+		{
+			endpoint:  "/transit/sign/{name}/{urlalgorithm}",
+			vaultPath: "/transit/sign/my-key/sha2-512",
+			expected: map[string]string{
+				"path":         "transit",
+				"name":         "my-key",
+				"urlalgorithm": "sha2-512",
+			},
+		},
+		{
+			endpoint:  "/transit/sign/{name}/{urlalgorithm}",
+			vaultPath: "/my-transit/sign/my-key/sha2-512",
+			expected: map[string]string{
+				"path":         "my-transit",
+				"name":         "my-key",
+				"urlalgorithm": "sha2-512",
+			},
+		},
+		{
+			endpoint:  "/auth/approle/tidy/secret-id",
+			vaultPath: "/auth/my-approle/tidy/secret-id",
+			expected: map[string]string{
+				"path": "my-approle",
+			},
+		},
+		{
+			endpoint:  "/sys/mfa/method/totp/{name}/admin-generate",
+			vaultPath: "/sys/mfa/method/totp/my_totp/admin-generate",
+			expected: map[string]string{
+				"path": "sys",
+				"name": "my_totp",
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.endpoint, func(t *testing.T) {
+			result, err := PathParameters(testCase.endpoint, testCase.vaultPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(result, testCase.expected) {
+				t.Fatalf("expected %+v but received %+v", testCase.expected, result)
+			}
+		})
 	}
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func mountResource() *schema.Resource {
+func MountResource() *schema.Resource {
 	return &schema.Resource{
 		Create: mountWrite,
 		Update: mountUpdate,
