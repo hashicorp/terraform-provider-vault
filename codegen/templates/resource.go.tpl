@@ -174,7 +174,7 @@ func delete{{ .UpperCaseDifferentiator }}Resource(d *schema.ResourceData, meta i
 	log.Printf("[DEBUG] Deleting %q", vaultPath)
 
 	if _, err := client.Logical().Delete(vaultPath); err != nil && !util.Is404(err) {
-		return fmt.Errorf("error deleting %q", vaultPath)
+		return fmt.Errorf("error deleting %q: %s", vaultPath, err)
 	} else if err != nil {
 		log.Printf("[DEBUG] %q not found, removing from state", vaultPath)
 		d.SetId("")
