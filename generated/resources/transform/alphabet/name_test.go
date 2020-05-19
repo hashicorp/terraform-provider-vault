@@ -21,7 +21,7 @@ var nameTestProvider = func() *schema.Provider {
 	return p
 }()
 
-func TestRoleName(t *testing.T) {
+func TestAlphabetName(t *testing.T) {
 	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
 	if isEnterprise == "" {
 		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
