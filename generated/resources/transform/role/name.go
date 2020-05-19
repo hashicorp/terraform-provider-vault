@@ -21,7 +21,7 @@ func NameResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Required:    true,
 			ForceNew:    true,
-			Description: "Path to backend to configure.",
+			Description: `The mount path for a back-end, for example, the path given in "$ vault auth enable -path=my-aws aws".`,
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
 			},
