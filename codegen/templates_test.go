@@ -1,9 +1,7 @@
 package codegen
 
 import (
-	"bytes"
 	"encoding/json"
-	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -548,23 +546,12 @@ func TestTemplateHandler(t *testing.T) {
 }`), endpointInfo); err != nil {
 		t.Fatal(err)
 	}
-	buf := bytes.NewBuffer([]byte{})
-	if err := h.Write(buf, templateTypeResource, "/transform/role/{name}", endpointInfo); err != nil {
+	b := &strings.Builder{}
+	if err := h.Write(b, templateTypeResource, "/transform/role/{name}", endpointInfo); err != nil {
 		t.Fatal(err)
 	}
-	result := ""
-	chunk := make([]byte, 500)
-	for {
-		_, err := buf.Read(chunk)
-		if err != nil {
-			if err == io.EOF {
-				result += string(chunk)
-				break
-			}
-			t.Fatal(err)
-		}
-		result += string(chunk)
-	}
+	result := b.String()
+
 	// We only spot check here because resources will be covered by their
 	// own tests fully testing validity. This test is mainly to make sure
 	// we're getting something that looks correct back rather than an empty
