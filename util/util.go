@@ -233,7 +233,7 @@ func PathParameters(endpoint, vaultPath string) (map[string]string, error) {
 
 	endpointReg, err := regexp.Compile(pattern)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to compile regex: %q: %w\n", pattern, err)
 	}
 
 	match := endpointReg.FindStringSubmatch(vaultPath)
