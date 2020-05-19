@@ -17,9 +17,53 @@ var endpointRegistry = map[string]*additionalInfo{
 			{
 				OASParameter: &framework.OASParameter{
 					Name:        "decoded_value",
-					Description: "The result of decoding.",
+					Description: "The result of decoding a value.",
 					Schema: &framework.OASSchema{
 						Type:         "string",
+						DisplayAttrs: &framework.DisplayAttributes{},
+					},
+				},
+				Computed: true,
+			},
+			{
+				OASParameter: &framework.OASParameter{
+					Name:        "batch_results",
+					Description: "The result of decoding batch_input.",
+					Schema: &framework.OASSchema{
+						Type: "array",
+						Items: &framework.OASSchema{
+							Type: "object",
+						},
+						DisplayAttrs: &framework.DisplayAttributes{},
+					},
+				},
+				Computed: true,
+			},
+		},
+	},
+	"/transform/encode/{role_name}": {
+		TemplateType: templateTypeDataSource,
+		AdditionalParameters: []*templatableParam{
+			{
+				OASParameter: &framework.OASParameter{
+					Name:        "encoded_value",
+					Description: "The result of encoding a value.",
+					Schema: &framework.OASSchema{
+						Type:         "string",
+						DisplayAttrs: &framework.DisplayAttributes{},
+					},
+				},
+				Computed: true,
+			},
+			{
+				OASParameter: &framework.OASParameter{
+					Name:        "batch_results",
+					Description: "The result of encoding batch_input.",
+					Schema: &framework.OASSchema{
+						Type: "array",
+						Items: &framework.OASSchema{
+							Type: "object",
+						},
 						DisplayAttrs: &framework.DisplayAttributes{},
 					},
 				},
@@ -28,6 +72,9 @@ var endpointRegistry = map[string]*additionalInfo{
 		},
 	},
 	"/transform/role/{name}": {
+		TemplateType: templateTypeResource,
+	},
+	"/transform/template/{name}": {
 		TemplateType: templateTypeResource,
 	},
 	"/transform/transformation/{name}": {
