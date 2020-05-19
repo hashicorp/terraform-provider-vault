@@ -288,10 +288,6 @@ func TestAccJWTAuthBackendRoleOIDC_full(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"bound_subject", "sl29dlldsfj3uECzsU3Sbmh0F29Fios1@client"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
-						"bound_audiences.#", "1"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
-						"bound_audiences.2478800941", "https://myco.test"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"user_claim", "https://vault/user"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"groups_claim", "https://vault/groups"),
@@ -610,7 +606,7 @@ resource "vault_jwt_auth_backend" "jwt" {
   oidc_client_secret = "secret"
   lifecycle {
   ignore_changes = [
-     # Ignore changes to odic_clie_secret inside the tests
+     # Ignore changes to oidc_client_secret inside the tests
      "oidc_client_secret"
     ]
   }
@@ -624,7 +620,6 @@ resource "vault_jwt_auth_backend_role" "role" {
 
   bound_subject = "sl29dlldsfj3uECzsU3Sbmh0F29Fios1@client"
   token_bound_cidrs = ["10.148.0.0/20", "10.150.0.0/20"]
-  bound_audiences = ["https://myco.test"]
   user_claim = "https://vault/user"
   groups_claim = "https://vault/groups"
   token_policies = ["default", "dev", "prod"]
