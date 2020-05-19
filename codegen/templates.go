@@ -16,8 +16,8 @@ import (
 var (
 	// templateRegistry holds templates for each type of file.
 	templateRegistry = map[templateType]string{
-		// TODO in separate PR - add templateTypeDoc
 		templateTypeDataSource: "/codegen/templates/datasource.go.tpl",
+		templateTypeDoc:        "/codegen/templates/doc.go.tpl",
 		templateTypeResource:   "/codegen/templates/resource.go.tpl",
 	}
 
@@ -91,22 +91,24 @@ func (h *templateHandler) toTemplatable(parentDir, endpoint string, endpointInfo
 		return parameters[i].Name < parameters[j].Name
 	})
 
-	// De-duplicate the parameters in place, because often parameters
-	// are at both the top-level and in the post body. This in-place
-	// approach is directly recommended here:
-	// https://github.com/golang/go/wiki/SliceTricks#in-place-deduplicate-comparable
-	j := 0
-	for i := 1; i < len(parameters); i++ {
-		if parameters[j] == parameters[i] {
-			continue
+	if len(parameters) > 2 {
+		// De-duplicate the parameters in place, because often parameters
+		// are at both the top-level and in the post body. This in-place
+		// approach is directly recommended here:
+		// https://github.com/golang/go/wiki/SliceTricks#in-place-deduplicate-comparable
+		j := 0
+		for i := 1; i < len(parameters); i++ {
+			if parameters[j] == parameters[i] {
+				continue
+			}
+			j++
+			// preserve the original data
+			// in[i], in[j] = in[j], in[i]
+			// only set what is required
+			parameters[j] = parameters[i]
 		}
-		j++
-		// preserve the original data
-		// in[i], in[j] = in[j], in[i]
-		// only set what is required
-		parameters[j] = parameters[i]
+		parameters = parameters[:j+1]
 	}
-	parameters = parameters[:j+1]
 
 	// The last field in the endpoint will be something like "name"
 	// or "roles" or whatever is at the end of an endpoint's path.
