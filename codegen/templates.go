@@ -16,9 +16,9 @@ import (
 var (
 	// templateRegistry holds templates for each type of file.
 	templateRegistry = map[templateType]string{
-		// TODO in separate PR - add templateTypeDataSource
-		// TODO in separate PR - add templateTypeDoc
-		templateTypeResource: "/codegen/templates/resource.go.tpl",
+		templateTypeDataSource: "/codegen/templates/datasource.go.tpl",
+		templateTypeDoc:        "/codegen/templates/doc.go.tpl",
+		templateTypeResource:   "/codegen/templates/resource.go.tpl",
 	}
 
 	// These are the types of fields that OpenAPI has that we support
@@ -91,33 +91,35 @@ func (h *templateHandler) toTemplatable(parentDir, endpoint string, endpointInfo
 		return parameters[i].Name < parameters[j].Name
 	})
 
-	// De-duplicate the parameters in place, because often parameters
-	// are at both the top-level and in the post body. This in-place
-	// approach is directly recommended here:
-	// https://github.com/golang/go/wiki/SliceTricks#in-place-deduplicate-comparable
-	j := 0
-	for i := 1; i < len(parameters); i++ {
-		if parameters[j] == parameters[i] {
-			continue
+	if len(parameters) > 2 {
+		// De-duplicate the parameters in place, because often parameters
+		// are at both the top-level and in the post body. This in-place
+		// approach is directly recommended here:
+		// https://github.com/golang/go/wiki/SliceTricks#in-place-deduplicate-comparable
+		j := 0
+		for i := 1; i < len(parameters); i++ {
+			if parameters[j] == parameters[i] {
+				continue
+			}
+			j++
+			// preserve the original data
+			// in[i], in[j] = in[j], in[i]
+			// only set what is required
+			parameters[j] = parameters[i]
 		}
-		j++
-		// preserve the original data
-		// in[i], in[j] = in[j], in[i]
-		// only set what is required
-		parameters[j] = parameters[i]
+		parameters = parameters[:j+1]
 	}
-	parameters = parameters[:j+1]
 
 	// The last field in the endpoint will be something like "name"
 	// or "roles" or whatever is at the end of an endpoint's path.
 	// This is used to differentiate generated variable or function names
 	// so they don't collide with the other ones in the same package.
-	lastEndpointField := clean(util.LastField(endpoint))
+	lastEndpointField := format(util.LastField(endpoint))
 	t := &templatableEndpoint{
 		Endpoint:                endpoint,
-		DirName:                 clean(util.LastField(parentDir)),
-		UpperCaseDifferentiator: strings.Title(strings.ToLower(lastEndpointField)),
-		LowerCaseDifferentiator: strings.ToLower(lastEndpointField),
+		DirName:                 format(util.LastField(parentDir)),
+		UpperCaseDifferentiator: strings.Title(lastEndpointField),
+		LowerCaseDifferentiator: lastEndpointField,
 		Parameters:              parameters,
 		SupportsRead:            endpointInfo.Get != nil,
 		SupportsWrite:           endpointInfo.Post != nil,
@@ -232,11 +234,12 @@ func (e *templatableEndpoint) Validate() error {
 					isSupported = true
 					break
 				}
-				// Right now, our templates assume that all array types are strings.
+				// Right now, our templates have switch statements for what to write
+				// parameters as if they're arrays of strings or objects.
 				// If we allow other types of arrays, we will need to also go into
 				// each template and add additional logic supporting the new array
 				// type.
-				if parameter.Schema.Items.Type != "string" {
+				if parameter.Schema.Items.Type != "string" && parameter.Schema.Items.Type != "object" {
 					return fmt.Errorf("unsupported array type of %s for %s", parameter.Schema.Items.Type, parameter.Name)
 				}
 				isSupported = true
@@ -250,11 +253,20 @@ func (e *templatableEndpoint) Validate() error {
 	return nil
 }
 
-// clean takes a field like "{role_name}" and returns
-// "rolename" for use in generated Go code.
-func clean(field string) string {
+// format takes a field like "{role_name}" and returns
+// "roleName" for use in generated Go code.
+func format(field string) string {
 	field = stripCurlyBraces(field)
-	return strings.Replace(field, "_", "", -1)
+	subFields := strings.Split(field, "_")
+	result := ""
+	for i, subField := range subFields {
+		if i == 0 {
+			result += subField
+			continue
+		}
+		result += strings.Title(subField)
+	}
+	return result
 }
 
 type templateType int
