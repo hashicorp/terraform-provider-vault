@@ -40,24 +40,33 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupConfig(group),
-				Check:  testAccIdentityGroupCheckAttrs(),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityGroupCheckAttrs(),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "type", "external"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "metadata.version", "1"),
+				),
 			},
 			{
 				Config: testAccIdentityGroupConfigUpdate(group),
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityGroupCheckAttrs(),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "name", fmt.Sprintf("%s-2", group)),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "type", "internal"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "metadata.version", "2"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1785148924", "test"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "member_entity_ids.#", "0"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "member_group_ids.#", "0"),
 				),
 			},
 			{
-				Config: testAccIdentityGroupConfigUpdatePolicies(group),
+				Config: testAccIdentityGroupConfigUpdateRemovePolicies(group),
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityGroupCheckAttrs(),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "type", "internal"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "0"),
 				),
 			},
@@ -65,7 +74,22 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 				Config: testAccIdentityGroupConfigUpdateMembers(group, entity),
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityGroupCheckAttrs(),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "type", "internal"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "2"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1785148924", "test"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "member_entity_ids.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "member_group_ids.#", "1"),
+				),
+			},
+			{
+				Config: testAccIdentityGroupConfigExternalMembers(group),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityGroupCheckAttrs(),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "type", "external"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "member_entity_ids.#", "0"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "member_group_ids.#", "0"),
 				),
 			},
 		},
@@ -185,7 +209,7 @@ func testAccIdentityGroupCheckAttrs() resource.TestCheckFunc {
 							}
 						}
 						if !found {
-							return fmt.Errorf("Expected item %d of %s (%s in state) of %q to be in state but wasn't", i, apiAttr, stateAttr, apiData[i])
+							return fmt.Errorf("expected item %d of %s (%s in state) of %q to be in state but wasn't", i, apiAttr, stateAttr, apiData[i])
 						}
 					}
 					match = true
@@ -219,14 +243,13 @@ resource "vault_identity_group" "group" {
   name = "%s-2"
   type = "internal"
   policies = ["dev", "test"]
-  
   metadata = {
     version = "2"
   }
 }`, groupName)
 }
 
-func testAccIdentityGroupConfigUpdatePolicies(groupName string) string {
+func testAccIdentityGroupConfigUpdateRemovePolicies(groupName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
   name = "%s-2"
@@ -249,6 +272,7 @@ resource "vault_identity_group" "group" {
   }
 
   member_entity_ids = ["${vault_identity_entity.entity.id}"]
+  member_group_ids = ["${vault_identity_group.other_group.id}"]
 }
 
 resource "vault_identity_entity" "entity" {
@@ -258,7 +282,11 @@ resource "vault_identity_entity" "entity" {
     version = "2"
   }
 }
-`, groupName, entityName)
+
+resource "vault_identity_group" "other_group" {
+  name = "other_%s"
+}
+`, groupName, entityName, groupName)
 }
 
 func testAccIdentityGroupConfigExternalMembers(groupName string) string {
@@ -271,6 +299,7 @@ resource "vault_identity_group" "group" {
     version = "1"
   }
 
-  member_entity_ids = ["this will fail"]
+  member_entity_ids = ["member entities can't be set for external groups"]
+  member_group_ids = ["member groups can't be set for external groups"]
 }`, groupName)
 }

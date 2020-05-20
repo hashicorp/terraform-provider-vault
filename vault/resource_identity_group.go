@@ -73,6 +73,14 @@ func identityGroupResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Description: "Group IDs to be assigned as group members.",
+				// Suppress the diff if group type is "external" because we cannot manage
+				// group members
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					if d.Get("type").(string) == "external" {
+						return true
+					}
+					return false
+				},
 			},
 
 			"member_entity_ids": {
