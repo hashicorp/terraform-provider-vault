@@ -15,7 +15,6 @@ up development while still yielding high quality code.
 - From the home directory of `terraform-provider-vault`, run:
 ```
 make generate
-make fmt
 ```
 - If you note any changes, you may need to hand-add code that implements 
 [best practices](https://www.terraform.io/docs/extend/best-practices/deprecations.html)

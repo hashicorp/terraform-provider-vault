@@ -23,6 +23,7 @@ dev: fmtcheck
 generate:
 	result=$(cd generated && find . -type f -not -name '*_test.go' | grep -v 'registry.go' | xargs rm && cd - )
 	go run cmd/generate/main.go -openapi-doc=testdata/openapi.json
+	make fmt
 
 vet:
 	@echo "go vet ."
