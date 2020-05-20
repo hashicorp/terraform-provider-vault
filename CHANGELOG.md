@@ -4,6 +4,8 @@ BUG FIXES:
 
 * `vault_approle_auth_backend_role`: Fix perpetual diff when `policies` and `period` are updated to be `token_policies` and `token_period` ([#744](https://github.com/terraform-providers/terraform-provider-vault/pull/744)).
 
+* `vault_jwt_auth_backend_role`: Fix crash when `bound_audiences` is empty ([#763](https://github.com/terraform-providers/terraform-provider-vault/pull/763)).
+
 ## 2.10.0 (April 03, 2020)
 
 FEATURES:
