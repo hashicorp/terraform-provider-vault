@@ -113,7 +113,7 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 		data["policies"] = d.Get("policies").(*schema.Set).List()
 	}
 
-	// Member group and entity ids are not allowed on external groups
+	// Member groups and entities can't be set for external groups
 	if d.Get("type").(string) == "internal" {
 		data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
 		data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
