@@ -33,8 +33,8 @@ func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
 		templateHandler: h,
 	}
 	createdCount := 0
+	skippedCount := 0
 	for endpoint, addedInfo := range endpointRegistry {
-		logger.Info(fmt.Sprintf("generating %s for %s\n", addedInfo.TemplateType.String(), endpoint))
 		if err := fCreator.GenerateCode(endpoint, paths[endpoint], addedInfo); err != nil {
 			if err == errUnsupported {
 				logger.Warn(fmt.Sprintf("couldn't generate %s, continuing", endpoint))
@@ -43,14 +43,23 @@ func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
 			logger.Error(err.Error())
 			os.Exit(1)
 		}
-		logger.Info(fmt.Sprintf("generating %s for %s\n", templateTypeDoc.String(), endpoint))
-		if err := fCreator.GenerateDoc(endpoint, paths[endpoint], addedInfo); err != nil {
+		logger.Info(fmt.Sprintf("generated %s for %s", addedInfo.TemplateType.String(), endpoint))
+		createdCount++
+
+		created, err := fCreator.GenerateDoc(endpoint, paths[endpoint], addedInfo)
+		if err != nil {
 			logger.Error(err.Error())
 			os.Exit(1)
 		}
-		createdCount += 2
+		if created {
+			logger.Info(fmt.Sprintf("generated %s for %s", templateTypeDoc.String(), endpoint))
+			createdCount++
+		} else {
+			skippedCount++
+		}
 	}
-	logger.Info(fmt.Sprintf("generated %d files\n", createdCount))
+	logger.Info(fmt.Sprintf("generated %d files", createdCount))
+	logger.Info(fmt.Sprintf("skipped generating %d docs because they already existed", skippedCount))
 	return nil
 }
 
@@ -71,21 +80,25 @@ func (c *fileCreator) GenerateCode(endpoint string, endpointInfo *framework.OASP
 }
 
 // GenerateDoc is exported to indicate it's intended to be directly used.
-func (c *fileCreator) GenerateDoc(endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
+// It will return:
+//   - true, nil: if a new doc is generated
+//   - false, nil: if a doc already exists so a new one is not generated
+//   - false, err: in error conditions
+func (c *fileCreator) GenerateDoc(endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) (bool, error) {
 	pathToFile, err := docFilePath(addedInfo.TemplateType, endpoint)
 	if err != nil {
-		return err
+		return false, err
 	}
 	// If the doc already exists, no need to generate a new one, especially
 	// since these get hand-edited after being first created.
 	if _, err := os.Stat(pathToFile); err == nil {
 		// The file already exists, nothing further to do here.
-		return nil
+		return false, nil
 	}
 	// From here on, addedInfo will be used to select the template to
 	// use. Since we want it to be for docs, we need to update that now.
 	addedInfo.TemplateType = templateTypeDoc
-	return c.writeFile(pathToFile, endpoint, endpointInfo, addedInfo)
+	return true, c.writeFile(pathToFile, endpoint, endpointInfo, addedInfo)
 }
 
 func (c *fileCreator) writeFile(pathToFile string, endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
