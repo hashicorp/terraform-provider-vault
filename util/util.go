@@ -216,23 +216,30 @@ func ParsePath(userSuppliedPath, endpoint string, d *schema.ResourceData) string
 	return recomprised
 }
 
-// For an endpoint like "/transform/role/{name}", returns
-// "{name}".
-func LastField(endpoint string) string {
-	endpointFields := strings.Split(endpoint, "/")
-	lastFieldPosition := len(endpointFields) - 1
-	if lastFieldPosition < 0 {
-		lastFieldPosition = 0
-	}
-	return endpointFields[lastFieldPosition]
-}
-
 // PathParameters is just like regexp FindStringSubmatch,
 // but it validates that the match is different from the string passed
 // in, and that there's only one result.
 func PathParameters(endpoint, vaultPath string) (map[string]string, error) {
 	fields := strings.Split(endpoint, "/")
-	fields[1] = "{path}"
+
+	// The first field is always "", let's strip it.
+	if fields[0] != "" {
+		return nil, fmt.Errorf("expected an endpoint starting with / but received %q", endpoint)
+	}
+	fields = fields[1:]
+
+	// For paths beginning with auth, if we strip it off we can
+	// parse them like the rest.
+	isAuthEndpoint := false
+	if fields[0] == "auth" {
+		if len(fields) < 2 {
+			// There are no further path parameters to parse.
+			return nil, nil
+		}
+		fields = fields[1:]
+		isAuthEndpoint = true
+	}
+	fields[0] = "{path}"
 
 	for i, field := range fields {
 		if strings.HasPrefix(field, "{") {
@@ -240,11 +247,15 @@ func PathParameters(endpoint, vaultPath string) (map[string]string, error) {
 			fields[i] = strings.ReplaceAll(fields[i], "}", ">.+)")
 		}
 	}
-	pattern := strings.Join(fields, "/")
+	pattern := "/"
+	if isAuthEndpoint {
+		pattern += "auth/"
+	}
+	pattern += strings.Join(fields, "/")
 
 	endpointReg, err := regexp.Compile(pattern)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to compile regex: %q: %w\n", pattern, err)
 	}
 
 	match := endpointReg.FindStringSubmatch(vaultPath)
@@ -258,11 +269,5 @@ func PathParameters(endpoint, vaultPath string) (map[string]string, error) {
 		}
 		result[fieldName] = match[i]
 	}
-	/*
-		Returns a map like {
-			"path": "transform-56614161/foo7306072804",
-			"name": "test-role-54539268/foo87766695434",
-		}
-	*/
 	return result, nil
 }

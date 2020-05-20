@@ -1,9 +1,7 @@
 package codegen
 
 import (
-	"bytes"
 	"encoding/json"
-	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -43,57 +41,67 @@ func TestFormat(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		actual := format(testCase.input)
-		if actual != testCase.expected {
-			t.Fatalf("input: %q; expected: %q; actual: %q", testCase.input, testCase.expected, actual)
-		}
+		t.Run(testCase.input, func(t *testing.T) {
+			actual := format(testCase.input)
+			if actual != testCase.expected {
+				t.Fatalf("input: %q; expected: %q; actual: %q", testCase.input, testCase.expected, actual)
+			}
+		})
 	}
 }
 
 func TestValidate(t *testing.T) {
 	testCases := []struct {
-		input       *templatableEndpoint
-		expectedErr string
+		testName  string
+		input     *templatableEndpoint
+		expectErr bool
 	}{
 		{
-			input:       nil,
-			expectedErr: "endpoint is nil",
+			testName:  "nil inputs error",
+			input:     nil,
+			expectErr: true,
 		},
 		{
-			input:       &templatableEndpoint{},
-			expectedErr: "endpoint cannot be blank for &{Endpoint: DirName: UpperCaseDifferentiator: LowerCaseDifferentiator: Parameters:[] SupportsRead:false SupportsWrite:false SupportsDelete:false}",
+			testName:  "blank endpoints error",
+			input:     &templatableEndpoint{},
+			expectErr: true,
 		},
 		{
+			testName: "blank dirnames error",
 			input: &templatableEndpoint{
 				Endpoint: "foo",
 			},
-			expectedErr: "dirname cannot be blank for &{Endpoint:foo DirName: UpperCaseDifferentiator: LowerCaseDifferentiator: Parameters:[] SupportsRead:false SupportsWrite:false SupportsDelete:false}",
+			expectErr: true,
 		},
 		{
+			testName: "blank upper case differentiators error",
 			input: &templatableEndpoint{
 				Endpoint: "foo",
 				DirName:  "foo",
 			},
-			expectedErr: "exported function prefix cannot be blank for &{Endpoint:foo DirName:foo UpperCaseDifferentiator: LowerCaseDifferentiator: Parameters:[] SupportsRead:false SupportsWrite:false SupportsDelete:false}",
+			expectErr: true,
 		},
 		{
+			testName: "blank lower case differentiators error",
 			input: &templatableEndpoint{
 				Endpoint:                "foo",
 				DirName:                 "foo",
 				UpperCaseDifferentiator: "foo",
 			},
-			expectedErr: "private function prefix cannot be blank for &{Endpoint:foo DirName:foo UpperCaseDifferentiator:foo LowerCaseDifferentiator: Parameters:[] SupportsRead:false SupportsWrite:false SupportsDelete:false}",
+			expectErr: true,
 		},
 		{
+			testName: "valid endpoint",
 			input: &templatableEndpoint{
 				Endpoint:                "foo",
 				DirName:                 "foo",
 				UpperCaseDifferentiator: "foo",
 				LowerCaseDifferentiator: "foo",
 			},
-			expectedErr: "",
+			expectErr: false,
 		},
 		{
+			testName: "bad parameter type",
 			input: &templatableEndpoint{
 				Endpoint:                "foo",
 				DirName:                 "foo",
@@ -110,9 +118,10 @@ func TestValidate(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: "unsupported type of foo for some-param",
+			expectErr: true,
 		},
 		{
+			testName: "good parameter type",
 			input: &templatableEndpoint{
 				Endpoint:                "foo",
 				DirName:                 "foo",
@@ -129,9 +138,10 @@ func TestValidate(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: "",
+			expectErr: false,
 		},
 		{
+			testName: "array of strings param",
 			input: &templatableEndpoint{
 				Endpoint:                "foo",
 				DirName:                 "foo",
@@ -151,9 +161,10 @@ func TestValidate(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: "",
+			expectErr: false,
 		},
 		{
+			testName: "array of objects param",
 			input: &templatableEndpoint{
 				Endpoint:                "foo",
 				DirName:                 "foo",
@@ -166,79 +177,72 @@ func TestValidate(t *testing.T) {
 							Schema: &framework.OASSchema{
 								Type: "array",
 								Items: &framework.OASSchema{
-									Type: "boolean",
+									Type: "object",
 								},
 							},
 						},
 					},
 				},
 			},
-			expectedErr: "unsupported array type of boolean for foo",
+			expectErr: false,
 		},
 	}
 	for _, testCase := range testCases {
-		shouldErr := testCase.expectedErr != ""
-		err := testCase.input.Validate()
-		if err != nil {
-			if err.Error() != testCase.expectedErr {
-				t.Fatalf("input: %+v; expected err: %q; actual: %q", testCase.input, testCase.expectedErr, err)
+		t.Run(testCase.testName, func(t *testing.T) {
+			err := testCase.input.Validate()
+			if testCase.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
 			}
-		} else {
-			if shouldErr {
-				t.Fatalf("expected an error for %+v", testCase.input)
+			if !testCase.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
 			}
-		}
+		})
 	}
 }
 
 func TestToTemplatableParam(t *testing.T) {
-	type input struct {
+	testCases := []struct {
 		param           framework.OASParameter
 		isPathParameter bool
-	}
-	testCases := []struct {
-		input    *input
-		expected *templatableParam
+		expected        *templatableParam
 	}{
 		{
-			input: &input{
-				param: framework.OASParameter{
-					Name:        "name",
+			param: framework.OASParameter{
+				Name:        "name",
+				Description: "description",
+				In:          "in",
+				Schema: &framework.OASSchema{
+					Type:        "type",
 					Description: "description",
-					In:          "in",
-					Schema: &framework.OASSchema{
-						Type:        "type",
-						Description: "description",
-						Properties: map[string]*framework.OASSchema{
-							"something": {Description: "schema"},
-						},
-						Required: []string{"a"},
-						Items: &framework.OASSchema{
-							Description: "schema",
-						},
-						Format:           "format",
-						Pattern:          "pattern",
-						Enum:             []interface{}{"enum"},
-						Default:          "default",
-						Example:          "example",
-						Deprecated:       true,
-						DisplayValue:     "displayvalue",
-						DisplaySensitive: true,
-						DisplayGroup:     "displaygroup",
-						DisplayAttrs: &framework.DisplayAttributes{
-							Name:       "foo",
-							Value:      true,
-							Sensitive:  true,
-							Navigation: true,
-							Group:      "group",
-							Action:     "action",
-						},
+					Properties: map[string]*framework.OASSchema{
+						"something": {Description: "schema"},
 					},
-					Required:   true,
-					Deprecated: true,
+					Required: []string{"a"},
+					Items: &framework.OASSchema{
+						Description: "schema",
+					},
+					Format:           "format",
+					Pattern:          "pattern",
+					Enum:             []interface{}{"enum"},
+					Default:          "default",
+					Example:          "example",
+					Deprecated:       true,
+					DisplayValue:     "displayvalue",
+					DisplaySensitive: true,
+					DisplayGroup:     "displaygroup",
+					DisplayAttrs: &framework.DisplayAttributes{
+						Name:       "foo",
+						Value:      true,
+						Sensitive:  true,
+						Navigation: true,
+						Group:      "group",
+						Action:     "action",
+					},
 				},
-				isPathParameter: true,
+				Required:   true,
+				Deprecated: true,
 			},
+			isPathParameter: true,
 			expected: &templatableParam{
 				OASParameter: &framework.OASParameter{
 					Name:        "name",
@@ -279,16 +283,14 @@ func TestToTemplatableParam(t *testing.T) {
 			},
 		},
 		{
-			input: &input{
-				param: framework.OASParameter{
-					Name:        "",
-					Description: "",
-					In:          "",
-					Required:    false,
-					Deprecated:  false,
-				},
-				isPathParameter: false,
+			param: framework.OASParameter{
+				Name:        "",
+				Description: "",
+				In:          "",
+				Required:    false,
+				Deprecated:  false,
 			},
+			isPathParameter: false,
 			expected: &templatableParam{
 				OASParameter: &framework.OASParameter{
 					Name:        "",
@@ -305,72 +307,22 @@ func TestToTemplatableParam(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		actual := toTemplatableParam(testCase.input.param, testCase.input.isPathParameter)
+		actual := toTemplatableParam(testCase.param, testCase.isPathParameter)
 		if !reflect.DeepEqual(testCase.expected, actual) {
-			t.Fatalf("expected %+v but received %+v", testCase.expected, actual)
+			t.Fatalf("expected %#v but received %#v", testCase.expected, actual)
 		}
 	}
 }
 
 func TestCollectParameters(t *testing.T) {
-	endpointInfo := &framework.OASPathItem{}
-	if err := json.Unmarshal([]byte(testEndpoint), endpointInfo); err != nil {
-		t.Fatal(err)
-	}
-	parameters := collectParameters(endpointInfo, &additionalInfo{})
-	for i := 0; i < len(parameters); i++ {
-		switch i {
-		case 0:
-			if parameters[0].Name != "name" {
-				t.Fatalf("expected 'name' but received %q", parameters[0].Name)
-			}
-		case 1:
-			if parameters[1].Name != "transformations" {
-				t.Fatalf("expected 'transformations' but received %q", parameters[1].Name)
-			}
-		default:
-			t.Fatalf("expected 2 parameters but received %d", len(parameters))
-		}
-	}
-}
-
-func TestTemplateHandler(t *testing.T) {
-	h, err := newTemplateHandler(hclog.Default())
-	if err != nil {
-		t.Fatal(err)
-	}
-	endpointInfo := &framework.OASPathItem{}
-	if err := json.Unmarshal([]byte(testEndpoint), endpointInfo); err != nil {
-		t.Fatal(err)
-	}
-	buf := bytes.NewBuffer([]byte{})
-	if err := h.Write(buf, "role", "/transform/role/{name}", endpointInfo, &additionalInfo{TemplateType: templateTypeResource}); err != nil {
-		t.Fatal(err)
-	}
-	result := ""
-	chunk := make([]byte, 500)
-	for {
-		_, err := buf.Read(chunk)
-		if err != nil {
-			if err == io.EOF {
-				result += string(chunk)
-				break
-			}
-			t.Fatal(err)
-		}
-		result += string(chunk)
-	}
-	// We only spot check here because resources will be covered by their
-	// own tests fully testing validity. This test is mainly to make sure
-	// we're getting something that looks correct back rather than an empty
-	// string.
-	if !strings.Contains(result, "resourceNameExists") {
-		t.Fatalf("unexpected result: %s", result)
-	}
-}
-
-// based on "/transform/role/{name}"
-const testEndpoint = `{
+	testCases := []struct {
+		testName       string
+		endpointInfo   string
+		expectedParams []string
+	}{
+		{
+			testName: "/transform/role/{name}",
+			endpointInfo: `{
 	"description": "Read, write, and delete roles.",
 	"parameters": [{
 		"name": "name",
@@ -433,4 +385,180 @@ const testEndpoint = `{
 			}
 		}
 	}
-}`
+}`,
+			expectedParams: []string{"name", "transformations"},
+		},
+		{
+			testName: "/transform/alphabet/{name}",
+			endpointInfo: `{
+	"description": "Read, write, and delete alphabets.",
+	"parameters": [{
+		"name": "name",
+		"description": "The name of the alphabet.",
+		"in": "path",
+		"schema": {
+			"type": "string"
+		},
+		"required": true
+	}],
+	"x-vault-createSupported": true,
+	"get": {
+		"operationId": "getTransformAlphabetName",
+		"tags": [
+			"secrets"
+		],
+		"responses": {
+			"200": {
+				"description": "OK"
+			}
+		}
+	},
+	"post": {
+		"operationId": "postTransformAlphabetName",
+		"tags": [
+			"secrets"
+		],
+		"requestBody": {
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"properties": {
+							"alphabet": {
+								"type": "string",
+								"description": "A string of characters that contains the alphabet set."
+							}
+						}
+					}
+				}
+			}
+		},
+		"responses": {
+			"200": {
+				"description": "OK"
+			}
+		}
+	},
+	"delete": {
+		"operationId": "deleteTransformAlphabetName",
+		"tags": [
+			"secrets"
+		],
+		"responses": {
+			"204": {
+				"description": "empty body"
+			}
+		}
+	}
+}`,
+			expectedParams: []string{"name", "alphabet"},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.testName, func(t *testing.T) {
+			endpointInfo := &framework.OASPathItem{}
+			if err := json.Unmarshal([]byte(testCase.endpointInfo), endpointInfo); err != nil {
+				t.Fatal(err)
+			}
+			parameters := collectParameters(endpointInfo, &additionalInfo{TemplateType: templateTypeResource})
+			if len(parameters) != len(testCase.expectedParams) {
+				t.Fatalf("expected %d parameters but received %d", len(testCase.expectedParams), len(parameters))
+			}
+			for i := 0; i < len(parameters); i++ {
+				if parameters[i].Name != testCase.expectedParams[i] {
+					t.Fatalf("expected %q but received %q", testCase.expectedParams[i], parameters[i].Name)
+				}
+			}
+		})
+	}
+}
+
+func TestTemplateHandler(t *testing.T) {
+	h, err := newTemplateHandler(hclog.Default())
+	if err != nil {
+		t.Fatal(err)
+	}
+	endpointInfo := &framework.OASPathItem{}
+	if err := json.Unmarshal([]byte(`{
+	"description": "Read, write, and delete roles.",
+	"parameters": [{
+		"name": "name",
+		"description": "The name of the role.",
+		"in": "path",
+		"schema": {
+			"type": "string"
+		},
+		"required": true
+	}],
+	"x-vault-createSupported": true,
+	"get": {
+		"operationId": "getTransformRoleName",
+		"tags": [
+			"secrets"
+		],
+		"responses": {
+			"200": {
+				"description": "OK"
+			}
+		}
+	},
+	"post": {
+		"operationId": "postTransformRoleName",
+		"tags": [
+			"secrets"
+		],
+		"requestBody": {
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"properties": {
+							"transformations": {
+								"type": "array",
+								"description": "A comma separated string or slice of transformations to use.",
+								"items": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"responses": {
+			"200": {
+				"description": "OK"
+			}
+		}
+	},
+	"delete": {
+		"operationId": "deleteTransformRoleName",
+		"tags": [
+			"secrets"
+		],
+		"responses": {
+			"204": {
+				"description": "empty body"
+			}
+		}
+	}
+}`), endpointInfo); err != nil {
+		t.Fatal(err)
+	}
+	b := &strings.Builder{}
+	if err := h.Write(b, "/transform/role/{name}", endpointInfo, &additionalInfo{
+		TemplateType: templateTypeResource,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	result := b.String()
+
+	// We only spot check here because resources will be covered by their
+	// own tests fully testing validity. This test is mainly to make sure
+	// we're getting something that looks correct back rather than an empty
+	// string.
+	if !strings.Contains(result, "resourceNameExists") {
+		t.Fatalf("unexpected result: %s", result)
+	}
+}

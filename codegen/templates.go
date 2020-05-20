@@ -4,13 +4,16 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"text/template"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 var (
@@ -21,7 +24,7 @@ var (
 		templateTypeResource:   "/codegen/templates/resource.go.tpl",
 	}
 
-	// These are the types of fields that OpenAPI has that we support
+	// These are the types of fields that OpenAPI 3 has that we support
 	// converting into Terraform fields.
 	supportedParamTypes = []string{
 		"array",
@@ -32,18 +35,23 @@ var (
 )
 
 func newTemplateHandler(logger hclog.Logger) (*templateHandler, error) {
+	homeDirPath, err := pathToHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
 	// Read in the template for each template type in the registry and
 	// cache them to be used repeatedly.
 	templates := make(map[templateType]*template.Template, len(templateRegistry))
 	for tmplType, pathFromHomeDir := range templateRegistry {
-		pathToFile := pathToHomeDir + pathFromHomeDir
+		pathToFile := filepath.Join(homeDirPath, pathFromHomeDir)
 		templateBytes, err := ioutil.ReadFile(pathToFile)
 		if err != nil {
-			return nil, err
+			return nil, errwrap.Wrapf("error reading "+pathToFile+": {{err}}", err)
 		}
 		t, err := template.New(tmplType.String()).Parse(string(templateBytes))
 		if err != nil {
-			return nil, err
+			return nil, errwrap.Wrapf("error parsing "+tmplType.String()+": {{err}}", err)
 		}
 		templates[tmplType] = t
 	}
@@ -63,18 +71,18 @@ type templateHandler struct {
 // Write takes one endpoint and uses a template to generate text
 // for it. This template is written to the given writer. It's exported
 // because it's the only method intended to be called by external callers.
-func (h *templateHandler) Write(wr io.Writer, parentDir string, endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
+func (h *templateHandler) Write(wr io.Writer, endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
 	templatable, ok := h.templatableEndpoints[endpoint]
 	if !ok {
 		// Since each endpoint will have a code file and a doc file, let's cache
 		// the template-friendly version of the endpoint so it doesn't have to be
 		// converted into that format twice.
-		t, err := h.toTemplatable(parentDir, endpoint, endpointInfo, addedInfo)
+		var err error
+		templatable, err = h.toTemplatable(endpoint, endpointInfo, addedInfo)
 		if err != nil {
 			return err
 		}
-		templatable = t
-		h.templatableEndpoints[endpoint] = t
+		h.templatableEndpoints[endpoint] = templatable
 	}
 	return h.templates[addedInfo.TemplateType].Execute(wr, templatable)
 }
@@ -82,7 +90,7 @@ func (h *templateHandler) Write(wr io.Writer, parentDir string, endpoint string,
 // toTemplatable does a bunch of work to format the given data into a
 // struct that has fields that will be idiomatic to use with Go's templating
 // language.
-func (h *templateHandler) toTemplatable(parentDir, endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) (*templatableEndpoint, error) {
+func (h *templateHandler) toTemplatable(endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) (*templatableEndpoint, error) {
 	parameters := collectParameters(endpointInfo, addedInfo)
 
 	// Sort the parameters by name so they won't shift every time
@@ -114,19 +122,19 @@ func (h *templateHandler) toTemplatable(parentDir, endpoint string, endpointInfo
 	// or "roles" or whatever is at the end of an endpoint's path.
 	// This is used to differentiate generated variable or function names
 	// so they don't collide with the other ones in the same package.
-	lastEndpointField := format(util.LastField(endpoint))
+	tmplName := format(path.Base(endpoint))
 	t := &templatableEndpoint{
 		Endpoint:                endpoint,
-		DirName:                 format(util.LastField(parentDir)),
-		UpperCaseDifferentiator: strings.Title(lastEndpointField),
-		LowerCaseDifferentiator: lastEndpointField,
+		DirName:                 format(path.Base(filepath.Dir(endpoint))),
+		UpperCaseDifferentiator: strings.Title(tmplName),
+		LowerCaseDifferentiator: tmplName,
 		Parameters:              parameters,
 		SupportsRead:            endpointInfo.Get != nil,
 		SupportsWrite:           endpointInfo.Post != nil,
 		SupportsDelete:          endpointInfo.Delete != nil,
 	}
 	if err := t.Validate(); err != nil {
-		return nil, err
+		return nil, errwrap.Wrapf("failed to validate templatable data for "+endpoint+": {{err}}", err)
 	}
 	return t, nil
 }
@@ -142,20 +150,11 @@ func collectParameters(endpointInfo *framework.OASPathItem, addedInfo *additiona
 	for _, param := range endpointInfo.Parameters {
 		result = append(result, toTemplatableParam(param, true))
 	}
-	if endpointInfo.Post == nil {
-		return result
-	}
-	if endpointInfo.Post.RequestBody == nil {
-		return result
-	}
-	if endpointInfo.Post.RequestBody.Content == nil {
+	if endpointInfo.Post == nil || endpointInfo.Post.RequestBody == nil || endpointInfo.Post.RequestBody.Content == nil {
 		return result
 	}
 	for _, mediaTypeObject := range endpointInfo.Post.RequestBody.Content {
-		if mediaTypeObject.Schema == nil {
-			continue
-		}
-		if mediaTypeObject.Schema.Properties == nil {
+		if mediaTypeObject.Schema == nil || mediaTypeObject.Schema.Properties == nil {
 			continue
 		}
 		for paramName, schema := range mediaTypeObject.Schema.Properties {
@@ -214,43 +213,47 @@ func (e *templatableEndpoint) Validate() error {
 	if e == nil {
 		return fmt.Errorf("endpoint is nil")
 	}
+	var errs error
 	if e.Endpoint == "" {
-		return fmt.Errorf("endpoint cannot be blank for %+v", e)
+		errs = multierror.Append(errs, fmt.Errorf("endpoint cannot be blank for %#v", e))
 	}
 	if e.DirName == "" {
-		return fmt.Errorf("dirname cannot be blank for %+v", e)
+		errs = multierror.Append(errs, fmt.Errorf("dirname cannot be blank for %#v", e))
 	}
 	if e.UpperCaseDifferentiator == "" {
-		return fmt.Errorf("exported function prefix cannot be blank for %+v", e)
+		errs = multierror.Append(errs, fmt.Errorf("exported function prefix cannot be blank for %#v", e))
 	}
 	if e.LowerCaseDifferentiator == "" {
-		return fmt.Errorf("private function prefix cannot be blank for %+v", e)
+		errs = multierror.Append(errs, fmt.Errorf("private function prefix cannot be blank for %#v", e))
 	}
 	for _, parameter := range e.Parameters {
-		isSupported := false
-		for _, supportedType := range supportedParamTypes {
-			if parameter.Schema.Type == supportedType {
-				if parameter.Schema.Type != "array" {
-					isSupported = true
-					break
-				}
-				// Right now, our templates have switch statements for what to write
-				// parameters as if they're arrays of strings or objects.
+		if err := validateParameter(parameter); err != nil {
+			errs = multierror.Append(errs, fmt.Errorf("error validating "+parameter.Name+": {{err}}", err))
+		}
+	}
+	return errs
+}
+
+func validateParameter(parameter *templatableParam) error {
+	for _, supportedType := range supportedParamTypes {
+		if parameter.Schema.Type == supportedType {
+			if parameter.Schema.Type != "array" {
+				// We have a match, and if the type isn't an array, we don't
+				// need to look into its element types to see if they're
+				// supported.
+				return nil
+			}
+			if parameter.Schema.Items.Type == "string" || parameter.Schema.Items.Type == "object" {
+				// Right now, our templates assume that all array types are strings.
 				// If we allow other types of arrays, we will need to also go into
 				// each template and add additional logic supporting the new array
 				// type.
-				if parameter.Schema.Items.Type != "string" && parameter.Schema.Items.Type != "object" {
-					return fmt.Errorf("unsupported array type of %s for %s", parameter.Schema.Items.Type, parameter.Name)
-				}
-				isSupported = true
-				break
+				return nil
 			}
-		}
-		if !isSupported {
-			return fmt.Errorf("unsupported type of %s for %s", parameter.Schema.Type, parameter.Name)
+			return fmt.Errorf("unsupported array type of %s for %s", parameter.Schema.Items.Type, parameter.Name)
 		}
 	}
-	return nil
+	return fmt.Errorf("unsupported parameter type of %s for %s", parameter.Schema.Type, parameter.Name)
 }
 
 // format takes a field like "{role_name}" and returns

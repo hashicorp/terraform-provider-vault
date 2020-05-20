@@ -21,7 +21,7 @@ func NameResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Required:    true,
 			ForceNew:    true,
-			Description: "Path to backend to configure.",
+			Description: `The mount path for a back-end, for example, the path given in "$ vault auth enable -path=my-aws aws".`,
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
 			},
@@ -125,7 +125,7 @@ func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleting %q", vaultPath)
 
 	if _, err := client.Logical().Delete(vaultPath); err != nil && !util.Is404(err) {
-		return fmt.Errorf("error deleting %q", vaultPath)
+		return fmt.Errorf("error deleting %q: %s", vaultPath, err)
 	} else if err != nil {
 		log.Printf("[DEBUG] %q not found, removing from state", vaultPath)
 		d.SetId("")

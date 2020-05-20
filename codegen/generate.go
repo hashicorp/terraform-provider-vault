@@ -18,16 +18,6 @@ const generatedDirPerms os.FileMode = 0775
 
 var (
 	errUnsupported = errors.New("code and doc generation for this item is unsupported")
-
-	// pathToHomeDir yields the path to the terraform-vault-provider
-	// home directory on the machine on which it's running.
-	// ex. /home/your-name/go/src/github.com/terraform-providers/terraform-provider-vault
-	pathToHomeDir = func() string {
-		repoName := "terraform-provider-vault"
-		wd, _ := os.Getwd()
-		pathParts := strings.Split(wd, repoName)
-		return pathParts[0] + repoName
-	}()
 )
 
 func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
@@ -69,15 +59,23 @@ type fileCreator struct {
 	templateHandler *templateHandler
 }
 
-// GenerateCode is exported to indicate it's intended to be directly used.
+// GenerateCode is exported because it's the only method intended to be used by
+// other objects. Unexported methods may be available to other code in this package,
+// but they're not intended to be used by anything but the fileCreator.
 func (c *fileCreator) GenerateCode(endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
-	pathToFile := codeFilePath(addedInfo.TemplateType, endpoint)
+	pathToFile, err := codeFilePath(addedInfo.TemplateType, endpoint)
+	if err != nil {
+		return err
+	}
 	return c.writeFile(pathToFile, endpoint, endpointInfo, addedInfo)
 }
 
 // GenerateDoc is exported to indicate it's intended to be directly used.
 func (c *fileCreator) GenerateDoc(endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
-	pathToFile := docFilePath(addedInfo.TemplateType, endpoint)
+	pathToFile, err := docFilePath(addedInfo.TemplateType, endpoint)
+	if err != nil {
+		return err
+	}
 	// If the doc already exists, no need to generate a new one, especially
 	// since these get hand-edited after being first created.
 	if _, err := os.Stat(pathToFile); err == nil {
@@ -91,18 +89,17 @@ func (c *fileCreator) GenerateDoc(endpoint string, endpointInfo *framework.OASPa
 }
 
 func (c *fileCreator) writeFile(pathToFile string, endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
-	parentDir := parentDir(pathToFile)
-	wr, closer, err := c.createFileWriter(pathToFile, parentDir)
+	wr, closer, err := c.createFileWriter(pathToFile)
 	if err != nil {
 		return err
 	}
 	defer closer()
-	return c.templateHandler.Write(wr, parentDir, endpoint, endpointInfo, addedInfo)
+	return c.templateHandler.Write(wr, endpoint, endpointInfo, addedInfo)
 }
 
 // createFileWriter creates a file and returns its writer for the caller to use in templating.
 // The closer will only be populated if the err is nil.
-func (c *fileCreator) createFileWriter(pathToFile, parentDir string) (wr *bufio.Writer, closer func(), err error) {
+func (c *fileCreator) createFileWriter(pathToFile string) (wr *bufio.Writer, closer func(), err error) {
 	var cleanups []func() error
 	closer = func() {
 		for _, cleanup := range cleanups {
@@ -113,7 +110,7 @@ func (c *fileCreator) createFileWriter(pathToFile, parentDir string) (wr *bufio.
 	}
 
 	// Make the directory and file.
-	if err := os.MkdirAll(parentDir, generatedDirPerms); err != nil {
+	if err := os.MkdirAll(filepath.Dir(pathToFile), generatedDirPerms); err != nil {
 		return nil, nil, err
 	}
 	f, err := os.Create(pathToFile)
@@ -161,10 +158,14 @@ we eventually cover all >500 of them and add tests.
 			│   └── name.go
 			└── transformation.go
 */
-func codeFilePath(tmplType templateType, endpoint string) string {
+func codeFilePath(tmplType templateType, endpoint string) (string, error) {
 	filename := fmt.Sprintf("%s%s.go", tmplType.String(), endpoint)
-	path := filepath.Join(pathToHomeDir, "generated", filename)
-	return stripCurlyBraces(path)
+	homeDirPath, err := pathToHomeDir()
+	if err != nil {
+		return "", err
+	}
+	path := filepath.Join(homeDirPath, "generated", filename)
+	return stripCurlyBraces(path), nil
 }
 
 /*
@@ -195,10 +196,14 @@ we eventually cover all >500 of them and add tests.
 			│   └── name.md
 			└── transformation.md
 */
-func docFilePath(tmplType templateType, endpoint string) string {
+func docFilePath(tmplType templateType, endpoint string) (string, error) {
 	filename := fmt.Sprintf("%s%s.md", tmplType.String(), endpoint)
-	path := filepath.Join(pathToHomeDir, "website", "docs", "generated", filename)
-	return stripCurlyBraces(path)
+	homeDirPath, err := pathToHomeDir()
+	if err != nil {
+		return "", err
+	}
+	path := filepath.Join(homeDirPath, "website", "docs", "generated", filename)
+	return stripCurlyBraces(path), nil
 }
 
 // stripCurlyBraces converts a path like
@@ -210,10 +215,15 @@ func stripCurlyBraces(path string) string {
 	return path
 }
 
-// parentDir returns the directory containing the given file.
-// ex. generated/resources/transform-transformation-name.go
-// returns generated/resources/
-func parentDir(pathToFile string) string {
-	lastSlash := strings.LastIndex(pathToFile, "/")
-	return pathToFile[:lastSlash]
+// pathToHomeDir yields the path to the terraform-vault-provider
+// home directory on the machine on which it's running.
+// ex. /home/your-name/go/src/github.com/terraform-providers/terraform-provider-vault
+func pathToHomeDir() (string, error) {
+	repoName := "terraform-provider-vault"
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	pathParts := strings.Split(wd, repoName)
+	return pathParts[0] + repoName, nil
 }
