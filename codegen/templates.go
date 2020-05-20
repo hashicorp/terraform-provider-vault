@@ -71,7 +71,7 @@ type templateHandler struct {
 // Write takes one endpoint and uses a template to generate text
 // for it. This template is written to the given writer. It's exported
 // because it's the only method intended to be called by external callers.
-func (h *templateHandler) Write(wr io.Writer, endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
+func (h *templateHandler) Write(wr io.Writer, tmplTp templateType, endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
 	templatable, ok := h.templatableEndpoints[endpoint]
 	if !ok {
 		// Since each endpoint will have a code file and a doc file, let's cache
@@ -84,7 +84,7 @@ func (h *templateHandler) Write(wr io.Writer, endpoint string, endpointInfo *fra
 		}
 		h.templatableEndpoints[endpoint] = templatable
 	}
-	return h.templates[addedInfo.TemplateType].Execute(wr, templatable)
+	return h.templates[tmplTp].Execute(wr, templatable)
 }
 
 // toTemplatable does a bunch of work to format the given data into a
@@ -284,11 +284,11 @@ const (
 func (t templateType) String() string {
 	switch t {
 	case templateTypeDataSource:
-		return "datasources"
+		return "datasource"
 	case templateTypeResource:
-		return "resources"
+		return "resource"
 	case templateTypeDoc:
-		return "docs"
+		return "doc"
 	}
 	return "unset"
 }

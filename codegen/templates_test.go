@@ -461,7 +461,7 @@ func TestCollectParameters(t *testing.T) {
 			if err := json.Unmarshal([]byte(testCase.endpointInfo), endpointInfo); err != nil {
 				t.Fatal(err)
 			}
-			parameters := collectParameters(endpointInfo, &additionalInfo{TemplateType: templateTypeResource})
+			parameters := collectParameters(endpointInfo, &additionalInfo{Type: tfTypeResource})
 			if len(parameters) != len(testCase.expectedParams) {
 				t.Fatalf("expected %d parameters but received %d", len(testCase.expectedParams), len(parameters))
 			}
@@ -547,8 +547,8 @@ func TestTemplateHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 	b := &strings.Builder{}
-	if err := h.Write(b, "/transform/role/{name}", endpointInfo, &additionalInfo{
-		TemplateType: templateTypeResource,
+	if err := h.Write(b, templateTypeResource, "/transform/role/{name}", endpointInfo, &additionalInfo{
+		Type: tfTypeResource,
 	}); err != nil {
 		t.Fatal(err)
 	}

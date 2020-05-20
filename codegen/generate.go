@@ -16,9 +16,7 @@ import (
 // the "vault" directory, which is at "drwxrwxr-x".
 const generatedDirPerms os.FileMode = 0775
 
-var (
-	errUnsupported = errors.New("code and doc generation for this item is unsupported")
-)
+var errUnsupported = errors.New("code and doc generation for this item is unsupported")
 
 func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
 	// Read in the templates we'll be using.
@@ -43,7 +41,7 @@ func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
 			logger.Error(err.Error())
 			os.Exit(1)
 		}
-		logger.Info(fmt.Sprintf("generated %s for %s", addedInfo.TemplateType.String(), endpoint))
+		logger.Info(fmt.Sprintf("generated %s for %s", addedInfo.Type.String(), endpoint))
 		createdCount++
 
 		created, err := fCreator.GenerateDoc(endpoint, paths[endpoint], addedInfo)
@@ -52,7 +50,7 @@ func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
 			os.Exit(1)
 		}
 		if created {
-			logger.Info(fmt.Sprintf("generated %s for %s", templateTypeDoc.String(), endpoint))
+			logger.Info(fmt.Sprintf("generated doc for %s", endpoint))
 			createdCount++
 		} else {
 			skippedCount++
@@ -72,11 +70,15 @@ type fileCreator struct {
 // other objects. Unexported methods may be available to other code in this package,
 // but they're not intended to be used by anything but the fileCreator.
 func (c *fileCreator) GenerateCode(endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
-	pathToFile, err := codeFilePath(addedInfo.TemplateType, endpoint)
+	pathToFile, err := codeFilePath(addedInfo.Type, endpoint)
 	if err != nil {
 		return err
 	}
-	return c.writeFile(pathToFile, endpoint, endpointInfo, addedInfo)
+	tmplType := templateTypeResource
+	if addedInfo.Type == tfTypeDataSource {
+		tmplType = templateTypeDataSource
+	}
+	return c.writeFile(pathToFile, tmplType, endpoint, endpointInfo, addedInfo)
 }
 
 // GenerateDoc is exported to indicate it's intended to be directly used.
@@ -85,7 +87,7 @@ func (c *fileCreator) GenerateCode(endpoint string, endpointInfo *framework.OASP
 //   - false, nil: if a doc already exists so a new one is not generated
 //   - false, err: in error conditions
 func (c *fileCreator) GenerateDoc(endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) (bool, error) {
-	pathToFile, err := docFilePath(addedInfo.TemplateType, endpoint)
+	pathToFile, err := docFilePath(addedInfo.Type, endpoint)
 	if err != nil {
 		return false, err
 	}
@@ -95,19 +97,16 @@ func (c *fileCreator) GenerateDoc(endpoint string, endpointInfo *framework.OASPa
 		// The file already exists, nothing further to do here.
 		return false, nil
 	}
-	// From here on, addedInfo will be used to select the template to
-	// use. Since we want it to be for docs, we need to update that now.
-	addedInfo.TemplateType = templateTypeDoc
-	return true, c.writeFile(pathToFile, endpoint, endpointInfo, addedInfo)
+	return true, c.writeFile(pathToFile, templateTypeDoc, endpoint, endpointInfo, addedInfo)
 }
 
-func (c *fileCreator) writeFile(pathToFile string, endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
+func (c *fileCreator) writeFile(pathToFile string, tmplTp templateType, endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
 	wr, closer, err := c.createFileWriter(pathToFile)
 	if err != nil {
 		return err
 	}
 	defer closer()
-	return c.templateHandler.Write(wr, endpoint, endpointInfo, addedInfo)
+	return c.templateHandler.Write(wr, tmplTp, endpoint, endpointInfo, addedInfo)
 }
 
 // createFileWriter creates a file and returns its writer for the caller to use in templating.
@@ -171,8 +170,8 @@ we eventually cover all >500 of them and add tests.
 			│   └── name.go
 			└── transformation.go
 */
-func codeFilePath(tmplType templateType, endpoint string) (string, error) {
-	filename := fmt.Sprintf("%s%s.go", tmplType.String(), endpoint)
+func codeFilePath(tfTp tfType, endpoint string) (string, error) {
+	filename := fmt.Sprintf("%ss%s.go", tfTp.String(), endpoint)
 	homeDirPath, err := pathToHomeDir()
 	if err != nil {
 		return "", err
@@ -209,8 +208,8 @@ we eventually cover all >500 of them and add tests.
 			│   └── name.md
 			└── transformation.md
 */
-func docFilePath(tmplType templateType, endpoint string) (string, error) {
-	filename := fmt.Sprintf("%s%s.md", tmplType.String(), endpoint)
+func docFilePath(tfTp tfType, endpoint string) (string, error) {
+	filename := fmt.Sprintf("%ss%s.md", tfTp.String(), endpoint)
 	homeDirPath, err := pathToHomeDir()
 	if err != nil {
 		return "", err

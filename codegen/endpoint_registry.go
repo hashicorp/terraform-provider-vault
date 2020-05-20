@@ -9,10 +9,10 @@ import "github.com/hashicorp/vault/sdk/framework"
 // endpoint per PR.
 var endpointRegistry = map[string]*additionalInfo{
 	"/transform/alphabet/{name}": {
-		TemplateType: templateTypeResource,
+		Type: tfTypeResource,
 	},
 	"/transform/decode/{role_name}": {
-		TemplateType: templateTypeDataSource,
+		Type: tfTypeDataSource,
 		AdditionalParameters: []*templatableParam{
 			{
 				OASParameter: &framework.OASParameter{
@@ -42,7 +42,7 @@ var endpointRegistry = map[string]*additionalInfo{
 		},
 	},
 	"/transform/encode/{role_name}": {
-		TemplateType: templateTypeDataSource,
+		Type: tfTypeDataSource,
 		AdditionalParameters: []*templatableParam{
 			{
 				OASParameter: &framework.OASParameter{
@@ -72,13 +72,13 @@ var endpointRegistry = map[string]*additionalInfo{
 		},
 	},
 	"/transform/role/{name}": {
-		TemplateType: templateTypeResource,
+		Type: tfTypeResource,
 	},
 	"/transform/template/{name}": {
-		TemplateType: templateTypeResource,
+		Type: tfTypeResource,
 	},
 	"/transform/transformation/{name}": {
-		TemplateType: templateTypeResource,
+		Type: tfTypeResource,
 		AdditionalParameters: []*templatableParam{
 			{
 				OASParameter: &framework.OASParameter{
@@ -98,7 +98,26 @@ var endpointRegistry = map[string]*additionalInfo{
 	},
 }
 
+// tfType is the type of Terraform code to generate.
+type tfType int
+
+const (
+	tfTypeUnset tfType = iota
+	tfTypeDataSource
+	tfTypeResource
+)
+
+func (t tfType) String() string {
+	switch t {
+	case tfTypeDataSource:
+		return "datasource"
+	case tfTypeResource:
+		return "resource"
+	}
+	return "unset"
+}
+
 type additionalInfo struct {
-	TemplateType         templateType
+	Type                 tfType
 	AdditionalParameters []*templatableParam
 }
