@@ -5,7 +5,7 @@ up development while still yielding high quality code.
 
 ## How to Generate Code and Docs
 - Please only PR 1 newly generated endpoint at a time to keep PRs small and focused.
-- Ensure `testdata/openapi.json` includes the endpoints you want to generate code.
+- Ensure `testdata/openapi.json` includes the endpoints for which you want to generate code.
 - If it doesn't:
   - Make a new Vault dev binary from the `vault-enterprise` repo.
   - Export a Vault license that includes the `transform` secrets engine: `export VAULT_LICENSE=foo`.
@@ -22,7 +22,12 @@ make fmt
 for deprecations.
 - Hand-test the code while comparing it to Vault's API docs until you're satisfied that
 the generated code is correct.
+- Also check against the real Vault API. The OpenAPI doc _does not_ include all response
+parameters, nor do Vault docs, and some response parameters are returned conditionally. 
+So, play with the endpoint and verify you've accounted for all the parameters coming out 
+of it.
+- If you find undocumented response parameters, add them to the endpoint's `additionalInfo`.
 - Hand-write unit tests for the code.
-- Hand-add the new resource or data source to `generated/registry.go`.
+- Hand-add the new resource or data source to `generated/terraform_registry.go`.
 - Hand update the partially generated doc to complete it.
 - Add the doc to the sidebar/layout so it will appear in nav.
