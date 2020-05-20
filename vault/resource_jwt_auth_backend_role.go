@@ -333,10 +333,14 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	boundAuds := util.JsonStringArrayToStringArray(resp.Data["bound_audiences"].([]interface{}))
-	err = d.Set("bound_audiences", boundAuds)
-	if err != nil {
-		return fmt.Errorf("error setting bound_audiences in state: %s", err)
+	if resp.Data["bound_audiences"] != nil {
+		boundAuds := util.JsonStringArrayToStringArray(resp.Data["bound_audiences"].([]interface{}))
+		err = d.Set("bound_audiences", boundAuds)
+		if err != nil {
+			return fmt.Errorf("error setting bound_audiences in state: %s", err)
+		}
+	} else {
+		d.Set("bound_audiences", make([]string, 0))
 	}
 
 	d.Set("user_claim", resp.Data["user_claim"].(string))
