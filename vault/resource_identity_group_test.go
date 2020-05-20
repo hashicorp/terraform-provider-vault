@@ -55,6 +55,13 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 				),
 			},
 			{
+				Config: testAccIdentityGroupConfigUpdatePolicies(group),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityGroupCheckAttrs(),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "0"),
+				),
+			},
+			{
 				Config: testAccIdentityGroupConfigUpdateMembers(group, entity),
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityGroupCheckAttrs(),
@@ -212,6 +219,19 @@ resource "vault_identity_group" "group" {
   name = "%s-2"
   type = "internal"
   policies = ["dev", "test"]
+  
+  metadata = {
+    version = "2"
+  }
+}`, groupName)
+}
+
+func testAccIdentityGroupConfigUpdatePolicies(groupName string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_group" "group" {
+  name = "%s-2"
+  type = "internal"
+  policies = []
   metadata = {
     version = "2"
   }
