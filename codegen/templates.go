@@ -91,32 +91,7 @@ func (h *templateHandler) Write(wr io.Writer, tmplTp templateType, endpoint stri
 // struct that has fields that will be idiomatic to use with Go's templating
 // language.
 func (h *templateHandler) toTemplatable(endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) (*templatableEndpoint, error) {
-	parameters := collectParameters(endpointInfo, addedInfo)
-
-	// Sort the parameters by name so they won't shift every time
-	// new files are generated due to having originated in maps.
-	sort.Slice(parameters, func(i, j int) bool {
-		return parameters[i].Name < parameters[j].Name
-	})
-
-	if len(parameters) > 2 {
-		// De-duplicate the parameters in place, because often parameters
-		// are at both the top-level and in the post body. This in-place
-		// approach is directly recommended here:
-		// https://github.com/golang/go/wiki/SliceTricks#in-place-deduplicate-comparable
-		j := 0
-		for i := 1; i < len(parameters); i++ {
-			if parameters[j] == parameters[i] {
-				continue
-			}
-			j++
-			// preserve the original data
-			// in[i], in[j] = in[j], in[i]
-			// only set what is required
-			parameters[j] = parameters[i]
-		}
-		parameters = parameters[:j+1]
-	}
+	parameters := parseParameters(endpointInfo, addedInfo)
 
 	// The last field in the endpoint will be something like "name"
 	// or "roles" or whatever is at the end of an endpoint's path.
@@ -139,10 +114,11 @@ func (h *templateHandler) toTemplatable(endpoint string, endpointInfo *framework
 	return t, nil
 }
 
-// collectParameters walks a PathItem and looks for all the parameters
+// parseParameters walks a PathItem and looks for all the parameters
 // described. Some are at the top level of the path, indicating they are
-// path parameters. Others are only in the post body.
-func collectParameters(endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) []*templatableParam {
+// path parameters. Others are only in the post body. It returns them
+// sorted and de-duplicated.
+func parseParameters(endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) []*templatableParam {
 	var result []*templatableParam
 	for _, param := range addedInfo.AdditionalParameters {
 		result = append(result, param)
@@ -166,6 +142,31 @@ func collectParameters(endpointInfo *framework.OASPathItem, addedInfo *additiona
 			}
 			result = append(result, toTemplatableParam(param, false))
 		}
+	}
+
+	// Sort the parameters by name so they won't shift every time
+	// new files are generated due to having originated in maps.
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
+
+	if len(result) > 2 {
+		// De-duplicate the parameters in place, because often parameters
+		// are at both the top-level and in the post body. This in-place
+		// approach is directly recommended here:
+		// https://github.com/golang/go/wiki/SliceTricks#in-place-deduplicate-comparable
+		j := 0
+		for i := 1; i < len(result); i++ {
+			if result[j] == result[i] {
+				continue
+			}
+			j++
+			// preserve the original data
+			// in[i], in[j] = in[j], in[i]
+			// only set what is required
+			result[j] = result[i]
+		}
+		result = result[:j+1]
 	}
 	return result
 }

@@ -314,7 +314,7 @@ func TestToTemplatableParam(t *testing.T) {
 	}
 }
 
-func TestCollectParameters(t *testing.T) {
+func TestParseParameters(t *testing.T) {
 	testCases := []struct {
 		testName       string
 		endpointInfo   string
@@ -451,7 +451,7 @@ func TestCollectParameters(t *testing.T) {
 		}
 	}
 }`,
-			expectedParams: []string{"name", "alphabet"},
+			expectedParams: []string{"alphabet", "name"},
 		},
 	}
 
@@ -461,7 +461,7 @@ func TestCollectParameters(t *testing.T) {
 			if err := json.Unmarshal([]byte(testCase.endpointInfo), endpointInfo); err != nil {
 				t.Fatal(err)
 			}
-			parameters := collectParameters(endpointInfo, &additionalInfo{Type: tfTypeResource})
+			parameters := parseParameters(endpointInfo, &additionalInfo{Type: tfTypeResource})
 			if len(parameters) != len(testCase.expectedParams) {
 				t.Fatalf("expected %d parameters but received %d", len(testCase.expectedParams), len(parameters))
 			}
