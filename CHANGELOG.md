@@ -1,9 +1,15 @@
 ## 2.11.0 (Unreleased)
 
+IMPROVEMENTS:
+
+* Add `headers` provider configuration setting to allow setting HTTP headers for all requests to the Vault server ([#730](https://github.com/terraform-providers/terraform-provider-vault/pull/730)).
+
 BUG FIXES:
 
+* `vault_jwt_auth_backend`: Fix plan error when `oidc_discovery_url`, `jwks_url`, or `jwt_validation_pubkeys` is set to a value that is not known until apply time ([#753](https://github.com/terraform-providers/terraform-provider-vault/pull/753)).
+* `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign`: Fix `serial` field ([#761](https://github.com/terraform-providers/terraform-provider-vault/pull/761)).
+* `vault_token`: Avoid panic when `vault_token` is gone from the server ([#740](https://github.com/terraform-providers/terraform-provider-vault/pull/740)).
 * `vault_approle_auth_backend_role`: Fix perpetual diff when `policies` and `period` are updated to be `token_policies` and `token_period` ([#744](https://github.com/terraform-providers/terraform-provider-vault/pull/744)).
-
 * `vault_jwt_auth_backend_role`: Fix crash when `bound_audiences` is empty ([#763](https://github.com/terraform-providers/terraform-provider-vault/pull/763)).
 * `vault_identity_group`: Fix removal of `policies`, `member_group_ids`, and `member_entity_ids` ([#766](https://github.com/terraform-providers/terraform-provider-vault/pull/766)).
 
