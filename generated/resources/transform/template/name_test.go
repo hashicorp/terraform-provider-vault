@@ -2,7 +2,6 @@ package template
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
@@ -24,14 +23,10 @@ var nameTestProvider = func() *schema.Provider {
 }()
 
 func TestTemplateName(t *testing.T) {
-	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
-	if isEnterprise == "" {
-		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
-	}
 	path := acctest.RandomWithPrefix("transform")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { util.TestAccPreCheck(t) },
+		PreCheck: func() { util.TestEntPreCheck(t) },
 		Providers: map[string]terraform.ResourceProvider{
 			"vault": nameTestProvider.ResourceProvider(),
 		},
