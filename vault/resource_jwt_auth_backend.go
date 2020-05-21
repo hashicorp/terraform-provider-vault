@@ -124,17 +124,23 @@ func jwtAuthBackendResource() *schema.Resource {
 }
 
 func jwtCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
-	var _ interface{}
-	var discUrlExists, jwksUrlExists, jwtPubKeysExists bool
-	_, discUrlExists = d.GetOk("oidc_discovery_url")
-	_, jwksUrlExists = d.GetOk("jwks_url")
-	_, jwtPubKeysExists = d.GetOk("jwt_validation_pubkeys")
-
-	if !(discUrlExists || jwksUrlExists || jwtPubKeysExists) {
-		return errors.New("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided")
+	attributes := []string{
+		"oidc_discovery_url",
+		"jwks_url",
+		"jwt_validation_pubkeys",
 	}
 
-	return nil
+	for _, attr := range attributes {
+		if !d.NewValueKnown(attr) {
+			return nil
+		}
+
+		if _, ok := d.GetOk(attr); ok {
+			return nil
+		}
+	}
+
+	return errors.New("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided")
 }
 
 var (
