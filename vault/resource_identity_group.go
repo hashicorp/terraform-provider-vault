@@ -73,6 +73,14 @@ func identityGroupResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Description: "Group IDs to be assigned as group members.",
+				// Suppress the diff if group type is "external" because we cannot manage
+				// group members
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					if d.Get("type").(string) == "external" {
+						return true
+					}
+					return false
+				},
 			},
 
 			"member_entity_ids": {
@@ -102,17 +110,13 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 	}
 
 	if externalPolicies, ok := d.GetOk("external_policies"); !(ok && externalPolicies.(bool)) {
-		if policies, ok := d.GetOk("policies"); ok {
-			data["policies"] = policies.(*schema.Set).List()
-		}
+		data["policies"] = d.Get("policies").(*schema.Set).List()
 	}
 
-	if memberEntityIDs, ok := d.GetOk("member_entity_ids"); ok && d.Get("type").(string) == "internal" {
-		data["member_entity_ids"] = memberEntityIDs.(*schema.Set).List()
-	}
-
-	if memberGroupIDs, ok := d.GetOk("member_group_ids"); ok {
-		data["member_group_ids"] = memberGroupIDs.(*schema.Set).List()
+	// Member groups and entities can't be set for external groups
+	if d.Get("type").(string) == "internal" {
+		data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
+		data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
 	}
 
 	if metadata, ok := d.GetOk("metadata"); ok {
