@@ -31,6 +31,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "country", "test"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "locality", "test"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "province", "test"),
+					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_root_sign_intermediate.test", "serial"),
 				),
 			},
 		},

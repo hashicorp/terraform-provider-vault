@@ -278,7 +278,7 @@ func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) er
 
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("issuing_ca", resp.Data["issuing_ca"])
-	d.Set("serial", resp.Data["serial"])
+	d.Set("serial", resp.Data["serial_number"])
 
 	d.SetId(path)
 	return pkiSecretBackendRootCertRead(d, meta)
