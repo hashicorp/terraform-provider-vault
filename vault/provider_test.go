@@ -174,6 +174,29 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 	}
 }
 
+func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
+	rootProvider := Provider().(*schema.Provider)
+
+	rootProviderResource := &schema.Resource{
+		Schema: rootProvider.Schema,
+	}
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: testHeaderConfig("auth", "123"),
+				Check:  testTokenName_check("token-testtoken"),
+			},
+		},
+	})
+
+	rootProviderData := rootProviderResource.TestResourceData()
+	if _, err := providerConfigure(rootProviderData); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestAccNamespaceProviderConfigure(t *testing.T) {
 	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
 	if isEnterprise == "" {
@@ -582,6 +605,23 @@ func TestAccTokenName(t *testing.T) {
 			},
 		})
 	}
+}
+
+func testHeaderConfig(headerName, headerValue string) string {
+	providerConfig := fmt.Sprintf(`
+	provider "vault" {
+		headers {
+			name  = "%s" 
+			value = "%s"
+		}
+		token_name = "testtoken"
+	}
+
+	data "vault_generic_secret" "test" {
+		path = "/auth/token/lookup-self"
+	}
+	`, headerName, headerValue)
+	return providerConfig
 }
 
 // Using the data lookup generic_secret to inspect used token
