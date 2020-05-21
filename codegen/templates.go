@@ -260,6 +260,7 @@ func validateParameter(parameter *templatableParam) error {
 // format takes a field like "{role_name}" and returns
 // "roleName" for use in generated Go code.
 func format(field string) string {
+	field = strings.ToLower(field)
 	field = stripCurlyBraces(field)
 	subFields := strings.Split(field, "_")
 	result := ""

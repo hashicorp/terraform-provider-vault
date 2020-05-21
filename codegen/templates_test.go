@@ -39,6 +39,26 @@ func TestFormat(t *testing.T) {
 			input:    "unlikely",
 			expected: "unlikely",
 		},
+		{
+			input:    "{role_name_}",
+			expected: "roleName",
+		},
+		{
+			input:    "{role__name}",
+			expected: "roleName",
+		},
+		{
+			input:    "{role_name_here}",
+			expected: "roleNameHere",
+		},
+		{
+			input:    "{rOlE_nAmE}",
+			expected: "roleName",
+		},
+		{
+			input:    "{ROLE_NAME}",
+			expected: "roleName",
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.input, func(t *testing.T) {
