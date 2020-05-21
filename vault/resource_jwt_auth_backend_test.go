@@ -155,12 +155,6 @@ resource "vault_jwt_auth_backend" "oidc" {
   path = "%s"
   type = "oidc"
   default_role = "api"
-  lifecycle {
-	ignore_changes = [
-     # Ignore changes to odic_clie_secret inside the tests
-     "oidc_client_secret"
-    ]
-  }
 }
 `, path)
 }

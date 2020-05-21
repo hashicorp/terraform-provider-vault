@@ -143,7 +143,6 @@ var (
 		"oidc_discovery_url",
 		"oidc_discovery_ca_pem",
 		"oidc_client_id",
-		"oidc_client_secret",
 		"jwks_url",
 		"jwks_ca_pem",
 		"jwt_validation_pubkeys",
@@ -235,7 +234,7 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
 
 	configuration := map[string]interface{}{}
-	for _, configOption := range matchingJwtMountConfigOptions {
+	for _, configOption := range append(matchingJwtMountConfigOptions, "oidc_client_secret") {
 		// Set the configuration if the user has specified it, or the attribute is in the Diff
 		if _, ok := d.GetOkExists(configOption); ok || d.HasChange(configOption) {
 			configuration[configOption] = d.Get(configOption)
