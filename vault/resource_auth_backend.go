@@ -130,11 +130,26 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 			d.Set("type", auth.Type)
 			d.Set("path", path)
 			d.Set("description", auth.Description)
-			d.Set("tune.0.default_lease_ttl_seconds", auth.Config.DefaultLeaseTTL)
-			d.Set("tune.0.max_lease_ttl_seconds", auth.Config.MaxLeaseTTL)
-			d.Set("tune.0.listing_visibility", auth.Config.ListingVisibility)
 			d.Set("local", auth.Local)
 			d.Set("accessor", auth.Accessor)
+
+			tunes := d.Get("tune").(*schema.Set)
+			var tune map[string]interface{}
+			if tunes.Len() > 0 {
+				t := tunes.List()[0]
+				tunes.Remove(t)
+
+				tune = t.(map[string]interface{})
+			} else {
+				tune = make(map[string]interface{})
+			}
+
+			tune["default_lease_ttl"] = fmt.Sprintf("%ds", auth.Config.DefaultLeaseTTL)
+			tune["max_lease_ttl"] = fmt.Sprintf("%ds", auth.Config.MaxLeaseTTL)
+			tune["listing_visibility"] = auth.Config.ListingVisibility
+
+			tunes.Add(tune)
+			d.Set("tune", tunes)
 			return nil
 		}
 	}

@@ -96,15 +96,15 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 			return fmt.Errorf("unexpected auth description")
 		}
 
-		if instanceState.Attributes["tune.0.default_lease_ttl_seconds"] != "3600" {
-			return fmt.Errorf("unexpected auth default_lease_ttl_seconds")
+		if v := instanceState.Attributes["tune.3452467105.default_lease_ttl"]; v != "3600s" {
+			return fmt.Errorf("unexpected auth default_lease_ttl, got %s", v)
 		}
 
-		if instanceState.Attributes["tune.0.max_lease_ttl_seconds"] != "86400" {
-			return fmt.Errorf("unexpected auth max_lease_ttl_seconds")
+		if instanceState.Attributes["tune.3452467105.max_lease_ttl"] != "86400s" {
+			return fmt.Errorf("unexpected auth max_lease_ttl")
 		}
 
-		if instanceState.Attributes["tune.0.listing_visibility"] != "unauth" {
+		if instanceState.Attributes["tune.3452467105.listing_visibility"] != "unauth" {
 			return fmt.Errorf("unexpected auth listing_visibility")
 		}
 
