@@ -77,8 +77,8 @@ func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		Type:        mountType,
 		Description: d.Get("description").(string),
 		Config: api.AuthConfigInput{
-			DefaultLeaseTTL:   fmt.Sprintf("%ds", d.Get("tune.0.default_lease_ttl")),
-			MaxLeaseTTL:       fmt.Sprintf("%ds", d.Get("tune.0.max_lease_ttl")),
+			DefaultLeaseTTL:   d.Get("tune.0.default_lease_ttl").(string),
+			MaxLeaseTTL:       d.Get("tune.0.max_lease_ttl").(string),
 			ListingVisibility: d.Get("tune.0.listing_visibility").(string),
 		},
 		Local: d.Get("local").(bool),
@@ -130,9 +130,9 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 			d.Set("type", auth.Type)
 			d.Set("path", path)
 			d.Set("description", auth.Description)
-			d.Set("default_lease_ttl_seconds", auth.Config.DefaultLeaseTTL)
-			d.Set("max_lease_ttl_seconds", auth.Config.MaxLeaseTTL)
-			d.Set("listing_visibility", auth.Config.ListingVisibility)
+			d.Set("tune.0.default_lease_ttl_seconds", auth.Config.DefaultLeaseTTL)
+			d.Set("tune.0.max_lease_ttl_seconds", auth.Config.MaxLeaseTTL)
+			d.Set("tune.0.listing_visibility", auth.Config.ListingVisibility)
 			d.Set("local", auth.Local)
 			d.Set("accessor", auth.Accessor)
 			return nil
