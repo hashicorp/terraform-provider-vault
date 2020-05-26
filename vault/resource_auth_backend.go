@@ -49,38 +49,6 @@ func authBackendResource() *schema.Resource {
 				Description: "The description of the auth backend",
 			},
 
-			"default_lease_ttl_seconds": {
-				Type:          schema.TypeInt,
-				Required:      false,
-				Optional:      true,
-				Computed:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"tune.0.default_lease_ttl"},
-				Deprecated:    "Use the tune configuration block to avoid forcing creation of new resource on an update",
-				Description:   "Default lease duration in seconds",
-			},
-
-			"max_lease_ttl_seconds": {
-				Type:          schema.TypeInt,
-				Required:      false,
-				Optional:      true,
-				Computed:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"tune.0.max_lease_ttl"},
-				Deprecated:    "Use the tune configuration block to avoid forcing creation of new resource on an update",
-				Description:   "Maximum possible lease duration in seconds",
-			},
-
-			"listing_visibility": {
-				Type:          schema.TypeString,
-				ForceNew:      true,
-				Optional:      true,
-				Computed:      true,
-				ConflictsWith: []string{"tune.0.listing_visibility"},
-				Deprecated:    "Use the tune configuration block to avoid forcing creation of new resource on an update",
-				Description:   "Specifies whether to show this mount in the UI-specific listing endpoint",
-			},
-
 			"local": {
 				Type:        schema.TypeBool,
 				ForceNew:    true,
@@ -109,9 +77,9 @@ func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		Type:        mountType,
 		Description: d.Get("description").(string),
 		Config: api.AuthConfigInput{
-			DefaultLeaseTTL:   fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
-			MaxLeaseTTL:       fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
-			ListingVisibility: d.Get("listing_visibility").(string),
+			DefaultLeaseTTL:   fmt.Sprintf("%ds", d.Get("tune.0.default_lease_ttl")),
+			MaxLeaseTTL:       fmt.Sprintf("%ds", d.Get("tune.0.max_lease_ttl")),
+			ListingVisibility: d.Get("tune.0.listing_visibility").(string),
 		},
 		Local: d.Get("local").(bool),
 	}
