@@ -149,6 +149,10 @@ variables in order to keep credential information out of the configuration.
 * `namespace` - (Optional) Set the namespace to use. May be set via the
   `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
 
+* `headers` - (Optional) A configuration block, described below, that provides headers
+to be sent along with all requests to the Vault server.  This block can be specified 
+multiple times.
+
 The `auth_login` configuration block accepts the following arguments:
 
 * `path` - (Required) The login path of the auth backend. For example, login with
@@ -160,7 +164,7 @@ The `auth_login` configuration block accepts the following arguments:
   *Available only for Vault Enterprise*
 
 * `parameters` - (Optional) A map of key-value parameters to send when authenticating
-  against the auth backend. Refer to [Vault API documentation](https://www.vaultproject.io/api/auth/index.html) for a particular auth method
+  against the auth backend. Refer to [Vault API documentation](https://www.vaultproject.io/api-docs/auth) for a particular auth method
   to see what can go here.
 
 The `client_auth` configuration block accepts the following arguments:
@@ -170,6 +174,12 @@ The `client_auth` configuration block accepts the following arguments:
 
 * `key_file` - (Required) Path to a file on local disk that contains the
   PEM-encoded private key for which the authentication certificate was issued.
+
+The `headers` configuration block accepts the following arguments:
+
+* `name` - (Required) The name of the header.
+
+* `value` - (Required) The value of the header.
 
 ## Example Usage
 

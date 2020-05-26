@@ -400,7 +400,7 @@ func gcpAuthResourceExists(d *schema.ResourceData, meta interface{}) (bool, erro
 func gcpAuthResourceBackendFromPath(path string) (string, error) {
 	var parts = strings.Split(path, "/")
 	if len(parts) != 4 {
-		return "", fmt.Errorf("Expecdted 4 parts in path '%s'", path)
+		return "", fmt.Errorf("Expected 4 parts in path '%s'", path)
 	}
 	return parts[1], nil
 }
@@ -408,7 +408,7 @@ func gcpAuthResourceBackendFromPath(path string) (string, error) {
 func gcpAuthResourceRoleFromPath(path string) (string, error) {
 	var parts = strings.Split(path, "/")
 	if len(parts) != 4 {
-		return "", fmt.Errorf("Expecdted 4 parts in path '%s'", path)
+		return "", fmt.Errorf("Expected 4 parts in path '%s'", path)
 	}
 	return parts[3], nil
 }

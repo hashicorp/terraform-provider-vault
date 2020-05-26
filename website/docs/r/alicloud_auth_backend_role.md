@@ -38,7 +38,7 @@ The following arguments are supported:
 * `backend` - (Optional; Forces new resource) Path to the mounted AliCloud auth backend.
   Defaults to `alicloud`
 
-For more details on the usage of each argument consult the [Vault AliCloud API documentation](https://www.vaultproject.io/api/auth/alicloud/index.html).
+For more details on the usage of each argument consult the [Vault AliCloud API documentation](https://www.vaultproject.io/api-docs/auth/alicloud).
 
 ### Common Token Arguments
 

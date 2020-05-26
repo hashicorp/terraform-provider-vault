@@ -120,7 +120,7 @@ documented above.
   duration specified by this value. At each renewal, the token's TTL will be set to the
   value of this field. Specified in seconds.
 
-For more details on the usage of each argument consult the [Vault Cert API documentation](https://www.vaultproject.io/api/auth/cert/index.html).
+For more details on the usage of each argument consult the [Vault Cert API documentation](https://www.vaultproject.io/api-docs/auth/cert).
 
 ## Attribute Reference
 

@@ -9,7 +9,7 @@ description: |-
 # vault\_approle\_auth\_backend\_role\_secret\_id
 
 Manages an AppRole auth backend SecretID in a Vault server. See the [Vault
-documentation](https://www.vaultproject.io/docs/auth/approle.html) for more
+documentation](https://www.vaultproject.io/docs/auth/approle) for more
 information.
 
 ## Example Usage
@@ -51,9 +51,9 @@ The following arguments are supported:
 
 * `secret_id` - (Optional) The SecretID to be created. If set, uses "Push"
   mode.  Defaults to Vault auto-generating SecretIDs.
-  
+
 * `wrapping_ttl` - (Optional) If set, the SecretID response will be
-  [response-wrapped](https://www.vaultproject.io/docs/concepts/response-wrapping.html)
+  [response-wrapped](https://www.vaultproject.io/docs/concepts/response-wrapping)
   and available for the duration specified. Only a single unwrapping of the
   token is allowed.
 
@@ -65,5 +65,5 @@ In addition to the fields above, the following attributes are exported:
 
 * `wrapping_accessor` - The unique ID for the response-wrapped SecretID that can
    be safely logged.
-   
+
 * `wrapping_token` - The token used to retrieve a response-wrapped SecretID.

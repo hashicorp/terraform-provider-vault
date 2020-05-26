@@ -45,7 +45,6 @@ resource "vault_jwt_auth_backend_role" "example" {
   role_name       = "test-role"
   token_policies  = ["default", "dev", "prod"]
 
-  bound_audiences       = ["https://myco.test"]
   user_claim            = "https://vault/user"
   role_type             = "oidc"
   allowed_redirect_uris = ["http://localhost:8200/ui/vault/auth/oidc/oidc/callback"]
@@ -60,8 +59,8 @@ The following arguments are supported:
 
 * `role_type` - (Optional) Type of role, either "oidc" (default) or "jwt".
 
-* `bound_audiences` - (Required) List of `aud` claims to match
-  against. Any match is sufficient.
+* `bound_audiences` - (Required for roles of type `jwt`, optional for roles of
+  type `oidc`) List of `aud` claims to match against. Any match is sufficient.
 
 * `user_claim` - (Required) The claim to use to uniquely identify
   the user; this will be used as the name for the Identity entity alias created

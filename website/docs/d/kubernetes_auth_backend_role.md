@@ -9,7 +9,7 @@ description: |-
 # vault\_kubernetes\_auth\_backend\_role
 
 Reads the Role of an Kubernetes from a Vault server. See the [Vault
-documentation](https://www.vaultproject.io/api/auth/kubernetes/index.html#read-role) for more
+documentation](https://www.vaultproject.io/api-docs/auth/kubernetes#read-role) for more
 information.
 
 ## Example Usage

@@ -54,7 +54,7 @@ The following arguments are supported:
 
 * `metadata` - (Optional) A Map of additional metadata to associate with the group.
 
-* `member_group_ids` - (Optional) A list of Group IDs to be assigned as group members.
+* `member_group_ids` - (Optional) A list of Group IDs to be assigned as group members. Not allowed on `external` groups.
 
 * `member_entity_ids` - (Optional) A list of Entity IDs to be assigned as group members. Not allowed on `external` groups.
 
