@@ -118,8 +118,8 @@ func (h *templateHandler) toTemplatable(endpoint string, endpointInfo *framework
 // described. Some are at the top level of the path, indicating they are
 // path parameters. Others are only in the post body. It returns them
 // sorted and de-duplicated.
-func parseParameters(endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) []*templatableParam {
-	var result []*templatableParam
+func parseParameters(endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) []templatableParam {
+	var result []templatableParam
 	for _, param := range addedInfo.AdditionalParameters {
 		result = append(result, param)
 	}
@@ -179,7 +179,7 @@ type templatableParam struct {
 	Computed    bool
 }
 
-func toTemplatableParam(param framework.OASParameter, isPathParameter bool) *templatableParam {
+func toTemplatableParam(param framework.OASParameter, isPathParameter bool) templatableParam {
 	ptrToParam := &param
 	if ptrToParam.Schema == nil {
 		// Always populate schema and display attributes so later it'll be easier
@@ -189,7 +189,7 @@ func toTemplatableParam(param framework.OASParameter, isPathParameter bool) *tem
 	if ptrToParam.Schema.DisplayAttrs == nil {
 		ptrToParam.Schema.DisplayAttrs = &framework.DisplayAttributes{}
 	}
-	return &templatableParam{
+	return templatableParam{
 		OASParameter: ptrToParam,
 		IsPathParam:  isPathParameter,
 	}
@@ -204,7 +204,7 @@ type templatableEndpoint struct {
 	DirName                 string
 	UpperCaseDifferentiator string
 	LowerCaseDifferentiator string
-	Parameters              []*templatableParam
+	Parameters              []templatableParam
 	SupportsRead            bool
 	SupportsWrite           bool
 	SupportsDelete          bool
@@ -235,7 +235,7 @@ func (e *templatableEndpoint) Validate() error {
 	return errs
 }
 
-func validateParameter(parameter *templatableParam) error {
+func validateParameter(parameter templatableParam) error {
 	for _, supportedType := range supportedParamTypes {
 		if parameter.Schema.Type == supportedType {
 			if parameter.Schema.Type != "array" {

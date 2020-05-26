@@ -13,7 +13,7 @@ var endpointRegistry = map[string]*additionalInfo{
 	},
 	"/transform/decode/{role_name}": {
 		Type: tfTypeDataSource,
-		AdditionalParameters: []*templatableParam{
+		AdditionalParameters: []templatableParam{
 			{
 				OASParameter: &framework.OASParameter{
 					Name:        "decoded_value",
@@ -43,7 +43,7 @@ var endpointRegistry = map[string]*additionalInfo{
 	},
 	"/transform/encode/{role_name}": {
 		Type: tfTypeDataSource,
-		AdditionalParameters: []*templatableParam{
+		AdditionalParameters: []templatableParam{
 			{
 				OASParameter: &framework.OASParameter{
 					Name:        "encoded_value",
@@ -79,7 +79,7 @@ var endpointRegistry = map[string]*additionalInfo{
 	},
 	"/transform/transformation/{name}": {
 		Type: tfTypeResource,
-		AdditionalParameters: []*templatableParam{
+		AdditionalParameters: []templatableParam{
 			{
 				OASParameter: &framework.OASParameter{
 					Name:        "templates",
@@ -119,5 +119,5 @@ func (t tfType) String() string {
 
 type additionalInfo struct {
 	Type                 tfType
-	AdditionalParameters []*templatableParam
+	AdditionalParameters []templatableParam
 }

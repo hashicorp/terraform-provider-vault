@@ -127,7 +127,7 @@ func TestValidate(t *testing.T) {
 				DirName:                 "foo",
 				UpperCaseDifferentiator: "foo",
 				LowerCaseDifferentiator: "foo",
-				Parameters: []*templatableParam{
+				Parameters: []templatableParam{
 					{
 						OASParameter: &framework.OASParameter{
 							Name: "some-param",
@@ -147,7 +147,7 @@ func TestValidate(t *testing.T) {
 				DirName:                 "foo",
 				UpperCaseDifferentiator: "foo",
 				LowerCaseDifferentiator: "foo",
-				Parameters: []*templatableParam{
+				Parameters: []templatableParam{
 					{
 						OASParameter: &framework.OASParameter{
 							Name: "some-param",
@@ -167,7 +167,7 @@ func TestValidate(t *testing.T) {
 				DirName:                 "foo",
 				UpperCaseDifferentiator: "foo",
 				LowerCaseDifferentiator: "foo",
-				Parameters: []*templatableParam{
+				Parameters: []templatableParam{
 					{
 						OASParameter: &framework.OASParameter{
 							Name: "foo",
@@ -190,7 +190,7 @@ func TestValidate(t *testing.T) {
 				DirName:                 "foo",
 				UpperCaseDifferentiator: "foo",
 				LowerCaseDifferentiator: "foo",
-				Parameters: []*templatableParam{
+				Parameters: []templatableParam{
 					{
 						OASParameter: &framework.OASParameter{
 							Name: "foo",
@@ -224,7 +224,7 @@ func TestToTemplatableParam(t *testing.T) {
 	testCases := []struct {
 		param           framework.OASParameter
 		isPathParameter bool
-		expected        *templatableParam
+		expected        templatableParam
 	}{
 		{
 			param: framework.OASParameter{
@@ -263,7 +263,7 @@ func TestToTemplatableParam(t *testing.T) {
 				Deprecated: true,
 			},
 			isPathParameter: true,
-			expected: &templatableParam{
+			expected: templatableParam{
 				OASParameter: &framework.OASParameter{
 					Name:        "name",
 					Description: "description",
@@ -311,7 +311,7 @@ func TestToTemplatableParam(t *testing.T) {
 				Deprecated:  false,
 			},
 			isPathParameter: false,
-			expected: &templatableParam{
+			expected: templatableParam{
 				OASParameter: &framework.OASParameter{
 					Name:        "",
 					Description: "",
