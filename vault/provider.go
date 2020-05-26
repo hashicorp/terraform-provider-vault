@@ -504,7 +504,7 @@ var (
 		},
 		"vault_identity_group_member_entity_ids": {
 			Resource:      identityGroupMemberEntityIdsResource(),
-			PathInventory: []string{"/identity/lookup/group"},
+			PathInventory: []string{"/identity/group/id/{id}"},
 		},
 		"vault_identity_group_policies": {
 			Resource:      identityGroupPoliciesResource(),

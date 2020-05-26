@@ -14,6 +14,36 @@ import (
 	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
+func TestAccIdentityGroupMemberEntityIdsExclusiveEmpty(t *testing.T) {
+	devEntity := acctest.RandomWithPrefix("dev-entity")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccIdentityGroupMemberEntityIdsConfigExclusiveEmpty(),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityGroupMemberEntityIdsCheckAttrs("vault_identity_group_member_entity_ids.member_entity_ids"),
+				),
+			},
+			{
+				Config: testAccIdentityGroupMemberEntityIdsConfigExclusive(devEntity),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityGroupMemberEntityIdsCheckAttrs("vault_identity_group_member_entity_ids.member_entity_ids"),
+				),
+			},
+			{
+				Config: testAccIdentityGroupMemberEntityIdsConfigExclusiveEmpty(),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityGroupMemberEntityIdsCheckAttrs("vault_identity_group_member_entity_ids.member_entity_ids"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccIdentityGroupMemberEntityIdsExclusive(t *testing.T) {
 	devEntity := acctest.RandomWithPrefix("dev-entity")
 	testEntity := acctest.RandomWithPrefix("test-entity")
@@ -36,6 +66,43 @@ func TestAccIdentityGroupMemberEntityIdsExclusive(t *testing.T) {
 					testAccIdentityGroupMemberEntityIdsCheckAttrs("vault_identity_group_member_entity_ids.member_entity_ids"),
 					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.member_entity_ids", "member_entity_ids.#", "2"),
 					devEntityTester.CheckMemberEntity("vault_identity_group_member_entity_ids.member_entity_ids"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccIdentityGroupMemberEntityIdsNonExclusiveEmpty(t *testing.T) {
+	devEntity := acctest.RandomWithPrefix("dev-entity")
+	testEntity := acctest.RandomWithPrefix("test-entity")
+	var devEntityTester memberEntityTester
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusiveEmpty(devEntity),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.dev", "member_entity_ids.#", "1"),
+					devEntityTester.GetMemberEntity("vault_identity_group_member_entity_ids.dev", 1),
+					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.test", "member_entity_ids.#", "0"),
+				),
+			},
+			{
+				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusive(devEntity, testEntity),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.dev", "member_entity_ids.#", "1"),
+					devEntityTester.CheckMemberEntity("vault_identity_group_member_entity_ids.dev"),
+					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.test", "member_entity_ids.#", "1"),
+				),
+			},
+			{
+				Config: testAccIdentityGroupMemberEntityIdsConfigNonExclusiveEmpty(devEntity),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.dev", "member_entity_ids.#", "1"),
+					devEntityTester.CheckMemberEntity("vault_identity_group_member_entity_ids.dev"),
+					resource.TestCheckResourceAttr("vault_identity_group_member_entity_ids.test", "member_entity_ids.#", "0"),
 				),
 			},
 		},
@@ -314,6 +381,17 @@ func testAccIdentityGroupMemberEntityIdsCheckLogical(resource string, member_ent
 	}
 }
 
+func testAccIdentityGroupMemberEntityIdsConfigExclusiveEmpty() string {
+	return `
+resource "vault_identity_group" "group" {
+	external_member_entity_ids = true
+}
+
+resource "vault_identity_group_member_entity_ids" "member_entity_ids" {
+  	group_id = vault_identity_group.group.id
+}`
+}
+
 func testAccIdentityGroupMemberEntityIdsConfigExclusive(devEntityName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_group" "group" {
@@ -357,6 +435,33 @@ resource "vault_identity_group_member_entity_ids" "member_entity_ids" {
 	group_id = vault_identity_group.group.id
 	member_entity_ids = ["${vault_identity_entity.dev.id}", "${vault_identity_entity.test.id}"]
 }`, devEntityName, testEntityName)
+}
+
+func testAccIdentityGroupMemberEntityIdsConfigNonExclusiveEmpty(devEntityName string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_group" "group" {
+	external_member_entity_ids = true
+}
+
+resource "vault_identity_entity" "dev_entity" {
+	name = "%s"
+	metadata = {
+	  version = "2"
+	}
+}
+
+resource "vault_identity_group_member_entity_ids" "dev" {
+	group_id = vault_identity_group.group.id
+  	exclusive = false
+  	member_entity_ids = ["${vault_identity_entity.dev_entity.id}"]
+}
+
+
+resource "vault_identity_group_member_entity_ids" "test" {
+	group_id = vault_identity_group.group.id
+	exclusive = false
+}
+`, devEntityName)
 }
 
 func testAccIdentityGroupMemberEntityIdsConfigNonExclusive(devEntityName, testEntityName string) string {

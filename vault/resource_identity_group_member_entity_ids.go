@@ -20,7 +20,6 @@ func identityGroupMemberEntityIdsResource() *schema.Resource {
 			"member_entity_ids": {
 				Type:     schema.TypeSet,
 				Optional: true,
-				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -112,7 +111,8 @@ func identityGroupMemberEntityIdsRead(d *schema.ResourceData, meta interface{}) 
 	d.Set("group_name", resp.Data["name"])
 
 	if d.Get("exclusive").(bool) {
-		if err = d.Set("member_entity_ids", resp.Data["member_entity_ids"]); err != nil {
+		respdata := resp.Data["member_entity_ids"]
+		if err = d.Set("member_entity_ids", respdata); err != nil {
 			return fmt.Errorf("error setting member entity ids for IdentityGroupMemberEntityIds %q: %s", id, err)
 		}
 	} else {

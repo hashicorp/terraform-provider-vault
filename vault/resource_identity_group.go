@@ -119,16 +119,13 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 		data["policies"] = d.Get("policies").(*schema.Set).List()
 	}
 
-	if externalMemberEntityIds, ok := d.GetOk("external_member_entity_ids"); !(ok && externalMemberEntityIds.(bool)) {
-		if memberEntityIDs, ok := d.GetOk("member_entity_ids"); ok && d.Get("type").(string) == "internal" {
-			data["member_entity_ids"] = memberEntityIDs.(*schema.Set).List()
-		}
-	}
-
 	// Member groups and entities can't be set for external groups
 	if d.Get("type").(string) == "internal" {
 		data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
-		data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
+
+		if externalMemberEntityIds, ok := d.GetOk("external_member_entity_ids"); !(ok && externalMemberEntityIds.(bool)) {
+			data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
+		}
 	}
 
 	if metadata, ok := d.GetOk("metadata"); ok {
