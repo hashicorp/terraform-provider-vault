@@ -202,13 +202,26 @@ func SliceRemoveIfPresent(list []interface{}, search interface{}) []interface{} 
 //   - parameters will include path parameters
 func ParsePath(userSuppliedPath, endpoint string, d *schema.ResourceData) string {
 	fields := strings.Split(endpoint, "/")
-	// The second field should be the one the user supplied rather
+	if fields[0] == "" {
+		// There was a leading slash that should be trimmed.
+		fields = fields[1:]
+	}
+	isAuthPath := false
+	if fields[0] == "auth" {
+		fields = fields[1:]
+		isAuthPath = true
+	}
+
+	// The first field should be the one the user supplied rather
 	// than the default one shown.
-	fields[1] = userSuppliedPath
+	fields[0] = userSuppliedPath
 
 	// Since endpoints start with a "/", the first field is always
 	// an extraneous "" and should be dropped.
-	recomprised := "/" + strings.Join(fields[1:], "/")
+	recomprised := "/" + strings.Join(fields, "/")
+	if isAuthPath {
+		recomprised = "/auth" + recomprised
+	}
 
 	// For a recomprised string like "/my-transform/role/{name}",
 	// this will return the fields of "/transform/role/" and

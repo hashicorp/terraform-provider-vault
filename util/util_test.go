@@ -149,14 +149,49 @@ func TestSliceRemoveIfPresent_struct(t *testing.T) {
 }
 
 func TestParsePath(t *testing.T) {
-	d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-		"name": {Type: schema.TypeString},
-	}, map[string]interface{}{
-		"name": "foo",
-	})
-	result := ParsePath("my/transform/hello", "/transform/role/{name}", d)
-	if result != "/my/transform/hello/role/foo" {
-		t.Fatalf("received unexpected result: %s", result)
+	testCases := []struct {
+		inputUserSuppliedPath, inputEndpoint string
+		inputData                            *schema.ResourceData
+		expected                             string
+	}{
+		{
+			inputUserSuppliedPath: "my/transform/hello",
+			inputEndpoint:         "/transform/role/{name}",
+			inputData: schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+				"name": {Type: schema.TypeString},
+			}, map[string]interface{}{
+				"name": "foo",
+			}),
+			expected: "/my/transform/hello/role/foo",
+		},
+		{
+			inputUserSuppliedPath: "jwt-1914071788362821795",
+			inputEndpoint:         "/auth/jwt/config",
+			inputData:             &schema.ResourceData{},
+			expected:              "/auth/jwt-1914071788362821795/config",
+		},
+		{
+			inputUserSuppliedPath: "accounting-transit",
+			inputEndpoint:         "/transit/export/{type}/{name}/{version}",
+			inputData: schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+				"name":    {Type: schema.TypeString},
+				"type":    {Type: schema.TypeString},
+				"version": {Type: schema.TypeString},
+			}, map[string]interface{}{
+				"version": "1",
+				"type":    "encryption-key",
+				"name":    "my-key",
+			}),
+			expected: "/accounting-transit/export/encryption-key/my-key/1",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.inputUserSuppliedPath, func(t *testing.T) {
+			actual := ParsePath(testCase.inputUserSuppliedPath, testCase.inputEndpoint, testCase.inputData)
+			if actual != testCase.expected {
+				t.Fatalf("expected %q, received %q", testCase.expected, actual)
+			}
+		})
 	}
 }
 

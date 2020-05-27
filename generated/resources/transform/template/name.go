@@ -29,23 +29,23 @@ func NameResource() *schema.Resource {
 		"alphabet": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The alphabet to use for this template. This is only used during FPE transformations.",
+			Description: `The alphabet to use for this template. This is only used during FPE transformations.`,
 		},
 		"name": {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: "The name of the template.",
+			Description: `The name of the template.`,
 			ForceNew:    true,
 		},
 		"pattern": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The pattern used for matching. Currently, only regular expression pattern is supported.",
+			Description: `The pattern used for matching. Currently, only regular expression pattern is supported.`,
 		},
 		"type": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The pattern type to use for match detection. Currently, only regex is supported.",
+			Description: `The pattern type to use for match detection. Currently, only regex is supported.`,
 		},
 	}
 	return &schema.Resource{
@@ -135,14 +135,14 @@ func updateNameResource(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating %q", vaultPath)
 
 	data := map[string]interface{}{}
-	if d.HasChange("alphabet") {
-		data["alphabet"] = d.Get("alphabet")
+	if raw, ok := d.GetOk("alphabet"); ok {
+		data["alphabet"] = raw
 	}
-	if d.HasChange("pattern") {
-		data["pattern"] = d.Get("pattern")
+	if raw, ok := d.GetOk("pattern"); ok {
+		data["pattern"] = raw
 	}
-	if d.HasChange("type") {
-		data["type"] = d.Get("type")
+	if raw, ok := d.GetOk("type"); ok {
+		data["type"] = raw
 	}
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
 		return fmt.Errorf("error updating template auth backend role %q: %s", vaultPath, err)
