@@ -17,9 +17,11 @@ func authBackendResource() *schema.Resource {
 		Delete: authBackendDelete,
 		Read:   authBackendRead,
 		Update: authBackendUpdate,
+
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+
 		MigrateState: resourceAuthBackendMigrateState,
 
 		Schema: map[string]*schema.Schema{
@@ -76,19 +78,24 @@ func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	options := &api.EnableAuthOptions{
 		Type:        mountType,
 		Description: d.Get("description").(string),
-		Config: api.AuthConfigInput{
-			DefaultLeaseTTL:   d.Get("tune.0.default_lease_ttl").(string),
-			MaxLeaseTTL:       d.Get("tune.0.max_lease_ttl").(string),
-			ListingVisibility: d.Get("tune.0.listing_visibility").(string),
-		},
-		Local: d.Get("local").(bool),
+		Local:       d.Get("local").(bool),
 	}
 
 	if path == "" {
 		path = mountType
 	}
 
-	log.Printf("[DEBUG] Writing auth %q to Vault", path)
+	tunes := d.Get("tune").(*schema.Set)
+	if tunes.Len() > 0 {
+		tune := tunes.List()[0].(map[string]interface{})
+
+		options.Config = api.AuthConfigInput{
+			DefaultLeaseTTL:   tune["default_lease_ttl"].(string),
+			MaxLeaseTTL:       tune["max_lease_ttl"].(string),
+			ListingVisibility: tune["listing_visibility"].(string),
+		}
+
+	}
 
 	if err := client.Sys().EnableAuthWithOptions(path, options); err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
@@ -96,7 +103,7 @@ func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 
 	d.SetId(path)
 
-	return authBackendUpdate(d, meta)
+	return authBackendRead(d, meta)
 }
 
 func authBackendDelete(d *schema.ResourceData, meta interface{}) error {
@@ -149,7 +156,10 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 			tune["listing_visibility"] = auth.Config.ListingVisibility
 
 			tunes.Add(tune)
-			d.Set("tune", tunes)
+			if err := d.Set("tune", tunes); err != nil {
+				return err
+			}
+
 			return nil
 		}
 	}
@@ -171,9 +181,8 @@ func authBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			backendType := d.Get("type")
 			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
 
-			err := authMountTune(client, "auth/"+path, raw)
-			if err != nil {
-				return nil
+			if err := authMountTune(client, "auth/"+path, raw); err != nil {
+				return err
 			}
 
 			log.Printf("[INFO] Written %s auth tune to '%q'", backendType, path)
