@@ -38,16 +38,14 @@ func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
 				logger.Warn(fmt.Sprintf("couldn't generate %s, continuing", endpoint))
 				continue
 			}
-			logger.Error(err.Error())
-			os.Exit(1)
+			return err
 		}
 		logger.Info(fmt.Sprintf("generated %s for %s", addedInfo.Type.String(), endpoint))
 		createdCount++
 
 		created, err := fCreator.GenerateDoc(endpoint, paths[endpoint], addedInfo)
 		if err != nil {
-			logger.Error(err.Error())
-			os.Exit(1)
+			return err
 		}
 		if created {
 			logger.Info(fmt.Sprintf("generated doc for %s", endpoint))
