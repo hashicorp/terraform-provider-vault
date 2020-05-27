@@ -19,9 +19,9 @@ import (
 var (
 	// templateRegistry holds templates for each type of file.
 	templateRegistry = map[templateType]string{
-		// TODO in separate PR - add templateTypeDataSource
-		// TODO in separate PR - add templateTypeDoc
-		templateTypeResource: "/codegen/templates/resource.go.tpl",
+		templateTypeDataSource: "/codegen/templates/datasource.go.tpl",
+		templateTypeDoc:        "/codegen/templates/doc.go.tpl",
+		templateTypeResource:   "/codegen/templates/resource.go.tpl",
 	}
 
 	// These are the types of fields that OpenAPI 3 has that we support
@@ -69,61 +69,40 @@ type templateHandler struct {
 }
 
 // Write takes one endpoint and uses a template to generate text
-// for it. This template is written to the given writer.
-func (h *templateHandler) Write(wr io.Writer, tmplType templateType, endpoint string, endpointInfo *framework.OASPathItem) error {
+// for it. This template is written to the given writer. It's exported
+// because it's the only method intended to be called by external callers.
+func (h *templateHandler) Write(wr io.Writer, tmplTp templateType, endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) error {
 	templatable, ok := h.templatableEndpoints[endpoint]
 	if !ok {
 		// Since each endpoint will have a code file and a doc file, let's cache
 		// the template-friendly version of the endpoint so it doesn't have to be
 		// converted into that format twice.
 		var err error
-		templatable, err = h.toTemplatable(endpoint, endpointInfo)
+		templatable, err = h.toTemplatable(endpoint, endpointInfo, addedInfo)
 		if err != nil {
 			return err
 		}
 		h.templatableEndpoints[endpoint] = templatable
 	}
-	return h.templates[tmplType].Execute(wr, templatable)
+	return h.templates[tmplTp].Execute(wr, templatable)
 }
 
-// toTemplatable converts the provided data into a struct that the template
-// can easily interpret.
-func (h *templateHandler) toTemplatable(endpoint string, endpointInfo *framework.OASPathItem) (*templatableEndpoint, error) {
-	parameters := collectParameters(endpointInfo)
-
-	// Sort the parameters by name so they won't shift every time
-	// new files are generated due to having originated in maps.
-	sort.Slice(parameters, func(i, j int) bool {
-		return parameters[i].Name < parameters[j].Name
-	})
-
-	// De-duplicate the parameters in place, because often parameters
-	// are at both the top-level and in the post body. This in-place
-	// approach is directly recommended here:
-	// https://github.com/golang/go/wiki/SliceTricks#in-place-deduplicate-comparable
-	j := 0
-	for i := 1; i < len(parameters); i++ {
-		if parameters[j] == parameters[i] {
-			continue
-		}
-		j++
-		// preserve the original data
-		// in[i], in[j] = in[j], in[i]
-		// only set what is required
-		parameters[j] = parameters[i]
-	}
-	parameters = parameters[:j+1]
+// toTemplatable does a bunch of work to format the given data into a
+// struct that has fields that will be idiomatic to use with Go's templating
+// language.
+func (h *templateHandler) toTemplatable(endpoint string, endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) (*templatableEndpoint, error) {
+	parameters := parseParameters(endpointInfo, addedInfo)
 
 	// The last field in the endpoint will be something like "name"
 	// or "roles" or whatever is at the end of an endpoint's path.
 	// This is used to differentiate generated variable or function names
 	// so they don't collide with the other ones in the same package.
-	tmplName := clean(path.Base(endpoint))
+	tmplName := format(path.Base(endpoint))
 	t := &templatableEndpoint{
 		Endpoint:                endpoint,
-		DirName:                 clean(path.Base(filepath.Dir(endpoint))),
-		UpperCaseDifferentiator: strings.Title(strings.ToLower(tmplName)),
-		LowerCaseDifferentiator: strings.ToLower(tmplName),
+		DirName:                 format(path.Base(filepath.Dir(endpoint))),
+		UpperCaseDifferentiator: strings.Title(tmplName),
+		LowerCaseDifferentiator: tmplName,
 		Parameters:              parameters,
 		SupportsRead:            endpointInfo.Get != nil,
 		SupportsWrite:           endpointInfo.Post != nil,
@@ -135,11 +114,15 @@ func (h *templateHandler) toTemplatable(endpoint string, endpointInfo *framework
 	return t, nil
 }
 
-// collectParameters walks a PathItem and looks for all the parameters
+// parseParameters walks a PathItem and looks for all the parameters
 // described. Some are at the top level of the path, indicating they are
-// path parameters. Others are only in the post body.
-func collectParameters(endpointInfo *framework.OASPathItem) []*templatableParam {
-	var result []*templatableParam
+// path parameters. Others are only in the post body. It returns them
+// sorted and de-duplicated.
+func parseParameters(endpointInfo *framework.OASPathItem, addedInfo *additionalInfo) []templatableParam {
+	var result []templatableParam
+	for _, param := range addedInfo.AdditionalParameters {
+		result = append(result, param)
+	}
 	for _, param := range endpointInfo.Parameters {
 		result = append(result, toTemplatableParam(param, true))
 	}
@@ -160,6 +143,31 @@ func collectParameters(endpointInfo *framework.OASPathItem) []*templatableParam 
 			result = append(result, toTemplatableParam(param, false))
 		}
 	}
+
+	// Sort the parameters by name so they won't shift every time
+	// new files are generated due to having originated in maps.
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
+
+	if len(result) > 2 {
+		// De-duplicate the parameters in place, because often parameters
+		// are at both the top-level and in the post body. This in-place
+		// approach is directly recommended here:
+		// https://github.com/golang/go/wiki/SliceTricks#in-place-deduplicate-comparable
+		j := 0
+		for i := 1; i < len(result); i++ {
+			if result[j] == result[i] {
+				continue
+			}
+			j++
+			// preserve the original data
+			// in[i], in[j] = in[j], in[i]
+			// only set what is required
+			result[j] = result[i]
+		}
+		result = result[:j+1]
+	}
 	return result
 }
 
@@ -168,9 +176,10 @@ func collectParameters(endpointInfo *framework.OASPathItem) []*templatableParam 
 type templatableParam struct {
 	*framework.OASParameter
 	IsPathParam bool
+	Computed    bool
 }
 
-func toTemplatableParam(param framework.OASParameter, isPathParameter bool) *templatableParam {
+func toTemplatableParam(param framework.OASParameter, isPathParameter bool) templatableParam {
 	ptrToParam := &param
 	if ptrToParam.Schema == nil {
 		// Always populate schema and display attributes so later it'll be easier
@@ -180,7 +189,7 @@ func toTemplatableParam(param framework.OASParameter, isPathParameter bool) *tem
 	if ptrToParam.Schema.DisplayAttrs == nil {
 		ptrToParam.Schema.DisplayAttrs = &framework.DisplayAttributes{}
 	}
-	return &templatableParam{
+	return templatableParam{
 		OASParameter: ptrToParam,
 		IsPathParam:  isPathParameter,
 	}
@@ -195,7 +204,7 @@ type templatableEndpoint struct {
 	DirName                 string
 	UpperCaseDifferentiator string
 	LowerCaseDifferentiator string
-	Parameters              []*templatableParam
+	Parameters              []templatableParam
 	SupportsRead            bool
 	SupportsWrite           bool
 	SupportsDelete          bool
@@ -226,7 +235,7 @@ func (e *templatableEndpoint) Validate() error {
 	return errs
 }
 
-func validateParameter(parameter *templatableParam) error {
+func validateParameter(parameter templatableParam) error {
 	for _, supportedType := range supportedParamTypes {
 		if parameter.Schema.Type == supportedType {
 			if parameter.Schema.Type != "array" {
@@ -235,7 +244,7 @@ func validateParameter(parameter *templatableParam) error {
 				// supported.
 				return nil
 			}
-			if parameter.Schema.Items.Type == "string" {
+			if parameter.Schema.Items.Type == "string" || parameter.Schema.Items.Type == "object" {
 				// Right now, our templates assume that all array types are strings.
 				// If we allow other types of arrays, we will need to also go into
 				// each template and add additional logic supporting the new array
@@ -248,11 +257,21 @@ func validateParameter(parameter *templatableParam) error {
 	return fmt.Errorf("unsupported parameter type of %s for %s", parameter.Schema.Type, parameter.Name)
 }
 
-// clean takes a field like "{role_name}" and returns
-// "rolename" for use in generated Go code.
-func clean(field string) string {
+// format takes a field like "{role_name}" and returns
+// "roleName" for use in generated Go code.
+func format(field string) string {
+	field = strings.ToLower(field)
 	field = stripCurlyBraces(field)
-	return strings.Replace(field, "_", "", -1)
+	subFields := strings.Split(field, "_")
+	result := ""
+	for i, subField := range subFields {
+		if i == 0 {
+			result += subField
+			continue
+		}
+		result += strings.Title(subField)
+	}
+	return result
 }
 
 type templateType int
@@ -267,11 +286,11 @@ const (
 func (t templateType) String() string {
 	switch t {
 	case templateTypeDataSource:
-		return "datasources"
+		return "datasource"
 	case templateTypeResource:
-		return "resources"
+		return "resource"
 	case templateTypeDoc:
-		return "docs"
+		return "doc"
 	}
 	return "unset"
 }

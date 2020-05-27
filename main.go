@@ -9,6 +9,9 @@ import (
 
 func main() {
 	p := schema.NewProvider(vault.Provider())
+	for name, resource := range generated.DataSourceRegistry {
+		p.RegisterDataSource(name, resource)
+	}
 	for name, resource := range generated.ResourceRegistry {
 		p.RegisterResource(name, resource)
 	}

@@ -106,6 +106,19 @@ func TestAccPreCheck(t *testing.T) {
 	}
 }
 
+func TestEntPreCheck(t *testing.T) {
+	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
+	if isEnterprise == "" {
+		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
+	}
+	if v := os.Getenv("VAULT_ADDR"); v == "" {
+		t.Fatal("VAULT_ADDR must be set for acceptance tests")
+	}
+	if v := os.Getenv("VAULT_TOKEN"); v == "" {
+		t.Fatal("VAULT_TOKEN must be set for acceptance tests")
+	}
+}
+
 func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState, ok := s.RootModule().Resources[name]

@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 )
 
-func TestClean(t *testing.T) {
+func TestFormat(t *testing.T) {
 	testCases := []struct {
 		input    string
 		expected string
@@ -25,7 +25,7 @@ func TestClean(t *testing.T) {
 		},
 		{
 			input:    "{role_name}",
-			expected: "rolename",
+			expected: "roleName",
 		},
 		{
 			input:    "{name}",
@@ -39,10 +39,30 @@ func TestClean(t *testing.T) {
 			input:    "unlikely",
 			expected: "unlikely",
 		},
+		{
+			input:    "{role_name_}",
+			expected: "roleName",
+		},
+		{
+			input:    "{role__name}",
+			expected: "roleName",
+		},
+		{
+			input:    "{role_name_here}",
+			expected: "roleNameHere",
+		},
+		{
+			input:    "{rOlE_nAmE}",
+			expected: "roleName",
+		},
+		{
+			input:    "{ROLE_NAME}",
+			expected: "roleName",
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.input, func(t *testing.T) {
-			actual := clean(testCase.input)
+			actual := format(testCase.input)
 			if actual != testCase.expected {
 				t.Fatalf("input: %q; expected: %q; actual: %q", testCase.input, testCase.expected, actual)
 			}
@@ -107,7 +127,7 @@ func TestValidate(t *testing.T) {
 				DirName:                 "foo",
 				UpperCaseDifferentiator: "foo",
 				LowerCaseDifferentiator: "foo",
-				Parameters: []*templatableParam{
+				Parameters: []templatableParam{
 					{
 						OASParameter: &framework.OASParameter{
 							Name: "some-param",
@@ -127,7 +147,7 @@ func TestValidate(t *testing.T) {
 				DirName:                 "foo",
 				UpperCaseDifferentiator: "foo",
 				LowerCaseDifferentiator: "foo",
-				Parameters: []*templatableParam{
+				Parameters: []templatableParam{
 					{
 						OASParameter: &framework.OASParameter{
 							Name: "some-param",
@@ -147,7 +167,7 @@ func TestValidate(t *testing.T) {
 				DirName:                 "foo",
 				UpperCaseDifferentiator: "foo",
 				LowerCaseDifferentiator: "foo",
-				Parameters: []*templatableParam{
+				Parameters: []templatableParam{
 					{
 						OASParameter: &framework.OASParameter{
 							Name: "foo",
@@ -170,7 +190,7 @@ func TestValidate(t *testing.T) {
 				DirName:                 "foo",
 				UpperCaseDifferentiator: "foo",
 				LowerCaseDifferentiator: "foo",
-				Parameters: []*templatableParam{
+				Parameters: []templatableParam{
 					{
 						OASParameter: &framework.OASParameter{
 							Name: "foo",
@@ -184,7 +204,7 @@ func TestValidate(t *testing.T) {
 					},
 				},
 			},
-			expectErr: true,
+			expectErr: false,
 		},
 	}
 	for _, testCase := range testCases {
@@ -204,7 +224,7 @@ func TestToTemplatableParam(t *testing.T) {
 	testCases := []struct {
 		param           framework.OASParameter
 		isPathParameter bool
-		expected        *templatableParam
+		expected        templatableParam
 	}{
 		{
 			param: framework.OASParameter{
@@ -243,7 +263,7 @@ func TestToTemplatableParam(t *testing.T) {
 				Deprecated: true,
 			},
 			isPathParameter: true,
-			expected: &templatableParam{
+			expected: templatableParam{
 				OASParameter: &framework.OASParameter{
 					Name:        "name",
 					Description: "description",
@@ -291,7 +311,7 @@ func TestToTemplatableParam(t *testing.T) {
 				Deprecated:  false,
 			},
 			isPathParameter: false,
-			expected: &templatableParam{
+			expected: templatableParam{
 				OASParameter: &framework.OASParameter{
 					Name:        "",
 					Description: "",
@@ -314,7 +334,7 @@ func TestToTemplatableParam(t *testing.T) {
 	}
 }
 
-func TestCollectParameters(t *testing.T) {
+func TestParseParameters(t *testing.T) {
 	testCases := []struct {
 		testName       string
 		endpointInfo   string
@@ -451,7 +471,7 @@ func TestCollectParameters(t *testing.T) {
 		}
 	}
 }`,
-			expectedParams: []string{"name", "alphabet"},
+			expectedParams: []string{"alphabet", "name"},
 		},
 	}
 
@@ -461,7 +481,7 @@ func TestCollectParameters(t *testing.T) {
 			if err := json.Unmarshal([]byte(testCase.endpointInfo), endpointInfo); err != nil {
 				t.Fatal(err)
 			}
-			parameters := collectParameters(endpointInfo)
+			parameters := parseParameters(endpointInfo, &additionalInfo{Type: tfTypeResource})
 			if len(parameters) != len(testCase.expectedParams) {
 				t.Fatalf("expected %d parameters but received %d", len(testCase.expectedParams), len(parameters))
 			}
@@ -547,7 +567,9 @@ func TestTemplateHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 	b := &strings.Builder{}
-	if err := h.Write(b, templateTypeResource, "/transform/role/{name}", endpointInfo); err != nil {
+	if err := h.Write(b, templateTypeResource, "/transform/role/{name}", endpointInfo, &additionalInfo{
+		Type: tfTypeResource,
+	}); err != nil {
 		t.Fatal(err)
 	}
 	result := b.String()
