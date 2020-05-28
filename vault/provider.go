@@ -249,7 +249,7 @@ var (
 			},
 		},
 		"vault_auth_backend": {
-			Resource:      authBackendResource(),
+			Resource:      AuthBackendResource(),
 			PathInventory: []string{"/sys/auth/{path}"},
 		},
 		"vault_token": {

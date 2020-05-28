@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func authBackendResource() *schema.Resource {
+func AuthBackendResource() *schema.Resource {
 	return &schema.Resource{
 		SchemaVersion: 1,
 

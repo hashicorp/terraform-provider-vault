@@ -61,7 +61,7 @@ func {{ .UpperCaseDifferentiator }}Resource() *schema.Resource {
 			{{- if .Schema.DisplayAttrs.Sensitive }}
 			Sensitive:   true,
 			{{- end }}
-			Description: "{{ .Description }}",
+			Description: `{{ .Description }}`,
 			{{- if .IsPathParam }}
 			ForceNew: true,
 			{{- end}}
@@ -77,7 +77,7 @@ func {{ .UpperCaseDifferentiator }}Resource() *schema.Resource {
 		Read:   read{{ .UpperCaseDifferentiator }}Resource,
 		Exists: resource{{ .UpperCaseDifferentiator }}Exists,
 		{{- end }}
-		{{- if .SupportsDelete }}
+		{{- if or .SupportsDelete .SupportsWrite  }}
 		Delete: delete{{ .UpperCaseDifferentiator }}Resource,
 		{{- end }}
 		Importer: &schema.ResourceImporter{
@@ -168,8 +168,8 @@ func update{{ .UpperCaseDifferentiator }}Resource(d *schema.ResourceData, meta i
 	{{- range .Parameters }}
 	{{- if not .IsPathParam }}
 	  {{- if not .Computed }}
-	if d.HasChange("{{ .Name }}") {
-		data["{{ .Name }}"] = d.Get("{{ .Name }}")
+	if raw, ok := d.GetOk("{{ .Name }}"); ok {
+		data["{{ .Name }}"] = raw
 	}
 	  {{- end }}
 	{{- end }}
@@ -196,6 +196,13 @@ func delete{{ .UpperCaseDifferentiator }}Resource(d *schema.ResourceData, meta i
 		return nil
 	}
 	log.Printf("[DEBUG] Deleted template auth backend role %q", vaultPath)
+	return nil
+}
+{{ else if .SupportsWrite }}
+func delete{{ .UpperCaseDifferentiator }}Resource(_ *schema.ResourceData, _ interface{}) error {
+	// Terraform requires the delete is implemented whenever create is implemented,
+	// but this endpoint doesn't support delete. Thus, we've simply stubbed out delete
+	// here.
 	return nil
 }
 {{ end }}

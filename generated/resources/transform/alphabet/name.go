@@ -29,12 +29,12 @@ func NameResource() *schema.Resource {
 		"alphabet": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "A string of characters that contains the alphabet set.",
+			Description: `A string of characters that contains the alphabet set.`,
 		},
 		"name": {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: "The name of the alphabet.",
+			Description: `The name of the alphabet.`,
 			ForceNew:    true,
 		},
 	}
@@ -109,8 +109,8 @@ func updateNameResource(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating %q", vaultPath)
 
 	data := map[string]interface{}{}
-	if d.HasChange("alphabet") {
-		data["alphabet"] = d.Get("alphabet")
+	if raw, ok := d.GetOk("alphabet"); ok {
+		data["alphabet"] = raw
 	}
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
 		return fmt.Errorf("error updating template auth backend role %q: %s", vaultPath, err)

@@ -30,40 +30,40 @@ func NameResource() *schema.Resource {
 			Type:        schema.TypeList,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Optional:    true,
-			Description: "The set of roles allowed to perform this transformation.",
+			Description: `The set of roles allowed to perform this transformation.`,
 		},
 		"masking_character": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The character used to replace data when in masking mode",
+			Description: `The character used to replace data when in masking mode`,
 		},
 		"name": {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: "The name of the transformation.",
+			Description: `The name of the transformation.`,
 			ForceNew:    true,
 		},
 		"template": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The name of the template to use.",
+			Description: `The name of the template to use.`,
 		},
 		"templates": {
 			Type:        schema.TypeList,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Optional:    true,
 			Computed:    true,
-			Description: "Templates configured for transformation.",
+			Description: `Templates configured for transformation.`,
 		},
 		"tweak_source": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The source of where the tweak value comes from. Only valid when in FPE mode.",
+			Description: `The source of where the tweak value comes from. Only valid when in FPE mode.`,
 		},
 		"type": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The type of transformation to perform.",
+			Description: `The type of transformation to perform.`,
 		},
 	}
 	return &schema.Resource{
@@ -174,20 +174,20 @@ func updateNameResource(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating %q", vaultPath)
 
 	data := map[string]interface{}{}
-	if d.HasChange("allowed_roles") {
-		data["allowed_roles"] = d.Get("allowed_roles")
+	if raw, ok := d.GetOk("allowed_roles"); ok {
+		data["allowed_roles"] = raw
 	}
-	if d.HasChange("masking_character") {
-		data["masking_character"] = d.Get("masking_character")
+	if raw, ok := d.GetOk("masking_character"); ok {
+		data["masking_character"] = raw
 	}
-	if d.HasChange("template") {
-		data["template"] = d.Get("template")
+	if raw, ok := d.GetOk("template"); ok {
+		data["template"] = raw
 	}
-	if d.HasChange("tweak_source") {
-		data["tweak_source"] = d.Get("tweak_source")
+	if raw, ok := d.GetOk("tweak_source"); ok {
+		data["tweak_source"] = raw
 	}
-	if d.HasChange("type") {
-		data["type"] = d.Get("type")
+	if raw, ok := d.GetOk("type"); ok {
+		data["type"] = raw
 	}
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
 		return fmt.Errorf("error updating template auth backend role %q: %s", vaultPath, err)
