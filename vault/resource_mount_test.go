@@ -490,7 +490,7 @@ func testResourceMount_CheckExternalEntropyAccess(expectedPath string, expectedE
 		}
 
 		if path != expectedPath {
-			return fmt.Errorf("unexpected path %q, expected %q", path, "transit")
+			return fmt.Errorf("unexpected path %q, expected %q", path, expectedPath)
 		}
 
 		mount, err := findMount(path)
