@@ -61,27 +61,35 @@ func identityGroupMemberEntityIdsUpdate(d *schema.ResourceData, meta interface{}
 	data := make(map[string]interface{})
 	memberEntityIds := d.Get("member_entity_ids").(*schema.Set).List()
 
-	if d.Get("exclusive").(bool) {
-		data["member_entity_ids"] = memberEntityIds
-	} else {
-		apiMemberEntityIds, err := readIdentityGroupMemberEntityIds(client, id)
-		if err != nil {
-			return err
-		}
-		if d.HasChange("member_entity_ids") {
-			oldMemberEntityIdsI, _ := d.GetChange("member_entity_ids")
-			oldMemberEntityIds := oldMemberEntityIdsI.(*schema.Set).List()
-			for _, memberEntityId := range oldMemberEntityIds {
-				apiMemberEntityIds = util.SliceRemoveIfPresent(apiMemberEntityIds, memberEntityId)
-			}
-		}
-		for _, memberEntityId := range memberEntityIds {
-			apiMemberEntityIds = util.SliceAppendIfMissing(apiMemberEntityIds, memberEntityId)
-		}
-		data["member_entity_ids"] = apiMemberEntityIds
+	resp, err := readIdentityGroup(client, id)
+	if err != nil {
+		return err
 	}
 
-	_, err := client.Logical().Write(path, data)
+	t, ok := resp.Data["type"]
+	if ok && t != "external" {
+		if d.Get("exclusive").(bool) {
+			data["member_entity_ids"] = memberEntityIds
+		} else {
+			apiMemberEntityIds, err := readIdentityGroupMemberEntityIds(client, id)
+			if err != nil {
+				return err
+			}
+			if d.HasChange("member_entity_ids") {
+				oldMemberEntityIdsI, _ := d.GetChange("member_entity_ids")
+				oldMemberEntityIds := oldMemberEntityIdsI.(*schema.Set).List()
+				for _, memberEntityId := range oldMemberEntityIds {
+					apiMemberEntityIds = util.SliceRemoveIfPresent(apiMemberEntityIds, memberEntityId)
+				}
+			}
+			for _, memberEntityId := range memberEntityIds {
+				apiMemberEntityIds = util.SliceAppendIfMissing(apiMemberEntityIds, memberEntityId)
+			}
+			data["member_entity_ids"] = apiMemberEntityIds
+		}
+	}
+
+	_, err = client.Logical().Write(path, data)
 	if err != nil {
 		return fmt.Errorf("error updating IdentityGroupMemberEntityIds %q: %s", id, err)
 	}
