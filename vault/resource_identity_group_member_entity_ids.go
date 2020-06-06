@@ -152,20 +152,28 @@ func identityGroupMemberEntityIdsDelete(d *schema.ResourceData, meta interface{}
 
 	data := make(map[string]interface{})
 
-	if d.Get("exclusive").(bool) {
-		data["member_entity_ids"] = make([]string, 0)
-	} else {
-		apiMemberEntityIds, err := readIdentityGroupMemberEntityIds(client, id)
-		if err != nil {
-			return err
-		}
-		for _, memberEntityId := range d.Get("member_entity_ids").(*schema.Set).List() {
-			apiMemberEntityIds = util.SliceRemoveIfPresent(apiMemberEntityIds, memberEntityId)
-		}
-		data["member_entity_ids"] = apiMemberEntityIds
+	resp, err := readIdentityGroup(client, id)
+	if err != nil {
+		return err
 	}
 
-	_, err := client.Logical().Write(path, data)
+	t, ok := resp.Data["type"]
+	if ok && t != "external" {
+		if d.Get("exclusive").(bool) {
+			data["member_entity_ids"] = make([]string, 0)
+		} else {
+			apiMemberEntityIds, err := readIdentityGroupMemberEntityIds(client, id)
+			if err != nil {
+				return err
+			}
+			for _, memberEntityId := range d.Get("member_entity_ids").(*schema.Set).List() {
+				apiMemberEntityIds = util.SliceRemoveIfPresent(apiMemberEntityIds, memberEntityId)
+			}
+			data["member_entity_ids"] = apiMemberEntityIds
+		}
+	}
+
+	_, err = client.Logical().Write(path, data)
 	if err != nil {
 		return fmt.Errorf("error updating IdentityGroupMemberEntityIds %q: %s", id, err)
 	}
