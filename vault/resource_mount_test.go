@@ -140,6 +140,36 @@ func TestResourceMount_KVV2(t *testing.T) {
 	})
 }
 
+func TestResourceMount_ExternalEntropyAccess(t *testing.T) {
+	path := acctest.RandomWithPrefix("example")
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceMount_InitialConfigExternalEntropyAccess(path),
+				Check:  testResourceMount_CheckExternalEntropyAccess(path, false),
+			},
+			{
+				Config: testResourceMount_UpdateConfigExternalEntropyAccess(path, true),
+				Check:  testResourceMount_CheckExternalEntropyAccess(path, true),
+			},
+			{
+				Config: testResourceMount_UpdateConfigExternalEntropyAccess(path, false),
+				Check:  testResourceMount_CheckExternalEntropyAccess(path, false),
+			},
+			{
+				Config: testResourceMount_UpdateConfigExternalEntropyAccess(path, true),
+				Check:  testResourceMount_CheckExternalEntropyAccess(path, true),
+			},
+			{
+				Config: testResourceMount_InitialConfigExternalEntropyAccess(path),
+				Check:  testResourceMount_CheckExternalEntropyAccess(path, false),
+			},
+		},
+	})
+}
+
 func testResourceMount_initialConfig(cfg mountConfig) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
@@ -447,6 +477,67 @@ func testResourceMount_UpdateCheckSealWrap(s *terraform.State) error {
 	}
 
 	return nil
+}
+
+func testResourceMount_CheckExternalEntropyAccess(expectedPath string, expectedExternalEntropyAccess bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["vault_mount.test"]
+		if resourceState == nil {
+			return fmt.Errorf("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return fmt.Errorf("resource has no primary instance")
+		}
+
+		path := instanceState.ID
+
+		if path != instanceState.Attributes["path"] {
+			return fmt.Errorf("id %q doesn't match path %q", path, instanceState.Attributes["path"])
+		}
+
+		if path != expectedPath {
+			return fmt.Errorf("unexpected path %q, expected %q", path, expectedPath)
+		}
+
+		mount, err := findMount(path)
+		if err != nil {
+			return fmt.Errorf("error reading back mount %q: %s", path, err)
+		}
+
+		if mount.ExternalEntropyAccess != expectedExternalEntropyAccess {
+			return fmt.Errorf("external_entropy_access is %v; wanted %t", mount.ExternalEntropyAccess,
+				expectedExternalEntropyAccess)
+		}
+
+		return nil
+	}
+}
+
+func testResourceMount_InitialConfigExternalEntropyAccess(path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "transit"
+	description = "Example mount for testing"
+	default_lease_ttl_seconds = 3600
+	max_lease_ttl_seconds = 36000
+}
+`, path)
+}
+
+func testResourceMount_UpdateConfigExternalEntropyAccess(path string, externalEntropyAccess bool) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "transit"
+	description = "Example mount for testing"
+	default_lease_ttl_seconds = 3600
+	max_lease_ttl_seconds = 36000
+	external_entropy_access = %t
+}
+`, path, externalEntropyAccess)
 }
 
 func findMount(path string) (*api.MountOutput, error) {

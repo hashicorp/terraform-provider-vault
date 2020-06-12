@@ -92,6 +92,14 @@ func mountResource() *schema.Resource {
 				Computed:    true,
 				Description: "Enable seal wrapping for the mount, causing values stored by the mount to be wrapped by the seal's encryption capability",
 			},
+
+			"external_entropy_access": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				ForceNew:    true,
+				Description: "Enable the secrets engine to access Vault's external entropy source",
+			},
 		},
 	}
 }
@@ -106,9 +114,10 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
 		},
-		Local:    d.Get("local").(bool),
-		Options:  opts(d),
-		SealWrap: d.Get("seal_wrap").(bool),
+		Local:                 d.Get("local").(bool),
+		Options:               opts(d),
+		SealWrap:              d.Get("seal_wrap").(bool),
+		ExternalEntropyAccess: d.Get("external_entropy_access").(bool),
 	}
 
 	path := d.Get("path").(string)
@@ -218,6 +227,7 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("local", mount.Local)
 	d.Set("options", mount.Options)
 	d.Set("seal_wrap", mount.SealWrap)
+	d.Set("external_entropy_access", mount.ExternalEntropyAccess)
 
 	return nil
 }
