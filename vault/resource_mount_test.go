@@ -158,6 +158,14 @@ func TestResourceMount_ExternalEntropyAccess(t *testing.T) {
 				Config: testResourceMount_UpdateConfigExternalEntropyAccess(path, false),
 				Check:  testResourceMount_CheckExternalEntropyAccess(path, false),
 			},
+			{
+				Config: testResourceMount_UpdateConfigExternalEntropyAccess(path, true),
+				Check:  testResourceMount_CheckExternalEntropyAccess(path, true),
+			},
+			{
+				Config: testResourceMount_InitialConfigExternalEntropyAccess(path),
+				Check:  testResourceMount_CheckExternalEntropyAccess(path, false),
+			},
 		},
 	})
 }
