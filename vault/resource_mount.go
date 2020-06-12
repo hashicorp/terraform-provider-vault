@@ -95,11 +95,9 @@ func mountResource() *schema.Resource {
 
 			"external_entropy_access": {
 				Type:        schema.TypeBool,
-				Required:    false,
 				Optional:    true,
 				Default:     false,
 				ForceNew:    true,
-				Computed:    false,
 				Description: "Enable the secrets engine to access Vault's external entropy source",
 			},
 		},
