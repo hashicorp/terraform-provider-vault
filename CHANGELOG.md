@@ -2,7 +2,11 @@
 
 FEATURES:
 
-* Adds the `vault_identity_group_member_entity_ids` resource for managing identity group entity members in a decoupled manner ([#724](https://github.com/terraform-providers/terraform-provider-vault/pull/724)).
+* **New Resource:** `vault_identity_group_member_entity_ids` ([#724](https://github.com/terraform-providers/terraform-provider-vault/pull/724)).
+
+IMPROVEMENTS:
+
+* resource/vault_mount: Adds support for the `external_entropy_access` field ([#792](https://github.com/terraform-providers/terraform-provider-vault/pull/792)).
 
 ## 2.11.0 (May 21, 2020)
 
