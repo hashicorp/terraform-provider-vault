@@ -32,7 +32,13 @@ resource "vault_database_secret_backend_connection" "postgres" {
   allowed_roles = ["dev", "prod"]
 
   postgresql {
-    connection_url = "postgres://username:password@host:port/database"
+    connection_url = "postgres://{{username}}:{{password}}@host:port/database"
+  }
+
+  # persisted in state but hidden in plan/apply output
+  data = {
+    username = "user"
+    password = "secret"
   }
 }
 ```
