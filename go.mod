@@ -18,5 +18,6 @@ require (
 	github.com/hashicorp/vault/sdk v0.1.14-0.20190730042320-0dc007d98cc8
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/rainycape/unidecode v0.0.0-20150907023854-cb7f23ec59be // indirect
+	github.com/ryboe/q v1.0.11
 	github.com/ulikunitz/xz v0.5.6 // indirect
 )

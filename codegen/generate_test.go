@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestCodeFilePath(t *testing.T) {
+func TestGenerate_CodeFilePath(t *testing.T) {
 	homeDirPath, err := pathToHomeDir()
 	if err != nil {
 		t.Fatal(err)
@@ -58,7 +58,7 @@ func TestCodeFilePath(t *testing.T) {
 	}
 }
 
-func TestDocFilePath(t *testing.T) {
+func TestGenerate_DocFilePath(t *testing.T) {
 	homeDirPath, err := pathToHomeDir()
 	if err != nil {
 		t.Fatal(err)
@@ -113,7 +113,7 @@ func TestDocFilePath(t *testing.T) {
 	}
 }
 
-func TestStripCurlyBraces(t *testing.T) {
+func TestGenerate_StripCurlyBraces(t *testing.T) {
 	testCases := []struct {
 		input    string
 		expected string

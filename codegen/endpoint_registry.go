@@ -11,7 +11,7 @@ var endpointRegistry = map[string]*additionalInfo{
 	"/auth/jwt/config": {
 		Type: tfTypeResource,
 	},
-	"/transform/alphabet/{name}": {
+	"/transform/alphabet": {
 		Type: tfTypeResource,
 	},
 	"/transform/decode/{role_name}": {

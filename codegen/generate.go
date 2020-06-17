@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/ryboe/q"
 )
 
 // generatedDirPerms uses 0775 because it is the same as for
@@ -33,6 +34,13 @@ func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
 	createdCount := 0
 	skippedCount := 0
 	for endpoint, addedInfo := range endpointRegistry {
+		_, ok := paths[endpoint]
+		if !ok {
+			q.Q("path not found:", endpoint)
+		}
+		q.Q("endpoint used:", endpoint)
+		// q.Q(p)
+		q.Q("=========")
 		if err := fCreator.GenerateCode(endpoint, paths[endpoint], addedInfo); err != nil {
 			if err == errUnsupported {
 				logger.Warn(fmt.Sprintf("couldn't generate %s, continuing", endpoint))
@@ -169,7 +177,15 @@ we eventually cover all >500 of them and add tests.
 			└── transformation.go
 */
 func codeFilePath(tfTp tfType, endpoint string) (string, error) {
-	filename := fmt.Sprintf("%ss%s.go", tfTp.String(), endpoint)
+	fname := strings.TrimSuffix(endpoint, "/{name}")
+	q.Q("-> new fname:", fname)
+	fname = strings.TrimSuffix(fname, "/{role_name}")
+	q.Q("-> new fname:", fname)
+	filename := fmt.Sprintf("%ss%s.go", tfTp.String(), fname)
+	fname = fmt.Sprintf("%s.go", fname)
+	q.Q("=<> endpoint:", endpoint)
+	q.Q("=<> filename:", filename)
+	q.Q("=<> proposed:", fname)
 	homeDirPath, err := pathToHomeDir()
 	if err != nil {
 		return "", err
