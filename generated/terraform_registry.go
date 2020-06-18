@@ -13,15 +13,15 @@ import (
 
 // Please alphabetize.
 var DataSourceRegistry = map[string]*schema.Resource{
-	"vault_transform_encode_role_name": encode.RoleNameDataSource(),
-	"vault_transform_decode_role_name": decode.RoleNameDataSource(),
+	"vault_transform_encode": encode.RoleNameDataSource(),
+	"vault_transform_decode": decode.RoleNameDataSource(),
 }
 
 // Please alphabetize.
 var ResourceRegistry = map[string]*schema.Resource{
-	"vault_auth_jwt_config":               jwt.ConfigResource(),
-	"vault_transform_alphabet_name":       alphabet.NameResource(),
-	"vault_transform_role_name":           role.NameResource(),
-	"vault_transform_template_name":       template.NameResource(),
-	"vault_transform_transformation_name": transformation.NameResource(),
+	"vault_auth_jwt_config":          jwt.ConfigResource(),
+	"vault_transform_alphabet":       alphabet.NameResource(),
+	"vault_transform_role":           role.NameResource(),
+	"vault_transform_template":       template.NameResource(),
+	"vault_transform_transformation": transformation.NameResource(),
 }
