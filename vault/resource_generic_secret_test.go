@@ -194,7 +194,7 @@ func testResourceGenericSecret_kvV2_initialCheck(expectedPath string) resource.T
 		keys := secretList.Data["keys"].([]interface{})
 		secret, err := client.Logical().Read(fmt.Sprintf("secretsv2/data/%s", keys[0]))
 		if secret == nil {
-			return fmt.Errorf("The secret is NIL!: %v", secret)
+			return fmt.Errorf("no kv-v2 secret, expected one.")
 		}
 		// Test the JSON.  Kv-v2 data is nested one level deeper than kv-v1.
 		nestedData := secret.Data["data"].(map[string]interface{})

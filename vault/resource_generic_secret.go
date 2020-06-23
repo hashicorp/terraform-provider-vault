@@ -65,7 +65,7 @@ func genericSecretResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
-				Description: "Only applicable for kv-v2 stores.  if set to true, permanently delete all versions of the secret.  If set to false, only the most recent secret version is deleted.",
+				Description: "Only applicable for kv-v2 stores.  If set to true, permanently delete all versions of the secret.  If set to false, only the most recent secret version is deleted.",
 			},
 			"data": {
 				Type:        schema.TypeMap,
