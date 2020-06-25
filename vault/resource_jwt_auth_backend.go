@@ -241,6 +241,18 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("accessor", backend.Accessor)
 	for _, configOption := range matchingJwtMountConfigOptions {
+		// The oidc_client_secret is sensitive so it will not be in the response
+		// Our options are to always assume it must be updated or always assume it
+		//  matches our current state. This assumes it always matches our current
+		//  state so that HasChange isn't always true and we store the last applied
+		//  secret in the state file to know if the new secret should be applied.
+		// This does intentionally miss the edge case where the oidc_client_secret
+		//  is updated without Terraform. Since we cannot know the current state
+		//  of the oidc_secret, Terraform will show no changes necessary even if
+		//  the actual value in Vault does not match the value in state.
+		if configOption == "oidc_client_secret" {
+			continue
+		}
 		d.Set(configOption, config.Data[configOption])
 	}
 

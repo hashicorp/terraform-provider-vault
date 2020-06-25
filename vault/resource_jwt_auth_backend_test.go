@@ -63,6 +63,7 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_discovery_url", "https://myco.auth0.com/"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "bound_issuer", "api://default"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_client_id", "client"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_client_secret", "secret"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "type", "oidc"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "default_role", "api"),
 				),
@@ -155,12 +156,6 @@ resource "vault_jwt_auth_backend" "oidc" {
   path = "%s"
   type = "oidc"
   default_role = "api"
-  lifecycle {
-	ignore_changes = [
-     # Ignore changes to odic_clie_secret inside the tests
-     "oidc_client_secret"
-    ]
-  }
 }
 `, path)
 }
