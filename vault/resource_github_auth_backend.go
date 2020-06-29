@@ -221,13 +221,11 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[DEBUG] Reading github auth tune from '%q/tune'", path)
-	tune, err := client.Sys().MountConfig(path)
+	rawTune, err := authMountTuneGet(client, path)
 	if err != nil {
-		log.Printf("[ERROR] Error when reading tune config from path '%q/tune': %s", path, err)
-		return err
+		return fmt.Errorf("error reading tune information from Vault: %s", err)
 	}
 
-	rawTune := flattenAuthMethodTune(tune)
 	if err := d.Set("tune", []map[string]interface{}{rawTune}); err != nil {
 		log.Printf("[ERROR] Error when setting tune config from path '%q/tune' to state: %s", path, err)
 		return err
