@@ -4,7 +4,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/terraform-providers/terraform-provider-vault/generated/datasources/transform/decode"
 	"github.com/terraform-providers/terraform-provider-vault/generated/datasources/transform/encode"
-	"github.com/terraform-providers/terraform-provider-vault/generated/resources/auth/jwt"
 	"github.com/terraform-providers/terraform-provider-vault/generated/resources/transform/alphabet"
 	"github.com/terraform-providers/terraform-provider-vault/generated/resources/transform/role"
 	"github.com/terraform-providers/terraform-provider-vault/generated/resources/transform/template"
@@ -19,7 +18,6 @@ var DataSourceRegistry = map[string]*schema.Resource{
 
 // Please alphabetize.
 var ResourceRegistry = map[string]*schema.Resource{
-	"vault_auth_jwt_config":          jwt.ConfigResource(),
 	"vault_transform_alphabet":       alphabet.NameResource(),
 	"vault_transform_role":           role.NameResource(),
 	"vault_transform_template":       template.NameResource(),
