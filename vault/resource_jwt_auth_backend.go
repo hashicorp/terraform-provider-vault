@@ -250,7 +250,7 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading tune information from Vault: %s", err)
 	}
 	if err := d.Set("tune", []map[string]interface{}{rawTune}); err != nil {
-		log.Printf("[ERROR] Error when setting tune config from path '%q/tune' to state: %s", path, err)
+		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", path+"/tune", err)
 		return err
 	}
 
