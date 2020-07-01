@@ -95,6 +95,16 @@ func authMountTune(client *api.Client, path string, configured interface{}) erro
 	return nil
 }
 
+func authMountTuneGet(client *api.Client, path string) (map[string]interface{}, error) {
+	tune, err := client.Sys().MountConfig(path)
+	if err != nil {
+		log.Printf("[ERROR] Error when reading tune config from path %q: %s", path+"/tune", err)
+		return nil, err
+	}
+
+	return flattenAuthMethodTune(tune), nil
+}
+
 func authMountDisable(client *api.Client, path string) error {
 	log.Printf("[DEBUG] Disabling auth mount config from '%q'", path)
 	err := client.Sys().DisableAuth(path)

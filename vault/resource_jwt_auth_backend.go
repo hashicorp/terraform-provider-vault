@@ -12,6 +12,9 @@ import (
 
 func jwtAuthBackendResource() *schema.Resource {
 	return &schema.Resource{
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Create: jwtAuthBackendWrite,
 		Delete: jwtAuthBackendDelete,
 		Read:   jwtAuthBackendRead,
@@ -201,6 +204,15 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	path := getJwtPath(d)
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
 
+	if path == "" {
+		// In v2.11.0 and prior, path was not read and so not set in the state.
+		// if path is empty here, we're likely in a import scenario where path is
+		// empty. Because path is used as the ID in the resource, if path is empty
+		// use the ID value
+		path = d.Id()
+	}
+	d.Set("path", path)
+
 	backend, err := getJwtAuthBackendIfPresent(client, path)
 
 	if err != nil {
@@ -225,9 +237,21 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
+	d.Set("type", backend.Type)
+
 	d.Set("accessor", backend.Accessor)
 	for _, configOption := range matchingJwtMountConfigOptions {
 		d.Set(configOption, config.Data[configOption])
+	}
+
+	log.Printf("[DEBUG] Reading jwt auth tune from '%q/tune'", path)
+	rawTune, err := authMountTuneGet(client, "auth/"+path)
+	if err != nil {
+		return fmt.Errorf("error reading tune information from Vault: %s", err)
+	}
+	if err := d.Set("tune", []map[string]interface{}{rawTune}); err != nil {
+		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", path+"/tune", err)
+		return err
 	}
 
 	return nil
