@@ -98,7 +98,7 @@ func authMountTune(client *api.Client, path string, configured interface{}) erro
 func authMountTuneGet(client *api.Client, path string) (map[string]interface{}, error) {
 	tune, err := client.Sys().MountConfig(path)
 	if err != nil {
-		log.Printf("[ERROR] Error when reading tune config from path '%q/tune': %s", path, err)
+		log.Printf("[ERROR] Error when reading tune config from path %q: %s", path+"/tune", err)
 		return nil, err
 	}
 
