@@ -7,6 +7,8 @@ FEATURES:
 IMPROVEMENTS:
 
 * resource/vault_mount: Adds support for the `external_entropy_access` field ([#792](https://github.com/terraform-providers/terraform-provider-vault/pull/792)).
+* resource/vault_jwt_auth_backend: enable existing JWT Auth backends to be imported ([#806](https://github.com/terraform-providers/terraform-provider-vault/pull/806)).
+* resource/vault_jwt_auth_backend: store `type` and `tune` information in state ([#806](https://github.com/terraform-providers/terraform-provider-vault/pull/806)).
 
 ## 2.11.0 (May 21, 2020)
 
