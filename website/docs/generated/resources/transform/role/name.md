@@ -29,7 +29,8 @@ resource "vault_transform_role" "test" {
 
 ## Argument Reference
 
-The following arguments are supported:
+The following arguments are supported:  
+
 * `path` - (Required) Path to where the back-end is mounted within Vault.
 * `name` - (Required) The name of the role.
 * `transformations` - (Optional) A comma separated string or slice of transformations to use.

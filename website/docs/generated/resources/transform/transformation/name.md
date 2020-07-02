@@ -32,7 +32,8 @@ resource "vault_transform_transformation" "test" {
 
 ## Argument Reference
 
-The following arguments are supported:
+The following arguments are supported:  
+
 * `path` - (Required) Path to where the back-end is mounted within Vault.
 * `allowed_roles` - (Optional) The set of roles allowed to perform this transformation.
 * `masking_character` - (Optional) The character used to replace data when in masking mode

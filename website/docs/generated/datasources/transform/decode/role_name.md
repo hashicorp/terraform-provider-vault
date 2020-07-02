@@ -42,6 +42,7 @@ data "vault_transform_decode_role" "test" {
 ## Argument Reference
 
 The following arguments are supported:
+
 * `path` - (Required) Path to where the back-end is mounted within Vault.
 * `batch_input` - (Optional) Specifies a list of items to be decoded in a single batch. If this parameter is set, the top-level parameters 'value', 'transformation' and 'tweak' will be ignored. Each batch item within the list can specify these parameters instead.
 * `batch_results` - (Optional) The result of decoding a batch.
