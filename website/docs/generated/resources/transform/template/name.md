@@ -42,7 +42,8 @@ resource "vault_transform_template" "test" {
 
 ## Argument Reference
 
-The following arguments are supported:
+The following arguments are supported: 
+
 * `path` - (Required) Path to where the back-end is mounted within Vault.
 * `alphabet` - (Optional) The alphabet to use for this template. This is only used during FPE transformations.
 * `name` - (Required) The name of the template.
