@@ -42,6 +42,7 @@ data "vault_transform_encode_role" "test" {
 ## Argument Reference
 
 The following arguments are supported:
+
 * `path` - (Required) Path to where the back-end is mounted within Vault.
 * `batch_input` - (Optional) Specifies a list of items to be encoded in a single batch. If this parameter is set, the parameters 'value', 'transformation' and 'tweak' will be ignored. Each batch item within the list can specify these parameters instead.
 * `batch_results` - (Optional) The result of encoding a batch.
