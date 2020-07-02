@@ -1,12 +1,12 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_transform_template_name resource"
-sidebar_current: "docs-vault-resource-transform-template-name"
+page_title: "Vault: vault_transform_template resource"
+sidebar_current: "docs-vault-resource-transform-template"
 description: |-
   "/transform/template/{name}"
 ---
 
-# vault\_transform\_template\_name
+# vault\_transform\_template
 
 This resource supports the "/transform/template/{name}" Vault endpoint.
 
@@ -26,13 +26,13 @@ resource "vault_mount" "transform" {
   path = "transform"
   type = "transform"
 }
-resource "vault_transform_alphabet_name" "numerics" {
+resource "vault_transform_alphabet" "numerics" {
   path = vault_mount.transform.path
   name = "numerics"
   alphabet = "0123456789"
 }
-resource "vault_transform_template_name" "test" {
-  path = vault_transform_alphabet_name.numerics.path
+resource "vault_transform_template" "test" {
+  path = vault_transform_alphabet.numerics.path
   name = "ccn"
   type = "regex"
   pattern = "(\\d{4})-(\\d{4})-(\\d{4})-(\\d{4})"

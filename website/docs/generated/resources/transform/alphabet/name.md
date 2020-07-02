@@ -1,12 +1,12 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_transform_alphabet_name resource"
-sidebar_current: "docs-vault-resource-transform-alphabet-name"
+page_title: "Vault: vault_transform_alphabet resource"
+sidebar_current: "docs-vault-resource-transform-alphabet"
 description: |-
   "/transform/alphabet/{name}"
 ---
 
-# vault\_transform\_alphabet\_name
+# vault\_transform\_alphabet
 
 This resource supports the "/transform/alphabet/{name}" Vault endpoint.
 
@@ -20,7 +20,7 @@ resource "vault_mount" "mount_transform" {
   type = "transform"
 }
 
-resource "vault_transform_alphabet_name" "test" {
+resource "vault_transform_alphabet" "test" {
   path = vault_mount.mount_transform.path
   name = "numerics"
   alphabet = "0123456789"

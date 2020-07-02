@@ -1,12 +1,12 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_transform_encode_role_name data source"
+page_title: "Vault: vault_transform_encode data source"
 sidebar_current: "docs-vault-datasource-transform-encode"
 description: |-
   "/transform/encode/{role_name}"
 ---
 
-# vault\_transform\_encode\_role\_name
+# vault\_transform\_encode
 
 This data source supports the "/transform/encode/{role_name}" Vault endpoint.
 
@@ -19,7 +19,7 @@ resource "vault_mount" "transform" {
   path = "transform"
   type = "transform"
 }
-resource "vault_transform_transformation_name" "ccn-fpe" {
+resource "vault_transform_transformation" "ccn-fpe" {
   path = vault_mount.transform.path
   name = "ccn-fpe"
   type = "fpe"
@@ -27,13 +27,13 @@ resource "vault_transform_transformation_name" "ccn-fpe" {
   tweak_source = "internal"
   allowed_roles = ["payments"]
 }
-resource "vault_transform_role_name" "payments" {
-  path = vault_transform_transformation_name.ccn-fpe.path
+resource "vault_transform_role" "payments" {
+  path = vault_transform_transformation.ccn-fpe.path
   name = "payments"
   transformations = ["ccn-fpe"]
 }
-data "vault_transform_encode_role_name" "test" {
-    path      = vault_transform_role_name.payments.path
+data "vault_transform_encode_role" "test" {
+    path      = vault_transform_role.payments.path
     role_name = "payments"
     batch_input = [{"value":"1111-2222-3333-4444"}]
 }

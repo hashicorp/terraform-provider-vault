@@ -1,12 +1,12 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_transform_role_name resource"
-sidebar_current: "docs-vault-resource-transform-role-name"
+page_title: "Vault: vault_transform_role resource"
+sidebar_current: "docs-vault-resource-transform-role"
 description: |-
   "/transform/role/{name}"
 ---
 
-# vault\_transform\_role\_name
+# vault\_transform\_role
 
 This resource supports the "/transform/role/{name}" Vault endpoint.
 
@@ -20,7 +20,7 @@ resource "vault_mount" "mount_transform" {
   path = "transform"
   type = "transform"
 }
-resource "vault_transform_role_name" "test" {
+resource "vault_transform_role" "test" {
   path = vault_mount.mount_transform.path
   name = "payments"
   transformations = ["ccn-fpe"]
