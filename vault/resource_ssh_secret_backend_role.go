@@ -107,6 +107,11 @@ func sshSecretBackendRoleResource() *schema.Resource {
 				Type:     schema.TypeMap,
 				Optional: true,
 			},
+			"algorithm_signer": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "ssh-rsa",
+			},
 			"max_ttl": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -178,6 +183,10 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		data["allowed_user_key_lengths"] = v
 	}
 
+	if v, ok := d.GetOk("algorithm_signer"); ok {
+		data["algorithm_signer"] = v.(string)
+	}
+
 	if v, ok := d.GetOk("max_ttl"); ok {
 		data["max_ttl"] = v.(string)
 	}
@@ -247,6 +256,10 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("allowed_user_key_lengths", role.Data["allowed_user_key_lengths"])
 	d.Set("max_ttl", role.Data["max_ttl"])
 	d.Set("ttl", role.Data["ttl"])
+
+	if v, ok := role.Data["algorithm_signer"]; ok {
+		d.Set("algorithm_signer", v.(string))
+	}
 
 	return nil
 }
