@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/mutexkv"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/config"
 )
@@ -35,7 +34,7 @@ const (
 // The key of the mutex should be the path in Vault.
 var vaultMutexKV = mutexkv.NewMutexKV()
 
-func Provider() terraform.ResourceProvider {
+func Provider() *schema.Provider {
 	dataSourcesMap, err := parse(DataSourceRegistry)
 	if err != nil {
 		panic(err)
@@ -271,7 +270,7 @@ var (
 			},
 		},
 		"vault_auth_backend": {
-			Resource:      authBackendResource(),
+			Resource:      AuthBackendResource(),
 			PathInventory: []string{"/sys/auth/{path}"},
 		},
 		"vault_token": {
@@ -462,7 +461,7 @@ var (
 			EnterpriseOnly: true,
 		},
 		"vault_mount": {
-			Resource:      mountResource(),
+			Resource:      MountResource(),
 			PathInventory: []string{"/sys/mounts/{path}"},
 		},
 		"vault_namespace": {
