@@ -159,7 +159,7 @@ func tokenResource() *schema.Resource {
 			"metadata": {
 				Type:        schema.TypeMap,
 				Optional:    true,
-				ForceNew:	 true,
+				ForceNew:    true,
 				Description: "Metadata to be associated with the token.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -362,6 +362,8 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error parsing expire_time: %s", err)
 	}
 	d.Set("lease_duration", int(expireTime.Sub(issueTime).Seconds()))
+
+	d.Set("metadata", resp.Data["meta"])
 
 	if d.Get("renewable").(bool) && tokenCheckLease(d) {
 		if id == "" {
