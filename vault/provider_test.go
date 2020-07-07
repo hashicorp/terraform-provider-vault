@@ -175,7 +175,7 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 }
 
 func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
-	rootProvider := Provider().(*schema.Provider)
+	rootProvider := Provider()
 
 	rootProviderResource := &schema.Resource{
 		Schema: rootProvider.Schema,
