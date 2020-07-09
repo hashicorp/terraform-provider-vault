@@ -20,8 +20,8 @@ resource "vault_github_auth_backend" "example" {
 }
 
 resource "vault_github_user" "tf_user" {
-  backend        = vault_github_auth_backend.example.id
-  user           = "john.doe"
+  backend  = vault_github_auth_backend.example.id
+  user     = "john.doe"
   policies = ["developer", "read-only"]
 }
 ```
