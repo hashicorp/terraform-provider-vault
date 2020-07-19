@@ -168,10 +168,44 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			},
 
 			"mongodb": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the mongodb-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mongodb-database-plugin plugin.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"connection_url": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Connection string to use to connecto to the database.",
+						},
+						"max_open_connections": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of open connections to the database.",
+							Default:     2,
+						},
+						"max_idle_connections": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of idle connections to the database.",
+						},
+						"max_connection_lifetime": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of seconds a connection may be reused.",
+						},
+						"tls_ca": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "x509 CA file for validating the certificate presented by the MongoDB server (PEM encoded).",
+						},
+						"tls_cerificate_key": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "x509 certificate for connecting to the database (PEM encoded).",
+						},
+					},
+				},
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("mongodb", dbBackendTypes),
 			},
@@ -369,6 +403,12 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		setDatabaseConnectionData(d, "hana.0.", data)
 	case "mongodb-database-plugin":
 		setDatabaseConnectionData(d, "mongodb.0.", data)
+		if v, ok := d.GetOk("mongodb.0.tls_ca"); ok {
+			data["tls_ca"] = v.(string)
+		}
+		if v, ok := d.GetOk("mongodb.0.tls_certificate_key"); ok {
+			data["tls_certificate_key"] = v.(string)
+		}
 	case "mssql-database-plugin":
 		setDatabaseConnectionData(d, "mssql.0.", data)
 	case "mysql-database-plugin":
@@ -428,6 +468,12 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 			result["max_connection_lifetime"] = n.Seconds()
 		}
 	}
+	if v, ok := data["tls_ca"]; ok {
+		result["tls_ca"] = v.(string)
+	}
+	if v, ok := data["tls_certificate_key"]; ok {
+		result["tls_certificate_key"] = v.(string)
+	}
 	return []map[string]interface{}{result}
 }
 
@@ -471,6 +517,9 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	}
 	if v, ok := d.GetOkExists(prefix + "max_connection_lifetime"); ok {
 		data["max_connection_lifetime"] = fmt.Sprintf("%ds", v)
+	}
+	if v, ok := d.GetOkExists(prefix + "tls_ca"); ok {
+		data["tls_ca"] = v.(string)
 	}
 }
 
