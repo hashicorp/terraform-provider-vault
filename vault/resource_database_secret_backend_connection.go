@@ -518,8 +518,11 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	if v, ok := d.GetOkExists(prefix + "max_connection_lifetime"); ok {
 		data["max_connection_lifetime"] = fmt.Sprintf("%ds", v)
 	}
-	if v, ok := d.GetOkExists(prefix + "tls_ca"); ok {
+	if v, ok := d.GetOk(prefix + "tls_ca"); ok {
 		data["tls_ca"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
+		data["tls_certificate_key"] = v.(string)
 	}
 }
 
