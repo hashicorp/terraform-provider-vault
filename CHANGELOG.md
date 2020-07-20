@@ -1,4 +1,4 @@
-## 2.12.0 (Unreleased)
+## 2.12.0 (July 20, 2020)
 FEATURES:
 
 * **New Resource:** `vault_identity_group_member_entity_ids` ([#724](https://github.com/terraform-providers/terraform-provider-vault/pull/724)).
