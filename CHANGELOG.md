@@ -1,8 +1,13 @@
 ## 2.12.0 (Unreleased)
-
 FEATURES:
 
 * **New Resource:** `vault_identity_group_member_entity_ids` ([#724](https://github.com/terraform-providers/terraform-provider-vault/pull/724)).
+* **New Resource:** `vault_transform_alphabet` ([#783](https://github.com/terraform-providers/terraform-provider-vault/pull/783)).
+* **New Resource:** `vault_transform_role` ([#783](https://github.com/terraform-providers/terraform-provider-vault/pull/783)).
+* **New Resource:** `vault_transform_template` ([#783](https://github.com/terraform-providers/terraform-provider-vault/pull/783)).
+* **New Resource:** `vault_transform_transformation` ([#783](https://github.com/terraform-providers/terraform-provider-vault/pull/783)).
+* **New Data Source**: `vault_transform_encode` data source ([#783](https://github.com/terraform-providers/terraform-provider-vault/pull/783)).
+* **New Data Source**: `vault_transform_decode` data source ([#783](https://github.com/terraform-providers/terraform-provider-vault/pull/783)).
 
 IMPROVEMENTS:
 
