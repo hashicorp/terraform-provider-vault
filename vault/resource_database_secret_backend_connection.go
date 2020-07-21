@@ -173,6 +173,17 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description: "Connection parameters for the mongodb-database-plugin plugin.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"username": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The username to use when authenticating with Cassandra.",
+						},
+						"password": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The password to use when authenticating with Cassandra.",
+							Sensitive:   true,
+						},
 						"connection_url": {
 							Type:        schema.TypeString,
 							Optional:    true,
@@ -403,6 +414,12 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		setDatabaseConnectionData(d, "hana.0.", data)
 	case "mongodb-database-plugin":
 		setDatabaseConnectionData(d, "mongodb.0.", data)
+		if v, ok := d.GetOk("mongodb.0.username"); ok {
+			data["username"] = v.(string)
+		}
+		if v, ok := d.GetOk("mongodb.0.password"); ok {
+			data["password"] = v.(string)
+		}
 		if v, ok := d.GetOk("mongodb.0.tls_ca"); ok {
 			data["tls_ca"] = v.(string)
 		}
@@ -473,6 +490,13 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 	}
 	if v, ok := data["tls_certificate_key"]; ok {
 		result["tls_certificate_key"] = v.(string)
+	}
+
+	if v, ok := data["username"]; ok {
+		result["username"] = v.(string)
+	}
+	if v, ok := data["password"]; ok {
+		result["password"] = v.(string)
 	}
 	return []map[string]interface{}{result}
 }
