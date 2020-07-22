@@ -21,7 +21,7 @@ for more details.
 
 ```hcl
 resource "vault_quota_rate_limit" "global" {
-	name = "global"
+  name = "global"
   path = ""
   rate = 100
 }

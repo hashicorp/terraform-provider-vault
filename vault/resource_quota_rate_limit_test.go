@@ -69,7 +69,7 @@ func testQuotaRateLimitCheckDestroy(s *terraform.State) error {
 func testQuotaRateLimit_Config(name, path, rate string) string {
 	return fmt.Sprintf(`
 resource "vault_quota_rate_limit" "foobar" {
-	name = "%s"
+  name = "%s"
   path = "%s"
   rate = %s
 }
