@@ -81,6 +81,14 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				ConflictsWith: []string{"policy", "policy_arn"},
 				Description:   "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is 'assumed_role'",
 			},
+			"iam_groups": {
+				Type: schema.TypeSet,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Optional:    true,
+				Description: "A list of IAM group names. IAM users generated against this vault role will be added to these IAM Groups. For a credential type of assumed_role or federation_token, the policies sent to the corresponding AWS call (sts:AssumeRole or sts:GetFederation) will be the policies from each group in iam_groups combined with the policy_document and policy_arns parameters.",
+			},
 			"default_sts_ttl": {
 				Type:        schema.TypeInt,
 				Optional:    true,
@@ -127,6 +135,11 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	credentialType := d.Get("credential_type").(string)
 
+	var iamGroups []interface{}
+	if v, ok := d.GetOk("iam_groups"); ok {
+		iamGroups = v.(*schema.Set).List()
+	}
+
 	data := map[string]interface{}{
 		"credential_type": credentialType,
 	}
@@ -138,6 +151,9 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	}
 	if len(roleARNs) != 0 {
 		data["role_arns"] = roleARNs
+	}
+	if len(iamGroups) != 0 {
+		data["iam_groups"] = iamGroups
 	}
 
 	defaultStsTTL, defaultStsTTLOk := d.GetOk("default_sts_ttl")
@@ -213,6 +229,9 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	if v, ok := secret.Data["max_sts_ttl"]; ok {
 		d.Set("max_sts_ttl", v)
+	}
+	if v, ok := secret.Data["iam_groups"]; ok {
+		d.Set("iam_groups", v)
 	}
 	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
 	d.Set("name", pathPieces[len(pathPieces)-1])
