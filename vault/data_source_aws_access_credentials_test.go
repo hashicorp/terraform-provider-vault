@@ -19,19 +19,21 @@ import (
 func TestAccDataSourceAWSAccessCredentials_basic(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := getTestAWSCreds(t)
+	region := getTestAWSRegion(t)
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceAWSAccessCredentialsConfig_basic(mountPath, accessKey, secretKey),
+				Config: testAccDataSourceAWSAccessCredentialsConfig_basic(mountPath, accessKey, secretKey, region),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "access_key"),
 					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
 					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "security_token", ""),
 					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "creds"),
 					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "lease_id"),
-					testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(),
+					testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region),
 				),
 			},
 		},
@@ -41,6 +43,7 @@ func TestAccDataSourceAWSAccessCredentials_basic(t *testing.T) {
 func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("aws")
 	accessKey, secretKey := getTestAWSCreds(t)
+	region := getTestAWSRegion(t)
 
 	type testCase struct {
 		config string
@@ -54,6 +57,7 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 					description = "Obtain AWS credentials."
 					access_key = "%s"
 					secret_key = "%s"
+					region = "%s"
 				}
 				
 				resource "vault_aws_secret_backend_role" "role" {
@@ -67,7 +71,7 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 					backend = "${vault_aws_secret_backend.aws.path}"
 					role = "${vault_aws_secret_backend_role.role.name}"
 					type = "sts"
-				}`, mountPath, accessKey, secretKey),
+				}`, mountPath, accessKey, secretKey, region),
 		},
 		"sts with role_arn": {
 			config: fmt.Sprintf(`
@@ -76,6 +80,7 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 					description = "Obtain AWS credentials."
 					access_key = "%s"
 					secret_key = "%s"
+					region = "%s"
 				}
 				
 				resource "vault_aws_secret_backend_role" "role" {
@@ -90,7 +95,7 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 					role     = "${vault_aws_secret_backend_role.role.name}"
 					type     = "sts"
 					role_arn = "arn:aws:iam::012345678901:role/foobar"
-				}`, mountPath, accessKey, secretKey),
+				}`, mountPath, accessKey, secretKey, region),
 		},
 	}
 
@@ -108,7 +113,7 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 							resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "security_token"),
 							resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "sts"),
 							resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "lease_id"),
-							testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(),
+							testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region),
 						),
 					},
 				},
@@ -117,13 +122,14 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 	}
 }
 
-func testAccDataSourceAWSAccessCredentialsConfig_basic(mountPath, accessKey, secretKey string) string {
+func testAccDataSourceAWSAccessCredentialsConfig_basic(mountPath, accessKey, secretKey, region string) string {
 	return fmt.Sprintf(`
 resource "vault_aws_secret_backend" "aws" {
     path = "%s"
     description = "Obtain AWS credentials."
     access_key = "%s"
     secret_key = "%s"
+	region = "%s"
 }
 
 resource "vault_aws_secret_backend_role" "role" {
@@ -137,10 +143,10 @@ data "vault_aws_access_credentials" "test" {
     backend = "${vault_aws_secret_backend.aws.path}"
     role = "${vault_aws_secret_backend_role.role.name}"
     type = "creds"
-}`, mountPath, accessKey, secretKey)
+}`, mountPath, accessKey, secretKey, region)
 }
 
-func testAccDataSourceAWSAccessCredentialsCheck_tokenWorks() resource.TestCheckFunc {
+func testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["data.vault_aws_access_credentials.test"]
 		if resourceState == nil {
@@ -160,6 +166,7 @@ func testAccDataSourceAWSAccessCredentialsCheck_tokenWorks() resource.TestCheckF
 		awsConfig := &aws.Config{
 			Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),
 			HTTPClient:  cleanhttp.DefaultClient(),
+			Region:      &region,
 		}
 		sess, err := session.NewSession(awsConfig)
 		if err != nil {
