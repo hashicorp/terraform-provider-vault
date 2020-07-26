@@ -180,6 +180,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "ttl", "1h"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "min_seconds_remaining", "3595"),
 					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_sign.test", "expiration"),
+					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_sign.test", "serial"),
 				),
 			},
 			{
@@ -195,6 +196,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "ttl", "1h"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "min_seconds_remaining", "3595"),
 					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_sign.test", "expiration"),
+					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_sign.test", "serial"),
 				),
 				ExpectNonEmptyPlan: true,
 			},
@@ -206,6 +208,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "ttl", "1h"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "min_seconds_remaining", "3595"),
 					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_sign.test", "expiration"),
+					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_sign.test", "serial"),
 				),
 			},
 		},

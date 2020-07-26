@@ -39,6 +39,8 @@ The following arguments are supported:
 
 * `seal_wrap` - (Optional) Boolean flag that can be explicitly set to true to enable seal wrapping for the mount, causing values stored by the mount to be wrapped by the seal's encryption capability
 
+* `external_entropy_access` - (Optional) Boolean flag that can be explicitly set to true to enable the secrets engine to access Vault's external entropy source
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:

@@ -267,7 +267,7 @@ func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta int
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("issuing_ca", resp.Data["issuing_ca"])
 	d.Set("ca_chain", resp.Data["ca_chain"])
-	d.Set("serial", resp.Data["serial"])
+	d.Set("serial", resp.Data["serial_number"])
 
 	d.SetId(fmt.Sprintf("%s/%s", backend, commonName))
 	return pkiSecretBackendRootSignIntermediateRead(d, meta)

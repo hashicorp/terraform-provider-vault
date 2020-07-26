@@ -12,6 +12,9 @@ import (
 
 func jwtAuthBackendResource() *schema.Resource {
 	return &schema.Resource{
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Create: jwtAuthBackendWrite,
 		Delete: jwtAuthBackendDelete,
 		Read:   jwtAuthBackendRead,
@@ -124,17 +127,23 @@ func jwtAuthBackendResource() *schema.Resource {
 }
 
 func jwtCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
-	var _ interface{}
-	var discUrlExists, jwksUrlExists, jwtPubKeysExists bool
-	_, discUrlExists = d.GetOk("oidc_discovery_url")
-	_, jwksUrlExists = d.GetOk("jwks_url")
-	_, jwtPubKeysExists = d.GetOk("jwt_validation_pubkeys")
-
-	if !(discUrlExists || jwksUrlExists || jwtPubKeysExists) {
-		return errors.New("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided")
+	attributes := []string{
+		"oidc_discovery_url",
+		"jwks_url",
+		"jwt_validation_pubkeys",
 	}
 
-	return nil
+	for _, attr := range attributes {
+		if !d.NewValueKnown(attr) {
+			return nil
+		}
+
+		if _, ok := d.GetOk(attr); ok {
+			return nil
+		}
+	}
+
+	return errors.New("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided")
 }
 
 var (
@@ -195,6 +204,15 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	path := getJwtPath(d)
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
 
+	if path == "" {
+		// In v2.11.0 and prior, path was not read and so not set in the state.
+		// if path is empty here, we're likely in a import scenario where path is
+		// empty. Because path is used as the ID in the resource, if path is empty
+		// use the ID value
+		path = d.Id()
+	}
+	d.Set("path", path)
+
 	backend, err := getJwtAuthBackendIfPresent(client, path)
 
 	if err != nil {
@@ -219,9 +237,21 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
+	d.Set("type", backend.Type)
+
 	d.Set("accessor", backend.Accessor)
 	for _, configOption := range matchingJwtMountConfigOptions {
 		d.Set(configOption, config.Data[configOption])
+	}
+
+	log.Printf("[DEBUG] Reading jwt auth tune from %q", path+"/tune")
+	rawTune, err := authMountTuneGet(client, "auth/"+path)
+	if err != nil {
+		return fmt.Errorf("error reading tune information from Vault: %s", err)
+	}
+	if err := d.Set("tune", []map[string]interface{}{rawTune}); err != nil {
+		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", path+"/tune", err)
+		return err
 	}
 
 	return nil
@@ -258,7 +288,7 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 				return nil
 			}
 
-			log.Printf("[INFO] Written %s auth tune to '%q'", backendType, path)
+			log.Printf("[INFO] Written %s auth tune to %q", backendType, path)
 			d.SetPartial("tune")
 		}
 	}

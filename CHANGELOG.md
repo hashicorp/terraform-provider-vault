@@ -1,8 +1,35 @@
-## 2.11.0 (Unreleased)
+## 2.12.1 (Unreleased)
+## 2.12.0 (July 20, 2020)
+FEATURES:
+
+* **New Resource:** `vault_identity_group_member_entity_ids` ([#724](https://github.com/terraform-providers/terraform-provider-vault/pull/724)).
+* **New Resource:** `vault_transform_alphabet` ([#783](https://github.com/terraform-providers/terraform-provider-vault/pull/783)).
+* **New Resource:** `vault_transform_role` ([#783](https://github.com/terraform-providers/terraform-provider-vault/pull/783)).
+* **New Resource:** `vault_transform_template` ([#783](https://github.com/terraform-providers/terraform-provider-vault/pull/783)).
+* **New Resource:** `vault_transform_transformation` ([#783](https://github.com/terraform-providers/terraform-provider-vault/pull/783)).
+* **New Data Source**: `vault_transform_encode` data source ([#783](https://github.com/terraform-providers/terraform-provider-vault/pull/783)).
+* **New Data Source**: `vault_transform_decode` data source ([#783](https://github.com/terraform-providers/terraform-provider-vault/pull/783)).
+
+IMPROVEMENTS:
+
+* resource/vault_mount: Adds support for the `external_entropy_access` field ([#792](https://github.com/terraform-providers/terraform-provider-vault/pull/792)).
+* resource/vault_jwt_auth_backend: enable existing JWT Auth backends to be imported ([#806](https://github.com/terraform-providers/terraform-provider-vault/pull/806)).
+* resource/vault_jwt_auth_backend: store `type` and `tune` information in state ([#806](https://github.com/terraform-providers/terraform-provider-vault/pull/806)).
+
+## 2.11.0 (May 21, 2020)
+
+IMPROVEMENTS:
+
+* Add `headers` provider configuration setting to allow setting HTTP headers for all requests to the Vault server ([#730](https://github.com/terraform-providers/terraform-provider-vault/pull/730)).
 
 BUG FIXES:
 
+* `vault_jwt_auth_backend`: Fix plan error when `oidc_discovery_url`, `jwks_url`, or `jwt_validation_pubkeys` is set to a value that is not known until apply time ([#753](https://github.com/terraform-providers/terraform-provider-vault/pull/753)).
+* `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign`: Fix `serial` field ([#761](https://github.com/terraform-providers/terraform-provider-vault/pull/761)).
+* `vault_token`: Avoid panic when `vault_token` is gone from the server ([#740](https://github.com/terraform-providers/terraform-provider-vault/pull/740)).
 * `vault_approle_auth_backend_role`: Fix perpetual diff when `policies` and `period` are updated to be `token_policies` and `token_period` ([#744](https://github.com/terraform-providers/terraform-provider-vault/pull/744)).
+* `vault_jwt_auth_backend_role`: Fix crash when `bound_audiences` is empty ([#763](https://github.com/terraform-providers/terraform-provider-vault/pull/763)).
+* `vault_identity_group`: Fix removal of `policies`, `member_group_ids`, and `member_entity_ids` ([#766](https://github.com/terraform-providers/terraform-provider-vault/pull/766)).
 
 ## 2.10.0 (April 03, 2020)
 

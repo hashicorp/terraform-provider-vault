@@ -73,16 +73,6 @@ func identityGroupResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Description: "Group IDs to be assigned as group members.",
-			},
-
-			"member_entity_ids": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				Computed: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Description: "Entity IDs to be assigned as group members.",
 				// Suppress the diff if group type is "external" because we cannot manage
 				// group members
 				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
@@ -91,6 +81,30 @@ func identityGroupResource() *schema.Resource {
 					}
 					return false
 				},
+			},
+
+			"member_entity_ids": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Entity IDs to be assigned as group members.",
+				// Suppress the diff if group type is "external" because we cannot manage
+				// group members
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					if d.Get("type").(string) == "external" || d.Get("external_member_entity_ids").(bool) == true {
+						return true
+					}
+					return false
+				},
+			},
+
+			"external_member_entity_ids": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Manage member entities externally through `vault_identity_group_policies_member_entity_ids`",
 			},
 		},
 	}
@@ -102,17 +116,16 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 	}
 
 	if externalPolicies, ok := d.GetOk("external_policies"); !(ok && externalPolicies.(bool)) {
-		if policies, ok := d.GetOk("policies"); ok {
-			data["policies"] = policies.(*schema.Set).List()
+		data["policies"] = d.Get("policies").(*schema.Set).List()
+	}
+
+	// Member groups and entities can't be set for external groups
+	if d.Get("type").(string) == "internal" {
+		data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
+
+		if externalMemberEntityIds, ok := d.GetOk("external_member_entity_ids"); !(ok && externalMemberEntityIds.(bool)) {
+			data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
 		}
-	}
-
-	if memberEntityIDs, ok := d.GetOk("member_entity_ids"); ok && d.Get("type").(string) == "internal" {
-		data["member_entity_ids"] = memberEntityIDs.(*schema.Set).List()
-	}
-
-	if memberGroupIDs, ok := d.GetOk("member_group_ids"); ok {
-		data["member_group_ids"] = memberGroupIDs.(*schema.Set).List()
 	}
 
 	if metadata, ok := d.GetOk("metadata"); ok {
@@ -259,6 +272,21 @@ func readIdentityGroupPolicies(client *api.Client, groupID string) ([]interface{
 	}
 
 	if v, ok := resp.Data["policies"]; ok && v != nil {
+		return v.([]interface{}), nil
+	}
+	return make([]interface{}, 0), nil
+}
+
+func readIdentityGroupMemberEntityIds(client *api.Client, groupID string) ([]interface{}, error) {
+	resp, err := readIdentityGroup(client, groupID)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("error IdentityGroup %s does not exist", groupID)
+	}
+
+	if v, ok := resp.Data["member_entity_ids"]; ok && v != nil {
 		return v.([]interface{}), nil
 	}
 	return make([]interface{}, 0), nil

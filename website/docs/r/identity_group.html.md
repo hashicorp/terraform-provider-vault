@@ -54,11 +54,13 @@ The following arguments are supported:
 
 * `metadata` - (Optional) A Map of additional metadata to associate with the group.
 
-* `member_group_ids` - (Optional) A list of Group IDs to be assigned as group members.
+* `member_group_ids` - (Optional) A list of Group IDs to be assigned as group members. Not allowed on `external` groups.
 
 * `member_entity_ids` - (Optional) A list of Entity IDs to be assigned as group members. Not allowed on `external` groups.
 
-* `external_policies` - (Optional) `false` by default. If set to `true`, this resource will ignore any policies return from Vault or specified in the resource. You can use [`vault_identity_group_policies`](identity_group_policies.html) to manage policies for this group in a decoupled manner.
+* `external_policies` - (Optional) `false` by default. If set to `true`, this resource will ignore any policies returned from Vault or specified in the resource. You can use [`vault_identity_group_policies`](identity_group_policies.html) to manage policies for this group in a decoupled manner.
+
+* `external_member_entity_ids` - (Optional) `false` by default. If set to `true`, this resource will ignore any Entity IDs returned from Vault or specified in the resource. You can use [`vault_identity_group_member_entity_ids`](identity_group_member_entity_ids.html) to manage Entity IDs for this group in a decoupled manner.
 
 ## Attributes Reference
 

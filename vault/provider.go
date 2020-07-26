@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/mutexkv"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/config"
 )
@@ -34,7 +34,7 @@ const (
 // The key of the mutex should be the path in Vault.
 var vaultMutexKV = mutexkv.NewMutexKV()
 
-func Provider() terraform.ResourceProvider {
+func Provider() *schema.Provider {
 	dataSourcesMap, err := parse(DataSourceRegistry)
 	if err != nil {
 		panic(err)
@@ -157,6 +157,26 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
 				Description: "The namespace to use. Available only for Vault Enterprise",
 			},
+			"headers": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "The headers to send with each Vault request.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The header name",
+						},
+						"value": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The header value",
+						},
+					},
+				},
+			},
 		},
 		ConfigureFunc:  providerConfigure,
 		DataSourcesMap: dataSourcesMap,
@@ -250,7 +270,7 @@ var (
 			},
 		},
 		"vault_auth_backend": {
-			Resource:      authBackendResource(),
+			Resource:      AuthBackendResource(),
 			PathInventory: []string{"/sys/auth/{path}"},
 		},
 		"vault_token": {
@@ -441,7 +461,7 @@ var (
 			EnterpriseOnly: true,
 		},
 		"vault_mount": {
-			Resource:      mountResource(),
+			Resource:      MountResource(),
 			PathInventory: []string{"/sys/mounts/{path}"},
 		},
 		"vault_namespace": {
@@ -480,6 +500,10 @@ var (
 		"vault_identity_group_alias": {
 			Resource:      identityGroupAliasResource(),
 			PathInventory: []string{"/identity/group-alias"},
+		},
+		"vault_identity_group_member_entity_ids": {
+			Resource:      identityGroupMemberEntityIdsResource(),
+			PathInventory: []string{"/identity/group/id/{id}"},
 		},
 		"vault_identity_group_policies": {
 			Resource:      identityGroupPoliciesResource(),
@@ -648,6 +672,21 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
 	}
+	// Set headers if provided
+	headers := d.Get("headers").([]interface{})
+	parsedHeaders := client.Headers().Clone()
+
+	if parsedHeaders == nil {
+		parsedHeaders = make(http.Header)
+	}
+
+	for _, h := range headers {
+		header := h.(map[string]interface{})
+		if name, ok := header["name"]; ok {
+			parsedHeaders.Add(name.(string), header["value"].(string))
+		}
+	}
+	client.SetHeaders(parsedHeaders)
 
 	client.SetMaxRetries(d.Get("max_retries").(int))
 

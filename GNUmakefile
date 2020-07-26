@@ -16,6 +16,15 @@ test: fmtcheck
 testacc: fmtcheck
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
 
+dev: fmtcheck
+	go build -o terraform-provider-vault
+	mv terraform-provider-vault ~/.terraform.d/plugins/
+
+generate:
+	result=$(cd generated && find . -type f -not -name '*_test.go' | grep -v 'registry.go' | xargs rm && cd - )
+	go run cmd/generate/main.go -openapi-doc=testdata/openapi.json
+	make fmt
+
 vet:
 	@echo "go vet ."
 	@go vet $$(go list ./... | grep -v vendor/) ; if [ $$? -eq 1 ]; then \
