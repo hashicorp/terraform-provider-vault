@@ -156,7 +156,7 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	d.Set("lease_renewable", secret.Renewable)
 
 	rootPath := backend + "/config/root"
-	regionData, err := client.Logical().ReadWithData(rootPath, data)
+	regionData, err := client.Logical().Read(rootPath)
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
