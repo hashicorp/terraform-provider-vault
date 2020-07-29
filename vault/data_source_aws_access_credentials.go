@@ -155,9 +155,17 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	d.Set("lease_start_time", time.Now().Format(time.RFC3339))
 	d.Set("lease_renewable", secret.Renewable)
 
+	rootPath := backend + "/config/root"
+	regionData, err := client.Logical().Read(rootPath)
+	if err != nil {
+		return fmt.Errorf("error reading from Vault: %s", err)
+	}
+	region := regionData.Data["region"].(string)
+
 	awsConfig := &aws.Config{
 		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),
 		HTTPClient:  cleanhttp.DefaultClient(),
+		Region:      &region,
 	}
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
