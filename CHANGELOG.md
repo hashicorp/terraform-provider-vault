@@ -1,4 +1,9 @@
 ## 2.12.1 (Unreleased)
+
+BUG FIXES:
+
+* `data.vault_aws_access_credentials`: Add support for passing region information stored in Vault backend to AWS Config ([#832](https://github.com/terraform-providers/terraform-provider-vault/pull/832))
+
 ## 2.12.0 (July 20, 2020)
 FEATURES:
 
