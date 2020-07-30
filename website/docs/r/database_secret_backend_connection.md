@@ -73,6 +73,8 @@ The following arguments are supported:
 
 * `postgresql` - (Optional) A nested block containing configuration options for PostgreSQL connections.
 
+* `redshift` - (Optional) A nested block containing configuration options for Redshift connections.
+
 * `oracle` - (Optional) A nested block containing configuration options for Oracle connections.
 
 * `elasticsearch` - (Optional) A nested block containing configuration options for Elasticsearch connections.
@@ -165,6 +167,22 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `connection_url` - (Required) A URL containing connection information. See
   the [Vault
   docs](https://www.vaultproject.io/api-docs/secret/databases/postgresql.html#sample-payload)
+  for an example.
+
+* `max_open_connections` - (Optional) The maximum number of open connections to
+  use.
+
+* `max_idle_connections` - (Optional) The maximum number of idle connections to
+  maintain.
+
+* `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
+  a connection alive for.
+
+### Redshift Configuration Options
+
+* `connection_url` - (Required) A URL containing connection information. See
+  the [Vault
+  docs](https://www.vaultproject.io/api-docs/secret/databases/redshift.html#sample-payload)
   for an example.
 
 * `max_open_connections` - (Optional) The maximum number of open connections to

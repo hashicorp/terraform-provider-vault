@@ -16,7 +16,7 @@ import (
 var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
-	dbBackendTypes                                      = []string{"cassandra", "hana", "mongodb", "mssql", "mysql", "mysql_rds", "mysql_aurora", "mysql_legacy", "postgresql", "oracle", "elasticsearch"}
+	dbBackendTypes                                      = []string{"cassandra", "hana", "mongodb", "mssql", "mysql", "mysql_rds", "mysql_aurora", "mysql_legacy", "postgresql", "redshift", "oracle", "elasticsearch"}
 )
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
@@ -236,6 +236,15 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith("postgresql", dbBackendTypes),
 			},
 
+			"redshift": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				Description:   "Connection parameters for the redshift-database-plugin plugin.",
+				Elem:          connectionStringResource(),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith("redshift", dbBackendTypes),
+			},
+
 			"oracle": {
 				Type:          schema.TypeList,
 				Optional:      true,
@@ -309,6 +318,8 @@ func getDatabasePluginName(d *schema.ResourceData) (string, error) {
 		return "oracle-database-plugin", nil
 	case len(d.Get("postgresql").([]interface{})) > 0:
 		return "postgresql-database-plugin", nil
+	case len(d.Get("redshift").([]interface{})) > 0:
+		return "redshift-database-plugin", nil
 	case len(d.Get("elasticsearch").([]interface{})) > 0:
 		return "elasticsearch-database-plugin", nil
 	default:
@@ -383,6 +394,8 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		setDatabaseConnectionData(d, "oracle.0.", data)
 	case "postgresql-database-plugin":
 		setDatabaseConnectionData(d, "postgresql.0.", data)
+	case "redshift-database-plugin":
+		setDatabaseConnectionData(d, "redshift.0.", data)
 	case "elasticsearch-database-plugin":
 		setElasticsearchDatabaseConnectionData(d, "elasticsearch.0.", data)
 	}
@@ -638,6 +651,8 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		d.Set("oracle", getConnectionDetailsFromResponse(d, "oracle.0.", resp))
 	case "postgresql-database-plugin":
 		d.Set("postgresql", getConnectionDetailsFromResponse(d, "postgresql.0.", resp))
+	case "redshift-database-plugin":
+		d.Set("redshift", getConnectionDetailsFromResponse(d, "redshift.0.", resp))
 	case "elasticsearch-database-plugin":
 		d.Set("elasticsearch", getElasticsearchConnectionDetailsFromResponse(d, "elasticsearch.0.", resp))
 	}
