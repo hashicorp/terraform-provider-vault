@@ -1,4 +1,9 @@
 ## 2.12.2 (Unreleased)
+
+BUG FIXES:
+
+* `data.vault_aws_access_credentials`: Revert [#832](https://github.com/terraform-providers/terraform-provider-vault/pull/832), which inadvertently introduced issues when the token policy did not have the required permissions to read the root configuration. ([#837](https://github.com/terraform-providers/terraform-provider-vault/pull/837))
+
 ## 2.12.1 (July 30, 2020)
 
 BUG FIXES:
