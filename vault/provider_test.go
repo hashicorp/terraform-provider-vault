@@ -79,14 +79,6 @@ func getTestAWSCreds(t *testing.T) (string, string) {
 	return accessKey, secretKey
 }
 
-func getTestAWSRegion(t *testing.T) string {
-	region := os.Getenv("AWS_DEFAULT_REGION")
-	if region == "" {
-		t.Skip("AWS_DEFAULT_REGION not set")
-	}
-	return region
-}
-
 type azureTestConf struct {
 	SubscriptionID, TenantID, ClientID, ClientSecret, Scope string
 }
