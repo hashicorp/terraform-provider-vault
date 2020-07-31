@@ -1,4 +1,4 @@
-## 2.12.2 (Unreleased)
+## 2.12.2 (July 31, 2020)
 
 BUG FIXES:
 
