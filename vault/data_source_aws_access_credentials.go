@@ -69,6 +69,12 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 				Optional:    true,
 				Description: "ARN to use if multiple are available in the role. Required if the role has multiple ARNs.",
 			},
+			"region": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "us-east-1",
+				Description: "Region the read credentials belong to.",
+			},
 			"access_key": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -120,6 +126,7 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	backend := d.Get("backend").(string)
 	credType := d.Get("type").(string)
 	role := d.Get("role").(string)
+	region := d.Get("region").(string)
 	path := backend + "/" + credType + "/" + role
 
 	arn := d.Get("role_arn").(string)
@@ -154,13 +161,6 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	d.Set("lease_duration", secret.LeaseDuration)
 	d.Set("lease_start_time", time.Now().Format(time.RFC3339))
 	d.Set("lease_renewable", secret.Renewable)
-
-	rootPath := backend + "/config/root"
-	regionData, err := client.Logical().Read(rootPath)
-	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
-	}
-	region := regionData.Data["region"].(string)
 
 	awsConfig := &aws.Config{
 		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),

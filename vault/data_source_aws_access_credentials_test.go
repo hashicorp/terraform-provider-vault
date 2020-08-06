@@ -71,6 +71,7 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 					backend = "${vault_aws_secret_backend.aws.path}"
 					role = "${vault_aws_secret_backend_role.role.name}"
 					type = "sts"
+					region = "${vault_aws_secret_backend.aws.region}"
 				}`, mountPath, accessKey, secretKey, region),
 		},
 		"sts with role_arn": {
@@ -95,6 +96,7 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 					role     = "${vault_aws_secret_backend_role.role.name}"
 					type     = "sts"
 					role_arn = "arn:aws:iam::012345678901:role/foobar"
+					region = "${vault_aws_secret_backend.aws.region}"
 				}`, mountPath, accessKey, secretKey, region),
 		},
 	}
@@ -143,6 +145,7 @@ data "vault_aws_access_credentials" "test" {
     backend = "${vault_aws_secret_backend.aws.path}"
     role = "${vault_aws_secret_backend_role.role.name}"
     type = "creds"
+	region = "${vault_aws_secret_backend.aws.region}"
 }`, mountPath, accessKey, secretKey, region)
 }
 
