@@ -72,7 +72,6 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 			"region": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Default:     "us-east-1",
 				Description: "Region the read credentials belong to.",
 			},
 			"access_key": {
@@ -126,7 +125,6 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	backend := d.Get("backend").(string)
 	credType := d.Get("type").(string)
 	role := d.Get("role").(string)
-	region := d.Get("region").(string)
 	path := backend + "/" + credType + "/" + role
 
 	arn := d.Get("role_arn").(string)
@@ -165,8 +163,13 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	awsConfig := &aws.Config{
 		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),
 		HTTPClient:  cleanhttp.DefaultClient(),
-		Region:      &region,
 	}
+
+	region := d.Get("region").(string)
+	if region != "" {
+		awsConfig.Region = &region
+	}
+
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
 		return fmt.Errorf("error creating AWS session: %s", err)
