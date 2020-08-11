@@ -33,12 +33,14 @@ func genericSecretDataSource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "JSON-encoded secret data read from Vault.",
+				Sensitive:   true,
 			},
 
 			"data": {
 				Type:        schema.TypeMap,
 				Computed:    true,
 				Description: "Map of strings read from Vault.",
+				Sensitive:   true,
 			},
 
 			"lease_id": {
