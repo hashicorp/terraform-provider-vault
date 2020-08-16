@@ -257,7 +257,7 @@ resource "vault_aws_secret_backend_role" "test_policy_inline" {
 resource "vault_aws_secret_backend_role" "test_policy_arns" {
   name = "%s-policy-arn"
   policy_arns = ["%s"]
-	credential_type = "iam_user"
+  credential_type = "iam_user"
   iam_groups = ["group1", "group2"]
   backend = "${vault_aws_secret_backend.test.path}"
 }
@@ -268,14 +268,14 @@ resource "vault_aws_secret_backend_role" "test_policy_inline_and_arns" {
   policy_arns = ["%s"]
   credential_type = "iam_user"
   iam_groups = ["group1", "group2"]
-	backend = "${vault_aws_secret_backend.test.path}"
+  backend = "${vault_aws_secret_backend.test.path}"
 }
 
 resource "vault_aws_secret_backend_role" "test_role_arns" {
 	name = "%s-role-arns"
 	role_arns = ["%s"]
 	credential_type = "assumed_role"
-  iam_groups = ["group1", "group2"]
+	iam_groups = ["group1", "group2"]
 	backend = "${vault_aws_secret_backend.test.path}"
 }
 `, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_updated, name, testAccAWSSecretBackendRolePolicyArn_updated, name, testAccAWSSecretBackendRolePolicyInline_updated, testAccAWSSecretBackendRolePolicyArn_updated, name, testAccAWSSecretBackendRoleRoleArn_updated)
