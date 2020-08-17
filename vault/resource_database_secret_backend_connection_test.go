@@ -139,6 +139,41 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
+	public_key := os.Getenv("MONGODB_ATLAS_PUBLIC_KEY")
+	if public_key == "" {
+		t.Skip("MONGODB_ATLAS_PUBLIC_KEY not set")
+	}
+
+	private_key := os.Getenv("MONGODB_ATLAS_PRIVATE_KEY")
+	project_id := os.Getenv("MONGODB_ATLAS_PROJECT_ID")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_mongodbatlas(name, backend, public_key, private_key, project_id),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.#", "1"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "verify_connection", "true"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mongodbatlas.0.public_key", public_key),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mongodbatlas.0.private_key", private_key),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mongodbatlas.0.project_id", project_id),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
 	connURL := os.Getenv("MONGODB_URL")
 	if connURL == "" {
@@ -575,6 +610,28 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, host, username, password)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_mongodbatlas(name, path, public_key, private_key, project_id string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = "${vault_mount.db.path}"
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  mongodbatlas {
+    public_key  = "%s"
+    private_key = "%s"
+    project_id  = "%s"
+  }
+}
+`, path, name, public_key, private_key, project_id)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_mongodb(name, path, connURL string) string {
