@@ -69,6 +69,11 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 				Optional:    true,
 				Description: "ARN to use if multiple are available in the role. Required if the role has multiple ARNs.",
 			},
+			"region": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Region the read credentials belong to.",
+			},
 			"access_key": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -159,6 +164,12 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
+
+	region := d.Get("region").(string)
+	if region != "" {
+		awsConfig.Region = &region
+	}
+
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
 		return fmt.Errorf("error creating AWS session: %s", err)
