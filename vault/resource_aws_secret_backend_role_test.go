@@ -43,6 +43,17 @@ func TestAccAWSSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "name", fmt.Sprintf("%s-role-arns", name)),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "backend", backend),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "role_arns.3970977939", testAccAWSSecretBackendRoleRoleArn_basic),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "name", fmt.Sprintf("%s-remove-attributes-assumed-role", name)),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "default_sts_ttl", "600"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "max_sts_ttl", "1200"),
+					util.TestCheckResourceAttrJSON("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "policy_document", testAccAWSSecretBackendRolePolicyInline_basic),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "policy_arns.320240204", testAccAWSSecretBackendRolePolicyArn_basic),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "role_arns.3970977939", testAccAWSSecretBackendRoleRoleArn_basic),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_iam_user", "name", fmt.Sprintf("%s-remove-attributes-iam-user", name)),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_iam_user", "backend", backend),
+					util.TestCheckResourceAttrJSON("vault_aws_secret_backend_role.test_remove_attributes_iam_user", "policy_document", testAccAWSSecretBackendRolePolicyInline_basic),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_iam_user", "policy_arns.320240204", testAccAWSSecretBackendRolePolicyArn_basic),
 				),
 			},
 			{
@@ -63,6 +74,15 @@ func TestAccAWSSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "name", fmt.Sprintf("%s-role-arns", name)),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "backend", backend),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "role_arns.2518714066", testAccAWSSecretBackendRoleRoleArn_updated),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "name", fmt.Sprintf("%s-remove-attributes-assumed-role", name)),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "default_sts_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "max_sts_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "policy_document", ""),
+					resource.TestCheckNoResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "policy_arns"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_iam_user", "name", fmt.Sprintf("%s-remove-attributes-iam-user", name)),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_iam_user", "backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_iam_user", "policy_document", ""),
 				),
 			},
 		},
@@ -145,6 +165,17 @@ func TestAccAWSSecretBackendRole_nested(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "name", fmt.Sprintf("%s-role-arns", name)),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "backend", backend),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "role_arns.3970977939", testAccAWSSecretBackendRoleRoleArn_basic),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "name", fmt.Sprintf("%s-remove-attributes-assumed-role", name)),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "default_sts_ttl", "600"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "max_sts_ttl", "1200"),
+					util.TestCheckResourceAttrJSON("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "policy_document", testAccAWSSecretBackendRolePolicyInline_basic),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "policy_arns.320240204", testAccAWSSecretBackendRolePolicyArn_basic),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "role_arns.3970977939", testAccAWSSecretBackendRoleRoleArn_basic),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_iam_user", "name", fmt.Sprintf("%s-remove-attributes-iam-user", name)),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_iam_user", "backend", backend),
+					util.TestCheckResourceAttrJSON("vault_aws_secret_backend_role.test_remove_attributes_iam_user", "policy_document", testAccAWSSecretBackendRolePolicyInline_basic),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_iam_user", "policy_arns.320240204", testAccAWSSecretBackendRolePolicyArn_basic),
 				),
 			},
 			{
@@ -165,6 +196,15 @@ func TestAccAWSSecretBackendRole_nested(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "name", fmt.Sprintf("%s-role-arns", name)),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "backend", backend),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "role_arns.2518714066", testAccAWSSecretBackendRoleRoleArn_updated),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "name", fmt.Sprintf("%s-remove-attributes-assumed-role", name)),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "default_sts_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "max_sts_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "policy_document", ""),
+					resource.TestCheckNoResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_assumed_role", "policy_arns"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_iam_user", "name", fmt.Sprintf("%s-remove-attributes-iam-user", name)),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_iam_user", "backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_remove_attributes_iam_user", "policy_document", ""),
 				),
 			},
 		},
@@ -220,12 +260,31 @@ resource "vault_aws_secret_backend_role" "test_policy_inline_and_arns" {
 }
 
 resource "vault_aws_secret_backend_role" "test_role_arns" {
-	name = "%s-role-arns"
-	role_arns = ["%s"]
-	credential_type = "assumed_role"
-	backend = "${vault_aws_secret_backend.test.path}"
+  name = "%s-role-arns"
+  role_arns = ["%s"]
+  credential_type = "assumed_role"
+  backend = "${vault_aws_secret_backend.test.path}"
 }
-`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_basic, name, testAccAWSSecretBackendRolePolicyArn_basic, name, testAccAWSSecretBackendRolePolicyInline_basic, testAccAWSSecretBackendRolePolicyArn_basic, name, testAccAWSSecretBackendRoleRoleArn_basic)
+
+resource "vault_aws_secret_backend_role" "test_remove_attributes_assumed_role" {
+  name = "%s-remove-attributes-assumed-role"
+  credential_type = "assumed_role"
+  backend = "${vault_aws_secret_backend.test.path}"
+  role_arns = ["%s"]
+  policy_arns = ["%s"]
+  policy_document = %q
+  default_sts_ttl = 600
+  max_sts_ttl = 1200
+}
+
+resource "vault_aws_secret_backend_role" "test_remove_attributes_iam_user" {
+  name = "%s-remove-attributes-iam-user"
+  credential_type = "iam_user"
+  backend = "${vault_aws_secret_backend.test.path}"
+  policy_arns = ["%s"]
+  policy_document = %q
+}
+`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_basic, name, testAccAWSSecretBackendRolePolicyArn_basic, name, testAccAWSSecretBackendRolePolicyInline_basic, testAccAWSSecretBackendRolePolicyArn_basic, name, testAccAWSSecretBackendRoleRoleArn_basic, name, testAccAWSSecretBackendRoleRoleArn_basic, testAccAWSSecretBackendRolePolicyArn_basic, testAccAWSSecretBackendRolePolicyInline_basic, name, testAccAWSSecretBackendRolePolicyArn_basic, testAccAWSSecretBackendRolePolicyInline_basic)
 }
 
 func testAccAWSSecretBackendRoleConfig_updated(name, path, accessKey, secretKey string) string {
@@ -261,10 +320,24 @@ resource "vault_aws_secret_backend_role" "test_policy_inline_and_arns" {
 }
 
 resource "vault_aws_secret_backend_role" "test_role_arns" {
-	name = "%s-role-arns"
-	role_arns = ["%s"]
-	credential_type = "assumed_role"
-	backend = "${vault_aws_secret_backend.test.path}"
+  name = "%s-role-arns"
+  role_arns = ["%s"]
+  credential_type = "assumed_role"
+  backend = "${vault_aws_secret_backend.test.path}"
 }
-`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_updated, name, testAccAWSSecretBackendRolePolicyArn_updated, name, testAccAWSSecretBackendRolePolicyInline_updated, testAccAWSSecretBackendRolePolicyArn_updated, name, testAccAWSSecretBackendRoleRoleArn_updated)
+
+resource "vault_aws_secret_backend_role" "test_remove_attributes_assumed_role" {
+  name = "%s-remove-attributes-assumed-role"
+  credential_type = "assumed_role"
+  backend = "${vault_aws_secret_backend.test.path}"
+  role_arns = ["%s"]
+}
+
+resource "vault_aws_secret_backend_role" "test_remove_attributes_iam_user" {
+  name = "%s-remove-attributes-iam-user"
+  credential_type = "iam_user"
+  backend = "${vault_aws_secret_backend.test.path}"
+  policy_arns = ["%s"]
+}
+`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_updated, name, testAccAWSSecretBackendRolePolicyArn_updated, name, testAccAWSSecretBackendRolePolicyInline_updated, testAccAWSSecretBackendRolePolicyArn_updated, name, testAccAWSSecretBackendRoleRoleArn_updated, name, testAccAWSSecretBackendRoleRoleArn_updated, name, testAccAWSSecretBackendRolePolicyArn_updated)
 }

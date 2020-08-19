@@ -5,11 +5,54 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
 type testingStruct struct {
 	foobar bool
 	list   []string
+}
+
+func TestJsonDiffSuppress(t *testing.T) {
+	d := new(schema.ResourceData)
+
+	noWhitespace := `{"test": "test"}`
+	whitespace := `
+{
+  "test": "test"
+}`
+
+	if !JsonDiffSuppress("", noWhitespace, whitespace, d) {
+		t.Errorf("Expected JsonDiffSuppress to return true for %q == %q", noWhitespace, whitespace)
+	}
+
+	noWhitespaceDiff := `{"test": "foo"}`
+	whitespaceDiff := `
+{
+  "test": "bar"
+}`
+
+	if JsonDiffSuppress("", noWhitespaceDiff, whitespaceDiff, d) {
+		t.Errorf("Expected JsonDiffSuppress to return false for %q == %q", noWhitespaceDiff, whitespaceDiff)
+	}
+
+	valid := `{"test": "test"}`
+	invalid := ``
+
+	if JsonDiffSuppress("", valid, invalid, d) {
+		t.Errorf("Expected JsonDiffSuppress to return false for %q == %q", valid, invalid)
+	}
+	if JsonDiffSuppress("", invalid, valid, d) {
+		t.Errorf("Expected JsonDiffSuppress to return false for %q == %q", invalid, valid)
+	}
+
+	empty := `    `
+	longEmpty := `       `
+
+	if !JsonDiffSuppress("", empty, longEmpty, d) {
+		t.Errorf("Expected JsonDiffSuppress to return true for %q == %q", empty, longEmpty)
+	}
 }
 
 func TestExpiredTokenError(t *testing.T) {
