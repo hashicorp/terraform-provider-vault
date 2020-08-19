@@ -135,10 +135,7 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	credentialType := d.Get("credential_type").(string)
 
-	var iamGroups []interface{}
-	if v, ok := d.GetOk("iam_groups"); ok {
-		iamGroups = v.(*schema.Set).List()
-	}
+	iamGroups := d.Get("iam_groups").(*schema.Set).List()
 
 	data := map[string]interface{}{
 		"credential_type": credentialType,
@@ -152,7 +149,7 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	if len(roleARNs) != 0 {
 		data["role_arns"] = roleARNs
 	}
-	if len(iamGroups) != 0 {
+	if len(iamGroups) != 0 || !d.IsNewResource() {
 		data["iam_groups"] = iamGroups
 	}
 
