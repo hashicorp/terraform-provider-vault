@@ -1,4 +1,9 @@
 ## 2.12.3 (Unreleased)
+
+IMPROVEMENTS:
+
+* Add `iam_groups` to `vault_aws_secret_backend_role` ([#826](https://github.com/terraform-providers/terraform-provider-vault/pull/826))
+
 ## 2.12.2 (July 31, 2020)
 
 BUG FIXES:
