@@ -133,7 +133,7 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	if policy != "" {
 		data["policy_document"] = policy
 	}
-	if len(policyARNs) != 0 {
+	if len(policyARNs) != 0 || !d.IsNewResource() {
 		data["policy_arns"] = policyARNs
 	}
 	if len(roleARNs) != 0 {
