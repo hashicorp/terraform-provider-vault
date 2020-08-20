@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 
+* `data.vault_generic_secret`: Mark `data` and `data_json` as `Sensitive` ([#844](https://github.com/terraform-providers/terraform-provider-vault/pull/844))
 * Add `iam_groups` to `vault_aws_secret_backend_role` ([#826](https://github.com/terraform-providers/terraform-provider-vault/pull/826))
 
 ## 2.12.2 (July 31, 2020)
