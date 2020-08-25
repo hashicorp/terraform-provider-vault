@@ -4,7 +4,7 @@ IMPROVEMENTS:
 
 * `data.vault_generic_secret`: Mark `data` and `data_json` as `Sensitive` ([#844](https://github.com/terraform-providers/terraform-provider-vault/pull/844))
 * Add `iam_groups` to `vault_aws_secret_backend_role` ([#826](https://github.com/terraform-providers/terraform-provider-vault/pull/826))
-* Add support for uri_sans parameter for resource vault_pki_secret_backend_cert ([#759](https://github.com/terraform-providers/terraform-provider-vault/pull/759))
+* Add support for `uri_sans` parameter for resource `vault_pki_secret_backend_cert` ([#759](https://github.com/terraform-providers/terraform-provider-vault/pull/759))
 
 BUG FIXES:
 
