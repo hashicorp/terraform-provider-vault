@@ -294,6 +294,7 @@ func connectionStringResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Connection string to use to connect to the database.",
+				Sensitive:   true,
 			},
 			"max_open_connections": {
 				Type:        schema.TypeInt,
