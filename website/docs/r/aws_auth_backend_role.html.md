@@ -107,8 +107,9 @@ The following arguments are supported:
   `inferred_entity_type` is set. This only applies when `auth_type` is set to
   `iam`.
 
-* `resolve_aws_unique_ids` - (Optional, Forces new resource) If set to `true`, the
-  `bound_iam_principal_arns` are resolved to [AWS Unique
+* `resolve_aws_unique_ids` - (Optional, Forces new resource) Only valid when
+  `auth_type` is `iam`. If set to `true`, the `bound_iam_principal_arns` are
+  resolved to [AWS Unique
   IDs](http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids)
   for the bound principal ARN. This field is ignored when a
   `bound_iam_principal_arn` ends in a wildcard. Resolving to unique IDs more
