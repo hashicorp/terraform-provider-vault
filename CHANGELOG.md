@@ -1,4 +1,9 @@
 ## 2.13.1 (Unreleased)
+
+BUG FIXES:
+
+* `resource/ssh_secret_backend_ca`: detect misconfigured resource and remove from state ([#856](https://github.com/terraform-providers/terraform-provider-vault/pull/856))
+
 ## 2.13.0 (August 27, 2020)
 
 IMPROVEMENTS:
