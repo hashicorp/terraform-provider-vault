@@ -33,12 +33,14 @@ func genericSecretDataSource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "JSON-encoded secret data read from Vault.",
+				Sensitive:   true,
 			},
 
 			"data": {
 				Type:        schema.TypeMap,
 				Computed:    true,
 				Description: "Map of strings read from Vault.",
+				Sensitive:   true,
 			},
 
 			"lease_id": {
@@ -84,7 +86,7 @@ func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error
 		return fmt.Errorf("no secret found at %q", path)
 	}
 
-	d.SetId(secret.RequestID)
+	d.SetId(path)
 
 	// Ignoring error because this value came from JSON in the
 	// first place so no reason why it should fail to re-encode.

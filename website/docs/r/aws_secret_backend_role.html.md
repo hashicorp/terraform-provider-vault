@@ -51,32 +51,39 @@ EOT
 The following arguments are supported:
 
 * `backend` - (Required) The path the AWS secret backend is mounted at,
-with no leading or trailing `/`s.
+  with no leading or trailing `/`s.
 
 * `name` - (Required) The name to identify this role within the backend.
-Must be unique within the backend.
+  Must be unique within the backend.
 
 * `credential_type` - (Required) Specifies the type of credential to be used when
-retrieving credentials from the role. Must be one of `iam_user`, `assumed_role`, or
-`federation_token`.
+  retrieving credentials from the role. Must be one of `iam_user`, `assumed_role`, or
+  `federation_token`.
 
 * `role_arns` - (Optional) Specifies the ARNs of the AWS roles this Vault role
-is allowed to assume. Required when `credential_type` is `assumed_role` and
-prohibited otherwise.
+  is allowed to assume. Required when `credential_type` is `assumed_role` and
+  prohibited otherwise.
 
 * `policy_arns` - (Optional) Specifies a list of AWS managed policy ARNs. The
-behavior depends on the credential type. With `iam_user`, the policies will be
-attached to IAM users when they are requested. With `assumed_role` and
-`federation_token`, the policy ARNs will act as a filter on what the credentials
-can do, similar to `policy_document`. When `credential_type` is `iam_user` or
-`federation_token`, at least one of `policy_document` or `policy_arns` must
-be specified.
+  behavior depends on the credential type. With `iam_user`, the policies will be
+  attached to IAM users when they are requested. With `assumed_role` and
+  `federation_token`, the policy ARNs will act as a filter on what the credentials
+  can do, similar to `policy_document`. When `credential_type` is `iam_user` or
+  `federation_token`, at least one of `policy_document` or `policy_arns` must
+  be specified.
 
 * `policy_document` - (Optional) The IAM policy document for the role. The
-behavior depends on the credential type. With `iam_user`, the policy document
-will be attached to the IAM user generated and augment the permissions the IAM
-user has. With `assumed_role` and `federation_token`, the policy document will
-act as a filter on what the credentials can do, similar to `policy_arns`.
+  behavior depends on the credential type. With `iam_user`, the policy document
+  will be attached to the IAM user generated and augment the permissions the IAM
+  user has. With `assumed_role` and `federation_token`, the policy document will
+  act as a filter on what the credentials can do, similar to `policy_arns`.
+
+* `iam_groups` (Optional) - A list of IAM group names. IAM users generated
+  against this vault role will be added to these IAM Groups. For a credential
+  type of `assumed_role` or `federation_token`, the policies sent to the
+  corresponding AWS call (sts:AssumeRole or sts:GetFederation) will be the
+  policies from each group in `iam_groups` combined with the `policy_document`
+  and `policy_arns` parameters.
 
 * `default_sts_ttl` - (Optional) The default TTL in seconds for STS credentials.
   When a TTL is not specified when STS credentials are requested,

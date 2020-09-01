@@ -176,6 +176,34 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith("mongodb", dbBackendTypes),
 			},
 
+			"mongodbatlas": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mongodbatlas-database-plugin plugin.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"private_key": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The Private Programmatic API Key used to connect with MongoDB Atlas API.",
+							Sensitive:   true,
+						},
+						"public_key": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The Public Programmatic API Key used to authenticate with the MongoDB Atlas API.",
+						},
+						"project_id": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The Project ID the Database User should be created within.",
+						},
+					},
+				},
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith("mongodbatlas", dbBackendTypes),
+			},
+
 			"hana": {
 				Type:          schema.TypeList,
 				Optional:      true,
@@ -293,6 +321,8 @@ func getDatabasePluginName(d *schema.ResourceData) (string, error) {
 		return "cassandra-database-plugin", nil
 	case len(d.Get("hana").([]interface{})) > 0:
 		return "hana-database-plugin", nil
+	case len(d.Get("mongodbatlas").([]interface{})) > 0:
+		return "mongodbatlas-database-plugin", nil
 	case len(d.Get("mongodb").([]interface{})) > 0:
 		return "mongodb-database-plugin", nil
 	case len(d.Get("mssql").([]interface{})) > 0:
@@ -369,6 +399,16 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		setDatabaseConnectionData(d, "hana.0.", data)
 	case "mongodb-database-plugin":
 		setDatabaseConnectionData(d, "mongodb.0.", data)
+	case "mongodbatlas-database-plugin":
+		if v, ok := d.GetOk("mongodbatlas.0.public_key"); ok {
+			data["public_key"] = v.(string)
+		}
+		if v, ok := d.GetOk("mongodbatlas.0.private_key"); ok {
+			data["private_key"] = v.(string)
+		}
+		if v, ok := d.GetOk("mongodbatlas.0.project_id"); ok {
+			data["project_id"] = v.(string)
+		}
 	case "mssql-database-plugin":
 		setDatabaseConnectionData(d, "mssql.0.", data)
 	case "mysql-database-plugin":
@@ -624,6 +664,23 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		d.Set("hana", getConnectionDetailsFromResponse(d, "hana.0.", resp))
 	case "mongodb-database-plugin":
 		d.Set("mongodb", getConnectionDetailsFromResponse(d, "mongodb.0.", resp))
+	case "mongodbatlas-database-plugin":
+		details := resp.Data["connection_details"]
+		data, ok := details.(map[string]interface{})
+		if ok {
+			result := map[string]interface{}{}
+
+			if v, ok := data["public_key"]; ok {
+				result["public_key"] = v.(string)
+			}
+			if v, ok := data["private_key"]; ok {
+				result["private_key"] = v.(string)
+			}
+			if v, ok := data["project_id"]; ok {
+				result["project_id"] = v.(string)
+			}
+			d.Set("mongodbatlas", []map[string]interface{}{result})
+		}
 	case "mssql-database-plugin":
 		d.Set("mssql", getConnectionDetailsFromResponse(d, "mssql.0.", resp))
 	case "mysql-database-plugin":

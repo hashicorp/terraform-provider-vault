@@ -1,4 +1,30 @@
-## 2.12.1 (Unreleased)
+## 2.13.1 (Unreleased)
+## 2.13.0 (August 27, 2020)
+
+IMPROVEMENTS:
+
+* `resource/transit_secret_backend_key`: add supported by Vault type of algorithm rsa-3072 ([#773](https://github.com/terraform-providers/terraform-provider-vault/pull/773))
+* `data.vault_generic_secret`: Mark `data` and `data_json` as `Sensitive` ([#844](https://github.com/terraform-providers/terraform-provider-vault/pull/844))
+* Add `iam_groups` to `vault_aws_secret_backend_role` ([#826](https://github.com/terraform-providers/terraform-provider-vault/pull/826))
+* Add support for `uri_sans` parameter for resource `vault_pki_secret_backend_cert` ([#759](https://github.com/terraform-providers/terraform-provider-vault/pull/759))
+
+BUG FIXES:
+
+* `data/vault_generic_secret`: Fix perpetual diff when using Terraform v0.13.0  ([#849](https://github.com/terraform-providers/terraform-provider-vault/pull/849))
+* `data.vault_aws_access_credentials`: Re-add support for passing region information stored in Vault backend to AWS Config ([#841](https://github.com/terraform-providers/terraform-provider-vault/pull/841))
+
+## 2.12.2 (July 31, 2020)
+
+BUG FIXES:
+
+* `data.vault_aws_access_credentials`: Revert [#832](https://github.com/terraform-providers/terraform-provider-vault/pull/832), which inadvertently introduced issues when the token policy did not have the required permissions to read the root configuration. ([#837](https://github.com/terraform-providers/terraform-provider-vault/pull/837))
+
+## 2.12.1 (July 30, 2020)
+
+BUG FIXES:
+
+* `data.vault_aws_access_credentials`: Add support for passing region information stored in Vault backend to AWS Config ([#832](https://github.com/terraform-providers/terraform-provider-vault/pull/832))
+
 ## 2.12.0 (July 20, 2020)
 FEATURES:
 
