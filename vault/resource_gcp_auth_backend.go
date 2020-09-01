@@ -117,7 +117,7 @@ func gcpAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Enabling gcp auth backend %q", path)
 	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
-		Type:        gcpAuthType,
+		Type:        authType,
 		Description: desc,
 		Local:       local,
 	})
