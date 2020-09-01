@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -36,9 +37,10 @@ func quotaRateLimitResource() *schema.Resource {
 				Description: "Path of the mount or namespace to apply the quota. A blank path configures a global rate limit quota.",
 			},
 			"rate": {
-				Type:        schema.TypeFloat,
-				Required:    true,
-				Description: "The maximum number of requests at any given second to be allowed by the quota rule. The rate must be positive.",
+				Type:         schema.TypeFloat,
+				Required:     true,
+				Description:  "The maximum number of requests at any given second to be allowed by the quota rule. The rate must be positive.",
+				ValidateFunc: validation.FloatAtLeast(0.0),
 			},
 		},
 	}
