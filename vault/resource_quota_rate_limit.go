@@ -44,16 +44,6 @@ func quotaRateLimitResource() *schema.Resource {
 	}
 }
 
-func quotaRateLimitUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
-	if v, ok := d.GetOk("path"); ok {
-		data["path"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("rate"); ok {
-		data["rate"] = v.(float64)
-	}
-}
-
 func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
