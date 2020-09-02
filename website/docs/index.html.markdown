@@ -22,7 +22,7 @@ own security trade-offs and caveats that are covered in the sections that
 follow. Consider these carefully before using this provider within your
 Terraform configuration.
 
--> Visit the [Inject secrets into Terraform using the Vault provider](https://learn.hashicorp.com/tutorials/terraform/secrets-vault&utm_source=WEBSITE&utm_medium=WEB_IO&utm_offer=ARTICLE_PAGE&utm_content=DOCS) Learn tutorial to learn how to use
+-> Visit the [Inject secrets into Terraform using the Vault provider](https://learn.hashicorp.com/tutorials/terraform/secrets-vault?utm_source=WEBSITE&utm_medium=WEB_IO&utm_offer=ARTICLE_PAGE&utm_content=DOCS) Learn tutorial to learn how to use
 short-lived credentials from Vault's AWS Secrets Engine to authenticate the 
 AWS provider.
 
