@@ -34,6 +34,7 @@ func quotaRateLimitResource() *schema.Resource {
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				ForceNew:    true,
 				Description: "Path of the mount or namespace to apply the quota. A blank path configures a global rate limit quota.",
 			},
 			"rate": {
