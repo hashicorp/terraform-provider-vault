@@ -68,6 +68,9 @@ func TestAccAWSSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "backend", backend),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "role_arns.2518714066", testAccAWSSecretBackendRoleRoleArn_updated),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_arns", "iam_groups.#", "2"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_groups", "name", fmt.Sprintf("%s-role-groups", name)),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_groups", "backend", backend),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend_role.test_role_groups", "iam_groups.#", "2"),
 				),
 			},
 			{
@@ -298,5 +301,12 @@ resource "vault_aws_secret_backend_role" "test_role_arns" {
 	iam_groups = ["group1", "group2"]
 	backend = "${vault_aws_secret_backend.test.path}"
 }
-`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_updated, name, testAccAWSSecretBackendRolePolicyArn_updated, name, testAccAWSSecretBackendRolePolicyInline_updated, testAccAWSSecretBackendRolePolicyArn_updated, name, testAccAWSSecretBackendRoleRoleArn_updated)
+
+resource "vault_aws_secret_backend_role" "test_role_groups" {
+	name = "%s-role-groups"
+	credential_type = "assumed_role"
+	iam_groups = ["group1", "group2"]
+	backend = "${vault_aws_secret_backend.test.path}"
+}
+`, path, accessKey, secretKey, name, testAccAWSSecretBackendRolePolicyInline_updated, name, testAccAWSSecretBackendRolePolicyArn_updated, name, testAccAWSSecretBackendRolePolicyInline_updated, testAccAWSSecretBackendRolePolicyArn_updated, name, testAccAWSSecretBackendRoleRoleArn_updated, name)
 }
