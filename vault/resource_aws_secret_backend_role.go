@@ -132,7 +132,7 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	iamGroups := d.Get("iam_groups").(*schema.Set).List()
 
 	if policy == "" && len(policyARNs) == 0 && len(roleARNs) == 0 && len(iamGroups) == 0 {
-		return fmt.Errorf("either policy, policy_arns, role_arns or iam_groups must be set")
+		return fmt.Errorf("at least one of `policy`, `policy_arns`, `role_arns` or `iam_groups` must be set")
 	}
 
 	credentialType := d.Get("credential_type").(string)
