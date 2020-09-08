@@ -2,7 +2,8 @@
 
 BUG FIXES:
 
-* `resource/ssh_secret_backend_ca`: detect misconfigured resource and remove from state ([#856](https://github.com/terraform-providers/terraform-provider-vault/pull/856))
+* `resource/vault_aws_secret_backend_role`: fix AWS Secrets Engine Role resource to allow only IAM Groups ([#862](https://github.com/terraform-providers/terraform-provider-vault/pull/862))
+* `resource/vault_ssh_secret_backend_ca`: detect misconfigured resource and remove from state ([#856](https://github.com/terraform-providers/terraform-provider-vault/pull/856))
 
 ## 2.13.0 (August 27, 2020)
 
