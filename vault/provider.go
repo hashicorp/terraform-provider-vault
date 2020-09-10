@@ -580,6 +580,10 @@ var (
 			Resource:      pkiSecretBackendSignResource(),
 			PathInventory: []string{"/pki/sign/{role}"},
 		},
+		"vault_quota_rate_limit": {
+			Resource:      quotaRateLimitResource(),
+			PathInventory: []string{"/sys/quotas/rate-limit/{name}"},
+		},
 		"vault_transit_secret_backend_key": {
 			Resource:      transitSecretBackendKeyResource(),
 			PathInventory: []string{"/transit/keys/{name}"},
