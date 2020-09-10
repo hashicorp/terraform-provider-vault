@@ -328,6 +328,17 @@ func connectionStringResource() *schema.Resource {
 				Optional:    true,
 				Description: "Maximum number of seconds a connection may be reused.",
 			},
+			"password": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The password to use when authenticating with Cassandra.",
+				Sensitive:   true,
+			},
+			"username": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The username to use when authenticating with Cassandra.",
+			},
 		},
 	}
 }
@@ -414,18 +425,6 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		setDatabaseConnectionData(d, "hana.0.", data)
 	case "mongodb-database-plugin":
 		setDatabaseConnectionData(d, "mongodb.0.", data)
-		if v, ok := d.GetOk("mongodb.0.username"); ok {
-			data["username"] = v.(string)
-		}
-		if v, ok := d.GetOk("mongodb.0.password"); ok {
-			data["password"] = v.(string)
-		}
-		if v, ok := d.GetOk("mongodb.0.tls_ca"); ok {
-			data["tls_ca"] = v.(string)
-		}
-		if v, ok := d.GetOk("mongodb.0.tls_certificate_key"); ok {
-			data["tls_certificate_key"] = v.(string)
-		}
 	case "mssql-database-plugin":
 		setDatabaseConnectionData(d, "mssql.0.", data)
 	case "mysql-database-plugin":
@@ -491,12 +490,14 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 	if v, ok := data["tls_certificate_key"]; ok {
 		result["tls_certificate_key"] = v.(string)
 	}
-
-	if v, ok := data["username"]; ok {
-		result["username"] = v.(string)
-	}
 	if v, ok := data["password"]; ok {
 		result["password"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "password"); ok {
+		// keep the password we have in state/config if the API doesn't return one
+		result["password"] = v.(string)
+	}
+	if v, ok := data["username"]; ok {
+		result["username"] = v.(string)
 	}
 	return []map[string]interface{}{result}
 }
@@ -547,6 +548,12 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	}
 	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
 		data["tls_certificate_key"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		data["password"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
 	}
 }
 
