@@ -1,6 +1,10 @@
 ## 2.13.1 (Unreleased)
+FEATURES:
+
+* **New Resource:** `vault_quota_rate_limit` resource to manage resource quota limit ([#825](https://github.com/terraform-providers/terraform-provider-vault/pull/825)).
 
 BUG FIXES:
+
 
 * `resource/vault_aws_secret_backend_role`: fix AWS Secrets Engine Role resource to allow only IAM Groups ([#862](https://github.com/terraform-providers/terraform-provider-vault/pull/862))
 * `resource/vault_ssh_secret_backend_ca`: detect misconfigured resource and remove from state ([#856](https://github.com/terraform-providers/terraform-provider-vault/pull/856))
