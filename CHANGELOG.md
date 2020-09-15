@@ -1,4 +1,4 @@
-## 2.13.1 (Unreleased)
+## 2.14.0 (Unreleased)
 FEATURES:
 
 * **New Resource:** `vault_quota_rate_limit` resource to manage resource quota limit ([#825](https://github.com/terraform-providers/terraform-provider-vault/pull/825)).
