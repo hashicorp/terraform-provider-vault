@@ -49,6 +49,12 @@ func kubernetesAuthBackendConfigDataSource() *schema.Resource {
 				Optional:    true,
 				Description: "Optional JWT issuer. If no issuer is specified, kubernetes.io/serviceaccount will be used as the default issuer.",
 			},
+			"disable_iss_validation": {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Optional:    true,
+				Description: "Optional disable JWT issuer validation. Allows to skip ISS validation.",
+			},
 		},
 	}
 }
@@ -83,6 +89,7 @@ func kubernetesAuthBackendConfigDataSourceRead(d *schema.ResourceData, meta inte
 	d.Set("pem_keys", pemKeys)
 
 	d.Set("issuer", resp.Data["issuer"])
+	d.Set("disable_iss_validation", resp.Data["disable_iss_validation"])
 
 	return nil
 }

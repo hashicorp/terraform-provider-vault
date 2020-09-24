@@ -7,6 +7,7 @@ require (
 	github.com/Azure/go-autorest v11.7.1+incompatible
 	github.com/aws/aws-sdk-go v1.25.3
 	github.com/go-sql-driver/mysql v1.5.0
+	github.com/google/btree v1.0.0 // indirect
 	github.com/gosimple/slug v1.4.1
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
