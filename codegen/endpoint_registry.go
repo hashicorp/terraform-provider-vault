@@ -107,6 +107,21 @@ const (
 	tfTypeResource
 )
 
+// DocType returns the type of documentation that should be generated:
+// - d: data-source
+// - r: resource
+// This is in accordance with the Terraform Registries *legacy* naming scheme.
+// TODO: Migrate to updated registry documentation file structure.
+func (t tfType) DocType() string {
+	switch t {
+	case tfTypeDataSource:
+		return "d"
+	case tfTypeResource:
+		return "r"
+	}
+	return "unset"
+}
+
 func (t tfType) String() string {
 	switch t {
 	case tfTypeDataSource:
