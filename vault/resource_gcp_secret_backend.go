@@ -68,6 +68,14 @@ func gcpSecretBackendResource() *schema.Resource {
 				Default:     "",
 				Description: "Maximum possible lease duration for secrets in seconds",
 			},
+			"local": {
+				Type:        schema.TypeBool,
+				Required:    false,
+				Optional:    true,
+				Computed:    false,
+				ForceNew:    true,
+				Description: "Local mount flag that can be explicitly set to true to enforce local mount in HA environment",
+			},
 		},
 	}
 }
@@ -80,6 +88,7 @@ func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
 	maxTTL := d.Get("max_lease_ttl_seconds").(int)
 	credentials := d.Get("credentials").(string)
+	local := d.Get("local").(bool)
 
 	configPath := gcpSecretBackendConfigPath(path)
 
@@ -92,6 +101,7 @@ func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
 		},
+		Local: local,
 	})
 	if err != nil {
 		return fmt.Errorf("error mounting to %q: %s", path, err)
@@ -146,6 +156,7 @@ func gcpSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
+	d.Set("local", mount.Local)
 
 	return nil
 }
