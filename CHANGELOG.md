@@ -1,4 +1,9 @@
 ## 2.14.1 (Unreleased)
+
+IMPROVEMENTS:
+
+* `resource/vault_gcp_secret_backend`: added support for `local` mount to prevent replicating the secret engine ([#855](https://github.com/terraform-providers/terraform-provider-vault/pull/855))
+
 ## 2.14.0 (September 15, 2020)
 FEATURES:
 
