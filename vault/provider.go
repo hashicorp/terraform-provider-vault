@@ -247,6 +247,14 @@ var (
 			Resource:      authBackendDataSource(),
 			PathInventory: []string{"/sys/auth"},
 		},
+		"vault_transit_encrypt": {
+			Resource:      transitEncryptDataSource(),
+			PathInventory: []string{"/transit/encrypt/{name}"},
+		},
+		"vault_transit_decrypt": {
+			Resource:      transitDecryptDataSource(),
+			PathInventory: []string{"/transit/decrypt/{name}"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
