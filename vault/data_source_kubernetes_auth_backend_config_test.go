@@ -55,6 +55,7 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 	jwt := kubernetesJWT
 	issuer := "kubernetes/serviceaccount"
 	disableIssValidation := true
+	disableLocalCaJwt := true
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -62,7 +63,7 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer, disableIssValidation),
+				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer, disableIssValidation, disableLocalCaJwt),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -80,10 +81,12 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 						"issuer", issuer),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"disable_iss_validation", strconv.FormatBool(disableIssValidation)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"disable_local_ca_jwt", strconv.FormatBool(disableLocalCaJwt)),
 				),
 			},
 			{
-				Config: testAccKubernetesAuthBackendConfigDataSourceConfig_full(backend, jwt, issuer, disableIssValidation),
+				Config: testAccKubernetesAuthBackendConfigDataSourceConfig_full(backend, jwt, issuer, disableIssValidation, disableLocalCaJwt),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -101,6 +104,8 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 						"issuer", issuer),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"disable_iss_validation", strconv.FormatBool(disableIssValidation)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"disable_local_ca_jwt", strconv.FormatBool(disableLocalCaJwt)),
 				),
 			},
 		},
@@ -116,11 +121,11 @@ data "vault_kubernetes_auth_backend_config" "config" {
 }`, testAccKubernetesAuthBackendConfigConfig_basic(backend, jwt), backend)
 }
 
-func testAccKubernetesAuthBackendConfigDataSourceConfig_full(backend, jwt string, issuer string, disableIssValidation bool) string {
+func testAccKubernetesAuthBackendConfigDataSourceConfig_full(backend, jwt string, issuer string, disableIssValidation bool, disableLocalCaJwt bool) string {
 	return fmt.Sprintf(`
 %s
 
 data "vault_kubernetes_auth_backend_config" "config" {
   backend = "%s"
-}`, testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer, disableIssValidation), backend)
+}`, testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer, disableIssValidation, disableLocalCaJwt), backend)
 }
