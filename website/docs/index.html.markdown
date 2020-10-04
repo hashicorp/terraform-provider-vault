@@ -22,6 +22,10 @@ own security trade-offs and caveats that are covered in the sections that
 follow. Consider these carefully before using this provider within your
 Terraform configuration.
 
+-> Visit the [Inject secrets into Terraform using the Vault provider](https://learn.hashicorp.com/tutorials/terraform/secrets-vault?utm_source=WEBSITE&utm_medium=WEB_IO&utm_offer=ARTICLE_PAGE&utm_content=DOCS) Learn tutorial to learn how to use
+short-lived credentials from Vault's AWS Secrets Engine to authenticate the 
+AWS provider.
+
 ## Best Practices
 
 We recommend that you avoid placing secrets in your Terraform config or state file wherever possible, and if placed there, you take steps to reduce and manage your risk. We have created a practical guide on how to do this with our opensource versions in Best Practices for Using HashiCorp Terraform with HashiCorp Vault:

@@ -1,13 +1,38 @@
-## 2.12.3 (Unreleased)
+## 2.14.1 (Unreleased)
+
+FEATURES:
+
+* **New Data Source**: `vault_transit_decrypt` data source ([#872](https://github.com/terraform-providers/terraform-provider-vault/pull/872)).
+* **New Data Source**: `vault_transit_encrypt` data source ([#872](https://github.com/terraform-providers/terraform-provider-vault/pull/872)).
 
 IMPROVEMENTS:
 
+* `resource/vault_gcp_secret_backend`: added support for `local` mount to prevent replicating the secret engine ([#855](https://github.com/terraform-providers/terraform-provider-vault/pull/855))
+
+## 2.14.0 (September 15, 2020)
+FEATURES:
+
+* **New Resource:** `vault_quota_rate_limit` resource to manage resource quota limit ([#825](https://github.com/terraform-providers/terraform-provider-vault/pull/825)).
+
+BUG FIXES:
+
+
+* `resource/vault_aws_secret_backend_role`: fix AWS Secrets Engine Role resource to allow only IAM Groups ([#862](https://github.com/terraform-providers/terraform-provider-vault/pull/862))
+* `resource/vault_ssh_secret_backend_ca`: detect misconfigured resource and remove from state ([#856](https://github.com/terraform-providers/terraform-provider-vault/pull/856))
+
+## 2.13.0 (August 27, 2020)
+
+IMPROVEMENTS:
+
+* `resource/transit_secret_backend_key`: add supported by Vault type of algorithm rsa-3072 ([#773](https://github.com/terraform-providers/terraform-provider-vault/pull/773))
 * `data.vault_generic_secret`: Mark `data` and `data_json` as `Sensitive` ([#844](https://github.com/terraform-providers/terraform-provider-vault/pull/844))
 * Add `iam_groups` to `vault_aws_secret_backend_role` ([#826](https://github.com/terraform-providers/terraform-provider-vault/pull/826))
+* Add support for `uri_sans` parameter for resource `vault_pki_secret_backend_cert` ([#759](https://github.com/terraform-providers/terraform-provider-vault/pull/759))
 
 BUG FIXES:
 
 * `data/vault_generic_secret`: Fix perpetual diff when using Terraform v0.13.0  ([#849](https://github.com/terraform-providers/terraform-provider-vault/pull/849))
+* `data.vault_aws_access_credentials`: Re-add support for passing region information stored in Vault backend to AWS Config ([#841](https://github.com/terraform-providers/terraform-provider-vault/pull/841))
 
 ## 2.12.2 (July 31, 2020)
 

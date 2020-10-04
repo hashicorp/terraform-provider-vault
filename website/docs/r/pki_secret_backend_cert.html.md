@@ -44,6 +44,8 @@ The following arguments are supported:
 
 * `ip_sans` - (Optional) List of alternative IPs
 
+* `uri_sans` - (Optional) List of alternative URIs
+
 * `other_sans` - (Optional) List of other SANs
 
 * `ttl` - (Optional) Time to live

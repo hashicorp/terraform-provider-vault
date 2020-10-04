@@ -247,6 +247,14 @@ var (
 			Resource:      authBackendDataSource(),
 			PathInventory: []string{"/sys/auth"},
 		},
+		"vault_transit_encrypt": {
+			Resource:      transitEncryptDataSource(),
+			PathInventory: []string{"/transit/encrypt/{name}"},
+		},
+		"vault_transit_decrypt": {
+			Resource:      transitDecryptDataSource(),
+			PathInventory: []string{"/transit/decrypt/{name}"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
@@ -579,6 +587,10 @@ var (
 		"vault_pki_secret_backend_sign": {
 			Resource:      pkiSecretBackendSignResource(),
 			PathInventory: []string{"/pki/sign/{role}"},
+		},
+		"vault_quota_rate_limit": {
+			Resource:      quotaRateLimitResource(),
+			PathInventory: []string{"/sys/quotas/rate-limit/{name}"},
 		},
 		"vault_transit_secret_backend_key": {
 			Resource:      transitSecretBackendKeyResource(),
