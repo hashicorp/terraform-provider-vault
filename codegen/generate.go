@@ -18,6 +18,8 @@ const generatedDirPerms os.FileMode = 0775
 
 var errUnsupported = errors.New("code and doc generation for this item is unsupported")
 
+// Run accepts a map of endpoint paths and generates both code and documentation
+// for NEW endpoints in the endpoint registry.
 func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
 	// Read in the templates we'll be using.
 	h, err := newTemplateHandler(logger)
@@ -207,13 +209,34 @@ we eventually cover all >500 of them and add tests.
 			└── transformation.md
 */
 func docFilePath(tfTp tfType, endpoint string) (string, error) {
-	filename := fmt.Sprintf("%ss%s.md", tfTp.String(), endpoint)
+	endpoint = normalizeDocEndpoint(endpoint)
+	filename := fmt.Sprintf("%s/%s.html.md", tfTp.DocType(), endpoint)
 	homeDirPath, err := pathToHomeDir()
 	if err != nil {
 		return "", err
 	}
-	path := filepath.Join(homeDirPath, "website", "docs", "generated", filename)
-	return stripCurlyBraces(path), nil
+	return filepath.Join(homeDirPath, "website", "docs", filename), nil
+}
+
+// normalizeDocEndpoint changes the raw endpoint into the format we expect for
+// using in generated documentation structure on registry.terraform.io.
+// Example:
+//  endpoint: /transform/alphabet/{name}
+//  normalized: transform_alphabet
+//
+//  endpoint: /transform/decode/{role_name}
+//  normalized: transform_decode
+//
+//  endpoint: /transform/encode/{role_name}
+//  normalized: transform_encode
+func normalizeDocEndpoint(endpoint string) string {
+	endpoint = stripCurlyBraces(endpoint)
+	endpoint = strings.TrimRight(endpoint, "name")
+	endpoint = strings.TrimRight(endpoint, "role_")
+	endpoint = strings.TrimRight(endpoint, "/")
+	endpoint = strings.ReplaceAll(endpoint, "/", "_")
+	endpoint = strings.TrimLeft(endpoint, "_")
+	return endpoint
 }
 
 // stripCurlyBraces converts a path like
