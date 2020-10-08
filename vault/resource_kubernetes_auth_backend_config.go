@@ -66,6 +66,18 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 				Optional:    true,
 				Description: "Optional JWT issuer. If no issuer is specified, kubernetes.io/serviceaccount will be used as the default issuer.",
 			},
+			"disable_iss_validation": {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Optional:    true,
+				Description: "Optional disable JWT issuer validation. Allows to skip ISS validation.",
+			},
+			"disable_local_ca_jwt": {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Optional:    true,
+				Description: "Optional disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.",
+			},
 		},
 	}
 }
@@ -103,6 +115,14 @@ func kubernetesAuthBackendConfigCreate(d *schema.ResourceData, meta interface{})
 
 	if v, ok := d.GetOk("issuer"); ok {
 		data["issuer"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("disable_iss_validation"); ok {
+		data["disable_iss_validation"] = v
+	}
+
+	if v, ok := d.GetOk("disable_local_ca_jwt"); ok {
+		data["disable_local_ca_jwt"] = v
 	}
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -155,6 +175,8 @@ func kubernetesAuthBackendConfigRead(d *schema.ResourceData, meta interface{}) e
 	d.Set("kubernetes_host", resp.Data["kubernetes_host"])
 	d.Set("kubernetes_ca_cert", resp.Data["kubernetes_ca_cert"])
 	d.Set("issuer", resp.Data["issuer"])
+	d.Set("disable_iss_validation", resp.Data["disable_iss_validation"])
+	d.Set("disable_local_ca_jwt", resp.Data["disable_local_ca_jwt"])
 
 	iPemKeys := resp.Data["pem_keys"].([]interface{})
 	pemKeys := make([]string, 0, len(iPemKeys))
@@ -195,6 +217,14 @@ func kubernetesAuthBackendConfigUpdate(d *schema.ResourceData, meta interface{})
 
 	if v, ok := d.GetOk("issuer"); ok {
 		data["issuer"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("disable_iss_validation"); ok {
+		data["disable_iss_validation"] = v
+	}
+
+	if v, ok := d.GetOk("disable_local_ca_jwt"); ok {
+		data["disable_local_ca_jwt"] = v
 	}
 
 	_, err := client.Logical().Write(path, data)

@@ -20,11 +20,12 @@ resource "vault_auth_backend" "kubernetes" {
 }
 
 resource "vault_kubernetes_auth_backend_config" "example" {
-  backend            = "${vault_auth_backend.kubernetes.path}"
-  kubernetes_host    = "http://example.com:443"
-  kubernetes_ca_cert = "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----"
-  token_reviewer_jwt = "ZXhhbXBsZQo="
-  issuer             = "api"
+  backend                = "${vault_auth_backend.kubernetes.path}"
+  kubernetes_host        = "http://example.com:443"
+  kubernetes_ca_cert     = "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----"
+  token_reviewer_jwt     = "ZXhhbXBsZQo="
+  issuer                 = "api"
+  disable_iss_validation = "true"
 }
 ```
 
@@ -40,7 +41,12 @@ The following arguments are supported:
 
 * `pem_keys` - (Optional) List of PEM-formatted public keys or certificates used to verify the signatures of Kubernetes service account JWTs. If a certificate is given, its public key will be extracted. Not every installation of Kubernetes exposes these keys.
 
-* `issuer` - Optional JWT issuer. If no issuer is specified, `kubernetes.io/serviceaccount` will be used as the default issuer. 
+* `issuer` - Optional JWT issuer. If no issuer is specified, `kubernetes.io/serviceaccount` will be used as the default issuer.
+
+* `disable_iss_validation` - (Optional) Disable JWT issuer validation. Allows to skip ISS validation. Requires Vault `v1.5.4+` or Vault auth kubernetes plugin `v0.7.1+`
+
+* `disable_local_ca_jwt` - (Optional) Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod. Requires Vault `v1.5.4+` or Vault auth kubernetes plugin `v0.7.1+`
+ 
 
 ## Attributes Reference
 
