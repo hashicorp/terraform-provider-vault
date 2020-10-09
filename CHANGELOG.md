@@ -8,6 +8,7 @@ FEATURES:
 IMPROVEMENTS:
 
 * `resource/vault_gcp_secret_backend`: added support for `local` mount to prevent replicating the secret engine ([#855](https://github.com/terraform-providers/terraform-provider-vault/pull/855))
+* `resource/vault_ssh_secret_backend_role`: added support for new `allowed_users_template` argument([#875](https://github.com/terraform-providers/terraform-provider-vault/pull/875))
 * `resource/vault_kubernetes_auth_backend_config`: Add `disable_iss_validation` and `disable_local_ca_jwt` config parameters to k8s auth backend ([#870](https://github.com/terraform-providers/terraform-provider-vault/pull/870))
 * `data/vault_kubernetes_auth_backend_config`: Add `disable_iss_validation` and `disable_local_ca_jwt` config parameters to k8s auth backend ([#870](https://github.com/terraform-providers/terraform-provider-vault/pull/870))
 
