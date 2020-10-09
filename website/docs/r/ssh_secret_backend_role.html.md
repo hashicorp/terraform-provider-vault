@@ -67,6 +67,8 @@ The following arguments are supported:
 
 * `default_critical_options` - (Optional) Specifies a map of critical options that certificates have when signed.
 
+* `allowed_users_template` - (Optional) Specifies if `allowed_users` can be declared using identity template policies. Non-templated users are also permitted.
+
 * `allowed_users` - (Optional) Specifies a comma-separated list of usernames that are to be allowed, only if certain usernames are to be allowed.
 
 * `default_user` - (Optional) Specifies the default username for which a credential will be generated.
