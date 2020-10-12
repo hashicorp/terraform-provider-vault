@@ -38,7 +38,7 @@ func TestAccSSHSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_id_format", ""),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_type", "ca"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_user_key_lengths.%", "0"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "algorithm_signer", "ssh-rsa"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "algorithm_signer", ""),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "max_ttl", "0"),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "ttl", "0"),
 				),
