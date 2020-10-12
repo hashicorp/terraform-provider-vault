@@ -75,6 +75,8 @@ The following arguments are supported:
 
 * `key_id_format` - (Optional) Specifies a custom format for the key id of a signed certificate.
 
+* `algorithm_signer` - (Optional) When supplied, this value specifies a signing algorithm for the key. Possible values: ssh-rsa, rsa-sha2-256, rsa-sha2-512.
+
 * `allowed_user_key_lengths` - (Optional) Specifies a map of ssh key types and their expected sizes which are allowed to be signed by the CA type.
 
 * `max_ttl` - (Optional) Specifies the maximum Time To Live value.
