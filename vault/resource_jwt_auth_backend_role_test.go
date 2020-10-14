@@ -54,6 +54,8 @@ func TestAccJWTAuthBackendRole_import(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"bound_audiences.2478800941", "https://myco.test"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"bound_claims_type", "string"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"user_claim", "https://vault/user"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"groups_claim", "https://vault/groups"),
@@ -109,6 +111,8 @@ func TestAccJWTAuthBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"bound_audiences.2478800941", "https://myco.test"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"bound_claims_type", "string"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"user_claim", "https://vault/user"),
 				),
 			},
@@ -147,6 +151,8 @@ func TestAccJWTAuthBackendRole_update(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"bound_audiences.2478800941", "https://myco.test"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"bound_claims_type", "string"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"user_claim", "https://vault/user"),
 				),
 			},
@@ -175,6 +181,8 @@ func TestAccJWTAuthBackendRole_update(t *testing.T) {
 						"token_bound_cidrs.#", "0"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"bound_audiences.#", "1"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"bound_claims_type", "string"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"bound_audiences.2478800941", "https://myco.test"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
@@ -229,6 +237,8 @@ func TestAccJWTAuthBackendRole_full(t *testing.T) {
 						"bound_audiences.#", "1"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"bound_audiences.2478800941", "https://myco.test"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"bound_claims_type", "string"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"user_claim", "https://vault/user"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
@@ -558,6 +568,7 @@ resource "vault_jwt_auth_backend_role" "role" {
 	role_type = "jwt"
 
   bound_audiences = ["https://myco.test"]
+  bound_claims_type = "string"
   user_claim = "https://vault/user"
 }`, backend, role)
 }
@@ -575,6 +586,7 @@ resource "vault_jwt_auth_backend_role" "role" {
 	role_type = "jwt"
 
   bound_audiences = ["https://myco.test"]
+  bound_claims_type = "string"
   user_claim = "https://vault/user"
   token_policies = ["default", "dev"]
 }`, backend, role)
@@ -595,6 +607,7 @@ resource "vault_jwt_auth_backend_role" "role" {
   bound_subject = "sl29dlldsfj3uECzsU3Sbmh0F29Fios1@client"
   token_bound_cidrs = ["10.148.0.0/20", "10.150.0.0/20"]
   bound_audiences = ["https://myco.test"]
+  bound_claims_type = "string"
   user_claim = "https://vault/user"
   groups_claim = "https://vault/groups"
   token_policies = ["default", "dev", "prod"]
@@ -641,6 +654,7 @@ resource "vault_jwt_auth_backend_role" "role" {
   token_ttl = 3600
   token_num_uses = 12
   token_max_ttl = 7200
+  bound_claims_type = "string"
   bound_claims = {
     department = "engineering,admin"
     sector = "7g"
@@ -698,6 +712,7 @@ resource "vault_jwt_auth_backend_role" "role" {
   bound_subject = "sl29dlldsfj3uECzsU3Sbmh0F29Fios1@client"
   bound_cidrs = ["10.148.0.0/20", "10.150.0.0/20"]
   bound_audiences = ["https://myco.test"]
+  bound_claims_type = "string"
   user_claim = "https://vault/user"
   groups_claim = "https://vault/groups"
   policies = ["default", "dev", "prod"]
@@ -722,6 +737,7 @@ resource "vault_jwt_auth_backend_role" "role" {
   bound_subject = "sl29dlldsfj3uECzsU3Sbmh0F29Fios1@update"
   bound_cidrs = ["10.150.0.0/20", "10.152.0.0/20"]
   bound_audiences = ["https://myco.update",]
+  bound_claims_type = "string"
   user_claim = "https://vault/updateuser"
   groups_claim = "https://vault/updategroups"
   policies = ["default", "dev"]
