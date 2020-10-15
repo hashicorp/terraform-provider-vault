@@ -118,7 +118,7 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 			"ttl": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Human-friendly description of the mount for the backend.",
+				Description: "User specified Time-To-Live for the STS token. Uses the Role defined default_sts_ttl when not specified",
 			},
 		},
 	}
