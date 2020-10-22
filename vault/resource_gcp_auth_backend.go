@@ -62,6 +62,12 @@ func gcpAuthBackendResource() *schema.Resource {
 					return strings.Trim(v.(string), "/")
 				},
 			},
+			"local": {
+				Type:        schema.TypeBool,
+				ForceNew:    true,
+				Optional:    true,
+				Description: "Specifies if the auth method is local only",
+			},
 		},
 	}
 }
@@ -107,9 +113,14 @@ func gcpAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	authType := gcpAuthType
 	path := d.Get("path").(string)
 	desc := d.Get("description").(string)
+	local := d.Get("local").(bool)
 
 	log.Printf("[DEBUG] Enabling gcp auth backend %q", path)
-	err := client.Sys().EnableAuth(path, authType, desc)
+	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
+		Type:        authType,
+		Description: desc,
+		Local:       local,
+	})
 	if err != nil {
 		return fmt.Errorf("error enabling gcp auth backend %q: %s", path, err)
 	}
@@ -163,7 +174,7 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("client_id", resp.Data["client_id"])
 	d.Set("project_id", resp.Data["project_id"])
 	d.Set("client_email", resp.Data["client_email"])
-
+	d.Set("local", resp.Data["local"])
 	return nil
 }
 
