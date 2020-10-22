@@ -1,6 +1,6 @@
 ## 2.15.1 (Unreleased)
 
-* resource/vault_gcp_auth_backend: added support for local mount to prevent replicating the secret engine (#861)
+* `resource/vault_gcp_auth_backend`: added support for local mount to prevent replicating the secret engine (#861)
 
 ## 2.15.0 (October 21, 2020)
 
