@@ -66,6 +66,23 @@ func azureSecretBackendRoleResource() *schema.Resource {
 					},
 				},
 			},
+			"azure_groups": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"object_id": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+
+						"group_name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
 			"application_object_id": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -90,13 +107,25 @@ func azureSecretBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 	if v, ok := d.GetOk("azure_roles"); ok {
 		rawAzureList := v.(*schema.Set).List()
 
-		// Vaults API requires we send trhe policy as an escaped string
+		// Vaults API requires we send the policy as an escaped string
 		// So we marshall and then change into a string
 		jsonAzureList, _ := json.Marshal(rawAzureList)
 		jsonAzureListString := string(jsonAzureList)
 
 		log.Printf("[DEBUG] Azure RoleSet turned to escaped JSON: %s", jsonAzureListString)
-		data["azure_roles"] = string(jsonAzureListString)
+		data["azure_roles"] = jsonAzureListString
+	}
+
+	if v, ok := d.GetOk("azure_groups"); ok {
+		rawAzureList := v.(*schema.Set).List()
+
+		// Vaults API requires we send the policy as an escaped string
+		// So we marshall and then change into a string
+		jsonAzureList, _ := json.Marshal(rawAzureList)
+		jsonAzureListString := string(jsonAzureList)
+
+		log.Printf("[DEBUG] Azure GroupSet turned to escaped JSON: %s", jsonAzureListString)
+		data["azure_groups"] = jsonAzureListString
 	}
 
 	if v, ok := d.GetOk("application_object_id"); ok {
@@ -136,23 +165,6 @@ func azureSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 	return azureSecretBackendRoleRead(d, meta)
 }
 
-func azureSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-	path := d.Id()
-
-	data := map[string]interface{}{}
-	azureSecretBackendRoleUpdateFields(d, data)
-
-	log.Printf("[DEBUG] Updating role %q in Azure Secret backend", path)
-	_, err := client.Logical().Write(path, data)
-	if err != nil {
-		return fmt.Errorf("Error updating Azure Secret role %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Updated role %q to Azure Secret backend", path)
-
-	return azureSecretBackendRoleRead(d, meta)
-}
-
 func azureSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Id()
@@ -186,6 +198,12 @@ func azureSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 		log.Printf("[DEBUG] Role Data from Azure: %s", v)
 
 		d.Set("azure_roles", resp.Data["azure_roles"])
+	}
+
+	if v, ok := resp.Data["azure_groups"]; ok {
+		log.Printf("[DEBUG] Group Data from Azure: %s", v)
+
+		d.Set("azure_groups", resp.Data["azure_groups"])
 	}
 
 	return nil
