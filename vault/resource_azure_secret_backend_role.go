@@ -66,6 +66,23 @@ func azureSecretBackendRoleResource() *schema.Resource {
 					},
 				},
 			},
+			"azure_groups": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"group_id": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+
+						"group_name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
 			"application_object_id": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -90,13 +107,25 @@ func azureSecretBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 	if v, ok := d.GetOk("azure_roles"); ok {
 		rawAzureList := v.(*schema.Set).List()
 
-		// Vaults API requires we send trhe policy as an escaped string
-		// So we marshall and then change into a string
+		// Vaults API requires we send the policy as an escaped string
+		// So we marshal it and then change into a string
 		jsonAzureList, _ := json.Marshal(rawAzureList)
 		jsonAzureListString := string(jsonAzureList)
 
 		log.Printf("[DEBUG] Azure RoleSet turned to escaped JSON: %s", jsonAzureListString)
 		data["azure_roles"] = string(jsonAzureListString)
+	}
+
+	if v, ok := d.GetOk("azure_groups"); ok {
+		rawAzureList := v.(*schema.Set).List()
+
+		// Vaults API requires we send the policy as an escaped string
+		// So we marshal it and then change into a string
+		jsonAzureList, _ := json.Marshal(rawAzureList)
+		jsonAzureListString := string(jsonAzureList)
+
+		log.Printf("[DEBUG] Azure GroupSet turned to escaped JSON: %s", jsonAzureListString)
+		data["azure_groups"] = string(jsonAzureListString)
 	}
 
 	if v, ok := d.GetOk("application_object_id"); ok {

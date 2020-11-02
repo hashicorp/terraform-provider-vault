@@ -39,6 +39,10 @@ resource "vault_azure_secret_backend_role" "generated_role" {
     role_name = "Reader"
     scope =  "/subscriptions/${var.subscription_id}/resourceGroups/azure-vault-group"
   }
+
+  azure_groups {
+    group_name = "Developers"
+  }
 }
 
 resource "vault_azure_secret_backend_role" "existing_object_id" {
@@ -57,6 +61,7 @@ The following arguments are supported:
 * `role` - (Required) Name of the Azure role
 * `backend` - Path to the mounted Azure auth backend
 * `azure_roles` - List of Azure roles to be assigned to the generated service principal.
+* `azure_groups` - List of Azure groups to be assigned to the generated service principal.
 * `application_object_id` - Application Object ID for an existing service principal that will
    be used instead of creating dynamic service principals. If present, `azure_roles` will be ignored.
 * `ttl` – (Optional) Specifies the default TTL for service principals generated using this role.
