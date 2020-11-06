@@ -258,25 +258,24 @@ namespace.
 
 The below configuration is a simple example of using the provider block's
 `namespace` attribute to configure an aliased provider and create a resource
-within that namespace:
+within that namespace. 
 
 ```hcl
- # main provider block with no namespace
+# main provider block with no namespace
 provider vault {}
 
- # create the "everyone" namespace in the default root namespace
+# create the "everyone" namespace in the default root namespace
 resource "vault_namespace" "everyone" {
   path = "everyone"
 }
 
- # configure an aliased provider, scope to the new namespace. Note: at time of
- # writing, provider configuration does not support the depends_on option.
+# configure an aliased provider, scope to the new namespace. 
 provider vault {
   alias     = "everyone"
-  namespace = "everyone"
+  namespace = vault_namespace.everyone.path
 }
 
- # create a policy in the "everyone" namespace
+# create a policy in the "everyone" namespace
 resource "vault_policy" "example" {
   provider = vault.everyone
 
@@ -309,10 +308,10 @@ root
 
 ### Nested Namespaces
 
-A more complex example of nested namespaces is possible using provider aliases
-and the `depends_on` configuration option. At time of writing Terraform (v0.13)
-does not support using the `depends_on` attribute in the `provider` block, which
-prevents the normal 
+A more complex example of nested namespaces is show below. Each provider blocks
+uses interpolation of the `ID` of namespace it belongs in to ensure the namespace
+exists before that provider gets configured:
+
 
 ```hcl
 # main provider block with no namespace
@@ -324,7 +323,7 @@ resource "vault_namespace" "everyone" {
 
 provider vault {
   alias     = "everyone"
-  namespace = vault_namespace.everyone.path
+  namespace = trimsuffix(vault_namespace.everyone.id, "/")
 }
 
 data "vault_policy_document" "public_secrets" {
@@ -347,8 +346,8 @@ resource "vault_namespace" "engineering" {
 }
 
 provider vault {
-  alias     = "engineering"
-  namespace = "${vault_namespace.everyone.path}/${vault_namespace.engineering.path}"
+  alias = "engineering"
+  namespace = trimsuffix(vault_namespace.engineering.id, "/")
 }
 
 resource "vault_namespace" "vault-team" {
@@ -365,8 +364,8 @@ data "vault_policy_document" "vault_team_secrets" {
 }
 
 provider vault {
-  alias     = "vault-team"
-  namespace = "${vault_namespace.everyone.path}/${vault_namespace.engineering.path}/${vault_namespace.vault-team.path}"
+  alias = "vault-team"
+  namespace = trimsuffix(vault_namespace.vault-team.id, "/")
 }
 
 resource "vault_policy" "vault_team" {
