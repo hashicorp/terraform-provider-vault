@@ -1,6 +1,12 @@
 ## 2.15.1 (Unreleased)
 
+IMPROVEMENTS:
+
 * `resource/vault_gcp_auth_backend`: added support for local mount to prevent replicating the secret engine (#861)
+
+BUG FIXES:
+
+* `resource/vault_jwt_auth_backend`: Fix possible reoccuring diff when using `oidc_client_secret` ([#803](https://github.com/terraform-providers/terraform-provider-vault/pull/803))
 
 ## 2.15.0 (October 21, 2020)
 
