@@ -77,7 +77,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    false,
-				Description: "Time to leave.",
+				Description: "Time to live.",
 			},
 			"format": {
 				Type:         schema.TypeString,
