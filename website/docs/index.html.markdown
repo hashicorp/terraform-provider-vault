@@ -3,13 +3,13 @@ layout: "vault"
 page_title: "Provider: Vault"
 sidebar_current: "docs-vault-index"
 description: |-
-  The Vault provider allows Terraform to read from, write to, and configure Hashicorp Vault
+  The Vault provider allows Terraform to read from, write to, and configure HashiCorp Vault
 ---
 
 # Vault Provider
 
 The Vault provider allows Terraform to read from, write to, and configure
-[Hashicorp Vault](https://vaultproject.io/).
+[HashiCorp Vault](https://vaultproject.io/).
 
 ~> **Important** Interacting with Vault from Terraform causes any secrets
 that you read and write to be persisted in both Terraform's state file
@@ -246,22 +246,180 @@ provider "vault" {
 }
 ```
 
-## Example Multiple Namespace Support
-To leverage more than one namespace in Vault you can use a Terraform alias:
+## Namespace support 
+
+The Vault provider supports managing [Namespaces][namespaces] (a feature of
+Vault Enterprise), as well as creating resources in those namespaces by
+utilizing [Provider Aliasing][aliasing]. The `namespace` option in the [provider
+block][provider-block] enables the management of  resources in the specified
+namespace. 
+
+### Using Provider Aliases
+
+The below configuration is a simple example of using the provider block's
+`namespace` attribute to configure an aliased provider and create a resource
+within that namespace. 
 
 ```hcl
-provider "vault" {
-  alias = "ns1"
-  namespace = "ns1"
+# main provider block with no namespace
+provider vault {}
+
+# create the "everyone" namespace in the default root namespace
+resource "vault_namespace" "everyone" {
+  path = "everyone"
 }
 
-provider "vault" {
-  alias = "ns2"
-  namespace = "ns2"
+# configure an aliased provider, scope to the new namespace. 
+provider vault {
+  alias     = "everyone"
+  namespace = vault_namespace.everyone.path
 }
 
-resource "vault_generic_secret" "secret"{
-  provider = "vault.ns1"
-  ...
+# create a policy in the "everyone" namespace
+resource "vault_policy" "example" {
+  provider = vault.everyone
+
+  depends_on = [vault_namespace.everyone]
+  name       = "vault_everyone_policy"
+  policy     = data.vault_policy_document.list_secrets.hcl
+}
+
+data "vault_policy_document" "list_secrets" {
+  rule {
+    path         = "secret/*"
+    capabilities = ["list"]
+    description  = "allow List on secrets under everyone/"
+  }
 }
 ```
+
+Using this alias configuration, the policy `list_secrets` is created under the
+`everyone` namespace, but not under the "root" namespace:
+
+```
+$ vault policy list -namespace=everyone
+default
+vault_everyone_policy
+
+$ vault policy list
+default
+root
+```
+
+### Nested Namespaces
+
+A more complex example of nested namespaces is show below. Each provider blocks
+uses interpolation of the `ID` of namespace it belongs in to ensure the namespace
+exists before that provider gets configured:
+
+
+```hcl
+# main provider block with no namespace
+provider vault {}
+
+resource "vault_namespace" "everyone" {
+  path = "everyone"
+}
+
+provider vault {
+  alias     = "everyone"
+  namespace = trimsuffix(vault_namespace.everyone.id, "/")
+}
+
+data "vault_policy_document" "public_secrets" {
+  rule {
+    path         = "secret/*"
+    capabilities = ["list"]
+    description  = "allow List on secrets under everyone/ namespace"
+  }
+}
+
+resource "vault_policy" "everyone" {
+  provider = vault.everyone
+  name     = "vault_everyone_policy"
+  policy   = data.vault_policy_document.vault_team_secrets.hcl
+}
+
+resource "vault_namespace" "engineering" {
+  provider = vault.everyone
+  path     = "engineering"
+}
+
+provider vault {
+  alias = "engineering"
+  namespace = trimsuffix(vault_namespace.engineering.id, "/")
+}
+
+resource "vault_namespace" "vault-team" {
+  provider = vault.engineering
+  path     = "vault-team"
+}
+
+data "vault_policy_document" "vault_team_secrets" {
+  rule {
+    path         = "secret/*"
+    capabilities = ["create", "read", "update", "delete", "list"]
+    description  = "allow all on secrets under everyone/engineering/vault-team/"
+  }
+}
+
+provider vault {
+  alias = "vault-team"
+  namespace = trimsuffix(vault_namespace.vault-team.id, "/")
+}
+
+resource "vault_policy" "vault_team" {
+  provider = vault.vault-team
+  name     = "vault_team_policy"
+  policy   = data.vault_policy_document.vault_team_secrets.hcl
+}
+```
+
+Using this configuration, the namespace and policy structure looks like so:
+
+```
+<root>/
+  default
+  root
+  /everyone/
+   default
+   vault_everyone_policy
+    /engineering/
+      default
+      /vault-team/
+      default
+      vault_team_policy
+```
+
+Verify the structure with `vault` directly:
+
+```
+$ vault namespace list
+Keys
+----
+everyone/
+
+$ vault namespace list -namespace=everyone
+Keys
+----
+engineering/
+
+$ vault namespace list -namespace=everyone/engineering
+Keys
+----
+vault-team/
+
+$ vault namespace list -namespace=everyone/engineering/vault-team
+No namespaces found
+
+$ vault namespace list -namespace=everyone/engineering/vault-team
+
+$ vault policy list -namespace=everyone/engineering/vault-team
+default
+vault_team_policy
+```
+
+
+[namespaces]: https://www.vaultproject.io/docs/enterprise/namespaces#vault-enterprise-namespaces
+[aliasing]: https://www.terraform.io/docs/configuration/providers.html#alias-multiple-provider-configurations
+[provider-block]: /docs#provider-arguments
