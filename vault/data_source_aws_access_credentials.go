@@ -115,6 +115,11 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 				Computed:    true,
 				Description: "True if the duration of this lease can be extended through renewal.",
 			},
+			"ttl": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "User specified Time-To-Live for the STS token. Uses the Role defined default_sts_ttl when not specified",
+			},
 		},
 	}
 }
@@ -131,6 +136,10 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	// If the ARN is empty and only one is specified in the role definition, this should work without issue
 	data := map[string][]string{
 		"role_arn": {arn},
+	}
+
+	if v, ok := d.GetOk("ttl"); ok {
+		data["ttl"] = []string{v.(string)}
 	}
 
 	log.Printf("[DEBUG] Reading %q from Vault with data %#v", path, data)
