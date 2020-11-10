@@ -14,8 +14,8 @@ func adSecretBackendResource() *schema.Resource {
 		"backend": {
 			Type:        schema.TypeString,
 			Default:     "ad",
-			Required:    true,
 			ForceNew:    true,
+			Optional:    true,
 			Description: `The mount path for a backend, for example, the path given in "$ vault auth enable -path=my-ad ad".`,
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
