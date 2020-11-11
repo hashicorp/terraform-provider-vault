@@ -405,29 +405,51 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error reading AWS auth backend role %q: %s", path, err)
 	}
+
 	log.Printf("[DEBUG] Read AWS auth backend role %q", path)
 	if resp == nil {
 		log.Printf("[WARN] AWS auth backend role %q not found, removing from state", path)
 		d.SetId("")
 		return nil
 	}
-	iPolicies := resp.Data["policies"].([]interface{})
+
+	// https://registry.terraform.io/providers/hashicorp/vault/latest/docs/resources/aws_auth_backend_role#deprecated-arguments
+	// Some of the token args we called are deprecated in Vault 1.2+, check for the old, then new keys through here
+	policiesKey := "policies"
+	if _, ok := resp.Data[policiesKey]; !ok {
+		policiesKey = "token_policies"
+	}
+
+	iPolicies := resp.Data[policiesKey].([]interface{})
 	policies := make([]string, len(iPolicies))
 	for i, iPolicy := range iPolicies {
 		policies[i] = iPolicy.(string)
 	}
 
-	ttl, err := resp.Data["ttl"].(json.Number).Int64()
+	ttlKey := "ttl"
+	if _, ok := resp.Data[ttlKey]; !ok {
+		ttlKey = "token_ttl"
+	}
+
+	ttl, err := resp.Data[ttlKey].(json.Number).Int64()
 	if err != nil {
 		return fmt.Errorf("expected ttl %q to be a number, isn't", resp.Data["ttl"])
 	}
 
-	maxTTL, err := resp.Data["max_ttl"].(json.Number).Int64()
+	maxTtlKey := "max_ttl"
+	if _, ok := resp.Data[maxTtlKey]; !ok {
+		ttlKey = "token_max_ttl"
+	}
+	maxTTL, err := resp.Data[maxTtlKey].(json.Number).Int64()
 	if err != nil {
 		return fmt.Errorf("expected max_ttl %q to be a number, isn't", resp.Data["max_ttl"])
 	}
 
-	period, err := resp.Data["period"].(json.Number).Int64()
+	periodKey := "period"
+	if _, ok := resp.Data[periodKey]; !ok {
+		periodKey = "token_period"
+	}
+	period, err := resp.Data[periodKey].(json.Number).Int64()
 	if err != nil {
 		return fmt.Errorf("expected period %q to be a number, isn't", resp.Data["period"])
 	}
