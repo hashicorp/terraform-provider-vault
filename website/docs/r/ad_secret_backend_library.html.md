@@ -1,9 +1,9 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_ad_secret_backend_role resource"
-sidebar_current: "docs-vault-resource-ad-secret-backend-role"
+page_title: "Vault: vault_ad_secret_backend_library resource"
+sidebar_current: "docs-vault-resource-ad-secret-backend-library"
 description: |-
-  Creates a role on the Active Directory Secret Backend for Vault.
+  Creates a library on the Active Directory Secret Backend for Vault.
 ---
 
 # vault\ad\_secret\_backend\_library
