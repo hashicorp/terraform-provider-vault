@@ -302,6 +302,10 @@ var (
 			Resource:      adSecretBackendResource(),
 			PathInventory: []string{"/ad"},
 		},
+		"vault_ad_secret_library": {
+			Resource:      adSecretBackendLibraryResource(),
+			PathInventory: []string{"/ad/library/{name}"},
+		},
 		"vault_ad_secret_role": {
 			Resource:      adSecretBackendRoleResource(),
 			PathInventory: []string{"/ad/roles/{role}"},
