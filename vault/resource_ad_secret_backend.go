@@ -35,7 +35,7 @@ func adSecretBackendResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Required:    true,
 			Sensitive:   true,
-			Description: `LDAP password for searching for the user DN (optional)`,
+			Description: `LDAP password for searching for the user DN.`,
 		},
 		"case_sensitive_names": {
 			Type:        schema.TypeBool,
@@ -45,19 +45,19 @@ func adSecretBackendResource() *schema.Resource {
 		"certificate": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: `CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded (optional)`,
+			Description: `CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.`,
 		},
 		"client_tls_cert": {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Sensitive:   true,
-			Description: `Client certificate to provide to the LDAP server, must be x509 PEM encoded (optional)`,
+			Description: `Client certificate to provide to the LDAP server, must be x509 PEM encoded.`,
 		},
 		"client_tls_key": {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Sensitive:   true,
-			Description: `Client certificate key to provide to the LDAP server, must be x509 PEM encoded (optional)`,
+			Description: `Client certificate key to provide to the LDAP server, must be x509 PEM encoded.`,
 		},
 		"default_lease_ttl_seconds": {
 			Type:        schema.TypeInt,
@@ -78,7 +78,7 @@ func adSecretBackendResource() *schema.Resource {
 		"discoverdn": {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Description: `Use anonymous bind to discover the bind DN of a user (optional)`,
+			Description: `Use anonymous bind to discover the bind DN of a user.`,
 		},
 		"formatter": {
 			Type:        schema.TypeString,
@@ -100,12 +100,12 @@ func adSecretBackendResource() *schema.Resource {
 		"groupfilter": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: `Go template for querying group membership of user (optional) The template can access the following context variables: UserDN, Username Example: (&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}})) Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`,
+			Description: `Go template for querying group membership of user. The template can access the following context variables: UserDN, Username Example: (&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}})) Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`,
 		},
 		"insecure_tls": {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Description: `Skip LDAP server SSL Certificate verification - insecure and not recommended for production use (optional)`,
+			Description: `Skip LDAP server SSL Certificate verification - insecure and not recommended for production use.`,
 		},
 		"last_rotation_tolerance": {
 			Type:        schema.TypeInt,
@@ -130,7 +130,7 @@ func adSecretBackendResource() *schema.Resource {
 			Type:        schema.TypeInt,
 			Optional:    true,
 			Computed:    true,
-			Description: "Maximum possible lease duration for secrets in seconds",
+			Description: "Maximum possible lease duration for secrets in seconds.",
 		},
 		"max_ttl": {
 			Type:        schema.TypeInt,
@@ -152,7 +152,7 @@ func adSecretBackendResource() *schema.Resource {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Computed:    true,
-			Description: `Issue a StartTLS command after establishing unencrypted connection (optional)`,
+			Description: `Issue a StartTLS command after establishing unencrypted connection.`,
 		},
 		"tls_max_version": {
 			Type:        schema.TypeString,
@@ -176,7 +176,7 @@ func adSecretBackendResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Computed:    true,
-			Description: `Enables userPrincipalDomain login with [username]@UPNDomain (optional)`,
+			Description: `Enables userPrincipalDomain login with [username]@UPNDomain.`,
 		},
 		"url": {
 			Type:        schema.TypeString,
