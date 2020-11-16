@@ -65,6 +65,7 @@ func adSecretBackendRoleResource() *schema.Resource {
 		Schema: fields,
 	}
 }
+
 func createRoleResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	backend := d.Get("backend").(string)
