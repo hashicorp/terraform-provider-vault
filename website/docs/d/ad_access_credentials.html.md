@@ -31,15 +31,16 @@ resource "vault_ad_secret_backend" "config" {
 }
 
 resource "vault_ad_secret_role" "bob" {
-    backend = "${vault_ad_secret_backend.config.backend}"
+    backend = vault_ad_secret_backend.config.backend
     role = "bob"
     service_account_name = "Bob"
     ttl = 60
 }
 
 data "vault_ad_access_credentials" "creds" {
-  backend = "${vault_ad_secret_backend.config.backend}"
-  role    = "${vault_ad_secret_role.bob.role}"
+  backend = vault_ad_secret_backend.config.backend
+  role    = vault_ad_secret_role.bob.role}
+  depends_on = [vault_ad_secret_role.bob]
 }
 ```
 

@@ -131,7 +131,7 @@ No additional attributes are exported by this resource.
 
 ## Import
 
-AD secret backends can be imported using the `backend`, e.g.
+AD secret backend can be imported using the `backend`, e.g.
 
 ```
 $ terraform import vault_ad_secret_backend.ad ad
