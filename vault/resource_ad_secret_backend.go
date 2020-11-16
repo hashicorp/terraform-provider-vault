@@ -105,7 +105,7 @@ func adSecretBackendResource() *schema.Resource {
 		"insecure_tls": {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Description: `Skip LDAP server SSL Certificate verification - VERY insecure (optional)`,
+			Description: `Skip LDAP server SSL Certificate verification - insecure and not recommended for production use (optional)`,
 		},
 		"last_rotation_tolerance": {
 			Type:        schema.TypeInt,
