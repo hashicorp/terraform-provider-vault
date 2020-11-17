@@ -75,7 +75,7 @@ func consulSecretBackendResource() *schema.Resource {
 				Description: "CA certificate to use when verifying Consul server certificate, must be x509 PEM encoded.",
 				Sensitive:   false,
 			},
-			"client_cert: {
+			"client_cert": {
 				Type:        schema.TypeString,
 				Required:    false,
 				Description: "Client certificate used for Consul's TLS communication, must be x509 PEM encoded and if this is set you need to also set client_key.",
