@@ -223,7 +223,8 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		d.SetPartial("default_lease_ttl_seconds")
 		d.SetPartial("max_lease_ttl_seconds")
 	}
-	if d.HasChange("address") || d.HasChange("token") || d.HasChange("scheme") {
+	if d.HasChange("address") || d.HasChange("token") || d.HasChange("scheme") ||
+	   d.HasChange("ca_cert") || d.HasChange("client_cert") || d.HasChange("client_key") {
 		log.Printf("[DEBUG] Updating Consul configuration at %q", configPath)
 		data := map[string]interface{}{
 			"address": d.Get("address").(string),
