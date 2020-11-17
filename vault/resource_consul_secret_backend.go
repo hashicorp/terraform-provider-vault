@@ -86,7 +86,7 @@ func consulSecretBackendResource() *schema.Resource {
 				Required:    false,
 				Description: "Client key used for Consul's TLS communication, must be x509 PEM encoded and if this is set you need to also set client_cert.",
 				Sensitive:   true,
-			}
+			},
 		},
 	}
 }
@@ -135,7 +135,7 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 		"scheme":  scheme,
 		"ca_cert":  ca_cert,
 		"client_cert":  client_cert,
-		"client_key":  client_key
+		"client_key":  client_key,
 	}
 	if _, err := client.Logical().Write(configPath, data); err != nil {
 		return fmt.Errorf("Error writing Consul configuration for %q: %s", path, err)
@@ -228,7 +228,7 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			"scheme":  d.Get("scheme").(string),
 			"ca_cert":  d.Get("ca_cert").(string),
 			"client_cert":  d.Get("client_cert").(string),
-			"client_key":  d.Get("client_key").(string)
+			"client_key":  d.Get("client_key").(string),
 		}
 		if _, err := client.Logical().Write(configPath, data); err != nil {
 			return fmt.Errorf("Error configuring Consul configuration for %q: %s", path, err)
