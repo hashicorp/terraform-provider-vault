@@ -118,7 +118,7 @@ func adSecretBackendResource() *schema.Resource {
 			Type:        schema.TypeInt,
 			Optional:    true,
 			Computed:    true,
-			Deprecated:  `Length is deprecated and password_policy should be used.`,
+			Deprecated:  `Length is deprecated and password_policy should be used with Vault >= 1.5.`,
 			Description: `The desired length of passwords that Vault generates.`,
 		},
 		"local": {
