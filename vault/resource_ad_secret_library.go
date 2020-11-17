@@ -111,22 +111,22 @@ func readLibraryResource(d *schema.ResourceData, meta interface{}) error {
 
 	setName, err := adSecretBackendSetNameFromPath(setPath)
 	if err != nil {
-		log.Printf("[WARN] Removing AD library %q because its ID is invalid", setPath)
-		d.SetId("")
 		return fmt.Errorf("invalid library ID %q: %s", setPath, err)
 	}
 	d.Set("name", setName)
 
 	backend, err := adSecretBackendFromLibraryPath(setPath)
 	if err != nil {
-		log.Printf("[WARN] Removing AD library %q because its ID is invalid", setPath)
-		d.SetId("")
 		return fmt.Errorf("invalid library ID %q: %s", setPath, err)
 	}
 	d.Set("backend", backend)
 
 	resp, err := client.Logical().Read(setPath)
-	if err != nil {
+	if err != nil && util.Is404(err) {
+		log.Printf("[WARN] %q not found, removing from state", setPath)
+		d.SetId("")
+		return nil
+	} else if err != nil {
 		return fmt.Errorf("error reading %q: %s", setPath, err)
 	}
 	log.Printf("[DEBUG] Read %q", setPath)

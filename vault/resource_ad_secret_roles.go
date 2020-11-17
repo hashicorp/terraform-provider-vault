@@ -99,16 +99,12 @@ func readRoleResource(d *schema.ResourceData, meta interface{}) error {
 
 	roleName, err := adSecretBackendRoleNameFromPath(rolePath)
 	if err != nil {
-		log.Printf("[WARN] Removing AD role %q because its ID is invalid", rolePath)
-		d.SetId("")
 		return fmt.Errorf("invalid role ID %q: %s", rolePath, err)
 	}
 	d.Set("role", roleName)
 
 	backend, err := adSecretBackendFromPath(rolePath)
 	if err != nil {
-		log.Printf("[WARN] Removing AD role %q because its ID is invalid", rolePath)
-		d.SetId("")
 		return fmt.Errorf("invalid role ID %q: %s", rolePath, err)
 	}
 	d.Set("backend", backend)

@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"github.com/terraform-providers/terraform-provider-vault/util"
 	"log"
 	"strings"
 
@@ -347,7 +348,11 @@ func readConfigResource(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Reading %q", path)
 
 	mountResp, err := client.Sys().MountConfig(path)
-	if err != nil {
+	if err != nil && util.Is404(err) {
+		log.Printf("[WARN] %q not found, removing from state", path)
+		d.SetId("")
+		return nil
+	} else if err != nil {
 		return fmt.Errorf("error reading %q: %s", path, err)
 	}
 
@@ -637,7 +642,11 @@ func deleteConfigResource(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Unmounting AD backend %q", vaultPath)
 
 	err := client.Sys().Unmount(vaultPath)
-	if err != nil {
+	if err != nil && util.Is404(err) {
+		log.Printf("[WARN] %q not found, removing from state", vaultPath)
+		d.SetId("")
+		return fmt.Errorf("error unmounting AD backend from %q: %s", vaultPath, err)
+	} else if err != nil {
 		return fmt.Errorf("error unmounting AD backend from %q: %s", vaultPath, err)
 	}
 	log.Printf("[DEBUG] Unmounted AD backend %q", vaultPath)
