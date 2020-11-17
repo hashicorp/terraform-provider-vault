@@ -86,7 +86,7 @@ func consulSecretBackendResource() *schema.Resource {
 				Required:    false,
 				Description: "Client key used for Consul's TLS communication, must be x509 PEM encoded and if this is set you need to also set client_cert.",
 				Sensitive:   true,
-			},
+			}
 		},
 	}
 }
