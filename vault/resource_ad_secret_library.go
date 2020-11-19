@@ -44,13 +44,13 @@ func adSecretBackendLibraryResource() *schema.Resource {
 			Type:        schema.TypeInt,
 			Optional:    true,
 			Computed:    true,
-			Description: `The maximum amount of time a check-out last with renewal before Vault automatically checks it back in.`,
+			Description: `The maximum amount of time, in seconds, a check-out last with renewal before Vault automatically checks it back in.`,
 		},
 		"ttl": {
 			Type:        schema.TypeInt,
 			Optional:    true,
 			Computed:    true,
-			Description: `The amount of time a single check-out lasts before Vault automatically checks it back in.`,
+			Description: `The amount of time, in seconds, a single check-out lasts before Vault automatically checks it back in.`,
 		},
 		"disable_check_in_enforcement": {
 			Type:        schema.TypeBool,
