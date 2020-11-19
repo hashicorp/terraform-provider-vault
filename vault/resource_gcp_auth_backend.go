@@ -20,7 +20,9 @@ func gcpAuthBackendResource() *schema.Resource {
 		Read:   gcpAuthBackendRead,
 		Delete: gcpAuthBackendDelete,
 		Exists: gcpAuthBackendExists,
-
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: map[string]*schema.Schema{
 			"credentials": {
 				Type:         schema.TypeString,
