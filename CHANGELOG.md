@@ -1,4 +1,10 @@
-## 2.15.1 (Unreleased)
+## 2.16.0 (Unreleased)
+
+FEATURES:
+* **New Data Source**: `vault_ad_access_credentials` data source ([#902](https://github.com/terraform-providers/terraform-provider-vault/pull/902).
+* **New Resource**: `vault_ad_secret_backend` resource ([#902](https://github.com/terraform-providers/terraform-provider-vault/pull/902).
+* **New Resource**: `vault_ad_secret_role` resource ([#902](https://github.com/terraform-providers/terraform-provider-vault/pull/902).
+* **New Resource**: `vault_ad_secret_library` resource ([#902](https://github.com/terraform-providers/terraform-provider-vault/pull/902).
 
 IMPROVEMENTS:
 
