@@ -10,14 +10,14 @@ description: |-
 
 This resource supports the "/transform/template/{name}" Vault endpoint.
 
-It creates or updates a template with the given name. If a template with the name does not exist, 
+It creates or updates a template with the given name. If a template with the name does not exist,
 it will be created. If the template exists, it will be updated with the new attributes.
 
 ## Example Usage
 
 Please note that the `pattern` below holds a regex. The regex shown
 is identical to the one in our [Setup](https://www.vaultproject.io/docs/secrets/transform#setup)
-docs, `(\d{4})-(\d{4})-(\d{4})-(\d{4})`. However, due to HCL, the 
+docs, `(\d{4})-(\d{4})-(\d{4})-(\d{4})`. However, due to HCL, the
 backslashes must be escaped to appear correctly in Vault. For further
 assistance escaping your own custom regex, see [String Literals](https://www.terraform.io/docs/configuration/expressions.html#string-literals).
 
@@ -42,7 +42,7 @@ resource "vault_transform_template" "test" {
 
 ## Argument Reference
 
-The following arguments are supported: 
+The following arguments are supported:
 
 * `path` - (Required) Path to where the back-end is mounted within Vault.
 * `alphabet` - (Optional) The alphabet to use for this template. This is only used during FPE transformations.

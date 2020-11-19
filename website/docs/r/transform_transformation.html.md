@@ -10,7 +10,7 @@ description: |-
 
 This resource supports the "/transform/transformation/{name}" Vault endpoint.
 
-It creates or updates a transformation with the given name. If a transformation with the name does not exist, 
+It creates or updates a transformation with the given name. If a transformation with the name does not exist,
 it will be created. If the transformation exists, it will be updated with the new attributes.
 
 ## Example Usage
@@ -32,7 +32,7 @@ resource "vault_transform_transformation" "test" {
 
 ## Argument Reference
 
-The following arguments are supported:  
+The following arguments are supported:
 
 * `path` - (Required) Path to where the back-end is mounted within Vault.
 * `allowed_roles` - (Optional) The set of roles allowed to perform this transformation.

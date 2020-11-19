@@ -1,0 +1,11 @@
+dn: CN=Bob,CN=Users,DC=corp,DC=example,DC=net
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: user
+cn: Bob
+description: test account
+name: Bob
+sAMAccountName: Bob
+distinguishedName: CN=Bob,CN=Users,DC=corp,DC=example,DC=net
+userPrincipalName: Bob

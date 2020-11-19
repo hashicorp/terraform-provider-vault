@@ -619,7 +619,7 @@ func testHeaderConfig(headerName, headerValue string) string {
 	providerConfig := fmt.Sprintf(`
 	provider "vault" {
 		headers {
-			name  = "%s" 
+			name  = "%s"
 			value = "%s"
 		}
 		token_name = "testtoken"
