@@ -8,7 +8,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
-* `resource/vault_gcp_auth_backend`: added support for local mount to prevent replicating the secret engine (#861)
+* `resource/vault_gcp_auth_backend`: added support for local mount to prevent replicating the secret engine ([#861](https://github.com/terraform-providers/terraform-provider-vault/pull/861))
 * `data/vault_gcp_auth_backend`: Add optional ttl parameter to data source ([#878](https://github.com/terraform-providers/terraform-provider-vault/pull/878))
 
 BUG FIXES:
