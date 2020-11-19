@@ -1,4 +1,4 @@
-## 2.16.0 (Unreleased)
+## 2.16.0 (November 19, 2020)
 
 FEATURES:
 * **New Data Source**: `vault_ad_access_credentials` data source ([#902](https://github.com/terraform-providers/terraform-provider-vault/pull/902))
