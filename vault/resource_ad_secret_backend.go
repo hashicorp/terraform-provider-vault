@@ -85,7 +85,7 @@ func adSecretBackendResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Computed:    true,
-			Deprecated:  `Formatter is deprecated and password_policy should be used.`,
+			Deprecated:  `Formatter is deprecated and password_policy should be used with Vault >= 1.5.`,
 			Description: `Text to insert the password into, ex. "customPrefix{{PASSWORD}}customSuffix".`,
 		},
 		"groupattr": {
