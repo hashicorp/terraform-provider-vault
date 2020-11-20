@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
-type Binding struct {
+type GCPBinding struct {
 	Resource string
 	Roles    []string
 }
@@ -53,13 +53,13 @@ func gcpSecretBindingHash(v interface{}) int {
 	return hashcode.String(buf.String())
 }
 
-func gcpSecretRenderBinding(binding *Binding) string {
+func gcpSecretRenderBinding(binding *GCPBinding) string {
 	output := fmt.Sprintf("resource \"%s\" {\n", binding.Resource)
 	output = fmt.Sprintf("%s  roles = %s\n", output, policyRenderListOfStrings(binding.Roles))
 	return fmt.Sprintf("%s}\n", output)
 }
 
-func gcpSecretRenderBindings(bindings []*Binding) string {
+func gcpSecretRenderBindings(bindings []*GCPBinding) string {
 	var output string
 
 	for i, binding := range bindings {
@@ -76,7 +76,7 @@ func gcpSecretRenderBindings(bindings []*Binding) string {
 func gcpSecretRenderBindingsFromData(v interface{}) string {
 	rawBindings := v.(*schema.Set).List()
 
-	bindings := make([]*Binding, len(rawBindings))
+	bindings := make([]*GCPBinding, len(rawBindings))
 
 	for i, binding := range rawBindings {
 		rawRoles := binding.(map[string]interface{})["roles"].(*schema.Set).List()
@@ -85,7 +85,7 @@ func gcpSecretRenderBindingsFromData(v interface{}) string {
 			roles[j] = role.(string)
 		}
 
-		binding := &Binding{
+		binding := &GCPBinding{
 			Resource: binding.(map[string]interface{})["resource"].(string),
 			Roles:    roles,
 		}
