@@ -15,12 +15,12 @@ type Binding struct {
 }
 
 func gcpSecretFlattenBinding(v interface{}) interface{} {
+	transformed := schema.NewSet(gcpSecretBindingHash, []interface{}{})
 	if v == nil {
-		return v
+		return transformed
 	}
 
 	rawBindings := v.((map[string]interface{}))
-	transformed := schema.NewSet(gcpSecretBindingHash, []interface{}{})
 	for resource, roles := range rawBindings {
 		transformed.Add(map[string]interface{}{
 			"resource": resource,
