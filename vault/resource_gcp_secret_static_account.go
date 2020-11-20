@@ -158,8 +158,8 @@ func gcpSecretStaticAccountRead(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	var binding interface{}
-	if v, ok := resp.Data["binding"]; ok && v != "" {
-		binding = gcpSecretFlattenBinding(resp.Data["bindings"])
+	if v, ok := resp.Data["bindings"]; ok && v != "" {
+		binding = gcpSecretFlattenBinding(v)
 	} else {
 		binding = gcpSecretFlattenBinding(nil)
 	}

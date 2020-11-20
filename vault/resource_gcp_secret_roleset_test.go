@@ -57,10 +57,10 @@ func TestGCPSecretRoleset(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            "vault_gcp_secret_backend.test",
+				ResourceName:            "vault_gcp_secret_roleset.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"credentials"},
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 				Config: updatedConfig,
