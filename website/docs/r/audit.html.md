@@ -26,7 +26,7 @@ resource "vault_audit" "test" {
 resource "vault_audit" "test" {
   type = "socket"
   path = "app_socket"
-  local = "false"
+  local = false
 
   options = {
     address     = "127.0.0.1:8000"
