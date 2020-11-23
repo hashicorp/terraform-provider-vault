@@ -1,3 +1,8 @@
+## Unreleased
+
+IMPROVEMENTS:
+* `resource/vault_audit `: added support for local mount to prevent replicating the audit backend ([#915](https://github.com/terraform-providers/terraform-provider-vault/pull/915))
+
 ## 2.16.0 (November 19, 2020)
 
 FEATURES:
