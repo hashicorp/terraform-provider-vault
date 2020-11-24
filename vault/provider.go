@@ -231,6 +231,10 @@ var (
 			Resource:      adAccessCredentialsDataSource(),
 			PathInventory: []string{"/ad/creds/{role}"},
 		},
+		"vault_nomad_access_credentials": {
+			Resource:      nomadAccessCredentialsDataSource(),
+			PathInventory: []string{"/nomad/creds/{role}"},
+		},
 		"vault_aws_access_credentials": {
 			Resource:      awsAccessCredentialsDataSource(),
 			PathInventory: []string{"/aws/creds"},
@@ -441,6 +445,18 @@ var (
 		"vault_kubernetes_auth_backend_role": {
 			Resource:      kubernetesAuthBackendRoleResource(),
 			PathInventory: []string{"/auth/kubernetes/role/{name}"},
+		},
+		"vault_nomad_secret_backend": {
+			Resource:      nomadSecretAccessBackendResource(),
+			PathInventory: []string{"/nomad"},
+		},
+		"vault_nomad_lease_secret_backend": {
+			Resource:      nomadSecretLeaseBackendResource(),
+			PathInventory: []string{"/nomad/config/lease"},
+		},
+		"vault_nomad_secret_role": {
+			Resource:      nomadSecretBackendRoleResource(),
+			PathInventory: []string{"/nomad/role/{role}"},
 		},
 		"vault_okta_auth_backend": {
 			Resource:      oktaAuthBackendResource(),
