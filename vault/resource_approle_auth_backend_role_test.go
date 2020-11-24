@@ -522,7 +522,7 @@ resource "vault_approle_auth_backend_role" "role" {
 }
 
 // TestAccAppRoleAuthBackendRole_token_policy_update is a regression test for
-// https://github.com/terraform-providers/terraform-provider-vault/issues/533
+// https://github.com/hashicorp/terraform-provider-vault/issues/533
 func TestAccAppRoleAuthBackendRole_token_policy_update(t *testing.T) {
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")

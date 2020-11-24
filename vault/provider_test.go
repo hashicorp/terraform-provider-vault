@@ -702,7 +702,7 @@ func TestAccProviderVaultAddrEnv(t *testing.T) {
 
 	// clear BASH_ENV for this test so any cmd.Exec invocations do not source the BASH_ENV
 	// file which is configured with a VAULT_ADDR here:
-	// https://github.com/terraform-providers/terraform-provider-vault/blob/f42716aae3aebc8daf9702dfa20ce3f8d09d9f4d/.circleci/config.yml#L27
+	// https://github.com/hashicorp/terraform-provider-vault/blob/f42716aae3aebc8daf9702dfa20ce3f8d09d9f4d/.circleci/config.yml#L27
 	// All values set in that BASH_ENV file will still be in the process environment of this
 	// test, they just won't clobber any values this test modifies in the process environment
 	// when the ExternalTokenHelper's command is formatted into a shell invocation to exec here:

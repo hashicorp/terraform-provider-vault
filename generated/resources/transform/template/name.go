@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
-	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 const nameEndpoint = "/transform/template/{name}"

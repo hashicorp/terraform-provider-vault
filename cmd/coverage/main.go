@@ -9,8 +9,8 @@ import (
 	"os"
 	"sort"
 
+	"github.com/hashicorp/terraform-provider-vault/vault"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/terraform-providers/terraform-provider-vault/vault"
 )
 
 var pathToOpenAPIDoc = flag.String("openapi-doc", "", "path/to/openapi.json")
