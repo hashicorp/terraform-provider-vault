@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/terraform-providers/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccDataSourceADAccessCredentials_basic(t *testing.T) {

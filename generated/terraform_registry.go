@@ -2,12 +2,12 @@ package generated
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/terraform-providers/terraform-provider-vault/generated/datasources/transform/decode"
-	"github.com/terraform-providers/terraform-provider-vault/generated/datasources/transform/encode"
-	"github.com/terraform-providers/terraform-provider-vault/generated/resources/transform/alphabet"
-	"github.com/terraform-providers/terraform-provider-vault/generated/resources/transform/role"
-	"github.com/terraform-providers/terraform-provider-vault/generated/resources/transform/template"
-	"github.com/terraform-providers/terraform-provider-vault/generated/resources/transform/transformation"
+	"github.com/hashicorp/terraform-provider-vault/generated/datasources/transform/decode"
+	"github.com/hashicorp/terraform-provider-vault/generated/datasources/transform/encode"
+	"github.com/hashicorp/terraform-provider-vault/generated/resources/transform/alphabet"
+	"github.com/hashicorp/terraform-provider-vault/generated/resources/transform/role"
+	"github.com/hashicorp/terraform-provider-vault/generated/resources/transform/template"
+	"github.com/hashicorp/terraform-provider-vault/generated/resources/transform/transformation"
 )
 
 // Please alphabetize.

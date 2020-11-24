@@ -17,7 +17,7 @@ to upgrade from version `1.9.0` to `2.0.0`.
 Most of the changes outlined in this guide have been previously marked as
 deprecated in the Terraform `plan`/`apply` output throughout previous provider
 releases, up to and including 1.9.0. These changes, such as deprecation notices,
-can always be found in the [CHANGELOG](https://github.com/terraform-providers/terraform-provider-vault/blob/master/CHANGELOG.md).
+can always be found in the [CHANGELOG](https://github.com/hashicorp/terraform-provider-vault/blob/master/CHANGELOG.md).
 
 Version 2.0.0 of the Vault provider is the first version to offer compatibility with
 Terraform 0.12.
