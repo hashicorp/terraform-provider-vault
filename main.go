@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/plugin"
-	"github.com/terraform-providers/terraform-provider-vault/generated"
-	"github.com/terraform-providers/terraform-provider-vault/schema"
-	"github.com/terraform-providers/terraform-provider-vault/vault"
+	"github.com/hashicorp/terraform-provider-vault/generated"
+	"github.com/hashicorp/terraform-provider-vault/schema"
+	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
 func main() {
