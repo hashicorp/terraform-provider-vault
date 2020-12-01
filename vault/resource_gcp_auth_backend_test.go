@@ -45,7 +45,7 @@ func TestGCPAuthBackend_import(t *testing.T) {
 		CheckDestroy: testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPAuthBackendConfig_import(gcpJSONCredentials, "gcp auth backend test", true),
+				Config: testGCPAuthBackendConfig_import(gcpJSONCredentials, "gcp auth backend test", "true"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "description", "gcp auth backend test"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "local", "true"),
@@ -126,7 +126,7 @@ resource "vault_gcp_auth_backend" "test" {
 
 }
 
-func testGCPAuthBackendConfig_import(credentials, description string, local bool) string {
+func testGCPAuthBackendConfig_import(credentials, description string, local string) string {
 	return fmt.Sprintf(`
 variable "json_credentials" {
   type = "string"
@@ -136,7 +136,7 @@ variable "json_credentials" {
 resource "vault_gcp_auth_backend" "test" {
   credentials                   = "${var.json_credentials}"
   description                   = "%s"
-  local                         = %t
+  local                         = %s
 }
 `, credentials, description, local)
 }
