@@ -45,7 +45,7 @@ func TestGCPAuthBackend_import(t *testing.T) {
 		CheckDestroy: testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPAuthBackendConfig_import(gcpJSONCredentials, "test", true),
+				Config: testGCPAuthBackendConfig_import(gcpJSONCredentials, "gcp auth backend test", true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "description", "gcp auth backend test"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "local", "true"),
