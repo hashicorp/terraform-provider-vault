@@ -471,8 +471,11 @@ var (
 			PathInventory: []string{"/auth/ldap/groups/{name}"},
 		},
 		"vault_nomad_secret_backend": {
-			Resource:      nomadSecretAccessBackendResource(),
-			PathInventory: []string{"/nomad/config/access"},
+			Resource: nomadSecretAccessBackendResource(),
+			PathInventory: []string{
+				"/nomad",
+				"/nomad/config/access",
+			},
 		},
 		"vault_nomad_secret_lease": {
 			Resource:      nomadSecretLeaseBackendResource(),
