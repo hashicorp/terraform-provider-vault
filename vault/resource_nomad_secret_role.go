@@ -86,7 +86,7 @@ func createNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 		data["global"] = v
 	}
 
-	// Policies are required if role type is 'client', so settiing up
+	// Policies are required if role type is 'client', so setting up
 	// to enforce that here.
 	if v, ok := d.GetOkExists("policies"); ok {
 		if roleType == "client" {
