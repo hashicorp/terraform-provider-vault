@@ -60,7 +60,7 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 			Type:        schema.TypeBool,
 			Required:    false,
 			Optional:    true,
-			Description: `Mark the secrets engine as local-only. Local engines are not replicated or removed by replication.Tolerance duration to use when checking the last rotation time.`,
+			Description: `Mark the secrets engine as local-only. Local engines are not replicated or removed by replication. Tolerance duration to use when checking the last rotation time.`,
 		},
 		"max_lease_ttl_seconds": {
 			Type:        schema.TypeInt,
