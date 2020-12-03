@@ -22,12 +22,14 @@ for more details.
 
 ```hcl
 resource "vault_nomad_secret_backend" "config" {
-	backend = "%s"
+	backend = "nomad"
 	description = "test description"
 	default_lease_ttl_seconds = "3600"
 	max_lease_ttl_seconds = "7200"
-	address = "ae20ceaa-...
-	token = "%s"
+	max_ttl = "240"
+	address = "https://127.0.0.1:4646"
+	token = "ae20ceaa-...
+	ttl = "120"
 }
 ```
 
@@ -59,7 +61,12 @@ replication.Tolerance duration to use when checking the last rotation time.
 generated with Generate Credential. If omitted, 0 is used and ignored, defaulting to the max value allowed 
 by the Nomad version.
 
+* `max_ttl` - (Optional) Maximum possible lease duration for secrets in seconds.
+
 * `token` - (Required) Specifies the Nomad Management token to use.
+
+* `ttl` - (Optional) Specifies the ttl of the lease for the generated token.
+
 
 
 ## Attributes Reference

@@ -475,11 +475,8 @@ var (
 			PathInventory: []string{
 				"/nomad",
 				"/nomad/config/access",
+				"/nomad/config/lease",
 			},
-		},
-		"vault_nomad_secret_lease": {
-			Resource:      nomadSecretLeaseBackendResource(),
-			PathInventory: []string{"/nomad/config/lease"},
 		},
 		"vault_nomad_secret_role": {
 			Resource:      nomadSecretBackendRoleResource(),

@@ -74,11 +74,23 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 			Computed:    true,
 			Description: `Specifies the maximum length to use for the name of the Nomad token generated with Generate Credential. If omitted, 0 is used and ignored, defaulting to the max value allowed by the Nomad version.`,
 		},
+		"max_ttl": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Computed:    true,
+			Description: "Maximum possible lease duration for secrets in seconds.",
+		},
 		"token": {
 			Type:        schema.TypeString,
 			Required:    true,
 			Sensitive:   true,
 			Description: `Specifies the Nomad Management token to use.`,
+		},
+		"ttl": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Computed:    true,
+			Description: "Maximum possible lease duration for secrets in seconds.",
 		},
 	}
 	return &schema.Resource{
@@ -149,7 +161,22 @@ func createNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) e
 		return fmt.Errorf("error writing %q: %s", configPath, err)
 	}
 
-	log.Printf("[DEBUG] Wrote %q", configPath)
+	dataLease := map[string]interface{}{}
+	if v, ok := d.GetOkExists("max_ttl"); ok {
+		dataLease["max_ttl"] = v
+	}
+
+	if v, ok := d.GetOkExists("ttl"); ok {
+		dataLease["ttl"] = v
+	}
+
+	configLeasePath := fmt.Sprintf("%s/config/lease", backend)
+	log.Printf("[DEBUG] Writing %q", configLeasePath)
+	if _, err := client.Logical().Write(configLeasePath, dataLease); err != nil {
+		return fmt.Errorf("error writing %q: %s", configLeasePath, err)
+	}
+
+	log.Printf("[DEBUG] Wrote %q", configLeasePath)
 	return readNomadAccessConfigResource(d, meta)
 }
 
@@ -222,6 +249,32 @@ func readNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) err
 		}
 	}
 
+	configLeasePath := fmt.Sprintf("%s/config/lease", d.Id())
+	log.Printf("[DEBUG] Reading %q", configLeasePath)
+
+	resp, err = client.Logical().Read(configLeasePath)
+	if err != nil {
+		return fmt.Errorf("error reading %q: %s", configLeasePath, err)
+	}
+	log.Printf("[DEBUG] Read %q", configLeasePath)
+	if resp == nil {
+		log.Printf("[WARN] %q not found, removing from state", configLeasePath)
+		d.SetId("")
+		return nil
+	}
+
+	if val, ok := resp.Data["max_ttl"]; ok {
+		if err := d.Set("max_ttl", val); err != nil {
+			return fmt.Errorf("error setting state key 'max_ttl': %s", err)
+		}
+	}
+
+	if val, ok := resp.Data["ttl"]; ok {
+		if err := d.Set("ttl", val); err != nil {
+			return fmt.Errorf("error setting state key 'ttl': %s", err)
+		}
+	}
+
 	return nil
 }
 
@@ -251,8 +304,8 @@ func updateNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) e
 		}
 	}
 
-	vaultPath := fmt.Sprintf("%s/config/access", backend)
-	log.Printf("[DEBUG] Updating %q", vaultPath)
+	configPath := fmt.Sprintf("%s/config/access", backend)
+	log.Printf("[DEBUG] Updating %q", configPath)
 
 	if raw, ok := d.GetOk("address"); ok {
 		data["address"] = raw
@@ -278,11 +331,29 @@ func updateNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) e
 		data["token"] = raw
 	}
 
-	if _, err := client.Logical().Write(vaultPath, data); err != nil {
-		return fmt.Errorf("error updating template auth backend role %q: %s", vaultPath, err)
+	if _, err := client.Logical().Write(configPath, data); err != nil {
+		return fmt.Errorf("error updating access config %q: %s", configPath, err)
+	}
+	log.Printf("[DEBUG] Updated %q", configPath)
+
+	configLeasePath := fmt.Sprintf("%s/config/lease", backend)
+	log.Printf("[DEBUG] Updating %q", configLeasePath)
+
+	dataLease := map[string]interface{}{}
+
+	if raw, ok := d.GetOk("max_ttl"); ok {
+		dataLease["max_ttl"] = raw
 	}
 
-	log.Printf("[DEBUG] Updated %q", vaultPath)
+	if raw, ok := d.GetOk("ttl"); ok {
+		dataLease["ttl"] = raw
+	}
+
+	if _, err := client.Logical().Write(configLeasePath, dataLease); err != nil {
+		return fmt.Errorf("error updating lease config %q: %s", configLeasePath, err)
+	}
+
+	log.Printf("[DEBUG] Updated %q", configLeasePath)
 	return readNomadAccessConfigResource(d, meta)
 }
 

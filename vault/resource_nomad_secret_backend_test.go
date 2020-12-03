@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func TestNomadSecretBackend(t *testing.T) {
+func TestAccNomadSecretBackend(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
 	address, token := util.GetTestNomadCreds(t)
 
@@ -30,6 +30,8 @@ func TestNomadSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "default_lease_ttl_seconds", "3600"),
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "max_lease_ttl_seconds", "7200"),
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "address", address),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "max_ttl", "60"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "ttl", "30"),
 				),
 			},
 			{
@@ -40,6 +42,8 @@ func TestNomadSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "default_lease_ttl_seconds", "7200"),
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "max_lease_ttl_seconds", "14400"),
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "address", "foobar"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "max_ttl", "90"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "ttl", "60"),
 				),
 			},
 		},
@@ -71,26 +75,30 @@ func testAccNomadSecretBackendCheckDestroy(s *terraform.State) error {
 
 func testNomadSecretBackendInitialConfig(backend, address, token string) string {
 	return fmt.Sprintf(`
-resource "vault_nomad_secret_backend" "config" {
+resource "vault_nomad_secret_backend" "test" {
 	backend = "%s"
 	description = "test description"
 	default_lease_ttl_seconds = "3600"
 	max_lease_ttl_seconds = "7200"
 	address = "%s"
 	token = "%s"
+	max_ttl = "60"
+	ttl = "30"
 }
 `, backend, address, token)
 }
 
 func testNomadSecretBackendUpdateConfig(backend, address, token string) string {
 	return fmt.Sprintf(`
-resource "vault_nomad_secret_backend" "config" {
+resource "vault_nomad_secret_backend" "test" {
 	backend = "%s"
 	description = "test description"
 	default_lease_ttl_seconds = "7200"
-	max_lease_ttl_seconds = "14000"
+	max_lease_ttl_seconds = "14400"
 	address = "%s"
 	token = "%s"
+	max_ttl = "90"
+	ttl = "60"
 }
 `, backend, address, token)
 }
