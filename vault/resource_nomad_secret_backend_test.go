@@ -23,7 +23,7 @@ func TestAccNomadSecretBackend(t *testing.T) {
 		CheckDestroy:              testAccNomadSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testNomadSecretBackendInitialConfig(backend, address, token),
+				Config: testNomadSecretBackendConfig(backend, address, token, 60, 30, 3600, 7200),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "description", "test description"),
@@ -35,7 +35,7 @@ func TestAccNomadSecretBackend(t *testing.T) {
 				),
 			},
 			{
-				Config: testNomadSecretBackendUpdateConfig(backend, "foobar", token),
+				Config: testNomadSecretBackendConfig(backend, "foobar", token, 90, 60, 7200, 14400),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "description", "test description"),
@@ -44,6 +44,18 @@ func TestAccNomadSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "address", "foobar"),
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "max_ttl", "90"),
 					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "ttl", "60"),
+				),
+			},
+			{
+				Config: testNomadSecretBackendConfig(backend, "foobar", token, 0, 0, -1, -1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "backend", backend),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "description", "test description"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "default_lease_ttl_seconds", "-1"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "max_lease_ttl_seconds", "-1"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "address", "foobar"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "max_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "ttl", "0"),
 				),
 			},
 		},
@@ -73,32 +85,17 @@ func testAccNomadSecretBackendCheckDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testNomadSecretBackendInitialConfig(backend, address, token string) string {
+func testNomadSecretBackendConfig(backend, address, token string, maxTTL, ttl, defaultLease, maxLease int) string {
 	return fmt.Sprintf(`
 resource "vault_nomad_secret_backend" "test" {
 	backend = "%s"
 	description = "test description"
-	default_lease_ttl_seconds = "3600"
-	max_lease_ttl_seconds = "7200"
 	address = "%s"
 	token = "%s"
-	max_ttl = "60"
-	ttl = "30"
+	max_ttl = "%d"
+	ttl = "%d"
+	default_lease_ttl_seconds = "%d"
+	max_lease_ttl_seconds = "%d"
 }
-`, backend, address, token)
-}
-
-func testNomadSecretBackendUpdateConfig(backend, address, token string) string {
-	return fmt.Sprintf(`
-resource "vault_nomad_secret_backend" "test" {
-	backend = "%s"
-	description = "test description"
-	default_lease_ttl_seconds = "7200"
-	max_lease_ttl_seconds = "14400"
-	address = "%s"
-	token = "%s"
-	max_ttl = "90"
-	ttl = "60"
-}
-`, backend, address, token)
+`, backend, address, token, maxTTL, ttl, defaultLease, maxLease)
 }

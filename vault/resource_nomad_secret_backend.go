@@ -282,26 +282,19 @@ func updateNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) e
 	backend := d.Id()
 
 	client := meta.(*api.Client)
-	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
-	maxTTL := d.Get("max_lease_ttl_seconds").(int)
 	tune := api.MountConfigInput{}
 	data := map[string]interface{}{}
 
-	if defaultTTL != 0 {
-		tune.DefaultLeaseTTL = fmt.Sprintf("%ds", defaultTTL)
-		data["default_lease_ttl_seconds"] = defaultTTL
-	}
+	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
+		tune.DefaultLeaseTTL = fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds"))
+		tune.MaxLeaseTTL = fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds"))
 
-	if maxTTL != 0 {
-		tune.MaxLeaseTTL = fmt.Sprintf("%ds", maxTTL)
-		data["max_lease_ttl_seconds"] = maxTTL
-	}
-
-	if tune.DefaultLeaseTTL != "0" || tune.MaxLeaseTTL != "0" {
+		log.Printf("[DEBUG] Updating mount lease TTLs for %q", backend)
 		err := client.Sys().TuneMount(backend, tune)
 		if err != nil {
-			return fmt.Errorf("error mounting to %q: %s", backend, err)
+			return fmt.Errorf("error updating mount TTLs for %q: %s", backend, err)
 		}
+		log.Printf("[DEBUG] Updated lease TTLs for %q", backend)
 	}
 
 	configPath := fmt.Sprintf("%s/config/access", backend)
