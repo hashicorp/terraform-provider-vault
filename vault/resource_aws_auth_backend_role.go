@@ -433,16 +433,16 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	ttl, err := resp.Data[ttlKey].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("expected ttl %q to be a number, isn't", resp.Data["ttl"])
+		return fmt.Errorf("expected ttl %q to be a number, isn't", resp.Data[ttlKey])
 	}
 
 	maxTtlKey := "max_ttl"
 	if _, ok := resp.Data[maxTtlKey]; !ok {
-		ttlKey = "token_max_ttl"
+		maxTtlKey = "token_max_ttl"
 	}
 	maxTTL, err := resp.Data[maxTtlKey].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("expected max_ttl %q to be a number, isn't", resp.Data["max_ttl"])
+		return fmt.Errorf("expected max_ttl %q to be a number, isn't", resp.Data[maxTtlKey])
 	}
 
 	periodKey := "period"
@@ -451,7 +451,7 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	period, err := resp.Data[periodKey].(json.Number).Int64()
 	if err != nil {
-		return fmt.Errorf("expected period %q to be a number, isn't", resp.Data["period"])
+		return fmt.Errorf("expected period %q to be a number, isn't", resp.Data[periodKey])
 	}
 
 	d.Set("backend", backend)
