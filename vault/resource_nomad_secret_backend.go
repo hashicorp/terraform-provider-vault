@@ -25,7 +25,7 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 		},
 		"address": {
 			Type:        schema.TypeString,
-			Required:    true,
+			Optional:    true,
 			Description: `Specifies the address of the Nomad instance, provided as "protocol://host:port" like "http://127.0.0.1:4646".`,
 		},
 		"ca_cert": {
@@ -82,7 +82,7 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 		},
 		"token": {
 			Type:        schema.TypeString,
-			Required:    true,
+			Optional:    true,
 			Sensitive:   true,
 			Description: `Specifies the Nomad Management token to use.`,
 		},
@@ -243,11 +243,11 @@ func readNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) err
 		}
 	}
 
-	if val, ok := resp.Data["token"]; ok {
-		if err := d.Set("token", val); err != nil {
-			return fmt.Errorf("error setting state key 'token': %s", err)
-		}
-	}
+	// if val, ok := resp.Data["token"]; ok {
+	// 	if err := d.Set("token", val); err != nil {
+	// 		return fmt.Errorf("error setting state key 'token': %s", err)
+	// 	}
+	// }
 
 	configLeasePath := fmt.Sprintf("%s/config/lease", d.Id())
 	log.Printf("[DEBUG] Reading %q", configLeasePath)

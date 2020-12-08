@@ -8,7 +8,7 @@ description: |-
 
 # vault\_nomad\_secret\_backend
 
-Creates a Nomad Secret Backend for Vault. The Nomad secret backend for Vault 
+Creates a Nomad Secret Backend for Vault. The Nomad secret backend for Vault
 generates Nomad ACL tokens dynamically based on pre-existing Nomad ACL policies.
 
 ~> **Important** All data provided in the resource configuration will be
@@ -40,7 +40,7 @@ The following arguments are supported:
 * `backend` - (Optional) The unique path this backend should be mounted at. Must
 not begin or end with a `/`. Defaults to `nomad`.
 
-* `address` - (Required) Specifies the address of the Nomad instance, provided 
+* `address` - (Optional) Specifies the address of the Nomad instance, provided
 as "protocol://host:port" like "http://127.0.0.1:4646".
 
 * `ca_cert` - (Optional) CA certificate to use when verifying the Nomad server certificate, must be
@@ -57,13 +57,13 @@ x509 PEM encoded.
 * `local` - (Optional) Mark the secrets engine as local-only. Local engines are not replicated or removed by
 replication.Tolerance duration to use when checking the last rotation time.
 
-* `max_token_name_length` - (Optional) Specifies the maximum length to use for the name of the Nomad token 
-generated with Generate Credential. If omitted, 0 is used and ignored, defaulting to the max value allowed 
+* `max_token_name_length` - (Optional) Specifies the maximum length to use for the name of the Nomad token
+generated with Generate Credential. If omitted, 0 is used and ignored, defaulting to the max value allowed
 by the Nomad version.
 
 * `max_ttl` - (Optional) Maximum possible lease duration for secrets in seconds.
 
-* `token` - (Required) Specifies the Nomad Management token to use.
+* `token` - (Optional) Specifies the Nomad Management token to use.
 
 * `ttl` - (Optional) Specifies the ttl of the lease for the generated token.
 
