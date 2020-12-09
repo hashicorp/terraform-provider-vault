@@ -86,6 +86,7 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 		"bound_claims_type": {
 			Type:        schema.TypeString,
 			Optional:    true,
+			Computed:    true,
 			Description: "How to interpret values in the claims/values map: can be either \"string\" (exact match) or \"glob\" (wildcard match).",
 		},
 		"bound_claims": {

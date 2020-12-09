@@ -75,7 +75,7 @@ The following arguments are supported:
 
 * `bound_claims_type` - (Optional) How to interpret values in the claims/values
   map (`bound_claims`): can be either `string` (exact match) or `glob` (wildcard
-  match). Requires Vault 1.4.0 or above. Defaults to `string`.
+  match). Requires Vault 1.4.0 or above.
 
 * `claim_mappings` - (Optional) If set, a map of claims (keys) to be copied
   to specified metadata fields (values).
