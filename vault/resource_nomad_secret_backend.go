@@ -243,12 +243,6 @@ func readNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) err
 		}
 	}
 
-	// if val, ok := resp.Data["token"]; ok {
-	// 	if err := d.Set("token", val); err != nil {
-	// 		return fmt.Errorf("error setting state key 'token': %s", err)
-	// 	}
-	// }
-
 	configLeasePath := fmt.Sprintf("%s/config/lease", d.Id())
 	log.Printf("[DEBUG] Reading %q", configLeasePath)
 
