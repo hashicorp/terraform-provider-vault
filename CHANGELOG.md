@@ -12,6 +12,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * `resource/vault_identity_entity`: Fixed nil pointer exception ([#899](https://github.com/terraform-providers/terraform-provider-vault/pull/899))
+* `resource/vault_mount`: Fixed bug where mount was deleted when description was changed ([#929](https://github.com/hashicorp/terraform-provider-vault/pull/929))
 
 ## 2.16.0 (November 19, 2020)
 
