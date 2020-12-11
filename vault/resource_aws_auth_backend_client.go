@@ -106,9 +106,9 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		data["sts_region"] = stsRegion
 	}
 
-	// sts_endpoint is required when sts_region is set
-	if stsEndpoint == "" && stsRegion != "" {
-		return fmt.Errorf("sts_endpoint must be set if sts_region is configured")
+	// sts_endpoint and sts_region are required to be set together
+	if (stsEndpoint == "") != (stsRegion == "") {
+		return fmt.Errorf("both sts_endpoint and sts_region need to be set")
 	}
 
 	log.Printf("[DEBUG] Writing AWS auth backend client config to %q", path)
