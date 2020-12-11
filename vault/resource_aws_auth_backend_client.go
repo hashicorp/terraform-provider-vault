@@ -150,6 +150,7 @@ func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("ec2_endpoint", secret.Data["endpoint"])
 	d.Set("iam_endpoint", secret.Data["iam_endpoint"])
 	d.Set("sts_endpoint", secret.Data["sts_endpoint"])
+	d.Set("sts_region", secret.Data["sts_region"])
 	d.Set("iam_server_id_header_value", secret.Data["iam_server_id_header_value"])
 	return nil
 }
