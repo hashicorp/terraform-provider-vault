@@ -60,6 +60,11 @@ func awsAuthBackendClientResource() *schema.Resource {
 				Optional:    true,
 				Description: "URL to override the default generated endpoint for making AWS STS API calls.",
 			},
+			"sts_region": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Region to override the default region for making AWS STS API calls.",
+			},
 			"iam_server_id_header_value": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -78,6 +83,8 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	ec2Endpoint := d.Get("ec2_endpoint").(string)
 	iamEndpoint := d.Get("iam_endpoint").(string)
 	stsEndpoint := d.Get("sts_endpoint").(string)
+	stsRegion := d.Get("sts_region").(string)
+
 	iamServerIDHeaderValue := d.Get("iam_server_id_header_value").(string)
 
 	path := awsAuthBackendClientPath(backend)
@@ -93,6 +100,15 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		log.Printf("[DEBUG] Updating AWS credentials at %q", path)
 		data["access_key"] = d.Get("access_key").(string)
 		data["secret_key"] = d.Get("secret_key").(string)
+	}
+
+	if stsRegion != "" {
+		data["sts_region"] = stsRegion
+	}
+
+	// sts_endpoint is required when sts_region is set
+	if stsEndpoint == "" && stsRegion != "" {
+		return fmt.Errorf("sts_endpoint must be set if sts_region is configured")
 	}
 
 	log.Printf("[DEBUG] Writing AWS auth backend client config to %q", path)
