@@ -172,6 +172,8 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
+	fmt.Printf("gcpAuthBackendRead resp.Data: %+v\n", resp.Data)
+
 	d.Set("private_key_id", resp.Data["private_key_id"])
 	d.Set("client_id", resp.Data["client_id"])
 	d.Set("project_id", resp.Data["project_id"])
