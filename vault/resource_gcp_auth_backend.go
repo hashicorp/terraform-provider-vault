@@ -173,6 +173,7 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	fmt.Printf("gcpAuthBackendRead resp.Data: %+v\n", resp.Data)
+	fmt.Printf("gcpAuthBackendRead resp: %+v\n", resp)
 
 	d.Set("private_key_id", resp.Data["private_key_id"])
 	d.Set("client_id", resp.Data["client_id"])
@@ -180,7 +181,7 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("client_email", resp.Data["client_email"])
 	d.Set("local", resp.Data["local"])
 	d.Set("description", resp.Data["description"])
-	d.Set("path", resp.Data["path"])
+	d.Set("path", path)
 	return nil
 }
 
