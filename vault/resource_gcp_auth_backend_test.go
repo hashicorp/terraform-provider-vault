@@ -138,5 +138,5 @@ resource "vault_gcp_auth_backend" "test" {
   description                   = "%s"
   path                          = "%s"
 }
-`, credentials, description)
+`, credentials, description, path)
 }
