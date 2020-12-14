@@ -102,14 +102,17 @@ func azureSecretBackendRoleResource() *schema.Resource {
 	}
 }
 
-func azureSecretBackendRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
+func azureSecretBackendRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) error {
 
 	if v, ok := d.GetOk("azure_roles"); ok {
 		rawAzureList := v.(*schema.Set).List()
 
 		// Vaults API requires we send the policy as an escaped string
 		// So we marshall and then change into a string
-		jsonAzureList, _ := json.Marshal(rawAzureList)
+		jsonAzureList, err := json.Marshal(rawAzureList)
+		if err != nil {
+			return fmt.Errorf("error marshaling JSON for azure_roles %q: %s", rawAzureList, err)
+		}
 		jsonAzureListString := string(jsonAzureList)
 
 		log.Printf("[DEBUG] Azure RoleSet turned to escaped JSON: %s", jsonAzureListString)
@@ -121,7 +124,11 @@ func azureSecretBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 
 		// Vaults API requires we send the policy as an escaped string
 		// So we marshall and then change into a string
-		jsonAzureList, _ := json.Marshal(rawAzureList)
+		jsonAzureList, err := json.Marshal(rawAzureList)
+		if err != nil {
+			return fmt.Errorf("error marshaling JSON for azure_groups %q: %s", rawAzureList, err)
+		}
+
 		jsonAzureListString := string(jsonAzureList)
 
 		log.Printf("[DEBUG] Azure GroupSet turned to escaped JSON: %s", jsonAzureListString)
@@ -140,6 +147,7 @@ func azureSecretBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 		data["max_ttl"] = v.(string)
 	}
 
+	return nil
 }
 
 func azureSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
@@ -151,11 +159,14 @@ func azureSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 	path := azureSecretRoleResourcePath(backend, role)
 
 	data := map[string]interface{}{}
-	azureSecretBackendRoleUpdateFields(d, data)
+	err := azureSecretBackendRoleUpdateFields(d, data)
+	if err != nil {
+		return err
+	}
 
 	log.Printf("[DEBUG] Writing role %q to Azure Secret backend", path)
 	d.SetId(path)
-	_, err := client.Logical().Write(path, data)
+	_, err = client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
 		return fmt.Errorf("Error writing Azure Secret role %q: %s", path, err)
