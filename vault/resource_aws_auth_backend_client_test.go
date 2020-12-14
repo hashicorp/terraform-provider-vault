@@ -106,7 +106,7 @@ func TestAccAWSAuthBackendClientStsRegionNoEndpoint(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccAWSAuthBackendClientConfigSTSRegionNoEndpoint(backend),
-				ExpectError: regexp.MustCompile("sts_endpoint must be set if sts_region is configured"),
+				ExpectError: regexp.MustCompile("both sts_endpoint and sts_region need to be set"),
 			},
 		},
 	})
