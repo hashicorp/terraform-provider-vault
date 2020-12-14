@@ -93,6 +93,7 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		"endpoint":                   ec2Endpoint,
 		"iam_endpoint":               iamEndpoint,
 		"sts_endpoint":               stsEndpoint,
+		"sts_region":                 stsRegion,
 		"iam_server_id_header_value": iamServerIDHeaderValue,
 	}
 
@@ -100,10 +101,6 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		log.Printf("[DEBUG] Updating AWS credentials at %q", path)
 		data["access_key"] = d.Get("access_key").(string)
 		data["secret_key"] = d.Get("secret_key").(string)
-	}
-
-	if stsRegion != "" {
-		data["sts_region"] = stsRegion
 	}
 
 	// sts_endpoint and sts_region are required to be set together
