@@ -8,8 +8,8 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/terraform-provider-vault/codegen"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/terraform-providers/terraform-provider-vault/codegen"
 )
 
 var pathToOpenAPIDoc = flag.String("openapi-doc", "", "path/to/openapi.json")

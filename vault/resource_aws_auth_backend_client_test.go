@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
@@ -96,6 +97,21 @@ func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 	})
 }
 
+func TestAccAWSAuthBackendClientStsRegionNoEndpoint(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccAWSAuthBackendClientConfigSTSRegionNoEndpoint(backend),
+				ExpectError: regexp.MustCompile("both sts_endpoint and sts_region need to be set"),
+			},
+		},
+	})
+}
+
 func testAccCheckAWSAuthBackendClientDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
@@ -146,6 +162,7 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 			"ec2_endpoint":               "endpoint",
 			"iam_endpoint":               "iam_endpoint",
 			"sts_endpoint":               "sts_endpoint",
+			"sts_region":                 "sts_region",
 			"iam_server_id_header_value": "iam_server_id_header_value",
 		}
 		for stateAttr, apiAttr := range attrs {
@@ -175,6 +192,7 @@ resource "vault_aws_auth_backend_client" "client" {
   ec2_endpoint = "http://vault.test/ec2"
   iam_endpoint = "http://vault.test/iam"
   sts_endpoint = "http://vault.test/sts"
+  sts_region = "vault-test"
   iam_server_id_header_value = "vault.test"
 }
 `, backend)
@@ -195,6 +213,7 @@ resource "vault_aws_auth_backend_client" "client" {
   ec2_endpoint = "http://updated.vault.test/ec2"
   iam_endpoint = "http://updated.vault.test/iam"
   sts_endpoint = "http://updated.vault.test/sts"
+  sts_region = "updated-vault-test"
   iam_server_id_header_value = "updated.vault.test"
 }`, backend)
 }
@@ -213,6 +232,7 @@ resource "vault_aws_auth_backend_client" "client" {
   ec2_endpoint = "http://vault.test/ec2"
   iam_endpoint = "http://vault.test/iam"
   sts_endpoint = "http://vault.test/sts"
+  sts_region = "vault-test"
   iam_server_id_header_value = "vault.test"
 }`, backend)
 }
@@ -231,6 +251,25 @@ resource "vault_aws_auth_backend_client" "client" {
   ec2_endpoint = "http://updated2.vault.test/ec2"
   iam_endpoint = "http://updated2.vault.test/iam"
   sts_endpoint = "http://updated2.vault.test/sts"
+  sts_region = "updated-vault-test"
   iam_server_id_header_value = "updated2.vault.test"
+}`, backend)
+}
+
+func testAccAWSAuthBackendClientConfigSTSRegionNoEndpoint(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = "${vault_auth_backend.aws.path}"
+  access_key = "AWSACCESSKEY"
+  ec2_endpoint = "http://vault.test/ec2"
+  iam_endpoint = "http://vault.test/iam"
+  sts_region = "vault-test"
+  iam_server_id_header_value = "vault.test"
 }`, backend)
 }

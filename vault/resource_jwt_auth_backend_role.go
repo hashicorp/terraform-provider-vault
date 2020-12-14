@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
-	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 var (
@@ -82,6 +82,12 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
+		},
+		"bound_claims_type": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			Description: "How to interpret values in the claims/values map: can be either \"string\" (exact match) or \"glob\" (wildcard match).",
 		},
 		"bound_claims": {
 			Type:        schema.TypeMap,
@@ -366,6 +372,10 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("oidc_scopes", make([]string, 0))
 	}
 
+	if v, ok := resp.Data["bound_claims_type"]; ok {
+		d.Set("bound_claims_type", v)
+	}
+
 	if resp.Data["bound_claims"] != nil {
 		boundClaims := make(map[string]interface{})
 		respBoundClaims := resp.Data["bound_claims"].(map[string]interface{})
@@ -521,6 +531,10 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 
 	if dataList := util.TerraformSetToStringArray(d.Get("oidc_scopes")); len(dataList) > 0 {
 		data["oidc_scopes"] = dataList
+	}
+
+	if v, ok := d.GetOkExists("bound_claims_type"); ok {
+		data["bound_claims_type"] = v.(string)
 	}
 
 	if v, ok := d.GetOk("bound_claims"); ok {

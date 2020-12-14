@@ -44,7 +44,7 @@ resource "vault_azure_secret_backend_role" "generated_role" {
 resource "vault_azure_secret_backend_role" "existing_object_id" {
   backend                     = "${vault_azure_secret_backend.azure.path}"
   role                        = "existing_object_id"
-	application_object_id 			= "11111111-2222-3333-4444-44444444444"
+  application_object_id       = "11111111-2222-3333-4444-44444444444"
   ttl                         = 300
   max_ttl                     = 600
 }
@@ -56,6 +56,7 @@ The following arguments are supported:
 
 * `role` - (Required) Name of the Azure role
 * `backend` - Path to the mounted Azure auth backend
+* `azure_groups` - List of Azure groups to be assigned to the generated service principal.
 * `azure_roles` - List of Azure roles to be assigned to the generated service principal.
 * `application_object_id` - Application Object ID for an existing service principal that will
    be used instead of creating dynamic service principals. If present, `azure_roles` will be ignored.

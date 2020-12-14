@@ -104,3 +104,17 @@ The `tune` block is used to tune the auth backend:
 ## Attributes Reference
 
 No additional attributes are exposed by this resource.
+
+## Import
+
+JWT auth backend can be imported using the `type`, e.g.
+
+```
+$ terraform import vault_jwt_auth_backend.oidc oidc
+```
+
+or
+
+```
+$ terraform import vault_jwt_auth_backend.jwt jwt
+```

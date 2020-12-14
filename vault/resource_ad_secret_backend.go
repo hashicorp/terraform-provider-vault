@@ -2,7 +2,7 @@ package vault
 
 import (
 	"fmt"
-	"github.com/terraform-providers/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"log"
 	"strings"
 

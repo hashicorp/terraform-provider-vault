@@ -231,6 +231,10 @@ var (
 			Resource:      adAccessCredentialsDataSource(),
 			PathInventory: []string{"/ad/creds/{role}"},
 		},
+		"vault_nomad_access_token": {
+			Resource:      nomadAccessCredentialsDataSource(),
+			PathInventory: []string{"/nomad/creds/{role}"},
+		},
 		"vault_aws_access_credentials": {
 			Resource:      awsAccessCredentialsDataSource(),
 			PathInventory: []string{"/aws/creds"},
@@ -465,6 +469,18 @@ var (
 		"vault_ldap_auth_backend_group": {
 			Resource:      ldapAuthBackendGroupResource(),
 			PathInventory: []string{"/auth/ldap/groups/{name}"},
+		},
+		"vault_nomad_secret_backend": {
+			Resource: nomadSecretAccessBackendResource(),
+			PathInventory: []string{
+				"/nomad",
+				"/nomad/config/access",
+				"/nomad/config/lease",
+			},
+		},
+		"vault_nomad_secret_role": {
+			Resource:      nomadSecretBackendRoleResource(),
+			PathInventory: []string{"/nomad/role/{role}"},
 		},
 		"vault_policy": {
 			Resource:      policyResource(),
