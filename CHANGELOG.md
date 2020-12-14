@@ -8,7 +8,7 @@ FEATURES:
 IMPROVEMENTS:
 * `resource/vault_audit`: added support for local mount to prevent replicating the audit backend ([#915](https://github.com/terraform-providers/terraform-provider-vault/pull/915))
 * `resource/jwt_auth_backend_role`: Added support for using globs in matching bound_claims ([#877](https://github.com/hashicorp/terraform-provider-vault/pull/877))
-* `vault_aws_auth_backend_client`: Added `sts_region` parameter ([#931](https://github.com/hashicorp/terraform-provider-vault/pull/931))
+* `resource/vault_aws_auth_backend_client`: Added `sts_region` parameter ([#931](https://github.com/hashicorp/terraform-provider-vault/pull/931))
 * `resource/vault_azure_secret_backend_role`: Added support for `azure_groups` ([#891](https://github.com/hashicorp/terraform-provider-vault/pull/891))
 
 BUG FIXES:
