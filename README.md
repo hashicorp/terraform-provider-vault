@@ -74,7 +74,7 @@ In order to run the full suite of Acceptance tests, you will need the following:
 1. An instance of Vault running to run the tests against
 2. The following environment variables are set:
     - `VAULT_ADDR` - location of Vault
-    - `VAULT_TOKEN` - token to use to query Vault. These tests do not attempt to read `~/.vault-token`.
+    - `VAULT_TOKEN` - token used to query Vault. These tests do not attempt to read `~/.vault-token`.
 3. The following environment variables may need to be set depending on which acceptance tests you wish to run.
 There may be additional variables for specific tests. Consult the specific test(s) for more information.
     - `AWS_ACCESS_KEY_ID`
@@ -84,6 +84,11 @@ There may be additional variables for specific tests. Consult the specific test(
     - `RMQ_CONNECTION_URI`
     - `RMQ_USERNAME`
     - `RMQ_PASSWORD`
+    - `ARM_SUBSCRIPTION_ID`
+    - `ARM_TENANT_ID`
+    - `ARM_CLIENT_ID`
+    - `ARM_CLIENT_SECRET`
+    - `ARM_RESOURCE_GROUP`
 4. Run `make testacc`
 
 If you wish to run specific tests, use the `TESTARGS` environment variable:
