@@ -177,6 +177,8 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("project_id", resp.Data["project_id"])
 	d.Set("client_email", resp.Data["client_email"])
 	d.Set("local", resp.Data["local"])
+	d.Set("description", resp.Data["description"])
+	d.Set("path", resp.Data["path"])
 	return nil
 }
 
