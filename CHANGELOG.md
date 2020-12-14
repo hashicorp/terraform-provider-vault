@@ -10,6 +10,7 @@ IMPROVEMENTS:
 * `resource/jwt_auth_backend_role`: Added support for using globs in matching bound_claims ([#877](https://github.com/hashicorp/terraform-provider-vault/pull/877))
 * `resource/vault_aws_auth_backend_client`: Added `sts_region` parameter ([#931](https://github.com/hashicorp/terraform-provider-vault/pull/931))
 * `resource/vault_azure_secret_backend_role`: Added support for `azure_groups` ([#891](https://github.com/hashicorp/terraform-provider-vault/pull/891))
+* `resource/vault_identity_oidc_role`: `client_id` parameter can optionally be configured ([#815](https://github.com/terraform-providers/terraform-provider-vault/pull/815))
 
 BUG FIXES:
 
