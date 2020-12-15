@@ -1,4 +1,4 @@
-## 2.17.0 (Unreleased)
+## 2.17.0 (December 15, 2020)
 
 FEATURES:
 * **New Data Source**: `vault_nomad_access_token` data source ([#923](https://github.com/hashicorp/terraform-provider-vault/pull/923))
