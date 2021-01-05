@@ -5,8 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
-	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 const identityEntityPath = "/identity/entity"
@@ -105,6 +105,18 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error writing IdentityEntity to %q: %s", name, err)
 	}
+
+	if resp == nil {
+		path := identityEntityNamePath(name)
+		entityMsg := "Unable to determine entity id."
+
+		if entity, err := client.Logical().Read(path); err == nil {
+			entityMsg = fmt.Sprintf("Entity resource ID %q may be imported.", entity.Data["id"])
+		}
+
+		return fmt.Errorf("Identity Entity %q already exists. %s", name, entityMsg)
+	}
+
 	log.Printf("[DEBUG] Wrote IdentityEntity %q", name)
 
 	d.SetId(resp.Data["id"].(string))

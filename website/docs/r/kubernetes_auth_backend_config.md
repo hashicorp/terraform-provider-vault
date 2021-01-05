@@ -46,8 +46,16 @@ The following arguments are supported:
 * `disable_iss_validation` - (Optional) Disable JWT issuer validation. Allows to skip ISS validation. Requires Vault `v1.5.4+` or Vault auth kubernetes plugin `v0.7.1+`
 
 * `disable_local_ca_jwt` - (Optional) Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod. Requires Vault `v1.5.4+` or Vault auth kubernetes plugin `v0.7.1+`
- 
+
 
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+Kubernetes authentication backend can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_kubernetes_auth_backend_config.config auth/kubernetes/config
+```

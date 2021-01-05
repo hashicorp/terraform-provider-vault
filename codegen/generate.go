@@ -250,7 +250,7 @@ func stripCurlyBraces(path string) string {
 
 // pathToHomeDir yields the path to the terraform-vault-provider
 // home directory on the machine on which it's running.
-// ex. /home/your-name/go/src/github.com/terraform-providers/terraform-provider-vault
+// ex. /home/your-name/go/src/github.com/hashicorp/terraform-provider-vault
 func pathToHomeDir() (string, error) {
 	repoName := "terraform-provider-vault"
 	wd, err := os.Getwd()

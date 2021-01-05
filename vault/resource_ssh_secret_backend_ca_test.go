@@ -26,27 +26,6 @@ func TestAccSSHSecretBackendCA_basic(t *testing.T) {
 	})
 }
 
-func TestAccSSHSecretBackendCA_mount_updated_basic(t *testing.T) {
-	backend := "ssh-" + acctest.RandString(10)
-
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testAccCheckSSHSecretBackendCADestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccSSHSecretBackendCAConfigGenerated(backend),
-				Check:  testAccSSHSecretBackendCACheck(backend),
-			},
-			{
-				Config:             testAccSSHSecretBackendCAConfigGenerated_mount_edit(backend),
-				Check:              testAccSSHSecretBackendCACheck(backend),
-				ExpectNonEmptyPlan: true,
-			},
-		},
-	})
-}
-
 func TestAccSSHSecretBackendCA_provided(t *testing.T) {
 	backend := "ssh-" + acctest.RandString(10)
 
@@ -107,21 +86,7 @@ func testAccSSHSecretBackendCAConfigGenerated(backend string) string {
 resource "vault_mount" "test" {
   type = "ssh"
   path = "%s"
-	description = "something"
-}
-
-resource "vault_ssh_secret_backend_ca" "test" {
-  backend              = "${vault_mount.test.path}"
-  generate_signing_key = true
-}`, backend)
-}
-
-func testAccSSHSecretBackendCAConfigGenerated_mount_edit(backend string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  type = "ssh"
-  path = "%s"
-	description = "something else"
+  description = "SSH Secret backend"
 }
 
 resource "vault_ssh_secret_backend_ca" "test" {
@@ -135,6 +100,7 @@ func testAccSSHSecretBackendCAConfigProvided(backend string) string {
 resource "vault_mount" "test" {
   type = "ssh"
   path = "%s"
+  description = "SSH Secret backend"
 }
 
 resource "vault_ssh_secret_backend_ca" "test" {
@@ -174,6 +140,7 @@ EOF
 
 func testAccSSHSecretBackendCACheck(backend string) resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
+		resource.TestCheckResourceAttrSet("vault_mount.test", "description"),
 		resource.TestCheckResourceAttrSet("vault_ssh_secret_backend_ca.test", "public_key"),
 		resource.TestCheckResourceAttr("vault_ssh_secret_backend_ca.test", "backend", backend),
 	)

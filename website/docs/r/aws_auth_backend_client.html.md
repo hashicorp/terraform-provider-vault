@@ -60,6 +60,9 @@ The following arguments are supported:
 * `sts_endpoint` - (Optional) Override the URL Vault uses when making STS API
 	calls.
 
+* `sts_region` - (Optional) Override the default region when making STS API 
+    calls. The `sts_endpoint` argument must be set when using `sts_region`.
+
 * `iam_server_id_header_value` - (Optional) The value to require in the
 	`X-Vault-AWS-IAM-Server-ID` header as part of `GetCallerIdentity` requests
 	that are used in the IAM auth method.

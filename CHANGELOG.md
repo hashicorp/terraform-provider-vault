@@ -1,3 +1,22 @@
+## 2.17.0 (December 15, 2020)
+
+FEATURES:
+* **New Data Source**: `vault_nomad_access_token` data source ([#923](https://github.com/hashicorp/terraform-provider-vault/pull/923))
+* **New Resource**: `vault_nomad_secret_backend` resource ([#923](https://github.com/hashicorp/terraform-provider-vault/pull/923))
+* **New Resource**: `vault_nomad_secret_role` resource ([#923](https://github.com/hashicorp/terraform-provider-vault/pull/923))
+
+IMPROVEMENTS:
+* `resource/vault_audit`: added support for local mount to prevent replicating the audit backend ([#915](https://github.com/terraform-providers/terraform-provider-vault/pull/915))
+* `resource/jwt_auth_backend_role`: Added support for using globs in matching bound_claims ([#877](https://github.com/hashicorp/terraform-provider-vault/pull/877))
+* `resource/vault_aws_auth_backend_client`: Added `sts_region` parameter ([#931](https://github.com/hashicorp/terraform-provider-vault/pull/931))
+* `resource/vault_azure_secret_backend_role`: Added support for `azure_groups` ([#891](https://github.com/hashicorp/terraform-provider-vault/pull/891))
+* `resource/vault_identity_oidc_role`: `client_id` parameter can optionally be configured ([#815](https://github.com/terraform-providers/terraform-provider-vault/pull/815))
+
+BUG FIXES:
+
+* `resource/vault_identity_entity`: Fixed nil pointer exception ([#899](https://github.com/terraform-providers/terraform-provider-vault/pull/899))
+* `resource/vault_mount`: Fixed bug where mount was deleted when description was changed ([#929](https://github.com/hashicorp/terraform-provider-vault/pull/929))
+
 ## 2.16.0 (November 19, 2020)
 
 FEATURES:
