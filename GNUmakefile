@@ -3,15 +3,10 @@ GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 WEBSITE_REPO=github.com/hashicorp/terraform-website
 PKG_NAME=vault
 
-VERSION=1.0.3
-
 default: build
 
 build: fmtcheck
 	go install
-	mkdir -p /Users/lasse.gaardsholt/.terraform.d/plugins/terraform.example.com/some/custom-vault/$(VERSION)/darwin_amd64
-	mv $(GOPATH)/bin/terraform-provider-vault /Users/lasse.gaardsholt/.terraform.d/plugins/terraform.example.com/some/custom-vault/$(VERSION)/darwin_amd64/terraform-provider-custom-vault_$(VERSION)
-
 
 test: fmtcheck
 	go test -i $(TEST) || exit 1
