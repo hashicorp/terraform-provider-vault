@@ -196,13 +196,6 @@ func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	// So... if it drifts, it drift.
 	d.Set("address", secret.Data["address"].(string))
 	d.Set("scheme", secret.Data["scheme"].(string))
-	
-	val, ok := secret.Data["ca_cert"]
-	if ok && val != nil {
-	    d.Set("ca_cert", val.(string))
-	} else {
-	    d.Set("ca_cert", "")
-	}
 
 	return nil
 }
