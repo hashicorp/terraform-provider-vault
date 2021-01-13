@@ -8,7 +8,7 @@ description: |-
 
 # vault\_pki\_secret\_backend\_root\_sign\_intermediate
 
-Creates an PKI certificate.
+Creates PKI certificate.
 
 ## Example Usage
 
