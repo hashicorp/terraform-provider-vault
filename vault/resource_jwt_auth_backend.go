@@ -139,6 +139,7 @@ func jwtCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 		"oidc_discovery_url",
 		"jwks_url",
 		"jwt_validation_pubkeys",
+		"provider_config",
 	}
 
 	for _, attr := range attributes {
@@ -167,6 +168,7 @@ var (
 		"bound_issuer",
 		"jwt_supported_algs",
 		"default_role",
+		"provider_config",
 	}
 )
 
