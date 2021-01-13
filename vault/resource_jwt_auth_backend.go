@@ -121,6 +121,14 @@ func jwtAuthBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The accessor of the JWT auth backend",
 			},
+			"provider_config": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "Provider specific handling configuration",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"tune": authMountTuneSchema(),
 		},
 	}
