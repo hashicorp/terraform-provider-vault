@@ -58,7 +58,7 @@ func quotaLeaseCountCreate(d *schema.ResourceData, meta interface{}) error {
 
 	data := map[string]interface{}{}
 	data["path"] = d.Get("path").(string)
-	data["rate"] = d.Get("rate").(float64)
+	data["max_leases"] = d.Get("max_leases").(float64)
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -88,7 +88,7 @@ func quotaLeaseCountRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"path", "rate"} {
+	for _, k := range []string{"path", "max_leases"} {
 		v, ok := resp.Data[k]
 		if ok {
 			if err := d.Set(k, v); err != nil {
@@ -110,7 +110,7 @@ func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	data := map[string]interface{}{}
 	data["path"] = d.Get("path").(string)
-	data["rate"] = d.Get("rate").(float64)
+	data["max_leases"] = d.Get("max_leases").(float64)
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {

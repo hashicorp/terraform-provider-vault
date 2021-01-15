@@ -15,54 +15,54 @@ func randomQuotaLeaseString() string {
 	whole := float64(acctest.RandIntRange(1000, 2000))
 	decimal := float64(acctest.RandIntRange(0, 100)) / 100
 
-	rateLimt := fmt.Sprintf("%.1f", whole+decimal)
+	leaseCout := fmt.Sprintf("%.1f", whole+decimal)
 	// Vault retuns floats with trailing zeros trimmed
-	return strings.TrimRight(strings.TrimRight(rateLimt, "0"), ".")
+	return strings.TrimRight(strings.TrimRight(leaseCout, "0"), ".")
 }
 
 func TestQuotaLeaseCount(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test")
-	rateLimit := randomQuotaLeaseString()
-	newRateLimit := randomQuotaLeaseString()
+	leaseCount := randomQuotaLeaseString()
+	newLeaseCount := randomQuotaLeaseString()
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testQuotaLeaseCountCheckDestroy([]string{rateLimit, newRateLimit}),
+		CheckDestroy: testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
 		Steps: []resource.TestStep{
 			{
-				Config: testQuotaLeaseCount_Config(name, "", rateLimit),
+				Config: testQuotaLeaseCount_Config(name, "", leaseCount),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_quota_lease_count.foobar", "name", name),
 					resource.TestCheckResourceAttr("vault_quota_lease_count.foobar", "path", ""),
-					resource.TestCheckResourceAttr("vault_quota_lease_count.foobar", "max_leases", rateLimit),
+					resource.TestCheckResourceAttr("vault_quota_lease_count.foobar", "max_leases", leaseCount),
 				),
 			},
 			{
-				Config: testQuotaLeaseCount_Config(name, "", newRateLimit),
+				Config: testQuotaLeaseCount_Config(name, "", newLeaseCount),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_quota_lease_count.foobar", "name", name),
 					resource.TestCheckResourceAttr("vault_quota_lease_count.foobar", "path", ""),
-					resource.TestCheckResourceAttr("vault_quota_lease_count.foobar", "max_leases", newRateLimit),
+					resource.TestCheckResourceAttr("vault_quota_lease_count.foobar", "max_leases", newLeaseCount),
 				),
 			},
 			{
-				Config: testQuotaLeaseCount_Config(name, "sys/", newRateLimit),
+				Config: testQuotaLeaseCount_Config(name, "sys/", newLeaseCount),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_quota_lease_count.foobar", "name", name),
 					resource.TestCheckResourceAttr("vault_quota_lease_count.foobar", "path", "sys/"),
-					resource.TestCheckResourceAttr("vault_quota_lease_count.foobar", "max_leases", newRateLimit),
+					resource.TestCheckResourceAttr("vault_quota_lease_count.foobar", "max_leases", newLeaseCount),
 				),
 			},
 		},
 	})
 }
 
-func testQuotaLeaseCountCheckDestroy(rateLimits []string) resource.TestCheckFunc {
+func testQuotaLeaseCountCheckDestroy(leaseCounts []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*api.Client)
 
-		for _, name := range rateLimits {
-			resp, err := client.Logical().Read(QuotaLeaseCountPath(name))
+		for _, name := range leaseCounts {
+			resp, err := client.Logical().Read(quotaLeaseCountPath(name))
 
 			if err != nil {
 				return err
@@ -78,7 +78,7 @@ func testQuotaLeaseCountCheckDestroy(rateLimits []string) resource.TestCheckFunc
 }
 
 // Caution: Don't set test max_leases values too low or other tests running concurrently might fail
-func testQuotaLeaseCount_Config(name, path, rate string) string {
+func testQuotaLeaseCount_Config(name, path, max_leases string) string {
 	return fmt.Sprintf(`
 resource "vault_quota_lease_count" "foobar" {
   name = "%s"
