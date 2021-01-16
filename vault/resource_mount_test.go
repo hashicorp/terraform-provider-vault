@@ -241,7 +241,7 @@ var testResourceMount_updateConfig = `
 resource "vault_mount" "test" {
 	path = "remountingExample"
 	type = "kv"
-	description = "Example mount for testing"
+	description = "Updated example mount for testing"
 	default_lease_ttl_seconds = 7200
 	max_lease_ttl_seconds = 72000
 	options = {
@@ -270,7 +270,7 @@ func testResourceMount_updateCheck(s *terraform.State) error {
 		return fmt.Errorf("error reading back mount: %s", err)
 	}
 
-	if wanted := "Example mount for testing"; mount.Description != wanted {
+	if wanted := "Updated example mount for testing"; mount.Description != wanted {
 		return fmt.Errorf("description is %v; wanted %v", mount.Description, wanted)
 	}
 

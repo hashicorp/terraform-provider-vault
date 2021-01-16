@@ -10,7 +10,7 @@ description: |-
 
 This resource supports the "/transform/role/{name}" Vault endpoint.
 
-It creates or updates the role with the given name. If a role with the name does not exist, it will be created. 
+It creates or updates the role with the given name. If a role with the name does not exist, it will be created.
 If the role exists, it will be updated with the new attributes.
 
 ## Example Usage
@@ -29,7 +29,7 @@ resource "vault_transform_role" "test" {
 
 ## Argument Reference
 
-The following arguments are supported:  
+The following arguments are supported:
 
 * `path` - (Required) Path to where the back-end is mounted within Vault.
 * `name` - (Required) The name of the role.

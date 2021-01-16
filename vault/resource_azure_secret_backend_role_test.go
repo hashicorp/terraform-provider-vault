@@ -32,8 +32,17 @@ func TestAzureSecretBackendRole(t *testing.T) {
 			{
 				Config: testAzureSecretBackendRoleInitialConfig(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test", "role", role),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test", "description", "Test for Vault Provider"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "role", role+"-azure-roles"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "description", "Test for Vault Provider"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.#", "1"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.1111275791.role_name", "Reader"),
+					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.1111275791.scope"),
+					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.1111275791.role_id"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "role", role+"-azure-groups"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "description", "Test for Vault Provider"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.#", "1"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.2681484837.group_name", "foobar"),
+					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.2681484837.object_id"),
 				),
 			},
 		},
@@ -66,23 +75,35 @@ func testAccAzureSecretBackendRoleCheckDestroy(s *terraform.State) error {
 func testAzureSecretBackendRoleInitialConfig(subscriptionID string, tenantID string, clientID string, clientSecret string, path string, role string, resourceGroup string) string {
 	return fmt.Sprintf(`
 resource "vault_azure_secret_backend" "azure" {
-	subscription_id = "%s"
-	tenant_id = "%s"
-	client_id = "%s"
-	client_secret = "%s"
-	path = "%s"
+  subscription_id = "%s"
+  tenant_id       = "%s"
+  client_id       = "%s"
+  client_secret   = "%s"
+  path            = "%s"
 }
 
-resource "vault_azure_secret_backend_role" "test" {
-  backend                     = "${vault_azure_secret_backend.azure.path}"
-  role                        = "%s"
-  ttl                         = 300
-	max_ttl                     = 600
-	description									= "Test for Vault Provider"
+resource "vault_azure_secret_backend_role" "test_azure_roles" {
+  backend     = "${vault_azure_secret_backend.azure.path}"
+  role        = "%[6]s-azure-roles"
+  ttl         = 300
+  max_ttl     = 600
+  description = "Test for Vault Provider"
 
-	azure_roles {
+  azure_roles {
     role_name = "Reader"
-    scope =  "/subscriptions/%[1]s/resourceGroups/%s"
+    scope =  "/subscriptions/%[1]s/resourceGroups/%[7]s"
+  }
+}
+
+resource "vault_azure_secret_backend_role" "test_azure_groups" {
+  backend     = "${vault_azure_secret_backend.azure.path}"
+  role        = "%[6]s-azure-groups"
+  ttl         = 300
+  max_ttl     = 600
+  description = "Test for Vault Provider"
+
+  azure_groups {
+    group_name = "foobar"
   }
 }
 `, subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup)

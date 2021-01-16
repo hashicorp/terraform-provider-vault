@@ -227,6 +227,14 @@ var (
 			Resource:      kubernetesAuthBackendRoleDataSource(),
 			PathInventory: []string{"/auth/kubernetes/role/{name}"},
 		},
+		"vault_ad_access_credentials": {
+			Resource:      adAccessCredentialsDataSource(),
+			PathInventory: []string{"/ad/creds/{role}"},
+		},
+		"vault_nomad_access_token": {
+			Resource:      nomadAccessCredentialsDataSource(),
+			PathInventory: []string{"/nomad/creds/{role}"},
+		},
 		"vault_aws_access_credentials": {
 			Resource:      awsAccessCredentialsDataSource(),
 			PathInventory: []string{"/aws/creds"},
@@ -258,6 +266,7 @@ var (
 	}
 
 	ResourceRegistry = map[string]*Description{
+
 		"vault_alicloud_auth_backend_role": {
 			Resource:      alicloudAuthBackendRoleResource(),
 			PathInventory: []string{"/auth/alicloud/role/{name}"},
@@ -292,6 +301,18 @@ var (
 		"vault_token_auth_backend_role": {
 			Resource:      tokenAuthBackendRoleResource(),
 			PathInventory: []string{"/auth/token/roles/{role_name}"},
+		},
+		"vault_ad_secret_backend": {
+			Resource:      adSecretBackendResource(),
+			PathInventory: []string{"/ad"},
+		},
+		"vault_ad_secret_library": {
+			Resource:      adSecretBackendLibraryResource(),
+			PathInventory: []string{"/ad/library/{name}"},
+		},
+		"vault_ad_secret_role": {
+			Resource:      adSecretBackendRoleResource(),
+			PathInventory: []string{"/ad/roles/{role}"},
 		},
 		"vault_aws_auth_backend_cert": {
 			Resource:      awsAuthBackendCertResource(),
@@ -448,6 +469,18 @@ var (
 		"vault_ldap_auth_backend_group": {
 			Resource:      ldapAuthBackendGroupResource(),
 			PathInventory: []string{"/auth/ldap/groups/{name}"},
+		},
+		"vault_nomad_secret_backend": {
+			Resource: nomadSecretAccessBackendResource(),
+			PathInventory: []string{
+				"/nomad",
+				"/nomad/config/access",
+				"/nomad/config/lease",
+			},
+		},
+		"vault_nomad_secret_role": {
+			Resource:      nomadSecretBackendRoleResource(),
+			PathInventory: []string{"/nomad/role/{role}"},
 		},
 		"vault_policy": {
 			Resource:      policyResource(),

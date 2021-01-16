@@ -14,7 +14,7 @@ jobs:
       - image: vault:latest
         environment:
           - VAULT_DEV_ROOT_TOKEN_ID=root
-    working_directory: /go/src/github.com/terraform-providers/terraform-provider-vault
+    working_directory: /go/src/github.com/hashicorp/terraform-provider-vault
     steps:
       - checkout
       - run:
@@ -46,4 +46,4 @@ jobs:
           command: |
             cd cmd/coverage/
             go build
-            ./coverage -openapi-doc=/go/src/github.com/terraform-providers/terraform-provider-vault/testdata/openapi.json
+            ./coverage -openapi-doc=/go/src/github.com/hashicorp/terraform-provider-vault/testdata/openapi.json

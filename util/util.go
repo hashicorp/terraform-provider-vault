@@ -119,6 +119,37 @@ func TestEntPreCheck(t *testing.T) {
 	}
 }
 
+func GetTestADCreds(t *testing.T) (string, string, string) {
+	adBindDN := os.Getenv("AD_BINDDN")
+	adBindPass := os.Getenv("AD_BINDPASS")
+	adURL := os.Getenv("AD_URL")
+
+	if adBindDN == "" {
+		t.Skip("AD_BINDDN not set")
+	}
+	if adBindPass == "" {
+		t.Skip("AD_BINDPASS not set")
+	}
+	if adURL == "" {
+		t.Skip("AD_URL not set")
+	}
+	return adBindDN, adBindPass, adURL
+}
+
+func GetTestNomadCreds(t *testing.T) (string, string) {
+	address := os.Getenv("NOMAD_ADDR")
+	token := os.Getenv("NOMAD_TOKEN")
+
+	if address == "" {
+		t.Skip("NOMAD_ADDR not set")
+	}
+	if token == "" {
+		t.Skip("NOMAD_TOKEN not set")
+	}
+
+	return address, token
+}
+
 func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState, ok := s.RootModule().Resources[name]

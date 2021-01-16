@@ -38,7 +38,7 @@ func MountResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Required:    false,
-				ForceNew:    true,
+				ForceNew:    false,
 				Description: "Human-friendly description of the mount",
 			},
 
@@ -140,6 +140,11 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 		DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 		MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
 		Options:         opts(d),
+	}
+
+	if d.HasChange("description") {
+		description := fmt.Sprintf("%s", d.Get("description"))
+		config.Description = &description
 	}
 
 	path := d.Id()

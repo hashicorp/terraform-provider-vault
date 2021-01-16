@@ -1,9 +1,34 @@
-## 2.15.1 (Unreleased)
+## 2.17.0 (December 15, 2020)
+
+FEATURES:
+* **New Data Source**: `vault_nomad_access_token` data source ([#923](https://github.com/hashicorp/terraform-provider-vault/pull/923))
+* **New Resource**: `vault_nomad_secret_backend` resource ([#923](https://github.com/hashicorp/terraform-provider-vault/pull/923))
+* **New Resource**: `vault_nomad_secret_role` resource ([#923](https://github.com/hashicorp/terraform-provider-vault/pull/923))
+
+IMPROVEMENTS:
+* `resource/vault_audit`: added support for local mount to prevent replicating the audit backend ([#915](https://github.com/terraform-providers/terraform-provider-vault/pull/915))
+* `resource/jwt_auth_backend_role`: Added support for using globs in matching bound_claims ([#877](https://github.com/hashicorp/terraform-provider-vault/pull/877))
+* `resource/vault_aws_auth_backend_client`: Added `sts_region` parameter ([#931](https://github.com/hashicorp/terraform-provider-vault/pull/931))
+* `resource/vault_azure_secret_backend_role`: Added support for `azure_groups` ([#891](https://github.com/hashicorp/terraform-provider-vault/pull/891))
+* `resource/vault_identity_oidc_role`: `client_id` parameter can optionally be configured ([#815](https://github.com/terraform-providers/terraform-provider-vault/pull/815))
+
+BUG FIXES:
+
+* `resource/vault_identity_entity`: Fixed nil pointer exception ([#899](https://github.com/terraform-providers/terraform-provider-vault/pull/899))
+* `resource/vault_mount`: Fixed bug where mount was deleted when description was changed ([#929](https://github.com/hashicorp/terraform-provider-vault/pull/929))
+
+## 2.16.0 (November 19, 2020)
+
+FEATURES:
+* **New Data Source**: `vault_ad_access_credentials` data source ([#902](https://github.com/terraform-providers/terraform-provider-vault/pull/902))
+* **New Resource**: `vault_ad_secret_backend` resource ([#902](https://github.com/terraform-providers/terraform-provider-vault/pull/902))
+* **New Resource**: `vault_ad_secret_role` resource ([#902](https://github.com/terraform-providers/terraform-provider-vault/pull/902))
+* **New Resource**: `vault_ad_secret_library` resource ([#902](https://github.com/terraform-providers/terraform-provider-vault/pull/902))
 
 IMPROVEMENTS:
 
-* `resource/vault_gcp_auth_backend`: added support for local mount to prevent replicating the secret engine (#861)
-* `data/vault_gcp_auth_backend`: Add optional ttl parameter to data source ([#878](https://github.com/terraform-providers/terraform-provider-vault/pull/878))
+* `resource/vault_gcp_auth_backend`: added support for local mount to prevent replicating the secret engine ([#861](https://github.com/terraform-providers/terraform-provider-vault/pull/861))
+* `data.vault_aws_access_credentials`: Add optional ttl parameter to data source ([#878](https://github.com/terraform-providers/terraform-provider-vault/pull/878))
 
 BUG FIXES:
 
@@ -520,7 +545,7 @@ BUG FIXES:
 
 BACKWARDS INCOMPATIBILITIES / NOTES:
 * `vault_auth_backend`'s ID has changed from the `type` to the `path` of the auth backend.
-  Interpolations referring to the `.id` of a `vault_auth_backend` should be updated to use
+  Interpolations referring to the `.id` of a `vault_auth_backend` should be updated to use
   its `.type` property. ([#12](https://github.com/terraform-providers/terraform-provider-vault/issues/12))
 * `vault_generic_secret`'s `allow_read` field is deprecated; use `disable_read` instead.
   If `disable_read` is set to false or not set, the secret will be read.

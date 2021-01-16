@@ -46,3 +46,11 @@ The following arguments are supported:
 ## Attributes Reference
 
 * `id` - The `id` of the created entity.
+
+## Import
+
+Identity entity can be imported using the `id`, e.g.
+
+```
+$ terraform import vault_identity_entity.test "ae6f8ued-0f1a-9f6b-2915-1a2be20dc053"
+```
