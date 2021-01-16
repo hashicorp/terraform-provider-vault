@@ -112,10 +112,17 @@ func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
 	data["path"] = d.Get("path").(string)
 	data["max_leases"] = d.Get("max_leases").(float64)
 
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().Delete(path)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error updating Resource Lease Count Quota %s: %s", name, err)
+		return fmt.Errorf("Error deleting Resource Lease Count Quota %s: %s", name, err)
+	}
+	log.Printf("[DEBUG] Deleted Resource Lease Count Quota %s", name)
+
+	_, err = client.Logical().Write(path, data)
+	if err != nil {
+		d.SetId("")
+		return fmt.Errorf("Error creating Resource Lease Count Quota %s: %s", name, err)
 	}
 	log.Printf("[DEBUG] Updated Resource Lease Count Quota %s", name)
 
