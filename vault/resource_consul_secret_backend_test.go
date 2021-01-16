@@ -78,7 +78,7 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "client_cert", "UPDATED-FAKE-CLIENT-CERT-MATERIAL"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "client_key", "UPDATED-FAKE-CLIENT-CERT-KEY-MATERIAL"),
 				),
-			}
+			},
 		},
 	})
 }
