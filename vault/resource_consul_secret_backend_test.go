@@ -29,6 +29,9 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "address", "127.0.0.1:8500"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "token", token),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "scheme", "http"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "ca_cert", ""),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "client_cert", ""),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "client_key", ""),
 				),
 			},
 			{
@@ -41,6 +44,9 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "address", "consul.domain.tld:8501"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "token", token),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "scheme", "https"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "ca_cert", ""),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "client_cert", ""),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "client_key", ""),
 				),
 			},
 			{
