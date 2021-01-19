@@ -1,3 +1,8 @@
+## Unreleased
+
+IMPROVEMENTS:
+* `resource/vault_consul_secret_backend`: Extend consul secret engine definition to cover all vault parameters ([#910](https://github.com/hashicorp/terraform-provider-vault/pull/910)]
+
 ## 2.17.0 (December 15, 2020)
 
 FEATURES:
