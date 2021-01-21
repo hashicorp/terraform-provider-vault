@@ -1,4 +1,4 @@
-## 2.18.0 (Unreleased)
+## 2.18.0 (January 21, 2021)
 
 FEATURES:
 * **New Resource**: `vault_password_policy` resource ([#927](https://github.com/hashicorp/terraform-provider-vault/pull/927))
