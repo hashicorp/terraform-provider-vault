@@ -1,5 +1,8 @@
 ## 2.18.0 (Unreleased)
 
+FEATURES:
+* **New Resource**: `vault_password_policy` resource ([#927](https://github.com/hashicorp/terraform-provider-vault/pull/927))
+
 IMPROVEMENTS:
 * `resource/vault_consul_secret_backend`: Extend consul secret engine definition to cover all vault parameters ([#910](https://github.com/hashicorp/terraform-provider-vault/pull/910))
 
