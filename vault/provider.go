@@ -577,6 +577,10 @@ var (
 			Resource:      rabbitmqSecretBackendRoleResource(),
 			PathInventory: []string{"/rabbitmq/roles/{name}"},
 		},
+		"vault_password_policy": {
+			Resource:      passwordPolicyResource(),
+			PathInventory: []string{"/sys/policy/password/{name}"},
+		},
 		"vault_pki_secret_backend": {
 			Resource:      pkiSecretBackendResource(),
 			PathInventory: []string{UnknownPath},
