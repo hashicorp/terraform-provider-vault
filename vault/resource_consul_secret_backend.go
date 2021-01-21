@@ -133,11 +133,11 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Writing Consul configuration to %q", configPath)
 	data := map[string]interface{}{
-		"address": address,
-		"token":   token,
-		"scheme":  scheme,
-		"ca_cert":  ca_cert,
-		"client_cert":  client_cert,
+		"address":     address,
+		"token":       token,
+		"scheme":      scheme,
+		"ca_cert":     ca_cert,
+		"client_cert": client_cert,
 		"client_key":  client_key,
 	}
 	if _, err := client.Logical().Write(configPath, data); err != nil {
@@ -223,14 +223,14 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		d.SetPartial("max_lease_ttl_seconds")
 	}
 	if d.HasChange("address") || d.HasChange("token") || d.HasChange("scheme") ||
-	   d.HasChange("ca_cert") || d.HasChange("client_cert") || d.HasChange("client_key") {
+		d.HasChange("ca_cert") || d.HasChange("client_cert") || d.HasChange("client_key") {
 		log.Printf("[DEBUG] Updating Consul configuration at %q", configPath)
 		data := map[string]interface{}{
-			"address": d.Get("address").(string),
-			"token":   d.Get("token").(string),
-			"scheme":  d.Get("scheme").(string),
-			"ca_cert":  d.Get("ca_cert").(string),
-			"client_cert":  d.Get("client_cert").(string),
+			"address":     d.Get("address").(string),
+			"token":       d.Get("token").(string),
+			"scheme":      d.Get("scheme").(string),
+			"ca_cert":     d.Get("ca_cert").(string),
+			"client_cert": d.Get("client_cert").(string),
 			"client_key":  d.Get("client_key").(string),
 		}
 		if _, err := client.Logical().Write(configPath, data); err != nil {
