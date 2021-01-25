@@ -121,12 +121,42 @@ func jwtAuthBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The accessor of the JWT auth backend",
 			},
+
 			"provider_config": {
-				Type:        schema.TypeMap,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Provider specific handling configuration",
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"provider": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"gsuit_service_account": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"gsuite_admin_impersonate": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"fetch_groups": {
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
+						"fetch_user_info": {
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
+						"groups_recurse_max_depth": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+						"user_custom_schemas": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
 				},
 			},
 			"tune": authMountTuneSchema(),
