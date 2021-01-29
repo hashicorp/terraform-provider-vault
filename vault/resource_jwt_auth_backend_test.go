@@ -72,6 +72,52 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 	})
 }
 
+// The random numbers on the provider_config are a hash of the object.
+func TestAccJWTAuthBackend_OIDC_Provider_ConfigAzure(t *testing.T) {
+	path := acctest.RandomWithPrefix("oidc")
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testJWTAuthBackend_Destroyed(path),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendConfigOIDCProviderConfigAzure(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.azure", "oidc_discovery_url", "https://accounts.google.com"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.azure", "provider_config.#", "1"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.azure", "provider_config.2995719985.provider", "azure"),
+				),
+			},
+		},
+	})
+}
+
+// The random numbers on the provider_config are a hash of the object.
+func TestAccJWTAuthBackend_OIDC_Provider_ConfigGSuite(t *testing.T) {
+	path := acctest.RandomWithPrefix("oidc")
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testJWTAuthBackend_Destroyed(path),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "oidc_discovery_url", "https://accounts.google.com"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.#", "1"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.provider", "gsuite"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.gsuite_service_account", "/tmp/service-account.json"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.gsuite_admin_impersonate", "admin@gsuitedomain.com"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.fetch_groups", "true"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.fetch_user_info", "true"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.groups_recurse_max_depth", "5"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.user_custom_schemas", "Education,Preferences"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccJWTAuthBackend_negative(t *testing.T) {
 	path := acctest.RandomWithPrefix("jwt")
 	resource.Test(t, resource.TestCase{
@@ -156,6 +202,40 @@ resource "vault_jwt_auth_backend" "oidc" {
   path = "%s"
   type = "oidc"
   default_role = "api"
+}
+`, path)
+}
+
+func testAccJWTAuthBackendConfigOIDCProviderConfigAzure(path string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "azure" {
+	description = "OIDC backend"
+	oidc_discovery_url = "https://accounts.google.com"
+	path = "%s"
+	type = "oidc"
+	provider_config {
+		provider                 = "azure"
+	}
+}
+`, path)
+}
+
+func testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(path string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "gsuite" {
+	description = "OIDC backend"
+	oidc_discovery_url = "https://accounts.google.com"
+	path = "%s"
+	type = "oidc"
+	provider_config {
+		provider                 = "gsuite"
+		gsuite_service_account   = "/tmp/service-account.json"
+		gsuite_admin_impersonate = "admin@gsuitedomain.com"
+		fetch_groups             = true
+		fetch_user_info          = true
+		groups_recurse_max_depth = 5
+		user_custom_schemas      = "Education,Preferences"
+	}
 }
 `, path)
 }
