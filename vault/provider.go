@@ -255,6 +255,10 @@ var (
 			Resource:      authBackendDataSource(),
 			PathInventory: []string{"/sys/auth"},
 		},
+		"vault_terraform_cloud_access_token": {
+			Resource:      terraformCloudAccessCredentialsDataSource(),
+			PathInventory: []string{"/terraform/creds/{role}"},
+		},
 		"vault_transit_encrypt": {
 			Resource:      transitEncryptDataSource(),
 			PathInventory: []string{"/transit/encrypt/{name}"},
@@ -633,8 +637,8 @@ var (
 			Resource:      terraformCloudSecretBackendResource(),
 			PathInventory: []string{"/terraform/config"},
 		},
-		"vault_terraform_cloud_secret_backend_role": {
-			Resource:      terraformCloudSecretBackendRoleResource(),
+		"vault_terraform_cloud_secret_role": {
+			Resource:      terraformCloudSecretRoleResource(),
 			PathInventory: []string{"/terraform/roles/{name}"},
 		},
 		"vault_transit_secret_backend_key": {

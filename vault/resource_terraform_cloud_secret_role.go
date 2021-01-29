@@ -15,13 +15,13 @@ var (
 	terraformCloudSecretBackendRoleNameFromPathRegex    = regexp.MustCompile("^.+/role/(.+$)")
 )
 
-func terraformCloudSecretBackendRoleResource() *schema.Resource {
+func terraformCloudSecretRoleResource() *schema.Resource {
 	return &schema.Resource{
-		Create: terraformCloudSecretBackendRoleWrite,
-		Read:   terraformCloudSecretBackendRoleRead,
-		Update: terraformCloudSecretBackendRoleWrite,
-		Delete: terraformCloudSecretBackendRoleDelete,
-		Exists: terraformCloudSecretBackendRoleExists,
+		Create: terraformCloudSecretRoleWrite,
+		Read:   terraformCloudSecretRoleRead,
+		Update: terraformCloudSecretRoleWrite,
+		Delete: terraformCloudSecretRoleDelete,
+		Exists: terraformCloudSecretRoleExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -49,7 +49,7 @@ func terraformCloudSecretBackendRoleResource() *schema.Resource {
 			},
 			"organization": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Name of the Terraform Cloud or Enterprise organization",
 			},
 			"team_id": {
@@ -78,7 +78,7 @@ func terraformCloudSecretBackendRoleResource() *schema.Resource {
 	}
 }
 
-func terraformCloudSecretBackendRoleGetBackend(d *schema.ResourceData) string {
+func terraformCloudSecretRoleGetBackend(d *schema.ResourceData) string {
 	if v, ok := d.GetOk("backend"); ok {
 		return v.(string)
 	} else if v, ok := d.GetOk("path"); ok {
@@ -88,17 +88,17 @@ func terraformCloudSecretBackendRoleGetBackend(d *schema.ResourceData) string {
 	}
 }
 
-func terraformCloudSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
+func terraformCloudSecretRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	name := d.Get("name").(string)
 
-	backend := terraformCloudSecretBackendRoleGetBackend(d)
+	backend := terraformCloudSecretRoleGetBackend(d)
 	if backend == "" {
 		return fmt.Errorf("No backend specified for Terraform Cloud secret backend role %s", name)
 	}
 
-	path := terraformCloudSecretBackendRolePath(backend, name)
+	path := terraformCloudSecretRolePath(backend, name)
 
 	payload := map[string]interface{}{}
 
@@ -125,21 +125,21 @@ func terraformCloudSecretBackendRoleWrite(d *schema.ResourceData, meta interface
 	}
 
 	d.SetId(path)
-	return terraformCloudSecretBackendRoleRead(d, meta)
+	return terraformCloudSecretRoleRead(d, meta)
 }
 
-func terraformCloudSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
+func terraformCloudSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
-	name, err := terraformCloudSecretBackendRoleNameFromPath(path)
+	name, err := terraformCloudSecretRoleNameFromPath(path)
 	if err != nil {
 		log.Printf("[WARN] Removing terraform cloud role %q because its ID is invalid", path)
 		d.SetId("")
 		return fmt.Errorf("invalid role ID %q: %s", path, err)
 	}
 
-	backend, err := terraformCloudSecretBackendRoleBackendFromPath(path)
+	backend, err := terraformCloudSecretRoleBackendFromPath(path)
 	if err != nil {
 		log.Printf("[WARN] Removing terraform cloud role %q because its ID is invalid", path)
 		d.SetId("")
@@ -173,7 +173,7 @@ func terraformCloudSecretBackendRoleRead(d *schema.ResourceData, meta interface{
 	return nil
 }
 
-func terraformCloudSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func terraformCloudSecretRoleDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
@@ -187,7 +187,7 @@ func terraformCloudSecretBackendRoleDelete(d *schema.ResourceData, meta interfac
 	return nil
 }
 
-func terraformCloudSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func terraformCloudSecretRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client := meta.(*api.Client)
 
 	path := d.Id()
@@ -202,11 +202,11 @@ func terraformCloudSecretBackendRoleExists(d *schema.ResourceData, meta interfac
 	return secret != nil, nil
 }
 
-func terraformCloudSecretBackendRolePath(backend, name string) string {
+func terraformCloudSecretRolePath(backend, name string) string {
 	return strings.Trim(backend, "/") + "/role/" + name
 }
 
-func terraformCloudSecretBackendRoleNameFromPath(path string) (string, error) {
+func terraformCloudSecretRoleNameFromPath(path string) (string, error) {
 	if !terraformCloudSecretBackendRoleNameFromPathRegex.MatchString(path) {
 		return "", fmt.Errorf("no name found")
 	}
@@ -217,7 +217,7 @@ func terraformCloudSecretBackendRoleNameFromPath(path string) (string, error) {
 	return res[1], nil
 }
 
-func terraformCloudSecretBackendRoleBackendFromPath(path string) (string, error) {
+func terraformCloudSecretRoleBackendFromPath(path string) (string, error) {
 	if !terraformCloudSecretBackendRoleBackendFromPathRegex.MatchString(path) {
 		return "", fmt.Errorf("no backend found")
 	}
