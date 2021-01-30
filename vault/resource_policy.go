@@ -10,10 +10,11 @@ import (
 
 func policyResource() *schema.Resource {
 	return &schema.Resource{
-		Create: policyWrite,
+		Create: policyCreate,
 		Update: policyWrite,
 		Delete: policyDelete,
 		Read:   policyRead,
+		Exists: policyExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -33,6 +34,23 @@ func policyResource() *schema.Resource {
 			},
 		},
 	}
+}
+
+func policyCreate(d *schema.ResourceData, meta interface{}) error {
+	exists, err := policyExists(d, meta)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("policy %s is already exists", d.Get("name").(string))
+	}
+
+	err = policyWrite(d, meta)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func policyWrite(d *schema.ResourceData, meta interface{}) error {
@@ -69,6 +87,14 @@ func policyDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func policyRead(d *schema.ResourceData, meta interface{}) error {
+	exists, err := policyExists(d, meta)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("policy %s is not exists", d.Id())
+	}
+
 	client := meta.(*api.Client)
 
 	name := d.Id()
@@ -83,4 +109,17 @@ func policyRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("name", name)
 
 	return nil
+}
+
+func policyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+	client := meta.(*api.Client)
+
+	name := d.Get("name").(string)
+
+	policy, err := client.Sys().GetPolicy(name)
+
+	if err != nil {
+		return false, fmt.Errorf("error reading from Vault: %s", err)
+	}
+	return policy != "", nil
 }
