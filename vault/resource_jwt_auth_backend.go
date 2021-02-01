@@ -1,11 +1,13 @@
 package vault
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
 	"sort"
 
+	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/hashicorp/vault/api"
@@ -126,6 +128,7 @@ func jwtAuthBackendResource() *schema.Resource {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Provider specific handling configuration",
+				Set:         jwtAuthProviderConfigHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"provider": {
@@ -325,7 +328,43 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return nil
+}
 
+func jwtAuthProviderConfigHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+
+	// We need to make sure to sort the strings below so that we always
+	// generate the same hash code no matter what is in the set.
+	if v, ok := m["provider_config"]; ok {
+		vs := v.(*schema.Set).List()
+		s := make([]string, len(vs))
+		for i, raw := range vs {
+			s[i] = raw.(string)
+		}
+		sort.Strings(s)
+
+		for _, v := range s {
+			buf.WriteString(fmt.Sprintf("%s-", v))
+		}
+	}
+	return hashcode.String(buf.String())
+}
+
+func jwtAuthProviderConfigFlatten(v interface{}) interface{} {
+	if v == nil {
+		return v
+	}
+
+	rawProviderConfig := v.((map[string]interface{}))
+	transformed := schema.NewSet(jwtAuthProviderConfigHash, []interface{}{})
+	for key, val := range rawProviderConfig {
+		transformed.Add(map[string]interface{}{
+			key: schema.NewSet(schema.HashString, val.([]interface{})),
+		})
+	}
+
+	return transformed
 }
 
 func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
