@@ -72,11 +72,16 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 	})
 }
 
+// TODO: OIDC plugin has a validation stage when configs are written,
+// and since we use circleci Docker, we can't mount files nor can it see a
+// local one. This will need to be updated when we switch to a Circle machine
+// executor.
+
 // The random numbers on the provider_config are a hash of the object.
 func TestAccJWTAuthBackend_OIDC_Provider_ConfigAzure(t *testing.T) {
 	path := acctest.RandomWithPrefix("oidc")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testJWTLocal(t) },
 		Providers:    testProviders,
 		CheckDestroy: testJWTAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
@@ -92,11 +97,16 @@ func TestAccJWTAuthBackend_OIDC_Provider_ConfigAzure(t *testing.T) {
 	})
 }
 
+// TODO: OIDC plugin has a validation stage when configs are written,
+// and since we use circleci Docker, we can't mount files nor can it see a
+// local one. This will need to be updated when we switch to a Circle machine
+// executor.
+
 // The random numbers on the provider_config are a hash of the object.
 func TestAccJWTAuthBackend_OIDC_Provider_ConfigGSuite(t *testing.T) {
 	path := acctest.RandomWithPrefix("oidc")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testJWTLocal(t) },
 		Providers:    testProviders,
 		CheckDestroy: testJWTAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
@@ -104,7 +114,6 @@ func TestAccJWTAuthBackend_OIDC_Provider_ConfigGSuite(t *testing.T) {
 				Config: testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "oidc_discovery_url", "https://accounts.google.com"),
-					resource.TestCheckTypeSet("vault_jwt_auth_backend.gsuite", "provider_config.#", "1"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.provider", "gsuite"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.gsuite_service_account", "/tmp/service-account.json"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.gsuite_admin_impersonate", "admin@gsuitedomain.com"),
