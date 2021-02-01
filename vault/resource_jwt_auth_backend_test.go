@@ -1,14 +1,11 @@
 package vault
 
 import (
-	"bytes"
 	"fmt"
 	"regexp"
-	"sort"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/vault/api"
@@ -75,46 +72,46 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 	})
 }
 
+// The random numbers on the provider_config are a hash of the object.
 func TestAccJWTAuthBackend_OIDC_Provider_ConfigAzure(t *testing.T) {
 	path := acctest.RandomWithPrefix("oidc")
-	config, hash := testAccJWTAuthBackendConfigOIDCProviderConfigAzure(path)
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testJWTAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
-				Config: config,
+				Config: testAccJWTAuthBackendConfigOIDCProviderConfigAzure(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "oidc_discovery_url", "https://accounts.google.com"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.#", "1"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", fmt.Sprintf("provider_config.%d.provider", hash), "azure"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.azure", "oidc_discovery_url", "https://accounts.google.com"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.azure", "provider_config.#", "1"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.azure", "provider_config.0.provider", "azure"),
 				),
 			},
 		},
 	})
 }
 
+// The random numbers on the provider_config are a hash of the object.
 func TestAccJWTAuthBackend_OIDC_Provider_ConfigGSuite(t *testing.T) {
 	path := acctest.RandomWithPrefix("oidc")
-	config, hash := testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(path)
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testJWTAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
-				Config: config,
+				Config: testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "oidc_discovery_url", "https://accounts.google.com"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.#", "1"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", fmt.Sprintf("provider_config.%d.provider", hash), "gsuite"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", fmt.Sprintf("provider_config.%d.gsuite_service_account", hash), "/tmp/service-account.json"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", fmt.Sprintf("provider_config.%d.gsuite_admin_impersonate", hash), "admin@gsuitedomain.com"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", fmt.Sprintf("provider_config.%d.fetch_groups", hash), "true"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", fmt.Sprintf("provider_config.%d.fetch_user_info", hash), "true"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", fmt.Sprintf("provider_config.%d.groups_recurse_max_depth", hash), "5"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", fmt.Sprintf("provider_config.%d.user_custom_schemas", hash), "Education,Preferences"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.0.provider", "gsuite"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.0.gsuite_service_account", "/tmp/service-account.json"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.0.gsuite_admin_impersonate", "admin@gsuitedomain.com"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.0.fetch_groups", "true"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.0.fetch_user_info", "true"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.0.groups_recurse_max_depth", "5"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.0.user_custom_schemas", "Education,Preferences"),
 				),
 			},
 		},
@@ -209,17 +206,9 @@ resource "vault_jwt_auth_backend" "oidc" {
 `, path)
 }
 
-func testAccJWTAuthBackendConfigOIDCProviderConfigAzure(path string) (string, int) {
-	provider := map[string]interface{}{
-		"provier_config": map[string]interface{}{
-			"provider": "azure",
-		},
-	}
-
-	hash := jwtAuthProviderConfigHash(provider)
-
+func testAccJWTAuthBackendConfigOIDCProviderConfigAzure(path string) string {
 	return fmt.Sprintf(`
-resource "vault_jwt_auth_backend" "gsuite" {
+resource "vault_jwt_auth_backend" "azure" {
 	description = "OIDC backend"
 	oidc_discovery_url = "https://accounts.google.com"
 	path = "%s"
@@ -228,24 +217,10 @@ resource "vault_jwt_auth_backend" "gsuite" {
 		provider                 = "azure"
 	}
 }
-`, path), hash
+`, path)
 }
 
-func testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(path string) (string, int) {
-	provider := map[string]interface{}{
-		"provier_config": map[string]interface{}{
-			"provider":                 "gsuite",
-			"gsuite_service_account":   "/tmp/service-account.json",
-			"gsuite_admin_impersonate": "admin@gsuitedomain.com",
-			"fetch_groups":             true,
-			"fetch_user_info":          true,
-			"groups_recurse_max_depth": 5,
-			"user_custom_schemas":      "Education,Preferences",
-		},
-	}
-
-	hash := jwtAuthProviderConfigHash(provider)
-
+func testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(path string) string {
 	return fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "gsuite" {
 	description = "OIDC backend"
@@ -262,32 +237,7 @@ resource "vault_jwt_auth_backend" "gsuite" {
 		user_custom_schemas      = "Education,Preferences"
 	}
 }
-`, path), hash
-}
-
-func mapToString(m map[string]interface{}) string {
-	b := new(bytes.Buffer)
-	for key, value := range m {
-		fmt.Fprintf(b, "%s=\"%s\"\n", key, value)
-	}
-	return b.String()
-}
-
-func testAccJWTProviderConfigHash(data map[string]interface{}) int {
-	var buf bytes.Buffer
-	var keys []string
-
-	for k := range data {
-		keys = append(keys, k)
-	}
-
-	// The keys need to be sorted to ensure the hash is calculated correctly.
-	sort.Strings(keys)
-	for _, v := range keys {
-		buf.WriteString(fmt.Sprintf("%s-", data[v]))
-	}
-
-	return hashcode.String(buf.String())
+`, path)
 }
 
 func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
