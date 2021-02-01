@@ -70,7 +70,8 @@ func testAccPreCheck(t *testing.T) {
 func testJWTLocal(t *testing.T) {
 	testAccPreCheck(t)
 	if v := os.Getenv("TEST_JWT"); v == "" {
-		t.Fatal("TEST_JWT must be set for jwt provider_config acceptance tests")
+		t.Log("TEST_JWT must be set for jwt provider_config acceptance tests")
+		t.Skip()
 	}
 }
 
