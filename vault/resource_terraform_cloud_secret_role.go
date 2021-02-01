@@ -33,19 +33,11 @@ func terraformCloudSecretRoleResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "The name of an existing role against which to create this Terraform Cloud credential",
 			},
-			"path": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Description:   "The path of the Terraform Cloud Secret Backend the role belongs to.",
-				Deprecated:    "use `backend` instead",
-				ConflictsWith: []string{"backend"},
-			},
 			"backend": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				Description:   "The path of the Terraform Cloud Secret Backend the role belongs to.",
-				ConflictsWith: []string{"path"},
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The path of the Terraform Cloud Secret Backend the role belongs to.",
 			},
 			"organization": {
 				Type:        schema.TypeString,
@@ -80,8 +72,6 @@ func terraformCloudSecretRoleResource() *schema.Resource {
 
 func terraformCloudSecretRoleGetBackend(d *schema.ResourceData) string {
 	if v, ok := d.GetOk("backend"); ok {
-		return v.(string)
-	} else if v, ok := d.GetOk("path"); ok {
 		return v.(string)
 	} else {
 		return ""
@@ -159,11 +149,7 @@ func terraformCloudSecretRoleRead(d *schema.ResourceData, meta interface{}) erro
 
 	data := secret.Data
 	d.Set("name", name)
-	if _, ok := d.GetOk("path"); ok {
-		d.Set("path", backend)
-	} else {
-		d.Set("backend", backend)
-	}
+	d.Set("backend", backend)
 	d.Set("organization", data["organization"])
 	d.Set("team_id", data["team_id"])
 	d.Set("user_id", data["user_id"])

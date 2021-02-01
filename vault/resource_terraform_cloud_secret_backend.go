@@ -21,7 +21,7 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			"backend": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
@@ -36,7 +36,7 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 			},
 			"token": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Specifies the Terraform Cloud access token to use.",
 				Sensitive:   true,
 			},
@@ -77,36 +77,38 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	path := d.Get("path").(string)
+	backend := d.Get("backend").(string)
 	address := d.Get("address").(string)
 	token := d.Get("token").(string)
 	basePath := d.Get("base_path").(string)
+	description := d.Get("description").(string)
+	defaultLeaseTTL := d.Get("default_lease_ttl_seconds")
+	maxLeaseTTL := d.Get("max_lease_ttl_seconds")
 
-	configPath := terraformCloudSecretBackendConfigPath(path)
+	configPath := terraformCloudSecretBackendConfigPath(backend)
 
 	info := &api.MountInput{
 		Type:        "terraform",
-		Description: d.Get("description").(string),
+		Description: description,
 		Config: api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
+			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultLeaseTTL),
+			MaxLeaseTTL:     fmt.Sprintf("%ds", maxLeaseTTL),
 		},
 	}
 
-	d.Partial(true)
-	log.Printf("[DEBUG] Mounting Terraform Cloud backend at %q", path)
+	log.Printf("[DEBUG] Mounting Terraform Cloud backend at %q", backend)
 
-	if err := client.Sys().Mount(path, info); err != nil {
-		return fmt.Errorf("Error mounting to %q: %s", path, err)
+	if err := client.Sys().Mount(backend, info); err != nil {
+		return fmt.Errorf("Error mounting to %q: %s", backend, err)
 	}
 
-	log.Printf("[DEBUG] Mounted Terraform Cloud backend at %q", path)
-	d.SetId(path)
+	log.Printf("[DEBUG] Mounted Terraform Cloud backend at %q", backend)
+	d.SetId(backend)
 
-	d.SetPartial("path")
-	d.SetPartial("description")
-	d.SetPartial("default_lease_ttl_seconds")
-	d.SetPartial("max_lease_ttl_seconds")
+	d.Set("backend", backend)
+	d.Set("description", description)
+	d.Set("default_lease_ttl_seconds", defaultLeaseTTL)
+	d.Set("max_lease_ttl_seconds", maxLeaseTTL)
 
 	log.Printf("[DEBUG] Writing Terraform Cloud configuration to %q", configPath)
 	data := map[string]interface{}{
@@ -115,13 +117,12 @@ func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{})
 		"base_path": basePath,
 	}
 	if _, err := client.Logical().Write(configPath, data); err != nil {
-		return fmt.Errorf("Error writing Terraform Cloud configuration for %q: %s", path, err)
+		return fmt.Errorf("Error writing Terraform Cloud configuration for %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Wrote Terraform Cloud configuration to %q", configPath)
-	d.SetPartial("address")
-	d.SetPartial("token")
-	d.SetPartial("base_path")
-	d.Partial(false)
+	d.Set("address", address)
+	d.Set("token", token)
+	d.Set("base_path", basePath)
 
 	return nil
 }
@@ -129,27 +130,27 @@ func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{})
 func terraformCloudSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	path := d.Id()
-	configPath := terraformCloudSecretBackendConfigPath(path)
+	backend := d.Id()
+	configPath := terraformCloudSecretBackendConfigPath(backend)
 
-	log.Printf("[DEBUG] Reading Terraform Cloud backend mount %q from Vault", path)
+	log.Printf("[DEBUG] Reading Terraform Cloud backend mount %q from Vault", backend)
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
-		return fmt.Errorf("Error reading mount %q: %s", path, err)
+		return fmt.Errorf("Error reading mount %q: %s", backend, err)
 	}
 
-	// path can have a trailing slash, but doesn't need to have one
+	// backend can have a trailing slash, but doesn't need to have one
 	// this standardises on having a trailing slash, which is how the
 	// API always responds.
-	mount, ok := mounts[strings.Trim(path, "/")+"/"]
+	mount, ok := mounts[strings.Trim(backend, "/")+"/"]
 	if !ok {
-		log.Printf("[WARN] Mount %q not found, removing from state.", path)
+		log.Printf("[WARN] Mount %q not found, removing from state.", backend)
 		d.SetId("")
 		return nil
 	}
 
-	d.Set("path", path)
+	d.Set("backend", backend)
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
@@ -174,24 +175,24 @@ func terraformCloudSecretBackendRead(d *schema.ResourceData, meta interface{}) e
 func terraformCloudSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	path := d.Id()
-	configPath := terraformCloudSecretBackendConfigPath(path)
-
-	d.Partial(true)
+	backend := d.Id()
+	configPath := terraformCloudSecretBackendConfigPath(backend)
 
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
+		defaultLeaseTTL := d.Get("default_lease_ttl_seconds")
+		maxLeaseTTL := d.Get("max_lease_ttl_seconds")
 		config := api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
+			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultLeaseTTL),
+			MaxLeaseTTL:     fmt.Sprintf("%ds", maxLeaseTTL),
 		}
 
-		log.Printf("[DEBUG] Updating lease TTLs for %q", path)
-		if err := client.Sys().TuneMount(path, config); err != nil {
-			return fmt.Errorf("Error updating mount TTLs for %q: %s", path, err)
+		log.Printf("[DEBUG] Updating lease TTLs for %q", backend)
+		if err := client.Sys().TuneMount(backend, config); err != nil {
+			return fmt.Errorf("Error updating mount TTLs for %q: %s", backend, err)
 		}
 
-		d.SetPartial("default_lease_ttl_seconds")
-		d.SetPartial("max_lease_ttl_seconds")
+		d.Set("default_lease_ttl_seconds", defaultLeaseTTL)
+		d.Set("max_lease_ttl_seconds", maxLeaseTTL)
 	}
 	if d.HasChange("address") || d.HasChange("token") || d.HasChange("base_path") {
 		log.Printf("[DEBUG] Updating Terraform Cloud configuration at %q", configPath)
@@ -201,43 +202,42 @@ func terraformCloudSecretBackendUpdate(d *schema.ResourceData, meta interface{})
 			"base_path": d.Get("base_path").(string),
 		}
 		if _, err := client.Logical().Write(configPath, data); err != nil {
-			return fmt.Errorf("Error configuring Terraform Cloud configuration for %q: %s", path, err)
+			return fmt.Errorf("Error configuring Terraform Cloud configuration for %q: %s", backend, err)
 		}
 		log.Printf("[DEBUG] Updated Terraform Cloud configuration at %q", configPath)
-		d.SetPartial("address")
-		d.SetPartial("token")
-		d.SetPartial("base_path")
+		d.Set("address", data["address"])
+		d.Set("token", data["token"])
+		d.Set("base_path", data["base_path"])
 	}
-	d.Partial(false)
 	return terraformCloudSecretBackendRead(d, meta)
 }
 
 func terraformCloudSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	path := d.Id()
+	backend := d.Id()
 
-	log.Printf("[DEBUG] Unmounting Terraform Cloud backend %q", path)
-	err := client.Sys().Unmount(path)
+	log.Printf("[DEBUG] Unmounting Terraform Cloud backend %q", backend)
+	err := client.Sys().Unmount(backend)
 	if err != nil {
-		return fmt.Errorf("Error unmounting Terraform Cloud backend from %q: %s", path, err)
+		return fmt.Errorf("Error unmounting Terraform Cloud backend from %q: %s", backend, err)
 	}
-	log.Printf("[DEBUG] Unmounted Terraform Cloud backend %q", path)
+	log.Printf("[DEBUG] Unmounted Terraform Cloud backend %q", backend)
 	return nil
 }
 
 func terraformCloudSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client := meta.(*api.Client)
 
-	path := d.Id()
+	backend := d.Id()
 
-	log.Printf("[DEBUG] Checking if Terraform Cloud backend exists at %q", path)
+	log.Printf("[DEBUG] Checking if Terraform Cloud backend exists at %q", backend)
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
 		return true, fmt.Errorf("Error retrieving list of mounts: %s", err)
 	}
-	log.Printf("[DEBUG] Checked if Terraform Cloud backend exists at %q", path)
-	_, ok := mounts[strings.Trim(path, "/")+"/"]
+	log.Printf("[DEBUG] Checked if Terraform Cloud backend exists at %q", backend)
+	_, ok := mounts[strings.Trim(backend, "/")+"/"]
 	return ok, nil
 }
 

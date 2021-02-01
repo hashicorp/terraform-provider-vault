@@ -60,7 +60,6 @@ func readTerraformCloudCredsResource(d *schema.ResourceData, meta interface{}) e
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 	log.Printf("[DEBUG] Read %q from Vault", path)
-	log.Printf("[DEBUG] Vault secret: %v", secret)
 
 	if secret == nil {
 		return fmt.Errorf("no role found at %q", path)

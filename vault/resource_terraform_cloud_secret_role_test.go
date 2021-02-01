@@ -88,26 +88,26 @@ func testAccTerraformCloudSecretRoleCheckDestroy(s *terraform.State) error {
 func testTerraformCloudSecretRole_initialConfig(backend, token, name, organization, teamId, userId string) string {
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
-  path = "%s"
+  backend = "%s"
   description = "test description"
   token = "%s"
 }
 
 resource "vault_terraform_cloud_secret_role" "test_org" {
-  backend = vault_terraform_cloud_secret_backend.test.path
+  backend = vault_terraform_cloud_secret_backend.test.backend
   name = "%s"
   organization = "%s"
 }
 
 resource "vault_terraform_cloud_secret_role" "test_team" {
-  path = vault_terraform_cloud_secret_backend.test.path
+  backend = vault_terraform_cloud_secret_backend.test.backend
   name = "%[3]s_team_id"
   organization = "%[4]s"
   team_id = "%[5]s"
 }
 
 resource "vault_terraform_cloud_secret_role" "test_user" {
-  path = vault_terraform_cloud_secret_backend.test.path
+  backend = vault_terraform_cloud_secret_backend.test.backend
   name = "%[3]s_user_id"
   user_id = "%[6]s"
 }
@@ -117,7 +117,7 @@ resource "vault_terraform_cloud_secret_role" "test_user" {
 func testTerraformCloudSecretRole_updateConfig(backend, token, name, organization, teamId, userId string) string {
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
-  path = "%s"
+  backend = "%s"
   description = "test description"
   default_lease_ttl_seconds = 3600
   max_lease_ttl_seconds = 86400
@@ -126,7 +126,7 @@ resource "vault_terraform_cloud_secret_backend" "test" {
 }
 
 resource "vault_terraform_cloud_secret_role" "test_org" {
-  backend = vault_terraform_cloud_secret_backend.test.path
+  backend = vault_terraform_cloud_secret_backend.test.backend
   name = "%s"
   organization = "%s"
 
@@ -135,7 +135,7 @@ resource "vault_terraform_cloud_secret_role" "test_org" {
 }
 
 resource "vault_terraform_cloud_secret_role" "test_team" {
-  path = vault_terraform_cloud_secret_backend.test.path
+  backend = vault_terraform_cloud_secret_backend.test.backend
   name = "%[3]s_team_id"
   organization = "%[4]s"
   team_id = "%[5]s"
@@ -144,7 +144,7 @@ resource "vault_terraform_cloud_secret_role" "test_team" {
 }
 
 resource "vault_terraform_cloud_secret_role" "test_user" {
-  path = vault_terraform_cloud_secret_backend.test.path
+  backend = vault_terraform_cloud_secret_backend.test.backend
   name = "%[3]s_user_id"
   user_id = "%[6]s"
 

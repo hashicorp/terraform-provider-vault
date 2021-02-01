@@ -95,19 +95,19 @@ func TestAccDataSourceTerraformCloudAccessCredentialsUserBasic(t *testing.T) {
 func testAccDataSourceTerraformCloudAccessCredentialsOrgConfig(backend, token, name, organization string) string {
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
-  path = "%s"
+  backend = "%s"
   description = "test description"
   token = "%s"
 }
 
 resource "vault_terraform_cloud_secret_role" "test" {
-  backend = vault_terraform_cloud_secret_backend.test.path
+  backend = vault_terraform_cloud_secret_backend.test.backend
   name = "%s"
   organization = "%s"
 }
 
 data "vault_terraform_cloud_access_token" "token" {
-  backend = vault_terraform_cloud_secret_backend.test.path
+  backend = vault_terraform_cloud_secret_backend.test.backend
   role    = vault_terraform_cloud_secret_role.test.name
 }
 `, backend, token, name, organization)
@@ -116,20 +116,20 @@ data "vault_terraform_cloud_access_token" "token" {
 func testAccDataSourceTerraformCloudAccessCredentialsTeamConfig(backend, token, name, organization, teamId string) string {
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
-  path = "%s"
+  backend = "%s"
   description = "test description"
   token = "%s"
 }
 
 resource "vault_terraform_cloud_secret_role" "test" {
-  backend = vault_terraform_cloud_secret_backend.test.path
+  backend = vault_terraform_cloud_secret_backend.test.backend
   name = "%s"
   organization = "%s"
   team_id = "%s"
 }
 
 data "vault_terraform_cloud_access_token" "token" {
-  backend = vault_terraform_cloud_secret_backend.test.path
+  backend = vault_terraform_cloud_secret_backend.test.backend
   role    = vault_terraform_cloud_secret_role.test.name
 }
 `, backend, token, name, organization, teamId)
@@ -138,19 +138,19 @@ data "vault_terraform_cloud_access_token" "token" {
 func testAccDataSourceTerraformCloudAccessCredentialsUserConfig(backend, token, name, userId string) string {
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
-  path = "%s"
+  backend = "%s"
   description = "test description"
   token = "%s"
 }
 
 resource "vault_terraform_cloud_secret_role" "test" {
-  backend = vault_terraform_cloud_secret_backend.test.path
+  backend = vault_terraform_cloud_secret_backend.test.backend
   name = "%s"
   user_id = "%s"
 }
 
 data "vault_terraform_cloud_access_token" "token" {
-  backend = vault_terraform_cloud_secret_backend.test.path
+  backend = vault_terraform_cloud_secret_backend.test.backend
   role    = vault_terraform_cloud_secret_role.test.name
 }
 `, backend, token, name, userId)
