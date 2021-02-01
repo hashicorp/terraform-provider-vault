@@ -202,20 +202,6 @@ var (
 	}
 )
 
-func setProviderConfig(d *schema.ResourceData, prefix string, data map[string]interface{}) {
-	if v, ok := d.GetOk(prefix + "url"); ok {
-		data["url"] = v.(string)
-	}
-
-	if v, ok := d.GetOk(prefix + "username"); ok {
-		data["username"] = v.(string)
-	}
-
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
-	}
-}
-
 func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
@@ -315,7 +301,8 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 				keys = append(keys, k)
 			}
 
-			sort.Sort(sort.StringSlice(keys))
+			// The keys need to be sorted to ensure the hash is calculated correctly.
+			sort.Strings(keys)
 			result := make([]interface{}, len(keys))
 			for i, k := range keys {
 				result[i] = rawProviderConfig[k]
