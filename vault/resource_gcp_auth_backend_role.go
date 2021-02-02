@@ -10,6 +10,11 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+var (
+	gcpAuthBackendRoleBackendFromPathRegex = regexp.MustCompile("^auth/(.+)/role/.+$")
+	gcpAuthBackendRoleNameFromPathRegex    = regexp.MustCompile("^auth/.+/role/(.+)$")
+)
+
 func gcpAuthBackendRoleResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
 		"role": {
@@ -398,17 +403,23 @@ func gcpAuthResourceExists(d *schema.ResourceData, meta interface{}) (bool, erro
 }
 
 func gcpAuthResourceBackendFromPath(path string) (string, error) {
-	var parts = strings.Split(path, "/")
-	if len(parts) != 4 {
-		return "", fmt.Errorf("Expected 4 parts in path '%s'", path)
+	if !gcpAuthBackendRoleBackendFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no backend found")
 	}
-	return parts[1], nil
+	res := gcpAuthBackendRoleBackendFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
+	}
+	return res[1], nil
 }
 
 func gcpAuthResourceRoleFromPath(path string) (string, error) {
-	var parts = strings.Split(path, "/")
-	if len(parts) != 4 {
-		return "", fmt.Errorf("Expected 4 parts in path '%s'", path)
+	if !gcpAuthBackendRoleNameFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no role found")
 	}
-	return parts[3], nil
+	res := gcpAuthBackendRoleNameFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for role", len(res))
+	}
+	return res[1], nil
 }
