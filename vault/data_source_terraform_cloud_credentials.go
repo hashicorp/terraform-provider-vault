@@ -27,6 +27,7 @@ func terraformCloudAccessCredentialsDataSource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Terraform Token provided by the Vault backend",
+				Sensitive:   true,
 			},
 			"token_id": {
 				Type:        schema.TypeString,
