@@ -8,9 +8,12 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func terraformCloudAccessCredentialsDataSource() *schema.Resource {
+func terraformCloudSecretCredsResource() *schema.Resource {
 	return &schema.Resource{
-		Read: readTerraformCloudCredsResource,
+		Create: readTerraformCloudSecretCredsResource,
+		Read:   readTerraformCloudSecretCredsResource,
+		Update: updateTerraformCloudSecretCredsResource,
+		Delete: deleteTerraformCloudSecretCredsResource,
 		Schema: map[string]*schema.Schema{
 			"backend": {
 				Type:        schema.TypeString,
@@ -50,7 +53,7 @@ func terraformCloudAccessCredentialsDataSource() *schema.Resource {
 	}
 }
 
-func readTerraformCloudCredsResource(d *schema.ResourceData, meta interface{}) error {
+func readTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -82,4 +85,25 @@ func readTerraformCloudCredsResource(d *schema.ResourceData, meta interface{}) e
 	d.Set("team_id", teamId)
 
 	return nil
+}
+
+func deleteTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+	tokenId := d.Id()
+
+	err := client.Sys().Revoke(tokenId)
+	if err != nil {
+		return fmt.Errorf("error revoking token from Vault: %s", err)
+	}
+	log.Printf("[DEBUG] Revoked tokenId: %q from Vault", tokenId)
+	return nil
+}
+
+func updateTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
+	err := deleteTerraformCloudSecretCredsResource(d, meta)
+	if err != nil {
+		return fmt.Errorf("previous token not revoked: %s", err)
+	}
+	err = readTerraformCloudSecretCredsResource(d, meta)
+	return err
 }

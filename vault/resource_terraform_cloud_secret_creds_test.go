@@ -2,6 +2,8 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/vault/api"
 	"os"
 	"testing"
 
@@ -10,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-func TestAccDataSourceTerraformCloudAccessCredentialsOrganizationClientBasic(t *testing.T) {
+func TestAccResourceTerraformCloudSecretCredsOrganizationBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	token := os.Getenv("TF_TOKEN")
@@ -24,20 +26,21 @@ func TestAccDataSourceTerraformCloudAccessCredentialsOrganizationClientBasic(t *
 				t.Skipf("TF_TOKEN and TF_ORGANIZATION must be set. Are currently %s and %s respectively", token, organization)
 			}
 		},
+		CheckDestroy: testAccResourceTerraformCloudSecretCredsCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceTerraformCloudAccessCredentialsOrgConfig(backend, token, name, organization),
+				Config: testAccResourceTerraformCloudSecretCredsOrgConfig(backend, token, name, organization),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.vault_terraform_cloud_access_token.token", "token"),
-					resource.TestCheckResourceAttrSet("data.vault_terraform_cloud_access_token.token", "token_id"),
-					resource.TestCheckResourceAttrSet("data.vault_terraform_cloud_access_token.token", "organization"),
+					resource.TestCheckResourceAttrSet("vault_terraform_cloud_secret_creds.token", "token"),
+					resource.TestCheckResourceAttrSet("vault_terraform_cloud_secret_creds.token", "token_id"),
+					resource.TestCheckResourceAttrSet("vault_terraform_cloud_secret_creds.token", "organization"),
 				),
 			},
 		},
 	})
 }
 
-func TestAccDataSourceTerraformCloudAccessCredentialsTeamClientBasic(t *testing.T) {
+func TestAccResourceTerraformCloudSecretCredsTeamBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	token := os.Getenv("TF_TOKEN")
@@ -52,21 +55,22 @@ func TestAccDataSourceTerraformCloudAccessCredentialsTeamClientBasic(t *testing.
 				t.Skipf("TF_TOKEN, TF_ORGANIZATION, and TF_TEAM_ID must be set. Are currently %s, %s and %s respectively", token, organization, teamId)
 			}
 		},
+		CheckDestroy: testAccResourceTerraformCloudSecretCredsCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceTerraformCloudAccessCredentialsTeamConfig(backend, token, name, organization, teamId),
+				Config: testAccResourceTerraformCloudSecretCredsTeamConfig(backend, token, name, organization, teamId),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.vault_terraform_cloud_access_token.token", "token"),
-					resource.TestCheckResourceAttrSet("data.vault_terraform_cloud_access_token.token", "token_id"),
-					resource.TestCheckResourceAttrSet("data.vault_terraform_cloud_access_token.token", "organization"),
-					resource.TestCheckResourceAttrSet("data.vault_terraform_cloud_access_token.token", "team_id"),
+					resource.TestCheckResourceAttrSet("vault_terraform_cloud_secret_creds.token", "token"),
+					resource.TestCheckResourceAttrSet("vault_terraform_cloud_secret_creds.token", "token_id"),
+					resource.TestCheckResourceAttrSet("vault_terraform_cloud_secret_creds.token", "organization"),
+					resource.TestCheckResourceAttrSet("vault_terraform_cloud_secret_creds.token", "team_id"),
 				),
 			},
 		},
 	})
 }
 
-func TestAccDataSourceTerraformCloudAccessCredentialsUserBasic(t *testing.T) {
+func TestAccResourceTerraformCloudSecretCredsUserBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	token := os.Getenv("TF_TOKEN")
@@ -80,19 +84,20 @@ func TestAccDataSourceTerraformCloudAccessCredentialsUserBasic(t *testing.T) {
 				t.Skipf("TF_TOKEN and TF_USER_ID must be set. Are currently %s and %s respectively", token, userId)
 			}
 		},
+		CheckDestroy: testAccResourceTerraformCloudSecretCredsCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceTerraformCloudAccessCredentialsUserConfig(backend, token, name, userId),
+				Config: testAccResourceTerraformCloudSecretCredsUserConfig(backend, token, name, userId),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.vault_terraform_cloud_access_token.token", "token"),
-					resource.TestCheckResourceAttrSet("data.vault_terraform_cloud_access_token.token", "token_id"),
+					resource.TestCheckResourceAttrSet("vault_terraform_cloud_secret_creds.token", "token"),
+					resource.TestCheckResourceAttrSet("vault_terraform_cloud_secret_creds.token", "token_id"),
 				),
 			},
 		},
 	})
 }
 
-func testAccDataSourceTerraformCloudAccessCredentialsOrgConfig(backend, token, name, organization string) string {
+func testAccResourceTerraformCloudSecretCredsOrgConfig(backend, token, name, organization string) string {
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
   backend = "%s"
@@ -106,14 +111,14 @@ resource "vault_terraform_cloud_secret_role" "test" {
   organization = "%s"
 }
 
-data "vault_terraform_cloud_access_token" "token" {
+resource "vault_terraform_cloud_secret_creds" "token" {
   backend = vault_terraform_cloud_secret_backend.test.backend
   role    = vault_terraform_cloud_secret_role.test.name
 }
 `, backend, token, name, organization)
 }
 
-func testAccDataSourceTerraformCloudAccessCredentialsTeamConfig(backend, token, name, organization, teamId string) string {
+func testAccResourceTerraformCloudSecretCredsTeamConfig(backend, token, name, organization, teamId string) string {
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
   backend = "%s"
@@ -128,14 +133,14 @@ resource "vault_terraform_cloud_secret_role" "test" {
   team_id = "%s"
 }
 
-data "vault_terraform_cloud_access_token" "token" {
+resource "vault_terraform_cloud_secret_creds" "token" {
   backend = vault_terraform_cloud_secret_backend.test.backend
   role    = vault_terraform_cloud_secret_role.test.name
 }
 `, backend, token, name, organization, teamId)
 }
 
-func testAccDataSourceTerraformCloudAccessCredentialsUserConfig(backend, token, name, userId string) string {
+func testAccResourceTerraformCloudSecretCredsUserConfig(backend, token, name, userId string) string {
 	return fmt.Sprintf(`
 resource "vault_terraform_cloud_secret_backend" "test" {
   backend = "%s"
@@ -149,9 +154,27 @@ resource "vault_terraform_cloud_secret_role" "test" {
   user_id = "%s"
 }
 
-data "vault_terraform_cloud_access_token" "token" {
+resource "vault_terraform_cloud_secret_creds" "token" {
   backend = vault_terraform_cloud_secret_backend.test.backend
   role    = vault_terraform_cloud_secret_role.test.name
 }
 `, backend, token, name, userId)
+}
+
+func testAccResourceTerraformCloudSecretCredsCheckDestroy(s *terraform.State) error {
+	client := testProvider.Meta().(*api.Client)
+
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "vault_terraform_cloud_secret_creds" {
+			continue
+		}
+		secret, err := client.Logical().Read(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+		if secret != nil {
+			return fmt.Errorf("creds %q still exists", rs.Primary.ID)
+		}
+	}
+	return nil
 }
