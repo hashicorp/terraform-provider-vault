@@ -639,7 +639,7 @@ var (
 		},
 		"vault_terraform_cloud_secret_role": {
 			Resource:      terraformCloudSecretRoleResource(),
-			PathInventory: []string{"/terraform/roles/{name}"},
+			PathInventory: []string{"/terraform/role/{name}"},
 		},
 		"vault_transit_secret_backend_key": {
 			Resource:      transitSecretBackendKeyResource(),

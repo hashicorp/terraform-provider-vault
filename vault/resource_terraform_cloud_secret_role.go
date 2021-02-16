@@ -113,6 +113,7 @@ func terraformCloudSecretRoleWrite(d *schema.ResourceData, meta interface{}) err
 	if _, err := client.Logical().Write(path, payload); err != nil {
 		return fmt.Errorf("error writing role configuration for %q: %s", path, err)
 	}
+	log.Printf("[DEBUG] Configured Terraform Cloud secrets backend role at %q", path)
 
 	d.SetId(path)
 	return terraformCloudSecretRoleRead(d, meta)
@@ -142,6 +143,7 @@ func terraformCloudSecretRoleRead(d *schema.ResourceData, meta interface{}) erro
 	if err != nil {
 		return fmt.Errorf("error reading role configuration for %q: %s", path, err)
 	}
+	log.Printf("[DEBUG] Read Terraform Cloud secrets backend role at %q", path)
 
 	if secret == nil {
 		return fmt.Errorf("resource not found")
@@ -184,6 +186,7 @@ func terraformCloudSecretRoleExists(d *schema.ResourceData, meta interface{}) (b
 	if err != nil {
 		return false, fmt.Errorf("error reading role configuration for %q: %s", path, err)
 	}
+	log.Printf("[DEBUG] Checked if Terraform Cloud secrets backend role %q exists", path)
 
 	return secret != nil, nil
 }
