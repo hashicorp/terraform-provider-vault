@@ -1,6 +1,6 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_terraform_cloud_secret_creds data source"
+page_title: "Vault: vault_terraform_cloud_secret_creds resource"
 sidebar_current: "docs-vault-resource-terraform-cloud-secret-creds"
 description: |-
   Generates tokens for Terraform Cloud.
@@ -35,7 +35,7 @@ resource "vault_terraform_cloud_secret_role" "example" {
   team_id      = "team-ieF4isC..."
 }
 
-data "vault_terraform_cloud_secret_creds" "token" {
+resource "vault_terraform_cloud_secret_creds" "token" {
   backend = vault_terraform_cloud_secret_backend.test.backend
   role    = vault_terraform_cloud_secret_role.example.name
 }
