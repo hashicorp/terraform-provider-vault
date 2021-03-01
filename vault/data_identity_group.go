@@ -172,16 +172,16 @@ func identityGroupLookup(client *api.Client, data map[string]interface{}) (*api.
 	resp, err := client.Logical().Write("identity/lookup/group", data)
 
 	if err != nil {
-		return nil, fmt.Errorf("Error reading Identity Group: %s", err)
+		return nil, fmt.Errorf("Error reading Identity Group '%v': %s", data, err)
 	}
 
 	if resp == nil {
-		return nil, fmt.Errorf("no Identity Group found")
+		return nil, fmt.Errorf("no Identity Group found '%v'", data)
 	}
 
 	_, ok := resp.Data["id"]
 	if !ok {
-		return nil, fmt.Errorf("no Identity Group found")
+		return nil, fmt.Errorf("no Identity Group found '%v'", data)
 	}
 
 	return resp, nil
