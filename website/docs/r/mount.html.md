@@ -19,6 +19,25 @@ resource "vault_mount" "example" {
 }
 ```
 
+```hcl
+resource "vault_mount" "kvv2-example" {
+  path        = "version2-example"
+  type        = "kv-v2"
+  description = "This is an example KV Version 2 secret engine mount"
+}
+```
+
+```hcl
+resource "vault_mount" "transit-example" {
+  path                      = "transit-example"
+  type                      = "transit"
+  options = {
+    convergent_encryption = false
+  }
+  description = "This is an example transit secret engine mount"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
