@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -10,7 +11,7 @@ import (
 
 func terraformCloudSecretCredsResource() *schema.Resource {
 	return &schema.Resource{
-		Create: readTerraformCloudSecretCredsResource,
+		Create: createTerraformCloudSecretCredsResource,
 		Read:   readTerraformCloudSecretCredsResource,
 		Update: updateTerraformCloudSecretCredsResource,
 		Delete: deleteTerraformCloudSecretCredsResource,
@@ -53,7 +54,7 @@ func terraformCloudSecretCredsResource() *schema.Resource {
 	}
 }
 
-func readTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
+func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -106,4 +107,30 @@ func updateTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 	}
 	err = readTerraformCloudSecretCredsResource(d, meta)
 	return err
+}
+
+func readTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+	tokenId := d.Id()
+
+	creds, err := client.Sys().Renew(tokenId, 0)
+	if err != nil {
+		if strings.Contains(err.Error(), "lease not found") {
+			err = createTerraformCloudSecretCredsResource(d, meta)
+			return err
+		} else {
+			return err
+		}
+	}
+
+	if creds.LeaseDuration > 0 {
+		data := creds.Data
+		d.SetId(tokenId)
+		d.Set("token", data["token"])
+		d.Set("token_id", tokenId)
+		d.Set("organization", data["organization"])
+		d.Set("team_id", data["teamId"])
+	}
+
+	return nil
 }
