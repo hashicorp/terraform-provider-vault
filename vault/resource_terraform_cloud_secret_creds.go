@@ -116,8 +116,7 @@ func readTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interfac
 	creds, err := client.Sys().Renew(tokenId, 0)
 	if err != nil {
 		if strings.Contains(err.Error(), "lease not found") {
-			err = createTerraformCloudSecretCredsResource(d, meta)
-			return err
+			return nil
 		} else {
 			return err
 		}
