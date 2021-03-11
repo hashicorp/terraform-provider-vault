@@ -79,7 +79,7 @@ func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 	organization := secret.Data["organization"]
 	teamId := secret.Data["team_id"]
 
-	d.SetId(tokenId)
+	d.SetId(secret.LeaseID)
 	d.Set("token", token)
 	d.Set("token_id", tokenId)
 	d.Set("organization", organization)
@@ -90,13 +90,13 @@ func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 
 func deleteTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	tokenId := d.Id()
+	leaseId := d.Id()
 
-	err := client.Sys().Revoke(tokenId)
+	err := client.Sys().Revoke(leaseId)
 	if err != nil {
 		return fmt.Errorf("error revoking token from Vault: %s", err)
 	}
-	log.Printf("[DEBUG] Revoked tokenId: %q from Vault", tokenId)
+	log.Printf("[DEBUG] Revoked tokenId: %q from Vault", leaseId)
 	return nil
 }
 
@@ -105,15 +105,18 @@ func updateTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 	if err != nil {
 		return fmt.Errorf("previous token not revoked: %s", err)
 	}
-	err = readTerraformCloudSecretCredsResource(d, meta)
+	err = createTerraformCloudSecretCredsResource(d, meta)
 	return err
 }
 
 func readTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	tokenId := d.Id()
+	leaseId := d.Id()
 
-	creds, err := client.Sys().Renew(tokenId, 0)
+	data := map[string]interface{}{
+		"lease_id": leaseId,
+	}
+	creds, err := client.Logical().Write("/sys/leases/lookup", data)
 	if err != nil {
 		if strings.Contains(err.Error(), "lease not found") {
 			return nil
@@ -124,11 +127,11 @@ func readTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interfac
 
 	if creds.LeaseDuration > 0 {
 		data := creds.Data
-		d.SetId(tokenId)
+		d.SetId(leaseId)
 		d.Set("token", data["token"])
-		d.Set("token_id", tokenId)
+		d.Set("token_id", data["token_id"])
 		d.Set("organization", data["organization"])
-		d.Set("team_id", data["teamId"])
+		d.Set("team_id", data["team_id"])
 	}
 
 	return nil

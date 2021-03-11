@@ -129,7 +129,6 @@ resource "vault_terraform_cloud_secret_backend" "test" {
 resource "vault_terraform_cloud_secret_role" "test" {
   backend = vault_terraform_cloud_secret_backend.test.backend
   name = "%s"
-  organization = "%s"
   team_id = "%s"
 }
 
@@ -137,7 +136,7 @@ resource "vault_terraform_cloud_secret_creds" "token" {
   backend = vault_terraform_cloud_secret_backend.test.backend
   role    = vault_terraform_cloud_secret_role.test.name
 }
-`, backend, token, name, organization, teamId)
+`, backend, token, name, teamId)
 }
 
 func testAccResourceTerraformCloudSecretCredsUserConfig(backend, token, name, userId string) string {
