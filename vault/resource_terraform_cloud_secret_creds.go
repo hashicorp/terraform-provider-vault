@@ -79,7 +79,11 @@ func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 	organization := secret.Data["organization"]
 	teamId := secret.Data["team_id"]
 
-	d.SetId(secret.LeaseID)
+	if secret.LeaseID != "" {
+		d.SetId(secret.LeaseID)
+	} else {
+		d.SetId(tokenId)
+	}
 	d.Set("token", token)
 	d.Set("token_id", tokenId)
 	d.Set("organization", organization)
@@ -90,13 +94,13 @@ func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 
 func deleteTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	leaseId := d.Id()
+	id := d.Id()
 
-	err := client.Sys().Revoke(leaseId)
+	err := client.Sys().Revoke(id)
 	if err != nil {
 		return fmt.Errorf("error revoking token from Vault: %s", err)
 	}
-	log.Printf("[DEBUG] Revoked tokenId: %q from Vault", leaseId)
+	log.Printf("[DEBUG] Revoked tokenId: %q from Vault", id)
 	return nil
 }
 
@@ -111,28 +115,34 @@ func updateTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 
 func readTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	leaseId := d.Id()
+	id := d.Id()
+	organization := d.Get("organization")
+	teamId := d.Get("team_id")
 
-	data := map[string]interface{}{
-		"lease_id": leaseId,
-	}
-	creds, err := client.Logical().Write("/sys/leases/lookup", data)
-	if err != nil {
-		if strings.Contains(err.Error(), "lease not found") {
-			return nil
-		} else {
-			return err
+	if organization == "" && teamId == "" {
+		data := map[string]interface{}{
+			"lease_id": id,
 		}
-	}
+		creds, err := client.Logical().Write("/sys/leases/lookup", data)
+		if err != nil {
+			if strings.Contains(err.Error(), "lease not found") {
+				return nil
+			} else {
+				return err
+			}
+		}
+		if creds.LeaseDuration <= 0 {
+			return nil
+		}
 
-	if creds.LeaseDuration > 0 {
-		data := creds.Data
-		d.SetId(leaseId)
+		d.SetId(id)
 		d.Set("token", data["token"])
 		d.Set("token_id", data["token_id"])
 		d.Set("organization", data["organization"])
 		d.Set("team_id", data["team_id"])
-	}
 
-	return nil
+		return nil
+	} else {
+		return createTerraformCloudSecretCredsResource(d, meta)
+	}
 }
