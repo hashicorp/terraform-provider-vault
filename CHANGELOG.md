@@ -1,3 +1,8 @@
+## Unreleased
+
+IMPROVEMENTS:
+* `resource/pki_secret_backend`: Support allowed_domains_template option for vault_pki_secret_backend_role ([#869](https://github.com/hashicorp/terraform-provider-vault/pull/869))
+
 ## 2.18.0 (January 21, 2021)
 
 FEATURES:
