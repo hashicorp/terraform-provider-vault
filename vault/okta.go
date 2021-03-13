@@ -146,6 +146,10 @@ func deleteOktaGroup(client *api.Client, path, name string) error {
 	return err
 }
 
+func oktaTuneEndpoint(path string) string {
+	return fmt.Sprintf("/auth/%s", path)
+}
+
 func oktaConfigEndpoint(path string) string {
 	return fmt.Sprintf("/auth/%s/config", path)
 }
