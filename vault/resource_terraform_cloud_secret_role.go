@@ -57,7 +57,7 @@ func terraformCloudSecretRoleResource() *schema.Resource {
 			"max_ttl": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Description: "Default lease for generated credentials. If not set or set to 0, will use system default.",
+				Description: "Maximum allowed lease for generated credentials. If not set or set to 0, will use system default.",
 				Default:     0,
 			},
 			"ttl": {

@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -100,7 +101,9 @@ func deleteTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 	if err != nil {
 		return fmt.Errorf("error revoking token from Vault: %s", err)
 	}
-	log.Printf("[DEBUG] Revoked tokenId: %q from Vault", id)
+	log.Printf("[DEBUG] Revoked lease: %q from Vault", id)
+	log.Printf("Lease for token %s, removing user token from schema", d.Get("token_id"))
+	d.SetId("")
 	return nil
 }
 
@@ -125,24 +128,25 @@ func readTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interfac
 		}
 		creds, err := client.Logical().Write("/sys/leases/lookup", data)
 		if err != nil {
-			if strings.Contains(err.Error(), "lease not found") {
+			if strings.Contains(err.Error(), "lease not found") ||
+				strings.Contains(err.Error(), "invalid lease") {
+				log.Printf("User token %s lease expired, removing user token from schema", d.Get("token_id"))
+				d.SetId("")
 				return nil
-			} else {
-				return err
 			}
+			return err
 		}
-		if creds.LeaseDuration <= 0 {
-			return nil
+		ttl, err := creds.Data["ttl"].(json.Number).Int64()
+		if err != nil && ttl <= 0 {
+			return err
 		}
 
-		d.SetId(id)
-		d.Set("token", data["token"])
-		d.Set("token_id", data["token_id"])
-		d.Set("organization", data["organization"])
-		d.Set("team_id", data["team_id"])
+		d.Set("token", creds.Data["token"])
+		d.Set("token_id", creds.Data["token_id"])
+		d.Set("organization", creds.Data["organization"])
+		d.Set("team_id", creds.Data["team_id"])
 
 		return nil
-	} else {
-		return createTerraformCloudSecretCredsResource(d, meta)
 	}
+	return createTerraformCloudSecretCredsResource(d, meta)
 }
