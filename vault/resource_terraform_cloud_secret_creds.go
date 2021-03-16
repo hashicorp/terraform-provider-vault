@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -20,7 +19,7 @@ func terraformCloudSecretCredsResource() *schema.Resource {
 			"backend": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Terraform Cloud secret backend to generate tokens from.",
+				Description: "Terraform Cloud secret backend to generate tokens from",
 			},
 			"role": {
 				Type:        schema.TypeString,
@@ -28,11 +27,17 @@ func terraformCloudSecretCredsResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Name of the role.",
 			},
+			"lease_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Sensitive:   true,
+				Description: "Associated Vault lease ID, if one exists",
+			},
 			"token": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Terraform Token provided by the Vault backend",
 				Sensitive:   true,
+				Description: "Terraform Token provided by the Vault backend",
 			},
 			"token_id": {
 				Type:        schema.TypeString,
@@ -42,13 +47,11 @@ func terraformCloudSecretCredsResource() *schema.Resource {
 			"organization": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Optional:    true,
 				Description: "Name of the Terraform Cloud or Enterprise organization",
 			},
 			"team_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Optional:    true,
 				Description: "ID of the Terraform Cloud or Enterprise team under organization (e.g., settings/teams/team-xxxxxxxxxxxxx)",
 			},
 		},
@@ -80,11 +83,14 @@ func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 	organization := secret.Data["organization"]
 	teamId := secret.Data["team_id"]
 
+	d.SetId(tokenId)
+
 	if secret.LeaseID != "" {
-		d.SetId(secret.LeaseID)
+		d.Set("lease_id", secret.LeaseID)
 	} else {
-		d.SetId(tokenId)
+		d.Set("lease_id", "")
 	}
+
 	d.Set("token", token)
 	d.Set("token_id", tokenId)
 	d.Set("organization", organization)
@@ -95,15 +101,21 @@ func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 
 func deleteTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	id := d.Id()
+	leaseId := d.Get("lease_id").(string)
 
-	err := client.Sys().Revoke(id)
-	if err != nil {
-		return fmt.Errorf("error revoking token from Vault: %s", err)
+	organization := d.Get("organization")
+	teamId := d.Get("team_id")
+
+	if organization == "" && teamId == "" {
+		err := client.Sys().Revoke(leaseId)
+		if err != nil {
+			return fmt.Errorf("error revoking token from Vault: %s", err)
+		}
+		log.Printf("[DEBUG] Revoked lease: %q from Vault, removing user token %s from state", leaseId, d.Id())
+		d.SetId("")
+	} else {
+		log.Printf("[DEBUG] No lease to revoke for Team/Org tokens")
 	}
-	log.Printf("[DEBUG] Revoked lease: %q from Vault", id)
-	log.Printf("Lease for token %s, removing user token from schema", d.Get("token_id"))
-	d.SetId("")
 	return nil
 }
 
@@ -118,33 +130,23 @@ func updateTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 
 func readTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	id := d.Id()
+	leaseId := d.Get("lease_id")
 	organization := d.Get("organization")
 	teamId := d.Get("team_id")
 
 	if organization == "" && teamId == "" {
 		data := map[string]interface{}{
-			"lease_id": id,
+			"lease_id": leaseId,
 		}
-		creds, err := client.Logical().Write("/sys/leases/lookup", data)
+		_, err := client.Logical().Write("/sys/leases/lookup", data)
 		if err != nil {
-			if strings.Contains(err.Error(), "lease not found") ||
-				strings.Contains(err.Error(), "invalid lease") {
-				log.Printf("User token %s lease expired, removing user token from schema", d.Get("token_id"))
+			if strings.Contains(err.Error(), "invalid lease") {
+				log.Printf("User token %s lease expired, removing user token from state", d.Get("token_id"))
 				d.SetId("")
 				return nil
 			}
 			return err
 		}
-		ttl, err := creds.Data["ttl"].(json.Number).Int64()
-		if err != nil && ttl <= 0 {
-			return err
-		}
-
-		d.Set("token", creds.Data["token"])
-		d.Set("token_id", creds.Data["token_id"])
-		d.Set("organization", creds.Data["organization"])
-		d.Set("team_id", creds.Data["team_id"])
 
 		return nil
 	}
