@@ -103,10 +103,7 @@ func deleteTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 	client := meta.(*api.Client)
 	leaseId := d.Get("lease_id").(string)
 
-	organization := d.Get("organization")
-	teamId := d.Get("team_id")
-
-	if organization == "" && teamId == "" {
+	if leaseId != "" {
 		err := client.Sys().Revoke(leaseId)
 		if err != nil {
 			return fmt.Errorf("error revoking token from Vault: %s", err)
@@ -131,10 +128,8 @@ func updateTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 func readTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	leaseId := d.Get("lease_id")
-	organization := d.Get("organization")
-	teamId := d.Get("team_id")
 
-	if organization == "" && teamId == "" {
+	if leaseId != "" {
 		data := map[string]interface{}{
 			"lease_id": leaseId,
 		}
