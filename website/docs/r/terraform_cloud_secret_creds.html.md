@@ -64,3 +64,6 @@ to identify the user of the call.
 * `organization` - The organization associated with the token provided.
 
 * `team_id` - The team id associated with the token provided.
+
+* `lease_id` - The lease associated with the token. Only user tokens will have a 
+Vault lease associated with them.
