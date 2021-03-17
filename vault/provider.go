@@ -629,6 +629,18 @@ var (
 			Resource:      quotaRateLimitResource(),
 			PathInventory: []string{"/sys/quotas/rate-limit/{name}"},
 		},
+		"vault_terraform_cloud_secret_backend": {
+			Resource:      terraformCloudSecretBackendResource(),
+			PathInventory: []string{"/terraform/config"},
+		},
+		"vault_terraform_cloud_secret_creds": {
+			Resource:      terraformCloudSecretCredsResource(),
+			PathInventory: []string{"/terraform/creds/{role}"},
+		},
+		"vault_terraform_cloud_secret_role": {
+			Resource:      terraformCloudSecretRoleResource(),
+			PathInventory: []string{"/terraform/role/{name}"},
+		},
 		"vault_transit_secret_backend_key": {
 			Resource:      transitSecretBackendKeyResource(),
 			PathInventory: []string{"/transit/keys/{name}"},
