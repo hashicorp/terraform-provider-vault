@@ -1,4 +1,4 @@
-## 2.19.0 (Unreleased)
+## 2.19.0 (March 17, 2021)
 
 FEATURES:
 * **New Resource**: `terraform_cloud_secret` resources ([#959](https://github.com/hashicorp/terraform-provider-vault/pull/959))
