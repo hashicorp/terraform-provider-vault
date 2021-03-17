@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* **New Resource**: `terraform_cloud_secret` resources ([#959](https://github.com/hashicorp/terraform-provider-vault/pull/959))
+
 IMPROVEMENTS:
 * `resource/pki_secret_backend`: Support allowed_domains_template option for vault_pki_secret_backend_role ([#869](https://github.com/hashicorp/terraform-provider-vault/pull/869))
 
