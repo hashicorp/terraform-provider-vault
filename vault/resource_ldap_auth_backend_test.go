@@ -230,3 +230,69 @@ resource "vault_ldap_auth_backend" "test" {
 `, path, use_token_groups)
 
 }
+
+func TestLDAPAuthBackend_tune(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-ldap-path")
+	resName := "vault_ldap_auth_backend.test"
+	var resAuthFirst api.AuthMount
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_tune_initialConfig(backend),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAuthMountExists(resName, &resAuthFirst),
+					resource.TestCheckResourceAttr(resName, "path", backend),
+					resource.TestCheckResourceAttr(resName, "id", backend),
+					resource.TestCheckResourceAttr(resName, "tune.2820787064.default_lease_ttl", "60s"),
+					resource.TestCheckResourceAttr(resName, "tune.2820787064.max_lease_ttl", "3600s"),
+					resource.TestCheckResourceAttr(resName, "tune.2820787064.listing_visibility", "unauth"),
+					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuthFirst.Accessor),
+					checkAuthMount(backend, listingVisibility("unauth")),
+					checkAuthMount(backend, defaultLeaseTtl(60)),
+					checkAuthMount(backend, maxLeaseTtl(3600)),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_tune_updateConfig(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuthFirst.Accessor),
+					resource.TestCheckResourceAttr(resName, "path", backend),
+					resource.TestCheckResourceAttr(resName, "id", backend),
+					resource.TestCheckResourceAttr(resName, "tune.1501804413.default_lease_ttl", "60s"),
+					resource.TestCheckResourceAttr(resName, "tune.1501804413.max_lease_ttl", "7200s"),
+					resource.TestCheckResourceAttr(resName, "tune.1501804413.listing_visibility", ""),
+					checkAuthMount(backend, listingVisibility("unauth")),
+					checkAuthMount(backend, defaultLeaseTtl(60)),
+					checkAuthMount(backend, maxLeaseTtl(7200)),
+				),
+			},
+		},
+	})
+}
+
+func testLDAPAuthBackendConfig_tune_initialConfig(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+	url = "ldap://localhost"
+	path = "%s"
+	tune {
+		listing_visibility = "unauth"
+		max_lease_ttl      = "3600s"
+		default_lease_ttl  = "60s"
+	}
+}`, backend)
+}
+
+func testLDAPAuthBackendConfig_tune_updateConfig(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+	url = "ldap://localhost"
+	path = "%s"
+	tune {
+		max_lease_ttl      = "7200s"
+		default_lease_ttl  = "60s"
+	}
+}`, backend)
+}

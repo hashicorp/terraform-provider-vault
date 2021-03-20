@@ -124,6 +124,7 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed:    true,
 			Description: "The accessor of the LDAP auth backend",
 		},
+		"tune": authMountTuneSchema(),
 	}
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
@@ -171,6 +172,20 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path := ldapAuthBackendConfigPath(d.Id())
 	data := map[string]interface{}{}
+	if d.HasChange("tune") {
+		log.Printf("[INFO] Auth '%q' tune configuration changed", d.Id())
+		if raw, ok := d.GetOk("tune"); ok {
+			log.Printf("[DEBUG] Writing ldap auth tune to '%q'", d.Id())
+
+			err := authMountTune(client, "auth/"+d.Id(), raw)
+			if err != nil {
+				return nil
+			}
+
+			log.Printf("[INFO] Written ldap auth tune to '%q'", d.Id())
+			d.SetPartial("tune")
+		}
+	}
 
 	if v, ok := d.GetOk("url"); ok {
 		data["url"] = v.(string)
