@@ -13,7 +13,7 @@ func azureSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: azureSecretBackendCreate,
 		Read:   azureSecretBackendRead,
-		Update: azureSecretBackendCreate,
+		Update: azureSecretBackendUpdate,
 		Delete: azureSecretBackendDelete,
 		Exists: azureSecretBackendExists,
 		Importer: &schema.ResourceImporter{
@@ -145,10 +145,66 @@ func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
+	log.Printf("[DEBUG] Read Azure secret Backend config %s", path)
+	resp, err := client.Logical().Read(path + "/config")
+	if err != nil {
+		if v, ok := resp.Data["client_id"].(string); ok {
+			d.Set("client_id", v)
+		}
+		if v, ok := resp.Data["subscription_id"].(string); ok {
+			d.Set("subscription_id", v)
+		}
+		if v, ok := resp.Data["tenant_id"].(string); ok {
+			d.Set("tenant_id", v)
+		}
+		if v, ok := resp.Data["environment"].(string); ok && v != "" {
+			d.Set("environment", v)
+		} else {
+			d.Set("environment", "AzurePublicCloud")
+		}
+	}
+
 	d.Set("path", path)
 	d.Set("description", mount.Description)
 
 	return nil
+}
+
+func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+
+	path := d.Id()
+	d.Partial(true)
+	if d.HasChange("client_id") || d.HasChange("environment") || d.HasChange("tenant_id") || d.HasChange("client_secret") {
+		log.Printf("[DEBUG] Updating Azure Backend Config at %q", path+"/config")
+		data := map[string]interface{}{
+			"tenant_id":       d.Get("tenant_id").(string),
+			"client_id":       d.Get("client_id").(string),
+			"client_secret":   d.Get("client_secret").(string),
+			"subscription_id": d.Get("subscription_id").(string),
+		}
+
+		environment := d.Get("environment").(string)
+		if environment != "" {
+			data["environment"] = environment
+		}
+
+		_, err := client.Logical().Write(path+"/config", data)
+		if err != nil {
+			return fmt.Errorf("error writing config for %q: %s", path, err)
+		}
+		log.Printf("[DEBUG] Updated Azure Backend Config at %q", path+"/config")
+		d.SetPartial("tenant_id")
+		d.SetPartial("client_id")
+		d.SetPartial("cleint_secret")
+		d.SetPartial("subscription_id")
+		if environment == "" {
+			d.Set("environment", "AzurePublicCloud")
+		}
+		d.SetPartial("environment")
+	}
+	d.Partial(false)
+	return azureSecretBackendRead(d, meta)
 }
 
 func azureSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
