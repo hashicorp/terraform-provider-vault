@@ -24,86 +24,89 @@ var (
 )
 
 func gcpAuthBackendRoleDataSource() *schema.Resource {
-	return &schema.Resource{
-		Read: gcpAuthBackendRoleRead,
-
-		Schema: map[string]*schema.Schema{
-			"role_name": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Name of the role.",
-				ForceNew:    true,
-			},
-			"role_id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "The RoleID of the GCP auth role.",
-			},
-			"backend": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Unique name of the auth backend to configure.",
-				ForceNew:    true,
-				Default:     "gcp",
-				// standardise on no beginning or trailing slashes
-				StateFunc: func(v interface{}) string {
-					return strings.Trim(v.(string), "/")
-				},
-			},
-			"type": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"bound_service_accounts": {
-				Type: schema.TypeSet,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Computed: true,
-			},
-			"bound_projects": {
-				Type: schema.TypeSet,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Computed: true,
-			},
-			"bound_zones": {
-				Type: schema.TypeSet,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Computed: true,
-			},
-			"bound_regions": {
-				Type: schema.TypeSet,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Computed: true,
-			},
-			"bound_instance_groups": {
-				Type: schema.TypeSet,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Computed: true,
-			},
-			"bound_labels": {
-				Type: schema.TypeSet,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Computed: true,
-			},
-			"token_policies": {
-				Type: schema.TypeSet,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Computed: true,
+	fields := map[string]*schema.Schema{
+		"role_name": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "Name of the role.",
+			ForceNew:    true,
+		},
+		"role_id": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "The RoleID of the GCP auth role.",
+		},
+		"backend": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Unique name of the auth backend to configure.",
+			ForceNew:    true,
+			Default:     "gcp",
+			// standardise on no beginning or trailing slashes
+			StateFunc: func(v interface{}) string {
+				return strings.Trim(v.(string), "/")
 			},
 		},
+		"type": {
+			Type:     schema.TypeString,
+			Computed: true,
+		},
+		"bound_service_accounts": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Computed: true,
+		},
+		"bound_projects": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Computed: true,
+		},
+		"bound_zones": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Computed: true,
+		},
+		"bound_regions": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Computed: true,
+		},
+		"bound_instance_groups": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Computed: true,
+		},
+		"bound_labels": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Computed: true,
+		},
+		"token_policies": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Computed: true,
+		},
+	}
+
+	addTokenFields(fields, &addTokenFieldsConfig{})
+
+	return &schema.Resource{
+		Read:   gcpAuthBackendRoleRead,
+		Schema: fields,
 	}
 }
 
@@ -131,6 +134,8 @@ func gcpAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 			}
 		}
 	}
+
+	readTokenFields(d, resp)
 
 	return nil
 }
