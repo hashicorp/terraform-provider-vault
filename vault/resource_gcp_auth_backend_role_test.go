@@ -91,7 +91,11 @@ func TestGCPAuthBackendRole_gce(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendRoleConfig_gce(backend, name, projectId),
-				Check:  testGCPAuthBackendRoleCheck_attrs(expectedAttrs, backend, name),
+				Check: resource.ComposeTestCheckFunc(
+					testGCPAuthBackendRoleCheck_attrs(expectedAttrs, backend, name),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
+						"bound_labels.#", "1"),
+				),
 			},
 		},
 	})
