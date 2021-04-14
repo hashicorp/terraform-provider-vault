@@ -316,7 +316,7 @@ resource "vault_gcp_auth_backend_role" "test" {
     token_policies         = ["policy_a", "policy_b"]
     bound_regions          = ["eu-west2"]
     bound_zones            = ["europe-west2-c"]
-    bound_labels           = ["foo"]
+    bound_labels           = ["foo:bar"]
 }
 `, backend, name, projectId)
 
