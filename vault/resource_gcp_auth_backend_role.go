@@ -220,8 +220,8 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, cr
 		data["bound_instance_groups"] = v.(*schema.Set).List()
 	}
 
-	if v, ok := d.GetOk("bound_instance_labels"); ok {
-		data["bound_instance_labels"] = v.(*schema.Set).List()
+	if v, ok := d.GetOk("bound_labels"); ok {
+		data["bound_labels"] = v.(*schema.Set).List()
 	}
 }
 

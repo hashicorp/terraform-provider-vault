@@ -19,6 +19,17 @@ func TestGCPAuthBackendRole_basic(t *testing.T) {
 	serviceAccount := acctest.RandomWithPrefix("tf-test-gcp-service-account")
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
 
+	expectedAttrs := map[string]string{
+		"type":                   "type",
+		"bound_service_accounts": "bound_service_accounts",
+		"bound_projects":         "bound_projects",
+		"token_ttl":              "token_ttl",
+		"token_max_ttl":          "token_max_ttl",
+		"token_period":           "token_period",
+		"token_policies":         "token_policies",
+		"add_group_aliases":      "add_group_aliases",
+	}
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
@@ -27,7 +38,7 @@ func TestGCPAuthBackendRole_basic(t *testing.T) {
 			{
 				Config: testGCPAuthBackendRoleConfig_basic(backend, name, serviceAccount, projectId),
 				Check: resource.ComposeTestCheckFunc(
-					testGCPAuthBackendRoleCheck_attrs(backend, name),
+					testGCPAuthBackendRoleCheck_attrs(expectedAttrs, backend, name),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
 						"token_ttl", "300"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
@@ -39,7 +50,7 @@ func TestGCPAuthBackendRole_basic(t *testing.T) {
 			{
 				Config: testGCPAuthBackendRoleConfig_unset(backend, name, serviceAccount, projectId),
 				Check: resource.ComposeTestCheckFunc(
-					testGCPAuthBackendRoleCheck_attrs(backend, name),
+					testGCPAuthBackendRoleCheck_attrs(expectedAttrs, backend, name),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
 						"token_ttl", "0"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
@@ -62,6 +73,17 @@ func TestGCPAuthBackendRole_gce(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-gcp-role")
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
 
+	expectedAttrs := map[string]string{
+		"type":           "type",
+		"bound_projects": "bound_projects",
+		"token_ttl":      "token_ttl",
+		"token_max_ttl":  "token_max_ttl",
+		"token_policies": "token_policies",
+		"bound_regions":  "bound_regions",
+		"bound_zones":    "bound_zones",
+		"bound_labels":   "bound_labels",
+	}
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
@@ -69,7 +91,7 @@ func TestGCPAuthBackendRole_gce(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendRoleConfig_gce(backend, name, projectId),
-				Check:  testGCPAuthBackendRoleCheck_attrs(backend, name),
+				Check:  testGCPAuthBackendRoleCheck_attrs(expectedAttrs, backend, name),
 			},
 		},
 	})
@@ -119,7 +141,7 @@ func testGCPAuthBackendRoleDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testGCPAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckFunc {
+func testGCPAuthBackendRoleCheck_attrs(expectedAttrs map[string]string, backend, name string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_gcp_auth_backend_role.test"]
 		if resourceState == nil {
@@ -156,24 +178,7 @@ func testGCPAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckF
 			return err
 		}
 
-		attrs := map[string]string{
-			"type":                   "type",
-			"bound_projects":         "bound_projects",
-			"token_ttl":              "token_ttl",
-			"token_max_ttl":          "token_max_ttl",
-			"token_period":           "token_period",
-			"token_policies":         "token_policies",
-			"bound_service_accounts": "bound_service_accounts",
-			"bound_regions":          "bound_regions",
-			"bound_zones":            "bound_zones",
-			"bound_labels":           "bound_labels",
-			"add_group_aliases":      "add_group_aliases",
-		}
-
-		for stateAttr, apiAttr := range attrs {
-			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
-				continue
-			}
+		for stateAttr, apiAttr := range expectedAttrs {
 			var match bool
 			switch resp.Data[apiAttr].(type) {
 			case json.Number:
