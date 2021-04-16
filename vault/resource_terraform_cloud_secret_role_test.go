@@ -14,9 +14,9 @@ import (
 func TestTerraformCloudSecretRole(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-backend")
 	name := acctest.RandomWithPrefix("tf-test-name")
-	token := os.Getenv("TF_TOKEN")
-	teamId := os.Getenv("TF_TEAM_ID")
-	userId := os.Getenv("TF_USER_ID")
+	token := os.Getenv("TEST_TF_TOKEN")
+	teamId := os.Getenv("TEST_TF_TEAM_ID")
+	userId := os.Getenv("TEST_TF_USER_ID")
 	organization := "hashicorp-vault-testing"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,

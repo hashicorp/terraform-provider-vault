@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -13,7 +14,7 @@ import (
 
 func TestTerraformCloudSecretBackend(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
-	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
+	token := os.Getenv("TEST_TF_TOKEN")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
