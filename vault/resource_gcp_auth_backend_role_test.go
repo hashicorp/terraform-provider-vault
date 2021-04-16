@@ -69,7 +69,11 @@ func TestGCPAuthBackendRole_gce(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendRoleConfig_gce(backend, name, projectId),
-				Check:  testGCPAuthBackendRoleCheck_attrs(backend, name),
+				Check: resource.ComposeTestCheckFunc(
+					testGCPAuthBackendRoleCheck_attrs(backend, name),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
+						"bound_labels.#", "2"),
+				),
 			},
 		},
 	})
@@ -166,7 +170,6 @@ func testGCPAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckF
 			"bound_service_accounts": "bound_service_accounts",
 			"bound_regions":          "bound_regions",
 			"bound_zones":            "bound_zones",
-			"bound_labels":           "bound_labels",
 			"add_group_aliases":      "add_group_aliases",
 		}
 
@@ -307,7 +310,7 @@ resource "vault_gcp_auth_backend_role" "test" {
     token_policies         = ["policy_a", "policy_b"]
     bound_regions          = ["eu-west2"]
     bound_zones            = ["europe-west2-c"]
-    bound_labels           = ["foo"]
+    bound_labels           = ["foo:bar", "key:value"]
 }
 `, backend, name, projectId)
 
