@@ -1,4 +1,12 @@
 version: 2.1
+
+workflows:
+  build:
+    jobs:
+      - build:
+          context:
+            - vault-plugin-secrets-terraform
+
 jobs:
   build:
     docker:

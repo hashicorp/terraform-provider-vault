@@ -16,15 +16,15 @@ import (
 func TestAccResourceTerraformCloudSecretCredsOrganizationBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	name := acctest.RandomWithPrefix("tf-test-name")
-	token := os.Getenv("TF_TOKEN")
-	organization := os.Getenv("TF_ORGANIZATION")
+	token := os.Getenv("TEST_TF_TOKEN")
+	organization := os.Getenv("TEST_TF_ORGANIZATION")
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck: func() {
 			util.TestAccPreCheck(t)
 			if token == "" || organization == "" {
-				t.Skipf("TF_TOKEN and TF_ORGANIZATION must be set. Are currently %s and %s respectively", token, organization)
+				t.Skipf("TEST_TF_TOKEN and TEST_TF_ORGANIZATION must be set. Are currently %s and %s respectively", token, organization)
 			}
 		},
 		CheckDestroy: testAccResourceTerraformCloudSecretCredsCheckDestroy,
@@ -44,16 +44,16 @@ func TestAccResourceTerraformCloudSecretCredsOrganizationBasic(t *testing.T) {
 func TestAccResourceTerraformCloudSecretCredsTeamBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	name := acctest.RandomWithPrefix("tf-test-name")
-	token := os.Getenv("TF_TOKEN")
-	organization := os.Getenv("TF_ORGANIZATION")
-	teamId := os.Getenv("TF_TEAM_ID")
+	token := os.Getenv("TEST_TF_TOKEN")
+	organization := os.Getenv("TEST_TF_ORGANIZATION")
+	teamId := os.Getenv("TEST_TF_TEAM_ID")
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck: func() {
 			util.TestAccPreCheck(t)
 			if token == "" || organization == "" || teamId == "" {
-				t.Skipf("TF_TOKEN, TF_ORGANIZATION, and TF_TEAM_ID must be set. Are currently %s, %s and %s respectively", token, organization, teamId)
+				t.Skipf("TEST_TF_TOKEN, TEST_TF_ORGANIZATION, and TEST_TF_TEAM_ID must be set. Are currently %s, %s and %s respectively", token, organization, teamId)
 			}
 		},
 		CheckDestroy: testAccResourceTerraformCloudSecretCredsCheckDestroy,
@@ -74,15 +74,15 @@ func TestAccResourceTerraformCloudSecretCredsTeamBasic(t *testing.T) {
 func TestAccResourceTerraformCloudSecretCredsUserBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	name := acctest.RandomWithPrefix("tf-test-name")
-	token := os.Getenv("TF_TOKEN")
-	userId := os.Getenv("TF_USER_ID")
+	token := os.Getenv("TEST_TF_TOKEN")
+	userId := os.Getenv("TEST_TF_USER_ID")
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck: func() {
 			util.TestAccPreCheck(t)
 			if token == "" || userId == "" {
-				t.Skipf("TF_TOKEN and TF_USER_ID must be set. Are currently %s and %s respectively", token, userId)
+				t.Skipf("TEST_TF_TOKEN and TEST_TF_USER_ID must be set. Are currently %s and %s respectively", token, userId)
 			}
 		},
 		CheckDestroy: testAccResourceTerraformCloudSecretCredsCheckDestroy,
