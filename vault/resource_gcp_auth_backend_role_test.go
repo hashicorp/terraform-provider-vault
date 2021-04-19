@@ -170,6 +170,7 @@ func testGCPAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckF
 			"bound_service_accounts": "bound_service_accounts",
 			"bound_regions":          "bound_regions",
 			"bound_zones":            "bound_zones",
+			"bound_labels":           "bound_labels",
 			"add_group_aliases":      "add_group_aliases",
 		}
 
@@ -198,6 +199,47 @@ func testGCPAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckF
 						return fmt.Errorf("Expected state field %s to be a bool, was %q", stateAttr, instanceState.Attributes[stateAttr])
 					}
 					match = resp.Data[apiAttr] == stateData
+				}
+			case map[string]interface{}:
+				apiData := resp.Data[apiAttr].(map[string]interface{})
+				length := instanceState.Attributes[stateAttr+".#"]
+				if length == "" {
+					if len(resp.Data[apiAttr].(map[string]interface{})) != 0 {
+						return fmt.Errorf("Expected state field %s to have %d entries, had 0", stateAttr, len(apiData))
+					}
+					match = true
+				} else {
+					count, err := strconv.Atoi(length)
+					if err != nil {
+						return fmt.Errorf("Expected %s.# to be a number, got %q", stateAttr, instanceState.Attributes[stateAttr+".#"])
+					}
+					if count != len(apiData) {
+						return fmt.Errorf("Expected %s to have %d entries in state, has %d", stateAttr, len(apiData), count)
+					}
+
+					for respKey, respValue := range apiData {
+						found := false
+						for stateKey, stateValue := range instanceState.Attributes {
+							if strings.HasPrefix(stateKey, stateAttr) {
+								val := respValue
+
+								// We send a list to Vault and it returns a map. To ensure
+								// the response from Vault and the state file are equal,
+								// we need to prepare a string "key:value" for comparison.
+								if apiAttr == "bound_labels" {
+									val = fmt.Sprintf("%s:%s", respKey, respValue)
+								}
+
+								if val == stateValue {
+									found = true
+								}
+							}
+						}
+						if !found {
+							return fmt.Errorf("Expected item %s of %s (%s in state) of %q to be in state but wasn't", respKey, apiAttr, stateAttr, endpoint)
+						}
+					}
+					match = true
 				}
 
 			case []interface{}:
