@@ -18,7 +18,6 @@ var (
 		"bound_zones",
 		"bound_regions",
 		"bound_instance_groups",
-		"bound_labels",
 		"token_policies",
 	}
 )
@@ -132,6 +131,18 @@ func gcpAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 			if err := d.Set(k, v); err != nil {
 				return fmt.Errorf("error reading %s for GCP Auth Backend Role %q: %q", k, path, err)
 			}
+		}
+	}
+
+	// bound_labels is configured as list but returned as map
+	if v, ok := resp.Data["bound_labels"]; ok {
+		labels := []string{}
+		for labelK, labelV := range v.(map[string]interface{}) {
+			labels = append(labels, fmt.Sprintf("%s:%s", labelK, labelV))
+		}
+
+		if err := d.Set("bound_labels", labels); err != nil {
+			return fmt.Errorf("error reading bound_labels for GCP auth backend role: %q", err)
 		}
 	}
 
