@@ -29,12 +29,13 @@ resource "vault_mount" "kvv2-example" {
 
 ```hcl
 resource "vault_mount" "transit-example" {
-  path                      = "transit-example"
-  type                      = "transit"
+  path        = "transit-example"
+  type        = "transit"
+  description = "This is an example transit secret engine mount"
+
   options = {
     convergent_encryption = false
   }
-  description = "This is an example transit secret engine mount"
 }
 ```
 
