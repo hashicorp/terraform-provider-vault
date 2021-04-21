@@ -1,7 +1,7 @@
 ## 2.19.1 (Unreleased)
 
 SECURITY:
-* `resource/vault_gcp_auth_backend_role`: Fixed typo in `bound_labels` parameter name causing no values to be applied to created roles [CVE-2021-30476](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-30476) ([#1028](https://github.com/hashicorp/terraform-provider-vault/pull/1002))
+* `resource/vault_gcp_auth_backend_role`: Fixed typo in `bound_labels` parameter name causing no values to be applied to created roles [CVE-2021-30476](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-30476) ([#1028](https://github.com/hashicorp/terraform-provider-vault/pull/1028))
 
 ## 2.19.0 (March 17, 2021)
 
