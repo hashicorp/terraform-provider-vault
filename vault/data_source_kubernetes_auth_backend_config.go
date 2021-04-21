@@ -4,9 +4,10 @@ import (
 	"strings"
 
 	"fmt"
+	"log"
+
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/vault/api"
-	"log"
 )
 
 func kubernetesAuthBackendConfigDataSource() *schema.Resource {
@@ -47,7 +48,7 @@ func kubernetesAuthBackendConfigDataSource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Optional:    true,
-				Description: "Optional JWT issuer. If no issuer is specified, kubernetes.io/serviceaccount will be used as the default issuer.",
+				Description: "Optional JWT issuer. If no issuer is specified, kubernetes/serviceaccount will be used as the default issuer.",
 			},
 			"disable_iss_validation": {
 				Type:        schema.TypeBool,
