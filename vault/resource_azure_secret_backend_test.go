@@ -22,10 +22,23 @@ func TestAzureSecretBackend(t *testing.T) {
 				Config: testAzureSecretBackend_initialConfig(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "path", path),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "description", "Initial Azure Secret config"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "subscription_id", "11111111-2222-3333-4444-111111111111"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "tenant_id", "11111111-2222-3333-4444-222222222222"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "client_id", "11111111-2222-3333-4444-333333333333"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "client_secret", "12345678901234567890"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "environment", "AzurePublicCloud"),
+				),
+			},
+			{
+				Config: testAzureSecretBackend_updatedConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "path", path),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "description", "Updated Azure Secret config"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "subscription_id", "11111111-2222-3333-4444-111111111111"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "tenant_id", "11111111-2222-3333-4444-222222222222"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "client_id", "11111111-2222-3333-4444-333333333333"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "client_secret", "ABCDEFGHIJABCDEFGHIJ"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "environment", "AzurePublicCloud"),
 				),
 			},
@@ -60,10 +73,24 @@ func testAzureSecretBackend_initialConfig(path string) string {
 	return fmt.Sprintf(`
 resource "vault_azure_secret_backend" "test" {
   path = "%s"
-	subscription_id = "11111111-2222-3333-4444-111111111111"
-	tenant_id = "11111111-2222-3333-4444-222222222222"
+  description = "Initial Azure Secret config"
+  subscription_id = "11111111-2222-3333-4444-111111111111"
+  tenant_id = "11111111-2222-3333-4444-222222222222"
   client_id = "11111111-2222-3333-4444-333333333333"
-	client_secret = "12345678901234567890"
-	environment = "AzurePublicCloud"
+  client_secret = "12345678901234567890"
+  environment = "AzurePublicCloud"
+}`, path)
+}
+
+func testAzureSecretBackend_updatedConfig(path string) string {
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "test" {
+  path = "%s"
+  description = "Updated Azure Secret config"
+  subscription_id = "11111111-2222-3333-4444-111111111111"
+  tenant_id = "11111111-2222-3333-4444-222222222222"
+  client_id = "11111111-2222-3333-4444-333333333333"
+  client_secret = "ABCDEFGHIJABCDEFGHIJ"
+  environment = "AzurePublicCloud"
 }`, path)
 }

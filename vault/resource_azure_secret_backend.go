@@ -13,7 +13,7 @@ func azureSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: azureSecretBackendCreate,
 		Read:   azureSecretBackendRead,
-		Update: azureSecretBackendCreate,
+		Update: azureSecretBackendUpdate,
 		Delete: azureSecretBackendDelete,
 		Exists: azureSecretBackendExists,
 		Importer: &schema.ResourceImporter{
@@ -45,7 +45,6 @@ func azureSecretBackendResource() *schema.Resource {
 			},
 			"subscription_id": {
 				Type:        schema.TypeString,
-				ForceNew:    true,
 				Required:    true,
 				Sensitive:   true,
 				Description: "The subscription id for the Azure Active Directory.",
@@ -149,6 +148,41 @@ func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("description", mount.Description)
 
 	return nil
+}
+
+func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+
+	backend := d.Id()
+	configPath := azureSecretBackendPath(backend)
+
+	if d.HasChange("description") {
+		description := d.Get("description").(string)
+		config := api.MountConfigInput{
+			Description: &description,
+		}
+		log.Printf("[DEBUG] Updating description for %q", backend)
+		if err := client.Sys().TuneMount(backend, config); err != nil {
+			return fmt.Errorf("error updating mount description for %q: %s", backend, err)
+		}
+		d.Set("description", description)
+	}
+	fields := []string{"tenant_id", "client_id", "client_secret", "environment", "subscription_id"}
+	if d.HasChanges(fields...) {
+		log.Printf("[DEBUG] Updating Azure secrets backend at %q", configPath)
+		data := map[string]interface{}{}
+		for _, f := range fields {
+			data[f] = d.Get(f).(string)
+		}
+		if _, err := client.Logical().Write(configPath, data); err != nil {
+			return fmt.Errorf("error configuring Azure secrets backend for %q: %s", backend, err)
+		}
+		log.Printf("[DEBUG] Updated Azure secrets backend configuration at %q", configPath)
+		for _, f := range fields {
+			d.Set(f, data[f])
+		}
+	}
+	return azureSecretBackendRead(d, meta)
 }
 
 func azureSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
