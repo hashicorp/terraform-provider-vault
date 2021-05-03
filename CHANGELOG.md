@@ -1,3 +1,8 @@
+## Unreleased
+
+IMPROVEMENTS:
+* `resource/vault_azure_secret_backend`: Added support for updating the backend ([#1009](https://github.com/hashicorp/terraform-provider-vault/pull/1009))
+
 ## 2.19.1 (April 21, 2021)
 
 SECURITY:
