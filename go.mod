@@ -3,7 +3,7 @@ module github.com/hashicorp/terraform-provider-vault
 // This should ensure existing PRs are still valid
 replace github.com/terraform-providers/terraform-provider-vault => ./
 
-go 1.13
+go 1.16
 
 require (
 	github.com/Azure/azure-sdk-for-go v29.0.0+incompatible
