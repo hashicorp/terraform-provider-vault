@@ -45,7 +45,7 @@ overwrite the previously stored values. With versions of Vault newer than
 `access_key` will be detected and corrected, but drifts on the `secret_key`
 will not.
 
-* `region` - (Optional) The AWS region for API calls. Defaults to `us-east-1`.
+* `region` - (Optional) The AWS region for API calls.
 
 ~> **Important** The same limitation noted above for the `access_key` parameter
 also applies to the `region` parameter. Vault versions 1.2.3 and older will not

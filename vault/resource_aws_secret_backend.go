@@ -126,9 +126,6 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Wrote root credentials to %q", path+"/config/root")
 	d.SetPartial("access_key")
 	d.SetPartial("secret_key")
-	if region == "" {
-		d.Set("region", "us-east-1")
-	}
 	d.SetPartial("region")
 	d.Partial(false)
 

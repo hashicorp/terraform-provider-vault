@@ -28,7 +28,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "max_lease_ttl_seconds", "86400"),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "access_key", accessKey),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "secret_key", secretKey),
-					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "region", "us-east-1"),
+					resource.TestCheckNoResourceAttr("vault_aws_secret_backend.test", "region"),
 				),
 			},
 			{
