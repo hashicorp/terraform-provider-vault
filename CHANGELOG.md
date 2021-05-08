@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 * `resource/vault_azure_secret_backend`: Added support for updating the backend ([#1009](https://github.com/hashicorp/terraform-provider-vault/pull/1009))
+* `resource/vault_aws_secret_backend`: Add `iam_endpoint` and `sts_endpoint` options ([#1043](https://github.com/hashicorp/terraform-provider-vault/pull/1043))
 
 ## 2.19.1 (April 21, 2021)
 
