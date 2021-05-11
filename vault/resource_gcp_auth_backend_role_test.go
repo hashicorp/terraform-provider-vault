@@ -14,7 +14,17 @@ import (
 )
 
 func TestGCPAuthBackendRole_basic(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-gcp-backend")
+	t.Run("simple backend path", func(t *testing.T) {
+		backend := acctest.RandomWithPrefix("tf-test-gcp-backend")
+		testGCPAuthBackendRole_basic(t, backend)
+	})
+	t.Run("nested backend path", func(t *testing.T) {
+		backend := acctest.RandomWithPrefix("tf-test-gcp-backend") + "/nested"
+		testGCPAuthBackendRole_basic(t, backend)
+	})
+}
+
+func testGCPAuthBackendRole_basic(t *testing.T, backend string) {
 	name := acctest.RandomWithPrefix("tf-test-gcp-role")
 	serviceAccount := acctest.RandomWithPrefix("tf-test-gcp-service-account")
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
