@@ -41,6 +41,8 @@ The following arguments are supported:
 
 * `allowed_domains` - (Optional) List of allowed domains for certificates 
 
+* `allowed_domains_template` - (Optional) Flag, if set, `allowed_domains` can be specified using identity template expressions such as `{{identity.entity.aliases.<mount accessor>.name}}`.
+
 * `allow_bare_domains` - (Optional) Flag to allow certificates matching the actual domain
 
 * `allow_subdomains` - (Optional) Flag to allow certificates matching subdomains

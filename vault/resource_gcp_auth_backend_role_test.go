@@ -69,7 +69,11 @@ func TestGCPAuthBackendRole_gce(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendRoleConfig_gce(backend, name, projectId),
-				Check:  testGCPAuthBackendRoleCheck_attrs(backend, name),
+				Check: resource.ComposeTestCheckFunc(
+					testGCPAuthBackendRoleCheck_attrs(backend, name),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
+						"bound_labels.#", "2"),
+				),
 			},
 		},
 	})
@@ -196,6 +200,47 @@ func testGCPAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckF
 					}
 					match = resp.Data[apiAttr] == stateData
 				}
+			case map[string]interface{}:
+				apiData := resp.Data[apiAttr].(map[string]interface{})
+				length := instanceState.Attributes[stateAttr+".#"]
+				if length == "" {
+					if len(resp.Data[apiAttr].(map[string]interface{})) != 0 {
+						return fmt.Errorf("Expected state field %s to have %d entries, had 0", stateAttr, len(apiData))
+					}
+					match = true
+				} else {
+					count, err := strconv.Atoi(length)
+					if err != nil {
+						return fmt.Errorf("Expected %s.# to be a number, got %q", stateAttr, instanceState.Attributes[stateAttr+".#"])
+					}
+					if count != len(apiData) {
+						return fmt.Errorf("Expected %s to have %d entries in state, has %d", stateAttr, len(apiData), count)
+					}
+
+					for respKey, respValue := range apiData {
+						found := false
+						for stateKey, stateValue := range instanceState.Attributes {
+							if strings.HasPrefix(stateKey, stateAttr) {
+								val := respValue
+
+								// We send a list to Vault and it returns a map. To ensure
+								// the response from Vault and the state file are equal,
+								// we need to prepare a string "key:value" for comparison.
+								if apiAttr == "bound_labels" {
+									val = fmt.Sprintf("%s:%s", respKey, respValue)
+								}
+
+								if val == stateValue {
+									found = true
+								}
+							}
+						}
+						if !found {
+							return fmt.Errorf("Expected item %s of %s (%s in state) of %q to be in state but wasn't", respKey, apiAttr, stateAttr, endpoint)
+						}
+					}
+					match = true
+				}
 
 			case []interface{}:
 				apiData := resp.Data[apiAttr].([]interface{})
@@ -307,7 +352,7 @@ resource "vault_gcp_auth_backend_role" "test" {
     token_policies         = ["policy_a", "policy_b"]
     bound_regions          = ["eu-west2"]
     bound_zones            = ["europe-west2-c"]
-    bound_labels           = ["foo"]
+    bound_labels           = ["foo:bar", "key:value"]
 }
 `, backend, name, projectId)
 

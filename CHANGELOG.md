@@ -1,3 +1,25 @@
+## Unreleased
+
+IMPROVEMENTS:
+* `resource/vault_azure_secret_backend`: Added support for updating the backend ([#1009](https://github.com/hashicorp/terraform-provider-vault/pull/1009))
+* `resource/vault_aws_secret_backend`: Add `iam_endpoint` and `sts_endpoint` options ([#1043](https://github.com/hashicorp/terraform-provider-vault/pull/1043))
+
+## 2.19.1 (April 21, 2021)
+
+SECURITY:
+* `resource/vault_gcp_auth_backend_role`: Fixed typo in `bound_labels` parameter name causing no values to be applied to created roles [CVE-2021-30476](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-30476) ([#1028](https://github.com/hashicorp/terraform-provider-vault/pull/1028))
+
+## 2.19.0 (March 17, 2021)
+
+FEATURES:
+* **New Resource**: `terraform_cloud_secret` resources ([#959](https://github.com/hashicorp/terraform-provider-vault/pull/959))
+
+IMPROVEMENTS:
+* `resource/pki_secret_backend`: Support allowed_domains_template option for vault_pki_secret_backend_role ([#869](https://github.com/hashicorp/terraform-provider-vault/pull/869))
+
+BUG FIXES:
+* `resource/vault_identity_group`: Don't send `name` parameter unless specified ([#1002](https://github.com/hashicorp/terraform-provider-vault/pull/1002))
+
 ## 2.18.0 (January 21, 2021)
 
 FEATURES:
