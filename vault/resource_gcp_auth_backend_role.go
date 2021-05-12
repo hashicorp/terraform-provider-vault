@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	gcpAuthBackendRoleBackendFromPathRegex = regexp.MustCompile("^auth/(.+)/role/.+$")
-	gcpAuthBackendRoleNameFromPathRegex    = regexp.MustCompile("^auth/.+/role/(.+)$")
+	gcpAuthBackendFromPathRegex  = regexp.MustCompile("^auth/(.+)/role/[^/]+$")
+	gcpAuthRoleNameFromPathRegex = regexp.MustCompile("^auth/.+/role/([^/]+)$")
 )
 
 func gcpAuthBackendRoleResource() *schema.Resource {
@@ -415,10 +415,10 @@ func gcpAuthResourceExists(d *schema.ResourceData, meta interface{}) (bool, erro
 }
 
 func gcpAuthResourceBackendFromPath(path string) (string, error) {
-	if !gcpAuthBackendRoleBackendFromPathRegex.MatchString(path) {
+	if !gcpAuthBackendFromPathRegex.MatchString(path) {
 		return "", fmt.Errorf("no backend found")
 	}
-	res := gcpAuthBackendRoleBackendFromPathRegex.FindStringSubmatch(path)
+	res := gcpAuthBackendFromPathRegex.FindStringSubmatch(path)
 	if len(res) != 2 {
 		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
 	}
@@ -426,10 +426,10 @@ func gcpAuthResourceBackendFromPath(path string) (string, error) {
 }
 
 func gcpAuthResourceRoleFromPath(path string) (string, error) {
-	if !gcpAuthBackendRoleNameFromPathRegex.MatchString(path) {
+	if !gcpAuthRoleNameFromPathRegex.MatchString(path) {
 		return "", fmt.Errorf("no role found")
 	}
-	res := gcpAuthBackendRoleNameFromPathRegex.FindStringSubmatch(path)
+	res := gcpAuthRoleNameFromPathRegex.FindStringSubmatch(path)
 	if len(res) != 2 {
 		return "", fmt.Errorf("unexpected number of matches (%d) for role", len(res))
 	}

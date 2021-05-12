@@ -13,6 +13,49 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+func TestGCPAuthBackend_pathRegex(t *testing.T) {
+	tests := map[string]struct {
+		path      string
+		wantMount string
+		wantRole  string
+	}{
+		"no nesting": {
+			path:      "auth/gcp/role/carrot",
+			wantMount: "gcp",
+			wantRole:  "carrot",
+		},
+		"nested": {
+			path:      "auth/test/usc1/gpc/role/usc1-test-master",
+			wantMount: "test/usc1/gpc",
+			wantRole:  "usc1-test-master",
+		},
+		"nested with double 'role'": {
+			path:      "auth/gcp/role/role/foo",
+			wantMount: "gcp/role",
+			wantRole:  "foo",
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			mount, err := gcpAuthResourceBackendFromPath(tc.path)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if mount != tc.wantMount {
+				t.Fatalf("expected mount %q, got %q", tc.wantMount, mount)
+			}
+
+			role, err := gcpAuthResourceRoleFromPath(tc.path)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if role != tc.wantRole {
+				t.Fatalf("expected role %q, got %q", tc.wantRole, role)
+			}
+		})
+	}
+}
+
 func TestGCPAuthBackendRole_basic(t *testing.T) {
 	t.Run("simple backend path", func(t *testing.T) {
 		backend := acctest.RandomWithPrefix("tf-test-gcp-backend")
