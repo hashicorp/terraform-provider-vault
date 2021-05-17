@@ -56,6 +56,29 @@ func TestAccIdentityEntityUpdate(t *testing.T) {
 	})
 }
 
+func TestAccIdentityEntityUpdateRemoveMetadata(t *testing.T) {
+	entity := acctest.RandomWithPrefix("test-entity")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccIdentityEntityConfig(entity),
+				Check:  testAccIdentityEntityCheckAttrs(),
+			},
+			{
+				Config: testAccIdentityEntityConfigUpdateRemoveMetadata(entity),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityEntityCheckAttrs(),
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "name", fmt.Sprintf("%s-2", entity)),
+					resource.TestCheckNoResourceAttr("vault_identity_entity.entity", "metadata")),
+			},
+		},
+	})
+}
+
 func testAccCheckIdentityEntityDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
@@ -188,5 +211,13 @@ resource "vault_identity_entity" "entity" {
   metadata = {
     version = "2"
   }
+}`, entityName)
+}
+
+func testAccIdentityEntityConfigUpdateRemoveMetadata(entityName string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_entity" "entity" {
+  name = "%s-2"
+  policies = ["dev", "test"]
 }`, entityName)
 }
