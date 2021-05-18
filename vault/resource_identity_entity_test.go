@@ -71,11 +71,35 @@ func TestAccIdentityEntityUpdateRemoveValues(t *testing.T) {
 			{
 				Config: testAccIdentityEntityConfigUpdateRemove(entity),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityEntityCheckAttrs(),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "name", fmt.Sprintf("%s-2", entity)),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "external_policies", "false"),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "disabled", "false"),
 					resource.TestCheckNoResourceAttr("vault_identity_entity.entity", "metadata"),
+					resource.TestCheckNoResourceAttr("vault_identity_entity.entity", "policies")),
+			},
+		},
+	})
+}
+
+// Testing an edge case where external_policies is true but policies
+// are still in the plan. They should be removed from the entity if this
+// bool is true.
+func TestAccIdentityEntityUpdateRemovePolicies(t *testing.T) {
+	entity := acctest.RandomWithPrefix("test-entity")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccIdentityEntityConfig(entity),
+				Check:  testAccIdentityEntityCheckAttrs(),
+			},
+			{
+				Config: testAccIdentityEntityConfigUpdateRemovePolicies(entity),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "external_policies", "true"),
 					resource.TestCheckNoResourceAttr("vault_identity_entity.entity", "policies")),
 			},
 		},
@@ -215,13 +239,24 @@ resource "vault_identity_entity" "entity" {
     version = "2"
   }
   disabled = true
-  external_policies = true
+  external_policies = false
 }`, entityName)
 }
 
 func testAccIdentityEntityConfigUpdateRemove(entityName string) string {
+	fmt.Println("remove")
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "entity" {
   name = "%s-2"
+}`, entityName)
+}
+
+func testAccIdentityEntityConfigUpdateRemovePolicies(entityName string) string {
+	fmt.Println("remove")
+	return fmt.Sprintf(`
+resource "vault_identity_entity" "entity" {
+  name = "%s-2"
+  policies = ["dev", "test"]
+  external_policies = true
 }`, entityName)
 }

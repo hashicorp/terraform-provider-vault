@@ -87,20 +87,18 @@ func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interfac
 			data["disabled"] = disabled
 		}
 	} else {
-		if d.HasChange("name") {
+		if d.HasChanges("name", "external_policies", "policies", "metadata", "disabled") {
 			data["name"] = d.Get("name")
-		}
-
-		if d.HasChange("policies") {
-			data["policies"] = d.Get("policies").(*schema.Set).List()
-		}
-
-		if d.HasChange("metadata") {
 			data["metadata"] = d.Get("metadata")
-		}
-
-		if d.HasChange("disabled") {
 			data["disabled"] = d.Get("disabled")
+			data["policies"] = d.Get("policies").(*schema.Set).List()
+
+			// Edge case where if external_policies is true, no policies
+			// should be configured on the entity.
+			data["external_policies"] = d.Get("external_policies").(bool)
+			if data["external_policies"].(bool) {
+				data["policies"] = nil
+			}
 		}
 	}
 }
