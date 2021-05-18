@@ -50,6 +50,7 @@ func TestAccIdentityEntityUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "disabled", "true"),
 				),
 			},
 		},
@@ -244,7 +245,6 @@ resource "vault_identity_entity" "entity" {
 }
 
 func testAccIdentityEntityConfigUpdateRemove(entityName string) string {
-	fmt.Println("remove")
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "entity" {
   name = "%s-2"
@@ -252,7 +252,6 @@ resource "vault_identity_entity" "entity" {
 }
 
 func testAccIdentityEntityConfigUpdateRemovePolicies(entityName string) string {
-	fmt.Println("remove")
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "entity" {
   name = "%s-2"
