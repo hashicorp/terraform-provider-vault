@@ -7,6 +7,7 @@ IMPROVEMENTS:
 BUG FIXES:
 * `resource/vault_gcp_auth_backend`: Support nested backend paths ([#1050](https://github.com/hashicorp/terraform-provider-vault/pull/1050))
 * `resource/vault_kubernetes_auth_backend_role`: allow unset audience ([#1022](https://github.com/hashicorp/terraform-provider-vault/pull/1022))
+* `resource/vault_identity_entity`: Fix bug where values are not removed if removed from file ([#1054](https://github.com/hashicorp/terraform-provider-vault/pull/1054))
 
 ## 2.19.1 (April 21, 2021)
 
