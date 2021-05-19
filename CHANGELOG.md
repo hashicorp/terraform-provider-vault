@@ -3,6 +3,8 @@
 IMPROVEMENTS:
 * `resource/vault_azure_secret_backend`: Added support for updating the backend ([#1009](https://github.com/hashicorp/terraform-provider-vault/pull/1009))
 * `resource/vault_aws_secret_backend`: Add `iam_endpoint` and `sts_endpoint` options ([#1043](https://github.com/hashicorp/terraform-provider-vault/pull/1043))
+
+BUG FIXES:
 * `resource/vault_gcp_auth_backend`: Support nested backend paths ([#1050](https://github.com/hashicorp/terraform-provider-vault/pull/1050))
 * `resource/vault_kubernetes_auth_backend_role`: allow unset audience ([#1022](https://github.com/hashicorp/terraform-provider-vault/pull/1022))
 
