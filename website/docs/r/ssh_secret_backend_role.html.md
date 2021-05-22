@@ -20,14 +20,14 @@ resource "vault_mount" "example" {
 
 resource "vault_ssh_secret_backend_role" "foo" {
     name                    = "my-role"
-    backend                 = "${vault_mount.example.path}"
+    backend                 = vault_mount.example.path
     key_type                = "ca"
     allow_user_certificates = true
 }
 
 resource "vault_ssh_secret_backend_role" "bar" {
     name          = "otp-role"
-    backend       = "${vault_mount.example.path}"
+    backend       = vault_mount.example.path
     key_type      = "otp"
     default_user  = "default"
     allowed_users = "default,baz"

@@ -19,7 +19,7 @@ resource "vault_mount" "example" {
 }
 
 resource "vault_ssh_secret_backend_ca" "foo" {
-    backend = "${vault_mount.example.path}"
+    backend = vault_mount.example.path
 }
 ```
 

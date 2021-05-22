@@ -28,8 +28,8 @@ resource "vault_auth_backend" "github" {
 
 resource "vault_identity_group_alias" "group-alias" {
   name           = "Github_Team_Slug"
-  mount_accessor = "${vault_auth_backend.github.accessor}"
-  canonical_id   = "${vault_identity_group.group.id}"
+  mount_accessor = vault_auth_backend.github.accessor
+  canonical_id   = vault_identity_group.group.id
 }
 ```
 

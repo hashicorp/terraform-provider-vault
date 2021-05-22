@@ -18,7 +18,7 @@ resource "vault_auth_backend" "example" {
 }
 
 resource "vault_aws_auth_backend_roletag_blacklist" "example" {
-  backend       = "${vault_auth_backend.example.path}"
+  backend       = vault_auth_backend.example.path
   safety_buffer = 360
 }
 ```
