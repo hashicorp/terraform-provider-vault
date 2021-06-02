@@ -50,6 +50,10 @@ default, this should be prefixed with `secret/`. Reading from other backends
 with this data source is possible; consult each backend's documentation
 to see which endpoints support the `GET` method.
 
+* `version` - The version of the secret to read. This is used by the
+Vault KV secrets engine - version 2 to indicate which version of the secret
+to read.
+
 ## Required Vault Capabilities
 
 Use of this resource requires the `read` capability on the given path.
