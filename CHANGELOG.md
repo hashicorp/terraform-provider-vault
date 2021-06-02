@@ -1,3 +1,9 @@
+## Unreleased
+
+IMPROVEMENTS:
+ * `provider/auth_login`: Supprt AWS STS signing when `method=aws` for in `auth_type`: ([#1060](https://github.com/hashicorp/terraform-provider-vault/pull/1060))
+ * 
+
 ## 2.20.0 (May 19, 2021)
 
 IMPROVEMENTS:
