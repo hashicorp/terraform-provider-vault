@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/mutexkv"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/vault/api"
+	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/config"
 )
 
@@ -101,6 +102,10 @@ func Provider() *schema.Provider {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+						},
+						"iam": {
+							Type:     schema.TypeBool,
+							Optional: true,
 						},
 					},
 				},
@@ -762,6 +767,13 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		}
 		authLoginParameters := authLogin["parameters"].(map[string]interface{})
 
+		authIAM := authLogin["iam"].(bool)
+		if authIAM {
+			if err := signAWSLogin(authLoginParameters); err != nil {
+				return nil, fmt.Errorf("error signing AWS login request: %s", err)
+			}
+		}
+
 		secret, err := client.Logical().Write(authLoginPath, authLoginParameters)
 		if err != nil {
 			return nil, err
@@ -843,4 +855,45 @@ func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {
 		}
 	}
 	return resourceMap, errs
+}
+
+func signAWSLogin(parameters map[string]interface{}) error {
+	var accessKey, secretKey, securityToken string
+	if val, ok := parameters["aws_access_key_id"].(string); ok {
+		accessKey = val
+	}
+
+	if val, ok := parameters["aws_secret_access_key"].(string); ok {
+		secretKey = val
+	}
+
+	if val, ok := parameters["aws_security_token"].(string); ok {
+		securityToken = val
+	}
+
+	creds, err := awsauth.RetrieveCreds(accessKey, secretKey, securityToken)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve AWS credentials: %s", err)
+	}
+
+	var headerValue, stsRegion string
+	if val, ok := parameters["header_value"].(string); ok {
+		headerValue = val
+	}
+
+	if val, ok := parameters["sts_region"].(string); ok {
+		stsRegion = val
+	}
+
+	loginData, err := awsauth.GenerateLoginData(creds, headerValue, stsRegion)
+	if err != nil {
+		return fmt.Errorf("failed to generate AWS login data: %s", err)
+	}
+
+	parameters["iam_http_request_method"] = loginData["iam_http_request_method"]
+	parameters["iam_request_url"] = loginData["iam_request_url"]
+	parameters["iam_request_headers"] = loginData["iam_request_headers"]
+	parameters["iam_request_body"] = loginData["iam_request_body"]
+
+	return nil
 }
