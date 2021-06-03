@@ -39,6 +39,19 @@ resource "vault_mount" "transit-example" {
 }
 ```
 
+```hcl
+resource "vault_mount" "pki-example" {
+  path        = "pki-example"
+  type        = "pki"
+  description = "This is an example PKI mount"
+
+  options = {
+    default_lease_ttl_seconds = 3600
+    max_lease_ttl_seconds     = 86400
+  }
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
