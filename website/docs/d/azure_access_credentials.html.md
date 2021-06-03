@@ -41,6 +41,7 @@ Credentials are tested by attempting to refresh a client token with them.
 
 ```hcl
 data "vault_azure_access_credentials" "creds" {
+  backend = "azure"
   role    = "my-role"
   validate_creds = true
   num_sequential_successes = 8
