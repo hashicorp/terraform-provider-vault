@@ -268,6 +268,10 @@ var (
 			Resource:      transitDecryptDataSource(),
 			PathInventory: []string{"/transit/decrypt/{name}"},
 		},
+		"vault_gcp_auth_backend_role": {
+			Resource:      gcpAuthBackendRoleDataSource(),
+			PathInventory: []string{"/auth/gcp/role/{role_name}"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
