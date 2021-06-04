@@ -21,20 +21,20 @@ for more details.
 
 ```hcl
 resource "vault_pki_secret_backend_root_cert" "test" {
-  depends_on = [ "vault_pki_secret_backend.pki" ]
+  depends_on = [vault_pki_secret_backend.pki]
 
-  backend = "${vault_pki_secret_backend.pki.path}"
+  backend = vault_pki_secret_backend.pki.path
 
-  type = "internal"
-  common_name = "Root CA"
-  ttl = "315360000"
-  format = "pem"
-  private_key_format = "der"
-  key_type = "rsa"
-  key_bits = 4096
+  type                 = "internal"
+  common_name          = "Root CA"
+  ttl                  = "315360000"
+  format               = "pem"
+  private_key_format   = "der"
+  key_type             = "rsa"
+  key_bits             = 4096
   exclude_cn_from_sans = true
-  ou = "My OU"
-  organization = "My organization"
+  ou                   = "My OU"
+  organization         = "My organization"
 }
 ```
 

@@ -21,7 +21,7 @@ resource "vault_mount" "pki" {
 }
 
 resource "vault_pki_secret_backend_crl_config" "crl_config" {
-  backend   = "${vault_mount.pki.path}"
+  backend   = vault_mount.pki.path
   expiry    = "72h"
   disable   = false
 }
