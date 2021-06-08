@@ -1,0 +1,6 @@
+dependencies:
+  - .github/dependabot.yml
+  - go.mod
+  - go.sum
+documentation:
+  - website/**/*
