@@ -14,14 +14,20 @@ Creates a role on an PKI Secret Backend for Vault.
 
 ```hcl
 resource "vault_pki_secret_backend" "pki" {
-  path = "%s"
+  path                      = "pki"
   default_lease_ttl_seconds = 3600
-  max_lease_ttl_seconds = 86400
+  max_lease_ttl_seconds     = 86400
 }
 
 resource "vault_pki_secret_backend_role" "role" {
-  backend = "${vault_pki_secret_backend.pki.path}"
-  name    = "my_role"
+  backend          = vault_pki_secret_backend.pki.path
+  name             = "my_role"
+  ttl              = 3600
+  allow_ip_sans    = true
+  key_type         = "rsa"
+  key_bits         = 4096
+  allowed_domains  = ["example.com", "my.domain"]
+  allow_subdomains = true
 }
 ```
 

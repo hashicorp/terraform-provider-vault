@@ -21,9 +21,9 @@ for more details.
 
 ```hcl
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
-  depends_on = [ "vault_pki_secret_backend.pki" ]
+  depends_on = [vault_pki_secret_backend.pki]
   
-  backend = "${vault_pki_secret_backend.pki.path}"
+  backend = vault_pki_secret_backend.pki.path
   
   type = "internal"
   common_name = "app.my.domain"
