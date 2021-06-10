@@ -103,8 +103,8 @@ func Provider() *schema.Provider {
 								Type: schema.TypeString,
 							},
 						},
-						"iam": {
-							Type:     schema.TypeBool,
+						"method": {
+							Type:     schema.TypeString,
 							Optional: true,
 						},
 					},
@@ -771,8 +771,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		}
 		authLoginParameters := authLogin["parameters"].(map[string]interface{})
 
-		authIAM := authLogin["iam"].(bool)
-		if authIAM {
+		method := authLogin["method"].(string)
+		if method == "aws" {
 			if err := signAWSLogin(authLoginParameters); err != nil {
 				return nil, fmt.Errorf("error signing AWS login request: %s", err)
 			}
