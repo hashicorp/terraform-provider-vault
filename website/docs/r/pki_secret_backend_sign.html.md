@@ -21,7 +21,7 @@ for more details.
 
 ```hcl
 resource "vault_pki_secret_backend_sign" "test" {
-  depends_on = [ "vault_pki_secret_backend_role.admin" ]
+  depends_on = [vault_pki_secret_backend_role.admin]
 
   backend = vault_pki_secret_backend.pki.path
 

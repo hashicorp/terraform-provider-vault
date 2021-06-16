@@ -18,6 +18,7 @@ documentation](https://www.vaultproject.io/docs/auth/aws.html).
 ```hcl
 resource "vault_auth_backend" "aws" {
   type = "aws"
+  path = "aws"
 }
 
 resource "vault_aws_auth_backend_client" "example" {

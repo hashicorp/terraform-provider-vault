@@ -59,6 +59,30 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 	})
 }
 
+func TestLDAPAuthBackend_tls(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-ldap-tls-path")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testLDAPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_tls(path, "true"),
+				Check:  testLDAPAuthBackendCheck_attrs(path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_tls(path, "false"),
+				Check:  testLDAPAuthBackendCheck_attrs(path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_tls(path, "true"),
+				Check:  testLDAPAuthBackendCheck_attrs(path),
+			},
+		},
+	})
+}
+
 func testLDAPAuthBackendDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
@@ -123,6 +147,16 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 		// Check that `bindpass`, if present in the state, is not returned by the API
 		if instanceState.Attributes["bindpass"] != "" && resp.Data["bindpass"] != nil {
 			return fmt.Errorf("expected api field bindpass to not be returned, but was %q", resp.Data["bindpass"])
+		}
+
+		// Check that `client_tls_crt`, if present in the state, is not returned by the API
+		if instanceState.Attributes["client_tls_crt"] != "" && resp.Data["client_tls_crt"] != nil {
+			return fmt.Errorf("expected api field client_tls_crt to not be returned, but was %q", resp.Data["client_tls_crt"])
+		}
+
+		// Check that `client_tls_key`, if present in the state, is not returned by the API
+		if instanceState.Attributes["client_tls_key"] != "" && resp.Data["client_tls_key"] != nil {
+			return fmt.Errorf("expected api field client_tls_key to not be returned, but was %q", resp.Data["client_tls_key"])
 		}
 
 		attrs := map[string]string{
@@ -225,6 +259,104 @@ resource "vault_ldap_auth_backend" "test" {
     deny_null_bind         = true
     description            = "example"
 
+    use_token_groups = %s
+}
+`, path, use_token_groups)
+
+}
+
+func testLDAPAuthBackendConfig_tls(path, use_token_groups string) string {
+
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path                   = "%s"
+    url                    = "ldaps://example.org"
+    starttls               = true
+    tls_min_version        = "tls11"
+    tls_max_version        = "tls12"
+    insecure_tls           = false
+    binddn                 = "cn=example.com"
+    bindpass               = "supersecurepassword"
+    discoverdn             = false
+    deny_null_bind         = true
+    description            = "example"
+    certificate            = <<EOT
+-----BEGIN CERTIFICATE-----
+MIIDazCCAlOgAwIBAgIUahce2sCO7Bom/Rznd5HsNAlr1NgwDQYJKoZIhvcNAQEL
+BQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoM
+GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAeFw0xODEyMDIwMTAxNDRaFw00NjEy
+MTUwMTAxNDRaMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEw
+HwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEB
+AQUAA4IBDwAwggEKAoIBAQDC8Qd4kJecWCLzysTV1NfoUd0E8rTBKN52HTLBWcJn
+EtZsG//k/K2NNwI92t9buDax9s/A6B79YXdfYp5hI/xLFkDRzObPpAOyl4b3bUmR
+la3Knmj743SV4tMhQCGrff2nc7WicA5Q7WTiwd+YLB+sOlOfaFzHhRFrk/PNvV8e
+KC6yMgfWZwZ2dxoDpnYLM7XDgTyQ85S6QgOtxlPh9o5mtZQhBkpDDYnNPIon5kwM
+JmrZMXNbCkvd4bjzAHsnuaJsVD/2cW/Gkh+UGMMBnxCKqTBivk3QM2xPFx9MJJ65
+t8kMJR8hbAVmEuK3PA7FrNrNRApdf9I8xDWX8v2jeecfAgMBAAGjUzBRMB0GA1Ud
+DgQWBBQXGfrns8OqxTGKsXG5pDZS/WyyYDAfBgNVHSMEGDAWgBQXGfrns8OqxTGK
+sXG5pDZS/WyyYDAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQCt
+8aUX26cl2PgdIEByZSHAX5G+2b0IEtTclPkl4uDyyKRY4dVq6gK3ueVSU5eUmBip
+JbV5aRetovGOcV//8vbxkZm/ntQ8Oo+2sfGR5lIzd0UdlOr5pkD6g3bFy/zJ+4DR
+DAe8fklUacfz6CFmD+H8GyHm+fKmF+mjr4oOGQW6OegRDJHuiipUk2lJyuXdlPSa
+FpNRO2sGbjn000ANinFgnFiVzGDnx0/G1Kii/6GWrI6rrdVmXioQzF+8AloWckeB
++hbmbwkwQa/JrLb5SWcBDOXSgtn1Li3XF5AQQBBjA3pOlyBXqnI94Irw89Lv9uPT
+MUR4qFxeUOW/GJGccMUd
+-----END CERTIFICATE-----
+EOT
+    client_tls_cert        = <<EOT
+-----BEGIN CERTIFICATE-----
+MIID3jCCAsagAwIBAgIUFQKX5kCu6lBK60jF6HYPZH0v9oIwDQYJKoZIhvcNAQEL
+BQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoM
+GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAeFw0yMTA2MDkwOTAzMDdaFw0zMTA2
+MDcwOTAzMDdaMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEw
+HwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEB
+AQUAA4IBDwAwggEKAoIBAQDRCYt5o89zZnQY65bC2sohOgEJa7CrLyPo4/2B/elC
+UN7lGSH3NA/kAGIR6ZHl7pOTiXFfvTjkLdpp7IXw2YI/D/tfyYFp5OeO6GxQdrpp
+0ctNia9mektigzNkiTXcWi0f3ye9TfKYP2ThJfHjua/2kYsVKtgCGZjou+qShKhm
+KFNjIUMXf+1tyQmVu26pVc5OjnBETVyrJqZSbPSEoI0sDb231rsQN/NV5/tbtxDC
+4ywm60bpgaqpIrhip1swp3XYn3CSfjGtzJuv9xMTJQ+bbS6A5Sncy+I69qlxbgwr
+P7ny60xp2quT18qHQwH93fKbBypO4QfFlULogWkYw1nNAgMBAAGjgcUwgcIwCQYD
+VR0TBAIwADARBglghkgBhvhCAQEEBAMCBaAwMwYJYIZIAYb4QgENBCYWJE9wZW5T
+U0wgR2VuZXJhdGVkIENsaWVudCBDZXJ0aWZpY2F0ZTAdBgNVHQ4EFgQU84RskljZ
+wD5J+rinRsA4eykTS+owHwYDVR0jBBgwFoAUFxn657PDqsUxirFxuaQ2Uv1ssmAw
+DgYDVR0PAQH/BAQDAgXgMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcDBDAN
+BgkqhkiG9w0BAQsFAAOCAQEANPokK0qpj1/b0hSrjImz1XD1N4QTKn47hV6hBhgr
+6MYKwBRVj8e0Ly/qgmipprP8hQsBtZPaUh98ZXu9dI5br7jPD/NKv9EpFVHAHWxP
+a4xuw2ibp4MdDSSsLxwV91KE/unoka1RjFZO6aLT+yS9Fkzyov5mWHh56nYdnpnv
+ATFy+UpXn9+16ddPBGALGlOmDaEHWImMEc2dIN6/GvtOpmUD/cr7fbsIN8leRgzZ
+suX9kmcMCISHk6aa5gWcRIBWPwxANNHUDL/+A6KAo36zM/dx8vln9XhftSEnxSFw
+6Z5nUoT9l/5TSGwK/AIkS4ApBDOytf/YiAq01QR9ENRGRQ==
+-----END CERTIFICATE-----
+EOT
+    client_tls_key         = <<EOT
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpQIBAAKCAQEA0QmLeaPPc2Z0GOuWwtrKIToBCWuwqy8j6OP9gf3pQlDe5Rkh
+9zQP5ABiEemR5e6Tk4lxX7045C3aaeyF8NmCPw/7X8mBaeTnjuhsUHa6adHLTYmv
+ZnpLYoMzZIk13FotH98nvU3ymD9k4SXx47mv9pGLFSrYAhmY6LvqkoSoZihTYyFD
+F3/tbckJlbtuqVXOTo5wRE1cqyamUmz0hKCNLA29t9a7EDfzVef7W7cQwuMsJutG
+6YGqqSK4YqdbMKd12J9wkn4xrcybr/cTEyUPm20ugOUp3MviOvapcW4MKz+58utM
+adqrk9fKh0MB/d3ymwcqTuEHxZVC6IFpGMNZzQIDAQABAoIBAQCdi1UMM1KZheEA
+Gya/6sembSH06K35BolI7/PTMfvIWEz1W5DGz/0d+M/w8hlcsweUjWTeJC2pg4l2
+haWZFUVdo/zvf15C4htHEJL5vdHXCR/xa1C/qnIAaCOmpObsESarO7OmsAWjizvL
+mJ6K5BrjeWPaazTruEEPPvmWvdZxTpx/vmnwnB8fhHdtMbkSCAqCyc/fUqJgAGLU
+1QXFeTcasW39jtAdutJq98UR2yOYiknU7xwDUAALwcVM14p4GmsBUM8Sf5JbYK2c
+EoBJk/aDJiK+fLgRinH76FNpTknvdH3hGfwotXwanSBKj3DzAQwY3JWXC5kIFdcL
+HjhtiOjhAoGBAOfetKHANyFgWwiVdRLmUA42K1r/1yvrisKycxJl4HeYI27VsQNI
+ffOLMkxLj8ahuXlzlceXUDvf78gkwydk8UGCvpFt1+da79rKfCGVogeNUmaExKke
++uFEoOrjWqaxtE/gRYmZlES9dhSnGQZH+r/V5HhxHrQI0MgAAITFMstZAoGBAObK
+jLl6ShwYG9A97howUxJRaGmyTk3iMMzu1cKoP4OGCFrsYnaiG/dK/b85stz/55ks
+aZjUR3anpUyedIo1DiB/Iqq0ues2UIo+adUno9Fyf+aI8x+gs4fsdbn8TXBMTPgC
+XQxm+wsC2EKIB6IlttZRTdhvLOHiw5/PkoApnheVAoGBANwtRikydSdkcA0+nuVL
+fkmAdrr6pkA2cpVfDpYx12y5MyxUDrqnY7KYQzLfra9Yct85OslEjhPNGcxb3FTU
+LaOfm4ZNX+95EroX/LeHd0zkjZJ8EKLnoCO5H3TsX3Ba3nXa6S04gOqlXjNOWRz1
+zM3NNh6IjDc5B8hi+BsbhphBAoGAfXgOi2N1WNKuhEa25FvzPZkuZ4/9TBA1MaSC
+Z8IqTWmXrz6lxRMamxWU39oRaF5jXX2spt55P4OitQXMG7r+RCJ6CU4ZaUts+8s0
+pCJZyCs0Z3N6oW4vTCz8T7FftDZ2/bnjNjPiNTlFst3bMIbKYLdw18KRJviuG3qw
+jaaSgQUCgYEAhPaS+90L+Y01mDPH+adkhCYy4hoZlF2cOf0DJFzQ2CdNkoK1Cv9V
+pIth9roSSN2mcYxH5P7uVIFm7jJ3tI4ExQdtJkPed/GK1DC7l2VGOi+TtCdm004r
+MvQzNd87hRypUZ9Hyx2C9RljNDHHjgwYwWv9JOT0xEOS4ZAaPfvTf20=
+-----END RSA PRIVATE KEY-----
+EOT
     use_token_groups = %s
 }
 `, path, use_token_groups)

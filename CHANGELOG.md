@@ -1,3 +1,13 @@
+## Unreleased
+
+FEATURES:
+* `data/vault_gcp_auth_backend_role`: Added GCP auth role data source to fetch role ID ([#1011](https://github.com/hashicorp/terraform-provider-vault/pull/1011))
+
+IMPROVEMENTS:
+ * `provider/auth_login`: Supprt AWS STS signing when `method=aws` for in `auth_type` ([#1060](https://github.com/hashicorp/terraform-provider-vault/pull/1060))
+ * `resource/vault_ldap_auth_backend`: Add `client_tls_cert` and `client_tls_key` options ([#1074](https://github.com/hashicorp/terraform-provider-vault/pull/1074))
+ * `resource/vault_identity_entity`Added additional logging information about entity ([#987](https://github.com/hashicorp/terraform-provider-vault/pull/987))
+
 ## 2.20.0 (May 19, 2021)
 
 IMPROVEMENTS:

@@ -14,9 +14,9 @@ Allows setting the issuing certificate endpoints, CRL distribution points, and O
 
 ```hcl
 resource "vault_pki_secret_backend" "pki" {
-  path = "%s"
+  path                      = "pki"
   default_lease_ttl_seconds = 3600
-  max_lease_ttl_seconds = 86400
+  max_lease_ttl_seconds     = 86400
 }
 
 resource "vault_pki_secret_backend_config_urls" "config_urls" {

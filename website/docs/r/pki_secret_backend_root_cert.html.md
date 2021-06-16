@@ -21,7 +21,7 @@ for more details.
 
 ```hcl
 resource "vault_pki_secret_backend_root_cert" "test" {
-  depends_on = [ "vault_pki_secret_backend.pki" ]
+  depends_on = [vault_pki_secret_backend.pki]
 
   backend = vault_pki_secret_backend.pki.path
 

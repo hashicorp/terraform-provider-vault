@@ -59,6 +59,8 @@ The following arguments are supported:
 
 * `mongodb` - (Optional) A nested block containing configuration options for MongoDB connections.
 
+* `mongodbatlas` - (Optional) A nested block containing configuration options for MongoDB Atlas connections.
+
 * `hana` - (Optional) A nested block containing configuration options for SAP HanaDB connections.
 
 * `mssql` - (Optional) A nested block containing configuration options for MSSQL connections.
@@ -111,6 +113,16 @@ Exactly one of the nested blocks of configuration options must be supplied.
   the [Vault
   docs](https://www.vaultproject.io/api-docs/secret/databases/mongodb.html#sample-payload)
   for an example.
+
+
+### MongoDB Atlas Configuration Options
+
+* `public_key` - (Required) The Public Programmatic API Key used to authenticate with the MongoDB Atlas API.
+
+* `private_key` - (Required) The Private Programmatic API Key used to connect with MongoDB Atlas API.
+
+* `project_id` - (Required) The Project ID the Database User should be created within.
+
 
 ### SAP HanaDB Configuration Options
 

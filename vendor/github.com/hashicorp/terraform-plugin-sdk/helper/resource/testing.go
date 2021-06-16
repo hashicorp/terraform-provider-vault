@@ -1350,6 +1350,8 @@ func modulePrimaryInstanceState(s *terraform.State, ms *terraform.ModuleState, n
 		return nil, fmt.Errorf("Not found: %s in %s", name, ms.Path)
 	}
 
+	fmt.Println(s)
+
 	is := rs.Primary
 	if is == nil {
 		return nil, fmt.Errorf("No primary instance: %s in %s", name, ms.Path)
