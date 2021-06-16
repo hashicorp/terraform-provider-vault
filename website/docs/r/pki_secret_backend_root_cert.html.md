@@ -25,16 +25,16 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 
   backend = vault_pki_secret_backend.pki.path
 
-  type                 = "internal"
-  common_name          = "Root CA"
-  ttl                  = "315360000"
-  format               = "pem"
-  private_key_format   = "der"
-  key_type             = "rsa"
-  key_bits             = 4096
-  exclude_cn_from_sans = true
-  ou                   = "My OU"
-  organization         = "My organization"
+  type                  = "internal"
+  common_name           = "Root CA"
+  ttl                   = "315360000"
+  format                = "pem"
+  private_key_format    = "der"
+  key_type              = "rsa"
+  key_bits              = 4096
+  exclude_cn_from_sans  = true
+  ou                    = "My OU"
+  organization          = "My organization"
 }
 ```
 

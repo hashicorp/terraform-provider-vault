@@ -22,7 +22,7 @@ resource "vault_auth_backend" "userpass" {
 
 resource "vault_mfa_duo" "my_duo" {
   name                  = "my_duo"
-  mount_accessor        = "${vault_auth_backend.userpass.accessor}"
+  mount_accessor        = vault_auth_backend.userpass.accessor
   secret_key            = "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz"
   integration_key       = "BIACEUEAXI20BNWTEYXT"
   api_hostname          = "api-2b5c39f5.duosecurity.com"

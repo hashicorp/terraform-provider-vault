@@ -41,17 +41,16 @@ Credentials are tested by attempting to refresh a client token with them.
 
 ```hcl
 data "vault_azure_access_credentials" "creds" {
-  backend = "azure"
-  role    = "my-role"
-  validate_creds = true
-  num_sequential_successes = 8
-  num_seconds_between_tests = 7
+  role                        = "my-role"
+  validate_creds              = true
+  num_sequential_successes    = 8
+  num_seconds_between_tests   = 7
   max_cred_validation_seconds = 1200 // 20 minutes
 }
 
 provider "azure" {
-  client_id = "${data.vault_azure_access_credentials.creds.client_id}"
-  client_secret = "${data.vault_azure_access_credentials.creds.client_secret}"
+  client_id     = data.vault_azure_access_credentials.creds.client_id
+  client_secret = data.vault_azure_access_credentials.creds.client_secret
 }
 ```
 

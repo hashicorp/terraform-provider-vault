@@ -25,10 +25,10 @@ resource "vault_gcp_secret_backend" "gcp" {
 }
 
 resource "vault_gcp_secret_roleset" "roleset" {
-  backend      = "${vault_gcp_secret_backend.gcp.path}"
+  backend      = vault_gcp_secret_backend.gcp.path
   roleset      = "project_viewer"
   secret_type  = "access_token"
-  project      = "${local.project}"
+  project      = local.project
   token_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
 
   binding {

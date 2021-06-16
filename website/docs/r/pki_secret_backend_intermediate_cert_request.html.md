@@ -25,7 +25,7 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
   
   backend = vault_pki_secret_backend.pki.path
   
-  type = "internal"
+  type        = "internal"
   common_name = "app.my.domain"
 }
 ```

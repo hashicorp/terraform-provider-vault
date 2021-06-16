@@ -20,20 +20,20 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "example" {
-  backend   = "${vault_auth_backend.approle.path}"
+  backend   = vault_auth_backend.approle.path
   role_name = "test-role"
   policies  = ["default", "dev", "prod"]
 }
 
 resource "vault_approle_auth_backend_role_secret_id" "id" {
-  backend   = "${vault_auth_backend.approle.path}"
-  role_name = "${vault_approle_auth_backend_role.example.role_name}"
+  backend   = vault_auth_backend.approle.path
+  role_name = vault_approle_auth_backend_role.example.role_name
 
   metadata = <<EOT
-{
-  "hello": "world"
-}
-EOT
+  {
+    "hello": "world"
+  }
+  EOT
 }
 ```
 

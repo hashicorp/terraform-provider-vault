@@ -22,7 +22,7 @@ for more details.
 
 ```hcl
 resource "vault_gcp_secret_backend" "gcp" {
-  credentials = "${file("credentials.json")}"
+  credentials = file("credentials.json")
 }
 ```
 

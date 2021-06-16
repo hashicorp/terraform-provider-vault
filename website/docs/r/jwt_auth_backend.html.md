@@ -17,10 +17,10 @@ Manage JWT auth backend:
 
 ```hcl
 resource "vault_jwt_auth_backend" "example" {
-    description  = "Demonstration of the Terraform JWT auth backend"
-    path = "jwt"
-    oidc_discovery_url = "https://myco.auth0.com/"
-    bound_issuer = "https://myco.auth0.com/"
+    description         = "Demonstration of the Terraform JWT auth backend"
+    path                = "jwt"
+    oidc_discovery_url  = "https://myco.auth0.com/"
+    bound_issuer        = "https://myco.auth0.com/"
 }
 ```
 
@@ -28,13 +28,13 @@ Manage OIDC auth backend:
 
 ```hcl
 resource "vault_jwt_auth_backend" "example" {
-    description  = "Demonstration of the Terraform JWT auth backend"
-    path = "oidc"
-    type = "oidc"
-    oidc_discovery_url = "https://myco.auth0.com/"
-    oidc_client_id = "1234567890"
-    oidc_client_secret = "secret123456"
-    bound_issuer = "https://myco.auth0.com/"
+    description         = "Demonstration of the Terraform JWT auth backend"
+    path                = "oidc"
+    type                = "oidc"
+    oidc_discovery_url  = "https://myco.auth0.com/"
+    oidc_client_id      = "1234567890"
+    oidc_client_secret  = "secret123456"
+    bound_issuer        = "https://myco.auth0.com/"
     tune {
         listing_visibility = "unauth"
     }

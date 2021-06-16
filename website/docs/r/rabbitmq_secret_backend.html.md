@@ -22,9 +22,9 @@ for more details.
 
 ```hcl
 resource "vault_rabbitmq_secret_backend" "rabbitmq" {
-  connection_uri = "https://....."
-  username = "user"
-  password = "password"
+  connection_uri  = "https://....."
+  username        = "user"
+  password        = "password"
 }
 ```
 

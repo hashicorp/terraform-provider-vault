@@ -71,13 +71,13 @@ resource "vault_generic_endpoint" "u1_entity" {
   data_json = <<EOT
 {
   "alias_name": "u1",
-  "alias_mount_accessor": "${vault_auth_backend.userpass.accessor}"
+  "alias_mount_accessor": vault_auth_backend.userpass.accessor
 }
 EOT
 }
 
 output "u1_id" {
-  value = "${vault_generic_endpoint.u1_entity.write_data["id"]}"
+  value = vault_generic_endpoint.u1_entity.write_data["id"]
 }
 ```
 

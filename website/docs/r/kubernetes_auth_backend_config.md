@@ -20,7 +20,7 @@ resource "vault_auth_backend" "kubernetes" {
 }
 
 resource "vault_kubernetes_auth_backend_config" "example" {
-  backend                = "${vault_auth_backend.kubernetes.path}"
+  backend                = vault_auth_backend.kubernetes.path
   kubernetes_host        = "http://example.com:443"
   kubernetes_ca_cert     = "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----"
   token_reviewer_jwt     = "ZXhhbXBsZQo="

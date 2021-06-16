@@ -27,7 +27,7 @@ resource "vault_aws_secret_backend" "aws" {
 }
 
 resource "vault_aws_secret_backend_role" "role" {
-  backend = "${vault_aws_secret_backend.aws.path}"
+  backend = vault_aws_secret_backend.aws.path
   name    = "deploy"
   credential_type = "iam_user"
 

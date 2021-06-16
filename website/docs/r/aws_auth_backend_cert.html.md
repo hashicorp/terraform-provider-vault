@@ -31,9 +31,9 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_cert" "cert" {
-  backend         = "${vault_auth_backend.aws.path}"
+  backend         = vault_auth_backend.aws.path}"
   cert_name       = "my-cert"
-  aws_public_cert = "${file("${path.module}/aws_public_key.crt})"
+  aws_public_cert = file("${path.module}/aws_public_key.crt)"
   type            = "pkcs7"
 }
 ```
