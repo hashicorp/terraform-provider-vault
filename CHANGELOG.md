@@ -1,4 +1,4 @@
-## Unreleased
+## 2.21.0 (Unreleased)
 
 FEATURES:
 * `data/vault_gcp_auth_backend_role`: Added GCP auth role data source to fetch role ID ([#1011](https://github.com/hashicorp/terraform-provider-vault/pull/1011))
