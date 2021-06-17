@@ -22,7 +22,7 @@ resource "vault_auth_backend" "azure" {
 }
 
 resource "vault_azure_auth_backend_role" "example" {
-  backend                         = "${vault_auth_backend.azure.path}"
+  backend                         = vault_auth_backend.azure.path
   role                            = "test-role"
   bound_subscription_ids          = ["11111111-2222-3333-4444-555555555555"]
   bound_resource_groups           = ["123456789012"]

@@ -24,13 +24,13 @@ for more details.
 ```hcl
 resource "vault_azure_secret_backend" "azure" {
   subscription_id = var.subscription_id
-  tenant_id = var.tenant_id
-  client_secret = var.client_secret
-  client_id = var.client_id
+  tenant_id       = var.tenant_id
+  client_secret   = var.client_secret
+  client_id       = var.client_id
 }
 
 resource "vault_azure_secret_backend_role" "generated_role" {
-  backend                     = "${vault_azure_secret_backend.azure.path}"
+  backend                     = vault_azure_secret_backend.azure.path
   role                        = "generated_role"
   ttl                         = 300
   max_ttl                     = 600
@@ -42,11 +42,11 @@ resource "vault_azure_secret_backend_role" "generated_role" {
 }
 
 resource "vault_azure_secret_backend_role" "existing_object_id" {
-  backend                     = "${vault_azure_secret_backend.azure.path}"
-  role                        = "existing_object_id"
-  application_object_id       = "11111111-2222-3333-4444-44444444444"
-  ttl                         = 300
-  max_ttl                     = 600
+  backend               = vault_azure_secret_backend.azure.path
+  role                  = "existing_object_id"
+  application_object_id = "11111111-2222-3333-4444-44444444444"
+  ttl                   = 300
+  max_ttl               = 600
 }
 ```
 

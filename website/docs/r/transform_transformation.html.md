@@ -21,11 +21,11 @@ resource "vault_mount" "mount_transform" {
   type = "transform"
 }
 resource "vault_transform_transformation" "test" {
-  path = vault_mount.mount_transform.path
-  name = "ccn-fpe"
-  type = "fpe"
-  template = "ccn"
-  tweak_source = "internal"
+  path          = vault_mount.mount_transform.path
+  name          = "ccn-fpe"
+  type          = "fpe"
+  template      = "ccn"
+  tweak_source  = "internal"
   allowed_roles = ["payments"]
 }
 ```

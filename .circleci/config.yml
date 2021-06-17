@@ -1,8 +1,16 @@
 version: 2.1
+
+workflows:
+  build:
+    jobs:
+      - build:
+          context:
+            - vault-plugin-secrets-terraform
+
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.16
       - image: circleci/mongo:latest
         environment:
           - MONGO_INITDB_ROOT_USERNAME: root

@@ -22,9 +22,9 @@ for more details.
 
 ```hcl
 resource "vault_rabbitmq_secret_backend" "rabbitmq" {
-  connection_uri = "https://....."
-  username = "user"
-  password = "password"
+  connection_uri  = "https://....."
+  username        = "user"
+  password        = "password"
 }
 ```
 
@@ -48,7 +48,7 @@ on `connection_uri`, `username`, `password` or `verify_connection`. Changing the
 overwrite the previously stored values.
 
 * `path` - (Optional) The unique path this backend should be mounted at. Must
-not begin or end with a `/`. Defaults to `aws`.
+not begin or end with a `/`. Defaults to `rabbitmq`.
 
 * `description` - (Optional) A human-friendly description for this backend.
 

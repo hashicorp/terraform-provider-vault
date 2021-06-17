@@ -32,7 +32,7 @@ resource "vault_auth_backend" "example" {
 }
 
 resource "vault_aws_auth_backend_client" "example" {
-  backend    = "${vault_auth_backend.example.path}"
+  backend    = vault_auth_backend.example.path
   access_key = "INSERT_AWS_ACCESS_KEY"
   secret_key = "INSERT_AWS_SECRET_KEY"
 }

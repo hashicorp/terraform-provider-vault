@@ -27,7 +27,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "postgres" {
-  backend       = "${vault_mount.db.path}"
+  backend       = vault_mount.db.path
   name          = "postgres"
   allowed_roles = ["dev", "prod"]
 
@@ -58,6 +58,8 @@ The following arguments are supported:
 * `cassandra` - (Optional) A nested block containing configuration options for Cassandra connections.
 
 * `mongodb` - (Optional) A nested block containing configuration options for MongoDB connections.
+
+* `mongodbatlas` - (Optional) A nested block containing configuration options for MongoDB Atlas connections.
 
 * `hana` - (Optional) A nested block containing configuration options for SAP HanaDB connections.
 
@@ -113,6 +115,14 @@ Exactly one of the nested blocks of configuration options must be supplied.
   for an example.
 
 * `tls_ca` - (Optional) x509 CA file for validating the certificate presented by the MongoDB server. Must be PEM encoded.
+
+### MongoDB Atlas Configuration Options
+
+* `public_key` - (Required) The Public Programmatic API Key used to authenticate with the MongoDB Atlas API.
+
+* `private_key` - (Required) The Private Programmatic API Key used to connect with MongoDB Atlas API.
+
+* `project_id` - (Required) The Project ID the Database User should be created within.
 
 ### SAP HanaDB Configuration Options
 
