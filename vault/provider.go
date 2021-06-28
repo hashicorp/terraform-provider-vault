@@ -634,6 +634,10 @@ var (
 			Resource:      pkiSecretBackendSignResource(),
 			PathInventory: []string{"/pki/sign/{role}"},
 		},
+		"vault_quota_lease_count": {
+			Resource:      quotaLeaseCountResource(),
+			PathInventory: []string{"/sys/quotas/lease-count/{name}"},
+		},
 		"vault_quota_rate_limit": {
 			Resource:      quotaRateLimitResource(),
 			PathInventory: []string{"/sys/quotas/rate-limit/{name}"},
