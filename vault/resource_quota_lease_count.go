@@ -17,7 +17,7 @@ func quotaLeaseCountResource() *schema.Resource {
 	return &schema.Resource{
 		Create: quotaLeaseCountCreate,
 		Read:   quotaLeaseCountRead,
-		// Update: quotaLeaseCountUpdate, // Due to hashicorp/vault#10712
+		Update: quotaLeaseCountUpdate,
 		Delete: quotaLeaseCountDelete,
 		Exists: quotaLeaseCountExists,
 		Importer: &schema.ResourceImporter{
@@ -34,13 +34,13 @@ func quotaLeaseCountResource() *schema.Resource {
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
+				ForceNew:    false,
 				Description: "Path of the mount or namespace to apply the quota. A blank path configures a global lease count quota.",
 			},
 			"max_leases": {
 				Type:         schema.TypeFloat,
 				Required:     true,
-				ForceNew:     true, //due to hashicorp/vault#10712
+				ForceNew:     false,
 				Description:  "The maximum number of leases to be allowed by the quota rule. The max_leases must be positive.",
 				ValidateFunc: validation.FloatAtLeast(0.0),
 			},
@@ -101,28 +101,27 @@ func quotaLeaseCountRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-// Due to hashicorp/vault#10712
-// func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
-// 	client := meta.(*api.Client)
+func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
 
-// 	name := d.Id()
-// 	path := quotaLeaseCountPath(name)
+	name := d.Id()
+	path := quotaLeaseCountPath(name)
 
-// 	log.Printf("[DEBUG] Updating Resource Lease Count Quota %s", name)
+	log.Printf("[DEBUG] Updating Resource Lease Count Quota %s", name)
 
-// 	data := map[string]interface{}{}
-// 	data["path"] = d.Get("path").(string)
-// 	data["max_leases"] = d.Get("max_leases").(float64)
+	data := map[string]interface{}{}
+	data["path"] = d.Get("path").(string)
+	data["max_leases"] = d.Get("max_leases").(float64)
 
-// 	_, err := client.Logical().Write(path, data)
-// 	if err != nil {
-// 		d.SetId("")
-// 		return fmt.Errorf("Error updating Resource Lease Count Quota %s: %s", name, err)
-// 	}
-// 	log.Printf("[DEBUG] Updated Resource Lease Count Quota %s", name)
+	_, err := client.Logical().Write(path, data)
+	if err != nil {
+		d.SetId("")
+		return fmt.Errorf("Error updating Resource Lease Count Quota %s: %s", name, err)
+	}
+	log.Printf("[DEBUG] Updated Resource Lease Count Quota %s", name)
 
-// 	return quotaLeaseCountRead(d, meta)
-// }
+	return quotaLeaseCountRead(d, meta)
+}
 
 func quotaLeaseCountDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)

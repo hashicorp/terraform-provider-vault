@@ -2,7 +2,8 @@ package vault
 
 import (
 	"fmt"
-	"strings"
+	"os"
+	"strconv"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
@@ -12,15 +13,15 @@ import (
 )
 
 func randomQuotaLeaseString() string {
-	whole := float64(acctest.RandIntRange(1000, 2000))
-	decimal := float64(acctest.RandIntRange(0, 100)) / 100
-
-	leaseCout := fmt.Sprintf("%.1f", whole+decimal)
-	// Vault retuns floats with trailing zeros trimmed
-	return strings.TrimRight(strings.TrimRight(leaseCout, "0"), ".")
+	whole := acctest.RandIntRange(1000, 2000)
+	return strconv.Itoa(whole)
 }
 
 func TestQuotaLeaseCount(t *testing.T) {
+	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
+	if isEnterprise == "" {
+		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
+	}
 	name := acctest.RandomWithPrefix("tf-test")
 	leaseCount := randomQuotaLeaseString()
 	newLeaseCount := randomQuotaLeaseString()
