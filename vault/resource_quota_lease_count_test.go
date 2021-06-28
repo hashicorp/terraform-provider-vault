@@ -14,7 +14,7 @@ import (
 
 func randomQuotaLeaseString() string {
 	whole := acctest.RandIntRange(1000, 2000)
-	return strconv.Itoa(whole)
+	return strconv.Itoa(whole + 1000)
 }
 
 func TestQuotaLeaseCount(t *testing.T) {
