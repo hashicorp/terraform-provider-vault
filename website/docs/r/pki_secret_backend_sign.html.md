@@ -21,11 +21,11 @@ for more details.
 
 ```hcl
 resource "vault_pki_secret_backend_sign" "test" {
-  depends_on = [ "vault_pki_secret_backend_role.admin" ]
+  depends_on = [vault_pki_secret_backend_role.admin]
 
-  backend = "${vault_pki_secret_backend.pki.path}"
+  backend = vault_pki_secret_backend.pki.path
 
-  name = "${vault_pki_secret_backend_role.admin.name}"
+  name = vault_pki_secret_backend_role.admin.name
   csr = <<EOT
 -----BEGIN CERTIFICATE REQUEST-----
 MIIEqDCCApACAQAwYzELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUx

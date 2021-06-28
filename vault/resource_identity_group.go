@@ -144,7 +144,6 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 	path := identityGroupPath
 
 	data := map[string]interface{}{
-		"name": name,
 		"type": typeValue,
 	}
 
@@ -157,7 +156,7 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error writing IdentityGroup to %q: %s", name, err)
 	}
-	log.Printf("[DEBUG] Wrote IdentityGroup %q", name)
+	log.Printf("[DEBUG] Wrote IdentityGroup %q", resp.Data["name"])
 
 	d.SetId(resp.Data["id"].(string))
 

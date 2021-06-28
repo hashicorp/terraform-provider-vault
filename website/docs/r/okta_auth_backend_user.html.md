@@ -20,7 +20,7 @@ resource "vault_okta_auth_backend" "example" {
 }
 
 resource "vault_okta_auth_backend_user" "foo" {
-    path     = "${vault_okta_auth_backend.example.path}"
+    path     = vault_okta_auth_backend.example.path
     username = "foo"
     groups   = ["one", "two"]
 }

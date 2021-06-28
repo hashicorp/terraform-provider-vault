@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/mutexkv"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/vault/api"
+	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/config"
 )
 
@@ -101,6 +102,10 @@ func Provider() *schema.Provider {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+						},
+						"method": {
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 					},
 				},
@@ -262,6 +267,10 @@ var (
 		"vault_transit_decrypt": {
 			Resource:      transitDecryptDataSource(),
 			PathInventory: []string{"/transit/decrypt/{name}"},
+		},
+		"vault_gcp_auth_backend_role": {
+			Resource:      gcpAuthBackendRoleDataSource(),
+			PathInventory: []string{"/auth/gcp/role/{role_name}"},
 		},
 	}
 
@@ -577,6 +586,10 @@ var (
 			Resource:      rabbitmqSecretBackendRoleResource(),
 			PathInventory: []string{"/rabbitmq/roles/{name}"},
 		},
+		"vault_password_policy": {
+			Resource:      passwordPolicyResource(),
+			PathInventory: []string{"/sys/policy/password/{name}"},
+		},
 		"vault_pki_secret_backend": {
 			Resource:      pkiSecretBackendResource(),
 			PathInventory: []string{UnknownPath},
@@ -628,6 +641,18 @@ var (
 		"vault_quota_rate_limit": {
 			Resource:      quotaRateLimitResource(),
 			PathInventory: []string{"/sys/quotas/rate-limit/{name}"},
+		},
+		"vault_terraform_cloud_secret_backend": {
+			Resource:      terraformCloudSecretBackendResource(),
+			PathInventory: []string{"/terraform/config"},
+		},
+		"vault_terraform_cloud_secret_creds": {
+			Resource:      terraformCloudSecretCredsResource(),
+			PathInventory: []string{"/terraform/creds/{role}"},
+		},
+		"vault_terraform_cloud_secret_role": {
+			Resource:      terraformCloudSecretRoleResource(),
+			PathInventory: []string{"/terraform/role/{name}"},
 		},
 		"vault_transit_secret_backend_key": {
 			Resource:      transitSecretBackendKeyResource(),
@@ -750,6 +775,13 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		}
 		authLoginParameters := authLogin["parameters"].(map[string]interface{})
 
+		method := authLogin["method"].(string)
+		if method == "aws" {
+			if err := signAWSLogin(authLoginParameters); err != nil {
+				return nil, fmt.Errorf("error signing AWS login request: %s", err)
+			}
+		}
+
 		secret, err := client.Logical().Write(authLoginPath, authLoginParameters)
 		if err != nil {
 			return nil, err
@@ -831,4 +863,45 @@ func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {
 		}
 	}
 	return resourceMap, errs
+}
+
+func signAWSLogin(parameters map[string]interface{}) error {
+	var accessKey, secretKey, securityToken string
+	if val, ok := parameters["aws_access_key_id"].(string); ok {
+		accessKey = val
+	}
+
+	if val, ok := parameters["aws_secret_access_key"].(string); ok {
+		secretKey = val
+	}
+
+	if val, ok := parameters["aws_security_token"].(string); ok {
+		securityToken = val
+	}
+
+	creds, err := awsauth.RetrieveCreds(accessKey, secretKey, securityToken)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve AWS credentials: %s", err)
+	}
+
+	var headerValue, stsRegion string
+	if val, ok := parameters["header_value"].(string); ok {
+		headerValue = val
+	}
+
+	if val, ok := parameters["sts_region"].(string); ok {
+		stsRegion = val
+	}
+
+	loginData, err := awsauth.GenerateLoginData(creds, headerValue, stsRegion)
+	if err != nil {
+		return fmt.Errorf("failed to generate AWS login data: %s", err)
+	}
+
+	parameters["iam_http_request_method"] = loginData["iam_http_request_method"]
+	parameters["iam_request_url"] = loginData["iam_request_url"]
+	parameters["iam_request_headers"] = loginData["iam_request_headers"]
+	parameters["iam_request_body"] = loginData["iam_request_body"]
+
+	return nil
 }

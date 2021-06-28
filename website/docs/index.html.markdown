@@ -23,7 +23,7 @@ follow. Consider these carefully before using this provider within your
 Terraform configuration.
 
 -> Visit the [Inject secrets into Terraform using the Vault provider](https://learn.hashicorp.com/tutorials/terraform/secrets-vault?utm_source=WEBSITE&utm_medium=WEB_IO&utm_offer=ARTICLE_PAGE&utm_content=DOCS) Learn tutorial to learn how to use
-short-lived credentials from Vault's AWS Secrets Engine to authenticate the 
+short-lived credentials from Vault's AWS Secrets Engine to authenticate the
 AWS provider.
 
 ## Best Practices
@@ -154,7 +154,7 @@ variables in order to keep credential information out of the configuration.
   `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
 
 * `headers` - (Optional) A configuration block, described below, that provides headers
-to be sent along with all requests to the Vault server.  This block can be specified 
+to be sent along with all requests to the Vault server.  This block can be specified
 multiple times.
 
 The `auth_login` configuration block accepts the following arguments:
@@ -166,6 +166,10 @@ The `auth_login` configuration block accepts the following arguments:
 * `namespace` - (Optional) The path to the namespace that has the mounted auth method.
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*
+
+* `method` - (Optional) When configured, will enable auth method specific operations.
+  For example, when set to `aws`, the provider will automatically sign login requests
+  for AWS authentication. Valid values include: `aws`.
 
 * `parameters` - (Optional) A map of key-value parameters to send when authenticating
   against the auth backend. Refer to [Vault API documentation](https://www.vaultproject.io/api-docs/auth) for a particular auth method
@@ -246,19 +250,36 @@ provider "vault" {
 }
 ```
 
-## Namespace support 
+### Example `auth_login` With AWS Signing
+
+Sign AWS metadata for instance profile login requests:
+
+```hcl
+provider "vault" {
+  address = "http://127.0.0.1:8200"
+  auth_login {
+    path = "auth/aws/login"
+    method = "aws"
+    parameters = {
+      role = "dev-role-iam"
+    }
+  }
+}
+```
+
+## Namespace support
 
 The Vault provider supports managing [Namespaces][namespaces] (a feature of
 Vault Enterprise), as well as creating resources in those namespaces by
 utilizing [Provider Aliasing][aliasing]. The `namespace` option in the [provider
 block][provider-block] enables the management of  resources in the specified
-namespace. 
+namespace.
 
 ### Using Provider Aliases
 
 The below configuration is a simple example of using the provider block's
 `namespace` attribute to configure an aliased provider and create a resource
-within that namespace. 
+within that namespace.
 
 ```hcl
 # main provider block with no namespace
@@ -269,7 +290,7 @@ resource "vault_namespace" "everyone" {
   path = "everyone"
 }
 
-# configure an aliased provider, scope to the new namespace. 
+# configure an aliased provider, scope to the new namespace.
 provider vault {
   alias     = "everyone"
   namespace = vault_namespace.everyone.path

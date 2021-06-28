@@ -121,6 +121,14 @@ func jwtAuthBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The accessor of the JWT auth backend",
 			},
+			"provider_config": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "Provider specific handling configuration",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"tune": authMountTuneSchema(),
 		},
 	}
@@ -131,6 +139,7 @@ func jwtCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 		"oidc_discovery_url",
 		"jwks_url",
 		"jwt_validation_pubkeys",
+		"provider_config",
 	}
 
 	for _, attr := range attributes {
@@ -159,6 +168,7 @@ var (
 		"bound_issuer",
 		"jwt_supported_algs",
 		"default_role",
+		"provider_config",
 	}
 )
 

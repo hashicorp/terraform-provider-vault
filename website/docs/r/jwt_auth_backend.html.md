@@ -17,10 +17,10 @@ Manage JWT auth backend:
 
 ```hcl
 resource "vault_jwt_auth_backend" "example" {
-    description  = "Demonstration of the Terraform JWT auth backend"
-    path = "jwt"
-    oidc_discovery_url = "https://myco.auth0.com/"
-    bound_issuer = "https://myco.auth0.com/"
+    description         = "Demonstration of the Terraform JWT auth backend"
+    path                = "jwt"
+    oidc_discovery_url  = "https://myco.auth0.com/"
+    bound_issuer        = "https://myco.auth0.com/"
 }
 ```
 
@@ -28,13 +28,13 @@ Manage OIDC auth backend:
 
 ```hcl
 resource "vault_jwt_auth_backend" "example" {
-    description  = "Demonstration of the Terraform JWT auth backend"
-    path = "oidc"
-    type = "oidc"
-    oidc_discovery_url = "https://myco.auth0.com/"
-    oidc_client_id = "1234567890"
-    oidc_client_secret = "secret123456"
-    bound_issuer = "https://myco.auth0.com/"
+    description         = "Demonstration of the Terraform JWT auth backend"
+    path                = "oidc"
+    type                = "oidc"
+    oidc_discovery_url  = "https://myco.auth0.com/"
+    oidc_client_id      = "1234567890"
+    oidc_client_secret  = "secret123456"
+    bound_issuer        = "https://myco.auth0.com/"
     tune {
         listing_visibility = "unauth"
     }
@@ -70,6 +70,8 @@ The following arguments are supported:
 * `jwt_supported_algs` - (Optional) A list of supported signing algorithms. Vault 1.1.0 defaults to [RS256] but future or past versions of Vault may differ
 
 * `default_role` - (Optional) The default role to use if none is provided during login
+
+* `provider_config` - (Optional) Provider specific handling configuration
 
 * tune - (Optional) Extra configuration block. Structure is documented below.
 

@@ -22,7 +22,7 @@ resource "vault_mount" "transit" {
 }
 
 resource "vault_transit_secret_cache_config" "cfg" {
-  backend = "${vault_mount.transit.path}"
+  backend = vault_mount.transit.path
   size    = 500
 }
 

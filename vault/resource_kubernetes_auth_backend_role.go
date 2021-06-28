@@ -159,8 +159,14 @@ func kubernetesAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[stri
 		data["period"] = v.(int)
 	}
 
-	if v, ok := d.GetOk("audience"); ok {
-		data["audience"] = v.(string)
+	if create {
+		if v, ok := d.GetOk("audience"); ok {
+			data["audience"] = v.(string)
+		}
+	} else {
+		if d.HasChange("audience") {
+			data["audience"] = d.Get("audience").(string)
+		}
 	}
 }
 

@@ -16,7 +16,7 @@ Provides a resource to manage Role Governing Policy (RGP) via [Sentinel](https:/
 
 ```hcl
 resource "vault_rgp_policy" "allow-all" {
-  name = "allow-all"
+  name              = "allow-all"
   enforcement_level = "soft-mandatory"
 
   policy = <<EOT

@@ -19,7 +19,7 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_role" "role" {
-  backend          = "${vault_auth_backend.aws.path}"
+  backend          = vault_auth_backend.aws.path
   role             = "%s"
   auth_type        = "ec2"
   bound_account_id = "123456789012"
@@ -28,8 +28,8 @@ resource "vault_aws_auth_backend_role" "role" {
 }
 
 resource "vault_aws_auth_backend_role_tag" "test" {
-  backend     = "${vault_auth_backend.aws.path}"
-  role        = "${vault_aws_auth_backend_role.role.role}"
+  backend     = vault_auth_backend.aws.path
+  role        = vault_aws_auth_backend_role.role.role
   policies    = ["prod", "dev", "test"]
   max_ttl     = "1h"
   instance_id = "i-1234567"

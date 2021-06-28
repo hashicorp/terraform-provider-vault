@@ -24,8 +24,8 @@ resource "vault_audit" "test" {
 
 ```hcl
 resource "vault_audit" "test" {
-  type = "socket"
-  path = "app_socket"
+  type  = "socket"
+  path  = "app_socket"
   local = false
 
   options = {

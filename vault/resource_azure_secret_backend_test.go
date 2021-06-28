@@ -29,6 +29,17 @@ func TestAzureSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "environment", "AzurePublicCloud"),
 				),
 			},
+			{
+				Config: testAzureSecretBackend_updated(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "path", path),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "subscription_id", "11111111-2222-3333-4444-111111111111"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "tenant_id", "22222222-3333-4444-5555-333333333333"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "client_id", "22222222-3333-4444-5555-444444444444"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "client_secret", "098765432109876543214"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "environment", "AzurePublicCloud"),
+				),
+			},
 		},
 	})
 }
@@ -58,12 +69,24 @@ func testAccAzureSecretBackendCheckDestroy(s *terraform.State) error {
 
 func testAzureSecretBackend_initialConfig(path string) string {
 	return fmt.Sprintf(`
-resource "vault_azure_secret_backend" "test" {
-  path = "%s"
-	subscription_id = "11111111-2222-3333-4444-111111111111"
-	tenant_id = "11111111-2222-3333-4444-222222222222"
-  client_id = "11111111-2222-3333-4444-333333333333"
-	client_secret = "12345678901234567890"
-	environment = "AzurePublicCloud"
-}`, path)
+	resource "vault_azure_secret_backend" "test" {
+	 path = "%s"
+	 subscription_id = "11111111-2222-3333-4444-111111111111"
+	 tenant_id = "11111111-2222-3333-4444-222222222222"
+	 client_id = "11111111-2222-3333-4444-333333333333"
+	 client_secret = "12345678901234567890"
+	 environment = "AzurePublicCloud"
+	}`, path)
+}
+
+func testAzureSecretBackend_updated(path string) string {
+	return fmt.Sprintf(`
+	resource "vault_azure_secret_backend" "test" {
+	 path = "%s"
+	 subscription_id = "11111111-2222-3333-4444-111111111111"
+	 tenant_id = "22222222-3333-4444-5555-333333333333"
+	 client_id = "22222222-3333-4444-5555-444444444444"
+	 client_secret = "098765432109876543214"
+	 environment = "AzurePublicCloud"
+	}`, path)
 }

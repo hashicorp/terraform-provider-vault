@@ -20,7 +20,7 @@ resource "vault_okta_auth_backend" "example" {
 }
 
 resource "vault_okta_auth_backend_group" "foo" {
-    path       = "${vault_okta_auth_backend.example.path}"
+    path       = vault_okta_auth_backend.example.path
     group_name = "foo"
     policies   = ["one", "two"]
 }
