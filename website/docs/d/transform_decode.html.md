@@ -20,16 +20,16 @@ resource "vault_mount" "transform" {
   type = "transform"
 }
 resource "vault_transform_transformation" "ccn-fpe" {
-  path = vault_mount.transform.path
-  name = "ccn-fpe"
-  type = "fpe"
-  template = "builtin/creditcardnumber"
-  tweak_source = "internal"
+  path          = vault_mount.transform.path
+  name          = "ccn-fpe"
+  type          = "fpe"
+  template      = "builtin/creditcardnumber"
+  tweak_source  = "internal"
   allowed_roles = ["payments"]
 }
 resource "vault_transform_role" "payments" {
-  path = vault_transform_transformation.ccn-fpe.path
-  name = "payments"
+  path            = vault_transform_transformation.ccn-fpe.path
+  name            = "payments"
   transformations = ["ccn-fpe"]
 }
 data "vault_transform_decode_role" "test" {

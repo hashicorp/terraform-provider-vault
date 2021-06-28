@@ -63,6 +63,10 @@ issued by this backend.
 * `max_lease_ttl_seconds` - (Optional) The maximum TTL that can be requested
 for credentials issued by this backend.
 
+* `iam_endpoint` - (Optional) Specifies a custom HTTP IAM endpoint to use.
+
+* `sts_endpoint` - (Optional) Specifies a custom HTTP STS endpoint to use.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

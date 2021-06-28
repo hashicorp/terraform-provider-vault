@@ -21,7 +21,7 @@ data "vault_kubernetes_auth_backend_role" "role" {
 }
 
 output "policies" {
-  value = "${data.vault_kubernetes_auth_backend_role.role.policies}"
+  value = data.vault_kubernetes_auth_backend_role.role.policies
 }
 ```
 

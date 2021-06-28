@@ -67,23 +67,39 @@ func identityEntityResource() *schema.Resource {
 	}
 }
 
-func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
-	if name, ok := d.GetOk("name"); ok {
-		data["name"] = name
-	}
-
-	if externalPolicies, ok := d.GetOk("external_policies"); !(ok && externalPolicies.(bool)) {
-		if policies, ok := d.GetOk("policies"); ok {
-			data["policies"] = policies.(*schema.Set).List()
+func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interface{}, create bool) {
+	if create {
+		if name, ok := d.GetOk("name"); ok {
+			data["name"] = name
 		}
-	}
 
-	if metadata, ok := d.GetOk("metadata"); ok {
-		data["metadata"] = metadata
-	}
+		if externalPolicies, ok := d.GetOk("external_policies"); !(ok && externalPolicies.(bool)) {
+			if policies, ok := d.GetOk("policies"); ok {
+				data["policies"] = policies.(*schema.Set).List()
+			}
+		}
 
-	if disabled, ok := d.GetOk("disabled"); ok {
-		data["disabled"] = disabled
+		if metadata, ok := d.GetOk("metadata"); ok {
+			data["metadata"] = metadata
+		}
+
+		if disabled, ok := d.GetOk("disabled"); ok {
+			data["disabled"] = disabled
+		}
+	} else {
+		if d.HasChanges("name", "external_policies", "policies", "metadata", "disabled") {
+			data["name"] = d.Get("name")
+			data["metadata"] = d.Get("metadata")
+			data["disabled"] = d.Get("disabled")
+			data["policies"] = d.Get("policies").(*schema.Set).List()
+
+			// Edge case where if external_policies is true, no policies
+			// should be configured on the entity.
+			data["external_policies"] = d.Get("external_policies").(bool)
+			if data["external_policies"].(bool) {
+				data["policies"] = nil
+			}
+		}
 	}
 }
 
@@ -98,7 +114,7 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 		"name": name,
 	}
 
-	identityEntityUpdateFields(d, data)
+	identityEntityUpdateFields(d, data, true)
 
 	resp, err := client.Logical().Write(path, data)
 
@@ -136,7 +152,7 @@ func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	data := map[string]interface{}{}
 
-	identityEntityUpdateFields(d, data)
+	identityEntityUpdateFields(d, data, false)
 
 	_, err := client.Logical().Write(path, data)
 

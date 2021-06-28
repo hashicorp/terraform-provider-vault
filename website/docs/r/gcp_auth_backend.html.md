@@ -14,7 +14,7 @@ Provides a resource to configure the [GCP auth backend within Vault](https://www
 
 ```hcl
 resource "vault_gcp_auth_backend" "gcp" {
-    credentials  = "${file("vault-gcp-credentials.json")}"
+    credentials  = file("vault-gcp-credentials.json")
 }
 ```
 

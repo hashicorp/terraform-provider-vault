@@ -17,10 +17,10 @@ Manage JWT auth backend:
 
 ```hcl
 resource "vault_jwt_auth_backend" "example" {
-    description  = "Demonstration of the Terraform JWT auth backend"
-    path = "jwt"
-    oidc_discovery_url = "https://myco.auth0.com/"
-    bound_issuer = "https://myco.auth0.com/"
+    description         = "Demonstration of the Terraform JWT auth backend"
+    path                = "jwt"
+    oidc_discovery_url  = "https://myco.auth0.com/"
+    bound_issuer        = "https://myco.auth0.com/"
 }
 ```
 
@@ -28,13 +28,13 @@ Manage OIDC auth backend:
 
 ```hcl
 resource "vault_jwt_auth_backend" "example" {
-    description  = "Demonstration of the Terraform JWT auth backend"
-    path = "oidc"
-    type = "oidc"
-    oidc_discovery_url = "https://myco.auth0.com/"
-    oidc_client_id = "1234567890"
-    oidc_client_secret = "secret123456"
-    bound_issuer = "https://myco.auth0.com/"
+    description         = "Demonstration of the Terraform JWT auth backend"
+    path                = "oidc"
+    type                = "oidc"
+    oidc_discovery_url  = "https://myco.auth0.com/"
+    oidc_client_id      = "1234567890"
+    oidc_client_secret  = "secret123456"
+    bound_issuer        = "https://myco.auth0.com/"
     tune {
         listing_visibility = "unauth"
     }
@@ -71,6 +71,8 @@ The following arguments are supported:
 
 * `default_role` - (Optional) The default role to use if none is provided during login
 
+* `provider_config` - (Optional) Provider specific handling configuration
+
 * tune - (Optional) Extra configuration block. Structure is documented below.
 
 The `tune` block is used to tune the auth backend:
@@ -103,7 +105,9 @@ The `tune` block is used to tune the auth backend:
 
 ## Attributes Reference
 
-No additional attributes are exposed by this resource.
+In addition to the fields above, the following attributes are exported:
+
+* `accessor` - The accessor for this auth method
 
 ## Import
 

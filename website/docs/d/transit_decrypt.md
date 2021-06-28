@@ -14,9 +14,9 @@ This is a data source which can be used to decrypt ciphertext using a Vault Tran
 
 ```hcl
 data "vault_transit_decrypt" "test" {
-  backend   = "transit"
-  key       = "test"
-  ciphertext = "vault:v1:S3GtnJ5GUNCWV+/pdL9+g1Feu/nzAv+RlmTmE91Tu0rBkeIU8MEb2nSspC/1IQ=="
+  backend     = "transit"
+  key         = "test"
+  ciphertext  = "vault:v1:S3GtnJ5GUNCWV+/pdL9+g1Feu/nzAv+RlmTmE91Tu0rBkeIU8MEb2nSspC/1IQ=="
 }
 ```
 

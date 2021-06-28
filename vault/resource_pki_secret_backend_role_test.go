@@ -75,8 +75,10 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "ttl", "1800"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "max_ttl", "3600"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allow_localhost", "true"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_domains.#", "1"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_domains.#", "2"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_domains.0", "other.domain"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_domains.1", "{{identity.entity.name}}"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_domains_template", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allow_bare_domains", "false"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allow_subdomains", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allow_glob_domains", "false"),
@@ -179,7 +181,8 @@ resource "vault_pki_secret_backend_role" "test" {
   ttl = 1800
   max_ttl = 3600
   allow_localhost = true
-  allowed_domains = ["other.domain"]
+  allowed_domains = ["other.domain", "{{identity.entity.name}}"]
+  allowed_domains_template = true
   allow_bare_domains = false
   allow_subdomains = true
   allow_glob_domains = false
