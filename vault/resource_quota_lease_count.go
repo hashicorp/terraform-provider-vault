@@ -38,11 +38,11 @@ func quotaLeaseCountResource() *schema.Resource {
 				Description: "Path of the mount or namespace to apply the quota. A blank path configures a global lease count quota.",
 			},
 			"max_leases": {
-				Type:         schema.TypeFloat,
+				Type:         schema.TypeInt,
 				Required:     true,
 				ForceNew:     false,
 				Description:  "The maximum number of leases to be allowed by the quota rule. The max_leases must be positive.",
-				ValidateFunc: validation.FloatAtLeast(0.0),
+				ValidateFunc: validation.IntAtLeast(0),
 			},
 		},
 	}
@@ -59,7 +59,7 @@ func quotaLeaseCountCreate(d *schema.ResourceData, meta interface{}) error {
 
 	data := map[string]interface{}{}
 	data["path"] = d.Get("path").(string)
-	data["max_leases"] = d.Get("max_leases").(float64)
+	data["max_leases"] = d.Get("max_leases").(int)
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -111,7 +111,7 @@ func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	data := map[string]interface{}{}
 	data["path"] = d.Get("path").(string)
-	data["max_leases"] = d.Get("max_leases").(float64)
+	data["max_leases"] = d.Get("max_leases").(int)
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
