@@ -1,3 +1,8 @@
+## Unreleased
+
+FEATURES:
+* **New Resource** `vault_quota_lease_count`: Adds ability to manage lease-count quota's (Vault Enterprise Feature) ([#948](https://github.com/hashicorp/terraform-provider-vault/pull/948))
+
 ## 2.21.0 (June 17, 2021)
 
 FEATURES:
