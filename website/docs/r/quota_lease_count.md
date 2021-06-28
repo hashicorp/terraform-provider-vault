@@ -15,7 +15,7 @@ specifying a path when creating the quota.
 See [Vault's Documentation](https://www.vaultproject.io/docs/enterprise/lease-count-quotas) for more
 information.   
 
-This is a Vault Enterprise Feature  
+**Note** this feature is available only with Vault Enterprise.
 
 ## Example Usage
 
