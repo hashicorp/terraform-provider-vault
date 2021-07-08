@@ -6,6 +6,9 @@ FEATURES:
 IMPROVEMENTS:
 * Remove last dependency on `github.com/terraform-providers` ([#1090](https://github.com/hashicorp/terraform-provider-vault/pull/1090))
 
+BUGS:
+* `resource/vault_identity_group`: Fix bug where metadata values are not removed if removed from file ([#1061](https://github.com/hashicorp/terraform-provider-vault/pull/1061))
+
 ## 2.21.0 (June 17, 2021)
 
 FEATURES:
