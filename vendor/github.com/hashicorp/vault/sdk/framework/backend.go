@@ -15,8 +15,9 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/helper/entropy"
+	"github.com/hashicorp/go-kms-wrapping/entropy"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -163,7 +164,8 @@ func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request
 
 	fd := FieldData{
 		Raw:    raw,
-		Schema: path.Fields}
+		Schema: path.Fields,
+	}
 
 	err = fd.Validate()
 	if err != nil {
@@ -225,6 +227,21 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	if path.Operations != nil {
 		if op, ok := path.Operations[req.Operation]; ok {
+
+			// Check whether this operation should be forwarded
+			if sysView := b.System(); sysView != nil {
+				replState := sysView.ReplicationState()
+				props := op.Properties()
+
+				if props.ForwardPerformanceStandby && replState.HasState(consts.ReplicationPerformanceStandby) {
+					return nil, logical.ErrReadOnly
+				}
+
+				if props.ForwardPerformanceSecondary && !sysView.LocalMount() && replState.HasState(consts.ReplicationPerformanceSecondary) {
+					return nil, logical.ErrReadOnly
+				}
+			}
+
 			callback = op.Handler()
 		}
 	} else {
@@ -244,7 +261,8 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	fd := FieldData{
 		Raw:    raw,
-		Schema: path.Fields}
+		Schema: path.Fields,
+	}
 
 	if req.Operation != logical.HelpOperation {
 		err := fd.Validate()
@@ -607,6 +625,10 @@ func (t FieldType) Zero() interface{} {
 		return []int{}
 	case TypeHeader:
 		return http.Header{}
+	case TypeFloat:
+		return 0.0
+	case TypeTime:
+		return time.Time{}
 	default:
 		panic("unknown type: " + t.String())
 	}

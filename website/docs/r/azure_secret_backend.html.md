@@ -24,10 +24,10 @@ for more details.
 ```hcl
 resource "vault_azure_secret_backend" "azure" {
   subscription_id = "11111111-2222-3333-4444-111111111111"
-  tenant_id = "11111111-2222-3333-4444-222222222222"
-  client_id = "11111111-2222-3333-4444-333333333333"
-  client_secret = "12345678901234567890"
-  environment = "AzurePublicCloud"
+  tenant_id       = "11111111-2222-3333-4444-222222222222"
+  client_id       = "11111111-2222-3333-4444-333333333333"
+  client_secret   = "12345678901234567890"
+  environment     = "AzurePublicCloud"
 }
 ```
 

@@ -17,8 +17,8 @@ Provides a resource to manage Endpoint Governing Policy (EGP) via [Sentinel](htt
 
 ```hcl
 resource "vault_egp_policy" "allow-all" {
-  name = "allow-all"
-  paths = ["*"]
+  name              = "allow-all"
+  paths             = ["*"]
   enforcement_level = "soft-mandatory"
 
   policy = <<EOT

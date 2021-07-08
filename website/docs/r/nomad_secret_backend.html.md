@@ -22,14 +22,14 @@ for more details.
 
 ```hcl
 resource "vault_nomad_secret_backend" "config" {
-	backend = "nomad"
-	description = "test description"
+	backend                   = "nomad"
+	description               = "test description"
 	default_lease_ttl_seconds = "3600"
-	max_lease_ttl_seconds = "7200"
-	max_ttl = "240"
-	address = "https://127.0.0.1:4646"
-	token = "ae20ceaa-...
-	ttl = "120"
+	max_lease_ttl_seconds     = "7200"
+	max_ttl                   = "240"
+	address                   = "https://127.0.0.1:4646"
+	token                     = "ae20ceaa-..."
+	ttl                       = "120"
 }
 ```
 

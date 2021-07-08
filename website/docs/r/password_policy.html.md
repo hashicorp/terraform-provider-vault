@@ -19,11 +19,11 @@ resource "vault_password_policy" "alphanumeric" {
   name = "alphanumeric"
 
   policy = <<EOT
-length = 20
-rule "charset" {
-	  charset = "abcdefghijklmnopqrstuvwxyz0123456789"
-}
-EOT
+    length = 20
+    rule "charset" {
+      charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+    }
+  EOT
 }
 ```
 

@@ -124,6 +124,17 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed:    true,
 			Description: "The accessor of the LDAP auth backend",
 		},
+		"client_tls_cert": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Computed: true,
+		},
+		"client_tls_key": {
+			Type:      schema.TypeString,
+			Optional:  true,
+			Computed:  true,
+			Sensitive: true,
+		},
 	}
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
@@ -240,6 +251,14 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["use_token_groups"] = v.(bool)
 	}
 
+	if v, ok := d.GetOk("client_tls_cert"); ok {
+		data["client_tls_cert"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("client_tls_key"); ok {
+		data["client_tls_key"] = v.(string)
+	}
+
 	updateTokenFields(d, data, false)
 
 	log.Printf("[DEBUG] Writing LDAP config %q", path)
@@ -309,7 +328,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("groupattr", resp.Data["groupattr"])
 	d.Set("use_token_groups", resp.Data["use_token_groups"])
 
-	// `bindpass` cannot be read out from the API
+	// `bindpass`, `client_tls_cert` and `client_tls_key` cannot be read out from the API
 	// So... if they drift, they drift.
 
 	return nil

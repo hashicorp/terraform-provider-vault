@@ -15,9 +15,9 @@ the backend.
 
 ```hcl
 resource "vault_pki_secret_backend" "pki" {
-  path = "pki"
+  path                      = "pki"
   default_lease_ttl_seconds = 3600
-  max_lease_ttl_seconds = 86400
+  max_lease_ttl_seconds     = 86400
 }
 ```
 
