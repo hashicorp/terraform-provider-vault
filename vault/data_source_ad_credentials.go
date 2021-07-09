@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -28,11 +27,13 @@ func adAccessCredentialsDataSource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Password for the service account.",
+				Sensitive:   true,
 			},
 			"last_password": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Last known password for the service account.",
+				Sensitive:   true,
 			},
 			"username": {
 				Type:        schema.TypeString,
