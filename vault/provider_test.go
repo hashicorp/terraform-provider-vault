@@ -67,6 +67,14 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
+func testJWTLocal(t *testing.T) {
+	testAccPreCheck(t)
+	if v := os.Getenv("TEST_JWT"); v == "" {
+		t.Log("TEST_JWT must be set for jwt provider_config acceptance tests")
+		t.Skip()
+	}
+}
+
 func getTestAWSCreds(t *testing.T) (string, string) {
 	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
 	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
