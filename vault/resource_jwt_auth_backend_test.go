@@ -72,16 +72,11 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 	})
 }
 
-// TODO: OIDC plugin has a validation stage when configs are written,
-// and since we use circleci Docker, we can't mount files nor can it see a
-// local one. This will need to be updated when we switch to a Circle machine
-// executor.
-
 // The random numbers on the provider_config are a hash of the object.
 func TestAccJWTAuthBackend_OIDC_Provider_ConfigAzure(t *testing.T) {
 	path := acctest.RandomWithPrefix("oidc")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testJWTLocal(t) },
+		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testJWTAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
