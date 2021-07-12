@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 
@@ -100,17 +101,22 @@ func TestAccJWTAuthBackend_OIDC_Provider_ConfigAzure(t *testing.T) {
 // The random numbers on the provider_config are a hash of the object.
 func TestAccJWTAuthBackend_OIDC_Provider_ConfigGSuite(t *testing.T) {
 	path := acctest.RandomWithPrefix("oidc")
+	serviceAccountPath := os.Getenv("JWT_SERVICE_ACCOUNT_PATH")
+	if serviceAccountPath == "" {
+		t.Skip("JWT_SERVICE_ACCOUNT_PATH not set")
+	}
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testJWTLocal(t) },
 		Providers:    testProviders,
 		CheckDestroy: testJWTAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(path),
+				Config: testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(path, serviceAccountPath),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "oidc_discovery_url", "https://accounts.google.com"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.provider", "gsuite"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.gsuite_service_account", "/tmp/service-account.json"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.gsuite_service_account", serviceAccountPath),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.gsuite_admin_impersonate", "admin@gsuitedomain.com"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.fetch_groups", "true"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.fetch_user_info", "true"),
@@ -224,7 +230,7 @@ resource "vault_jwt_auth_backend" "azure" {
 `, path)
 }
 
-func testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(path string) string {
+func testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(backendPath, serviceAccountPath string) string {
 	return fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "gsuite" {
 	description = "OIDC backend"
@@ -233,7 +239,7 @@ resource "vault_jwt_auth_backend" "gsuite" {
 	type = "oidc"
 	provider_config {
 		provider                 = "gsuite"
-		gsuite_service_account   = "/tmp/service-account.json"
+		gsuite_service_account   = "%s"
 		gsuite_admin_impersonate = "admin@gsuitedomain.com"
 		fetch_groups             = true
 		fetch_user_info          = true
@@ -241,7 +247,7 @@ resource "vault_jwt_auth_backend" "gsuite" {
 		user_custom_schemas      = "Education,Preferences"
 	}
 }
-`, path)
+`, backendPath, serviceAccountPath)
 }
 
 func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
