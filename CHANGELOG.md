@@ -8,6 +8,7 @@ IMPROVEMENTS:
 
 BUGS:
 * `resource/vault_identity_group`: Fix bug where metadata values are not removed if removed from file ([#1061](https://github.com/hashicorp/terraform-provider-vault/pull/1061))
+* `resource/jwt_auth_backend`: Fixed bug where `provider_config` only supported string values ([#960](https://github.com/hashicorp/terraform-provider-vault/pull/960))
 
 ## 2.21.0 (June 17, 2021)
 
