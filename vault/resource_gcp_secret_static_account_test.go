@@ -137,8 +137,8 @@ func testGCPSecretStaticAccount_attrs(backend, staticAccount string) resource.Te
 
 		endpoint := instanceState.ID
 
-		if endpoint != backend+"/static/"+staticAccount {
-			return fmt.Errorf("expected ID to be %q, got %q instead", backend+"/static/"+staticAccount, endpoint)
+		if endpoint != backend+"/static-account/"+staticAccount {
+			return fmt.Errorf("expected ID to be %q, got %q instead", backend+"/static-account/"+staticAccount, endpoint)
 		}
 
 		client := testProvider.Meta().(*api.Client)

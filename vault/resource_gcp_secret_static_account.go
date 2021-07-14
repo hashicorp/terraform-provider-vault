@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	gcpSecretStaticAccountBackendFromPathRegex = regexp.MustCompile("^(.+)/static/.+$")
-	gcpSecretStaticAccountNameFromPathRegex    = regexp.MustCompile("^.+/static/(.+)$")
+	gcpSecretStaticAccountBackendFromPathRegex = regexp.MustCompile("^(.+)/static-account/.+$")
+	gcpSecretStaticAccountNameFromPathRegex    = regexp.MustCompile("^.+/static-account/(.+)$")
 )
 
 func gcpSecretStaticAccountResource() *schema.Resource {
@@ -237,7 +237,7 @@ func gcpSecretStaticAccountExists(d *schema.ResourceData, meta interface{}) (boo
 }
 
 func gcpSecretStaticAccountPath(backend, staticAccount string) string {
-	return strings.Trim(backend, "/") + "/static/" + strings.Trim(staticAccount, "/")
+	return strings.Trim(backend, "/") + "/static-account/" + strings.Trim(staticAccount, "/")
 }
 
 func gcpSecretStaticAccountBackendFromPath(path string) (string, error) {
