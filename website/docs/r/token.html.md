@@ -39,7 +39,7 @@ resource "vault_token" "example" {
   renew_min_lease = 43200
   renew_increment = 86400
 
-  gpg_key = "keybase:my_username"
+  pgp_key = "keybase:my_username"
 }
 ```
 

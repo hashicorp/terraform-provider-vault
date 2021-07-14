@@ -1,3 +1,15 @@
+## Unreleased
+
+FEATURES:
+* **New Resource** `vault_quota_lease_count`: Adds ability to manage lease-count quota's (Vault Enterprise Feature) ([#948](https://github.com/hashicorp/terraform-provider-vault/pull/948))
+
+IMPROVEMENTS:
+* Remove last dependency on `github.com/terraform-providers` ([#1090](https://github.com/hashicorp/terraform-provider-vault/pull/1090))
+
+BUGS:
+* `resource/vault_identity_group`: Fix bug where metadata values are not removed if removed from file ([#1061](https://github.com/hashicorp/terraform-provider-vault/pull/1061))
+* `resource/jwt_auth_backend`: Fixed bug where `provider_config` only supported string values ([#960](https://github.com/hashicorp/terraform-provider-vault/pull/960))
+
 ## 2.21.0 (June 17, 2021)
 
 FEATURES:

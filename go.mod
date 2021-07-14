@@ -1,8 +1,5 @@
 module github.com/hashicorp/terraform-provider-vault
 
-// This should ensure existing PRs are still valid
-replace github.com/terraform-providers/terraform-provider-vault => ./
-
 go 1.16
 
 require (
