@@ -172,6 +172,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
+* `tls_certificate_key` - (Optional) x509 certificate for connecting to the database. This must be a PEM encoded version of the private key and the certificate combined.
+
+* `tls_ca` - (Optional) x509 CA file for validating the certificate presented by the MySQL server. Must be PEM encoded.
+
 ### PostgreSQL Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See

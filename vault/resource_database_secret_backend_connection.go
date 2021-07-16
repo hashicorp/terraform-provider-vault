@@ -226,7 +226,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          mysqlConnectionStringResource(),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("mysql", dbBackendTypes),
 			},
@@ -313,6 +313,21 @@ func connectionStringResource() *schema.Resource {
 			},
 		},
 	}
+}
+
+func mysqlConnectionStringResource() *schema.Resource {
+	r := connectionStringResource()
+	r.Schema["tls_certificate_key"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "x509 certificate for connecting to the database. This must be a PEM encoded version of the private key and the certificate combined.",
+	}
+	r.Schema["tls_ca"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "x509 CA file for validating the certificate presented by the MySQL server. Must be PEM encoded.",
+	}
+	return r
 }
 
 func getDatabasePluginName(d *schema.ResourceData) (string, error) {
@@ -412,7 +427,7 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case "mssql-database-plugin":
 		setDatabaseConnectionData(d, "mssql.0.", data)
 	case "mysql-database-plugin":
-		setDatabaseConnectionData(d, "mysql.0.", data)
+		setMySQLDatabaseConnectionData(d, "mysql.0.", data)
 	case "mysql-rds-database-plugin":
 		setDatabaseConnectionData(d, "mysql_rds.0.", data)
 	case "mysql-aurora-database-plugin":
@@ -471,6 +486,61 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 	return []map[string]interface{}{result}
 }
 
+func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	result := map[string]interface{}{}
+	if v, ok := d.GetOk(prefix + "connection_url"); ok {
+		result["connection_url"] = v.(string)
+	} else {
+		if v, ok := data["connection_url"]; ok {
+			result["connection_url"] = v.(string)
+		}
+	}
+	if v, ok := data["max_open_connections"]; ok {
+		n, err := v.(json.Number).Int64()
+		if err != nil {
+			log.Printf("[WARN] Non-number %s returned from Vault server: %s", v, err)
+		} else {
+			result["max_open_connections"] = n
+		}
+	}
+	if v, ok := data["max_idle_connections"]; ok {
+		n, err := v.(json.Number).Int64()
+		if err != nil {
+			log.Printf("[WARN] Non-number %s returned from Vault server: %s", v, err)
+		} else {
+			result["max_idle_connections"] = n
+		}
+	}
+	if v, ok := data["max_connection_lifetime"]; ok {
+		n, err := time.ParseDuration(v.(string))
+		if err != nil {
+			log.Printf("[WARN] Non-number %s returned from Vault server: %s", v, err)
+		} else {
+			result["max_connection_lifetime"] = n.Seconds()
+		}
+	}
+	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
+		result["tls_certificate_key"] = v.(string)
+	} else {
+		if v, ok := data["tls_certificate_key"]; ok {
+			result["tls_certificate_key"] = v.(string)
+		}
+	}
+	if v, ok := d.GetOk(prefix + "tls_ca"); ok {
+		result["tls_ca"] = v.(string)
+	} else {
+		if v, ok := data["tls_ca"]; ok {
+			result["tls_ca"] = v.(string)
+		}
+	}
+	return []map[string]interface{}{result}
+}
+
 func getElasticsearchConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
@@ -511,6 +581,16 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	}
 	if v, ok := d.GetOkExists(prefix + "max_connection_lifetime"); ok {
 		data["max_connection_lifetime"] = fmt.Sprintf("%ds", v)
+	}
+}
+
+func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionData(d, prefix, data)
+	if v, ok := d.GetOkExists(prefix + "tls_certificate_key"); ok {
+		data["tls_certificate_key"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "tls_ca"); ok {
+		data["tls_ca"] = v.(string)
 	}
 }
 
@@ -684,7 +764,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case "mssql-database-plugin":
 		d.Set("mssql", getConnectionDetailsFromResponse(d, "mssql.0.", resp))
 	case "mysql-database-plugin":
-		d.Set("mysql", getConnectionDetailsFromResponse(d, "mysql.0.", resp))
+		d.Set("mysql", getMySQLConnectionDetailsFromResponse(d, "mysql.0.", resp))
 	case "mysql-rds-database-plugin":
 		d.Set("mysql_rds", getConnectionDetailsFromResponse(d, "mysql_rds.0.", resp))
 	case "mysql-aurora-database-plugin":
