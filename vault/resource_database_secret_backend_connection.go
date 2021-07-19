@@ -259,7 +259,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the postgresql-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResourceWithUsernameTemplate(),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("postgresql", dbBackendTypes),
 			},
@@ -329,6 +329,39 @@ func mysqlConnectionStringResource() *schema.Resource {
 		Description: "x509 CA file for validating the certificate presented by the MySQL server. Must be PEM encoded.",
 	}
 	return r
+}
+
+func connectionStringResourceWithUsernameTemplate() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"connection_url": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Connection string to use to connect to the database.",
+			},
+			"max_open_connections": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "Maximum number of open connections to the database.",
+				Default:     2,
+			},
+			"max_idle_connections": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "Maximum number of idle connections to the database.",
+			},
+			"max_connection_lifetime": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "Maximum number of seconds a connection may be reused.",
+			},
+			"username_template": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Username template for plugin generate username",
+			},
+		},
+	}
 }
 
 func getDatabasePluginName(d *schema.ResourceData) (string, error) {
@@ -484,6 +517,13 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 			result["max_connection_lifetime"] = n.Seconds()
 		}
 	}
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		result["username_template"] = v.(string)
+	} else {
+		if v, ok := data["username_template"]; ok {
+			result["username_template"] = v.(string)
+		}
+	}
 	return []map[string]interface{}{result}
 }
 
@@ -552,6 +592,9 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	}
 	if v, ok := d.GetOkExists(prefix + "max_connection_lifetime"); ok {
 		data["max_connection_lifetime"] = fmt.Sprintf("%ds", v)
+	}
+	if v, ok := d.GetOkExists(prefix + "username_template"); ok {
+		data["username_template"] = v.(string)
 	}
 }
 
