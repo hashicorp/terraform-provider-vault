@@ -192,7 +192,7 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
-* `username_template` - (Optional) The username template for vault generate username.
+* `username_template` - (Optional) For Vault v1.7+. The username template for vault generate username.
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
