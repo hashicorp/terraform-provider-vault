@@ -102,7 +102,6 @@ func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	d.SetId(path)
 	d.MarkNewResource()
 	d.Partial(true)
-	d.SetPartial("path")
 	return githubAuthBackendUpdate(d, meta)
 }
 
@@ -156,15 +155,6 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 	log.Printf("[INFO] Github auth config successfully written to '%q'", configPath)
 
-	d.SetPartial("organization")
-	d.SetPartial("base_url")
-	if _, ok := data["ttl"]; ok {
-		d.SetPartial("ttl")
-	}
-	if _, ok := data["max_ttl"]; ok {
-		d.SetPartial("max_ttl")
-	}
-
 	if d.HasChange("tune") {
 		log.Printf("[INFO] Github Auth '%q' tune configuration changed", d.Id())
 		if raw, ok := d.GetOk("tune"); ok {
@@ -176,7 +166,6 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			}
 
 			log.Printf("[INFO] Written github auth tune to '%q'", path)
-			d.SetPartial("tune")
 		}
 	}
 
@@ -188,7 +177,6 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			log.Printf("[ERROR] Error updating github auth description to '%q'", path)
 			return err
 		}
-		d.SetPartial("description")
 	}
 
 	d.Partial(false)

@@ -366,7 +366,6 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			}
 
 			log.Printf("[INFO] Written %s auth tune to %q", backendType, path)
-			d.SetPartial("tune")
 		}
 	}
 

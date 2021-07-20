@@ -126,11 +126,6 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Mounted Consul backend at %q", path)
 	d.SetId(path)
 
-	d.SetPartial("path")
-	d.SetPartial("description")
-	d.SetPartial("default_lease_ttl_seconds")
-	d.SetPartial("max_lease_ttl_seconds")
-
 	log.Printf("[DEBUG] Writing Consul configuration to %q", configPath)
 	data := map[string]interface{}{
 		"address":     address,
@@ -144,12 +139,6 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("Error writing Consul configuration for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote Consul configuration to %q", configPath)
-	d.SetPartial("address")
-	d.SetPartial("token")
-	d.SetPartial("scheme")
-	d.SetPartial("ca_cert")
-	d.SetPartial("client_cert")
-	d.SetPartial("client_key")
 	d.Partial(false)
 
 	return nil
@@ -219,8 +208,6 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("Error updating mount TTLs for %q: %s", path, err)
 		}
 
-		d.SetPartial("default_lease_ttl_seconds")
-		d.SetPartial("max_lease_ttl_seconds")
 	}
 	if d.HasChange("address") || d.HasChange("token") || d.HasChange("scheme") ||
 		d.HasChange("ca_cert") || d.HasChange("client_cert") || d.HasChange("client_key") {
@@ -237,12 +224,6 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("Error configuring Consul configuration for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated Consul configuration at %q", configPath)
-		d.SetPartial("address")
-		d.SetPartial("token")
-		d.SetPartial("scheme")
-		d.SetPartial("ca_cert")
-		d.SetPartial("client_cert")
-		d.SetPartial("client_key")
 	}
 	d.Partial(false)
 	return consulSecretBackendRead(d, meta)

@@ -109,11 +109,6 @@ func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Mounted GCP backend at %q", path)
 	d.SetId(path)
 
-	d.SetPartial("path")
-	d.SetPartial("description")
-	d.SetPartial("default_lease_ttl_seconds")
-	d.SetPartial("max_lease_ttl_seconds")
-
 	log.Printf("[DEBUG] Writing GCP configuration to %q", configPath)
 	if credentials != "" {
 		data := map[string]interface{}{
@@ -177,8 +172,6 @@ func gcpSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error updating mount TTLs for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
-		d.SetPartial("default_lease_ttl_seconds")
-		d.SetPartial("max_lease_ttl_seconds")
 	}
 
 	if d.HasChange("credentials") {
@@ -190,7 +183,6 @@ func gcpSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error writing GCP credentials for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated credentials for %q", path)
-		d.SetPartial("credentials")
 	}
 
 	d.Partial(false)
