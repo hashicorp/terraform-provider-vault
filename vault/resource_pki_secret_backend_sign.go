@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -219,7 +220,7 @@ func pkiSecretBackendSignCreate(d *schema.ResourceData, meta interface{}) error 
 	return pkiSecretBackendSignRead(d, meta)
 }
 
-func pkiSecretBackendSignDiff(d *schema.ResourceDiff, meta interface{}) error {
+func pkiSecretBackendSignDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	if d.Id() == "" {
 		return nil
 	}

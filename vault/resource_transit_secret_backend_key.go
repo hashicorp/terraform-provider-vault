@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -141,7 +142,7 @@ func transitSecretBackendKeyResource() *schema.Resource {
 			},
 		},
 		CustomizeDiff: customdiff.All(
-			customdiff.ValidateChange("exportable", func(old, new, meta interface{}) error {
+			customdiff.ValidateChange("exportable", func(_ context.Context, old, new, meta interface{}) error {
 				// 'exportable' Can only be enabled once, and once it is enabled, it cannot be disabled
 				//   without creating a new key
 
@@ -155,7 +156,7 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				}
 				return nil
 			}),
-			customdiff.ValidateChange("allow_plaintext_backup", func(old, new, meta interface{}) error {
+			customdiff.ValidateChange("allow_plaintext_backup", func(_ context.Context, old, new, meta interface{}) error {
 				// Same conditions as above. This cannot be disabled once enabled.
 				if new.(bool) && !old.(bool) {
 					return nil
@@ -165,10 +166,10 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				}
 				return nil
 			}),
-			customdiff.ForceNewIfChange("exportable", func(old, new, meta interface{}) bool {
+			customdiff.ForceNewIfChange("exportable", func(_ context.Context, old, new, meta interface{}) bool {
 				return !new.(bool) && old.(bool)
 			}),
-			customdiff.ForceNewIfChange("allow_plaintext_backup", func(old, new, meta interface{}) bool {
+			customdiff.ForceNewIfChange("allow_plaintext_backup", func(_ context.Context, old, new, meta interface{}) bool {
 				return !new.(bool) && old.(bool)
 			}),
 		),

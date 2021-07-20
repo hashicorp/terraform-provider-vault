@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
@@ -260,7 +261,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 	}
 }
 
-func resourceVaultAwsAuthBackendRoleCustomizeDiff(diff *schema.ResourceDiff, v interface{}) error {
+func resourceVaultAwsAuthBackendRoleCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, v interface{}) error {
 	if diff.HasChange("resolve_aws_unique_ids") {
 		o, n := diff.GetChange("resolve_aws_unique_ids")
 		// The resolve_aws_unique_ids field can be updated from false to true

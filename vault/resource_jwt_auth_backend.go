@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -164,7 +165,7 @@ func jwtAuthBackendResource() *schema.Resource {
 	}
 }
 
-func jwtCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
+func jwtCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	attributes := []string{
 		"oidc_discovery_url",
 		"jwks_url",

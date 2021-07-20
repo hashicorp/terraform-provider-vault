@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -245,7 +246,7 @@ func pkiSecretBackendCertNeedsRenewed(autoRenew bool, expiration int, minSecRema
 	return time.Now().After(renewTime)
 }
 
-func pkiSecretBackendCertDiff(d *schema.ResourceDiff, meta interface{}) error {
+func pkiSecretBackendCertDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	if d.Id() == "" {
 		return nil
 	}

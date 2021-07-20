@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"regexp"
@@ -101,7 +102,7 @@ func gcpSecretRolesetResource() *schema.Resource {
 			},
 		},
 
-		CustomizeDiff: customdiff.ComputedIf("service_account_email", func(d *schema.ResourceDiff, meta interface{}) bool {
+		CustomizeDiff: customdiff.ComputedIf("service_account_email", func(_ context.Context, d *schema.ResourceDiff, meta interface{}) bool {
 			log.Printf("[DEBUG] Checking if GCP Secrets backend roleset has changes in `token_scopes` or `binding`")
 			// Due to https://github.com/hashicorp/terraform/issues/17411
 			// we cannot use d.HasChange("binding") directly
