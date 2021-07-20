@@ -6,7 +6,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
@@ -479,7 +478,7 @@ func resourceOktaGroupHash(v interface{}) int {
 		return 0
 	}
 	if v, ok := m["group_name"]; ok {
-		return hashcode.String(v.(string))
+		return schema.HashString(v.(string))
 	}
 
 	return 0
@@ -491,7 +490,7 @@ func resourceOktaUserHash(v interface{}) int {
 		return 0
 	}
 	if v, ok := m["username"]; ok {
-		return hashcode.String(v.(string))
+		return schema.HashString(v.(string))
 	}
 
 	return 0

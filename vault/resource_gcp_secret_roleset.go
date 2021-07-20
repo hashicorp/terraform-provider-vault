@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/customdiff"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
@@ -298,7 +297,7 @@ func gcpSecretRolesetBindingHash(v interface{}) int {
 			buf.WriteString(fmt.Sprintf("%s-", v))
 		}
 	}
-	return hashcode.String(buf.String())
+	return schema.HashString(buf.String())
 }
 
 func gcpSecretRolesetPath(backend, roleset string) string {
