@@ -9,11 +9,11 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gosimple/slug v1.4.1
 	github.com/hashicorp/errwrap v1.0.0
-	github.com/hashicorp/go-cleanhttp v0.5.1
-	github.com/hashicorp/go-hclog v0.14.1
+	github.com/hashicorp/go-cleanhttp v0.5.2
+	github.com/hashicorp/go-hclog v0.15.0
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/hashicorp/go-retryablehttp v0.6.8 // indirect
-	github.com/hashicorp/terraform-plugin-sdk v1.9.0
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.7.0
 	github.com/hashicorp/vault v1.2.0
 	github.com/hashicorp/vault/api v1.0.5-0.20200519221902-385fac77e20f
 	github.com/hashicorp/vault/sdk v0.1.14-0.20210526173046-412db2245e81
