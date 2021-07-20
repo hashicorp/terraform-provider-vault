@@ -16,5 +16,5 @@ func main() {
 		p.RegisterResource(name, resource)
 	}
 	plugin.Serve(&plugin.ServeOpts{
-		ProviderFunc: p.ResourceProvider})
+		ProviderFunc: p.SchemaProvider})
 }

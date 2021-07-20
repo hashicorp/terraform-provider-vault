@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	tfschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-vault/generated/resources/transform/alphabet"
 	"github.com/hashicorp/terraform-provider-vault/schema"
@@ -27,8 +28,8 @@ func TestTemplateName(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { util.TestEntPreCheck(t) },
-		Providers: map[string]terraform.ResourceProvider{
-			"vault": nameTestProvider.ResourceProvider(),
+		Providers: map[string]*tfschema.Provider{
+			"vault": nameTestProvider.SchemaProvider(),
 		},
 		CheckDestroy: destroy,
 		Steps: []resource.TestStep{

@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	tfschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/generated/resources/transform/role"
 	"github.com/hashicorp/terraform-provider-vault/generated/resources/transform/transformation"
 	"github.com/hashicorp/terraform-provider-vault/schema"
@@ -27,8 +27,8 @@ func TestDecodeBasic(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { util.TestEntPreCheck(t) },
-		Providers: map[string]terraform.ResourceProvider{
-			"vault": roleNameTestProvider.ResourceProvider(),
+		Providers: map[string]*tfschema.Provider{
+			"vault": roleNameTestProvider.SchemaProvider(),
 		},
 		Steps: []resource.TestStep{
 			{
@@ -72,8 +72,8 @@ func TestDecodeBatch(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { util.TestEntPreCheck(t) },
-		Providers: map[string]terraform.ResourceProvider{
-			"vault": roleNameTestProvider.ResourceProvider(),
+		Providers: map[string]*tfschema.Provider{
+			"vault": roleNameTestProvider.SchemaProvider(),
 		},
 		Steps: []resource.TestStep{
 			{

@@ -48,11 +48,11 @@ func TestProvider(t *testing.T) {
 }
 
 var testProvider *schema.Provider
-var testProviders map[string]terraform.ResourceProvider
+var testProviders map[string]*schema.Provider
 
 func init() {
 	testProvider = Provider()
-	testProviders = map[string]terraform.ResourceProvider{
+	testProviders = map[string]*schema.Provider{
 		"vault": testProvider,
 	}
 }
@@ -172,7 +172,7 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 	}
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
-		Providers: map[string]terraform.ResourceProvider{
+		Providers: map[string]*schema.Provider{
 			"vault": rootProvider,
 		},
 		Steps: []resource.TestStep{
@@ -232,7 +232,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	//Create a test namespace and make sure it stays there
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
-		Providers: map[string]terraform.ResourceProvider{
+		Providers: map[string]*schema.Provider{
 			"vault": rootProvider,
 		},
 		Steps: []resource.TestStep{
@@ -257,7 +257,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	// Create a policy with sudo permissions and an orphaned periodic token within the test namespace
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
-		Providers: map[string]terraform.ResourceProvider{
+		Providers: map[string]*schema.Provider{
 			"vault": nsProvider,
 		},
 		Steps: []resource.TestStep{
@@ -403,7 +403,7 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 		//Finally test that you can do stuff with the new token by creating a sub namespace
 		resource.Test(t, resource.TestCase{
 			PreCheck: func() { testAccPreCheck(t) },
-			Providers: map[string]terraform.ResourceProvider{
+			Providers: map[string]*schema.Provider{
 				"vault": ns2Provider,
 			},
 			Steps: []resource.TestStep{
