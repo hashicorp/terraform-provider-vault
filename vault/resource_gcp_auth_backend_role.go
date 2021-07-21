@@ -36,12 +36,6 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 			Optional: true,
 			ForceNew: true,
 		},
-		"project_id": {
-			Type:     schema.TypeString,
-			Optional: true,
-			ForceNew: true,
-			Removed:  `Use "bound_projects"`,
-		},
 		"add_group_aliases": {
 			Type:     schema.TypeBool,
 			Optional: true,
@@ -172,10 +166,6 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, cr
 
 	if v, ok := d.GetOk("type"); ok {
 		data["type"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("project_id"); ok {
-		data["project_id"] = v.(string)
 	}
 
 	if v, ok := d.GetOk("bound_projects"); ok {
@@ -354,7 +344,7 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	for _, k := range []string{"project_id", "bound_projects", "add_group_aliases", "max_jwt_exp", "bound_service_accounts", "bound_zones", "bound_regions", "bound_instance_groups"} {
+	for _, k := range []string{"bound_projects", "add_group_aliases", "max_jwt_exp", "bound_service_accounts", "bound_zones", "bound_regions", "bound_instance_groups"} {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
 				return fmt.Errorf("error reading %s for GCP Auth Backend Role %q: %q", k, path, err)

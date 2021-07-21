@@ -31,12 +31,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			Description: "The auth type permitted for this role.",
 			ForceNew:    true,
 		},
-		"bound_ami_id": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Only EC2 instances using this AMI ID will be permitted to log in.",
-			Removed:     `Use "bound_ami_ids" as a list.`,
-		},
 		"bound_ami_ids": {
 			Type:        schema.TypeSet,
 			Optional:    true,
@@ -44,12 +38,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-		},
-		"bound_account_id": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Only EC2 instances with this account ID in their identity document will be permitted to log in.",
-			Removed:     `Use "bound_account_ids" as a list.`,
 		},
 		"bound_account_ids": {
 			Type:        schema.TypeSet,
@@ -59,12 +47,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 		},
-		"bound_region": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Only EC2 instances in this region will be permitted to log in.",
-			Removed:     `Use "bound_regions" as a list.`,
-		},
 		"bound_regions": {
 			Type:        schema.TypeSet,
 			Optional:    true,
@@ -72,13 +54,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-		},
-		"bound_vpc_id": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Description:   "Only EC2 instances associated with this VPC ID will be permitted to log in.",
-			Removed:       `Use "bound_vpc_ids" as a list.`,
-			ConflictsWith: []string{"bound_vpc_ids"},
 		},
 		"bound_vpc_ids": {
 			Type:        schema.TypeSet,
@@ -88,12 +63,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 		},
-		"bound_subnet_id": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Only EC2 instances associated with this subnet ID will be permitted to log in.",
-			Removed:     `Use "bound_subnet_ids" as a list.`,
-		},
 		"bound_subnet_ids": {
 			Type:        schema.TypeSet,
 			Optional:    true,
@@ -101,12 +70,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-		},
-		"bound_iam_role_arn": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Only EC2 instances that match this IAM role ARN will be permitted to log in.",
-			Removed:     `Use "bound_iam_role_arns" as a list.`,
 		},
 		"bound_iam_role_arns": {
 			Type:        schema.TypeSet,
@@ -116,12 +79,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 		},
-		"bound_iam_instance_profile_arn": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Only EC2 instances associated with an IAM instance profile ARN that matches this value will be permitted to log in.",
-			Removed:     `Use "bound_iam_instance_profile_arns" as a list.`,
-		},
 		"bound_iam_instance_profile_arns": {
 			Type:        schema.TypeSet,
 			Optional:    true,
@@ -129,15 +86,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-		},
-		"bound_ec2_instance_id": {
-			Type:        schema.TypeSet,
-			Optional:    true,
-			Description: "Only EC2 instances that match this instance ID will be permitted to log in.",
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Removed: `Use "bound_ec2_instance_ids".`,
 		},
 		"bound_ec2_instance_ids": {
 			Type:        schema.TypeSet,
@@ -151,12 +99,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "The key of the tag on EC2 instance to use for role tags.",
-		},
-		"bound_iam_principal_arn": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "The IAM principal that must be authenticated using the iam auth method.",
-			Removed:     `Use "bound_iam_principal_arns" as a list.`,
 		},
 		"bound_iam_principal_arns": {
 			Type:        schema.TypeSet,
@@ -320,51 +262,33 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if isEc2(authType, inferred) {
 
-		if v, ok := d.GetOk("bound_ami_id"); ok {
-			data["bound_ami_id"] = v.(string)
-		} else if _, ok := d.GetOk("bound_ami_ids"); ok {
+		if _, ok := d.GetOk("bound_ami_ids"); ok {
 			setSlice(d, "bound_ami_ids", "bound_ami_id", data)
 		}
 
-		if v, ok := data["bound_account_id"].(string); ok {
-			d.Set("bound_account_ids", []string{v})
-		} else {
-			setSlice(d, "bound_account_ids", "bound_account_id", data)
-		}
+		setSlice(d, "bound_account_ids", "bound_account_id", data)
 
-		if v, ok := d.GetOk("bound_region"); ok {
-			data["bound_region"] = v.(string)
-		} else if _, ok := d.GetOk("bound_regions"); ok {
+		if _, ok := d.GetOk("bound_regions"); ok {
 			setSlice(d, "bound_regions", "bound_region", data)
 		}
 
-		if v, ok := d.GetOk("bound_vpc_id"); ok {
-			data["bound_vpc_id"] = v.(string)
-		} else if _, ok := d.GetOk("bound_vpc_ids"); ok {
+		if _, ok := d.GetOk("bound_vpc_ids"); ok {
 			setSlice(d, "bound_vpc_ids", "bound_vpc_id", data)
 		}
 
-		if v, ok := d.GetOk("bound_subnet_id"); ok {
-			data["bound_subnet_id"] = v.(string)
-		} else if _, ok := d.GetOk("bound_subnet_ids"); ok {
+		if _, ok := d.GetOk("bound_subnet_ids"); ok {
 			setSlice(d, "bound_subnet_ids", "bound_subnet_id", data)
 		}
 
-		if v, ok := d.GetOk("bound_iam_role_arn"); ok {
-			data["bound_iam_role_arn"] = v.(string)
-		} else if _, ok := d.GetOk("bound_iam_role_arns"); ok {
+		if _, ok := d.GetOk("bound_iam_role_arns"); ok {
 			setSlice(d, "bound_iam_role_arns", "bound_iam_role_arn", data)
 		}
 
-		if v, ok := d.GetOk("bound_iam_instance_profile_arn"); ok {
-			data["bound_iam_instance_profile_arn"] = v.(string)
-		} else if _, ok := d.GetOk("bound_iam_instance_profile_arns"); ok {
+		if _, ok := d.GetOk("bound_iam_instance_profile_arns"); ok {
 			setSlice(d, "bound_iam_instance_profile_arns", "bound_iam_instance_profile_arn", data)
 		}
 
-		if v, ok := d.GetOk("bound_ec2_instance_id"); ok {
-			data["bound_ec2_instance_id"] = v.(string)
-		} else if _, ok := d.GetOk("bound_ec2_instance_ids"); ok {
+		if _, ok := d.GetOk("bound_ec2_instance_ids"); ok {
 			setSlice(d, "bound_ec2_instance_ids", "bound_ec2_instance_id", data)
 		}
 	}
@@ -584,51 +508,35 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if isEc2(authType, inferred) {
 
-		if v, ok := d.GetOk("bound_ami_id"); ok {
-			data["bound_ami_id"] = v.(string)
-		} else if _, ok := d.GetOk("bound_ami_ids"); ok {
+		if _, ok := d.GetOk("bound_ami_ids"); ok {
 			setSlice(d, "bound_ami_ids", "bound_ami_id", data)
 		}
 
-		if v, ok := d.GetOk("bound_account_id"); ok {
-			data["bound_account_id"] = v.(string)
-		} else if _, ok := d.GetOk("bound_account_ids"); ok {
+		if _, ok := d.GetOk("bound_account_ids"); ok {
 			setSlice(d, "bound_account_ids", "bound_account_id", data)
 		}
 
-		if v, ok := d.GetOk("bound_region"); ok {
-			data["bound_region"] = v.(string)
-		} else if _, ok := d.GetOk("bound_regions"); ok {
+		if _, ok := d.GetOk("bound_regions"); ok {
 			setSlice(d, "bound_regions", "bound_region", data)
 		}
 
-		if v, ok := d.GetOk("bound_vpc_id"); ok {
-			data["bound_vpc_id"] = v.(string)
-		} else if _, ok := d.GetOk("bound_vpc_ids"); ok {
+		if _, ok := d.GetOk("bound_vpc_ids"); ok {
 			setSlice(d, "bound_vpc_ids", "bound_vpc_id", data)
 		}
 
-		if v, ok := d.GetOk("bound_subnet_id"); ok {
-			data["bound_subnet_id"] = v.(string)
-		} else if _, ok := d.GetOk("bound_subnet_ids"); ok {
+		if _, ok := d.GetOk("bound_subnet_ids"); ok {
 			setSlice(d, "bound_subnet_ids", "bound_subnet_id", data)
 		}
 
-		if v, ok := d.GetOk("bound_iam_role_arn"); ok {
-			data["bound_iam_role_arn"] = v.(string)
-		} else if _, ok := d.GetOk("bound_iam_role_arns"); ok {
+		if _, ok := d.GetOk("bound_iam_role_arns"); ok {
 			setSlice(d, "bound_iam_role_arns", "bound_iam_role_arn", data)
 		}
 
-		if v, ok := d.GetOk("bound_iam_instance_profile_arn"); ok {
-			data["bound_iam_instance_profile_arn"] = v.(string)
-		} else if _, ok := d.GetOk("bound_iam_instance_profile_arns"); ok {
+		if _, ok := d.GetOk("bound_iam_instance_profile_arns"); ok {
 			setSlice(d, "bound_iam_instance_profile_arns", "bound_iam_instance_profile_arn", data)
 		}
 
-		if v, ok := d.GetOk("bound_ec2_instance_id"); ok {
-			data["bound_ec2_instance_id"] = v.(string)
-		} else if _, ok := d.GetOk("bound_ec2_instance_ids"); ok {
+		if _, ok := d.GetOk("bound_ec2_instance_ids"); ok {
 			setSlice(d, "bound_ec2_instance_ids", "bound_ec2_instance_id", data)
 		}
 	}
@@ -650,9 +558,7 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 			data["inferred_entity_type"] = inferred
 		}
 
-		if v, ok := d.GetOk("bound_iam_principal_arn"); ok {
-			data["bound_iam_principal_arn"] = v.(string)
-		} else if _, ok := d.GetOk("bound_iam_principal_arns"); ok {
+		if _, ok := d.GetOk("bound_iam_principal_arns"); ok {
 			setSlice(d, "bound_iam_principal_arns", "bound_iam_principal_arn", data)
 		}
 
