@@ -12,7 +12,7 @@ import (
 
 func authMountTuneSchema() *schema.Schema {
 	return &schema.Schema{
-		Type:       schema.TypeSet,
+		Type:       schema.TypeList,
 		Optional:   true,
 		Computed:   true,
 		MaxItems:   1,
