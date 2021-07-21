@@ -35,7 +35,8 @@ func NewRoutesClient(subscriptionID string) RoutesClient {
 	return NewRoutesClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewRoutesClientWithBaseURI creates an instance of the RoutesClient client.
+// NewRoutesClientWithBaseURI creates an instance of the RoutesClient client using a custom endpoint.  Use this when
+// interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
 func NewRoutesClientWithBaseURI(baseURI string, subscriptionID string) RoutesClient {
 	return RoutesClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
@@ -65,7 +66,7 @@ func (client RoutesClient) CreateOrUpdate(ctx context.Context, resourceGroupName
 
 	result, err = client.CreateOrUpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.RoutesClient", "CreateOrUpdate", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.RoutesClient", "CreateOrUpdate", nil, "Failure sending request")
 		return
 	}
 
@@ -100,12 +101,33 @@ func (client RoutesClient) CreateOrUpdatePreparer(ctx context.Context, resourceG
 // http.Response Body if it receives an error.
 func (client RoutesClient) CreateOrUpdateSender(req *http.Request) (future RoutesCreateOrUpdateFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client RoutesClient) (r Route, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.RoutesCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.RoutesCreateOrUpdateFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		if r.Response.Response, err = future.GetResult(sender); err == nil && r.Response.Response.StatusCode != http.StatusNoContent {
+			r, err = client.CreateOrUpdateResponder(r.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "network.RoutesCreateOrUpdateFuture", "Result", r.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -114,7 +136,6 @@ func (client RoutesClient) CreateOrUpdateSender(req *http.Request) (future Route
 func (client RoutesClient) CreateOrUpdateResponder(resp *http.Response) (result Route, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -146,7 +167,7 @@ func (client RoutesClient) Delete(ctx context.Context, resourceGroupName string,
 
 	result, err = client.DeleteSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.RoutesClient", "Delete", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.RoutesClient", "Delete", nil, "Failure sending request")
 		return
 	}
 
@@ -179,12 +200,27 @@ func (client RoutesClient) DeletePreparer(ctx context.Context, resourceGroupName
 // http.Response Body if it receives an error.
 func (client RoutesClient) DeleteSender(req *http.Request) (future RoutesDeleteFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client RoutesClient) (ar autorest.Response, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.RoutesDeleteFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.RoutesDeleteFuture")
+			return
+		}
+		ar.Response = future.Response()
+		return
+	}
 	return
 }
 
@@ -193,7 +229,6 @@ func (client RoutesClient) DeleteSender(req *http.Request) (future RoutesDeleteF
 func (client RoutesClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -232,6 +267,7 @@ func (client RoutesClient) Get(ctx context.Context, resourceGroupName string, ro
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.RoutesClient", "Get", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -262,8 +298,7 @@ func (client RoutesClient) GetPreparer(ctx context.Context, resourceGroupName st
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoutesClient) GetSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -271,7 +306,6 @@ func (client RoutesClient) GetSender(req *http.Request) (*http.Response, error) 
 func (client RoutesClient) GetResponder(resp *http.Response) (result Route, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -311,6 +345,11 @@ func (client RoutesClient) List(ctx context.Context, resourceGroupName string, r
 	result.rlr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.RoutesClient", "List", resp, "Failure responding to request")
+		return
+	}
+	if result.rlr.hasNextLink() && result.rlr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -340,8 +379,7 @@ func (client RoutesClient) ListPreparer(ctx context.Context, resourceGroupName s
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoutesClient) ListSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -349,7 +387,6 @@ func (client RoutesClient) ListSender(req *http.Request) (*http.Response, error)
 func (client RoutesClient) ListResponder(resp *http.Response) (result RouteListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

@@ -7,7 +7,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 const secretIDResource = "vault_approle_auth_backend_role_secret_id.secret_id"
@@ -38,13 +40,46 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { util.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
+					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
+					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_accessor"),
+					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_token"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace(t *testing.T) {
+	backend := acctest.RandomWithPrefix("approle")
+	role := acctest.RandomWithPrefix("test-role")
+
+	namespacePath := acctest.RandomWithPrefix("test-namespace")
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { util.TestEntPreCheck(t) },
+		Providers: testProviders,
+		CheckDestroy: func(s *terraform.State) error {
+			if err := testAccCheckAppRoleAuthBackendRoleSecretIDDestroy(s); err != nil {
+				return err
+			}
+			return testNamespaceDestroy(namespacePath)(s)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testNamespaceConfig(namespacePath),
+				Check:  testNamespaceCheckAttrs(),
+			},
+			{
+				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped_namespace(namespacePath, backend, role),
+				Check: resource.ComposeTestCheckFunc(
+					testAssertClientNamespace(namespacePath),
 					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
 					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
 					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_accessor"),
@@ -162,4 +197,25 @@ resource "vault_approle_auth_backend_role_secret_id" "secret_id" {
   backend = "${vault_auth_backend.approle.path}"
   wrapping_ttl = "60s"
 }`, backend, role)
+}
+
+func testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped_namespace(namespacePath, backend, role string) string {
+	return fmt.Sprintf(`
+provider "vault" {
+	namespace = %q
+}
+
+%s
+`, namespacePath, testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role))
+}
+
+func testAssertClientNamespace(expectedNS string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client := testProvider.Meta().(*api.Client)
+		actualNS := client.Headers().Get(consts.NamespaceHeaderName)
+		if actualNS != expectedNS {
+			return fmt.Errorf("expected namespace %v, actual %v", expectedNS, actualNS)
+		}
+		return nil
+	}
 }

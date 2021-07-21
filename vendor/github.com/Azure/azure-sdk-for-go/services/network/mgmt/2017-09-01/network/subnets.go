@@ -35,7 +35,8 @@ func NewSubnetsClient(subscriptionID string) SubnetsClient {
 	return NewSubnetsClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewSubnetsClientWithBaseURI creates an instance of the SubnetsClient client.
+// NewSubnetsClientWithBaseURI creates an instance of the SubnetsClient client using a custom endpoint.  Use this when
+// interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
 func NewSubnetsClientWithBaseURI(baseURI string, subscriptionID string) SubnetsClient {
 	return SubnetsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
@@ -65,7 +66,7 @@ func (client SubnetsClient) CreateOrUpdate(ctx context.Context, resourceGroupNam
 
 	result, err = client.CreateOrUpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.SubnetsClient", "CreateOrUpdate", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.SubnetsClient", "CreateOrUpdate", nil, "Failure sending request")
 		return
 	}
 
@@ -100,12 +101,33 @@ func (client SubnetsClient) CreateOrUpdatePreparer(ctx context.Context, resource
 // http.Response Body if it receives an error.
 func (client SubnetsClient) CreateOrUpdateSender(req *http.Request) (future SubnetsCreateOrUpdateFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client SubnetsClient) (s Subnet, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.SubnetsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.SubnetsCreateOrUpdateFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		if s.Response.Response, err = future.GetResult(sender); err == nil && s.Response.Response.StatusCode != http.StatusNoContent {
+			s, err = client.CreateOrUpdateResponder(s.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "network.SubnetsCreateOrUpdateFuture", "Result", s.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -114,7 +136,6 @@ func (client SubnetsClient) CreateOrUpdateSender(req *http.Request) (future Subn
 func (client SubnetsClient) CreateOrUpdateResponder(resp *http.Response) (result Subnet, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -146,7 +167,7 @@ func (client SubnetsClient) Delete(ctx context.Context, resourceGroupName string
 
 	result, err = client.DeleteSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.SubnetsClient", "Delete", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.SubnetsClient", "Delete", nil, "Failure sending request")
 		return
 	}
 
@@ -179,12 +200,27 @@ func (client SubnetsClient) DeletePreparer(ctx context.Context, resourceGroupNam
 // http.Response Body if it receives an error.
 func (client SubnetsClient) DeleteSender(req *http.Request) (future SubnetsDeleteFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client SubnetsClient) (ar autorest.Response, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.SubnetsDeleteFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.SubnetsDeleteFuture")
+			return
+		}
+		ar.Response = future.Response()
+		return
+	}
 	return
 }
 
@@ -193,7 +229,6 @@ func (client SubnetsClient) DeleteSender(req *http.Request) (future SubnetsDelet
 func (client SubnetsClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -233,6 +268,7 @@ func (client SubnetsClient) Get(ctx context.Context, resourceGroupName string, v
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.SubnetsClient", "Get", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -266,8 +302,7 @@ func (client SubnetsClient) GetPreparer(ctx context.Context, resourceGroupName s
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client SubnetsClient) GetSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -275,7 +310,6 @@ func (client SubnetsClient) GetSender(req *http.Request) (*http.Response, error)
 func (client SubnetsClient) GetResponder(resp *http.Response) (result Subnet, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -315,6 +349,11 @@ func (client SubnetsClient) List(ctx context.Context, resourceGroupName string, 
 	result.slr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.SubnetsClient", "List", resp, "Failure responding to request")
+		return
+	}
+	if result.slr.hasNextLink() && result.slr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -344,8 +383,7 @@ func (client SubnetsClient) ListPreparer(ctx context.Context, resourceGroupName 
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client SubnetsClient) ListSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -353,7 +391,6 @@ func (client SubnetsClient) ListSender(req *http.Request) (*http.Response, error
 func (client SubnetsClient) ListResponder(resp *http.Response) (result SubnetListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

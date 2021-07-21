@@ -36,7 +36,9 @@ func NewRouteFilterRulesClient(subscriptionID string) RouteFilterRulesClient {
 	return NewRouteFilterRulesClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewRouteFilterRulesClientWithBaseURI creates an instance of the RouteFilterRulesClient client.
+// NewRouteFilterRulesClientWithBaseURI creates an instance of the RouteFilterRulesClient client using a custom
+// endpoint.  Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure
+// stack).
 func NewRouteFilterRulesClientWithBaseURI(baseURI string, subscriptionID string) RouteFilterRulesClient {
 	return RouteFilterRulesClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
@@ -75,7 +77,7 @@ func (client RouteFilterRulesClient) CreateOrUpdate(ctx context.Context, resourc
 
 	result, err = client.CreateOrUpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.RouteFilterRulesClient", "CreateOrUpdate", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.RouteFilterRulesClient", "CreateOrUpdate", nil, "Failure sending request")
 		return
 	}
 
@@ -111,12 +113,33 @@ func (client RouteFilterRulesClient) CreateOrUpdatePreparer(ctx context.Context,
 // http.Response Body if it receives an error.
 func (client RouteFilterRulesClient) CreateOrUpdateSender(req *http.Request) (future RouteFilterRulesCreateOrUpdateFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client RouteFilterRulesClient) (rfr RouteFilterRule, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.RouteFilterRulesCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.RouteFilterRulesCreateOrUpdateFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		if rfr.Response.Response, err = future.GetResult(sender); err == nil && rfr.Response.Response.StatusCode != http.StatusNoContent {
+			rfr, err = client.CreateOrUpdateResponder(rfr.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "network.RouteFilterRulesCreateOrUpdateFuture", "Result", rfr.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -125,7 +148,6 @@ func (client RouteFilterRulesClient) CreateOrUpdateSender(req *http.Request) (fu
 func (client RouteFilterRulesClient) CreateOrUpdateResponder(resp *http.Response) (result RouteFilterRule, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -157,7 +179,7 @@ func (client RouteFilterRulesClient) Delete(ctx context.Context, resourceGroupNa
 
 	result, err = client.DeleteSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.RouteFilterRulesClient", "Delete", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.RouteFilterRulesClient", "Delete", nil, "Failure sending request")
 		return
 	}
 
@@ -190,12 +212,27 @@ func (client RouteFilterRulesClient) DeletePreparer(ctx context.Context, resourc
 // http.Response Body if it receives an error.
 func (client RouteFilterRulesClient) DeleteSender(req *http.Request) (future RouteFilterRulesDeleteFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client RouteFilterRulesClient) (ar autorest.Response, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.RouteFilterRulesDeleteFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.RouteFilterRulesDeleteFuture")
+			return
+		}
+		ar.Response = future.Response()
+		return
+	}
 	return
 }
 
@@ -204,7 +241,6 @@ func (client RouteFilterRulesClient) DeleteSender(req *http.Request) (future Rou
 func (client RouteFilterRulesClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -243,6 +279,7 @@ func (client RouteFilterRulesClient) Get(ctx context.Context, resourceGroupName 
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.RouteFilterRulesClient", "Get", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -273,8 +310,7 @@ func (client RouteFilterRulesClient) GetPreparer(ctx context.Context, resourceGr
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client RouteFilterRulesClient) GetSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -282,7 +318,6 @@ func (client RouteFilterRulesClient) GetSender(req *http.Request) (*http.Respons
 func (client RouteFilterRulesClient) GetResponder(resp *http.Response) (result RouteFilterRule, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -322,6 +357,11 @@ func (client RouteFilterRulesClient) ListByRouteFilter(ctx context.Context, reso
 	result.rfrlr, err = client.ListByRouteFilterResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.RouteFilterRulesClient", "ListByRouteFilter", resp, "Failure responding to request")
+		return
+	}
+	if result.rfrlr.hasNextLink() && result.rfrlr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -351,8 +391,7 @@ func (client RouteFilterRulesClient) ListByRouteFilterPreparer(ctx context.Conte
 // ListByRouteFilterSender sends the ListByRouteFilter request. The method will close the
 // http.Response Body if it receives an error.
 func (client RouteFilterRulesClient) ListByRouteFilterSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListByRouteFilterResponder handles the response to the ListByRouteFilter request. The method always
@@ -360,7 +399,6 @@ func (client RouteFilterRulesClient) ListByRouteFilterSender(req *http.Request) 
 func (client RouteFilterRulesClient) ListByRouteFilterResponder(resp *http.Response) (result RouteFilterRuleListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -430,7 +468,7 @@ func (client RouteFilterRulesClient) Update(ctx context.Context, resourceGroupNa
 
 	result, err = client.UpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.RouteFilterRulesClient", "Update", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.RouteFilterRulesClient", "Update", nil, "Failure sending request")
 		return
 	}
 
@@ -467,12 +505,33 @@ func (client RouteFilterRulesClient) UpdatePreparer(ctx context.Context, resourc
 // http.Response Body if it receives an error.
 func (client RouteFilterRulesClient) UpdateSender(req *http.Request) (future RouteFilterRulesUpdateFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client RouteFilterRulesClient) (rfr RouteFilterRule, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.RouteFilterRulesUpdateFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.RouteFilterRulesUpdateFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		if rfr.Response.Response, err = future.GetResult(sender); err == nil && rfr.Response.Response.StatusCode != http.StatusNoContent {
+			rfr, err = client.UpdateResponder(rfr.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "network.RouteFilterRulesUpdateFuture", "Result", rfr.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -481,7 +540,6 @@ func (client RouteFilterRulesClient) UpdateSender(req *http.Request) (future Rou
 func (client RouteFilterRulesClient) UpdateResponder(resp *http.Response) (result RouteFilterRule, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

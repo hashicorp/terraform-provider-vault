@@ -36,7 +36,9 @@ func NewPublicIPAddressesClient(subscriptionID string) PublicIPAddressesClient {
 	return NewPublicIPAddressesClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewPublicIPAddressesClientWithBaseURI creates an instance of the PublicIPAddressesClient client.
+// NewPublicIPAddressesClientWithBaseURI creates an instance of the PublicIPAddressesClient client using a custom
+// endpoint.  Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure
+// stack).
 func NewPublicIPAddressesClientWithBaseURI(baseURI string, subscriptionID string) PublicIPAddressesClient {
 	return PublicIPAddressesClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
@@ -76,7 +78,7 @@ func (client PublicIPAddressesClient) CreateOrUpdate(ctx context.Context, resour
 
 	result, err = client.CreateOrUpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.PublicIPAddressesClient", "CreateOrUpdate", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.PublicIPAddressesClient", "CreateOrUpdate", nil, "Failure sending request")
 		return
 	}
 
@@ -110,12 +112,33 @@ func (client PublicIPAddressesClient) CreateOrUpdatePreparer(ctx context.Context
 // http.Response Body if it receives an error.
 func (client PublicIPAddressesClient) CreateOrUpdateSender(req *http.Request) (future PublicIPAddressesCreateOrUpdateFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client PublicIPAddressesClient) (pia PublicIPAddress, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.PublicIPAddressesCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.PublicIPAddressesCreateOrUpdateFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		if pia.Response.Response, err = future.GetResult(sender); err == nil && pia.Response.Response.StatusCode != http.StatusNoContent {
+			pia, err = client.CreateOrUpdateResponder(pia.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "network.PublicIPAddressesCreateOrUpdateFuture", "Result", pia.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -124,7 +147,6 @@ func (client PublicIPAddressesClient) CreateOrUpdateSender(req *http.Request) (f
 func (client PublicIPAddressesClient) CreateOrUpdateResponder(resp *http.Response) (result PublicIPAddress, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -155,7 +177,7 @@ func (client PublicIPAddressesClient) Delete(ctx context.Context, resourceGroupN
 
 	result, err = client.DeleteSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.PublicIPAddressesClient", "Delete", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.PublicIPAddressesClient", "Delete", nil, "Failure sending request")
 		return
 	}
 
@@ -187,12 +209,27 @@ func (client PublicIPAddressesClient) DeletePreparer(ctx context.Context, resour
 // http.Response Body if it receives an error.
 func (client PublicIPAddressesClient) DeleteSender(req *http.Request) (future PublicIPAddressesDeleteFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client PublicIPAddressesClient) (ar autorest.Response, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.PublicIPAddressesDeleteFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.PublicIPAddressesDeleteFuture")
+			return
+		}
+		ar.Response = future.Response()
+		return
+	}
 	return
 }
 
@@ -201,7 +238,6 @@ func (client PublicIPAddressesClient) DeleteSender(req *http.Request) (future Pu
 func (client PublicIPAddressesClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -240,6 +276,7 @@ func (client PublicIPAddressesClient) Get(ctx context.Context, resourceGroupName
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.PublicIPAddressesClient", "Get", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -272,8 +309,7 @@ func (client PublicIPAddressesClient) GetPreparer(ctx context.Context, resourceG
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client PublicIPAddressesClient) GetSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -281,7 +317,6 @@ func (client PublicIPAddressesClient) GetSender(req *http.Request) (*http.Respon
 func (client PublicIPAddressesClient) GetResponder(resp *http.Response) (result PublicIPAddress, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -325,6 +360,7 @@ func (client PublicIPAddressesClient) GetVirtualMachineScaleSetPublicIPAddress(c
 	result, err = client.GetVirtualMachineScaleSetPublicIPAddressResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.PublicIPAddressesClient", "GetVirtualMachineScaleSetPublicIPAddress", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -361,8 +397,7 @@ func (client PublicIPAddressesClient) GetVirtualMachineScaleSetPublicIPAddressPr
 // GetVirtualMachineScaleSetPublicIPAddressSender sends the GetVirtualMachineScaleSetPublicIPAddress request. The method will close the
 // http.Response Body if it receives an error.
 func (client PublicIPAddressesClient) GetVirtualMachineScaleSetPublicIPAddressSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // GetVirtualMachineScaleSetPublicIPAddressResponder handles the response to the GetVirtualMachineScaleSetPublicIPAddress request. The method always
@@ -370,7 +405,6 @@ func (client PublicIPAddressesClient) GetVirtualMachineScaleSetPublicIPAddressSe
 func (client PublicIPAddressesClient) GetVirtualMachineScaleSetPublicIPAddressResponder(resp *http.Response) (result PublicIPAddress, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -409,6 +443,11 @@ func (client PublicIPAddressesClient) List(ctx context.Context, resourceGroupNam
 	result.pialr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.PublicIPAddressesClient", "List", resp, "Failure responding to request")
+		return
+	}
+	if result.pialr.hasNextLink() && result.pialr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -437,8 +476,7 @@ func (client PublicIPAddressesClient) ListPreparer(ctx context.Context, resource
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client PublicIPAddressesClient) ListSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -446,7 +484,6 @@ func (client PublicIPAddressesClient) ListSender(req *http.Request) (*http.Respo
 func (client PublicIPAddressesClient) ListResponder(resp *http.Response) (result PublicIPAddressListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -520,6 +557,11 @@ func (client PublicIPAddressesClient) ListAll(ctx context.Context) (result Publi
 	result.pialr, err = client.ListAllResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.PublicIPAddressesClient", "ListAll", resp, "Failure responding to request")
+		return
+	}
+	if result.pialr.hasNextLink() && result.pialr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -547,8 +589,7 @@ func (client PublicIPAddressesClient) ListAllPreparer(ctx context.Context) (*htt
 // ListAllSender sends the ListAll request. The method will close the
 // http.Response Body if it receives an error.
 func (client PublicIPAddressesClient) ListAllSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListAllResponder handles the response to the ListAll request. The method always
@@ -556,7 +597,6 @@ func (client PublicIPAddressesClient) ListAllSender(req *http.Request) (*http.Re
 func (client PublicIPAddressesClient) ListAllResponder(resp *http.Response) (result PublicIPAddressListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -634,6 +674,11 @@ func (client PublicIPAddressesClient) ListVirtualMachineScaleSetPublicIPAddresse
 	result.pialr, err = client.ListVirtualMachineScaleSetPublicIPAddressesResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.PublicIPAddressesClient", "ListVirtualMachineScaleSetPublicIPAddresses", resp, "Failure responding to request")
+		return
+	}
+	if result.pialr.hasNextLink() && result.pialr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -663,8 +708,7 @@ func (client PublicIPAddressesClient) ListVirtualMachineScaleSetPublicIPAddresse
 // ListVirtualMachineScaleSetPublicIPAddressesSender sends the ListVirtualMachineScaleSetPublicIPAddresses request. The method will close the
 // http.Response Body if it receives an error.
 func (client PublicIPAddressesClient) ListVirtualMachineScaleSetPublicIPAddressesSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListVirtualMachineScaleSetPublicIPAddressesResponder handles the response to the ListVirtualMachineScaleSetPublicIPAddresses request. The method always
@@ -672,7 +716,6 @@ func (client PublicIPAddressesClient) ListVirtualMachineScaleSetPublicIPAddresse
 func (client PublicIPAddressesClient) ListVirtualMachineScaleSetPublicIPAddressesResponder(resp *http.Response) (result PublicIPAddressListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -753,6 +796,11 @@ func (client PublicIPAddressesClient) ListVirtualMachineScaleSetVMPublicIPAddres
 	result.pialr, err = client.ListVirtualMachineScaleSetVMPublicIPAddressesResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.PublicIPAddressesClient", "ListVirtualMachineScaleSetVMPublicIPAddresses", resp, "Failure responding to request")
+		return
+	}
+	if result.pialr.hasNextLink() && result.pialr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -785,8 +833,7 @@ func (client PublicIPAddressesClient) ListVirtualMachineScaleSetVMPublicIPAddres
 // ListVirtualMachineScaleSetVMPublicIPAddressesSender sends the ListVirtualMachineScaleSetVMPublicIPAddresses request. The method will close the
 // http.Response Body if it receives an error.
 func (client PublicIPAddressesClient) ListVirtualMachineScaleSetVMPublicIPAddressesSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListVirtualMachineScaleSetVMPublicIPAddressesResponder handles the response to the ListVirtualMachineScaleSetVMPublicIPAddresses request. The method always
@@ -794,7 +841,6 @@ func (client PublicIPAddressesClient) ListVirtualMachineScaleSetVMPublicIPAddres
 func (client PublicIPAddressesClient) ListVirtualMachineScaleSetVMPublicIPAddressesResponder(resp *http.Response) (result PublicIPAddressListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -863,7 +909,7 @@ func (client PublicIPAddressesClient) UpdateTags(ctx context.Context, resourceGr
 
 	result, err = client.UpdateTagsSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.PublicIPAddressesClient", "UpdateTags", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.PublicIPAddressesClient", "UpdateTags", nil, "Failure sending request")
 		return
 	}
 
@@ -897,12 +943,33 @@ func (client PublicIPAddressesClient) UpdateTagsPreparer(ctx context.Context, re
 // http.Response Body if it receives an error.
 func (client PublicIPAddressesClient) UpdateTagsSender(req *http.Request) (future PublicIPAddressesUpdateTagsFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client PublicIPAddressesClient) (pia PublicIPAddress, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.PublicIPAddressesUpdateTagsFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.PublicIPAddressesUpdateTagsFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		if pia.Response.Response, err = future.GetResult(sender); err == nil && pia.Response.Response.StatusCode != http.StatusNoContent {
+			pia, err = client.UpdateTagsResponder(pia.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "network.PublicIPAddressesUpdateTagsFuture", "Result", pia.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -911,7 +978,6 @@ func (client PublicIPAddressesClient) UpdateTagsSender(req *http.Request) (futur
 func (client PublicIPAddressesClient) UpdateTagsResponder(resp *http.Response) (result PublicIPAddress, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

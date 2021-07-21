@@ -35,7 +35,8 @@ func NewLoadBalancersClient(subscriptionID string) LoadBalancersClient {
 	return NewLoadBalancersClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewLoadBalancersClientWithBaseURI creates an instance of the LoadBalancersClient client.
+// NewLoadBalancersClientWithBaseURI creates an instance of the LoadBalancersClient client using a custom endpoint.
+// Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
 func NewLoadBalancersClientWithBaseURI(baseURI string, subscriptionID string) LoadBalancersClient {
 	return LoadBalancersClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
@@ -64,7 +65,7 @@ func (client LoadBalancersClient) CreateOrUpdate(ctx context.Context, resourceGr
 
 	result, err = client.CreateOrUpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.LoadBalancersClient", "CreateOrUpdate", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.LoadBalancersClient", "CreateOrUpdate", nil, "Failure sending request")
 		return
 	}
 
@@ -98,12 +99,33 @@ func (client LoadBalancersClient) CreateOrUpdatePreparer(ctx context.Context, re
 // http.Response Body if it receives an error.
 func (client LoadBalancersClient) CreateOrUpdateSender(req *http.Request) (future LoadBalancersCreateOrUpdateFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client LoadBalancersClient) (lb LoadBalancer, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.LoadBalancersCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.LoadBalancersCreateOrUpdateFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		if lb.Response.Response, err = future.GetResult(sender); err == nil && lb.Response.Response.StatusCode != http.StatusNoContent {
+			lb, err = client.CreateOrUpdateResponder(lb.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "network.LoadBalancersCreateOrUpdateFuture", "Result", lb.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -112,7 +134,6 @@ func (client LoadBalancersClient) CreateOrUpdateSender(req *http.Request) (futur
 func (client LoadBalancersClient) CreateOrUpdateResponder(resp *http.Response) (result LoadBalancer, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -143,7 +164,7 @@ func (client LoadBalancersClient) Delete(ctx context.Context, resourceGroupName 
 
 	result, err = client.DeleteSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.LoadBalancersClient", "Delete", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.LoadBalancersClient", "Delete", nil, "Failure sending request")
 		return
 	}
 
@@ -175,12 +196,27 @@ func (client LoadBalancersClient) DeletePreparer(ctx context.Context, resourceGr
 // http.Response Body if it receives an error.
 func (client LoadBalancersClient) DeleteSender(req *http.Request) (future LoadBalancersDeleteFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client LoadBalancersClient) (ar autorest.Response, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.LoadBalancersDeleteFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.LoadBalancersDeleteFuture")
+			return
+		}
+		ar.Response = future.Response()
+		return
+	}
 	return
 }
 
@@ -189,7 +225,6 @@ func (client LoadBalancersClient) DeleteSender(req *http.Request) (future LoadBa
 func (client LoadBalancersClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -228,6 +263,7 @@ func (client LoadBalancersClient) Get(ctx context.Context, resourceGroupName str
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.LoadBalancersClient", "Get", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -260,8 +296,7 @@ func (client LoadBalancersClient) GetPreparer(ctx context.Context, resourceGroup
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client LoadBalancersClient) GetSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -269,7 +304,6 @@ func (client LoadBalancersClient) GetSender(req *http.Request) (*http.Response, 
 func (client LoadBalancersClient) GetResponder(resp *http.Response) (result LoadBalancer, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -308,6 +342,11 @@ func (client LoadBalancersClient) List(ctx context.Context, resourceGroupName st
 	result.lblr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.LoadBalancersClient", "List", resp, "Failure responding to request")
+		return
+	}
+	if result.lblr.hasNextLink() && result.lblr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -336,8 +375,7 @@ func (client LoadBalancersClient) ListPreparer(ctx context.Context, resourceGrou
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client LoadBalancersClient) ListSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -345,7 +383,6 @@ func (client LoadBalancersClient) ListSender(req *http.Request) (*http.Response,
 func (client LoadBalancersClient) ListResponder(resp *http.Response) (result LoadBalancerListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -419,6 +456,11 @@ func (client LoadBalancersClient) ListAll(ctx context.Context) (result LoadBalan
 	result.lblr, err = client.ListAllResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.LoadBalancersClient", "ListAll", resp, "Failure responding to request")
+		return
+	}
+	if result.lblr.hasNextLink() && result.lblr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -446,8 +488,7 @@ func (client LoadBalancersClient) ListAllPreparer(ctx context.Context) (*http.Re
 // ListAllSender sends the ListAll request. The method will close the
 // http.Response Body if it receives an error.
 func (client LoadBalancersClient) ListAllSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListAllResponder handles the response to the ListAll request. The method always
@@ -455,7 +496,6 @@ func (client LoadBalancersClient) ListAllSender(req *http.Request) (*http.Respon
 func (client LoadBalancersClient) ListAllResponder(resp *http.Response) (result LoadBalancerListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -524,7 +564,7 @@ func (client LoadBalancersClient) UpdateTags(ctx context.Context, resourceGroupN
 
 	result, err = client.UpdateTagsSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.LoadBalancersClient", "UpdateTags", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.LoadBalancersClient", "UpdateTags", nil, "Failure sending request")
 		return
 	}
 
@@ -558,12 +598,33 @@ func (client LoadBalancersClient) UpdateTagsPreparer(ctx context.Context, resour
 // http.Response Body if it receives an error.
 func (client LoadBalancersClient) UpdateTagsSender(req *http.Request) (future LoadBalancersUpdateTagsFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client LoadBalancersClient) (lb LoadBalancer, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.LoadBalancersUpdateTagsFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.LoadBalancersUpdateTagsFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		if lb.Response.Response, err = future.GetResult(sender); err == nil && lb.Response.Response.StatusCode != http.StatusNoContent {
+			lb, err = client.UpdateTagsResponder(lb.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "network.LoadBalancersUpdateTagsFuture", "Result", lb.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -572,7 +633,6 @@ func (client LoadBalancersClient) UpdateTagsSender(req *http.Request) (future Lo
 func (client LoadBalancersClient) UpdateTagsResponder(resp *http.Response) (result LoadBalancer, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

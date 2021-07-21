@@ -6,23 +6,34 @@ cloud.google.com/go/internal/optional
 cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
 cloud.google.com/go/storage
-# contrib.go.opencensus.io/exporter/ocagent v0.4.12
-contrib.go.opencensus.io/exporter/ocagent
-# github.com/Azure/azure-sdk-for-go v29.0.0+incompatible
+# github.com/Azure/azure-sdk-for-go v51.1.0+incompatible
 ## explicit
 github.com/Azure/azure-sdk-for-go/services/network/mgmt/2017-09-01/network
 github.com/Azure/azure-sdk-for-go/version
-# github.com/Azure/go-autorest v11.7.1+incompatible
+# github.com/Azure/go-autorest v14.2.0+incompatible
+github.com/Azure/go-autorest
+# github.com/Azure/go-autorest/autorest v0.11.17
 ## explicit
 github.com/Azure/go-autorest/autorest
-github.com/Azure/go-autorest/autorest/adal
 github.com/Azure/go-autorest/autorest/azure
+# github.com/Azure/go-autorest/autorest/adal v0.9.11
+github.com/Azure/go-autorest/autorest/adal
+# github.com/Azure/go-autorest/autorest/azure/auth v0.5.7
+## explicit
 github.com/Azure/go-autorest/autorest/azure/auth
+# github.com/Azure/go-autorest/autorest/azure/cli v0.4.2
 github.com/Azure/go-autorest/autorest/azure/cli
+# github.com/Azure/go-autorest/autorest/date v0.3.0
 github.com/Azure/go-autorest/autorest/date
+# github.com/Azure/go-autorest/autorest/to v0.4.0
+## explicit
 github.com/Azure/go-autorest/autorest/to
+# github.com/Azure/go-autorest/autorest/validation v0.3.1
+## explicit
 github.com/Azure/go-autorest/autorest/validation
+# github.com/Azure/go-autorest/logger v0.2.0
 github.com/Azure/go-autorest/logger
+# github.com/Azure/go-autorest/tracing v0.6.0
 github.com/Azure/go-autorest/tracing
 # github.com/agext/levenshtein v1.2.2
 github.com/agext/levenshtein
@@ -34,7 +45,7 @@ github.com/apparentlymart/go-textseg/textseg
 github.com/armon/go-metrics
 # github.com/armon/go-radix v1.0.0
 github.com/armon/go-radix
-# github.com/aws/aws-sdk-go v1.30.27
+# github.com/aws/aws-sdk-go v1.37.19
 ## explicit
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/arn
@@ -47,6 +58,7 @@ github.com/aws/aws-sdk-go/aws/credentials
 github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds
 github.com/aws/aws-sdk-go/aws/credentials/endpointcreds
 github.com/aws/aws-sdk-go/aws/credentials/processcreds
+github.com/aws/aws-sdk-go/aws/credentials/ssocreds
 github.com/aws/aws-sdk-go/aws/credentials/stscreds
 github.com/aws/aws-sdk-go/aws/csm
 github.com/aws/aws-sdk-go/aws/defaults
@@ -57,7 +69,9 @@ github.com/aws/aws-sdk-go/aws/session
 github.com/aws/aws-sdk-go/aws/signer/v4
 github.com/aws/aws-sdk-go/internal/context
 github.com/aws/aws-sdk-go/internal/ini
-github.com/aws/aws-sdk-go/internal/s3err
+github.com/aws/aws-sdk-go/internal/s3shared
+github.com/aws/aws-sdk-go/internal/s3shared/arn
+github.com/aws/aws-sdk-go/internal/s3shared/s3err
 github.com/aws/aws-sdk-go/internal/sdkio
 github.com/aws/aws-sdk-go/internal/sdkmath
 github.com/aws/aws-sdk-go/internal/sdkrand
@@ -65,61 +79,55 @@ github.com/aws/aws-sdk-go/internal/sdkuri
 github.com/aws/aws-sdk-go/internal/shareddefaults
 github.com/aws/aws-sdk-go/internal/strings
 github.com/aws/aws-sdk-go/internal/sync/singleflight
+github.com/aws/aws-sdk-go/private/checksum
 github.com/aws/aws-sdk-go/private/protocol
 github.com/aws/aws-sdk-go/private/protocol/ec2query
 github.com/aws/aws-sdk-go/private/protocol/eventstream
 github.com/aws/aws-sdk-go/private/protocol/eventstream/eventstreamapi
 github.com/aws/aws-sdk-go/private/protocol/json/jsonutil
+github.com/aws/aws-sdk-go/private/protocol/jsonrpc
 github.com/aws/aws-sdk-go/private/protocol/query
 github.com/aws/aws-sdk-go/private/protocol/query/queryutil
 github.com/aws/aws-sdk-go/private/protocol/rest
+github.com/aws/aws-sdk-go/private/protocol/restjson
 github.com/aws/aws-sdk-go/private/protocol/restxml
 github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
 github.com/aws/aws-sdk-go/service/ec2
 github.com/aws/aws-sdk-go/service/iam
 github.com/aws/aws-sdk-go/service/s3
-github.com/aws/aws-sdk-go/service/s3/internal/arn
+github.com/aws/aws-sdk-go/service/sso
+github.com/aws/aws-sdk-go/service/sso/ssoiface
 github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d
 github.com/bgentry/go-netrc/netrc
 # github.com/bgentry/speakeasy v0.1.0
 github.com/bgentry/speakeasy
-# github.com/census-instrumentation/opencensus-proto v0.2.1
-github.com/census-instrumentation/opencensus-proto/gen-go/agent/common/v1
-github.com/census-instrumentation/opencensus-proto/gen-go/agent/metrics/v1
-github.com/census-instrumentation/opencensus-proto/gen-go/agent/trace/v1
-github.com/census-instrumentation/opencensus-proto/gen-go/metrics/v1
-github.com/census-instrumentation/opencensus-proto/gen-go/resource/v1
-github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1
+# github.com/cenkalti/backoff/v3 v3.0.0
+github.com/cenkalti/backoff/v3
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/dgrijalva/jwt-go v3.2.0+incompatible
-github.com/dgrijalva/jwt-go
-# github.com/dimchansky/utfbom v1.1.0
+# github.com/dimchansky/utfbom v1.1.1
 github.com/dimchansky/utfbom
 # github.com/fatih/color v1.7.0
 github.com/fatih/color
+# github.com/form3tech-oss/jwt-go v3.2.2+incompatible
+github.com/form3tech-oss/jwt-go
 # github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 github.com/fullsailor/pkcs7
 # github.com/go-sql-driver/mysql v1.5.0
 ## explicit
 github.com/go-sql-driver/mysql
 # github.com/golang/protobuf v1.4.2
-github.com/golang/protobuf/jsonpb
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go/descriptor
-github.com/golang/protobuf/protoc-gen-go/generator
-github.com/golang/protobuf/protoc-gen-go/generator/internal/remap
-github.com/golang/protobuf/protoc-gen-go/plugin
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
-github.com/golang/protobuf/ptypes/wrappers
 # github.com/golang/snappy v0.0.1
 github.com/golang/snappy
-# github.com/google/go-cmp v0.5.0
+# github.com/google/go-cmp v0.5.5
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -132,27 +140,23 @@ github.com/googleapis/gax-go/v2
 # github.com/gosimple/slug v1.4.1
 ## explicit
 github.com/gosimple/slug
-# github.com/grpc-ecosystem/grpc-gateway v1.8.5
-github.com/grpc-ecosystem/grpc-gateway/internal
-github.com/grpc-ecosystem/grpc-gateway/runtime
-github.com/grpc-ecosystem/grpc-gateway/utilities
-# github.com/hashicorp/errwrap v1.0.0
+# github.com/hashicorp/errwrap v1.1.0
 ## explicit
 github.com/hashicorp/errwrap
-# github.com/hashicorp/go-cleanhttp v0.5.1
+# github.com/hashicorp/go-cleanhttp v0.5.2
 ## explicit
 github.com/hashicorp/go-cleanhttp
 # github.com/hashicorp/go-getter v1.4.0
 github.com/hashicorp/go-getter
 github.com/hashicorp/go-getter/helper/url
-# github.com/hashicorp/go-hclog v0.14.1
+# github.com/hashicorp/go-hclog v0.16.1
 ## explicit
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.1.0
 github.com/hashicorp/go-immutable-radix
 # github.com/hashicorp/go-kms-wrapping/entropy v0.1.0
 github.com/hashicorp/go-kms-wrapping/entropy
-# github.com/hashicorp/go-multierror v1.1.0
+# github.com/hashicorp/go-multierror v1.1.1
 ## explicit
 github.com/hashicorp/go-multierror
 # github.com/hashicorp/go-plugin v1.0.1
@@ -161,10 +165,14 @@ github.com/hashicorp/go-plugin/internal/plugin
 # github.com/hashicorp/go-retryablehttp v0.6.8
 ## explicit
 github.com/hashicorp/go-retryablehttp
-# github.com/hashicorp/go-rootcerts v1.0.1
+# github.com/hashicorp/go-rootcerts v1.0.2
 github.com/hashicorp/go-rootcerts
 # github.com/hashicorp/go-safetemp v1.0.0
 github.com/hashicorp/go-safetemp
+# github.com/hashicorp/go-secure-stdlib/parseutil v0.1.1
+github.com/hashicorp/go-secure-stdlib/parseutil
+# github.com/hashicorp/go-secure-stdlib/strutil v0.1.1
+github.com/hashicorp/go-secure-stdlib/strutil
 # github.com/hashicorp/go-sockaddr v1.0.2
 github.com/hashicorp/go-sockaddr
 # github.com/hashicorp/go-uuid v1.0.2
@@ -267,10 +275,10 @@ github.com/hashicorp/vault/builtin/credential/aws
 github.com/hashicorp/vault/command/config
 github.com/hashicorp/vault/command/token
 github.com/hashicorp/vault/helper/awsutil
-# github.com/hashicorp/vault/api v1.0.5-0.20200519221902-385fac77e20f
+# github.com/hashicorp/vault/api v1.1.2-0.20210719211531-6b31c12b0af2
 ## explicit
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.14-0.20210526173046-412db2245e81
+# github.com/hashicorp/vault/sdk v0.2.1
 ## explicit
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/helper/dbutil
@@ -302,7 +310,7 @@ github.com/hashicorp/vault/sdk/physical/inmem
 github.com/hashicorp/vault/sdk/version
 # github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d
 github.com/hashicorp/yamux
-# github.com/jmespath/go-jmespath v0.3.0
+# github.com/jmespath/go-jmespath v0.4.0
 github.com/jmespath/go-jmespath
 # github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
 github.com/keybase/go-crypto/brainpool
@@ -335,7 +343,7 @@ github.com/mitchellh/go-homedir
 github.com/mitchellh/go-testing-interface
 # github.com/mitchellh/go-wordwrap v1.0.0
 github.com/mitchellh/go-wordwrap
-# github.com/mitchellh/mapstructure v1.3.2
+# github.com/mitchellh/mapstructure v1.4.1
 github.com/mitchellh/mapstructure
 # github.com/mitchellh/reflectwalk v1.0.1
 github.com/mitchellh/reflectwalk
@@ -384,10 +392,8 @@ go.opencensus.io/internal
 go.opencensus.io/internal/tagencoding
 go.opencensus.io/metric/metricdata
 go.opencensus.io/metric/metricproducer
-go.opencensus.io/plugin/ocgrpc
 go.opencensus.io/plugin/ochttp
 go.opencensus.io/plugin/ochttp/propagation/b3
-go.opencensus.io/plugin/ochttp/propagation/tracecontext
 go.opencensus.io/resource
 go.opencensus.io/stats
 go.opencensus.io/stats/internal
@@ -397,7 +403,9 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
+# go.uber.org/atomic v1.6.0
+go.uber.org/atomic
+# golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blake2b
 golang.org/x/crypto/blowfish
@@ -421,7 +429,7 @@ golang.org/x/crypto/pkcs12/internal/rc2
 golang.org/x/crypto/poly1305
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/net v0.0.0-20200602114024-627f9648deb9
+# golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
@@ -436,13 +444,11 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980
+# golang.org/x/sys v0.0.0-20201119102817-f84b799fce68
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
-# golang.org/x/text v0.3.2
+# golang.org/x/text v0.3.3
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
@@ -458,7 +464,6 @@ google.golang.org/api/internal
 google.golang.org/api/iterator
 google.golang.org/api/option
 google.golang.org/api/storage/v1
-google.golang.org/api/support/bundler
 google.golang.org/api/transport/http
 google.golang.org/api/transport/http/internal/propagation
 # google.golang.org/appengine v1.6.1
@@ -477,12 +482,10 @@ google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
 # google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 google.golang.org/genproto/googleapis/api/annotations
-google.golang.org/genproto/googleapis/api/httpbody
 google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/type/expr
-google.golang.org/genproto/protobuf/field_mask
 # google.golang.org/grpc v1.29.1
 google.golang.org/grpc
 google.golang.org/grpc/attributes
@@ -527,14 +530,12 @@ google.golang.org/grpc/status
 google.golang.org/grpc/tap
 google.golang.org/grpc/test/bufconn
 # google.golang.org/protobuf v1.25.0
-google.golang.org/protobuf/encoding/protojson
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
 google.golang.org/protobuf/internal/descfmt
 google.golang.org/protobuf/internal/descopts
 google.golang.org/protobuf/internal/detrand
 google.golang.org/protobuf/internal/encoding/defval
-google.golang.org/protobuf/internal/encoding/json
 google.golang.org/protobuf/internal/encoding/messageset
 google.golang.org/protobuf/internal/encoding/tag
 google.golang.org/protobuf/internal/encoding/text
@@ -558,10 +559,7 @@ google.golang.org/protobuf/runtime/protoimpl
 google.golang.org/protobuf/types/descriptorpb
 google.golang.org/protobuf/types/known/anypb
 google.golang.org/protobuf/types/known/durationpb
-google.golang.org/protobuf/types/known/fieldmaskpb
 google.golang.org/protobuf/types/known/timestamppb
-google.golang.org/protobuf/types/known/wrapperspb
-google.golang.org/protobuf/types/pluginpb
 # gopkg.in/square/go-jose.v2 v2.5.1
 gopkg.in/square/go-jose.v2
 gopkg.in/square/go-jose.v2/cipher
