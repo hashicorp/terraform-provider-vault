@@ -735,6 +735,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
 	}
+
+	client.SetCloneHeaders(true)
+
 	// Set headers if provided
 	headers := d.Get("headers").([]interface{})
 	parsedHeaders := client.Headers().Clone()

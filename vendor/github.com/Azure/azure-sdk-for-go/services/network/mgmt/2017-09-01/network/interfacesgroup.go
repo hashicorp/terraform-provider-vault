@@ -35,7 +35,8 @@ func NewInterfacesClient(subscriptionID string) InterfacesClient {
 	return NewInterfacesClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewInterfacesClientWithBaseURI creates an instance of the InterfacesClient client.
+// NewInterfacesClientWithBaseURI creates an instance of the InterfacesClient client using a custom endpoint.  Use this
+// when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
 func NewInterfacesClientWithBaseURI(baseURI string, subscriptionID string) InterfacesClient {
 	return InterfacesClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
@@ -64,7 +65,7 @@ func (client InterfacesClient) CreateOrUpdate(ctx context.Context, resourceGroup
 
 	result, err = client.CreateOrUpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "CreateOrUpdate", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "CreateOrUpdate", nil, "Failure sending request")
 		return
 	}
 
@@ -98,12 +99,33 @@ func (client InterfacesClient) CreateOrUpdatePreparer(ctx context.Context, resou
 // http.Response Body if it receives an error.
 func (client InterfacesClient) CreateOrUpdateSender(req *http.Request) (future InterfacesCreateOrUpdateFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client InterfacesClient) (i Interface, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.InterfacesCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.InterfacesCreateOrUpdateFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		if i.Response.Response, err = future.GetResult(sender); err == nil && i.Response.Response.StatusCode != http.StatusNoContent {
+			i, err = client.CreateOrUpdateResponder(i.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "network.InterfacesCreateOrUpdateFuture", "Result", i.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -112,7 +134,6 @@ func (client InterfacesClient) CreateOrUpdateSender(req *http.Request) (future I
 func (client InterfacesClient) CreateOrUpdateResponder(resp *http.Response) (result Interface, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -143,7 +164,7 @@ func (client InterfacesClient) Delete(ctx context.Context, resourceGroupName str
 
 	result, err = client.DeleteSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "Delete", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "Delete", nil, "Failure sending request")
 		return
 	}
 
@@ -175,12 +196,27 @@ func (client InterfacesClient) DeletePreparer(ctx context.Context, resourceGroup
 // http.Response Body if it receives an error.
 func (client InterfacesClient) DeleteSender(req *http.Request) (future InterfacesDeleteFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client InterfacesClient) (ar autorest.Response, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.InterfacesDeleteFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.InterfacesDeleteFuture")
+			return
+		}
+		ar.Response = future.Response()
+		return
+	}
 	return
 }
 
@@ -189,7 +225,6 @@ func (client InterfacesClient) DeleteSender(req *http.Request) (future Interface
 func (client InterfacesClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -228,6 +263,7 @@ func (client InterfacesClient) Get(ctx context.Context, resourceGroupName string
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "Get", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -260,8 +296,7 @@ func (client InterfacesClient) GetPreparer(ctx context.Context, resourceGroupNam
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client InterfacesClient) GetSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -269,7 +304,6 @@ func (client InterfacesClient) GetSender(req *http.Request) (*http.Response, err
 func (client InterfacesClient) GetResponder(resp *http.Response) (result Interface, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -300,7 +334,7 @@ func (client InterfacesClient) GetEffectiveRouteTable(ctx context.Context, resou
 
 	result, err = client.GetEffectiveRouteTableSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "GetEffectiveRouteTable", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "GetEffectiveRouteTable", nil, "Failure sending request")
 		return
 	}
 
@@ -332,12 +366,33 @@ func (client InterfacesClient) GetEffectiveRouteTablePreparer(ctx context.Contex
 // http.Response Body if it receives an error.
 func (client InterfacesClient) GetEffectiveRouteTableSender(req *http.Request) (future InterfacesGetEffectiveRouteTableFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client InterfacesClient) (erlr EffectiveRouteListResult, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.InterfacesGetEffectiveRouteTableFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.InterfacesGetEffectiveRouteTableFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		if erlr.Response.Response, err = future.GetResult(sender); err == nil && erlr.Response.Response.StatusCode != http.StatusNoContent {
+			erlr, err = client.GetEffectiveRouteTableResponder(erlr.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "network.InterfacesGetEffectiveRouteTableFuture", "Result", erlr.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -346,7 +401,6 @@ func (client InterfacesClient) GetEffectiveRouteTableSender(req *http.Request) (
 func (client InterfacesClient) GetEffectiveRouteTableResponder(resp *http.Response) (result EffectiveRouteListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -390,6 +444,7 @@ func (client InterfacesClient) GetVirtualMachineScaleSetIPConfiguration(ctx cont
 	result, err = client.GetVirtualMachineScaleSetIPConfigurationResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "GetVirtualMachineScaleSetIPConfiguration", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -425,8 +480,7 @@ func (client InterfacesClient) GetVirtualMachineScaleSetIPConfigurationPreparer(
 // GetVirtualMachineScaleSetIPConfigurationSender sends the GetVirtualMachineScaleSetIPConfiguration request. The method will close the
 // http.Response Body if it receives an error.
 func (client InterfacesClient) GetVirtualMachineScaleSetIPConfigurationSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // GetVirtualMachineScaleSetIPConfigurationResponder handles the response to the GetVirtualMachineScaleSetIPConfiguration request. The method always
@@ -434,7 +488,6 @@ func (client InterfacesClient) GetVirtualMachineScaleSetIPConfigurationSender(re
 func (client InterfacesClient) GetVirtualMachineScaleSetIPConfigurationResponder(resp *http.Response) (result InterfaceIPConfiguration, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -476,6 +529,7 @@ func (client InterfacesClient) GetVirtualMachineScaleSetNetworkInterface(ctx con
 	result, err = client.GetVirtualMachineScaleSetNetworkInterfaceResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "GetVirtualMachineScaleSetNetworkInterface", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -510,8 +564,7 @@ func (client InterfacesClient) GetVirtualMachineScaleSetNetworkInterfacePreparer
 // GetVirtualMachineScaleSetNetworkInterfaceSender sends the GetVirtualMachineScaleSetNetworkInterface request. The method will close the
 // http.Response Body if it receives an error.
 func (client InterfacesClient) GetVirtualMachineScaleSetNetworkInterfaceSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // GetVirtualMachineScaleSetNetworkInterfaceResponder handles the response to the GetVirtualMachineScaleSetNetworkInterface request. The method always
@@ -519,7 +572,6 @@ func (client InterfacesClient) GetVirtualMachineScaleSetNetworkInterfaceSender(r
 func (client InterfacesClient) GetVirtualMachineScaleSetNetworkInterfaceResponder(resp *http.Response) (result Interface, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -558,6 +610,11 @@ func (client InterfacesClient) List(ctx context.Context, resourceGroupName strin
 	result.ilr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "List", resp, "Failure responding to request")
+		return
+	}
+	if result.ilr.hasNextLink() && result.ilr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -586,8 +643,7 @@ func (client InterfacesClient) ListPreparer(ctx context.Context, resourceGroupNa
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client InterfacesClient) ListSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -595,7 +651,6 @@ func (client InterfacesClient) ListSender(req *http.Request) (*http.Response, er
 func (client InterfacesClient) ListResponder(resp *http.Response) (result InterfaceListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -669,6 +724,11 @@ func (client InterfacesClient) ListAll(ctx context.Context) (result InterfaceLis
 	result.ilr, err = client.ListAllResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "ListAll", resp, "Failure responding to request")
+		return
+	}
+	if result.ilr.hasNextLink() && result.ilr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -696,8 +756,7 @@ func (client InterfacesClient) ListAllPreparer(ctx context.Context) (*http.Reque
 // ListAllSender sends the ListAll request. The method will close the
 // http.Response Body if it receives an error.
 func (client InterfacesClient) ListAllSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListAllResponder handles the response to the ListAll request. The method always
@@ -705,7 +764,6 @@ func (client InterfacesClient) ListAllSender(req *http.Request) (*http.Response,
 func (client InterfacesClient) ListAllResponder(resp *http.Response) (result InterfaceListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -773,7 +831,7 @@ func (client InterfacesClient) ListEffectiveNetworkSecurityGroups(ctx context.Co
 
 	result, err = client.ListEffectiveNetworkSecurityGroupsSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "ListEffectiveNetworkSecurityGroups", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "ListEffectiveNetworkSecurityGroups", nil, "Failure sending request")
 		return
 	}
 
@@ -805,12 +863,33 @@ func (client InterfacesClient) ListEffectiveNetworkSecurityGroupsPreparer(ctx co
 // http.Response Body if it receives an error.
 func (client InterfacesClient) ListEffectiveNetworkSecurityGroupsSender(req *http.Request) (future InterfacesListEffectiveNetworkSecurityGroupsFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client InterfacesClient) (ensglr EffectiveNetworkSecurityGroupListResult, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.InterfacesListEffectiveNetworkSecurityGroupsFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.InterfacesListEffectiveNetworkSecurityGroupsFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		if ensglr.Response.Response, err = future.GetResult(sender); err == nil && ensglr.Response.Response.StatusCode != http.StatusNoContent {
+			ensglr, err = client.ListEffectiveNetworkSecurityGroupsResponder(ensglr.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "network.InterfacesListEffectiveNetworkSecurityGroupsFuture", "Result", ensglr.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -819,7 +898,6 @@ func (client InterfacesClient) ListEffectiveNetworkSecurityGroupsSender(req *htt
 func (client InterfacesClient) ListEffectiveNetworkSecurityGroupsResponder(resp *http.Response) (result EffectiveNetworkSecurityGroupListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -863,6 +941,11 @@ func (client InterfacesClient) ListVirtualMachineScaleSetIPConfigurations(ctx co
 	result.iiclr, err = client.ListVirtualMachineScaleSetIPConfigurationsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "ListVirtualMachineScaleSetIPConfigurations", resp, "Failure responding to request")
+		return
+	}
+	if result.iiclr.hasNextLink() && result.iiclr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -897,8 +980,7 @@ func (client InterfacesClient) ListVirtualMachineScaleSetIPConfigurationsPrepare
 // ListVirtualMachineScaleSetIPConfigurationsSender sends the ListVirtualMachineScaleSetIPConfigurations request. The method will close the
 // http.Response Body if it receives an error.
 func (client InterfacesClient) ListVirtualMachineScaleSetIPConfigurationsSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListVirtualMachineScaleSetIPConfigurationsResponder handles the response to the ListVirtualMachineScaleSetIPConfigurations request. The method always
@@ -906,7 +988,6 @@ func (client InterfacesClient) ListVirtualMachineScaleSetIPConfigurationsSender(
 func (client InterfacesClient) ListVirtualMachineScaleSetIPConfigurationsResponder(resp *http.Response) (result InterfaceIPConfigurationListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -983,6 +1064,11 @@ func (client InterfacesClient) ListVirtualMachineScaleSetNetworkInterfaces(ctx c
 	result.ilr, err = client.ListVirtualMachineScaleSetNetworkInterfacesResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "ListVirtualMachineScaleSetNetworkInterfaces", resp, "Failure responding to request")
+		return
+	}
+	if result.ilr.hasNextLink() && result.ilr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -1012,8 +1098,7 @@ func (client InterfacesClient) ListVirtualMachineScaleSetNetworkInterfacesPrepar
 // ListVirtualMachineScaleSetNetworkInterfacesSender sends the ListVirtualMachineScaleSetNetworkInterfaces request. The method will close the
 // http.Response Body if it receives an error.
 func (client InterfacesClient) ListVirtualMachineScaleSetNetworkInterfacesSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListVirtualMachineScaleSetNetworkInterfacesResponder handles the response to the ListVirtualMachineScaleSetNetworkInterfaces request. The method always
@@ -1021,7 +1106,6 @@ func (client InterfacesClient) ListVirtualMachineScaleSetNetworkInterfacesSender
 func (client InterfacesClient) ListVirtualMachineScaleSetNetworkInterfacesResponder(resp *http.Response) (result InterfaceListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -1100,6 +1184,11 @@ func (client InterfacesClient) ListVirtualMachineScaleSetVMNetworkInterfaces(ctx
 	result.ilr, err = client.ListVirtualMachineScaleSetVMNetworkInterfacesResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "ListVirtualMachineScaleSetVMNetworkInterfaces", resp, "Failure responding to request")
+		return
+	}
+	if result.ilr.hasNextLink() && result.ilr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -1130,8 +1219,7 @@ func (client InterfacesClient) ListVirtualMachineScaleSetVMNetworkInterfacesPrep
 // ListVirtualMachineScaleSetVMNetworkInterfacesSender sends the ListVirtualMachineScaleSetVMNetworkInterfaces request. The method will close the
 // http.Response Body if it receives an error.
 func (client InterfacesClient) ListVirtualMachineScaleSetVMNetworkInterfacesSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListVirtualMachineScaleSetVMNetworkInterfacesResponder handles the response to the ListVirtualMachineScaleSetVMNetworkInterfaces request. The method always
@@ -1139,7 +1227,6 @@ func (client InterfacesClient) ListVirtualMachineScaleSetVMNetworkInterfacesSend
 func (client InterfacesClient) ListVirtualMachineScaleSetVMNetworkInterfacesResponder(resp *http.Response) (result InterfaceListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -1208,7 +1295,7 @@ func (client InterfacesClient) UpdateTags(ctx context.Context, resourceGroupName
 
 	result, err = client.UpdateTagsSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "UpdateTags", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "network.InterfacesClient", "UpdateTags", nil, "Failure sending request")
 		return
 	}
 
@@ -1242,12 +1329,33 @@ func (client InterfacesClient) UpdateTagsPreparer(ctx context.Context, resourceG
 // http.Response Body if it receives an error.
 func (client InterfacesClient) UpdateTagsSender(req *http.Request) (future InterfacesUpdateTagsFuture, err error) {
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client InterfacesClient) (i Interface, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "network.InterfacesUpdateTagsFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("network.InterfacesUpdateTagsFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		if i.Response.Response, err = future.GetResult(sender); err == nil && i.Response.Response.StatusCode != http.StatusNoContent {
+			i, err = client.UpdateTagsResponder(i.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "network.InterfacesUpdateTagsFuture", "Result", i.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -1256,7 +1364,6 @@ func (client InterfacesClient) UpdateTagsSender(req *http.Request) (future Inter
 func (client InterfacesClient) UpdateTagsResponder(resp *http.Response) (result Interface, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
