@@ -28,8 +28,8 @@ func TestAccIdentityGroupPoliciesExclusive(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityGroupPoliciesCheckAttrs("vault_identity_group_policies.policies"),
 					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.0", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.1", "test"),
 				),
 			},
 		},
@@ -46,9 +46,9 @@ func TestAccIdentityGroupPoliciesNonExclusive(t *testing.T) {
 				Config: testAccIdentityGroupPoliciesConfigNonExclusive(),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.0", "dev"),
 					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.0", "test"),
 				),
 			},
 			{
@@ -56,9 +56,9 @@ func TestAccIdentityGroupPoliciesNonExclusive(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityGroupPoliciesCheckLogical("vault_identity_group.group", []string{"dev", "foo"}),
 					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.0", "dev"),
 					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.804021650", "foo"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.0", "foo"),
 				),
 			},
 		},
