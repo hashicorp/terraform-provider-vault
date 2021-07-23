@@ -1,3 +1,8 @@
+## Unreleased
+
+BUGS:
+* `resource/vault_identity_group`: Correctly handle the case of a preexisting identity group, suggest resource import in this case ([#1010](https://github.com/hashicorp/terraform-provider-vault/pull/1010))
+
 ## 2.22.0 (July 22, 2021)
 
 FEATURES:
