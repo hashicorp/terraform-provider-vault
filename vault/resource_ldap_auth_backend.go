@@ -118,7 +118,12 @@ func ldapAuthBackendResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-
+		"local": {
+			Type:        schema.TypeBool,
+			ForceNew:    true,
+			Optional:    true,
+			Description: "Specifies if the auth method is local only",
+		},
 		"accessor": {
 			Type:        schema.TypeString,
 			Computed:    true,
@@ -161,12 +166,15 @@ func ldapAuthBackendConfigPath(path string) string {
 func ldapAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	authType := ldapAuthType
 	path := d.Get("path").(string)
-	desc := d.Get("description").(string)
+	options := &api.EnableAuthOptions{
+		Type:        ldapAuthType,
+		Description: d.Get("description").(string),
+		Local:       d.Get("local").(bool),
+	}
 
 	log.Printf("[DEBUG] Enabling LDAP auth backend %q", path)
-	err := client.Sys().EnableAuth(path, authType, desc)
+	err := client.Sys().EnableAuthWithOptions(path, options)
 	if err != nil {
 		return fmt.Errorf("error enabling ldap auth backend %q: %s", path, err)
 	}
@@ -327,6 +335,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("groupdn", resp.Data["groupdn"])
 	d.Set("groupattr", resp.Data["groupattr"])
 	d.Set("use_token_groups", resp.Data["use_token_groups"])
+	d.Set("local", resp.Data["local"])
 
 	// `bindpass`, `client_tls_cert` and `client_tls_key` cannot be read out from the API
 	// So... if they drift, they drift.

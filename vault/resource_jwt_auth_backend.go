@@ -122,6 +122,12 @@ func jwtAuthBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The accessor of the JWT auth backend",
 			},
+			"local": {
+				Type:        schema.TypeBool,
+				ForceNew:    true,
+				Optional:    true,
+				Description: "Specifies if the auth method is local only",
+			},
 			"provider_config": {
 				Type:        schema.TypeSet,
 				Optional:    true,
@@ -206,12 +212,16 @@ func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	authType := d.Get("type").(string)
-	desc := d.Get("description").(string)
 	path := getJwtPath(d)
+	options := &api.EnableAuthOptions{
+		Type:        authType,
+		Description: d.Get("description").(string),
+		Local:       d.Get("local").(bool),
+	}
 
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
 
-	err := client.Sys().EnableAuth(path, authType, desc)
+	err := client.Sys().EnableAuthWithOptions(path, options)
 
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
@@ -278,6 +288,7 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Set("type", backend.Type)
+	d.Set("local", backend.Local)
 
 	d.Set("accessor", backend.Accessor)
 	for _, configOption := range matchingJwtMountConfigOptions {

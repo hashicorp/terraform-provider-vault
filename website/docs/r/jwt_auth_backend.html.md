@@ -73,6 +73,8 @@ The following arguments are supported:
 
 * `provider_config` - (Optional) Provider specific handling configuration
 
+* `local` - (Optional) Specifies if the auth method is local only.
+
 * tune - (Optional) Extra configuration block. Structure is documented below.
 
 The `tune` block is used to tune the auth backend:
