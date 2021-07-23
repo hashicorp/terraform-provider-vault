@@ -1,4 +1,4 @@
-## Unreleased
+## 2.22.1 (Unreleased)
 
 BUGS:
 * `resource/vault_identity_group`: Correctly handle the case of a preexisting identity group, suggest resource import in this case ([#1014](https://github.com/hashicorp/terraform-provider-vault/pull/1010))
