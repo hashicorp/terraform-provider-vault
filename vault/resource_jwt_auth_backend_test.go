@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"testing"
 
@@ -67,61 +66,6 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_client_secret", "secret"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "type", "oidc"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "default_role", "api"),
-				),
-			},
-		},
-	})
-}
-
-// The random numbers on the provider_config are a hash of the object.
-func TestAccJWTAuthBackend_OIDC_Provider_ConfigAzure(t *testing.T) {
-	path := acctest.RandomWithPrefix("oidc")
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testJWTAuthBackend_Destroyed(path),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccJWTAuthBackendConfigOIDCProviderConfigAzure(path),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.azure", "oidc_discovery_url", "https://accounts.google.com"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.azure", "provider_config.#", "1"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.azure", "provider_config.2995719985.provider", "azure"),
-				),
-			},
-		},
-	})
-}
-
-// TODO: OIDC plugin has a validation stage when configs are written,
-// and since we use circleci Docker, we can't mount files nor can it see a
-// local one. This will need to be updated when we switch to a Circle machine
-// executor.
-
-// The random numbers on the provider_config are a hash of the object.
-func TestAccJWTAuthBackend_OIDC_Provider_ConfigGSuite(t *testing.T) {
-	path := acctest.RandomWithPrefix("oidc")
-	serviceAccountPath := os.Getenv("JWT_SERVICE_ACCOUNT_PATH")
-	if serviceAccountPath == "" {
-		t.Skip("JWT_SERVICE_ACCOUNT_PATH not set")
-	}
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testJWTLocal(t) },
-		Providers:    testProviders,
-		CheckDestroy: testJWTAuthBackend_Destroyed(path),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(path, serviceAccountPath),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "oidc_discovery_url", "https://accounts.google.com"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.provider", "gsuite"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.gsuite_service_account", serviceAccountPath),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.gsuite_admin_impersonate", "admin@gsuitedomain.com"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.fetch_groups", "true"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.fetch_user_info", "true"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.groups_recurse_max_depth", "5"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.user_custom_schemas", "Education,Preferences"),
 				),
 			},
 		},
@@ -214,40 +158,6 @@ resource "vault_jwt_auth_backend" "oidc" {
   default_role = "api"
 }
 `, path)
-}
-
-func testAccJWTAuthBackendConfigOIDCProviderConfigAzure(path string) string {
-	return fmt.Sprintf(`
-resource "vault_jwt_auth_backend" "azure" {
-	description = "OIDC backend"
-	oidc_discovery_url = "https://accounts.google.com"
-	path = "%s"
-	type = "oidc"
-	provider_config {
-		provider                 = "azure"
-	}
-}
-`, path)
-}
-
-func testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(backendPath, serviceAccountPath string) string {
-	return fmt.Sprintf(`
-resource "vault_jwt_auth_backend" "gsuite" {
-	description = "OIDC backend"
-	oidc_discovery_url = "https://accounts.google.com"
-	path = "%s"
-	type = "oidc"
-	provider_config {
-		provider                 = "gsuite"
-		gsuite_service_account   = "%s"
-		gsuite_admin_impersonate = "admin@gsuitedomain.com"
-		fetch_groups             = true
-		fetch_user_info          = true
-		groups_recurse_max_depth = 5
-		user_custom_schemas      = "Education,Preferences"
-	}
-}
-`, backendPath, serviceAccountPath)
 }
 
 func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
