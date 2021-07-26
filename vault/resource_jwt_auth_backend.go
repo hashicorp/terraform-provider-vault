@@ -263,6 +263,11 @@ func resourceJwtAuthStateUpgradeV0(rawState map[string]interface{}, meta interfa
 	// schema are already strings, so we just need to convert the
 	// non-string values.
 	if rawConfig, ok := rawState["provider_config"]; ok {
+		if rawConfig == nil {
+			rawState["provider_config"] = make([]map[string]interface{}, 0)
+			return rawState, nil
+		}
+
 		providerConfig := rawConfig.(map[string]interface{})
 		var newConfig []map[string]interface{}
 		newConfig = append(newConfig, providerConfig)
