@@ -312,17 +312,15 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	configuration := map[string]interface{}{}
 	for _, configOption := range matchingJwtMountConfigOptions {
-		if configOption != "provider_config" {
-			// Set the configuration if the user has specified it, or the attribute is in the Diff
-			if _, ok := d.GetOkExists(configOption); ok || d.HasChange(configOption) {
-				configuration[configOption] = d.Get(configOption)
-			}
-		} else {
-			if _, ok := d.GetOkExists(configOption); ok || d.HasChange(configOption) {
+		if _, ok := d.GetOkExists(configOption); ok || d.HasChange(configOption) {
+			configuration[configOption] = d.Get(configOption)
+
+			if configOption == "provider_config" {
 				newConfig, err := convertProviderConfigValues(d.Get(configOption).(map[string]interface{}))
 				if err != nil {
 					return err
 				}
+
 				configuration[configOption] = newConfig
 			}
 		}
