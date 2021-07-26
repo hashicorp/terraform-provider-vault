@@ -295,7 +295,7 @@ func TestAccJWTAuthBackendProviderConfigConversionBool(t *testing.T) {
 		}
 		actual, err := convertProviderConfigValues(config)
 		if tc.err && err == nil {
-			t.Fatalf("exepcted error, got none for key: %s, value: %s", tc.name, tc.value)
+			t.Fatalf("expected error, got none for key: %s, value: %s", tc.name, tc.value)
 		} else if !tc.err && err != nil {
 			t.Fatalf("expected no error, got one: %s", err)
 		} else if !tc.err {
