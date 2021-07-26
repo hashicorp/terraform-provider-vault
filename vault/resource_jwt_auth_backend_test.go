@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"testing"
 
@@ -229,4 +230,38 @@ func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testResourceJwtAuthStateV0() map[string]interface{} {
+	return map[string]interface{}{
+		"provider_config": map[string]interface{}{
+			"provider":                 "azure",
+			"fetch_groups":             "true",
+			"fetch_user_info":          "true",
+			"groups_recurse_max_depth": "1",
+		},
+	}
+}
+
+func testResourceJwtAuthStateV1() map[string]interface{} {
+	return map[string]interface{}{
+		"provider_config": []map[string]interface{}{{
+			"provider":                 "azure",
+			"fetch_groups":             true,
+			"fetch_user_info":          true,
+			"groups_recurse_max_depth": int64(1),
+		}},
+	}
+}
+
+func TestResourceJwtAuthStateUpgradeV0(t *testing.T) {
+	expected := testResourceJwtAuthStateV1()
+	actual, err := resourceJwtAuthStateUpgradeV0(testResourceJwtAuthStateV0(), nil)
+	if err != nil {
+		t.Fatalf("error migrating state: %s", err)
+	}
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("\n\nexpected:\n\n%+v\n\ngot:\n\n%+v\n\n", expected, actual)
+	}
 }
