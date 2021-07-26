@@ -300,7 +300,7 @@ func TestAccJWTAuthBackendProviderConfigConversionBool(t *testing.T) {
 			t.Fatalf("expected no error, got one: %s", err)
 		} else if !tc.err {
 			if actual[tc.name] != tc.want {
-				t.Fatalf("exepcted %s, got %s", tc.want, actual[tc.name])
+				t.Fatalf("expected %s, got %s", tc.want, actual[tc.name])
 			}
 		}
 	}
