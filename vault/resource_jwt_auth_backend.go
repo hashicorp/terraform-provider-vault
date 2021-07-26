@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
@@ -280,6 +281,29 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 }
 
+func convertProviderConfigValues(input map[string]interface{}) (map[string]interface{}, error) {
+	newConfig := make(map[string]interface{})
+	for k, v := range input {
+		switch k {
+		case "fetch_groups", "fetch_user_info":
+			valBool, err := strconv.ParseBool(v.(string))
+			if err != nil {
+				return nil, fmt.Errorf("could not convert %s to bool: %s", k, err)
+			}
+			newConfig[k] = valBool
+		case "groups_recurse_max_depth":
+			valInt, err := strconv.ParseInt(v.(string), 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("could not convert %s to int: %s", k, err)
+			}
+			newConfig[k] = valInt
+		default:
+			newConfig[k] = v.(string)
+		}
+	}
+	return newConfig, nil
+}
+
 func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
@@ -288,9 +312,19 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	configuration := map[string]interface{}{}
 	for _, configOption := range matchingJwtMountConfigOptions {
-		// Set the configuration if the user has specified it, or the attribute is in the Diff
-		if _, ok := d.GetOkExists(configOption); ok || d.HasChange(configOption) {
-			configuration[configOption] = d.Get(configOption)
+		if configOption != "provider_config" {
+			// Set the configuration if the user has specified it, or the attribute is in the Diff
+			if _, ok := d.GetOkExists(configOption); ok || d.HasChange(configOption) {
+				configuration[configOption] = d.Get(configOption)
+			}
+		} else {
+			if _, ok := d.GetOkExists(configOption); ok || d.HasChange(configOption) {
+				newConfig, err := convertProviderConfigValues(d.Get(configOption).(map[string]interface{}))
+				if err != nil {
+					return err
+				}
+				configuration[configOption] = newConfig
+			}
 		}
 	}
 
