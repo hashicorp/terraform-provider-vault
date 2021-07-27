@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
@@ -183,10 +184,11 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 							Description: "Influxdb host to connect to.",
 						},
 						"port": {
-							Type:        schema.TypeInt,
-							Optional:    true,
-							Description: "The transport port to use to connect to Influxdb.",
-							Default:     8086,
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Description:  "The transport port to use to connect to Influxdb.",
+							Default:      8086,
+							ValidateFunc: validation.IsPortNumber,
 						},
 						"username": {
 							Type:        schema.TypeString,
@@ -218,10 +220,11 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 							Sensitive:   true,
 						},
 						"pem_json": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "Specifies JSON containing a certificate and private key; a certificate, private key, and issuing CA certificate; or just a CA certificate.",
-							Sensitive:   true,
+							Type:         schema.TypeString,
+							Optional:     true,
+							Description:  "Specifies JSON containing a certificate and private key; a certificate, private key, and issuing CA certificate; or just a CA certificate.",
+							Sensitive:    true,
+							ValidateFunc: validation.StringIsJSON,
 						},
 						"connect_timeout": {
 							Type:        schema.TypeInt,
