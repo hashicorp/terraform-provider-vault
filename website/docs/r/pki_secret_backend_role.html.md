@@ -111,6 +111,8 @@ The following arguments are supported:
 
 * `not_before_duration` - (Optional) Specifies the duration by which to backdate the NotBefore property.
 
+* `allowed_serial_numbers` - (Optional) An array of allowed serial numbers to put in Subject
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

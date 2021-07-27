@@ -312,6 +312,15 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Description:  "Specifies the duration by which to backdate the NotBefore property.",
 				ValidateFunc: validateDuration,
 			},
+			"allowed_serial_numbers": {
+				Type:        schema.TypeList,
+				Required:    false,
+				Optional:    true,
+				Description: "Defines allowed Subject serial numbers.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -350,6 +359,12 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 		policyIdentifiers = append(policyIdentifiers, iIdentifier.(string))
 	}
 
+	iAllowedSerialNumbers := d.Get("allowed_serial_numbers").([]interface{})
+	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
+	for _, iSerialNumber := range iAllowedSerialNumbers {
+		allowedSerialNumbers = append(allowedSerialNumbers, iSerialNumber.(string))
+	}
+
 	data := map[string]interface{}{
 		"ttl":                                d.Get("ttl"),
 		"max_ttl":                            d.Get("max_ttl"),
@@ -383,6 +398,7 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 		"require_cn":                         d.Get("require_cn"),
 		"basic_constraints_valid_for_non_ca": d.Get("basic_constraints_valid_for_non_ca"),
 		"not_before_duration":                d.Get("not_before_duration"),
+		"allowed_serial_numbers":             d.Get("allowed_serial_numbers"),
 	}
 
 	if len(allowedDomains) > 0 {
@@ -399,6 +415,10 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 
 	if len(policyIdentifiers) > 0 {
 		data["policy_identifiers"] = policyIdentifiers
+	}
+
+	if len(allowedSerialNumbers) > 0 {
+		data["allowed_serial_numbers"] = allowedSerialNumbers
 	}
 
 	log.Printf("[DEBUG] Creating role %s on PKI secret backend %q", name, backend)
@@ -473,6 +493,12 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	notBeforeDuration := flattenVaultDuration(secret.Data["not_before_duration"])
 
+	iAllowedSerialNumbers := secret.Data["allowed_serial_numbers"].([]interface{})
+	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
+	for _, iSerialNumber := range iAllowedSerialNumbers {
+		allowedSerialNumbers = append(allowedSerialNumbers, iSerialNumber.(string))
+	}
+
 	d.Set("backend", backend)
 	d.Set("name", name)
 	d.Set("ttl", secret.Data["ttl"])
@@ -511,6 +537,7 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("policy_identifiers", policyIdentifiers)
 	d.Set("basic_constraints_valid_for_non_ca", secret.Data["basic_constraints_valid_for_non_ca"])
 	d.Set("not_before_duration", notBeforeDuration)
+	d.Set("allowed_serial_numbers", allowedSerialNumbers)
 
 	return nil
 }
@@ -543,6 +570,12 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 	policyIdentifiers := make([]string, 0, len(iPolicyIdentifiers))
 	for _, iIdentifier := range iPolicyIdentifiers {
 		policyIdentifiers = append(policyIdentifiers, iIdentifier.(string))
+	}
+
+	iAllowedSerialNumbers := d.Get("allowed_serial_numbers").([]interface{})
+	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
+	for _, iSerialNumber := range iAllowedSerialNumbers {
+		allowedSerialNumbers = append(allowedSerialNumbers, iSerialNumber.(string))
 	}
 
 	data := map[string]interface{}{
@@ -578,6 +611,7 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 		"require_cn":                         d.Get("require_cn"),
 		"basic_constraints_valid_for_non_ca": d.Get("basic_constraints_valid_for_non_ca"),
 		"not_before_duration":                d.Get("not_before_duration"),
+		"allowed_serial_numbers":             d.Get("allowed_serial_numbers"),
 	}
 
 	if len(allowedDomains) > 0 {
@@ -594,6 +628,10 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 
 	if len(policyIdentifiers) > 0 {
 		data["policy_identifiers"] = policyIdentifiers
+	}
+
+	if len(allowedSerialNumbers) > 0 {
+		data["allowed_serial_numbers"] = allowedSerialNumbers
 	}
 
 	_, err := client.Logical().Write(path, data)
