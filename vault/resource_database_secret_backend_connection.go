@@ -20,7 +20,7 @@ type connectionStringConfig struct {
 var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
-	dbBackendTypes                                      = []string{"cassandra", "hana", "mongodb", "mssql", "mysql", "mysql_rds", "mysql_aurora", "mysql_legacy", "postgresql", "oracle", "elasticsearch", "snowflake"}
+	dbBackendTypes                                      = []string{"cassandra", "influxdb", "hana", "mongodb", "mssql", "mysql", "mysql_rds", "mysql_aurora", "mysql_legacy", "postgresql", "oracle", "elasticsearch", "snowflake"}
 )
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
@@ -169,6 +169,75 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				},
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("cassandra", dbBackendTypes),
+			},
+
+			"influxdb": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the influxdb-database-plugin plugin.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Influxdb host to connect to.",
+						},
+						"port": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "The transport port to use to connect to Influxdb.",
+							Default:     8086,
+						},
+						"username": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Specifies the username to use for superuser access.",
+						},
+						"password": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Specifies the password corresponding to the given username.",
+							Sensitive:   true,
+						},
+						"tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: "Whether to use TLS when connecting to Influxdb.",
+							Default:     true,
+						},
+						"insecure_tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: "Whether to skip verification of the server certificate when using TLS.",
+							Default:     false,
+						},
+						"pem_bundle": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Concatenated PEM blocks containing a certificate and private key; a certificate, private key, and issuing CA certificate; or just a CA certificate.",
+							Sensitive:   true,
+						},
+						"pem_json": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Specifies JSON containing a certificate and private key; a certificate, private key, and issuing CA certificate; or just a CA certificate.",
+							Sensitive:   true,
+						},
+						"connect_timeout": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     5,
+							Description: "The number of seconds to use as a connection timeout.",
+						},
+						"username_template": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Template describing how dynamic usernames are generated.",
+						},
+					},
+				},
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith("influxdb", dbBackendTypes),
 			},
 
 			"mongodb": {
@@ -376,6 +445,8 @@ func getDatabasePluginName(d *schema.ResourceData) (string, error) {
 	switch {
 	case len(d.Get("cassandra").([]interface{})) > 0:
 		return "cassandra-database-plugin", nil
+	case len(d.Get("influxdb").([]interface{})) > 0:
+		return "influxdb-database-plugin", nil
 	case len(d.Get("hana").([]interface{})) > 0:
 		return "hana-database-plugin", nil
 	case len(d.Get("mongodbatlas").([]interface{})) > 0:
@@ -454,6 +525,8 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		if v, ok := d.GetOkExists("cassandra.0.connect_timeout"); ok {
 			data["connect_timeout"] = v.(int)
 		}
+	case "influxdb-database-plugin":
+		setInfluxDBDatabaseConnectionData(d, "influxdb.0.", data)
 	case "hana-database-plugin":
 		setDatabaseConnectionData(d, "hana.0.", data)
 	case "mongodb-database-plugin":
@@ -815,6 +888,8 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			}
 			d.Set("cassandra", []map[string]interface{}{result})
 		}
+	case "influxdb-database-plugin":
+		d.Set("influxdb", getInfluxDBConnectionDetailsFromResponse(d, "influxdb.0.", resp))
 	case "hana-database-plugin":
 		d.Set("hana", getConnectionDetailsFromResponse(d, "hana.0.", resp))
 	case "mongodb-database-plugin":
