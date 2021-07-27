@@ -1,3 +1,8 @@
+## Unreleased
+
+BUGS:
+* `resource/jwt_auth_backend`: Fixed bug where `provider_config` did not configure non-string values correctly ([#1118](https://github.com/hashicorp/terraform-provider-vault/pull/1118))
+
 ## 2.22.1 (July 23, 2021)
 
 BUGS:
