@@ -89,7 +89,7 @@ The following arguments are supported:
 
 * `default_role` - (Optional) The default role to use if none is provided during login
 
-* `provider_config` - (Optional) Provider specific handling configuration. All values should be a string, but the provider will convert to the appropriate type when configuring Vault.
+* `provider_config` - (Optional) Provider specific handling configuration. All values may be strings, and the provider will convert to the appropriate type when configuring Vault.
 
 * tune - (Optional) Extra configuration block. Structure is documented below.
 
