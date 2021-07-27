@@ -51,9 +51,9 @@ resource "vault_jwt_auth_backend" "gsuite" {
     type = "oidc"
     provider_config = {
         provider = "gsuite"
-        fetch_groups = "true"
-        fetch_user_info = "true"
-        groups_recurse_max_depth = "1"
+        fetch_groups = true
+        fetch_user_info = true
+        groups_recurse_max_depth = 1
     }
 }
 ```
