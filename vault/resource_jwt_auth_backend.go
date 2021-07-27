@@ -284,21 +284,22 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 func convertProviderConfigValues(input map[string]interface{}) (map[string]interface{}, error) {
 	newConfig := make(map[string]interface{})
 	for k, v := range input {
+		val := v.(string)
 		switch k {
 		case "fetch_groups", "fetch_user_info":
-			valBool, err := strconv.ParseBool(v.(string))
+			valBool, err := strconv.ParseBool(val)
 			if err != nil {
 				return nil, fmt.Errorf("could not convert %s to bool: %s", k, err)
 			}
 			newConfig[k] = valBool
 		case "groups_recurse_max_depth":
-			valInt, err := strconv.ParseInt(v.(string), 10, 64)
+			valInt, err := strconv.ParseInt(val, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("could not convert %s to int: %s", k, err)
 			}
 			newConfig[k] = valInt
 		default:
-			newConfig[k] = v.(string)
+			newConfig[k] = val
 		}
 	}
 	return newConfig, nil
