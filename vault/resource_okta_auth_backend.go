@@ -215,6 +215,7 @@ func oktaAuthBackendResource() *schema.Resource {
 func parseTTLForState(i interface{}) string {
 	d, err := parseutil.ParseDurationSecond(i)
 	if err != nil {
+		log.Printf("[WARN] Failed to parse TTL for state, will use specified value %v, error %s", i, err)
 		return i.(string)
 	}
 	return strconv.Itoa(int(d.Seconds()))
