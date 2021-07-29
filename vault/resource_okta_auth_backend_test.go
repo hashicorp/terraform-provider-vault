@@ -3,6 +3,7 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
@@ -82,6 +83,30 @@ func TestAccOktaAuthBackend(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:     "invalid_ttl",
+			preCheck: util.TestAccPreCheck,
+			steps: func(path string) []resource.TestStep {
+				return []resource.TestStep{
+					{
+						Config:      testAccOktaAuthConfig_invalid_ttl(path, organization),
+						ExpectError: regexp.MustCompile(`invalid value for "ttl", could not parse "invalid_ttl"$`),
+					},
+				}
+			},
+		},
+		{
+			name:     "invalid_max_ttl",
+			preCheck: util.TestAccPreCheck,
+			steps: func(path string) []resource.TestStep {
+				return []resource.TestStep{
+					{
+						Config:      testAccOktaAuthConfig_invalid_max_ttl(path, organization),
+						ExpectError: regexp.MustCompile(`invalid value for "max_ttl", could not parse "invalid_max_ttl"$`),
+					},
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -133,6 +158,32 @@ resource "vault_okta_auth_backend" "test" {
         username = "bar"
         groups = ["example"]
     }
+}
+`, path, organization)
+}
+
+func testAccOktaAuthConfig_invalid_ttl(path string, organization string) string {
+	return fmt.Sprintf(`
+resource "vault_okta_auth_backend" "test" {
+    description = "Testing the Terraform okta auth backend"
+    path = "%s"
+    organization = "%s"
+    token = "this must be kept secret"
+    ttl = "invalid_ttl"
+    max_ttl = "1h"
+}
+`, path, organization)
+}
+
+func testAccOktaAuthConfig_invalid_max_ttl(path string, organization string) string {
+	return fmt.Sprintf(`
+resource "vault_okta_auth_backend" "test" {
+    description = "Testing the Terraform okta auth backend"
+    path = "%s"
+    organization = "%s"
+    token = "this must be kept secret"
+    ttl = "1h"
+    max_ttl = "invalid_max_ttl"
 }
 `, path, organization)
 }

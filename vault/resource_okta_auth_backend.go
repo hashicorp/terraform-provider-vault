@@ -80,21 +80,23 @@ func oktaAuthBackendResource() *schema.Resource {
 			},
 
 			"ttl": {
-				Type:        schema.TypeString,
-				Required:    false,
-				Optional:    true,
-				Default:     "0",
-				Description: "Duration after which authentication will be expired",
-				StateFunc:   parseTTLForState,
+				Type:         schema.TypeString,
+				Required:     false,
+				Optional:     true,
+				Default:      "0",
+				Description:  "Duration after which authentication will be expired",
+				ValidateFunc: validateOktaTTL,
+				StateFunc:    normalizeOktaTTL,
 			},
 
 			"max_ttl": {
-				Type:        schema.TypeString,
-				Required:    false,
-				Optional:    true,
-				Description: "Maximum duration after which authentication will be expired",
-				Default:     "0",
-				StateFunc:   parseTTLForState,
+				Type:         schema.TypeString,
+				Required:     false,
+				Optional:     true,
+				Description:  "Maximum duration after which authentication will be expired",
+				Default:      "0",
+				ValidateFunc: validateOktaTTL,
+				StateFunc:    normalizeOktaTTL,
 			},
 
 			"group": {
@@ -212,13 +214,31 @@ func oktaAuthBackendResource() *schema.Resource {
 	}
 }
 
-func parseTTLForState(i interface{}) string {
-	d, err := parseutil.ParseDurationSecond(i)
+func normalizeOktaTTL(i interface{}) string {
+	s, err := parseDurationSeconds(i)
 	if err != nil {
-		log.Printf("[WARN] Failed to parse TTL for state, will use specified value %v, error %s", i, err)
+		// validateOktaTTL should prevent ever getting here
 		return i.(string)
 	}
-	return strconv.Itoa(int(d.Seconds()))
+	return s
+}
+
+func validateOktaTTL(i interface{}, k string) ([]string, []error) {
+	var errors []error
+	s, err := parseDurationSeconds(i)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("invalid value for %q, could not parse %q", k, i))
+	}
+	return []string{s}, errors
+}
+
+func parseDurationSeconds(i interface{}) (string, error) {
+	d, err := parseutil.ParseDurationSecond(i)
+	if err != nil {
+		log.Printf("[ERROR] Could not parse %v to seconds, error: %s", i, err)
+		return "", err
+	}
+	return strconv.Itoa(int(d.Seconds())), nil
 }
 
 func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
