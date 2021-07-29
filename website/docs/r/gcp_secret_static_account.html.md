@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_gcp_secret_static_account resource"
-sidebar_current: "docs-vault-resource-gcp-secret-statoc-account"
+sidebar_current: "docs-vault-resource-gcp-secret-static-account"
 description: |-
   Creates a Static Account for the GCP Secret Backend for Vault.
 ---
@@ -54,9 +54,9 @@ The following arguments are supported:
 
 * `service_account_email` - (Required, Forces new resource) Email of the GCP service account to manage.
 
-* `secret_type` - (Optional, Forces new resource) Type of secret generated for this role set. Accepted values: `access_token`, `service_account_key`. Defaults to `access_token`.
+* `secret_type` - (Optional, Forces new resource) Type of secret generated for this static account. Accepted values: `access_token`, `service_account_key`. Defaults to `access_token`.
 
-* `token_scopes` - (Optional, Required for `secret_type = "access_token"`) List of OAuth scopes to assign to `access_token` secrets generated under this role set (`access_token` role sets only).
+* `token_scopes` - (Optional, Required for `secret_type = "access_token"`) List of OAuth scopes to assign to `access_token` secrets generated under this static account (`access_token` static accounts only).
 
 * `binding` - (Optional) Bindings to create for this static account. This can be specified multiple times for multiple bindings. Structure is documented below.
 

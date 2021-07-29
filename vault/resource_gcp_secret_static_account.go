@@ -62,7 +62,7 @@ func gcpSecretStaticAccountResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Optional:    true,
-				Description: "List of OAuth scopes to assign to `access_token` secrets generated under this role set (`access_token` role sets only) ",
+				Description: "List of OAuth scopes to assign to `access_token` secrets generated under this static account (`access_token` static accounts only) ",
 			},
 			"binding": {
 				Type:     schema.TypeSet,
@@ -111,7 +111,7 @@ func gcpSecretStaticAccountCreate(d *schema.ResourceData, meta interface{}) erro
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing GCP Secrets backend static account %q: %s", path, err)
+		return fmt.Errorf("error writing GCP Secrets backend static account %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote GCP Secrets backend static account %q", path)
 
@@ -181,7 +181,7 @@ func gcpSecretStaticAccountUpdate(d *schema.ResourceData, meta interface{}) erro
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error updating GCP Secrets backend static account %q: %s", path, err)
+		return fmt.Errorf("error updating GCP Secrets backend static account %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated GCP Secrets backend static account %q", path)
 
@@ -195,7 +195,7 @@ func gcpSecretStaticAccountDelete(d *schema.ResourceData, meta interface{}) erro
 	log.Printf("[DEBUG] Deleting GCP secrets backend static account %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting GCP secrets backend static account %q", path)
+		return fmt.Errorf("error deleting GCP secrets backend static account %q", path)
 	}
 	log.Printf("[DEBUG] Deleted GCP secrets backend static account %q", path)
 
