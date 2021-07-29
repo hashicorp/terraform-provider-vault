@@ -3,11 +3,9 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -15,31 +13,89 @@ import (
 )
 
 func TestAccOktaAuthBackend(t *testing.T) {
-	path := "okta-" + strconv.Itoa(acctest.RandInt())
 	organization := "example"
 
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccOktaAuthConfig_basic(path, organization),
-				Check: resource.ComposeTestCheckFunc(
-					testAccOktaAuthBackend_InitialCheck,
-					testAccOktaAuthBackend_GroupsCheck(path, "dummy", []string{"one", "two", "default"}),
-					testAccOktaAuthBackend_UsersCheck(path, "foo", []string{"dummy"}, []string{}),
-				),
-			},
-			{
-				Config: testAccOktaAuthConfig_updated(path, organization),
-				Check: resource.ComposeTestCheckFunc(
-					testAccOktaAuthBackend_GroupsCheck(path, "example", []string{"three", "four", "default"}),
-					testAccOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{}),
-				),
+	tests := []struct {
+		name     string
+		preCheck func()
+		steps    func(path string) []resource.TestStep
+	}{
+		{
+			name:     "default",
+			preCheck: func() { util.TestAccPreCheck(t) },
+			steps: func(path string) []resource.TestStep {
+				return []resource.TestStep{
+					{
+						Config: testAccOktaAuthConfig_basic(path, organization),
+						Check: resource.ComposeTestCheckFunc(
+							testAccOktaAuthBackend_InitialCheck,
+							testAccOktaAuthBackend_GroupsCheck(path, "dummy", []string{"one", "two", "default"}),
+							testAccOktaAuthBackend_UsersCheck(path, "foo", []string{"dummy"}, []string{}),
+						),
+					},
+					{
+						Config: testAccOktaAuthConfig_updated(path, organization),
+						Check: resource.ComposeTestCheckFunc(
+							testAccOktaAuthBackend_GroupsCheck(path, "example", []string{"three", "four", "default"}),
+							testAccOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{}),
+						),
+					},
+				}
 			},
 		},
-	})
+		{
+			name:     "import",
+			preCheck: func() { util.TestAccPreCheck(t) },
+			steps: func(path string) []resource.TestStep {
+				return []resource.TestStep{
+					{
+						Config: testAccOktaAuthConfig_basic(path, organization),
+						Check: resource.ComposeTestCheckFunc(
+							testAccOktaAuthBackend_InitialCheck,
+							testAccOktaAuthBackend_GroupsCheck(path, "dummy", []string{"one", "two", "default"}),
+							testAccOktaAuthBackend_UsersCheck(path, "foo", []string{"dummy"}, []string{}),
+						),
+					},
+					{
+						ResourceName:      "vault_okta_auth_backend.test",
+						ImportState:       true,
+						ImportStateVerify: true,
+						ImportStateVerifyIgnore: []string{
+							"token",
+						},
+					},
+					{
+						Config: testAccOktaAuthConfig_updated(path, organization),
+						Check: resource.ComposeTestCheckFunc(
+							testAccOktaAuthBackend_GroupsCheck(path, "example", []string{"three", "four", "default"}),
+							testAccOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{}),
+						),
+					},
+					{
+						ResourceName:      "vault_okta_auth_backend.test",
+						ImportState:       true,
+						ImportStateVerify: true,
+						ImportStateVerifyIgnore: []string{
+							"token",
+						},
+					},
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := resource.PrefixedUniqueId("okta-" + tt.name + "-")
+			resource.Test(t, resource.TestCase{
+				Providers:    testProviders,
+				PreCheck:     tt.preCheck,
+				CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+				Steps:        tt.steps(path),
+			})
+		},
+		)
+	}
 }
 
 func testAccOktaAuthConfig_basic(path string, organization string) string {

@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -20,9 +22,11 @@ func oktaAuthBackendResource() *schema.Resource {
 		Delete: oktaAuthBackendDelete,
 		Read:   oktaAuthBackendRead,
 		Update: oktaAuthBackendUpdate,
-
+		Exists: oktaAuthBackendExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: map[string]*schema.Schema{
-
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -79,7 +83,9 @@ func oktaAuthBackendResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    false,
 				Optional:    true,
+				Default:     "0",
 				Description: "Duration after which authentication will be expired",
+				StateFunc:   parseTTLForState,
 			},
 
 			"max_ttl": {
@@ -87,6 +93,8 @@ func oktaAuthBackendResource() *schema.Resource {
 				Required:    false,
 				Optional:    true,
 				Description: "Maximum duration after which authentication will be expired",
+				Default:     "0",
+				StateFunc:   parseTTLForState,
 			},
 
 			"group": {
@@ -204,6 +212,14 @@ func oktaAuthBackendResource() *schema.Resource {
 	}
 }
 
+func parseTTLForState(i interface{}) string {
+	d, err := parseutil.ParseDurationSecond(i)
+	if err != nil {
+		return i.(string)
+	}
+	return strconv.Itoa(int(d.Seconds()))
+}
+
 func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
@@ -245,6 +261,10 @@ func oktaAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
+func oktaAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+	return isOktaAuthBackendPresent(meta.(*api.Client), d.Id())
+}
+
 func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
@@ -263,12 +283,15 @@ func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
+	d.Set("path", path)
+
 	mount, err := authMountInfoGet(client, path)
 	if err != nil {
 		return fmt.Errorf("error reading okta oth mount from '%q': %s", path, err)
 	}
 
 	d.Set("accessor", mount.Accessor)
+	d.Set("description", mount.Description)
 
 	log.Printf("[DEBUG] Reading groups for mount %s from Vault", path)
 	groups, err := oktaReadAllGroups(client, path)
@@ -288,8 +311,36 @@ func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	return nil
+	if err := oktaReadAuthConfig(client, path, d); err != nil {
+		return err
+	}
 
+	return nil
+}
+
+func oktaReadAuthConfig(client *api.Client, path string, d *schema.ResourceData) error {
+	log.Printf("[DEBUG] Reading auth config for mount %s from Vault", path)
+	config, err := client.Logical().Read(oktaConfigEndpoint(path))
+	if err != nil {
+		return err
+	}
+
+	// map schema config to okta auth params.
+	fieldMap := map[string]string{
+		"organization": "organization",
+		"ttl":          "token_ttl",
+		"max_ttl":      "token_max_ttl",
+	}
+	for k, v := range fieldMap {
+		if v, ok := config.Data[v]; ok {
+			s, err := parseutil.ParseString(v)
+			if err != nil {
+				return err
+			}
+			d.Set(k, s)
+		}
+	}
+	return nil
 }
 
 func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {

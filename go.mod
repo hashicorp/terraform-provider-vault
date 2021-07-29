@@ -16,6 +16,7 @@ require (
 	github.com/hashicorp/go-hclog v0.16.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-retryablehttp v0.6.8 // indirect
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.1
 	github.com/hashicorp/terraform-plugin-sdk v1.9.0
 	github.com/hashicorp/vault v1.2.0
 	github.com/hashicorp/vault/api v1.1.2-0.20210719211531-6b31c12b0af2
