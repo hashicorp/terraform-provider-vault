@@ -17,12 +17,12 @@ func TestAccOktaAuthBackend(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		preCheck func()
+		preCheck func(t *testing.T)
 		steps    func(path string) []resource.TestStep
 	}{
 		{
 			name:     "default",
-			preCheck: func() { util.TestAccPreCheck(t) },
+			preCheck: util.TestAccPreCheck,
 			steps: func(path string) []resource.TestStep {
 				return []resource.TestStep{
 					{
@@ -45,7 +45,7 @@ func TestAccOktaAuthBackend(t *testing.T) {
 		},
 		{
 			name:     "import",
-			preCheck: func() { util.TestAccPreCheck(t) },
+			preCheck: util.TestAccPreCheck,
 			steps: func(path string) []resource.TestStep {
 				return []resource.TestStep{
 					{
@@ -88,8 +88,8 @@ func TestAccOktaAuthBackend(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			path := resource.PrefixedUniqueId("okta-" + tt.name + "-")
 			resource.Test(t, resource.TestCase{
+				PreCheck:     func() { tt.preCheck(t) },
 				Providers:    testProviders,
-				PreCheck:     tt.preCheck,
 				CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
 				Steps:        tt.steps(path),
 			})
