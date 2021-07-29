@@ -127,7 +127,7 @@ func gcpSecretStaticAccountRead(d *schema.ResourceData, meta interface{}) error 
 		return fmt.Errorf("invalid path %q for GCP secrets backend static account: %s", path, err)
 	}
 
-	staticAccount, err := gcpSecretRoleSetdStaticAccountNameFromPath(path)
+	staticAccount, err := gcpSecretStaticAccountNameFromPath(path)
 	if err != nil {
 		return fmt.Errorf("invalid path %q for GCP Secrets backend static account: %s", path, err)
 	}
@@ -251,7 +251,7 @@ func gcpSecretStaticAccountBackendFromPath(path string) (string, error) {
 	return res[1], nil
 }
 
-func gcpSecretRoleSetdStaticAccountNameFromPath(path string) (string, error) {
+func gcpSecretStaticAccountNameFromPath(path string) (string, error) {
 	if !gcpSecretStaticAccountNameFromPathRegex.MatchString(path) {
 		return "", fmt.Errorf("no static account found")
 	}
