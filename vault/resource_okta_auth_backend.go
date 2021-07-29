@@ -283,15 +283,21 @@ func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	d.Set("path", path)
+	if err := d.Set("path", path); err != nil {
+		return err
+	}
 
 	mount, err := authMountInfoGet(client, path)
 	if err != nil {
 		return fmt.Errorf("error reading okta oth mount from '%q': %s", path, err)
 	}
 
-	d.Set("accessor", mount.Accessor)
-	d.Set("description", mount.Description)
+	if err := d.Set("accessor", mount.Accessor); err != nil {
+		return err
+	}
+	if err := d.Set("description", mount.Description); err != nil {
+		return err
+	}
 
 	log.Printf("[DEBUG] Reading groups for mount %s from Vault", path)
 	groups, err := oktaReadAllGroups(client, path)
@@ -337,7 +343,9 @@ func oktaReadAuthConfig(client *api.Client, path string, d *schema.ResourceData)
 			if err != nil {
 				return err
 			}
-			d.Set(k, s)
+			if err := d.Set(k, s); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
