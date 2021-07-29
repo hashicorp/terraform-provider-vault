@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -24,18 +25,59 @@ const gcpJSONCredentials string = `
   }
 `
 
-func TestGCPAuthBackend_basic(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testGCPAuthBackendDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testGCPAuthBackendConfig_basic(gcpJSONCredentials),
-				Check:  testGCPAuthBackendCheck_attrs(),
+func TestGCPAuthBackend(t *testing.T) {
+	tests := []struct {
+		name     string
+		preCheck func(t *testing.T)
+		steps    func(path string) []resource.TestStep
+		path     string
+	}{
+		{
+			name:     "basic",
+			path:     gcpAuthDefaultPath,
+			preCheck: util.TestAccPreCheck,
+			steps: func(path string) []resource.TestStep {
+				return []resource.TestStep{
+					{
+						Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
+						Check:  testGCPAuthBackendCheck_attrs(),
+					},
+				}
 			},
 		},
-	})
+		{
+			name:     "import",
+			path:     resource.PrefixedUniqueId("gcp-import-"),
+			preCheck: util.TestAccPreCheck,
+			steps: func(path string) []resource.TestStep {
+				return []resource.TestStep{
+					{
+						Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
+						Check:  testGCPAuthBackendCheck_attrs(),
+					},
+					{
+						ResourceName:      "vault_gcp_auth_backend.test",
+						ImportState:       true,
+						ImportStateVerify: true,
+						ImportStateVerifyIgnore: []string{
+							"credentials",
+						},
+					},
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resource.Test(t, resource.TestCase{
+				PreCheck:     func() { tt.preCheck(t) },
+				Providers:    testProviders,
+				CheckDestroy: testGCPAuthBackendDestroy,
+				Steps:        tt.steps(tt.path),
+			})
+		})
+	}
 }
 
 func testGCPAuthBackendDestroy(s *terraform.State) error {
@@ -72,7 +114,7 @@ func testGCPAuthBackendCheck_attrs() resource.TestCheckFunc {
 	}
 }
 
-func testGCPAuthBackendConfig_basic(credentials string) string {
+func testGCPAuthBackendConfig_basic(path, credentials string) string {
 	return fmt.Sprintf(`
 variable "json_credentials" {
   type = "string"
@@ -80,8 +122,9 @@ variable "json_credentials" {
 }
 
 resource "vault_gcp_auth_backend" "test" {
-  credentials                   = "${var.json_credentials}"
+  path                          = %q
+  credentials                   = var.json_credentials
 }
-`, credentials)
+`, credentials, path)
 
 }
