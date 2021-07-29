@@ -41,6 +41,24 @@ resource "vault_jwt_auth_backend" "example" {
 }
 ```
 
+Configuring the auth backend with a `provider_config:
+
+```hcl
+resource "vault_jwt_auth_backend" "gsuite" {
+    description = "OIDC backend"
+    oidc_discovery_url = "https://accounts.google.com"
+    path = "oidc"
+    type = "oidc"
+    provider_config = {
+        provider = "gsuite"
+        fetch_groups = true
+        fetch_user_info = true
+        groups_recurse_max_depth = 1
+    }
+}
+```
+
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -71,7 +89,7 @@ The following arguments are supported:
 
 * `default_role` - (Optional) The default role to use if none is provided during login
 
-* `provider_config` - (Optional) Provider specific handling configuration
+* `provider_config` - (Optional) Provider specific handling configuration. All values may be strings, and the provider will convert to the appropriate type when configuring Vault.
 
 * tune - (Optional) Extra configuration block. Structure is documented below.
 

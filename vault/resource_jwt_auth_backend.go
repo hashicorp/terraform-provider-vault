@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"sort"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
@@ -123,40 +123,11 @@ func jwtAuthBackendResource() *schema.Resource {
 				Description: "The accessor of the JWT auth backend",
 			},
 			"provider_config": {
-				Type:        schema.TypeSet,
+				Type:        schema.TypeMap,
 				Optional:    true,
 				Description: "Provider specific handling configuration",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"provider": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"gsuite_service_account": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"gsuite_admin_impersonate": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"fetch_groups": {
-							Type:     schema.TypeBool,
-							Optional: true,
-						},
-						"fetch_user_info": {
-							Type:     schema.TypeBool,
-							Optional: true,
-						},
-						"groups_recurse_max_depth": {
-							Type:     schema.TypeInt,
-							Optional: true,
-						},
-						"user_custom_schemas": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-					},
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
 				},
 			},
 			"tune": authMountTuneSchema(),
@@ -293,25 +264,7 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		if configOption == "oidc_client_secret" {
 			continue
 		}
-
-		if configOption == "provider_config" {
-			var keys []string
-			rawProviderConfig := config.Data[configOption].(map[string]interface{})
-			for k := range rawProviderConfig {
-				keys = append(keys, k)
-			}
-
-			// The keys need to be sorted to ensure the hash is calculated correctly.
-			sort.Strings(keys)
-			result := make([]interface{}, len(keys))
-			for i, k := range keys {
-				result[i] = rawProviderConfig[k]
-			}
-
-			d.Set(configOption, result)
-		} else {
-			d.Set(configOption, config.Data[configOption])
-		}
+		d.Set(configOption, config.Data[configOption])
 	}
 
 	log.Printf("[DEBUG] Reading jwt auth tune from %q", path+"/tune")
@@ -328,6 +281,30 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 }
 
+func convertProviderConfigValues(input map[string]interface{}) (map[string]interface{}, error) {
+	newConfig := make(map[string]interface{})
+	for k, v := range input {
+		val := v.(string)
+		switch k {
+		case "fetch_groups", "fetch_user_info":
+			valBool, err := strconv.ParseBool(val)
+			if err != nil {
+				return nil, fmt.Errorf("could not convert %s to bool: %s", k, err)
+			}
+			newConfig[k] = valBool
+		case "groups_recurse_max_depth":
+			valInt, err := strconv.ParseInt(val, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("could not convert %s to int: %s", k, err)
+			}
+			newConfig[k] = valInt
+		default:
+			newConfig[k] = val
+		}
+	}
+	return newConfig, nil
+}
+
 func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
@@ -336,14 +313,16 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	configuration := map[string]interface{}{}
 	for _, configOption := range matchingJwtMountConfigOptions {
-		// Set the configuration if the user has specified it, or the attribute is in the Diff
-		if configOption != "provider_config" {
-			if _, ok := d.GetOkExists(configOption); ok || d.HasChange(configOption) {
-				configuration[configOption] = d.Get(configOption)
-			}
-		} else {
-			if _, ok := d.GetOkExists(configOption); ok || d.HasChange(configOption) {
-				configuration[configOption] = d.Get(configOption).(*schema.Set).List()
+		if _, ok := d.GetOkExists(configOption); ok || d.HasChange(configOption) {
+			configuration[configOption] = d.Get(configOption)
+
+			if configOption == "provider_config" {
+				newConfig, err := convertProviderConfigValues(d.Get(configOption).(map[string]interface{}))
+				if err != nil {
+					return err
+				}
+
+				configuration[configOption] = newConfig
 			}
 		}
 	}

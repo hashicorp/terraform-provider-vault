@@ -45,10 +45,8 @@ resource "vault_mount" "pki-example" {
   type        = "pki"
   description = "This is an example PKI mount"
 
-  options = {
-    default_lease_ttl_seconds = 3600
-    max_lease_ttl_seconds     = 86400
-  }
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds     = 86400
 }
 ```
 

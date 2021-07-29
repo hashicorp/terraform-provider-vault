@@ -1,5 +1,16 @@
 ## Unreleased
 
+BUGS:
+* `resource/jwt_auth_backend`: Fixed bug where `provider_config` did not configure non-string values correctly ([#1118](https://github.com/hashicorp/terraform-provider-vault/pull/1118))
+
+## 2.22.1 (July 23, 2021)
+
+BUGS:
+* `resource/vault_identity_group`: Correctly handle the case of a preexisting identity group, suggest resource import in this case ([#1014](https://github.com/hashicorp/terraform-provider-vault/pull/1010))
+* `resource/jwt_auth_backend`: Reverted ([#960](https://github.com/hashicorp/terraform-provider-vault/pull/960)) due to migration errors ([#1114](https://github.com/hashicorp/terraform-provider-vault/pull/1114))
+
+## 2.22.0 (July 22, 2021)
+
 FEATURES:
 * **New Resource** `vault_quota_lease_count`: Adds ability to manage lease-count quota's (Vault Enterprise Feature) ([#948](https://github.com/hashicorp/terraform-provider-vault/pull/948))
 
@@ -9,6 +20,7 @@ IMPROVEMENTS:
 BUGS:
 * `resource/vault_identity_group`: Fix bug where metadata values are not removed if removed from file ([#1061](https://github.com/hashicorp/terraform-provider-vault/pull/1061))
 * `resource/jwt_auth_backend`: Fixed bug where `provider_config` only supported string values ([#960](https://github.com/hashicorp/terraform-provider-vault/pull/960))
+* `provider`: Fix inconsistent handling of `namespace` when `wrapping_ttl` was specified in any resource ([#1107](https://github.com/hashicorp/terraform-provider-vault/pull/1107))
 
 ## 2.21.0 (June 17, 2021)
 

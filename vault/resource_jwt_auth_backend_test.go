@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"testing"
 
@@ -51,6 +50,27 @@ func TestAccJWTAuthBackend(t *testing.T) {
 		},
 	})
 }
+
+func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
+	path := acctest.RandomWithPrefix("oidc")
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testJWTAuthBackend_Destroyed(path),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendProviderConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_discovery_url", "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "type", "oidc"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "provider_config.provider", "azure"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "provider_config.groups_recurse_max_depth", "1"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 	path := acctest.RandomWithPrefix("oidc")
 	resource.Test(t, resource.TestCase{
@@ -67,61 +87,6 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_client_secret", "secret"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "type", "oidc"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "default_role", "api"),
-				),
-			},
-		},
-	})
-}
-
-// The random numbers on the provider_config are a hash of the object.
-func TestAccJWTAuthBackend_OIDC_Provider_ConfigAzure(t *testing.T) {
-	path := acctest.RandomWithPrefix("oidc")
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testJWTAuthBackend_Destroyed(path),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccJWTAuthBackendConfigOIDCProviderConfigAzure(path),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.azure", "oidc_discovery_url", "https://accounts.google.com"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.azure", "provider_config.#", "1"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.azure", "provider_config.2995719985.provider", "azure"),
-				),
-			},
-		},
-	})
-}
-
-// TODO: OIDC plugin has a validation stage when configs are written,
-// and since we use circleci Docker, we can't mount files nor can it see a
-// local one. This will need to be updated when we switch to a Circle machine
-// executor.
-
-// The random numbers on the provider_config are a hash of the object.
-func TestAccJWTAuthBackend_OIDC_Provider_ConfigGSuite(t *testing.T) {
-	path := acctest.RandomWithPrefix("oidc")
-	serviceAccountPath := os.Getenv("JWT_SERVICE_ACCOUNT_PATH")
-	if serviceAccountPath == "" {
-		t.Skip("JWT_SERVICE_ACCOUNT_PATH not set")
-	}
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testJWTLocal(t) },
-		Providers:    testProviders,
-		CheckDestroy: testJWTAuthBackend_Destroyed(path),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(path, serviceAccountPath),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "oidc_discovery_url", "https://accounts.google.com"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.provider", "gsuite"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.gsuite_service_account", serviceAccountPath),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.gsuite_admin_impersonate", "admin@gsuitedomain.com"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.fetch_groups", "true"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.fetch_user_info", "true"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.groups_recurse_max_depth", "5"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.gsuite", "provider_config.1247099397.user_custom_schemas", "Education,Preferences"),
 				),
 			},
 		},
@@ -216,38 +181,19 @@ resource "vault_jwt_auth_backend" "oidc" {
 `, path)
 }
 
-func testAccJWTAuthBackendConfigOIDCProviderConfigAzure(path string) string {
+func testAccJWTAuthBackendProviderConfig(path string) string {
 	return fmt.Sprintf(`
-resource "vault_jwt_auth_backend" "azure" {
-	description = "OIDC backend"
-	oidc_discovery_url = "https://accounts.google.com"
-	path = "%s"
-	type = "oidc"
-	provider_config {
-		provider                 = "azure"
-	}
+resource "vault_jwt_auth_backend" "oidc" {
+  description = "OIDC backend"
+  oidc_discovery_url = "https://myco.auth0.com/"
+  path = "%s"
+  type = "oidc"
+  provider_config = {
+	provider = "azure"
+	groups_recurse_max_depth = "1"
+  }
 }
 `, path)
-}
-
-func testAccJWTAuthBackendConfigOIDCProviderConfigGSuite(backendPath, serviceAccountPath string) string {
-	return fmt.Sprintf(`
-resource "vault_jwt_auth_backend" "gsuite" {
-	description = "OIDC backend"
-	oidc_discovery_url = "https://accounts.google.com"
-	path = "%s"
-	type = "oidc"
-	provider_config {
-		provider                 = "gsuite"
-		gsuite_service_account   = "%s"
-		gsuite_admin_impersonate = "admin@gsuitedomain.com"
-		fetch_groups             = true
-		fetch_user_info          = true
-		groups_recurse_max_depth = 5
-		user_custom_schemas      = "Education,Preferences"
-	}
-}
-`, backendPath, serviceAccountPath)
 }
 
 func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
@@ -316,6 +262,137 @@ func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 					// force value to be unknown until apply phase
 					oidc_discovery_url = "https://myco.auth0.${vault_identity_oidc_key.key.id}/"
 				}`, path),
+			},
+		},
+	})
+}
+
+func TestAccJWTAuthBackendProviderConfigConversionBool(t *testing.T) {
+	type test struct {
+		name  string
+		value string
+		err   bool
+		want  interface{}
+	}
+
+	tests := []test{
+		{name: "fetch_groups", value: "true", err: false, want: true},
+		{name: "fetch_groups", value: "TRUE", err: false, want: true},
+		{name: "fetch_groups", value: "false", err: false, want: false},
+		{name: "fetch_groups", value: "FALSE", err: false, want: false},
+		{name: "fetch_groups", value: "foo", err: true, want: ""},
+
+		{name: "fetch_user_info", value: "true", err: false, want: true},
+		{name: "fetch_user_info", value: "TRUE", err: false, want: true},
+		{name: "fetch_user_info", value: "false", err: false, want: false},
+		{name: "fetch_user_info", value: "FALSE", err: false, want: false},
+		{name: "fetch_user_info", value: "foo", err: true, want: ""},
+	}
+
+	for _, tc := range tests {
+		config := map[string]interface{}{
+			tc.name: tc.value,
+		}
+		actual, err := convertProviderConfigValues(config)
+		if tc.err && err == nil {
+			t.Fatalf("expected error, got none for key: %s, value: %s", tc.name, tc.value)
+		} else if !tc.err && err != nil {
+			t.Fatalf("expected no error, got one: %s", err)
+		} else if !tc.err {
+			if actual[tc.name] != tc.want {
+				t.Fatalf("expected %s, got %s", tc.want, actual[tc.name])
+			}
+		}
+	}
+}
+
+func TestAccJWTAuthBackendProviderConfigConversionInt(t *testing.T) {
+	type test struct {
+		name  string
+		value string
+		err   bool
+		want  interface{}
+	}
+
+	tests := []test{
+		{name: "groups_recurse_max_depth", value: "1", err: false, want: int64(1)},
+		{name: "groups_recurse_max_depth", value: "0", err: false, want: int64(0)},
+		{name: "groups_recurse_max_depth", value: "-1", err: false, want: int64(-1)},
+		{name: "groups_recurse_max_depth", value: "foo", err: true, want: int64(0)},
+	}
+
+	for _, tc := range tests {
+		config := map[string]interface{}{
+			tc.name: tc.value,
+		}
+		actual, err := convertProviderConfigValues(config)
+		if tc.err && err == nil {
+			t.Fatalf("exepcted error, got none for key: %s, value: %s", tc.name, tc.value)
+		} else if !tc.err && err != nil {
+			t.Fatalf("expected no error, got one: %s", err)
+		} else if !tc.err {
+			if actual[tc.name] != tc.want {
+				t.Fatalf("exepcted %s, got %s", tc.want, actual[tc.name])
+			}
+		}
+	}
+}
+
+// Testing bad values here for various parameters. This test leaks backends that don't get
+// cleaned up because a race condition exists that make it hard to get the error
+// before Terraform destroys the resource. Since we are creating both a Vault mount
+// and configuring it in a single resource, the mount creation succeeds but the config fails.
+// There seems to be a race condition if you destroy the resource, so auth backends never
+// get deleted because only the config failed.
+// Leaving this test here for now until we can update to newer versions of SDK, which might
+// have resolved this race condition.
+func TestAccJWTAuthBackendProviderConfig_negative(t *testing.T) {
+	t.Skip(true)
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "oidc" {
+					description = "OIDC Backend"
+					oidc_discovery_url = "https://myco.auth0.com/"
+					path = "%s"
+					type = "oidc"
+					provider_config = {
+						provider = "azure"
+						fetch_groups = "foo"
+					}
+				  }`, acctest.RandomWithPrefix("oidc")),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("could not convert fetch_groups to bool: strconv.ParseBool: parsing \"foo\": invalid syntax"),
+			},
+			{
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "oidc" {
+					description = "OIDC Backend"
+					oidc_discovery_url = "https://myco.auth0.com/"
+					path = "%s"
+					type = "oidc"
+					provider_config = {
+						provider = "azure"
+						fetch_user_info = "foo"
+					}
+				  }`, acctest.RandomWithPrefix("oidc")),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("could not convert fetch_user_info to bool: strconv.ParseBool: parsing \"foo\": invalid syntax"),
+			},
+			{
+				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "oidc" {
+					description = "OIDC Backend"
+					oidc_discovery_url = "https://myco.auth0.com/"
+					path = "%s"
+					type = "oidc"
+					provider_config = {
+						provider = "azure"
+						groups_recurse_max_depth = "foo"
+					}
+				  }`, acctest.RandomWithPrefix("oidc")),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("could not convert groups_recurse_max_depth to int: strconv.ParseInt: parsing \"foo\": invalid syntax"),
 			},
 		},
 	})
