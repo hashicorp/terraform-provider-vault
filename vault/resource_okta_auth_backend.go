@@ -81,9 +81,9 @@ func oktaAuthBackendResource() *schema.Resource {
 
 			"ttl": {
 				Type:         schema.TypeString,
+				Computed:     true,
 				Required:     false,
 				Optional:     true,
-				Default:      "0",
 				Description:  "Duration after which authentication will be expired",
 				ValidateFunc: validateOktaTTL,
 				StateFunc:    normalizeOktaTTL,
@@ -91,10 +91,10 @@ func oktaAuthBackendResource() *schema.Resource {
 
 			"max_ttl": {
 				Type:         schema.TypeString,
+				Computed:     true,
 				Required:     false,
 				Optional:     true,
 				Description:  "Maximum duration after which authentication will be expired",
-				Default:      "0",
 				ValidateFunc: validateOktaTTL,
 				StateFunc:    normalizeOktaTTL,
 			},
