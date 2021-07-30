@@ -10,7 +10,10 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-const gcpAuthType string = "gcp"
+const (
+	gcpAuthType        = "gcp"
+	gcpAuthDefaultPath = "gcp"
+)
 
 func gcpAuthBackendResource() *schema.Resource {
 	return &schema.Resource{
@@ -20,7 +23,9 @@ func gcpAuthBackendResource() *schema.Resource {
 		Read:   gcpAuthBackendRead,
 		Delete: gcpAuthBackendDelete,
 		Exists: gcpAuthBackendExists,
-
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: map[string]*schema.Schema{
 			"credentials": {
 				Type:         schema.TypeString,
@@ -57,7 +62,7 @@ func gcpAuthBackendResource() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
-				Default:  "gcp",
+				Default:  gcpAuthDefaultPath,
 				StateFunc: func(v interface{}) string {
 					return strings.Trim(v.(string), "/")
 				},
@@ -170,11 +175,25 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	d.Set("private_key_id", resp.Data["private_key_id"])
-	d.Set("client_id", resp.Data["client_id"])
-	d.Set("project_id", resp.Data["project_id"])
-	d.Set("client_email", resp.Data["client_email"])
-	d.Set("local", resp.Data["local"])
+	params := []string{
+		"private_key_id",
+		"client_id",
+		"project_id",
+		"client_email",
+		"local",
+	}
+
+	for _, param := range params {
+		if err := d.Set(param, resp.Data[param]); err != nil {
+			return err
+		}
+	}
+
+	// set the auth backend's path
+	if err := d.Set("path", d.Id()); err != nil {
+		return err
+	}
+
 	return nil
 }
 
