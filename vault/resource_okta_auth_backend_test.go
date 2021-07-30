@@ -13,114 +13,110 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func TestAccOktaAuthBackend(t *testing.T) {
+func TestAccOktaAuthBackend_basic(t *testing.T) {
 	organization := "example"
+	path := resource.PrefixedUniqueId("okta-basic-")
 
-	tests := []struct {
-		name     string
-		preCheck func(t *testing.T)
-		steps    func(path string) []resource.TestStep
-	}{
-		{
-			name:     "default",
-			preCheck: util.TestAccPreCheck,
-			steps: func(path string) []resource.TestStep {
-				return []resource.TestStep{
-					{
-						Config: testAccOktaAuthConfig_basic(path, organization),
-						Check: resource.ComposeTestCheckFunc(
-							testAccOktaAuthBackend_InitialCheck,
-							testAccOktaAuthBackend_GroupsCheck(path, "dummy", []string{"one", "two", "default"}),
-							testAccOktaAuthBackend_UsersCheck(path, "foo", []string{"dummy"}, []string{}),
-						),
-					},
-					{
-						Config: testAccOktaAuthConfig_updated(path, organization),
-						Check: resource.ComposeTestCheckFunc(
-							testAccOktaAuthBackend_GroupsCheck(path, "example", []string{"three", "four", "default"}),
-							testAccOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{}),
-						),
-					},
-				}
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { util.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOktaAuthConfig_basic(path, organization),
+				Check: resource.ComposeTestCheckFunc(
+					testAccOktaAuthBackend_InitialCheck,
+					testAccOktaAuthBackend_GroupsCheck(path, "dummy", []string{"one", "two", "default"}),
+					testAccOktaAuthBackend_UsersCheck(path, "foo", []string{"dummy"}, []string{}),
+				),
+			},
+			{
+				Config: testAccOktaAuthConfig_updated(path, organization),
+				Check: resource.ComposeTestCheckFunc(
+					testAccOktaAuthBackend_GroupsCheck(path, "example", []string{"three", "four", "default"}),
+					testAccOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{}),
+				),
 			},
 		},
-		{
-			name:     "import",
-			preCheck: util.TestAccPreCheck,
-			steps: func(path string) []resource.TestStep {
-				return []resource.TestStep{
-					{
-						Config: testAccOktaAuthConfig_basic(path, organization),
-						Check: resource.ComposeTestCheckFunc(
-							testAccOktaAuthBackend_InitialCheck,
-							testAccOktaAuthBackend_GroupsCheck(path, "dummy", []string{"one", "two", "default"}),
-							testAccOktaAuthBackend_UsersCheck(path, "foo", []string{"dummy"}, []string{}),
-						),
-					},
-					{
-						ResourceName:      "vault_okta_auth_backend.test",
-						ImportState:       true,
-						ImportStateVerify: true,
-						ImportStateVerifyIgnore: []string{
-							"token",
-						},
-					},
-					{
-						Config: testAccOktaAuthConfig_updated(path, organization),
-						Check: resource.ComposeTestCheckFunc(
-							testAccOktaAuthBackend_GroupsCheck(path, "example", []string{"three", "four", "default"}),
-							testAccOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{}),
-						),
-					},
-					{
-						ResourceName:      "vault_okta_auth_backend.test",
-						ImportState:       true,
-						ImportStateVerify: true,
-						ImportStateVerifyIgnore: []string{
-							"token",
-						},
-					},
-				}
-			},
-		},
-		{
-			name:     "invalid_ttl",
-			preCheck: util.TestAccPreCheck,
-			steps: func(path string) []resource.TestStep {
-				return []resource.TestStep{
-					{
-						Config:      testAccOktaAuthConfig_invalid_ttl(path, organization),
-						ExpectError: regexp.MustCompile(`invalid value for "ttl", could not parse "invalid_ttl"$`),
-					},
-				}
-			},
-		},
-		{
-			name:     "invalid_max_ttl",
-			preCheck: util.TestAccPreCheck,
-			steps: func(path string) []resource.TestStep {
-				return []resource.TestStep{
-					{
-						Config:      testAccOktaAuthConfig_invalid_max_ttl(path, organization),
-						ExpectError: regexp.MustCompile(`invalid value for "max_ttl", could not parse "invalid_max_ttl"$`),
-					},
-				}
-			},
-		},
-	}
+	})
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			path := resource.PrefixedUniqueId("okta-" + tt.name + "-")
-			resource.Test(t, resource.TestCase{
-				PreCheck:     func() { tt.preCheck(t) },
-				Providers:    testProviders,
-				CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
-				Steps:        tt.steps(path),
-			})
+func TestAccOktaAuthBackend_import(t *testing.T) {
+	organization := "example"
+	path := resource.PrefixedUniqueId("okta-import-")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { util.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOktaAuthConfig_basic(path, organization),
+				Check: resource.ComposeTestCheckFunc(
+					testAccOktaAuthBackend_InitialCheck,
+					testAccOktaAuthBackend_GroupsCheck(path, "dummy", []string{"one", "two", "default"}),
+					testAccOktaAuthBackend_UsersCheck(path, "foo", []string{"dummy"}, []string{}),
+				),
+			},
+			{
+				ResourceName:      "vault_okta_auth_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"token",
+				},
+			},
+			{
+				Config: testAccOktaAuthConfig_updated(path, organization),
+				Check: resource.ComposeTestCheckFunc(
+					testAccOktaAuthBackend_GroupsCheck(path, "example", []string{"three", "four", "default"}),
+					testAccOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{}),
+				),
+			},
+			{
+				ResourceName:      "vault_okta_auth_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"token",
+				},
+			},
 		},
-		)
-	}
+	})
+}
+
+func TestAccOktaAuthBackend_invalid_ttl(t *testing.T) {
+	organization := "example"
+	path := resource.PrefixedUniqueId("okta-invalid-ttl-")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { util.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccOktaAuthConfig_invalid_ttl(path, organization),
+				ExpectError: regexp.MustCompile(`invalid value for "ttl", could not parse "invalid_ttl"$`),
+			},
+		},
+	})
+}
+
+func TestAccOktaAuthBackend_invalid_max_ttl(t *testing.T) {
+	organization := "example"
+	path := resource.PrefixedUniqueId("okta-invalid_max_ttl-")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { util.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccOktaAuthConfig_invalid_max_ttl(path, organization),
+				ExpectError: regexp.MustCompile(`invalid value for "max_ttl", could not parse "invalid_max_ttl"$`),
+			},
+		},
+	})
 }
 
 func testAccOktaAuthConfig_basic(path string, organization string) string {
