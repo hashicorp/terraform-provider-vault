@@ -122,6 +122,7 @@ func ldapAuthBackendResource() *schema.Resource {
 			Type:        schema.TypeBool,
 			ForceNew:    true,
 			Optional:    true,
+			Default:     false,
 			Description: "Specifies if the auth method is local only",
 		},
 		"accessor": {

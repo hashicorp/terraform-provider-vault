@@ -58,6 +58,8 @@ on `token`. Changing the value, however, _will_ overwrite the previously stored 
 * `max_lease_ttl_seconds` - (Optional) The maximum TTL that can be requested
 for credentials issued by this backend.
 
+* `local` - (Optional) Specifies if the secret backend is local only.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

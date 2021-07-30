@@ -90,6 +90,13 @@ func consulSecretBackendResource() *schema.Resource {
 				Description: "Client key used for Consul's TLS communication, must be x509 PEM encoded and if this is set you need to also set client_cert.",
 				Sensitive:   true,
 			},
+			"local": {
+				Type:        schema.TypeBool,
+				ForceNew:    true,
+				Optional:    true,
+				Default:     false,
+				Description: "Specifies if the secret backend is local only",
+			},
 		},
 	}
 }
@@ -104,12 +111,14 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	ca_cert := d.Get("ca_cert").(string)
 	client_cert := d.Get("client_cert").(string)
 	client_key := d.Get("client_key").(string)
+	local := d.Get("local").(bool)
 
 	configPath := consulSecretBackendConfigPath(path)
 
 	info := &api.MountInput{
 		Type:        "consul",
 		Description: d.Get("description").(string),
+		Local:       local,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
