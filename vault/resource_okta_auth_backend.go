@@ -354,13 +354,13 @@ func oktaReadAuthConfig(client *api.Client, path string, d *schema.ResourceData)
 		return err
 	}
 
-	// map schema config to okta auth params.
-	fieldMap := map[string]string{
-		"organization": "organization",
-		"ttl":          "token_ttl",
-		"max_ttl":      "token_max_ttl",
+	// map schema config TTL strings to okta auth TTL params.
+	// the provider input type of string does not match Vault's API of int64
+	ttlFieldMap := map[string]string{
+		"ttl":     "token_ttl",
+		"max_ttl": "token_max_ttl",
 	}
-	for k, v := range fieldMap {
+	for k, v := range ttlFieldMap {
 		if v, ok := config.Data[v]; ok {
 			s, err := parseutil.ParseString(v)
 			if err != nil {
@@ -371,6 +371,18 @@ func oktaReadAuthConfig(client *api.Client, path string, d *schema.ResourceData)
 			}
 		}
 	}
+
+	params := []string{
+		"base_url",
+		"bypass_okta_mfa",
+		"organization",
+	}
+	for _, param := range params {
+		if err := d.Set(param, config.Data[param]); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
