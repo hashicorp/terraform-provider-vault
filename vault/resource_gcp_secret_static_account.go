@@ -145,8 +145,12 @@ func gcpSecretStaticAccountRead(d *schema.ResourceData, meta interface{}) error 
 		return nil
 	}
 
-	d.Set("backend", backend)
-	d.Set("static_account", staticAccount)
+	if err := d.Set("backend", backend); err != nil {
+		return err
+	}
+	if err := d.Set("static_account", staticAccount); err != nil {
+		return err
+	}
 
 	for _, k := range []string{"secret_type", "token_scopes", "service_account_email", "service_account_project"} {
 		v, ok := resp.Data[k]
