@@ -25,59 +25,44 @@ const gcpJSONCredentials string = `
   }
 `
 
-func TestGCPAuthBackend(t *testing.T) {
-	tests := []struct {
-		name     string
-		preCheck func(t *testing.T)
-		steps    func(path string) []resource.TestStep
-		path     string
-	}{
-		{
-			name:     "basic",
-			path:     gcpAuthDefaultPath,
-			preCheck: util.TestAccPreCheck,
-			steps: func(path string) []resource.TestStep {
-				return []resource.TestStep{
-					{
-						Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
-						Check:  testGCPAuthBackendCheck_attrs(),
-					},
-				}
-			},
-		},
-		{
-			name:     "import",
-			path:     resource.PrefixedUniqueId("gcp-import-"),
-			preCheck: util.TestAccPreCheck,
-			steps: func(path string) []resource.TestStep {
-				return []resource.TestStep{
-					{
-						Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
-						Check:  testGCPAuthBackendCheck_attrs(),
-					},
-					{
-						ResourceName:      "vault_gcp_auth_backend.test",
-						ImportState:       true,
-						ImportStateVerify: true,
-						ImportStateVerifyIgnore: []string{
-							"credentials",
-						},
-					},
-				}
-			},
-		},
-	}
+func TestGCPAuthBackend_basic(t *testing.T) {
+	path := resource.PrefixedUniqueId("gcp-basic-")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resource.Test(t, resource.TestCase{
-				PreCheck:     func() { tt.preCheck(t) },
-				Providers:    testProviders,
-				CheckDestroy: testGCPAuthBackendDestroy,
-				Steps:        tt.steps(tt.path),
-			})
-		})
-	}
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { util.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testGCPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
+				Check:  testGCPAuthBackendCheck_attrs(),
+			},
+		},
+	})
+}
+
+func TestGCPAuthBackend_import(t *testing.T) {
+	path := resource.PrefixedUniqueId("gcp-import-")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { util.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testGCPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
+				Check:  testGCPAuthBackendCheck_attrs(),
+			},
+			{
+				ResourceName:      "vault_gcp_auth_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"credentials",
+				},
+			},
+		},
+	})
 }
 
 func testGCPAuthBackendDestroy(s *terraform.State) error {
