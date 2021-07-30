@@ -224,12 +224,14 @@ func normalizeOktaTTL(i interface{}) string {
 }
 
 func validateOktaTTL(i interface{}, k string) ([]string, []error) {
+	var values []string
 	var errors []error
 	s, err := parseDurationSeconds(i)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("invalid value for %q, could not parse %q", k, i))
+		values = append(values, s)
 	}
-	return []string{s}, errors
+	return values, errors
 }
 
 func parseDurationSeconds(i interface{}) (string, error) {
