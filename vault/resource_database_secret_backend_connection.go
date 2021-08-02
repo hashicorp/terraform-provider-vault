@@ -321,6 +321,7 @@ func mysqlConnectionStringResource() *schema.Resource {
 		Type:        schema.TypeString,
 		Optional:    true,
 		Description: "x509 certificate for connecting to the database. This must be a PEM encoded version of the private key and the certificate combined.",
+		Sensitive:   true,
 	}
 	r.Schema["tls_ca"] = &schema.Schema{
 		Type:        schema.TypeString,
