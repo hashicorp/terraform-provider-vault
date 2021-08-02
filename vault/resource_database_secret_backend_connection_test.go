@@ -245,13 +245,15 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
 	password := acctest.RandomWithPrefix("password")
+	tls_ca := os.Getenv("MYSQL_CA")
+	tls_certificate_key := os.Getenv("MYSQL_CERTIFICATE_KEY")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mysql(name, backend, connURL, password),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mysql(name, backend, connURL, password, tls_ca, tls_certificate_key),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -267,6 +269,8 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "data.%", "1"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "data.password", password),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.tls_ca", tls_ca),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.tls_certificate_key", tls_certificate_key),
 				),
 			},
 			{
@@ -332,13 +336,15 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
 	password := acctest.RandomWithPrefix("password")
+	tls_ca := os.Getenv("MYSQL_CA")
+	tls_certificate_key := os.Getenv("MYSQL_CERTIFICATE_KEY")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, password, 0),
+				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, password, tls_ca, tls_certificate_key, 0),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -353,10 +359,12 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "data.%", "1"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "data.password", password),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.tls_ca", tls_ca),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.tls_certificate_key", tls_certificate_key),
 				),
 			},
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, password, 10),
+				Config: testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, backend, connURL, password, tls_ca, tls_certificate_key, 10),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -371,6 +379,8 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.max_connection_lifetime", "10"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "data.%", "1"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "data.password", password),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.tls_ca", tls_ca),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mysql.0.tls_certificate_key", tls_certificate_key),
 				),
 			},
 		},
@@ -674,7 +684,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, connURL)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mysql(name, path, connURL, password string) string {
+func testAccDatabaseSecretBackendConnectionConfig_mysql(name, path, connURL, password string, tls_ca string, tls_certificate_key string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -692,13 +702,15 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 
   data = {
-	  password = "%s"
+	  password            = "%s"
+	  tls_ca              = "%s"
+	  tls_certificate_key = "%s"
   }
 }
-`, path, name, connURL, password)
+`, path, name, connURL, password, tls_ca, tls_certificate_key)
 }
 
-func testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, path, connURL, password string, connLifetime int) string {
+func testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, path, connURL, password string, tls_ca string, tls_certificate_key string, connLifetime int) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -717,10 +729,12 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 
   data = {
-	  password = "%s"
+	  password            = "%s"
+	  tls_ca              = "%s"
+	  tls_certificate_key = "%s"
   }
 }
-`, path, name, connURL, connLifetime, password)
+`, path, name, connURL, connLifetime, password, tls_ca, tls_certificate_key)
 }
 
 func testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, path, connURL, username, password string, connLifetime int) string {
