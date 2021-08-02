@@ -79,3 +79,11 @@ If this is not supplied only locally configured groups will be enabled.
 In addition to all arguments above, the following attributes are exported:
 
 * `accessor` - The mount accessor related to the auth mount. It is useful for integration with [Identity Secrets Engine](https://www.vaultproject.io/docs/secrets/identity/index.html).
+
+## Import
+
+Okta authentication backends can be imported using its `path`, e.g.
+
+```
+$ terraform import vault_okta_auth_backend.example okta
+```

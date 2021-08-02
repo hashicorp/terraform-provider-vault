@@ -3,24 +3,23 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
+	"regexp"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
-func TestAccOktaAuthBackend(t *testing.T) {
-	path := "okta-" + strconv.Itoa(acctest.RandInt())
+func TestAccOktaAuthBackend_basic(t *testing.T) {
 	organization := "example"
+	path := resource.PrefixedUniqueId("okta-basic-")
 
 	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { util.TestAccPreCheck(t) },
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
@@ -37,6 +36,84 @@ func TestAccOktaAuthBackend(t *testing.T) {
 					testAccOktaAuthBackend_GroupsCheck(path, "example", []string{"three", "four", "default"}),
 					testAccOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{}),
 				),
+			},
+		},
+	})
+}
+
+func TestAccOktaAuthBackend_import(t *testing.T) {
+	organization := "example"
+	path := resource.PrefixedUniqueId("okta-import-")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { util.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOktaAuthConfig_basic(path, organization),
+				Check: resource.ComposeTestCheckFunc(
+					testAccOktaAuthBackend_InitialCheck,
+					testAccOktaAuthBackend_GroupsCheck(path, "dummy", []string{"one", "two", "default"}),
+					testAccOktaAuthBackend_UsersCheck(path, "foo", []string{"dummy"}, []string{}),
+				),
+			},
+			{
+				ResourceName:      "vault_okta_auth_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"token",
+				},
+			},
+			{
+				Config: testAccOktaAuthConfig_updated(path, organization),
+				Check: resource.ComposeTestCheckFunc(
+					testAccOktaAuthBackend_GroupsCheck(path, "example", []string{"three", "four", "default"}),
+					testAccOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{}),
+				),
+			},
+			{
+				ResourceName:      "vault_okta_auth_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"token",
+				},
+			},
+		},
+	})
+}
+
+func TestAccOktaAuthBackend_invalid_ttl(t *testing.T) {
+	organization := "example"
+	path := resource.PrefixedUniqueId("okta-invalid-ttl-")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { util.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccOktaAuthConfig_invalid_ttl(path, organization),
+				ExpectError: regexp.MustCompile(`invalid value for "ttl", could not parse "invalid_ttl"$`),
+			},
+		},
+	})
+}
+
+func TestAccOktaAuthBackend_invalid_max_ttl(t *testing.T) {
+	organization := "example"
+	path := resource.PrefixedUniqueId("okta-invalid_max_ttl-")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { util.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccOktaAuthConfig_invalid_max_ttl(path, organization),
+				ExpectError: regexp.MustCompile(`invalid value for "max_ttl", could not parse "invalid_max_ttl"$`),
 			},
 		},
 	})
@@ -77,6 +154,32 @@ resource "vault_okta_auth_backend" "test" {
         username = "bar"
         groups = ["example"]
     }
+}
+`, path, organization)
+}
+
+func testAccOktaAuthConfig_invalid_ttl(path string, organization string) string {
+	return fmt.Sprintf(`
+resource "vault_okta_auth_backend" "test" {
+    description = "Testing the Terraform okta auth backend"
+    path = "%s"
+    organization = "%s"
+    token = "this must be kept secret"
+    ttl = "invalid_ttl"
+    max_ttl = "1h"
+}
+`, path, organization)
+}
+
+func testAccOktaAuthConfig_invalid_max_ttl(path string, organization string) string {
+	return fmt.Sprintf(`
+resource "vault_okta_auth_backend" "test" {
+    description = "Testing the Terraform okta auth backend"
+    path = "%s"
+    organization = "%s"
+    token = "this must be kept secret"
+    ttl = "1h"
+    max_ttl = "invalid_max_ttl"
 }
 `, path, organization)
 }
