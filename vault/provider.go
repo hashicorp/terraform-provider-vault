@@ -849,7 +849,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
 
-	// Set tht token to the generated child token
+	// Set the token to the generated child token
 	client.SetToken(childToken)
 
 	// Set the namespace to the requested namespace, if provided
