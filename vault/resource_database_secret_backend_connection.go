@@ -586,10 +586,10 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 
 func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionData(d, prefix, data)
-	if v, ok := d.GetOkExists(prefix + "tls_certificate_key"); ok {
+	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
 		data["tls_certificate_key"] = v.(string)
 	}
-	if v, ok := d.GetOkExists(prefix + "tls_ca"); ok {
+	if v, ok := d.GetOk(prefix + "tls_ca"); ok {
 		data["tls_ca"] = v.(string)
 	}
 }
