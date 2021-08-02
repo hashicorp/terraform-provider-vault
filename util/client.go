@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -17,10 +18,14 @@ import (
 
 type Client struct {
 	*api.Client
-	Data *schema.ResourceData
+	Data  *schema.ResourceData
+	mutex sync.Mutex
 }
 
 func (c *Client) lazyInit() error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	// client has already be initialized.
 	if c.Client != nil {
 		return nil
@@ -190,6 +195,32 @@ func (c *Client) lazyInit() error {
 	return nil
 }
 
+func (c *Client) CurrentWrappingLookupFunc() api.WrappingLookupFunc {
+	if err := c.lazyInit(); err != nil {
+		panic(err)
+	}
+
+	return c.Client.CurrentWrappingLookupFunc()
+}
+
+// Address performs the lazy initialization, then delegates.
+func (c *Client) Address() string {
+	if err := c.lazyInit(); err != nil {
+		panic(err)
+	}
+
+	return c.Client.Address()
+}
+
+// Auth performs the lazy initialization, then delegates.
+func (c *Client) Auth() *api.Auth {
+	if err := c.lazyInit(); err != nil {
+		panic(err)
+	}
+
+	return c.Client.Auth()
+}
+
 // Clone creates a same object, but a copy.
 func (c *Client) Clone() (*Client, error) {
 	clone := &Client{
@@ -211,6 +242,14 @@ func (c *Client) Logical() *api.Logical {
 	}
 
 	return c.Client.Logical()
+}
+
+func (c *Client) NewRequest(method, requestPath string) *api.Request {
+	if err := c.lazyInit(); err != nil {
+		panic(err)
+	}
+
+	return c.Client.NewRequest(method, requestPath)
 }
 
 // Sys performs the lazy initialization, then delegates.

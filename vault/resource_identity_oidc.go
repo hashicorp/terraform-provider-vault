@@ -43,7 +43,6 @@ func identityOidcCreate(d *schema.ResourceData, meta interface{}) error {
 	identityOidcUpdateFields(d, data)
 
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error writing IdentityOidc %s: %s", addr, err)
 	}
@@ -66,7 +65,6 @@ func identityOidcUpdate(d *schema.ResourceData, meta interface{}) error {
 	identityOidcUpdateFields(d, data)
 
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error updating IdentityOidc for %s: %s", addr, err)
 	}

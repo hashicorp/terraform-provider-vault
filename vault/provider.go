@@ -662,7 +662,10 @@ var (
 )
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	return &util.Client{nil, d}, nil
+	return &util.Client{
+		Client: nil,
+		Data:   d,
+	}, nil
 }
 
 func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {
