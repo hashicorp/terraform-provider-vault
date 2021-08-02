@@ -87,7 +87,7 @@ func (c *Client) lazyInit() error {
 	client.SetMaxRetries(d.Get("max_retries").(int))
 
 	// Try an get the token from the config or token helper
-	token, err := providerToken(d)
+	token, err := ProviderToken(d)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func (c *Client) lazyInit() error {
 
 		method := authLogin["method"].(string)
 		if method == "aws" {
-			if err := signAWSLogin(authLoginParameters); err != nil {
+			if err := SignAWSLogin(authLoginParameters); err != nil {
 				return fmt.Errorf("error signing AWS login request: %s", err)
 			}
 		}
@@ -222,7 +222,7 @@ func (c *Client) Sys() *api.Sys {
 	return c.Client.Sys()
 }
 
-func providerToken(d *schema.ResourceData) (string, error) {
+func ProviderToken(d *schema.ResourceData) (string, error) {
 	if token := d.Get("token").(string); token != "" {
 		return token, nil
 	}
@@ -254,7 +254,7 @@ func providerToken(d *schema.ResourceData) (string, error) {
 	return strings.TrimSpace(token), nil
 }
 
-func signAWSLogin(parameters map[string]interface{}) error {
+func SignAWSLogin(parameters map[string]interface{}) error {
 	var accessKey, secretKey, securityToken string
 	if val, ok := parameters["aws_access_key_id"].(string); ok {
 		accessKey = val

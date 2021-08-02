@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/command/config"
 	"github.com/mitchellh/go-homedir"
 )
@@ -48,8 +49,10 @@ func TestProvider(t *testing.T) {
 	}
 }
 
-var testProvider *schema.Provider
-var testProviders map[string]terraform.ResourceProvider
+var (
+	testProvider  *schema.Provider
+	testProviders map[string]terraform.ResourceProvider
+)
 
 func init() {
 	testProvider = Provider()
@@ -222,7 +225,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
 
-	//Create a test namespace and make sure it stays there
+	// Create a test namespace and make sure it stays there
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
 		Providers: map[string]terraform.ResourceProvider{
@@ -260,7 +263,6 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 			},
 		},
 	})
-
 }
 
 func testResourceApproleConfig_basic() string {
@@ -355,7 +357,7 @@ resource "vault_token" "test" {
 
 func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *testing.T) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		//Check that it made the policy
+		// Check that it made the policy
 		resourceState := s.Modules[0].Resources["vault_policy.test"]
 		if resourceState == nil {
 			return fmt.Errorf("resource not found in state")
@@ -366,7 +368,7 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 			return fmt.Errorf("resource has no primary instance")
 		}
 
-		//Check that it made the token and read it back
+		// Check that it made the token and read it back
 
 		tokenResourceState := s.Modules[0].Resources["vault_token.test"]
 		if tokenResourceState == nil {
@@ -393,7 +395,7 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 
 		ns2Path := acctest.RandomWithPrefix("test-namespace2")
 
-		//Finally test that you can do stuff with the new token by creating a sub namespace
+		// Finally test that you can do stuff with the new token by creating a sub namespace
 		resource.Test(t, resource.TestCase{
 			PreCheck: func() { testAccPreCheck(t) },
 			Providers: map[string]terraform.ResourceProvider{
@@ -500,7 +502,7 @@ func TestAccProviderToken(t *testing.T) {
 			// Set up the file token.
 			if tc.fileToken {
 				tokenBytes := []byte("file-token")
-				err := ioutil.WriteFile(tokenFilePath, tokenBytes, 0666)
+				err := ioutil.WriteFile(tokenFilePath, tokenBytes, 0o666)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -524,7 +526,7 @@ func TestAccProviderToken(t *testing.T) {
 			}
 
 			// Get and check the provider token.
-			token, err := providerToken(d)
+			token, err := util.ProviderToken(d)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -536,7 +538,6 @@ func TestAccProviderToken(t *testing.T) {
 }
 
 func TestAccTokenName(t *testing.T) {
-
 	tests := []struct {
 		TokenNameEnv       string
 		UseTokenNameEnv    bool
@@ -749,7 +750,6 @@ func TestAccProviderVaultAddrEnv(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-
 			if tc.vaultAddrEnv != "" {
 				unset, err := tempSetenv("VAULT_ADDR", tc.vaultAddrEnv)
 				defer failIfErr(t, unset)
@@ -767,7 +767,7 @@ func TestAccProviderVaultAddrEnv(t *testing.T) {
 			}
 
 			// Get and check the provider token.
-			token, err := providerToken(d)
+			token, err := util.ProviderToken(d)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -857,11 +857,11 @@ func setupTestTokenHelper(t *testing.T, script string) (cleanup func()) {
 	configPath := path.Join(dir, "vault-config")
 	helperPath := path.Join(dir, "helper-script")
 	configStr := fmt.Sprintf(`token_helper = "%s"`, helperPath)
-	err = ioutil.WriteFile(configPath, []byte(configStr), 0666)
+	err = ioutil.WriteFile(configPath, []byte(configStr), 0o666)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(helperPath, []byte(script), 0777)
+	err = ioutil.WriteFile(helperPath, []byte(script), 0o777)
 	if err != nil {
 		t.Fatal(err)
 	}

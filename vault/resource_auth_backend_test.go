@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/vault/api"
 )
 
 func TestResourceAuth(t *testing.T) {
@@ -113,7 +114,6 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 
 		client := testProvider.Meta().(*util.Client)
 		auths, err := client.Sys().ListAuth()
-
 		if err != nil {
 			return fmt.Errorf("error reading back auth: %s", err)
 		}
@@ -183,7 +183,6 @@ func testResourceAuth_updateCheck(s *terraform.State) error {
 
 	client := testProvider.Meta().(*util.Client)
 	auths, err := client.Sys().ListAuth()
-
 	if err != nil {
 		return fmt.Errorf("error reading back auth: %s", err)
 	}
@@ -364,7 +363,6 @@ func checkAuthMount(backend string, checker func(*api.AuthMount) error) resource
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*util.Client)
 		auths, err := client.Sys().ListAuth()
-
 		if err != nil {
 			return fmt.Errorf("error reading back auth: %s", err)
 		}
