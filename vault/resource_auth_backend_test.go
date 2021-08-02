@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestResourceAuth(t *testing.T) {
@@ -30,7 +30,7 @@ func TestResourceAuth(t *testing.T) {
 }
 
 func testAccCheckAuthBackendDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 
 	auths, err := client.Sys().ListAuth()
 	if err != nil {
@@ -111,7 +111,7 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 			return fmt.Errorf("unexpected auth local")
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 		auths, err := client.Sys().ListAuth()
 
 		if err != nil {
@@ -181,7 +181,7 @@ func testResourceAuth_updateCheck(s *terraform.State) error {
 		return fmt.Errorf("unexpected auth name")
 	}
 
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 	auths, err := client.Sys().ListAuth()
 
 	if err != nil {
@@ -362,7 +362,7 @@ resource "vault_auth_backend" "test" {
 
 func checkAuthMount(backend string, checker func(*api.AuthMount) error) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 		auths, err := client.Sys().ListAuth()
 
 		if err != nil {

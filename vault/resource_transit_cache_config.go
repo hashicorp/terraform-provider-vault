@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func transitSecretBackendCacheConfig() *schema.Resource {
@@ -36,7 +36,7 @@ func transitSecretBackendCacheConfig() *schema.Resource {
 }
 
 func transitSecretBackendCacheConfigUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	size := d.Get("size").(int)
 
 	backend := d.Get("backend").(string) + "/cache-config"
@@ -65,7 +65,7 @@ func transitSecretBackendCacheConfigUpdate(d *schema.ResourceData, meta interfac
 }
 
 func transitSecretBackendCacheConfigRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	backend := d.Id()
 

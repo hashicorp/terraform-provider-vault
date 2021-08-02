@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccSSHSecretBackendRole_basic(t *testing.T) {
@@ -140,7 +140,7 @@ func TestAccSSHSecretBackendRole_import(t *testing.T) {
 }
 
 func testAccSSHSecretBackendRoleCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ssh_secret_backend_role" {

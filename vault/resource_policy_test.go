@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestResourcePolicy(t *testing.T) {
@@ -63,7 +63,7 @@ func testResourcePolicy_initialCheck(expectedName string) resource.TestCheckFunc
 			return fmt.Errorf("unexpected policy name %q, expected %q", name, expectedName)
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 		policy, err := client.Sys().GetPolicy(name)
 		if err != nil {
 			return fmt.Errorf("error reading back policy: %s", err)
@@ -96,7 +96,7 @@ func testResourcePolicy_updateCheck(s *terraform.State) error {
 
 	name := instanceState.ID
 
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 
 	if name != instanceState.Attributes["name"] {
 		return fmt.Errorf("id doesn't match name")

@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccGithubTeam_basic(t *testing.T) {
@@ -98,7 +98,7 @@ func TestGithubTeamBackEndPath(t *testing.T) {
 }
 
 func testAccGithubTeamCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 	for _, r := range s.RootModule().Resources {
 		if r.Type != "vault_github_team" {
 			continue

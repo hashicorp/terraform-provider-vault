@@ -187,7 +187,6 @@ func setTokenFields(d *schema.ResourceData, data map[string]interface{}, config 
 	if !conflicted {
 		data["token_bound_cidrs"] = d.Get("token_bound_cidrs").(*schema.Set).List()
 	}
-
 }
 
 func updateTokenFields(d *schema.ResourceData, data map[string]interface{}, create bool) {

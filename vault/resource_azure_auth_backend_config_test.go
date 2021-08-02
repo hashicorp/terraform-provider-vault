@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccAzureAuthBackendConfig_import(t *testing.T) {
@@ -51,7 +51,7 @@ func TestAccAzureAuthBackendConfig_basic(t *testing.T) {
 }
 
 func testAccCheckAzureAuthBackendConfigDestroy(s *terraform.State) error {
-	config := testProvider.Meta().(*api.Client)
+	config := testProvider.Meta().(*util.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_azure_auth_backend_config" {
@@ -104,7 +104,7 @@ func testAccAzureAuthBackendConfigCheck_attrs(backend string) resource.TestCheck
 			return fmt.Errorf("expected ID to be %q, got %q", "auth/"+backend+"/config", endpoint)
 		}
 
-		config := testProvider.Meta().(*api.Client)
+		config := testProvider.Meta().(*util.Client)
 		resp, err := config.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("error reading back Azure auth config from %q: %s", endpoint, err)

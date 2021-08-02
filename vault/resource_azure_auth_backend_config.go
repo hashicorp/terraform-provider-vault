@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func azureAuthBackendConfigResource() *schema.Resource {
@@ -65,7 +65,7 @@ func azureAuthBackendConfigResource() *schema.Resource {
 }
 
 func azureAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	config := meta.(*api.Client)
+	config := meta.(*util.Client)
 
 	// if backend comes from the config, it won't have the StateFunc
 	// applied yet, so we need to apply it again.
@@ -99,7 +99,7 @@ func azureAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	config := meta.(*api.Client)
+	config := meta.(*util.Client)
 
 	log.Printf("[DEBUG] Reading Azure auth backend config")
 	secret, err := config.Logical().Read(d.Id())
@@ -129,7 +129,7 @@ func azureAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	config := meta.(*api.Client)
+	config := meta.(*util.Client)
 
 	log.Printf("[DEBUG] Deleting Azure auth backend config from %q", d.Id())
 	_, err := config.Logical().Delete(d.Id())
@@ -142,7 +142,7 @@ func azureAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	config := meta.(*api.Client)
+	config := meta.(*util.Client)
 
 	log.Printf("[DEBUG] Checking if Azure auth backend is configured at %q", d.Id())
 	secret, err := config.Logical().Read(d.Id())

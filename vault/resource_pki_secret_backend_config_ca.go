@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func pkiSecretBackendConfigCAResource() *schema.Resource {
@@ -34,7 +34,7 @@ func pkiSecretBackendConfigCAResource() *schema.Resource {
 }
 
 func pkiSecretBackendConfigCACreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	backend := d.Get("backend").(string)
 

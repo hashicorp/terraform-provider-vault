@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func namespaceResource() *schema.Resource {
@@ -37,7 +37,7 @@ func namespaceResource() *schema.Resource {
 }
 
 func namespaceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Get("path").(string)
 
@@ -52,7 +52,7 @@ func namespaceWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Get("path").(string)
 
@@ -68,7 +68,7 @@ func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func namespaceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	upgradeNonPathdNamespaceID(d)
 

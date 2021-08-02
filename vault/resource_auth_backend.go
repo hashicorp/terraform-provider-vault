@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -100,7 +101,7 @@ func AuthBackendResource() *schema.Resource {
 }
 
 func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	mountType := d.Get("type").(string)
 	path := d.Get("path").(string)
@@ -132,7 +133,7 @@ func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func authBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 
@@ -146,12 +147,11 @@ func authBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func authBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	targetPath := d.Id()
 
 	auths, err := client.Sys().ListAuth()
-
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
@@ -177,7 +177,7 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func authBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)

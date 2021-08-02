@@ -7,7 +7,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func kubernetesAuthBackendRoleDataSource() *schema.Resource {
@@ -101,7 +101,7 @@ func kubernetesAuthBackendRoleDataSource() *schema.Resource {
 }
 
 func kubernetesAuthBackendRoleDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role_name").(string)

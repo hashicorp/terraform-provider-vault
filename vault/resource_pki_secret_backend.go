@@ -3,10 +3,11 @@ package vault
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
-	"strings"
 )
 
 func pkiSecretBackendResource() *schema.Resource {
@@ -66,7 +67,7 @@ func pkiSecretBackendResource() *schema.Resource {
 }
 
 func pkiSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Get("path").(string)
 	description := d.Get("description").(string)
@@ -99,7 +100,7 @@ func pkiSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func pkiSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 
@@ -129,7 +130,7 @@ func pkiSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func pkiSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	d.Partial(true)
@@ -153,7 +154,7 @@ func pkiSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func pkiSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 
@@ -168,7 +169,7 @@ func pkiSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func pkiSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if PKI backend exists at %q", path)

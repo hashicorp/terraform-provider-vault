@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccGithubAuthBackend_basic(t *testing.T) {
@@ -161,7 +161,7 @@ func TestAccGithubAuthBackend_importTuning(t *testing.T) {
 
 func testAccCheckAuthMountExists(n string, out *api.AuthMount) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 		return authMountExistsHelper(n, s, client, out)
 	}
 }
@@ -171,11 +171,11 @@ func testAccCheckGithubAuthMountDestroy(s *terraform.State) error {
 }
 
 func testAccCheckAuthMountDestroy(s *terraform.State, resType string) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 	return authMountDestroyHelper(s, client, resType)
 }
 
-func authMountExistsHelper(n string, s *terraform.State, client *api.Client, out *api.AuthMount) error {
+func authMountExistsHelper(n string, s *terraform.State, client *util.Client, out *api.AuthMount) error {
 	rs, ok := s.RootModule().Resources[n]
 	if !ok {
 		return fmt.Errorf("Not found: %s", n)
@@ -200,7 +200,7 @@ func authMountExistsHelper(n string, s *terraform.State, client *api.Client, out
 	return nil
 }
 
-func authMountDestroyHelper(s *terraform.State, client *api.Client, resType string) error {
+func authMountDestroyHelper(s *terraform.State, client *util.Client, resType string) error {
 	for _, r := range s.RootModule().Resources {
 		if r.Type != resType {
 			continue

@@ -2,10 +2,12 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/vault/api"
 )
 
 func rabbitmqSecretBackendResource() *schema.Resource {
@@ -82,7 +84,7 @@ func rabbitmqSecretBackendResource() *schema.Resource {
 }
 
 func rabbitmqSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Get("path").(string)
 	description := d.Get("description").(string)
@@ -135,7 +137,7 @@ func rabbitmqSecretBackendCreate(d *schema.ResourceData, meta interface{}) error
 }
 
 func rabbitmqSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 
@@ -164,7 +166,7 @@ func rabbitmqSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func rabbitmqSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	d.Partial(true)
@@ -205,7 +207,7 @@ func rabbitmqSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 }
 
 func rabbitmqSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	log.Printf("[DEBUG] Unmounting RabbitMQ backend %q", path)
@@ -218,7 +220,7 @@ func rabbitmqSecretBackendDelete(d *schema.ResourceData, meta interface{}) error
 }
 
 func rabbitmqSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if RabbitMQ backend exists at %q", path)

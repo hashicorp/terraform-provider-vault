@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 type oktaUser struct {
@@ -19,7 +18,7 @@ type oktaGroup struct {
 	Policies []string
 }
 
-func isOktaUserPresent(client *api.Client, path, username string) (bool, error) {
+func isOktaUserPresent(client *util.Client, path, username string) (bool, error) {
 	secret, err := client.Logical().Read(oktaUserEndpoint(path, username))
 	if err != nil {
 		return false, err
@@ -28,7 +27,7 @@ func isOktaUserPresent(client *api.Client, path, username string) (bool, error) 
 	return secret != nil, err
 }
 
-func listOktaUsers(client *api.Client, path string) ([]string, error) {
+func listOktaUsers(client *util.Client, path string) ([]string, error) {
 	secret, err := client.Logical().List(oktaUserEndpoint(path, ""))
 	if err != nil {
 		return []string{}, err
@@ -45,9 +44,8 @@ func listOktaUsers(client *api.Client, path string) ([]string, error) {
 	return []string{}, nil
 }
 
-func readOktaUser(client *api.Client, path string, username string) (*oktaUser, error) {
+func readOktaUser(client *util.Client, path string, username string) (*oktaUser, error) {
 	secret, err := client.Logical().Read(oktaUserEndpoint(path, username))
-
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +57,7 @@ func readOktaUser(client *api.Client, path string, username string) (*oktaUser, 
 	}, nil
 }
 
-func updateOktaUser(client *api.Client, path string, user oktaUser) error {
+func updateOktaUser(client *util.Client, path string, user oktaUser) error {
 	_, err := client.Logical().Write(oktaUserEndpoint(path, user.Username), map[string]interface{}{
 		"groups":   strings.Join(user.Groups, ","),
 		"policies": strings.Join(user.Policies, ","),
@@ -68,12 +66,12 @@ func updateOktaUser(client *api.Client, path string, user oktaUser) error {
 	return err
 }
 
-func deleteOktaUser(client *api.Client, path, username string) error {
+func deleteOktaUser(client *util.Client, path, username string) error {
 	_, err := client.Logical().Delete(oktaUserEndpoint(path, username))
 	return err
 }
 
-func isOktaAuthBackendPresent(client *api.Client, path string) (bool, error) {
+func isOktaAuthBackendPresent(client *util.Client, path string) (bool, error) {
 	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		return false, fmt.Errorf("error reading from Vault: %s", err)
@@ -82,7 +80,6 @@ func isOktaAuthBackendPresent(client *api.Client, path string) (bool, error) {
 	configuredPath := path + "/"
 
 	for authBackendPath, auth := range auths {
-
 		if auth.Type == "okta" && authBackendPath == configuredPath {
 			return true, nil
 		}
@@ -91,7 +88,7 @@ func isOktaAuthBackendPresent(client *api.Client, path string) (bool, error) {
 	return false, nil
 }
 
-func isOktaGroupPresent(client *api.Client, path, name string) (bool, error) {
+func isOktaGroupPresent(client *util.Client, path, name string) (bool, error) {
 	secret, err := client.Logical().Read(oktaGroupEndpoint(path, name))
 	if err != nil {
 		return false, err
@@ -100,7 +97,7 @@ func isOktaGroupPresent(client *api.Client, path, name string) (bool, error) {
 	return secret != nil, err
 }
 
-func listOktaGroups(client *api.Client, path string) ([]string, error) {
+func listOktaGroups(client *util.Client, path string) ([]string, error) {
 	secret, err := client.Logical().List(oktaGroupEndpoint(path, ""))
 	if err != nil {
 		return []string{}, err
@@ -117,9 +114,8 @@ func listOktaGroups(client *api.Client, path string) ([]string, error) {
 	return []string{}, nil
 }
 
-func readOktaGroup(client *api.Client, path string, name string) (*oktaGroup, error) {
+func readOktaGroup(client *util.Client, path string, name string) (*oktaGroup, error) {
 	secret, err := client.Logical().Read(oktaGroupEndpoint(path, name))
-
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +126,7 @@ func readOktaGroup(client *api.Client, path string, name string) (*oktaGroup, er
 	}, nil
 }
 
-func updateOktaGroup(client *api.Client, path string, group oktaGroup) error {
+func updateOktaGroup(client *util.Client, path string, group oktaGroup) error {
 	_, err := client.Logical().Write(oktaGroupEndpoint(path, group.Name), map[string]interface{}{
 		"policies": strings.Join(group.Policies, ","),
 	})
@@ -138,7 +134,7 @@ func updateOktaGroup(client *api.Client, path string, group oktaGroup) error {
 	return err
 }
 
-func deleteOktaGroup(client *api.Client, path, name string) error {
+func deleteOktaGroup(client *util.Client, path, name string) error {
 	_, err := client.Logical().Delete(oktaGroupEndpoint(path, name))
 	return err
 }

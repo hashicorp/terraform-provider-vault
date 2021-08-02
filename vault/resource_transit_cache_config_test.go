@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccTransitCacheConfig(t *testing.T) {
@@ -45,7 +45,7 @@ func TestAccTransitCacheConfig(t *testing.T) {
 }
 
 func testAccTransitCacheConfigCheckDestroyed(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_transit_secret_cache_config" {
@@ -76,7 +76,7 @@ func testAccTransitCacheConfigCheckApi(size int) resource.TestCheckFunc {
 
 		id := instanceState.ID
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 		resp, err := client.Logical().Read(id)
 		if err != nil {
 			return err

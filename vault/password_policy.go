@@ -7,10 +7,11 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
-func readPasswordPolicy(client *api.Client, name string) (map[string]interface{}, error) {
+func readPasswordPolicy(client *util.Client, name string) (map[string]interface{}, error) {
 	r := client.NewRequest("GET", fmt.Sprintf("/v1/sys/policies/password/%s", name))
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -37,7 +38,7 @@ func readPasswordPolicy(client *api.Client, name string) (map[string]interface{}
 }
 
 func passwordPolicyDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Id()
 
@@ -56,12 +57,11 @@ func passwordPolicyDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func passwordPolicyRead(attributes []string, d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Id()
 
 	policy, err := readPasswordPolicy(client, name)
-
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
@@ -75,7 +75,7 @@ func passwordPolicyRead(attributes []string, d *schema.ResourceData, meta interf
 }
 
 func passwordPolicyWrite(attributes []string, d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Get("name").(string)
 

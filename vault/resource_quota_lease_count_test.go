@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func randomQuotaLeaseString() string {
@@ -60,7 +60,7 @@ func TestQuotaLeaseCount(t *testing.T) {
 
 func testQuotaLeaseCountCheckDestroy(leaseCounts []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 
 		for _, name := range leaseCounts {
 			resp, err := client.Logical().Read(quotaLeaseCountPath(name))

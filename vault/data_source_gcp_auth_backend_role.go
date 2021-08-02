@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -110,7 +110,7 @@ func gcpAuthBackendRoleDataSource() *schema.Resource {
 }
 
 func gcpAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := gcpRoleResourcePath(d.Get("backend").(string), d.Get("role_name").(string))
 

@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -176,7 +176,7 @@ func transitSecretBackendKeyResource() *schema.Resource {
 }
 
 func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -214,7 +214,7 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 }
 
 func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	backend, err := transitSecretBackendKeyBackendFromPath(path)
@@ -309,7 +309,7 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 }
 
 func transitSecretBackendKeyUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating transit secret backend key %q", path)
@@ -332,7 +332,7 @@ func transitSecretBackendKeyUpdate(d *schema.ResourceData, meta interface{}) err
 }
 
 func transitSecretBackendKeyDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting key %q", path)
@@ -345,7 +345,7 @@ func transitSecretBackendKeyDelete(d *schema.ResourceData, meta interface{}) err
 }
 
 func transitSecretBackendKeyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if key %q exists", path)

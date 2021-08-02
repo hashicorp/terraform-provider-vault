@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -96,7 +96,7 @@ func gcpSecretStaticAccountResource() *schema.Resource {
 }
 
 func gcpSecretStaticAccountCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	backend := d.Get("backend").(string)
 	staticAccount := d.Get("static_account").(string)
@@ -119,7 +119,7 @@ func gcpSecretStaticAccountCreate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func gcpSecretStaticAccountRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	backend, err := gcpSecretStaticAccountBackendFromPath(path)
@@ -175,7 +175,7 @@ func gcpSecretStaticAccountRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func gcpSecretStaticAccountUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -193,7 +193,7 @@ func gcpSecretStaticAccountUpdate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func gcpSecretStaticAccountDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting GCP secrets backend static account %q", path)
@@ -229,7 +229,7 @@ func gcpSecretStaticAccountUpdateFields(d *schema.ResourceData, data map[string]
 }
 
 func gcpSecretStaticAccountExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", path)
 	secret, err := client.Logical().Read(path)

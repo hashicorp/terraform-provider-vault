@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestNamespace_basic(t *testing.T) {
@@ -63,7 +63,7 @@ func testNamespaceCheckAttrs() resource.TestCheckFunc {
 
 func testNamespaceDestroy(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 
 		namespaceRef, err := client.Logical().Read(fmt.Sprintf("/sys/namespaces/%s", path))
 		if err != nil {

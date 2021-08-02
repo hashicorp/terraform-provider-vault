@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const kubernetesJWT = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWF1dGgtdmF1bHQtb3BlcmF0b3IiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlY3JldC5uYW1lIjoia3ViZXJuZXRlcy1hdXRoLXZhdWx0LW9wZXJhdG9yLXRva2VuLWZycmc3Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6Imt1YmVybmV0ZXMtYXV0aC12YXVsdC1vcGVyYXRvciIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6IjMwYzRiZjdkLTMwZmYtMTFlOC04ODdkLTA4MDAyNzZhYmI4OCIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDprdWJlcm5ldGVzLWF1dGgtdmF1bHQtb3BlcmF0b3I6a3ViZXJuZXRlcy1hdXRoLXZhdWx0LW9wZXJhdG9yIn0.V6lWrH6rgNfghn5Qc9IdPwxrAV0E8cdVNvGh3KmVCZpZVwOnL4eCQ3R6V37pO7ssTs-0aYYWc2NYcGnLiXvUPah89uK2wkE_Eod3NgWDqlutcM-LJuIK6xubuH0y2Bpb7ZddZmtc5MOa8e88iwiZmQ_zKhifwESdwFWaA5Nn1QNzwIPu2kOZU0Wz9sVN4i_NETUGqaEQYVU6DF--gErCLeloUDERW-QyrCRZ-ymTFt7UWRiPi3zAZ0-BG8j4TsjNYLiifGiMiaD6Ss-pd0brVMzQylpVlnZ7Of6ywIv-BWVa278ki3cd1RMqQj8tzHNg2tlbBSLMn92Gxh16jBW90w"
@@ -154,7 +154,7 @@ func TestAccKubernetesAuthBackendConfig_basic(t *testing.T) {
 }
 
 func testAccCheckKubernetesAuthBackendConfigDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_kubernetes_auth_backend_config" {

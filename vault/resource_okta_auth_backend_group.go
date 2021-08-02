@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 func oktaAuthBackendGroupResource() *schema.Resource {
@@ -68,7 +67,7 @@ func oktaAuthBackendGroupResource() *schema.Resource {
 }
 
 func oktaAuthBackendGroupWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Get("path").(string)
 	groupName := d.Get("group_name").(string)
@@ -96,7 +95,7 @@ func oktaAuthBackendGroupWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendGroupRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Id()
 
 	backend, err := oktaAuthBackendGroupPathFromID(id)
@@ -111,7 +110,6 @@ func oktaAuthBackendGroupRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Reading group %s from Okta auth backend %s", groupName, backend)
 
 	present, err := isOktaGroupPresent(client, backend, groupName)
-
 	if err != nil {
 		return fmt.Errorf("unable to read group %s from Vault: %s", groupName, err)
 	}
@@ -135,7 +133,7 @@ func oktaAuthBackendGroupRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendGroupDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Get("path").(string)
 	group := d.Get("group_name").(string)
@@ -152,7 +150,7 @@ func oktaAuthBackendGroupDelete(d *schema.ResourceData, meta interface{}) error 
 }
 
 func oktaAuthBackendGroupExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Id()
 
 	backend, err := oktaAuthBackendGroupPathFromID(id)
@@ -179,7 +177,7 @@ func oktaAuthBackendGroupID(path, groupName string) string {
 }
 
 func oktaAuthBackendGroupPathFromID(id string) (string, error) {
-	var parts = strings.SplitN(id, "/", 2)
+	parts := strings.SplitN(id, "/", 2)
 	if len(parts) != 2 {
 		return "", fmt.Errorf("Expected 2 parts in ID '%s'", id)
 	}
@@ -187,7 +185,7 @@ func oktaAuthBackendGroupPathFromID(id string) (string, error) {
 }
 
 func oktaAuthBackendGroupNameFromID(id string) (string, error) {
-	var parts = strings.SplitN(id, "/", 2)
+	parts := strings.SplitN(id, "/", 2)
 	if len(parts) != 2 {
 		return "", fmt.Errorf("Expected 2 parts in ID '%s'", id)
 	}

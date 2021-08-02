@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -81,7 +82,7 @@ func githubAuthBackendResource() *schema.Resource {
 func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	var description string
 
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := strings.Trim(d.Get("path").(string), "/")
 
 	if v, ok := d.GetOk("description"); ok {
@@ -93,7 +94,6 @@ func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 		Type:        "github",
 		Description: description,
 	})
-
 	if err != nil {
 		return fmt.Errorf("error enabling github auth backend at '%s': %s", path, err)
 	}
@@ -107,7 +107,7 @@ func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
@@ -149,7 +149,6 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Writing github auth config to '%q'", configPath)
 	_, err := client.Logical().Write(configPath, data)
-
 	if err != nil {
 		d.SetId("")
 		return fmt.Errorf("error writing github config to '%q': %s", configPath, err)
@@ -196,7 +195,7 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
 
@@ -274,5 +273,5 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	return authMountDisable(meta.(*api.Client), d.Id())
+	return authMountDisable(meta.(*util.Client), d.Id())
 }

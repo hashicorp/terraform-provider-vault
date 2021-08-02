@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const testAccIdentityOidcRoleTemplate = `{
@@ -114,7 +114,7 @@ func TestAccIdentityOidcRoleUpdate(t *testing.T) {
 }
 
 func testAccCheckIdentityOidcRoleDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_oidc_role" {
@@ -146,7 +146,7 @@ func testAccIdentityOidcRoleCheckAttrs() resource.TestCheckFunc {
 		id := instanceState.ID
 
 		path := identityOidcRolePath(id)
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 		resp, err := client.Logical().Read(path)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", path)

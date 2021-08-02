@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestResourceGenericSecret(t *testing.T) {
@@ -40,7 +40,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*api.Client)
+					client := testProvider.Meta().(*util.Client)
 					_, err := client.Logical().Delete(path)
 					if err != nil {
 						t.Fatalf("unable to manually delete the secret via the SDK: %s", err)
@@ -95,7 +95,7 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 			return fmt.Errorf("unexpected secret path")
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 		secret, err := client.Logical().Read(path)
 		if err != nil {
 			return fmt.Errorf("error reading back secret: %s", err)
@@ -143,7 +143,7 @@ func testResourceGenericSecret_updateCheck(s *terraform.State) error {
 
 	path := instanceState.ID
 
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 	secret, err := client.Logical().Read(path)
 	if err != nil {
 		return fmt.Errorf("error reading back secret: %s", err)

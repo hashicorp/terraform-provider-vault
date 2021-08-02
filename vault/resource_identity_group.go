@@ -158,7 +158,7 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 }
 
 func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Get("name").(string)
 	typeValue := d.Get("type").(string)
@@ -174,7 +174,6 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	resp, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error writing IdentityGroup to %q: %s", name, err)
 	}
@@ -198,7 +197,7 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityGroup %q", id)
@@ -214,7 +213,6 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error updating IdentityGroup %q: %s", id, err)
 	}
@@ -224,7 +222,7 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Id()
 
 	resp, err := readIdentityGroup(client, id)
@@ -253,7 +251,7 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Id()
 
 	path := identityGroupIDPath(id)
@@ -272,7 +270,7 @@ func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Id()
 	key := id
 
@@ -299,7 +297,7 @@ func identityGroupIDPath(id string) string {
 	return fmt.Sprintf("%s/id/%s", identityGroupPath, id)
 }
 
-func readIdentityGroupPolicies(client *api.Client, groupID string) ([]interface{}, error) {
+func readIdentityGroupPolicies(client *util.Client, groupID string) ([]interface{}, error) {
 	resp, err := readIdentityGroup(client, groupID)
 	if err != nil {
 		return nil, err
@@ -314,7 +312,7 @@ func readIdentityGroupPolicies(client *api.Client, groupID string) ([]interface{
 	return make([]interface{}, 0), nil
 }
 
-func readIdentityGroupMemberEntityIds(client *api.Client, groupID string) ([]interface{}, error) {
+func readIdentityGroupMemberEntityIds(client *util.Client, groupID string) ([]interface{}, error) {
 	resp, err := readIdentityGroup(client, groupID)
 	if err != nil {
 		return nil, err
@@ -330,7 +328,7 @@ func readIdentityGroupMemberEntityIds(client *api.Client, groupID string) ([]int
 }
 
 // This function may return `nil` for the IdentityGroup if it does not exist
-func readIdentityGroup(client *api.Client, groupID string) (*api.Secret, error) {
+func readIdentityGroup(client *util.Client, groupID string) (*api.Secret, error) {
 	path := identityGroupIDPath(groupID)
 	log.Printf("[DEBUG] Reading IdentityGroup %s from %q", groupID, path)
 

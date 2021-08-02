@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -81,7 +82,7 @@ func gcpSecretBackendResource() *schema.Resource {
 }
 
 func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Get("path").(string)
 	description := d.Get("description").(string)
@@ -132,7 +133,7 @@ func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 
@@ -162,7 +163,7 @@ func gcpSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	d.Partial(true)
@@ -198,7 +199,7 @@ func gcpSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 
@@ -212,7 +213,7 @@ func gcpSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if GCP backend exists at %q", path)
 	mounts, err := client.Sys().ListMounts()

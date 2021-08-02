@@ -104,7 +104,7 @@ func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interfac
 }
 
 func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Get("name").(string)
 
@@ -117,7 +117,6 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 	identityEntityUpdateFields(d, data, true)
 
 	resp, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error writing IdentityEntity to %q: %s", name, err)
 	}
@@ -141,7 +140,7 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityEntity %q", id)
@@ -155,7 +154,6 @@ func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
 	identityEntityUpdateFields(d, data, false)
 
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error updating IdentityEntity %q: %s", id, err)
 	}
@@ -165,7 +163,7 @@ func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Id()
 
 	resp, err := readIdentityEntity(client, id)
@@ -192,7 +190,7 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Id()
 
 	path := identityEntityIDPath(id)
@@ -211,7 +209,7 @@ func identityEntityDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Id()
 
 	path := identityEntityIDPath(id)
@@ -241,7 +239,7 @@ func identityEntityIDPath(id string) string {
 	return fmt.Sprintf("%s/id/%s", identityEntityPath, id)
 }
 
-func readIdentityEntityPolicies(client *api.Client, entityID string) ([]interface{}, error) {
+func readIdentityEntityPolicies(client *util.Client, entityID string) ([]interface{}, error) {
 	resp, err := readIdentityEntity(client, entityID)
 	if err != nil {
 		return nil, err
@@ -257,7 +255,7 @@ func readIdentityEntityPolicies(client *api.Client, entityID string) ([]interfac
 }
 
 // May return nil if entity does not exist
-func readIdentityEntity(client *api.Client, entityID string) (*api.Secret, error) {
+func readIdentityEntity(client *util.Client, entityID string) (*api.Secret, error) {
 	path := identityEntityIDPath(entityID)
 	log.Printf("[DEBUG] Reading Entity %s from %q", entityID, path)
 

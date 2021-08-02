@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func mfaDuoResource() *schema.Resource {
@@ -63,7 +63,7 @@ func mfaDuoResource() *schema.Resource {
 }
 
 func mfaDuoWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Get("name").(string)
 
@@ -84,7 +84,7 @@ func mfaDuoWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaDuoDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Get("name").(string)
 
@@ -100,7 +100,7 @@ func mfaDuoDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaDuoRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Get("name").(string)
 

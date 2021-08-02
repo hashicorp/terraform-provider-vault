@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
@@ -69,7 +69,7 @@ func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
 }
 
 func testAccCheckidentityEntityPoliciesDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_entity_policies" {
@@ -121,7 +121,7 @@ func testAccIdentityEntityPoliciesCheckAttrs(resource string) resource.TestCheck
 		id := instanceState.ID
 
 		path := identityEntityIDPath(id)
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 		resp, err := client.Logical().Read(path)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", path)
@@ -216,7 +216,7 @@ func testAccIdentityEntityPoliciesCheckLogical(resource string, policies []strin
 		id := instanceState.ID
 
 		path := identityEntityIDPath(id)
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 		resp, err := client.Logical().Read(path)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", path)

@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestLDAPAuthBackendUser_import(t *testing.T) {
@@ -130,7 +130,7 @@ func TestLDAPAuthBackendUser_oneGroup(t *testing.T) {
 }
 
 func testLDAPAuthBackendUserDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ldap_auth_backend_user" {
@@ -159,7 +159,7 @@ func testLDAPAuthBackendUserCheck_groups(backend, username string, groups []stri
 			return fmt.Errorf("resource has no primary instance")
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 		resp, err := client.Logical().Read(instanceState.ID)
 		if err != nil {
 			return err
@@ -215,7 +215,7 @@ func testLDAPAuthBackendUserCheck_attrs(backend, username string) resource.TestC
 			return fmt.Errorf("expected ID to be %q, got %q instead", endpoint, instanceState.ID)
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {
 			return err

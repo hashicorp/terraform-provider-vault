@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -108,7 +108,7 @@ func gcpSecretRolesetResource() *schema.Resource {
 }
 
 func gcpSecretRolesetCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	backend := d.Get("backend").(string)
 	roleset := d.Get("roleset").(string)
@@ -131,7 +131,7 @@ func gcpSecretRolesetCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretRolesetRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	backend, err := gcpSecretRolesetBackendFromPath(path)
@@ -191,7 +191,7 @@ func gcpSecretRolesetRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretRolesetUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -209,7 +209,7 @@ func gcpSecretRolesetUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretRolesetDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting GCP secrets backend roleset %q", path)
@@ -243,7 +243,7 @@ func gcpSecretRolesetUpdateFields(d *schema.ResourceData, data map[string]interf
 }
 
 func gcpSecretRolesetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", path)
 	secret, err := client.Logical().Read(path)

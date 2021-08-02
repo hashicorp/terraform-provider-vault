@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -132,7 +132,7 @@ func sshSecretBackendRoleResource() *schema.Resource {
 }
 
 func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -217,7 +217,7 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 
@@ -273,7 +273,7 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func sshSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting role %q", path)
@@ -287,7 +287,7 @@ func sshSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error 
 }
 
 func sshSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", path)

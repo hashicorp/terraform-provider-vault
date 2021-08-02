@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -156,25 +157,23 @@ func jwtCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
 	return errors.New("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided")
 }
 
-var (
-	// TODO: build this from the Resource Schema?
-	matchingJwtMountConfigOptions = []string{
-		"oidc_discovery_url",
-		"oidc_discovery_ca_pem",
-		"oidc_client_id",
-		"oidc_client_secret",
-		"jwks_url",
-		"jwks_ca_pem",
-		"jwt_validation_pubkeys",
-		"bound_issuer",
-		"jwt_supported_algs",
-		"default_role",
-		"provider_config",
-	}
-)
+// TODO: build this from the Resource Schema?
+var matchingJwtMountConfigOptions = []string{
+	"oidc_discovery_url",
+	"oidc_discovery_ca_pem",
+	"oidc_client_id",
+	"oidc_client_secret",
+	"jwks_url",
+	"jwks_ca_pem",
+	"jwt_validation_pubkeys",
+	"bound_issuer",
+	"jwt_supported_algs",
+	"default_role",
+	"provider_config",
+}
 
 func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	authType := d.Get("type").(string)
 	desc := d.Get("description").(string)
@@ -183,7 +182,6 @@ func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
 
 	err := client.Sys().EnableAuth(path, authType, desc)
-
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -194,14 +192,13 @@ func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func jwtAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := getJwtPath(d)
 
 	log.Printf("[DEBUG] Deleting auth %s from Vault", path)
 
 	err := client.Sys().DisableAuth(path)
-
 	if err != nil {
 		return fmt.Errorf("error disabling auth from Vault: %s", err)
 	}
@@ -210,7 +207,7 @@ func jwtAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := getJwtPath(d)
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
@@ -225,7 +222,6 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("path", path)
 
 	backend, err := getJwtAuthBackendIfPresent(client, path)
-
 	if err != nil {
 		return fmt.Errorf("unable to check auth backends in Vault for path %s: %s", path, err)
 	}
@@ -237,7 +233,6 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	config, err := client.Logical().Read(jwtConfigEndpoint(path))
-
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
@@ -278,7 +273,6 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return nil
-
 }
 
 func convertProviderConfigValues(input map[string]interface{}) (map[string]interface{}, error) {
@@ -306,7 +300,7 @@ func convertProviderConfigValues(input map[string]interface{}) (map[string]inter
 }
 
 func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := getJwtPath(d)
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
@@ -355,7 +349,7 @@ func jwtConfigEndpoint(path string) string {
 	return fmt.Sprintf("/auth/%s/config", path)
 }
 
-func getJwtAuthBackendIfPresent(client *api.Client, path string) (*api.AuthMount, error) {
+func getJwtAuthBackendIfPresent(client *util.Client, path string) (*api.AuthMount, error) {
 	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		return nil, fmt.Errorf("error reading from Vault: %s", err)
@@ -364,7 +358,6 @@ func getJwtAuthBackendIfPresent(client *api.Client, path string) (*api.AuthMount
 	configuredPath := path + "/"
 
 	for authBackendPath, auth := range auths {
-
 		if authBackendPath == configuredPath {
 			return auth, nil
 		}

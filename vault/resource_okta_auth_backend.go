@@ -205,7 +205,7 @@ func oktaAuthBackendResource() *schema.Resource {
 }
 
 func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	authType := oktaAuthType
 	desc := d.Get("description").(string)
@@ -214,12 +214,11 @@ func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
 
 	// client.Sys().EnableAuth() is deprecated.
-	//err := client.Sys().EnableAuth(path, authType, desc)
+	// err := client.Sys().EnableAuth(path, authType, desc)
 	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
 		Type:        authType,
 		Description: desc,
 	})
-
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -230,14 +229,13 @@ func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting auth %s from Vault", path)
 
 	err := client.Sys().DisableAuth(path)
-
 	if err != nil {
 		return fmt.Errorf("error disabling auth from Vault: %s", err)
 	}
@@ -246,13 +244,12 @@ func oktaAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
 
 	present, err := isOktaAuthBackendPresent(client, path)
-
 	if err != nil {
 		return fmt.Errorf("unable to check auth backends in Vault for path %s: %s", path, err)
 	}
@@ -289,11 +286,10 @@ func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return nil
-
 }
 
 func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
@@ -339,7 +335,7 @@ func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	return oktaAuthBackendRead(d, meta)
 }
 
-func oktaReadAllGroups(client *api.Client, path string) (*schema.Set, error) {
+func oktaReadAllGroups(client *util.Client, path string) (*schema.Set, error) {
 	groupNames, err := listOktaGroups(client, path)
 	if err != nil {
 		return nil, fmt.Errorf("unable to list groups from %s in Vault: %s", path, err)
@@ -367,7 +363,7 @@ func oktaReadAllGroups(client *api.Client, path string) (*schema.Set, error) {
 	return groups, nil
 }
 
-func oktaReadAllUsers(client *api.Client, path string) (*schema.Set, error) {
+func oktaReadAllUsers(client *util.Client, path string) (*schema.Set, error) {
 	userNames, err := listOktaUsers(client, path)
 	if err != nil {
 		return nil, fmt.Errorf("unable to list groups from %s in Vault: %s", path, err)
@@ -401,8 +397,7 @@ func oktaReadAllUsers(client *api.Client, path string) (*schema.Set, error) {
 	return users, nil
 }
 
-func oktaAuthUpdateGroups(d *schema.ResourceData, client *api.Client, path string, oldValue, newValue interface{}) error {
-
+func oktaAuthUpdateGroups(d *schema.ResourceData, client *util.Client, path string, oldValue, newValue interface{}) error {
 	groupsToDelete := oldValue.(*schema.Set).Difference(newValue.(*schema.Set))
 	newGroups := newValue.(*schema.Set).Difference(oldValue.(*schema.Set))
 
@@ -437,7 +432,7 @@ func oktaAuthUpdateGroups(d *schema.ResourceData, client *api.Client, path strin
 	return nil
 }
 
-func oktaAuthUpdateUsers(d *schema.ResourceData, client *api.Client, path string, oldValue, newValue interface{}) error {
+func oktaAuthUpdateUsers(d *schema.ResourceData, client *util.Client, path string, oldValue, newValue interface{}) error {
 	usersToDelete := oldValue.(*schema.Set).Difference(newValue.(*schema.Set))
 	newUsers := newValue.(*schema.Set).Difference(oldValue.(*schema.Set))
 

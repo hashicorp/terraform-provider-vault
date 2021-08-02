@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 func approleAuthBackendLoginResource() *schema.Resource {
@@ -88,7 +87,7 @@ func approleAuthBackendLoginResource() *schema.Resource {
 }
 
 func approleAuthBackendLoginCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	backend := d.Get("backend").(string)
 
@@ -116,7 +115,7 @@ func approleAuthBackendLoginCreate(d *schema.ResourceData, meta interface{}) err
 }
 
 func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	log.Printf("[DEBUG] Reading token %q", d.Id())
 	resp, err := client.Auth().Token().LookupAccessor(d.Id())
@@ -155,7 +154,7 @@ func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error
 }
 
 func approleAuthBackendLoginDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	accessor := d.Id()
 
 	log.Printf("[DEBUG] Revoking token %q", accessor)
@@ -169,7 +168,7 @@ func approleAuthBackendLoginDelete(d *schema.ResourceData, meta interface{}) err
 }
 
 func approleAuthBackendLoginExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	accessor := d.Id()
 
 	log.Printf("[DEBUG] Checking if token %q exists", accessor)
@@ -188,7 +187,7 @@ func approleAuthBackendLoginPath(backend string) string {
 	return "auth/" + strings.Trim(backend, "/") + "/login"
 }
 
-func leaseExpiringSoon(d *schema.ResourceData, client *api.Client) bool {
+func leaseExpiringSoon(d *schema.ResourceData, client *util.Client) bool {
 	startedStr := d.Get("lease_started").(string)
 	duration := d.Get("lease_duration").(int)
 	if startedStr == "" {

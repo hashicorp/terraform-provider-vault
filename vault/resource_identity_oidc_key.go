@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const identityOidcKeyPathTemplate = "identity/oidc/key/%s"
@@ -82,7 +82,7 @@ func identityOidcKeyUpdateFields(d *schema.ResourceData, data map[string]interfa
 }
 
 func identityOidcKeyCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Get("name").(string)
 	path := identityOidcKeyPath(name)
@@ -101,7 +101,7 @@ func identityOidcKeyCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	name := d.Id()
 	path := identityOidcKeyPath(name)
 
@@ -119,7 +119,7 @@ func identityOidcKeyUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	name := d.Id()
 
 	resp, err := identityOidcKeyApiRead(name, client)
@@ -143,7 +143,7 @@ func identityOidcKeyRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	name := d.Id()
 	path := identityOidcKeyPath(name)
 
@@ -161,7 +161,7 @@ func identityOidcKeyDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	name := d.Id()
 
 	log.Printf("[DEBUG] Checking if IdentityOidcKey %s exists", name)
@@ -179,7 +179,7 @@ func identityOidcKeyPath(name string) string {
 	return fmt.Sprintf(identityOidcKeyPathTemplate, name)
 }
 
-func identityOidcKeyApiRead(name string, client *api.Client) (map[string]interface{}, error) {
+func identityOidcKeyApiRead(name string, client *util.Client) (map[string]interface{}, error) {
 	path := identityOidcKeyPath(name)
 	resp, err := client.Logical().Read(path)
 
@@ -204,7 +204,7 @@ func identityOidcKeyApiRead(name string, client *api.Client) (map[string]interfa
 	return resp.Data, nil
 }
 
-func identityOidcKeyApiWrite(name string, data map[string]interface{}, client *api.Client) error {
+func identityOidcKeyApiWrite(name string, data map[string]interface{}, client *util.Client) error {
 	path := identityOidcKeyPath(name)
 
 	log.Printf("[DEBUG] Writing IdentityOidcKey %s at %s", name, path)

@@ -6,10 +6,11 @@ import (
 	"path"
 	"strings"
 
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
-func versionedSecret(requestedVersion int, path string, client *api.Client) (*api.Secret, error) {
+func versionedSecret(requestedVersion int, path string, client *util.Client) (*api.Secret, error) {
 	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		return nil, err
@@ -31,7 +32,6 @@ func versionedSecret(requestedVersion int, path string, client *api.Client) (*ap
 	}
 
 	secret, err := kvReadRequest(client, path, versionParam)
-
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func versionedSecret(requestedVersion int, path string, client *api.Client) (*ap
 	return secret, nil
 }
 
-func kvReadRequest(client *api.Client, path string, params map[string]string) (*api.Secret, error) {
+func kvReadRequest(client *util.Client, path string, params map[string]string) (*api.Secret, error) {
 	r := client.NewRequest("GET", "/v1/"+path)
 	for k, v := range params {
 		r.Params.Set(k, v)
@@ -78,7 +78,7 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 	return api.ParseSecret(resp.Body)
 }
 
-func kvPreflightVersionRequest(client *api.Client, path string) (string, int, error) {
+func kvPreflightVersionRequest(client *util.Client, path string) (string, int, error) {
 	// We don't want to use a wrapping call here so save any custom value and
 	// restore after
 	currentWrappingLookupFunc := client.CurrentWrappingLookupFunc()
@@ -127,7 +127,7 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 	return mountPath, 1, nil
 }
 
-func isKVv2(path string, client *api.Client) (string, bool, error) {
+func isKVv2(path string, client *util.Client) (string, bool, error) {
 	mountPath, version, err := kvPreflightVersionRequest(client, path)
 	if err != nil {
 		return "", false, err

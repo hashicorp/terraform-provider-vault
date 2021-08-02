@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func awsAuthBackendClientResource() *schema.Resource {
@@ -75,7 +75,7 @@ func awsAuthBackendClientResource() *schema.Resource {
 }
 
 func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	// if backend comes from the config, it won't have the StateFunc
 	// applied yet, so we need to apply it again.
@@ -121,7 +121,7 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	log.Printf("[DEBUG] Reading AWS auth backend client config")
 	secret, err := client.Logical().Read(d.Id())
@@ -153,7 +153,7 @@ func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	log.Printf("[DEBUG] Deleting AWS auth backend client config from %q", d.Id())
 	_, err := client.Logical().Delete(d.Id())
@@ -166,7 +166,7 @@ func awsAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	log.Printf("[DEBUG] Checking if AWS auth backend client is configured at %q", d.Id())
 	secret, err := client.Logical().Read(d.Id())

@@ -5,7 +5,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"strconv"
 	"testing"
 )
@@ -63,7 +63,7 @@ func testAccOktaAuthBackendUser_InitialCheck(s *terraform.State) error {
 
 func testAccOktaAuthBackendUser_Destroyed(path, userName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 
 		group, err := client.Logical().Read(fmt.Sprintf("/auth/%s/users/%s", path, userName))
 		if err != nil {

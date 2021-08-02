@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const testAccRabbitmqSecretBackendRoleTags_basic = `management`
@@ -119,7 +119,7 @@ func TestAccRabbitmqSecretBackendRole_nested(t *testing.T) {
 }
 
 func testAccRabbitmqSecretBackendRoleCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_rabbitmq_secret_backend_role" {

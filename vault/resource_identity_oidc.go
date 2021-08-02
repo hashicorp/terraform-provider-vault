@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const identityOidcPathTemplate = "identity/oidc/config"
@@ -34,7 +34,7 @@ func identityOidcUpdateFields(d *schema.ResourceData, data map[string]interface{
 }
 
 func identityOidcCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := identityOidcPathTemplate
 
 	data := make(map[string]interface{})
@@ -55,7 +55,7 @@ func identityOidcCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := identityOidcPathTemplate
 	addr := d.Id()
 
@@ -76,7 +76,7 @@ func identityOidcUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := identityOidcPathTemplate
 	addr := d.Id()
 
@@ -101,7 +101,7 @@ func identityOidcRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	addr := d.Id()
 	path := identityOidcPathTemplate
 
@@ -121,7 +121,7 @@ func identityOidcDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	addr := d.Id()
 	path := identityOidcPathTemplate
 

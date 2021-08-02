@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -140,7 +140,7 @@ func tokenAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]in
 }
 
 func tokenAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	role := d.Get("role_name").(string)
 
@@ -164,7 +164,7 @@ func tokenAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 }
 
 func tokenAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	roleName, err := tokenAuthBackendRoleNameFromPath(path)
@@ -237,7 +237,7 @@ func tokenAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating Token auth backend role %q", path)
@@ -255,7 +255,7 @@ func tokenAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 }
 
 func tokenAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting Token auth backend role %q", path)
@@ -269,7 +269,7 @@ func tokenAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error 
 }
 
 func tokenAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if Token auth backend role %q exists", path)

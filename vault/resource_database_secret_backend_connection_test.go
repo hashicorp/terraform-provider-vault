@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 )
 
@@ -408,7 +408,7 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 	createMySQSUser(t, db, testUsername, testPassword)
 	defer deleteMySQLUser(t, db, testUsername)
 
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -526,7 +526,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 }
 
 func testAccDatabaseSecretBackendConnectionCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_database_secret_backend_connection" {

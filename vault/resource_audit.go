@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -56,7 +57,7 @@ func auditResource() *schema.Resource {
 }
 
 func auditWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	description := d.Get("description").(string)
 	local := d.Get("local").(bool)
@@ -91,7 +92,7 @@ func auditWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func auditDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 
@@ -105,7 +106,7 @@ func auditDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func auditRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 

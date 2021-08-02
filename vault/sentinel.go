@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/vault/api"
 )
 
-func readSentinelPolicy(client *api.Client, policyType string, name string) (map[string]interface{}, error) {
+func readSentinelPolicy(client *util.Client, policyType string, name string) (map[string]interface{}, error) {
 	r := client.NewRequest("GET", fmt.Sprintf("/v1/sys/policies/%s/%s", policyType, name))
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -35,7 +37,7 @@ func readSentinelPolicy(client *api.Client, policyType string, name string) (map
 	return secret.Data, nil
 }
 
-func PutSentinelPolicy(client *api.Client, policyType string, name string, body map[string]interface{}) error {
+func PutSentinelPolicy(client *util.Client, policyType string, name string, body map[string]interface{}) error {
 	r := client.NewRequest("PUT", fmt.Sprintf("/v1/sys/policies/%s/%s", policyType, name))
 	if err := r.SetJSONBody(body); err != nil {
 		return err
@@ -52,7 +54,7 @@ func PutSentinelPolicy(client *api.Client, policyType string, name string, body 
 	return nil
 }
 
-func DeleteSentinelPolicy(client *api.Client, policyType string, name string) error {
+func DeleteSentinelPolicy(client *util.Client, policyType string, name string) error {
 	r := client.NewRequest("DELETE", fmt.Sprintf("/v1/sys/policies/%s/%s", policyType, name))
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -73,7 +75,7 @@ func ValidateSentinelEnforcementLevel(v interface{}, k string) (ws []string, err
 }
 
 func sentinelPolicyDelete(policyType string, d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Id()
 
@@ -88,12 +90,11 @@ func sentinelPolicyDelete(policyType string, d *schema.ResourceData, meta interf
 }
 
 func sentinelPolicyRead(policyType string, attributes []string, d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Id()
 
 	policy, err := readSentinelPolicy(client, policyType, name)
-
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
@@ -107,7 +108,7 @@ func sentinelPolicyRead(policyType string, attributes []string, d *schema.Resour
 }
 
 func sentinelPolicyWrite(policyType string, attributes []string, d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Get("name").(string)
 
@@ -118,7 +119,6 @@ func sentinelPolicyWrite(policyType string, attributes []string, d *schema.Resou
 	}
 
 	err := PutSentinelPolicy(client, policyType, name, body)
-
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}

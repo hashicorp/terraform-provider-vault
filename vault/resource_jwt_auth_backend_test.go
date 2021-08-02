@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccJWTAuthBackend(t *testing.T) {
@@ -199,7 +199,7 @@ resource "vault_jwt_auth_backend" "oidc" {
 func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {

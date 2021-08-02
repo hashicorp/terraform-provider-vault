@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/encryption"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -161,7 +162,7 @@ func tokenResource() *schema.Resource {
 }
 
 func tokenCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	var err error
 	var wrapped bool
 
@@ -173,7 +174,7 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		policies = append(policies, iPolicy.(string))
 	}
 
-	var createRequest = &api.TokenCreateRequest{}
+	createRequest := &api.TokenCreateRequest{}
 
 	if len(policies) > 0 {
 		createRequest.Policies = policies
@@ -291,7 +292,7 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	id := d.Get("client_token").(string)
 	accessor := d.Id()
@@ -388,7 +389,7 @@ func tokenUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	token := d.Id()
 
@@ -403,7 +404,7 @@ func tokenDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	accessor := d.Id()
 
 	log.Printf("[DEBUG] Checking if token accessor %q exists", accessor)

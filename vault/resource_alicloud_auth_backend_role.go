@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func alicloudAuthBackendRoleResource() *schema.Resource {
@@ -82,7 +82,7 @@ func alicloudAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string
 }
 
 func alicloudAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -105,7 +105,7 @@ func alicloudAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) err
 }
 
 func alicloudAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -122,7 +122,7 @@ func alicloudAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) err
 }
 
 func alicloudAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading AliCloud role %q", path)
@@ -163,7 +163,7 @@ func alicloudAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 }
 
 func alicloudAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting AliCloud role %q", path)
@@ -177,7 +177,7 @@ func alicloudAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) err
 }
 
 func alicloudAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Checking if AliCloud Auth Backend role %q exists", path)

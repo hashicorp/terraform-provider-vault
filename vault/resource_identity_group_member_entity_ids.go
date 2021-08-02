@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 func identityGroupMemberEntityIdsResource() *schema.Resource {
@@ -49,7 +48,7 @@ func identityGroupMemberEntityIdsResource() *schema.Resource {
 }
 
 func identityGroupMemberEntityIdsUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Get("group_id").(string)
 
 	log.Printf("[DEBUG] Updating IdentityGroupMemberEntityIds %q", id)
@@ -101,7 +100,7 @@ func identityGroupMemberEntityIdsUpdate(d *schema.ResourceData, meta interface{}
 }
 
 func identityGroupMemberEntityIdsRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Id()
 
 	resp, err := readIdentityGroup(client, id)
@@ -141,7 +140,7 @@ func identityGroupMemberEntityIdsRead(d *schema.ResourceData, meta interface{}) 
 }
 
 func identityGroupMemberEntityIdsDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Get("group_id").(string)
 
 	log.Printf("[DEBUG] Deleting IdentityGroupMemberEntityIds %q", id)

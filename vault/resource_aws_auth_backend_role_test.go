@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccAWSAuthBackendRole_importInferred(t *testing.T) {
@@ -231,7 +231,7 @@ func TestAccAWSAuthBackendRole_deprecatedEc2(t *testing.T) {
 }
 
 func testAccCheckAWSAuthBackendRoleDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*util.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_aws_auth_backend_role" {
@@ -266,7 +266,7 @@ func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestChe
 			return fmt.Errorf("expected ID to be %q, got %q instead", "auth/"+backend+"/role/"+role, endpoint)
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*util.Client)
 		resp, err := client.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", endpoint)

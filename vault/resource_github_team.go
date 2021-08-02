@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const tokenParamDeprecationMsg = "This parameter should be moved to the Github Auth backend config " +
@@ -133,7 +133,7 @@ func githubTeamCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubTeamUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -155,7 +155,7 @@ func githubTeamUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubTeamRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	dt, err := client.Logical().Read(path)
@@ -183,7 +183,7 @@ func githubTeamRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubTeamDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	_, err := client.Logical().Delete(d.Id())
 	if err != nil {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const ldapAuthType string = "ldap"
@@ -159,7 +159,7 @@ func ldapAuthBackendConfigPath(path string) string {
 }
 
 func ldapAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	authType := ldapAuthType
 	path := d.Get("path").(string)
@@ -178,7 +178,7 @@ func ldapAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := ldapAuthBackendConfigPath(d.Id())
 	data := map[string]interface{}{}
@@ -263,7 +263,6 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Writing LDAP config %q", path)
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		d.SetId("")
 		return fmt.Errorf("error writing ldap config %q: %s", path, err)
@@ -274,7 +273,7 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	auths, err := client.Sys().ListAuth()
@@ -335,7 +334,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func ldapAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting LDAP auth backend %q", path)
@@ -349,7 +348,7 @@ func ldapAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func ldapAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	path := ldapAuthBackendConfigPath(d.Id())
 
 	log.Printf("[DEBUG] Checking if LDAP auth backend %q exists", path)

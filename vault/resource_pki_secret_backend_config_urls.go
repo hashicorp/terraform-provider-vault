@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func pkiSecretBackendConfigUrlsResource() *schema.Resource {
@@ -45,7 +45,7 @@ func pkiSecretBackendConfigUrlsResource() *schema.Resource {
 }
 
 func pkiSecretBackendConfigUrlsCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	backend := d.Get("backend").(string)
 
@@ -73,7 +73,7 @@ func pkiSecretBackendConfigUrlsCreate(d *schema.ResourceData, meta interface{}) 
 }
 
 func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	path := d.Id()
 	backend := pkiSecretBackendConfigUrlsPath(path)
@@ -99,7 +99,7 @@ func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) er
 }
 
 func pkiSecretBackendConfigUrlsUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	backend := d.Get("backend").(string)
 

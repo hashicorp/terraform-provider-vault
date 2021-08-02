@@ -9,12 +9,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
-var (
-	approleAuthBackendRoleSecretIDIDRegex = regexp.MustCompile("^backend=(.+)::role=(.+)::accessor=(.+)$")
-)
+var approleAuthBackendRoleSecretIDIDRegex = regexp.MustCompile("^backend=(.+)::role=(.+)::accessor=(.+)$")
 
 func approleAuthBackendRoleSecretIDResource() *schema.Resource {
 	return &schema.Resource{
@@ -111,7 +108,7 @@ func approleAuthBackendRoleSecretIDResource() *schema.Resource {
 }
 
 func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role_name").(string)
@@ -158,7 +155,6 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	}
 
 	resp, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error writing AppRole auth backend role SecretID %q: %s", path, err)
 	}
@@ -182,7 +178,7 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 }
 
 func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Id()
 
 	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)
@@ -258,7 +254,7 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 }
 
 func approleAuthBackendRoleSecretIDDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Id()
 	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)
 	if err != nil {
@@ -288,7 +284,7 @@ func approleAuthBackendRoleSecretIDDelete(d *schema.ResourceData, meta interface
 }
 
 func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 	id := d.Id()
 
 	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)

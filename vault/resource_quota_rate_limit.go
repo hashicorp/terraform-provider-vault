@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func quotaRateLimitPath(name string) string {
@@ -48,7 +48,7 @@ func quotaRateLimitResource() *schema.Resource {
 }
 
 func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Get("name").(string)
 	path := quotaRateLimitPath(name)
@@ -71,7 +71,7 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Id()
 	path := quotaRateLimitPath(name)
@@ -101,7 +101,7 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Id()
 	path := quotaRateLimitPath(name)
@@ -123,7 +123,7 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaRateLimitDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Id()
 	path := quotaRateLimitPath(name)
@@ -139,7 +139,7 @@ func quotaRateLimitDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaRateLimitExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*util.Client)
 
 	name := d.Id()
 	path := quotaRateLimitPath(name)
