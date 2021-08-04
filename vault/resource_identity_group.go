@@ -137,9 +137,11 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 			data["name"] = d.Get("name")
 			data["metadata"] = d.Get("metadata")
 			data["policies"] = d.Get("policies").(*schema.Set).List()
-			data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
-			data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
-
+			// Member groups and entities can't be set for external groups
+			if d.Get("type").(string) == "internal" {
+				data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
+				data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
+			}
 			// Edge case where if external_policies is true, no policies
 			// should be configured on the entity.
 			data["external_policies"] = d.Get("external_policies").(bool)
