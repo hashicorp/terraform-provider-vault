@@ -146,8 +146,8 @@ func identityGroupMemberEntityIdsRead(d *schema.ResourceData, meta interface{}) 
 		}
 	} else {
 		set := map[interface{}]bool{}
-		if curIDS != nil {
-			for _, v := range curIDS.([]interface{}) {
+		if ids, ok := curIDS.([]interface{}); ok {
+			for _, v := range ids {
 				set[v] = true
 			}
 		}
