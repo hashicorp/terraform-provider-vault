@@ -111,8 +111,6 @@ func auditRead(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Reading audit backends %s from Vault", path)
 
-	client.Sys().ListAudit()
-
 	audits, err := client.Sys().ListAudit()
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
