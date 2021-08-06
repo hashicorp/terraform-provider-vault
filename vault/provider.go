@@ -666,6 +666,10 @@ var (
 			Resource:      transitSecretBackendCacheConfig(),
 			PathInventory: []string{"/transit/cache-config"},
 		},
+		"vault_raft_snapshot_agent_config": {
+			Resource:      raftSnapshotAgentConfigResource(),
+			PathInventory: []string{"sys/storage/raft/snapshot-auto/config/{name}"},
+		},
 	}
 )
 
