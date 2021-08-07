@@ -8,6 +8,7 @@ BUGS:
 * `resource/jwt_auth_backend`: Fixed bug where `provider_config` did not configure non-string values correctly ([#1118](https://github.com/hashicorp/terraform-provider-vault/pull/1118))
 * `resource/gcp_auth_backend`: Support importing resource ([#1125](https://github.com/hashicorp/terraform-provider-vault/pull/1125))
 * `resource/okta_auth_backend`: Support importing resource ([#1123](https://github.com/hashicorp/terraform-provider-vault/pull/1123))
+* `resource/audit`: List audit only once during read ([#1138](https://github.com/hashicorp/terraform-provider-vault/pull/1138))
 
 ## 2.22.1 (July 23, 2021)
 
