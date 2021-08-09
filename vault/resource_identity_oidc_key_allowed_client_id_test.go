@@ -22,6 +22,9 @@ func TestAccIdentityOidcKeyAllowedClientId(t *testing.T) {
 			{
 				Config: testAccIdentityOidcKeyAllowedClientIdConfig(name),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_identity_oidc_key.key", "rotation_period", "86400"),
+					resource.TestCheckResourceAttr("vault_identity_oidc_key.key", "verification_ttl", "86400"),
+					resource.TestCheckResourceAttr("vault_identity_oidc_key.key", "algorithm", "RS256"),
 					testAccIdentityOidcKeyAllowedClientIdCheckAttrs("vault_identity_oidc_key_allowed_client_id.role_one", 3),
 					testAccIdentityOidcKeyAllowedClientIdCheckAttrs("vault_identity_oidc_key_allowed_client_id.role_two", 3),
 					testAccIdentityOidcKeyAllowedClientIdCheckAttrs("vault_identity_oidc_key_allowed_client_id.role_three", 3),
@@ -30,12 +33,18 @@ func TestAccIdentityOidcKeyAllowedClientId(t *testing.T) {
 			{
 				Config: testAccIdentityOidcKeyAllowedClientIdRemove(name),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_identity_oidc_key.key", "rotation_period", "86401"),
+					resource.TestCheckResourceAttr("vault_identity_oidc_key.key", "verification_ttl", "86401"),
+					resource.TestCheckResourceAttr("vault_identity_oidc_key.key", "algorithm", "RS256"),
 					testAccIdentityOidcKeyAllowedClientIdCheckAttrs("vault_identity_oidc_key_allowed_client_id.role_one", 1),
 				),
 			},
 			{
 				Config: testAccIdentityOidcKeyAllowedClientIdRecreate(name),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_identity_oidc_key.key", "rotation_period", "86400"),
+					resource.TestCheckResourceAttr("vault_identity_oidc_key.key", "verification_ttl", "86400"),
+					resource.TestCheckResourceAttr("vault_identity_oidc_key.key", "algorithm", "RS256"),
 					testAccIdentityOidcKeyAllowedClientIdCheckAttrs("vault_identity_oidc_key_allowed_client_id.role", 1),
 				),
 			},
@@ -152,8 +161,8 @@ resource "vault_identity_oidc_key" "key" {
   name = "%s"
 	algorithm = "RS256"
 
-	rotation_period  = 3600
-	verification_ttl = 3600
+	rotation_period  = 86401
+	verification_ttl = 86401
 }
 
 resource "vault_identity_oidc_role" "role_one" {
