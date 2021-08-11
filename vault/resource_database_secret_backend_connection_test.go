@@ -764,7 +764,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, connURL, connLifetime, password)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mysql_tls(name, path, connURL, password string, tls_ca string, tls_certificate_key string) string {
+func testAccDatabaseSecretBackendConnectionConfig_mysql_tls(name, path, connURL, password, tls_ca, tls_certificate_key string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
