@@ -465,12 +465,17 @@ func TestAccDatabaseSecretBackendConnection_mysql_tls(t *testing.T) {
 	if tls_ca == "" {
 		t.Skip("MYSQL_CA not set")
 	}
-
 	connURL := os.Getenv("MYSQL_URL")
+	if connURL == "" {
+		t.Skip("MYSQL_URL not set")
+	}
+	tls_certificate_key := os.Getenv("MYSQL_CERTIFICATE_KEY")
+	if tls_certificate_key == "" {
+		t.Skip("MYSQL_CERTIFICATE_KEY not set")
+	}
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
 	password := acctest.RandomWithPrefix("password")
-	tls_certificate_key := os.Getenv("MYSQL_CERTIFICATE_KEY")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
