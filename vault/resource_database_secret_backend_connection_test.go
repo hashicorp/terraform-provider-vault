@@ -779,10 +779,6 @@ resource "vault_database_secret_backend_connection" "test" {
 
   mysql {
 	  connection_url = "%s"
-  }
-
-  data = {
-	  password            = "%s"
 	  tls_ca              = <<EOT
 %s
 EOT
@@ -790,8 +786,12 @@ EOT
 %s
 EOT
   }
+
+  data = {
+	  password            = "%s"
+  }
 }
-`, path, name, connURL, password, tls_ca, tls_certificate_key)
+`, path, name, connURL, tls_ca, tls_certificate_key, password)
 }
 
 func testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, path, connURL, username, password string, connLifetime int) string {
