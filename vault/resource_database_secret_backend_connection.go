@@ -488,43 +488,13 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 }
 
 func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+	commonDetails := getConnectionDetailsFromResponse(d, prefix, resp)
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
 	if !ok {
 		return nil
 	}
-	result := map[string]interface{}{}
-	if v, ok := d.GetOk(prefix + "connection_url"); ok {
-		result["connection_url"] = v.(string)
-	} else {
-		if v, ok := data["connection_url"]; ok {
-			result["connection_url"] = v.(string)
-		}
-	}
-	if v, ok := data["max_open_connections"]; ok {
-		n, err := v.(json.Number).Int64()
-		if err != nil {
-			log.Printf("[WARN] Non-number %s returned from Vault server: %s", v, err)
-		} else {
-			result["max_open_connections"] = n
-		}
-	}
-	if v, ok := data["max_idle_connections"]; ok {
-		n, err := v.(json.Number).Int64()
-		if err != nil {
-			log.Printf("[WARN] Non-number %s returned from Vault server: %s", v, err)
-		} else {
-			result["max_idle_connections"] = n
-		}
-	}
-	if v, ok := data["max_connection_lifetime"]; ok {
-		n, err := time.ParseDuration(v.(string))
-		if err != nil {
-			log.Printf("[WARN] Non-number %s returned from Vault server: %s", v, err)
-		} else {
-			result["max_connection_lifetime"] = n.Seconds()
-		}
-	}
+	result := commonDetails[0]
 	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
 		result["tls_certificate_key"] = v.(string)
 	} else {
