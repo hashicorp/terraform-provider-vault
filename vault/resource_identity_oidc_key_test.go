@@ -3,6 +3,7 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -21,6 +22,11 @@ func TestAccIdentityOidcKey(t *testing.T) {
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityOidcKeyDestroy,
 		Steps: []resource.TestStep{
+			{
+				// Test a create failure
+				Config:      testAccIdentityOidcKeyConfig_bad(key),
+				ExpectError: regexp.MustCompile(`unknown signing algorithm "RS123"`),
+			},
 			{
 				Config: testAccIdentityOidcKeyConfig(key),
 				Check: resource.ComposeTestCheckFunc(
@@ -74,6 +80,11 @@ func TestAccIdentityOidcKeyUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_identity_oidc_key.key", "algorithm", "RS256"),
 					resource.TestCheckResourceAttr("vault_identity_oidc_key.key", "allowed_client_ids.#", "0"),
 				),
+			},
+			{
+				// Test an update failure
+				Config:      testAccIdentityOidcKeyConfig_bad(key),
+				ExpectError: regexp.MustCompile(`unknown signing algorithm "RS123"`),
 			},
 		},
 	})
@@ -199,6 +210,16 @@ func testAccIdentityOidcKeyConfig(entityName string) string {
 resource "vault_identity_oidc_key" "key" {
   name = "%s"
 	algorithm = "RS256"
+
+	allowed_client_ids = []
+}`, entityName)
+}
+
+func testAccIdentityOidcKeyConfig_bad(entityName string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_oidc_key" "key" {
+  name = "%s"
+	algorithm = "RS123"
 
 	allowed_client_ids = []
 }`, entityName)
