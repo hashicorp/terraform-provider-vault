@@ -3,6 +3,8 @@
 FEATURES:
 * **New Resource** `vault_gcp_secret_static_account`: Provision Static Accounts in the [GCP Secrets Engine](https://www.vaultproject.io/docs/secrets/gcp/index.html) ([#1094](https://github.com/hashicorp/terraform-provider-vault/pull/1094))
 
+IMPROVEMENTS:
+* `resource/database_secret_backend/mysql`: Add tls_certificate_key and tls_ca options ([#1098](https://github.com/hashicorp/terraform-provider-vault/pull/1098))
 
 BUGS:
 * `resource/jwt_auth_backend`: Fixed bug where `provider_config` did not configure non-string values correctly ([#1118](https://github.com/hashicorp/terraform-provider-vault/pull/1118))
