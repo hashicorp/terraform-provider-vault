@@ -171,7 +171,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mongodb-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          tlsConnectionStringResource(),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("mongodb", dbBackendTypes),
 			},
@@ -226,7 +226,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-database-plugin plugin.",
-				Elem:          mysqlConnectionStringResource(),
+				Elem:          tlsConnectionStringResource(),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("mysql", dbBackendTypes),
 			},
@@ -315,7 +315,7 @@ func connectionStringResource() *schema.Resource {
 	}
 }
 
-func mysqlConnectionStringResource() *schema.Resource {
+func tlsConnectionStringResource() *schema.Resource {
 	r := connectionStringResource()
 	r.Schema["tls_certificate_key"] = &schema.Schema{
 		Type:        schema.TypeString,
@@ -414,7 +414,7 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case "hana-database-plugin":
 		setDatabaseConnectionData(d, "hana.0.", data)
 	case "mongodb-database-plugin":
-		setDatabaseConnectionData(d, "mongodb.0.", data)
+		setTLSDatabaseConnectionData(d, "mongodb.0.", data)
 	case "mongodbatlas-database-plugin":
 		if v, ok := d.GetOk("mongodbatlas.0.public_key"); ok {
 			data["public_key"] = v.(string)
@@ -428,7 +428,7 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case "mssql-database-plugin":
 		setDatabaseConnectionData(d, "mssql.0.", data)
 	case "mysql-database-plugin":
-		setMySQLDatabaseConnectionData(d, "mysql.0.", data)
+		setTLSDatabaseConnectionData(d, "mysql.0.", data)
 	case "mysql-rds-database-plugin":
 		setDatabaseConnectionData(d, "mysql_rds.0.", data)
 	case "mysql-aurora-database-plugin":
@@ -487,7 +487,7 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 	return []map[string]interface{}{result}
 }
 
-func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+func getTLSConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
 	commonDetails := getConnectionDetailsFromResponse(d, prefix, resp)
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
@@ -555,7 +555,7 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	}
 }
 
-func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+func setTLSDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionData(d, prefix, data)
 	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
 		data["tls_certificate_key"] = v.(string)
@@ -714,7 +714,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case "hana-database-plugin":
 		d.Set("hana", getConnectionDetailsFromResponse(d, "hana.0.", resp))
 	case "mongodb-database-plugin":
-		d.Set("mongodb", getConnectionDetailsFromResponse(d, "mongodb.0.", resp))
+		d.Set("mongodb", getTLSConnectionDetailsFromResponse(d, "mongodb.0.", resp))
 	case "mongodbatlas-database-plugin":
 		details := resp.Data["connection_details"]
 		data, ok := details.(map[string]interface{})
@@ -735,7 +735,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case "mssql-database-plugin":
 		d.Set("mssql", getConnectionDetailsFromResponse(d, "mssql.0.", resp))
 	case "mysql-database-plugin":
-		d.Set("mysql", getMySQLConnectionDetailsFromResponse(d, "mysql.0.", resp))
+		d.Set("mysql", getTLSConnectionDetailsFromResponse(d, "mysql.0.", resp))
 	case "mysql-rds-database-plugin":
 		d.Set("mysql_rds", getConnectionDetailsFromResponse(d, "mysql_rds.0.", resp))
 	case "mysql-aurora-database-plugin":

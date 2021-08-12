@@ -204,6 +204,46 @@ func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseSecretBackendConnection_mongodb_tls(t *testing.T) {
+	tlsCa := os.Getenv("MONGODB_CA")
+	if tlsCa == "" {
+		t.Skip("MONGODB_CA not set")
+	}
+	tlsCertificateKey := os.Getenv("MONGODB_CERTIFICATE_KEY")
+	if tlsCertificateKey == "" {
+		t.Skip("MONGODB_CERTIFICATE_KEY not set")
+	}
+	connURL := os.Getenv("MONGODB_URL")
+	if connURL == "" {
+		t.Skip("MONGODB_URL not set")
+	}
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_mongodb_tls(name, backend, connURL, tlsCa, tlsCertificateKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.#", "1"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "verify_connection", "true"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mongodb.0.connection_url", connURL),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mongodb.0.tls_ca", tlsCa+"\n"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mongodb.0.tls_certificate_key", tlsCertificateKey+"\n"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 	connURL := os.Getenv("MSSQL_URL")
 	if connURL == "" {
@@ -698,6 +738,32 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, connURL)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_mongodb_tls(name, path, connURL, tlsCa, tlsCertificateKey string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = "${vault_mount.db.path}"
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  mongodb {
+    connection_url = "%s"
+    tls_ca		   = <<EOT
+%s
+EOT
+    tls_certificate_key = <<EOT
+%s
+EOT
+  }
+}
+`, path, name, connURL, tlsCa, tlsCertificateKey)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path, connURL string) string {

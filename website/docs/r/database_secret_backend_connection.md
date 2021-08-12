@@ -114,6 +114,11 @@ Exactly one of the nested blocks of configuration options must be supplied.
   docs](https://www.vaultproject.io/api-docs/secret/databases/mongodb.html#sample-payload)
   for an example.
 
+* `tls_certificate_key` - (Optional) x509 certificate for connecting to the database. This must be a PEM encoded version of the private key and the certificate combined.
+
+* `tls_ca` - (Optional) x509 CA file for validating the certificate presented by the MongoDB server. Must be PEM encoded.
+
+
 
 ### MongoDB Atlas Configuration Options
 
