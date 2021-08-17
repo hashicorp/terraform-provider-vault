@@ -1,6 +1,6 @@
 language: go
 go:
-- 1.12.5
+- 1.16.x
 go_import_path: github.com/terraform-providers/terraform-provider-vault
 script:
 - make test

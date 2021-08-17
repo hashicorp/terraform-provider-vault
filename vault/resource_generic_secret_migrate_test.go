@@ -3,7 +3,7 @@ package vault
 import (
 	"testing"
 
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func TestGenericSecretMigrateState(t *testing.T) {

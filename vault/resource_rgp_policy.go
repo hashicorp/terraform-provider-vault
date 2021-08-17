@@ -1,7 +1,7 @@
 package vault
 
 import (
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
 var rgpPolicyAttributes = []string{"enforcement_level", "policy"}
