@@ -1,4 +1,4 @@
-## 2.23.0 (Unreleased)
+## 2.23.0 (August 18, 2021)
 
 FEATURES:
 * **New Resource** `vault_gcp_secret_static_account`: Provision Static Accounts in the [GCP Secrets Engine](https://www.vaultproject.io/docs/secrets/gcp/index.html) ([#1094](https://github.com/hashicorp/terraform-provider-vault/pull/1094))
