@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func resourceAuthBackendMigrateState(v int, s *terraform.InstanceState, meta interface{}) (*terraform.InstanceState, error) {
