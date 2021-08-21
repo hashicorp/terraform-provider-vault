@@ -93,7 +93,9 @@ func identityOidcKeyCreate(d *schema.ResourceData, meta interface{}) error {
 	data := make(map[string]interface{})
 
 	identityOidcKeyUpdateFields(d, data)
-	identityOidcKeyApiWrite(name, data, client)
+	if err := identityOidcKeyApiWrite(name, data, client); err != nil {
+		return err
+	}
 
 	d.SetId(name)
 
@@ -113,7 +115,9 @@ func identityOidcKeyUpdate(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 
 	identityOidcKeyUpdateFields(d, data)
-	identityOidcKeyApiWrite(name, data, client)
+	if err := identityOidcKeyApiWrite(name, data, client); err != nil {
+		return err
+	}
 
 	return identityOidcKeyRead(d, meta)
 }
