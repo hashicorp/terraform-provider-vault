@@ -67,6 +67,7 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccTokenAuthBackendRoleCheck_attrs(role),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "role_name", role),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_entity_aliases.#", "2"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.1785148924", "test"),
@@ -88,6 +89,7 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 					testAccTokenAuthBackendRoleCheck_attrs(roleUpdated),
 					testAccTokenAuthBackendRoleCheck_deleted(role),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "role_name", roleUpdated),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_entity_aliases.#", "2"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.1785148924", "test"),
@@ -136,6 +138,9 @@ func TestAccTokenAuthBackendRoleDeprecated(t *testing.T) {
 				Config: testAccTokenAuthBackendRoleConfigDeprecated(role),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "role_name", role),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_entity_aliases.#", "2"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_entity_aliases.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_entity_aliases.1785148924", "test"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.1785148924", "test"),
@@ -156,6 +161,9 @@ func TestAccTokenAuthBackendRoleDeprecated(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccTokenAuthBackendRoleCheck_deleted(role),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "role_name", roleUpdated),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_entity_aliases.#", "2"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_entity_aliases.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_entity_aliases.1785148924", "test"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.326271447", "dev"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.1785148924", "test"),
@@ -240,6 +248,7 @@ func testAccTokenAuthBackendRoleCheck_attrs(role string) resource.TestCheckFunc 
 
 		attrs := map[string]string{
 			"role_name":              "name",
+			"allowed_entity_aliases": "allowed_entity_aliases",
 			"allowed_policies":       "allowed_policies",
 			"disallowed_policies":    "disallowed_policies",
 			"orphan":                 "orphan",
@@ -331,6 +340,7 @@ func testAccTokenAuthBackendRoleConfigUpdate(role string) string {
 	return fmt.Sprintf(`
 resource "vault_token_auth_backend_role" "role" {
   role_name = "%s"
+  allowed_entity_aliases = ["dev", "test"]
   allowed_policies = ["dev", "test"]
   disallowed_policies = ["default"]
   orphan = true
@@ -347,6 +357,7 @@ func testAccTokenAuthBackendRoleConfigDeprecated(role string) string {
 	return fmt.Sprintf(`
 resource "vault_token_auth_backend_role" "role" {
   role_name = "%s"
+  allowed_entity_aliases = ["dev", "test"]
   allowed_policies = ["dev", "test"]
   disallowed_policies = ["default"]
   orphan = true
