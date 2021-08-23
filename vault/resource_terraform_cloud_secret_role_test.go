@@ -19,8 +19,13 @@ func TestTerraformCloudSecretRole(t *testing.T) {
 	userId := os.Getenv("TEST_TF_USER_ID")
 	organization := "hashicorp-vault-testing"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		Providers: testProviders,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			if token == "" || teamId == "" || userId == "" {
+				t.Skipf("TEST_TF_TOKEN, TEST_TF_TEAM_ID, and TEST_TF_USER_ID must be set. Are currently %q, %q, and %q respectively", token, teamId, userId)
+			}
+		},
 		CheckDestroy: testAccTerraformCloudSecretRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
