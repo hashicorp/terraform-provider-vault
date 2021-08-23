@@ -12,7 +12,10 @@ import (
 )
 
 func readSentinelPolicy(client *util.Client, policyType string, name string) (map[string]interface{}, error) {
-	r := client.NewRequest("GET", fmt.Sprintf("/v1/sys/policies/%s/%s", policyType, name))
+	r, err := client.NewRequest("GET", fmt.Sprintf("/v1/sys/policies/%s/%s", policyType, name))
+	if err != nil {
+		return nil, fmt.Errorf("error creating new request: %w", err)
+	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -38,7 +41,11 @@ func readSentinelPolicy(client *util.Client, policyType string, name string) (ma
 }
 
 func PutSentinelPolicy(client *util.Client, policyType string, name string, body map[string]interface{}) error {
-	r := client.NewRequest("PUT", fmt.Sprintf("/v1/sys/policies/%s/%s", policyType, name))
+	r, err := client.NewRequest("PUT", fmt.Sprintf("/v1/sys/policies/%s/%s", policyType, name))
+	if err != nil {
+		return fmt.Errorf("error creating new request: %w", err)
+	}
+
 	if err := r.SetJSONBody(body); err != nil {
 		return err
 	}
@@ -55,7 +62,10 @@ func PutSentinelPolicy(client *util.Client, policyType string, name string, body
 }
 
 func DeleteSentinelPolicy(client *util.Client, policyType string, name string) error {
-	r := client.NewRequest("DELETE", fmt.Sprintf("/v1/sys/policies/%s/%s", policyType, name))
+	r, err := client.NewRequest("DELETE", fmt.Sprintf("/v1/sys/policies/%s/%s", policyType, name))
+	if err != nil {
+		return fmt.Errorf("error creating new request: %w", err)
+	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()

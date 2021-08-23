@@ -38,13 +38,15 @@ func identityOidcCreate(d *schema.ResourceData, meta interface{}) error {
 	path := identityOidcPathTemplate
 
 	data := make(map[string]interface{})
-	addr := client.Address()
+	addr, err := client.Address()
+	if err != nil {
+		return fmt.Errorf("error get client address: %w", err)
+	}
 
 	identityOidcUpdateFields(d, data)
 
-	_, err := client.Logical().Write(path, data)
-	if err != nil {
-		return fmt.Errorf("error writing IdentityOidc %s: %s", addr, err)
+	if _, err := client.Logical().Write(path, data); err != nil {
+		return fmt.Errorf("error writing IdentityOidc %s: %w", addr, err)
 	}
 	log.Printf("[DEBUG] Wrote IdentityOidc to %s", addr)
 

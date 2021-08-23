@@ -22,6 +22,30 @@ type Client struct {
 	mutex sync.Mutex
 }
 
+// Auth wrap the lazy init error with Auth.
+type Auth struct {
+	*api.Auth
+	err error
+}
+
+// Logical wrap the lazy init error with Logical.
+type Logical struct {
+	*api.Logical
+	err error
+}
+
+// TokenAuth wraps the lazy init error with TokenAuth.
+type TokenAuth struct {
+	*api.TokenAuth
+	err error
+}
+
+// Sys wraps the lazy init error with Sys.
+type Sys struct {
+	*api.Sys
+	err error
+}
+
 func (c *Client) lazyInit() error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -195,30 +219,34 @@ func (c *Client) lazyInit() error {
 	return nil
 }
 
-func (c *Client) CurrentWrappingLookupFunc() api.WrappingLookupFunc {
+func (c *Client) CurrentWrappingLookupFunc() (api.WrappingLookupFunc, error) {
 	if err := c.lazyInit(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return c.Client.CurrentWrappingLookupFunc()
+	return c.Client.CurrentWrappingLookupFunc(), nil
 }
 
 // Address performs the lazy initialization, then delegates.
-func (c *Client) Address() string {
+func (c *Client) Address() (string, error) {
 	if err := c.lazyInit(); err != nil {
-		panic(err)
+		return "", err
 	}
 
-	return c.Client.Address()
+	return c.Client.Address(), nil
 }
 
 // Auth performs the lazy initialization, then delegates.
-func (c *Client) Auth() *api.Auth {
+func (c *Client) Auth() *Auth {
 	if err := c.lazyInit(); err != nil {
-		panic(err)
+		return &Auth{
+			err: fmt.Errorf("could not lazy init provider: %w", err),
+		}
 	}
 
-	return c.Client.Auth()
+	return &Auth{
+		Auth: c.Client.Auth(),
+	}
 }
 
 // Clone creates a same object, but a copy.
@@ -236,29 +264,37 @@ func (c *Client) Clone() (*Client, error) {
 }
 
 // Logical performs the lazy initialization, then delegates.
-func (c *Client) Logical() *api.Logical {
+func (c *Client) Logical() *Logical {
 	if err := c.lazyInit(); err != nil {
-		panic(err)
+		return &Logical{
+			err: fmt.Errorf("could not lazy init provider: %w", err),
+		}
 	}
 
-	return c.Client.Logical()
+	return &Logical{
+		Logical: c.Client.Logical(),
+	}
 }
 
-func (c *Client) NewRequest(method, requestPath string) *api.Request {
+func (c *Client) NewRequest(method, requestPath string) (*api.Request, error) {
 	if err := c.lazyInit(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return c.Client.NewRequest(method, requestPath)
+	return c.Client.NewRequest(method, requestPath), nil
 }
 
 // Sys performs the lazy initialization, then delegates.
-func (c *Client) Sys() *api.Sys {
+func (c *Client) Sys() *Sys {
 	if err := c.lazyInit(); err != nil {
-		panic(err)
+		return &Sys{
+			err: fmt.Errorf("could not lazy init provider: %w", err),
+		}
 	}
 
-	return c.Client.Sys()
+	return &Sys{
+		Sys: c.Client.Sys(),
+	}
 }
 
 func ProviderToken(d *schema.ResourceData) (string, error) {
@@ -332,4 +368,177 @@ func SignAWSLogin(parameters map[string]interface{}) error {
 	parameters["iam_request_body"] = loginData["iam_request_body"]
 
 	return nil
+}
+
+func (a *Auth) Token() *TokenAuth {
+	if a.err != nil {
+		return &TokenAuth{
+			nil,
+			a.err,
+		}
+	}
+
+	return &TokenAuth{
+		a.Auth.Token(),
+		nil,
+	}
+}
+
+func (l *Logical) Delete(path string) (*api.Secret, error) {
+	if l.err != nil {
+		return nil, fmt.Errorf("delete failure: %w", l.err)
+	}
+
+	return l.Logical.Delete(path)
+}
+
+func (l *Logical) List(path string) (*api.Secret, error) {
+	if l.err != nil {
+		return nil, fmt.Errorf("list failure: %w", l.err)
+	}
+
+	return l.Logical.List(path)
+}
+
+func (l *Logical) Read(path string) (*api.Secret, error) {
+	if l.err != nil {
+		return nil, fmt.Errorf("read failure: %w", l.err)
+	}
+
+	return l.Logical.Read(path)
+}
+
+func (l *Logical) ReadWithData(path string, data map[string][]string) (*api.Secret, error) {
+	if l.err != nil {
+		return nil, fmt.Errorf("read failure: %w", l.err)
+	}
+
+	return l.Logical.ReadWithData(path, data)
+}
+
+func (l *Logical) Write(path string, data map[string]interface{}) (*api.Secret, error) {
+	if l.err != nil {
+		return nil, fmt.Errorf("write failure: %w", l.err)
+	}
+
+	return l.Logical.Write(path, data)
+}
+
+func (t *TokenAuth) Create(opts *api.TokenCreateRequest) (*api.Secret, error) {
+	if t.err != nil {
+		return nil, fmt.Errorf("create failure: %w", t.err)
+	}
+
+	return t.TokenAuth.Create(opts)
+}
+
+func (t *TokenAuth) CreateWithRole(opts *api.TokenCreateRequest, roleName string) (*api.Secret, error) {
+	if t.err != nil {
+		return nil, fmt.Errorf("create failure: %w", t.err)
+	}
+
+	return t.TokenAuth.CreateWithRole(opts, roleName)
+}
+
+func (t *TokenAuth) LookupAccessor(accessor string) (*api.Secret, error) {
+	if t.err != nil {
+		return nil, fmt.Errorf("lookup failure: %w", t.err)
+	}
+
+	return t.TokenAuth.LookupAccessor(accessor)
+}
+
+func (t *TokenAuth) LookupSelf() (*api.Secret, error) {
+	if t.err != nil {
+		return nil, fmt.Errorf("lookup failure: %w", t.err)
+	}
+
+	return t.TokenAuth.LookupSelf()
+}
+
+func (t *TokenAuth) Renew(token string, increment int) (*api.Secret, error) {
+	if t.err != nil {
+		return nil, fmt.Errorf("renew failure: %w", t.err)
+	}
+
+	return t.TokenAuth.Renew(token, increment)
+}
+
+func (t *TokenAuth) RevokeAccessor(accessor string) error {
+	if t.err != nil {
+		return fmt.Errorf("revoke accessor failure: %w", t.err)
+	}
+
+	return t.TokenAuth.RevokeAccessor(accessor)
+}
+
+func (s *Sys) EnableAuditWithOptions(path string, options *api.EnableAuditOptions) error {
+	if s.err != nil {
+		return fmt.Errorf("enable audit failure: %w", s.err)
+	}
+
+	return s.Sys.EnableAuditWithOptions(path, options)
+}
+
+func (s *Sys) EnableAuthWithOptions(path string, options *api.EnableAuthOptions) error {
+	if s.err != nil {
+		return fmt.Errorf("enable auth failure: %w", s.err)
+	}
+
+	return s.Sys.EnableAuthWithOptions(path, options)
+}
+
+func (s *Sys) GetPolicy(name string) (string, error) {
+	if s.err != nil {
+		return "", fmt.Errorf("get policy failure: %w", s.err)
+	}
+
+	return s.Sys.GetPolicy(name)
+}
+
+func (s *Sys) ListAuth() (map[string]*api.AuthMount, error) {
+	if s.err != nil {
+		return nil, fmt.Errorf("list auth failure: %w", s.err)
+	}
+
+	return s.Sys.ListAuth()
+}
+
+func (s *Sys) ListMounts() (map[string]*api.MountOutput, error) {
+	if s.err != nil {
+		return nil, fmt.Errorf("list mounts failure: %w", s.err)
+	}
+
+	return s.Sys.ListMounts()
+}
+
+func (s *Sys) Mount(path string, mountInfo *api.MountInput) error {
+	if s.err != nil {
+		return fmt.Errorf("mount failure: %w", s.err)
+	}
+
+	return s.Sys.Mount(path, mountInfo)
+}
+
+func (s *Sys) MountConfig(path string) (*api.MountConfigOutput, error) {
+	if s.err != nil {
+		return nil, fmt.Errorf("mount failure: %w", s.err)
+	}
+
+	return s.Sys.MountConfig(path)
+}
+func (s *Sys) TuneMount(path string, config api.MountConfigInput) error {
+	if s.err != nil {
+		return fmt.Errorf("tune mount failure: %w", s.err)
+	}
+
+	return s.Sys.TuneMount(path, config)
+}
+
+func (s *Sys) Unmount(path string) error {
+	if s.err != nil {
+		return fmt.Errorf("unmount failure: %w", s.err)
+	}
+
+	return s.Sys.Unmount(path)
 }

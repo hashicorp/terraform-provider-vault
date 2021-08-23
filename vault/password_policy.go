@@ -12,7 +12,10 @@ import (
 )
 
 func readPasswordPolicy(client *util.Client, name string) (map[string]interface{}, error) {
-	r := client.NewRequest("GET", fmt.Sprintf("/v1/sys/policies/password/%s", name))
+	r, err := client.NewRequest("GET", fmt.Sprintf("/v1/sys/policies/password/%s", name))
+	if err != nil {
+		return nil, fmt.Errorf("error creating new request: %w", err)
+	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -44,8 +47,11 @@ func passwordPolicyDelete(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Deleting %s password policy from Vault", name)
 
-	r := client.NewRequest("DELETE", fmt.Sprintf("/v1/sys/policies/password/%s", name))
+	r, err := client.NewRequest("DELETE", fmt.Sprintf("/v1/sys/policies/password/%s", name))
+	if err != nil {
+		return fmt.Errorf("error creating new request: %w", err)
 
+	}
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	resp, err := client.RawRequestWithContext(ctx, r)
@@ -86,7 +92,11 @@ func passwordPolicyWrite(attributes []string, d *schema.ResourceData, meta inter
 		body[value] = d.Get(value)
 	}
 
-	r := client.NewRequest("PUT", fmt.Sprintf("/v1/sys/policies/password/%s", name))
+	r, err := client.NewRequest("PUT", fmt.Sprintf("/v1/sys/policies/password/%s", name))
+	if err != nil {
+		return fmt.Errorf("error creating new request: %w", err)
+	}
+
 	if err := r.SetJSONBody(body); err != nil {
 		return err
 	}

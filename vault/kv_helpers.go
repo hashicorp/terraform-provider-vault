@@ -49,7 +49,11 @@ func versionedSecret(requestedVersion int, path string, client *util.Client) (*a
 }
 
 func kvReadRequest(client *util.Client, path string, params map[string]string) (*api.Secret, error) {
-	r := client.NewRequest("GET", "/v1/"+path)
+	r, err := client.NewRequest("GET", "/v1/"+path)
+	if err != nil {
+		return nil, fmt.Errorf("error creating new request: %w", err)
+	}
+
 	for k, v := range params {
 		r.Params.Set(k, v)
 	}
@@ -81,11 +85,19 @@ func kvReadRequest(client *util.Client, path string, params map[string]string) (
 func kvPreflightVersionRequest(client *util.Client, path string) (string, int, error) {
 	// We don't want to use a wrapping call here so save any custom value and
 	// restore after
-	currentWrappingLookupFunc := client.CurrentWrappingLookupFunc()
+	currentWrappingLookupFunc, err := client.CurrentWrappingLookupFunc()
+	if err != nil {
+		return "", 0, err
+	}
+
 	client.SetWrappingLookupFunc(nil)
 	defer client.SetWrappingLookupFunc(currentWrappingLookupFunc)
 
-	r := client.NewRequest("GET", "/v1/sys/internal/ui/mounts/"+path)
+	r, err := client.NewRequest("GET", "/v1/sys/internal/ui/mounts/"+path)
+	if err != nil {
+		return "", 0, fmt.Errorf("error creating new request: %w", err)
+	}
+
 	resp, err := client.RawRequest(r)
 	if resp != nil {
 		defer resp.Body.Close()
