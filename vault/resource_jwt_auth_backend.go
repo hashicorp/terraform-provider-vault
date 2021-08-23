@@ -182,7 +182,10 @@ func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
 
-	err := client.Sys().EnableAuth(path, authType, desc)
+	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
+		Type:        authType,
+		Description: desc,
+	})
 
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)

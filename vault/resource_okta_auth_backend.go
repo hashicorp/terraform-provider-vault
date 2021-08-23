@@ -252,8 +252,6 @@ func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
 
-	// client.Sys().EnableAuth() is deprecated.
-	//err := client.Sys().EnableAuth(path, authType, desc)
 	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
 		Type:        authType,
 		Description: desc,

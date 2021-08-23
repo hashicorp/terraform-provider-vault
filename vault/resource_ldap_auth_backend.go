@@ -166,7 +166,12 @@ func ldapAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	desc := d.Get("description").(string)
 
 	log.Printf("[DEBUG] Enabling LDAP auth backend %q", path)
-	err := client.Sys().EnableAuth(path, authType, desc)
+
+	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
+		Type:        authType,
+		Description: desc,
+	})
+
 	if err != nil {
 		return fmt.Errorf("error enabling ldap auth backend %q: %s", path, err)
 	}
