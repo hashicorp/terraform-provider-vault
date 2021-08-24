@@ -300,6 +300,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("description", authMount.Description)
 	d.Set("accessor", authMount.Accessor)
+	d.Set("local", authMount.Local)
 
 	path = ldapAuthBackendConfigPath(path)
 
@@ -336,7 +337,6 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("groupdn", resp.Data["groupdn"])
 	d.Set("groupattr", resp.Data["groupattr"])
 	d.Set("use_token_groups", resp.Data["use_token_groups"])
-	d.Set("local", resp.Data["local"])
 
 	// `bindpass`, `client_tls_cert` and `client_tls_key` cannot be read out from the API
 	// So... if they drift, they drift.

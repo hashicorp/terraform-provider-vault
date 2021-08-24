@@ -28,6 +28,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vault_jwt_auth_backend.jwt", "accessor"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", ""),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "type", "jwt"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "local", "false"),
 				),
 			},
 			{
