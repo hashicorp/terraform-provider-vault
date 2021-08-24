@@ -86,8 +86,11 @@ func testAccGithubUserCheckDestroy(s *terraform.State) error {
 		if r.Type != "vault_github_user" {
 			continue
 		}
-
-		resp, err := client.RawRequest(client.NewRequest("GET", "/v1/"+r.Primary.ID))
+		req, err := client.NewRequest("GET", "/v1/"+r.Primary.ID)
+		if err != nil {
+			return fmt.Errorf("error creating new request: %w", err)
+		}
+		resp, err := client.RawRequest(req)
 		log.Printf("[DEBUG] Checking if resource '%s' is destroyed, statusCode: %d, error: %s", r.Primary.ID, resp.StatusCode, err)
 		if resp.StatusCode == 404 {
 			return nil
