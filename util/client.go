@@ -251,16 +251,19 @@ func (c *Client) Auth() *Auth {
 
 // Clone creates a same object, but a copy.
 func (c *Client) Clone() (*Client, error) {
-	clone := &Client{
-		Data: c.Data,
+	if err := c.lazyInit(); err != nil {
+		return nil, err
 	}
 
-	var err error
-	if c.Client != nil {
-		clone.Client, err = c.Client.Clone()
+	clone, err := c.Client.Clone()
+	if err != nil {
+		return nil, err
 	}
 
-	return clone, err
+	return &Client{
+		Client: clone,
+		Data:   c.Data,
+	}, nil
 }
 
 // Logical performs the lazy initialization, then delegates.
