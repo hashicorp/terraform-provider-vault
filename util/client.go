@@ -284,6 +284,24 @@ func (c *Client) NewRequest(method, requestPath string) (*api.Request, error) {
 	return c.Client.NewRequest(method, requestPath), nil
 }
 
+func (c *Client) SetToken(token string) {
+	if err := c.lazyInit; err != nil {
+		log.Printf("[DEBUG] could not init the client during SetToken, will fail later")
+		return
+	}
+
+	c.Client.SetToken(token)
+}
+
+func (c *Client) SetWrappingLookupFunc(lookupfunc api.WrappingLookupFunc) {
+	if err := c.lazyInit; err != nil {
+		log.Printf("[DEBUG] could not init the client during SetWrappingLookupFunc, will fail later")
+		return
+	}
+
+	c.Client.SetWrappingLookupFunc(lookupfunc)
+}
+
 // Sys performs the lazy initialization, then delegates.
 func (c *Client) Sys() *Sys {
 	if err := c.lazyInit(); err != nil {
