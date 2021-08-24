@@ -288,7 +288,7 @@ func (c *Client) NewRequest(method, requestPath string) (*api.Request, error) {
 }
 
 func (c *Client) SetToken(token string) {
-	if err := c.lazyInit; err != nil {
+	if err := c.lazyInit(); err != nil {
 		log.Printf("[DEBUG] could not init the client during SetToken, will fail later")
 		return
 	}
@@ -297,7 +297,7 @@ func (c *Client) SetToken(token string) {
 }
 
 func (c *Client) SetWrappingLookupFunc(lookupfunc api.WrappingLookupFunc) {
-	if err := c.lazyInit; err != nil {
+	if err := c.lazyInit(); err != nil {
 		log.Printf("[DEBUG] could not init the client during SetWrappingLookupFunc, will fail later")
 		return
 	}
