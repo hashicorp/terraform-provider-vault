@@ -171,7 +171,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mongodb-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("mongodb", dbBackendTypes),
 			},
@@ -205,10 +205,12 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			},
 
 			"hana": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the hana-database-plugin plugin.",
-				Elem:          connectionStringResourceWithoutUsernameTemplate(),
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the hana-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					excludeUsernameTemplate: true,
+				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("hana", dbBackendTypes),
 			},
@@ -217,7 +219,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mssql-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("mssql", dbBackendTypes),
 			},
@@ -234,7 +236,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-rds-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("mysql_rds", dbBackendTypes),
 			},
@@ -242,7 +244,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-aurora-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("mysql_aurora", dbBackendTypes),
 			},
@@ -250,7 +252,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-legacy-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("mysql_legacy", dbBackendTypes),
 			},
@@ -259,7 +261,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the postgresql-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("postgresql", dbBackendTypes),
 			},
@@ -268,7 +270,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the oracle-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("oracle", dbBackendTypes),
 			},
@@ -287,8 +289,12 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 	}
 }
 
-func connectionStringResource() *schema.Resource {
-	return &schema.Resource{
+type connectionStringConfig struct {
+	excludeUsernameTemplate bool
+}
+
+func connectionStringResource(config *connectionStringConfig) *schema.Resource {
+	res := &schema.Resource{
 		Schema: map[string]*schema.Schema{
 			"connection_url": {
 				Type:        schema.TypeString,
@@ -311,17 +317,22 @@ func connectionStringResource() *schema.Resource {
 				Optional:    true,
 				Description: "Maximum number of seconds a connection may be reused.",
 			},
-			"username_template": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Username generation template.",
-			},
 		},
 	}
+
+	if !config.excludeUsernameTemplate {
+		res.Schema["username_template"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Username generation template.",
+		}
+	}
+
+	return res
 }
 
 func mysqlConnectionStringResource() *schema.Resource {
-	r := connectionStringResource()
+	r := connectionStringResource(&connectionStringConfig{})
 	r.Schema["tls_certificate_key"] = &schema.Schema{
 		Type:        schema.TypeString,
 		Optional:    true,
@@ -334,34 +345,6 @@ func mysqlConnectionStringResource() *schema.Resource {
 		Description: "x509 CA file for validating the certificate presented by the MySQL server. Must be PEM encoded.",
 	}
 	return r
-}
-
-func connectionStringResourceWithoutUsernameTemplate() *schema.Resource {
-	return &schema.Resource{
-		Schema: map[string]*schema.Schema{
-			"connection_url": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Database connection URL.",
-			},
-			"max_open_connections": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Description: "Maximum number of open database connections.",
-				Default:     2,
-			},
-			"max_idle_connections": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Description: "Maximum number of idle database connections.",
-			},
-			"max_connection_lifetime": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Description: "Maximum number of seconds a connection may be reused.",
-			},
-		},
-	}
 }
 
 func getDatabasePluginName(d *schema.ResourceData) (string, error) {
@@ -517,8 +500,10 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 			result["max_connection_lifetime"] = n.Seconds()
 		}
 	}
-	if v, ok := d.GetOk(prefix + "username_template"); ok {
-		result["username_template"] = v.(string)
+	if _, ok := d.GetOk(prefix + "username_template"); ok {
+		if v, ok := data["username_template"]; ok {
+			result["username_template"] = v.(string)
+		}
 	} else {
 		if v, ok := data["username_template"]; ok {
 			result["username_template"] = v.(string)
