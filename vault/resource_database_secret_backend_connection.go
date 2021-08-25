@@ -208,7 +208,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the hana-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResourceWithoutUsernameTemplate(),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("hana", dbBackendTypes),
 			},
@@ -259,7 +259,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the postgresql-database-plugin plugin.",
-				Elem:          connectionStringResourceWithUsernameTemplate(),
+				Elem:          connectionStringResource(),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("postgresql", dbBackendTypes),
 			},
@@ -311,6 +311,11 @@ func connectionStringResource() *schema.Resource {
 				Optional:    true,
 				Description: "Maximum number of seconds a connection may be reused.",
 			},
+			"username_template": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Username generation template.",
+			},
 		},
 	}
 }
@@ -331,34 +336,29 @@ func mysqlConnectionStringResource() *schema.Resource {
 	return r
 }
 
-func connectionStringResourceWithUsernameTemplate() *schema.Resource {
+func connectionStringResourceWithoutUsernameTemplate() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
 			"connection_url": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Connection string to use to connect to the database.",
+				Description: "Database connection URL.",
 			},
 			"max_open_connections": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Description: "Maximum number of open connections to the database.",
+				Description: "Maximum number of open database connections.",
 				Default:     2,
 			},
 			"max_idle_connections": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Description: "Maximum number of idle connections to the database.",
+				Description: "Maximum number of idle database connections.",
 			},
 			"max_connection_lifetime": {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Maximum number of seconds a connection may be reused.",
-			},
-			"username_template": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Username template for plugin generate username",
 			},
 		},
 	}
