@@ -13,6 +13,10 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+type connectionStringConfig struct {
+	excludeUsernameTemplate bool
+}
+
 var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
@@ -287,10 +291,6 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			},
 		},
 	}
-}
-
-type connectionStringConfig struct {
-	excludeUsernameTemplate bool
 }
 
 func connectionStringResource(config *connectionStringConfig) *schema.Resource {
