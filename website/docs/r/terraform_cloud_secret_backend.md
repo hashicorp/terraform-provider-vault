@@ -23,7 +23,7 @@ for more details.
 
 ```hcl
 resource "vault_terraform_cloud_secret_backend" "test" {
-  path        = "terraform"
+  backend     = "terraform"
   description = "Manages the Terraform Cloud backend"
   token       = "V0idfhi2iksSDU234ucdbi2nidsi..."
 }
