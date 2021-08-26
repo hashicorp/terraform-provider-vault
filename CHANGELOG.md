@@ -1,3 +1,8 @@
+## 2.24.0 (Unreleased)
+
+IMPROVEMENTS:
+* `resource/database_secret_backend_connection`: Add username_template to vault_database_secret_backend_connection ([#1103](https://github.com/hashicorp/terraform-provider-vault/pull/1103)
+
 ## 2.23.0 (August 18, 2021)
 
 FEATURES:
