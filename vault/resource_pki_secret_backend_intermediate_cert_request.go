@@ -2,11 +2,12 @@ package vault
 
 import (
 	"fmt"
+	"log"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/hashicorp/vault/api"
-	"log"
-	"strings"
 )
 
 func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
@@ -166,6 +167,13 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Computed:    true,
 				Description: "The private key type.",
 			},
+			"add_basic_constraints": {
+				Type:        schema.TypeBool,
+				Description: "Whether to add a Basic Constraints extension with CA: true",
+				ForceNew:    true,
+				Default:     false,
+				Optional:    true,
+			},
 		},
 	}
 }
@@ -203,19 +211,20 @@ func pkiSecretBackendIntermediateCertRequestCreate(d *schema.ResourceData, meta 
 	}
 
 	data := map[string]interface{}{
-		"common_name":          d.Get("common_name").(string),
-		"format":               d.Get("format").(string),
-		"private_key_format":   d.Get("private_key_format").(string),
-		"key_type":             d.Get("key_type").(string),
-		"key_bits":             d.Get("key_bits").(int),
-		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
-		"ou":                   d.Get("ou").(string),
-		"organization":         d.Get("organization").(string),
-		"country":              d.Get("country").(string),
-		"locality":             d.Get("locality").(string),
-		"province":             d.Get("province").(string),
-		"street_address":       d.Get("street_address").(string),
-		"postal_code":          d.Get("postal_code").(string),
+		"common_name":           d.Get("common_name").(string),
+		"format":                d.Get("format").(string),
+		"private_key_format":    d.Get("private_key_format").(string),
+		"key_type":              d.Get("key_type").(string),
+		"key_bits":              d.Get("key_bits").(int),
+		"exclude_cn_from_sans":  d.Get("exclude_cn_from_sans").(bool),
+		"ou":                    d.Get("ou").(string),
+		"organization":          d.Get("organization").(string),
+		"country":               d.Get("country").(string),
+		"locality":              d.Get("locality").(string),
+		"province":              d.Get("province").(string),
+		"street_address":        d.Get("street_address").(string),
+		"postal_code":           d.Get("postal_code").(string),
+		"add_basic_constraints": d.Get("add_basic_constraints").(bool),
 	}
 
 	if len(altNames) > 0 {
