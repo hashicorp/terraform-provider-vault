@@ -493,6 +493,38 @@ func (t *TokenAuth) RevokeAccessor(accessor string) error {
 	return t.TokenAuth.RevokeAccessor(accessor)
 }
 
+func (t *TokenAuth) RevokeTree(token string) error {
+	if t.err != nil {
+		return fmt.Errorf("revoke tree failure: %w", t.err)
+	}
+
+	return t.TokenAuth.RevokeTree(token)
+}
+
+func (s *Sys) DeletePolicy(name string) error {
+	if s.err != nil {
+		return fmt.Errorf("delete policy failure: %w", s.err)
+	}
+
+	return s.Sys.DeletePolicy(name)
+}
+
+func (s *Sys) DisableAudit(path string) error {
+	if s.err != nil {
+		return fmt.Errorf("disable audit failure: %w", s.err)
+	}
+
+	return s.Sys.DisableAudit(path)
+}
+
+func (s *Sys) DisableAuth(path string) error {
+	if s.err != nil {
+		return fmt.Errorf("disable auth failure: %w", s.err)
+	}
+
+	return s.Sys.DisableAuth(path)
+}
+
 func (s *Sys) EnableAuditWithOptions(path string, options *api.EnableAuditOptions) error {
 	if s.err != nil {
 		return fmt.Errorf("enable audit failure: %w", s.err)
@@ -525,6 +557,14 @@ func (s *Sys) ListAuth() (map[string]*api.AuthMount, error) {
 	return s.Sys.ListAuth()
 }
 
+func (s *Sys) ListAudit() (map[string]*api.Audit, error) {
+	if s.err != nil {
+		return nil, fmt.Errorf("list audit failure: %w", s.err)
+	}
+
+	return s.Sys.ListAudit()
+}
+
 func (s *Sys) ListMounts() (map[string]*api.MountOutput, error) {
 	if s.err != nil {
 		return nil, fmt.Errorf("list mounts failure: %w", s.err)
@@ -548,6 +588,23 @@ func (s *Sys) MountConfig(path string) (*api.MountConfigOutput, error) {
 
 	return s.Sys.MountConfig(path)
 }
+
+func (s *Sys) PutPolicy(name, rules string) error {
+	if s.err != nil {
+		return fmt.Errorf("put policy failure: %w", s.err)
+	}
+
+	return s.Sys.PutPolicy(name, rules)
+}
+
+func (s *Sys) Remount(from, to string) error {
+	if s.err != nil {
+		return fmt.Errorf("remount failure: %w", s.err)
+	}
+
+	return s.Sys.Remount(from, to)
+}
+
 func (s *Sys) TuneMount(path string, config api.MountConfigInput) error {
 	if s.err != nil {
 		return fmt.Errorf("tune mount failure: %w", s.err)
