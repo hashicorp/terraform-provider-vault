@@ -72,6 +72,8 @@ The following arguments are supported:
 
 * `postal_code` - (Optional) The postal code
 
+* `add_basic_constraints` - (Optional) Add CA basic constraints to the CSR to allow signing with ADCS
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
