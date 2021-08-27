@@ -277,51 +277,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Connection parameters for the snowflake-database-plugin plugin.",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"account": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The Account Name for the snowflake connection. Formats <accountname> if in us-west-2, or <accountname>.<region> for any other region",
-						},
-						"username": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The AccountAdmin level user using to connect to snowflake",
-						},
-						"password": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The password with the provided user",
-							Sensitive:   true,
-						},
-						"database": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "The database in snowflake to restrict the user to",
-						},
-						"schema": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "The schema in snowflake to restrict the user to",
-						},
-						"warehouse": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "The warehouse in snowflake to restrict the user to",
-						},
-						"host": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "Override the host connection to get to snowflake",
-						},
-						"port": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "Override the host connection port to get to snowflake",
-						},
-					},
-				},
+				Elem: snowflakeConnectionStringResource(),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("snowflake", dbBackendTypes),
 			},
@@ -380,6 +336,28 @@ func mysqlConnectionStringResource() *schema.Resource {
 		Type:        schema.TypeString,
 		Optional:    true,
 		Description: "x509 CA file for validating the certificate presented by the MySQL server. Must be PEM encoded.",
+	}
+	return r
+}
+
+func snowflakeConnectionStringResource() *schema.Resource {
+	r := connectionStringResource()
+	r.Schema["username"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Required:    true,
+		Description: "The AccountAdmin level user using to connect to snowflake",
+	}
+	r.Schema["password"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Required:    true,
+		Description: "The password with the provided user",
+		Sensitive:   true,
+	}
+	r.Schema["username_template"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Required:    false,
+		Description: "Template describing how dynamic usernames are generated.",
+		Sensitive:   false,
 	}
 	return r
 }
@@ -598,16 +576,13 @@ func getElasticsearchConnectionDetailsFromResponse(d *schema.ResourceData, prefi
 }
 
 func getSnowflakeConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+	commonDetails := getConnectionDetailsFromResponse(d, prefix, resp)
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
 	if !ok {
 		return nil
 	}
-	result := map[string]interface{}{}
-
-	if v, ok := d.GetOk(prefix + "account"); ok {
-		result["account"] = v.(string)
-	}
+	result := commonDetails[0]
 
 	if v, ok := data["username"]; ok {
 		result["username"] = v.(string)
@@ -621,43 +596,11 @@ func getSnowflakeConnectionDetailsFromResponse(d *schema.ResourceData, prefix st
 		}
 	}
 
-	if v, ok := d.GetOk(prefix + "database"); ok {
-		result["database"] = v.(string)
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		result["username_template"] = v.(string)
 	} else {
-		if v, ok := data["database"]; ok {
-			result["database"] = v.(string)
-		}
-	}
-
-	if v, ok := d.GetOk(prefix + "schema"); ok {
-		result["schema"] = v.(string)
-	} else {
-		if v, ok := data["schema"]; ok {
-			result["schema"] = v.(string)
-		}
-	}
-
-	if v, ok := d.GetOk(prefix + "warehouse"); ok {
-		result["warehouse"] = v.(string)
-	} else {
-		if v, ok := data["warehouse"]; ok {
-			result["warehouse"] = v.(string)
-		}
-	}
-
-	if v, ok := d.GetOk(prefix + "host"); ok {
-		result["host"] = v.(string)
-	} else {
-		if v, ok := data["host"]; ok {
-			result["host"] = v.(string)
-		}
-	}
-
-	if v, ok := d.GetOk(prefix + "port"); ok {
-		result["port"] = v.(string)
-	} else {
-		if v, ok := data["port"]; ok {
-			result["port"] = v.(string)
+		if v, ok := data["username_template"]; ok {
+			result["username_template"] = v.(string)
 		}
 	}
 
@@ -703,31 +646,8 @@ func setElasticsearchDatabaseConnectionData(d *schema.ResourceData, prefix strin
 	}
 }
 
-func buildSnowflakeConnectionUrl(username, password, account, database, schema, warehouse, host, port interface{}) interface{} {
-	connectionUrl := fmt.Sprintf("%s:%s@%s", username, password, account)
-	if host != "" && port != "" {
-		connectionUrl = fmt.Sprintf("%s:%s@%s.%s:%s", username, password, account, host, port)
-	}
-
-	if database != "" {
-		connectionUrl += "/" + database.(string)
-		if schema != "" {
-			connectionUrl += "/" + schema.(string)
-		}
-	}
-
-	if warehouse != "" {
-		connectionUrl += "&warehouse=" + warehouse.(string)
-	}
-
-	return connectionUrl
-}
-
 func setSnowflakeDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
-	if v, ok := d.GetOk(prefix + "account"); ok {
-		data["account"] = v.(string)
-	}
-
+	setDatabaseConnectionData(d, prefix, data)
 	if v, ok := d.GetOk(prefix + "username"); ok {
 		data["username"] = v.(string)
 	}
@@ -736,37 +656,9 @@ func setSnowflakeDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 		data["password"] = v.(string)
 	}
 
-	if v, ok := d.GetOk(prefix + "database"); ok {
-		data["database"] = v.(string)
-	} else {
-		data["database"] = ""
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		data["username_template"] = v.(string)
 	}
-
-	if v, ok := d.GetOk(prefix + "schema"); ok {
-		data["schema"] = v.(string)
-	} else {
-		data["schema"] = ""
-	}
-
-	if v, ok := d.GetOk(prefix + "warehouse"); ok {
-		data["warehouse"] = v.(string)
-	} else {
-		data["warehouse"] = ""
-	}
-
-	if v, ok := d.GetOk(prefix + "host"); ok {
-		data["host"] = v.(string)
-	} else {
-		data["host"] = ""
-	}
-
-	if v, ok := d.GetOk(prefix + "port"); ok {
-		data["port"] = v.(string)
-	} else {
-		data["port"] = ""
-	}
-
-	data["connection_url"] = buildSnowflakeConnectionUrl(data["username"], data["password"], data["account"], data["database"], data["schema"], data["warehouse"], data["host"], data["port"])
 }
 
 func databaseSecretBackendConnectionCreate(d *schema.ResourceData, meta interface{}) error {

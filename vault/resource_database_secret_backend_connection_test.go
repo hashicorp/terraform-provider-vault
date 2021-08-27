@@ -572,21 +572,13 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
-	host := os.Getenv("SNOWFLAKE_HOST")
-	port := os.Getenv("SNOWFLAKE_PORT")
-	account := os.Getenv("SNOWFLAKE_ACCOUNT")
-	if account == "" {
-		t.Skip("SNOWFLAKE_ACCOUNT not set")
-	}
+	url := os.Getenv("SNOWFLAKE_URL")
 	username := os.Getenv("SNOWFLAKE_USERNAME")
 	password := os.Getenv("SNOWFLAKE_PASSWORD")
-	db := os.Getenv("SNOWFLAKE_DB")
-	schema := os.Getenv("SNOWFLAKE_SCHEMA")
-	warehouse := os.Getenv("SNOWFLAKE_WAREHOUSE")
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
 
-	config := testAccDatabaseSecretBackendConnectionConfig_snowflake(name, backend, account, host, port, username, password, db, schema, warehouse)
+	config := testAccDatabaseSecretBackendConnectionConfig_snowflake(name, backend, url, username, password)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -601,14 +593,9 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.0", "dev"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.1", "prod"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "verify_connection", "true"),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.account", account),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.host", host),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.port", port),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.connection_url", url),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.username", username),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.password", password),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.database", db),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.schema", schema),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.warehouse", warehouse),
 				),
 			},
 		},
@@ -948,7 +935,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, connURL)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_snowflake(name, path, account, host, port, username, password, db, schema, warehouse string) string {
+func testAccDatabaseSecretBackendConnectionConfig_snowflake(name, path, url, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -962,17 +949,12 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
 
   snowflake { 
-    account = "%s"
-	host = "%s"
-	port = "%s"
+    connection_url = "%s"
 	username = "%s"
 	password = "%s"
-	database = "%s"
-	schema = "%s"
-	warehouse = "%s"
   }
 }
-`, path, name, account, host, port, username, password, db, schema, warehouse)
+`, path, name, url,  username, password)
 }
 
 func newMySQLConnection(t *testing.T, connURL string, username string, password string) *sql.DB {

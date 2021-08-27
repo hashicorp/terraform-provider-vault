@@ -221,21 +221,27 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 ### Snowflake Configuration Options
 
-*  `account` - (Required) The Snowflake account name. Format: <accountname> if in us-west-2, or <accountname>.<region> for any other region.
+* `connection_url` - (Required) A URL containing connection information. See
+  the [Vault
+  docs](https://www.vaultproject.io/api-docs/secret/databases/snowflake#sample-payload)
+  for an example.
+
+* `max_open_connections` - (Optional) The maximum number of open connections to
+  use.
+
+* `max_idle_connections` - (Optional) The maximum number of idle connections to
+  maintain.
+
+* `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
+  a connection alive for.
 
 * `username` - (Required) The username to be used in the connection (the account admin level).
 
 * `password` - (Required) The password to be used in the connection.
+*  
+* `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 
-* `database` - (Optional) The database name to restrict this connection to in snowflake.
 
-* `schema` - (Optional) The schema name to restrict this connection to in snowflake.
-
-* `warehouse` - (Optional) The warehouse name to restrict this connection to in snowflake.
-
-* `host` - (Optional) Override the default host for snowflake connections (default: snowflakecomputing.com).
-
-* `port` - (Optional) Override the default port for snowflake connections (default: 443).
 
 ## Attributes Reference
 
