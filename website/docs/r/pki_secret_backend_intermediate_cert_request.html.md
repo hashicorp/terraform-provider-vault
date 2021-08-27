@@ -82,6 +82,7 @@ The following arguments are supported:
 * `managed_key_id` - (Optional) The ID of the previously configured managed key. This field is
   required if `type` is `kms` and it conflicts with `managed_key_name`
 
+* `add_basic_constraints` - (Optional) Add CA basic constraints to the CSR to allow signing with ADCS
 
 ## Attributes Reference
 
