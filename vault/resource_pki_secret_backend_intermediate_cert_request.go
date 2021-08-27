@@ -183,6 +183,13 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				ForceNew:      true,
 				ConflictsWith: []string{"managed_key_name"},
 			},
+			"add_basic_constraints": {
+				Type:        schema.TypeBool,
+				Description: "Whether to add a Basic Constraints extension with CA: true",
+				ForceNew:    true,
+				Default:     false,
+				Optional:    true,
+			},
 		},
 	}
 }
@@ -223,19 +230,20 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 	}
 
 	data := map[string]interface{}{
-		"common_name":          d.Get("common_name").(string),
-		"format":               d.Get("format").(string),
-		"private_key_format":   d.Get("private_key_format").(string),
-		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
-		"ou":                   d.Get("ou").(string),
-		"organization":         d.Get("organization").(string),
-		"country":              d.Get("country").(string),
-		"locality":             d.Get("locality").(string),
-		"province":             d.Get("province").(string),
-		"street_address":       d.Get("street_address").(string),
-		"postal_code":          d.Get("postal_code").(string),
-		"managed_key_name":     d.Get("managed_key_name").(string),
-		"managed_key_id":       d.Get("managed_key_id").(string),
+		"common_name":           d.Get("common_name").(string),
+		"format":                d.Get("format").(string),
+		"private_key_format":    d.Get("private_key_format").(string),
+		"exclude_cn_from_sans":  d.Get("exclude_cn_from_sans").(bool),
+		"ou":                    d.Get("ou").(string),
+		"organization":          d.Get("organization").(string),
+		"country":               d.Get("country").(string),
+		"locality":              d.Get("locality").(string),
+		"province":              d.Get("province").(string),
+		"street_address":        d.Get("street_address").(string),
+		"postal_code":           d.Get("postal_code").(string),
+		"managed_key_name":      d.Get("managed_key_name").(string),
+		"managed_key_id":        d.Get("managed_key_id").(string),
+		"add_basic_constraints": d.Get("add_basic_constraints").(bool),
 	}
 
 	if intermediateType != "kms" {
