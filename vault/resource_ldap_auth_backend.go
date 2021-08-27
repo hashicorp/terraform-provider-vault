@@ -118,7 +118,13 @@ func ldapAuthBackendResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-
+		"local": {
+			Type:        schema.TypeBool,
+			ForceNew:    true,
+			Optional:    true,
+			Default:     false,
+			Description: "Specifies if the auth method is local only",
+		},
 		"accessor": {
 			Type:        schema.TypeString,
 			Computed:    true,
@@ -161,12 +167,15 @@ func ldapAuthBackendConfigPath(path string) string {
 func ldapAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	authType := ldapAuthType
 	path := d.Get("path").(string)
-	desc := d.Get("description").(string)
+	options := &api.EnableAuthOptions{
+		Type:        ldapAuthType,
+		Description: d.Get("description").(string),
+		Local:       d.Get("local").(bool),
+	}
 
 	log.Printf("[DEBUG] Enabling LDAP auth backend %q", path)
-	err := client.Sys().EnableAuth(path, authType, desc)
+	err := client.Sys().EnableAuthWithOptions(path, options)
 	if err != nil {
 		return fmt.Errorf("error enabling ldap auth backend %q: %s", path, err)
 	}
@@ -291,6 +300,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("description", authMount.Description)
 	d.Set("accessor", authMount.Accessor)
+	d.Set("local", authMount.Local)
 
 	path = ldapAuthBackendConfigPath(path)
 

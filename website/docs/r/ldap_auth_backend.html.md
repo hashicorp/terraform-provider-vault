@@ -69,6 +69,8 @@ The following arguments are supported:
 
 * `description` - (Optional) Description for the LDAP auth backend mount
 
+* `local` - (Optional) Specifies if the auth method is local only.
+
 ### Common Token Arguments
 
 These arguments are common across several Authentication Token resources since Vault 1.2.
