@@ -1,4 +1,9 @@
-## Unreleased
+## 2.24.0 (Unreleased)
+
+IMPROVEMENTS:
+* `resource/database_secret_backend_connection`: Add username_template to vault_database_secret_backend_connection ([#1103](https://github.com/hashicorp/terraform-provider-vault/pull/1103)
+
+## 2.23.0 (August 18, 2021)
 
 FEATURES:
 * **New Resource** `vault_gcp_secret_static_account`: Provision Static Accounts in the [GCP Secrets Engine](https://www.vaultproject.io/docs/secrets/gcp/index.html) ([#1094](https://github.com/hashicorp/terraform-provider-vault/pull/1094))
@@ -11,6 +16,7 @@ BUGS:
 * `resource/gcp_auth_backend`: Support importing resource ([#1125](https://github.com/hashicorp/terraform-provider-vault/pull/1125))
 * `resource/okta_auth_backend`: Support importing resource ([#1123](https://github.com/hashicorp/terraform-provider-vault/pull/1123))
 * `resource/audit`: List audit only once during read ([#1138](https://github.com/hashicorp/terraform-provider-vault/pull/1138))
+* `resource/identity_oidc_key`: Error handling for identity oidc key vault calls ([#1142](https://github.com/hashicorp/terraform-provider-vault/pull/1142))
 
 ## 2.22.1 (July 23, 2021)
 

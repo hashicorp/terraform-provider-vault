@@ -118,6 +118,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `tls_ca` - (Optional) x509 CA file for validating the certificate presented by the MongoDB server. Must be PEM encoded.
 
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
 
 
 ### MongoDB Atlas Configuration Options
@@ -161,6 +165,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
 ### MySQL Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -181,6 +189,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `tls_ca` - (Optional) x509 CA file for validating the certificate presented by the MySQL server. Must be PEM encoded.
 
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
 ### PostgreSQL Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -197,6 +209,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
 ### Oracle Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -212,6 +228,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
+
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
 ### Elasticsearch Configuration Options
 

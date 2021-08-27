@@ -13,6 +13,10 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+type connectionStringConfig struct {
+	excludeUsernameTemplate bool
+}
+
 var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
@@ -205,10 +209,12 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			},
 
 			"hana": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the hana-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the hana-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					excludeUsernameTemplate: true,
+				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("hana", dbBackendTypes),
 			},
@@ -217,7 +223,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mssql-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("mssql", dbBackendTypes),
 			},
@@ -234,7 +240,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-rds-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("mysql_rds", dbBackendTypes),
 			},
@@ -242,7 +248,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-aurora-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("mysql_aurora", dbBackendTypes),
 			},
@@ -250,7 +256,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-legacy-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("mysql_legacy", dbBackendTypes),
 			},
@@ -259,7 +265,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the postgresql-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("postgresql", dbBackendTypes),
 			},
@@ -268,7 +274,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the oracle-database-plugin plugin.",
-				Elem:          connectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("oracle", dbBackendTypes),
 			},
@@ -287,8 +293,8 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 	}
 }
 
-func connectionStringResource() *schema.Resource {
-	return &schema.Resource{
+func connectionStringResource(config *connectionStringConfig) *schema.Resource {
+	res := &schema.Resource{
 		Schema: map[string]*schema.Schema{
 			"connection_url": {
 				Type:        schema.TypeString,
@@ -313,10 +319,20 @@ func connectionStringResource() *schema.Resource {
 			},
 		},
 	}
+
+	if !config.excludeUsernameTemplate {
+		res.Schema["username_template"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Username generation template.",
+		}
+	}
+
+	return res
 }
 
 func tlsConnectionStringResource() *schema.Resource {
-	r := connectionStringResource()
+	r := connectionStringResource(&connectionStringConfig{})
 	r.Schema["tls_certificate_key"] = &schema.Schema{
 		Type:        schema.TypeString,
 		Optional:    true,
@@ -484,6 +500,15 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 			result["max_connection_lifetime"] = n.Seconds()
 		}
 	}
+	if _, ok := d.GetOk(prefix + "username_template"); ok {
+		if v, ok := data["username_template"]; ok {
+			result["username_template"] = v.(string)
+		}
+	} else {
+		if v, ok := data["username_template"]; ok {
+			result["username_template"] = v.(string)
+		}
+	}
 	return []map[string]interface{}{result}
 }
 
@@ -552,6 +577,9 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	}
 	if v, ok := d.GetOkExists(prefix + "max_connection_lifetime"); ok {
 		data["max_connection_lifetime"] = fmt.Sprintf("%ds", v)
+	}
+	if v, ok := d.GetOkExists(prefix + "username_template"); ok {
+		data["username_template"] = v.(string)
 	}
 }
 
