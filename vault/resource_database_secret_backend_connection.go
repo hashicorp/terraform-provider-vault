@@ -355,7 +355,7 @@ func snowflakeConnectionStringResource() *schema.Resource {
 	}
 	r.Schema["username_template"] = &schema.Schema{
 		Type:        schema.TypeString,
-		Required:    false,
+		Optional:    true,
 		Description: "Template describing how dynamic usernames are generated.",
 		Sensitive:   false,
 	}
