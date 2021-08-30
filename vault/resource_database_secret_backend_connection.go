@@ -344,12 +344,12 @@ func snowflakeConnectionStringResource() *schema.Resource {
 	r := connectionStringResource()
 	r.Schema["username"] = &schema.Schema{
 		Type:        schema.TypeString,
-		Required:    true,
+		Optional:    true,
 		Description: "The AccountAdmin level user using to connect to snowflake",
 	}
 	r.Schema["password"] = &schema.Schema{
 		Type:        schema.TypeString,
-		Required:    true,
+		Optional:    true,
 		Description: "The password with the provided user",
 		Sensitive:   true,
 	}
