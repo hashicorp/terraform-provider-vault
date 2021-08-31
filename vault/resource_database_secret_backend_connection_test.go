@@ -957,7 +957,7 @@ resource "vault_database_secret_backend_connection" "test" {
 	password = "%s"
   }
 }
-`, path, name, url,  username, password)
+`, path, name, url, username, password)
 }
 
 func newMySQLConnection(t *testing.T, connURL string, username string, password string) *sql.DB {
