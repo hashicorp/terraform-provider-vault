@@ -575,6 +575,40 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
+	url := os.Getenv("SNOWFLAKE_URL")
+	if url == "" {
+		t.Skip("SNOWFLAKE_URL not set")
+	}
+	username := os.Getenv("SNOWFLAKE_USERNAME")
+	password := os.Getenv("SNOWFLAKE_PASSWORD")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	config := testAccDatabaseSecretBackendConnectionConfig_snowflake(name, backend, url, username, password)
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "verify_connection", "true"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.connection_url", url),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.username", username),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.password", password),
+				),
+			},
+		},
+	})
+}
+
 func testAccDatabaseSecretBackendConnectionCheckDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
@@ -907,6 +941,28 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, connURL, userTempl)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_snowflake(name, path, url, username, password string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = "${vault_mount.db.path}"
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  snowflake { 
+    connection_url = "%s"
+	username = "%s"
+	password = "%s"
+  }
+}
+`, path, name, url, username, password)
 }
 
 func newMySQLConnection(t *testing.T, connURL string, username string, password string) *sql.DB {
