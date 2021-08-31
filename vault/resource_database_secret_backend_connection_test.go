@@ -573,6 +573,9 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 
 func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 	url := os.Getenv("SNOWFLAKE_URL")
+	if url == "" {
+		t.Skip("SNOWFLAKE_URL not set")
+	}
 	username := os.Getenv("SNOWFLAKE_USERNAME")
 	password := os.Getenv("SNOWFLAKE_PASSWORD")
 	backend := acctest.RandomWithPrefix("tf-test-db")
