@@ -241,8 +241,6 @@ Exactly one of the nested blocks of configuration options must be supplied.
 *  
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 
-
-
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
