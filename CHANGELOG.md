@@ -1,5 +1,8 @@
 ## 2.24.0 (Unreleased)
 
+FEATURES:
+* **New Database Resource**: Added support for the `snowflake-database-plugin` to `vault_database_secret_backend_connection` ([#983](https://github.com/hashicorp/terraform-provider-vault/pull/983))
+
 IMPROVEMENTS:
 * `resource/database_secret_backend_connection`: Add username_template to vault_database_secret_backend_connection ([#1103](https://github.com/hashicorp/terraform-provider-vault/pull/1103))
 * `resource/ldap_auth_backend`: Allow the creation of `local` mounts ([#1115](https://github.com/hashicorp/terraform-provider-vault/pull/1115))
