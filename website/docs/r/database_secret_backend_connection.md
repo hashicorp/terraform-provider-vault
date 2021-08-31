@@ -235,10 +235,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
-* `username` - (Required) The username to be used in the connection (the account admin level).
+* `username` - (Optional) The username to be used in the connection (the account admin level).
 
-* `password` - (Required) The password to be used in the connection.
-*  
+* `password` - (Optional) The password to be used in the connection.
+
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 
 ## Attributes Reference
