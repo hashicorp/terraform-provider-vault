@@ -357,7 +357,7 @@ func mysqlConnectionStringResource() *schema.Resource {
 }
 
 func snowflakeConnectionStringResource() *schema.Resource {
-	r := connectionStringResource()
+	r := connectionStringResource(&connectionStringConfig{})
 	r.Schema["username"] = &schema.Schema{
 		Type:        schema.TypeString,
 		Optional:    true,
@@ -368,12 +368,6 @@ func snowflakeConnectionStringResource() *schema.Resource {
 		Optional:    true,
 		Description: "The password with the provided user",
 		Sensitive:   true,
-	}
-	r.Schema["username_template"] = &schema.Schema{
-		Type:        schema.TypeString,
-		Optional:    true,
-		Description: "Template describing how dynamic usernames are generated.",
-		Sensitive:   false,
 	}
 	return r
 }

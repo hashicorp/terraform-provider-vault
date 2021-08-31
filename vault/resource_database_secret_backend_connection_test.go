@@ -584,8 +584,9 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 	password := os.Getenv("SNOWFLAKE_PASSWORD")
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
+	userTempl := "{{.DisplayName}}"
 
-	config := testAccDatabaseSecretBackendConnectionConfig_snowflake(name, backend, url, username, password)
+	config := testAccDatabaseSecretBackendConnectionConfig_snowflake(name, backend, url, username, password, userTempl)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -603,6 +604,7 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.connection_url", url),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.username", username),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.password", password),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "snowflake.0.username_template", userTempl),
 				),
 			},
 		},
@@ -943,7 +945,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, connURL, userTempl)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_snowflake(name, path, url, username, password string) string {
+func testAccDatabaseSecretBackendConnectionConfig_snowflake(name, path, url, username, password, userTempl string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -958,11 +960,12 @@ resource "vault_database_secret_backend_connection" "test" {
 
   snowflake { 
     connection_url = "%s"
-	username = "%s"
-	password = "%s"
+    username = "%s"
+    password = "%s"
+    username_template = "%s"
   }
 }
-`, path, name, url, username, password)
+`, path, name, url, username, password, userTempl)
 }
 
 func newMySQLConnection(t *testing.T, connURL string, username string, password string) *sql.DB {
