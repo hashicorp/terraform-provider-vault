@@ -274,10 +274,10 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			},
 
 			"snowflake": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "Connection parameters for the snowflake-database-plugin plugin.",
-				Elem: snowflakeConnectionStringResource(),
+				Type:          schema.TypeList,
+				Optional:      true,
+				Description:   "Connection parameters for the snowflake-database-plugin plugin.",
+				Elem:          snowflakeConnectionStringResource(),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("snowflake", dbBackendTypes),
 			},
