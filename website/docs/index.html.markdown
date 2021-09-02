@@ -154,7 +154,7 @@ variables in order to keep credential information out of the configuration.
   `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
 
 * `policies` - (Optional) A list a policies to attach to the child token.
-  Needs sudo capability to `auth/token/create`.
+  Needs sudo capability on `auth/token/create`.
 
 * `headers` - (Optional) A configuration block, described below, that provides headers
 to be sent along with all requests to the Vault server.  This block can be specified
