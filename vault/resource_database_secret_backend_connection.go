@@ -670,6 +670,61 @@ func getElasticsearchConnectionDetailsFromResponse(d *schema.ResourceData, prefi
 	return []map[string]interface{}{result}
 }
 
+func getInfluxDBConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	result := map[string]interface{}{}
+
+	if v, ok := data["host"]; ok {
+		result["host"] = v.(string)
+	}
+	if v, ok := data["port"]; ok {
+		port, _ := v.(json.Number).Int64()
+		result["port"] = port
+	}
+	if v, ok := data["username"]; ok {
+		result["username"] = v.(string)
+	}
+	if v, ok := data["password"]; ok {
+		result["password"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "password"); ok {
+		// keep the password we have in state/config if the API doesn't return one
+		result["password"] = v.(string)
+	}
+	if v, ok := data["tls"]; ok {
+		result["tls"] = v.(bool)
+	}
+	if v, ok := data["insecure_tls"]; ok {
+		result["insecure_tls"] = v.(bool)
+	}
+	if v, ok := data["pem_bundle"]; ok {
+		result["pem_bundle"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "pem_bundle"); ok {
+		result["pem_bundle"] = v.(string)
+	}
+	if v, ok := data["pem_json"]; ok {
+		result["pem_json"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "pem_json"); ok {
+		result["pem_json"] = v.(string)
+	}
+	if v, ok := data["protocol_version"]; ok {
+		protocol, _ := v.(json.Number).Int64()
+		result["protocol_version"] = int64(protocol)
+	}
+	if v, ok := data["connect_timeout"]; ok {
+		timeout, _ := v.(json.Number).Int64()
+		result["connect_timeout"] = timeout
+	}
+	if v, ok := data["username_template"]; ok {
+		result["username_template"] = v.(string)
+	}
+
+	return []map[string]interface{}{result}
+}
+
 func getSnowflakeConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
 	commonDetails := getConnectionDetailsFromResponse(d, prefix, resp)
 	details := resp.Data["connection_details"]
@@ -741,6 +796,39 @@ func setElasticsearchDatabaseConnectionData(d *schema.ResourceData, prefix strin
 
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
+	}
+}
+
+func setInfluxDBDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	if v, ok := d.GetOkExists(prefix + "host"); ok {
+		data["host"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "port"); ok {
+		data["port"] = v.(int)
+	}
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		data["password"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "tls"); ok {
+		data["tls"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists(prefix + "insecure_tls"); ok {
+		data["insecure_tls"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists(prefix + "pem_bundle"); ok {
+		data["pem_bundle"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "pem_json"); ok {
+		data["pem_json"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "connect_timeout"); ok {
+		data["connect_timeout"] = v.(int)
+	}
+	if v, ok := d.GetOkExists(prefix + "username_template"); ok {
+		data["username_template"] = v.(string)
 	}
 }
 
