@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"testing"
 
 	"fmt"
@@ -77,24 +76,16 @@ func TestAccRaftSnapshotAgentConfig_import(t *testing.T) {
 func testAccRaftSnapshotAgentConfigCheckDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
-	secret, err := client.Logical().List("sys/storage/raft/snapshot-auto/config")
-	if err != nil {
-		return err
-	}
-
-	var keys []string
-	if v, ok := secret.Data["keys"]; ok {
-		keys = util.ToStringArray(v.([]interface{}))
-	}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_raft_snapshot_agent_config" {
 			continue
 		}
-		for _, name := range keys {
-			if name == rs.Primary.Attributes["name"] {
-				return fmt.Errorf("config %q still exists", name)
-			}
+		snapshot, err := client.Logical().Read(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+		if snapshot != nil {
+			return fmt.Errorf("library %q still exists", rs.Primary.ID)
 		}
 	}
 	return nil
