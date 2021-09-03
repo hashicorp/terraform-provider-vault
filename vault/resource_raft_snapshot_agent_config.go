@@ -286,11 +286,7 @@ func createOrUpdateSnapshotAgentConfigResource(d *schema.ResourceData, meta inte
 	}
 
 	log.Printf("[DEBUG] Configuring automatic snapshots: %q", name)
-	r := client.NewRequest("POST", "/v1/"+path)
-	if err := r.SetJSONBody(config); err != nil {
-		return fmt.Errorf("failed to form snapshot agent request: %s", err)
-	}
-	if _, err := client.RawRequest(r); err != nil {
+	if _, err = client.Logical().Write(path, config); err != nil {
 		return fmt.Errorf("error writing %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Configured automatic snapshots: %q", name)
