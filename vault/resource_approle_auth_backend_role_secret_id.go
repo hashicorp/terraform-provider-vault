@@ -79,6 +79,13 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 				},
 			},
 
+			"reuse_wrapping_token": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Reuse the wrapping token if the wrapped secret-id is still valid.",
+				ForceNew:    true,
+			},
+
 			"accessor": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -147,6 +154,8 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	} else {
 		data["metadata"] = ""
 	}
+	var reuseWrappingToken bool
+	reuseWrappingToken = d.Get("reuse_wrapping_token").(bool)
 
 	wrappingTTL, wrapped := d.GetOk("wrapping_ttl")
 
@@ -170,7 +179,11 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	var accessor string
 
 	if wrapped {
-		accessor = resp.WrapInfo.Accessor
+		if reuseWrappingToken {
+			accessor = resp.WrapInfo.WrappedAccessor
+		} else {
+			accessor = resp.WrapInfo.Accessor
+		}
 		d.Set("wrapping_token", resp.WrapInfo.Token)
 		d.Set("wrapping_accessor", accessor)
 	} else {
@@ -179,7 +192,7 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 		d.Set("accessor", accessor)
 	}
 
-	d.SetId(approleAuthBackendRoleSecretIDID(backend, role, accessor, wrapped))
+	d.SetId(approleAuthBackendRoleSecretIDID(backend, role, accessor, wrapped, reuseWrappingToken))
 
 	return approleAuthBackendRoleSecretIDRead(d, meta)
 }
@@ -194,8 +207,10 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 	}
 
 	// If the ID is wrapped, there is no information available other than whether
-	// the wrapping token is still valid.
-	if wrapped {
+	// the wrapping token is still valid, unless we are planning to re-use it.
+	reuseWrappingToken := d.Get("reuse_wrapping_token").(bool)
+
+	if wrapped && !reuseWrappingToken {
 		valid, err := approleAuthBackendRoleSecretIDExists(d, meta)
 		if err != nil {
 			return err
@@ -330,8 +345,8 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 	return resp != nil, nil
 }
 
-func approleAuthBackendRoleSecretIDID(backend, role, accessor string, wrapped bool) string {
-	if wrapped {
+func approleAuthBackendRoleSecretIDID(backend, role, accessor string, wrapped bool, reuse_wrapping_token bool) string {
+	if wrapped && !reuse_wrapping_token {
 		accessor = "wrapped-" + accessor
 	}
 	return fmt.Sprintf("backend=%s::role=%s::accessor=%s", strings.Trim(backend, "/"), strings.Trim(role, "/"), accessor)

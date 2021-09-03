@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -52,6 +53,30 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped(t *testing.T) {
 					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
 					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_accessor"),
 					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_token"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccAppRoleAuthBackendRoleSecretID_wrapped_reuse(t *testing.T) {
+	backend := acctest.RandomWithPrefix("approle")
+	role := acctest.RandomWithPrefix("test-role")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { util.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped_reuse(backend, role),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
+					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
+					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_accessor"),
+					resource.TestCheckResourceAttrSet(secretIDResource, "wrapping_token"),
+					resource.TestCheckResourceAttrSet(secretIDResource, "accessor"),
+					resource.TestMatchResourceAttr(secretIDResource, "accessor", regexp.MustCompile("^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$")),
 				),
 			},
 		},
@@ -197,6 +222,27 @@ resource "vault_approle_auth_backend_role_secret_id" "secret_id" {
   role_name = vault_approle_auth_backend_role.role.role_name
   backend = vault_auth_backend.approle.path
   wrapping_ttl = "60s"
+}`, backend, role)
+}
+
+func testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped_reuse(backend, role string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "approle" {
+  type = "approle"
+  path = "%s"
+}
+
+resource "vault_approle_auth_backend_role" "role" {
+  backend = "${vault_auth_backend.approle.path}"
+  role_name = "%s"
+  token_policies = ["default", "dev", "prod"]
+}
+
+resource "vault_approle_auth_backend_role_secret_id" "secret_id" {
+  role_name = "${vault_approle_auth_backend_role.role.role_name}"
+  backend = "${vault_auth_backend.approle.path}"
+  wrapping_ttl = "60s"
+  reuse_wrapping_token = true
 }`, backend, role)
 }
 
