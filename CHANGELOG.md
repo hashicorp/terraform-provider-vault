@@ -9,6 +9,9 @@ IMPROVEMENTS:
 * `resource/jwt_auth_backend`: Allow the creation of `local` mounts ([#1115](https://github.com/hashicorp/terraform-provider-vault/pull/1115))
 * `resource/consul_secret_backend`: Allow the creation of `local` mounts ([#1115](https://github.com/hashicorp/terraform-provider-vault/pull/1115))
 
+BUGS:
+* `resource/vault_identity_group`: Fix bug where member_entity_ids & member_group_ids were attempted to be managed on external identity groups ([#1134](https://github.com/hashicorp/terraform-provider-vault/pull/1134))
+
 ## 2.23.0 (August 18, 2021)
 
 FEATURES:
