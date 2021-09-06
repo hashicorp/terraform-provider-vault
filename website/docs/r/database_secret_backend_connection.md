@@ -79,6 +79,8 @@ The following arguments are supported:
 
 * `elasticsearch` - (Optional) A nested block containing configuration options for Elasticsearch connections.
 
+* `snowflake` - (Optional) A nested block containing configuration options for Snowflake connections.
+
 Exactly one of the nested blocks of configuration options must be supplied.
 
 ### Cassandra Configuration Options
@@ -113,6 +115,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
   the [Vault
   docs](https://www.vaultproject.io/api-docs/secret/databases/mongodb.html#sample-payload)
   for an example.
+
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
 
 ### MongoDB Atlas Configuration Options
@@ -156,6 +162,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
 ### MySQL Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -176,6 +186,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `tls_ca` - (Optional) x509 CA file for validating the certificate presented by the MySQL server. Must be PEM encoded.
 
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
 ### PostgreSQL Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -191,6 +205,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
+
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
 ### Oracle Configuration Options
 
@@ -208,6 +226,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
 ### Elasticsearch Configuration Options
 
 * `url` - (Required) The URL for Elasticsearch's API. https requires certificate
@@ -216,6 +238,28 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `username` - (Required) The username to be used in the connection.
 
 * `password` - (Required) The password to be used in the connection.
+
+### Snowflake Configuration Options
+
+* `connection_url` - (Required) A URL containing connection information. See
+  the [Vault
+  docs](https://www.vaultproject.io/api-docs/secret/databases/snowflake#sample-payload)
+  for an example.
+
+* `max_open_connections` - (Optional) The maximum number of open connections to
+  use.
+
+* `max_idle_connections` - (Optional) The maximum number of idle connections to
+  maintain.
+
+* `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
+  a connection alive for.
+
+* `username` - (Optional) The username to be used in the connection (the account admin level).
+
+* `password` - (Optional) The password to be used in the connection.
+
+* `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 
 ## Attributes Reference
 

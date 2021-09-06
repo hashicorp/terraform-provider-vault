@@ -22,7 +22,7 @@ func TestLDAPAuthBackend_import(t *testing.T) {
 		CheckDestroy: testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "false"),
+				Config: testLDAPAuthBackendConfig_basic(path, "false", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 			{
@@ -44,15 +44,23 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 		CheckDestroy: testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "false"),
+				Config: testLDAPAuthBackendConfig_basic(path, "false", "true"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
+				Check:  testLDAPAuthBackendCheck_attrs(path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_basic(path, "false", "false"),
+				Check:  testLDAPAuthBackendCheck_attrs(path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 		},
@@ -68,15 +76,23 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 		CheckDestroy: testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_tls(path, "true"),
+				Config: testLDAPAuthBackendConfig_tls(path, "true", "true"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_tls(path, "false"),
+				Config: testLDAPAuthBackendConfig_tls(path, "false", "true"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_tls(path, "true"),
+				Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
+				Check:  testLDAPAuthBackendCheck_attrs(path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_tls(path, "false", "false"),
+				Check:  testLDAPAuthBackendCheck_attrs(path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 		},
@@ -135,6 +151,11 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 
 		if instanceState.Attributes["accessor"] != authMount.Accessor {
 			return fmt.Errorf("accessor in state %s does not match accessor returned from vault %s", instanceState.Attributes["accessor"], authMount.Accessor)
+		}
+
+		l := instanceState.Attributes["local"] == "true"
+		if l != authMount.Local {
+			return fmt.Errorf("local bool in state for %s does not match value returned from vault: State: %t, Vault: %t", path, l, authMount.Local)
 		}
 
 		configPath := "auth/" + endpoint + "/config"
@@ -243,11 +264,12 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 	}
 }
 
-func testLDAPAuthBackendConfig_basic(path, use_token_groups string) string {
+func testLDAPAuthBackendConfig_basic(path, use_token_groups string, local string) string {
 
 	return fmt.Sprintf(`
 resource "vault_ldap_auth_backend" "test" {
     path                   = "%s"
+    local                  = %s
     url                    = "ldaps://example.org"
     starttls               = true
     tls_min_version        = "tls11"
@@ -261,15 +283,16 @@ resource "vault_ldap_auth_backend" "test" {
 
     use_token_groups = %s
 }
-`, path, use_token_groups)
+`, path, local, use_token_groups)
 
 }
 
-func testLDAPAuthBackendConfig_tls(path, use_token_groups string) string {
+func testLDAPAuthBackendConfig_tls(path, use_token_groups string, local string) string {
 
 	return fmt.Sprintf(`
 resource "vault_ldap_auth_backend" "test" {
     path                   = "%s"
+    local                  = %s
     url                    = "ldaps://example.org"
     starttls               = true
     tls_min_version        = "tls11"
@@ -359,6 +382,6 @@ MvQzNd87hRypUZ9Hyx2C9RljNDHHjgwYwWv9JOT0xEOS4ZAaPfvTf20=
 EOT
     use_token_groups = %s
 }
-`, path, use_token_groups)
+`, path, local, use_token_groups)
 
 }

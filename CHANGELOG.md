@@ -1,3 +1,17 @@
+## 2.24.0 (Unreleased)
+
+FEATURES:
+* **New Database Resource**: Added support for the `snowflake-database-plugin` to `vault_database_secret_backend_connection` ([#983](https://github.com/hashicorp/terraform-provider-vault/pull/983))
+
+IMPROVEMENTS:
+* `resource/database_secret_backend_connection`: Add username_template to vault_database_secret_backend_connection ([#1103](https://github.com/hashicorp/terraform-provider-vault/pull/1103))
+* `resource/ldap_auth_backend`: Allow the creation of `local` mounts ([#1115](https://github.com/hashicorp/terraform-provider-vault/pull/1115))
+* `resource/jwt_auth_backend`: Allow the creation of `local` mounts ([#1115](https://github.com/hashicorp/terraform-provider-vault/pull/1115))
+* `resource/consul_secret_backend`: Allow the creation of `local` mounts ([#1115](https://github.com/hashicorp/terraform-provider-vault/pull/1115))
+
+BUGS:
+* `resource/vault_identity_group`: Fix bug where member_entity_ids & member_group_ids were attempted to be managed on external identity groups ([#1134](https://github.com/hashicorp/terraform-provider-vault/pull/1134))
+
 ## 2.23.0 (August 18, 2021)
 
 FEATURES:

@@ -27,6 +27,19 @@ func TestAccJWTAuthBackend(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vault_jwt_auth_backend.jwt", "accessor"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", ""),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "type", "jwt"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "local", "false"),
+				),
+			},
+			{
+				Config: testAccJWTAuthLocalBackendConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "description", "JWT backend"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "path", path),
+					resource.TestCheckResourceAttrSet("vault_jwt_auth_backend.jwt", "accessor"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", ""),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "type", "jwt"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "local", "true"),
 				),
 			},
 			{
@@ -126,6 +139,17 @@ resource "vault_jwt_auth_backend" "jwt" {
   description = "JWT backend"
   oidc_discovery_url = "https://myco.auth0.com/"
   path = "%s"
+}
+`, path)
+}
+
+func testAccJWTAuthLocalBackendConfig(path string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "jwt" {
+  description = "JWT backend"
+  oidc_discovery_url = "https://myco.auth0.com/"
+  path = "%s"
+  local = true
 }
 `, path)
 }
