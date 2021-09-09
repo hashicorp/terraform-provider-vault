@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	sdk_schema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-vault/schema"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -25,8 +26,8 @@ func TestTransformationName(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { util.TestEntPreCheck(t) },
-		Providers: map[string]*schema.Provider{
-			"vault": nameTestProvider.ResourceProvider(),
+		Providers: map[string]*sdk_schema.Provider{
+			"vault": nameTestProvider.SchemaProvider(),
 		},
 		CheckDestroy: destroy,
 		Steps: []resource.TestStep{

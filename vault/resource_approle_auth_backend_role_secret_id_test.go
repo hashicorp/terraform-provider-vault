@@ -7,9 +7,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const secretIDResource = "vault_approle_auth_backend_role_secret_id.secret_id"
@@ -147,8 +148,8 @@ resource "vault_approle_auth_backend_role" "role" {
 }
 
 resource "vault_approle_auth_backend_role_secret_id" "secret_id" {
-  role_name = "${vault_approle_auth_backend_role.role.role_name}"
-  backend = "${vault_auth_backend.approle.path}"
+  role_name = vault_approle_auth_backend_role.role.role_name
+  backend = vault_auth_backend.approle.path
 }`, backend, role)
 }
 
