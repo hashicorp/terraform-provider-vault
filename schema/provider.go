@@ -25,7 +25,3 @@ func (p *Provider) RegisterResource(name string, resource *schema.Resource) {
 func (p *Provider) SchemaProvider() *schema.Provider {
 	return p.provider
 }
-
-func (p *Provider) ResourceProvider() *schema.Provider {
-	return p.provider
-}
