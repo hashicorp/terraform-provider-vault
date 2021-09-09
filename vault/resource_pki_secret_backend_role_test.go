@@ -49,6 +49,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "key_usage.1", "KeyAgreement"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "key_usage.2", "KeyEncipherment"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "ext_key_usage.#", "0"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "ext_key_usage_oids.#", "0"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "use_csr_common_name", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "use_csr_sans", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "ou.0", "test"),
@@ -98,6 +99,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "key_usage.#", "1"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "key_usage.0", "DigitalSignature"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "ext_key_usage.#", "0"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "ext_key_usage_oids.#", "0"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "use_csr_common_name", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "use_csr_sans", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "ou.0", "test"),
@@ -150,6 +152,7 @@ resource "vault_pki_secret_backend_role" "test" {
   key_bits = 2048
   key_usage = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
   ext_key_usage = []
+  ext_key_usage_oids = []
   use_csr_common_name = true
   use_csr_sans = true
   ou = ["test"]

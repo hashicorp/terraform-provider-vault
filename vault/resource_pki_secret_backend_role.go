@@ -204,6 +204,15 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"ext_key_usage_oids": {
+				Type:        schema.TypeList,
+				Required:    false,
+				Optional:    true,
+				Description: "Specifies the allowed extended key usage oids constraint on issued certificates.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"use_csr_common_name": {
 				Type:        schema.TypeBool,
 				Required:    false,
@@ -344,6 +353,12 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 		extKeyUsage = append(extKeyUsage, iUsage.(string))
 	}
 
+	iExtKeyUsageOids := d.Get("ext_key_usage_oids").([]interface{})
+	extKeyUsageOids := make([]string, 0, len(iExtKeyUsageOids))
+	for _, iUsage := range iExtKeyUsageOids {
+		extKeyUsageOids = append(extKeyUsageOids, iUsage.(string))
+	}
+
 	iPolicyIdentifiers := d.Get("policy_identifiers").([]interface{})
 	policyIdentifiers := make([]string, 0, len(iPolicyIdentifiers))
 	for _, iIdentifier := range iPolicyIdentifiers {
@@ -395,6 +410,10 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 
 	if len(extKeyUsage) > 0 {
 		data["ext_key_usage"] = extKeyUsage
+	}
+
+	if len(extKeyUsageOids) > 0 {
+		data["ext_key_usage_oids"] = extKeyUsageOids
 	}
 
 	if len(policyIdentifiers) > 0 {
@@ -465,6 +484,12 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		extKeyUsage = append(extKeyUsage, iUsage.(string))
 	}
 
+	iExtKeyUsageOids := d.Get("ext_key_usage_oids").([]interface{})
+	extKeyUsageOids := make([]string, 0, len(iExtKeyUsageOids))
+	for _, iUsage := range iExtKeyUsageOids {
+		extKeyUsageOids = append(extKeyUsageOids, iUsage.(string))
+	}
+
 	iPolicyIdentifiers := secret.Data["policy_identifiers"].([]interface{})
 	policyIdentifiers := make([]string, 0, len(iPolicyIdentifiers))
 	for _, iIdentifier := range iPolicyIdentifiers {
@@ -496,6 +521,7 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("key_bits", keyBits)
 	d.Set("key_usage", keyUsage)
 	d.Set("ext_key_usage", extKeyUsage)
+	d.Set("ext_key_usage_oids", extKeyUsageOids)
 	d.Set("use_csr_common_name", secret.Data["use_csr_common_name"])
 	d.Set("use_csr_sans", secret.Data["use_csr_sans"])
 	d.Set("ou", secret.Data["ou"])
@@ -537,6 +563,12 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 	extKeyUsage := make([]string, 0, len(iExtKeyUsage))
 	for _, iUsage := range iExtKeyUsage {
 		extKeyUsage = append(extKeyUsage, iUsage.(string))
+	}
+
+	iExtKeyUsageOids := d.Get("ext_key_usage_oids").([]interface{})
+	extKeyUsageOids := make([]string, 0, len(iExtKeyUsageOids))
+	for _, iUsage := range iExtKeyUsageOids {
+		extKeyUsageOids = append(extKeyUsageOids, iUsage.(string))
 	}
 
 	iPolicyIdentifiers := d.Get("policy_identifiers").([]interface{})
@@ -590,6 +622,10 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 
 	if len(extKeyUsage) > 0 {
 		data["ext_key_usage"] = extKeyUsage
+	}
+
+	if len(extKeyUsageOids) > 0 {
+		data["ext_key_usage_oids"] = extKeyUsageOids
 	}
 
 	if len(policyIdentifiers) > 0 {
