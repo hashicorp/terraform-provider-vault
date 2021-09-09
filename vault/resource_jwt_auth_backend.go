@@ -1,13 +1,14 @@
 package vault
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"strconv"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -142,7 +143,7 @@ func jwtAuthBackendResource() *schema.Resource {
 	}
 }
 
-func jwtCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
+func jwtCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	attributes := []string{
 		"oidc_discovery_url",
 		"jwks_url",
@@ -356,7 +357,6 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			}
 
 			log.Printf("[INFO] Written %s auth tune to %q", backendType, path)
-			d.SetPartial("tune")
 		}
 	}
 

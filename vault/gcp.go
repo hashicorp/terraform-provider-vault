@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/helper"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 /// GCPBinding is used to generate the HCL binding format that GCP Secret Engine Requires
@@ -53,7 +54,7 @@ func gcpSecretBindingHash(v interface{}) int {
 			buf.WriteString(fmt.Sprintf("%s-", v))
 		}
 	}
-	return hashcode.String(buf.String())
+	return helper.HashCodeString(buf.String())
 }
 
 func gcpSecretRenderBinding(binding *GCPBinding) string {

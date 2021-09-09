@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -40,7 +40,6 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 			Type:     schema.TypeString,
 			Optional: true,
 			ForceNew: true,
-			Removed:  `Use "bound_projects"`,
 		},
 		"add_group_aliases": {
 			Type:     schema.TypeBool,
