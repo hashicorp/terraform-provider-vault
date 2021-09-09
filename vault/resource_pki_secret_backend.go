@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 	"strings"
 )
@@ -89,10 +89,6 @@ func pkiSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Mounted PKI backend at %q", path)
 	d.SetId(path)
 
-	d.SetPartial("path")
-	d.SetPartial("description")
-	d.SetPartial("default_lease_ttl_seconds")
-	d.SetPartial("max_lease_ttl_seconds")
 	d.Partial(false)
 
 	return pkiSecretBackendRead(d, meta)
@@ -144,8 +140,6 @@ func pkiSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error updating mount TTLs for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
-		d.SetPartial("default_lease_ttl_seconds")
-		d.SetPartial("max_lease_ttl_seconds")
 	}
 	d.Partial(false)
 

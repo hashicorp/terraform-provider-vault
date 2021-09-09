@@ -1,8 +1,7 @@
 package schema
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func NewProvider(seed *schema.Provider) *Provider {
@@ -27,6 +26,6 @@ func (p *Provider) SchemaProvider() *schema.Provider {
 	return p.provider
 }
 
-func (p *Provider) ResourceProvider() terraform.ResourceProvider {
+func (p *Provider) ResourceProvider() *schema.Provider {
 	return p.provider
 }

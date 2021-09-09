@@ -7,11 +7,10 @@ import (
 	"path"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/pathorcontents"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/command/config"
 	"github.com/mitchellh/go-homedir"
 )
@@ -49,11 +48,11 @@ func TestProvider(t *testing.T) {
 }
 
 var testProvider *schema.Provider
-var testProviders map[string]terraform.ResourceProvider
+var testProviders map[string]*schema.Provider
 
 func init() {
 	testProvider = Provider()
-	testProviders = map[string]terraform.ResourceProvider{
+	testProviders = map[string]*schema.Provider{
 		"vault": testProvider,
 	}
 }
@@ -118,10 +117,10 @@ func getTestAzureConf(t *testing.T) *azureTestConf {
 }
 
 func getTestGCPCreds(t *testing.T) (string, string) {
-	credentials := os.Getenv("GOOGLE_CREDENTIALS")
+	maybeCreds := os.Getenv("GOOGLE_CREDENTIALS")
 	project := os.Getenv("GOOGLE_PROJECT")
 
-	if credentials == "" {
+	if maybeCreds == "" {
 		t.Skip("GOOGLE_CREDENTIALS not set")
 	}
 
@@ -129,12 +128,24 @@ func getTestGCPCreds(t *testing.T) (string, string) {
 		t.Skip("GOOGLE_PROJECT not set")
 	}
 
-	contents, _, err := pathorcontents.Read(credentials)
-	if err != nil {
-		t.Fatal("Error reading GOOGLE_CREDENTIALS: " + err.Error())
+	maybeFilename := maybeCreds
+	if maybeCreds[0] == '~' {
+		var err error
+		maybeFilename, err = homedir.Expand(maybeCreds)
+		if err != nil {
+			t.Fatal("Error reading GOOGLE_CREDENTIALS: " + err.Error())
+		}
 	}
 
-	return string(contents), project
+	if _, err := os.Stat(maybeFilename); err == nil {
+		contents, err := ioutil.ReadFile(maybeFilename)
+		if err != nil {
+			t.Fatal("Error reading GOOGLE_CREDENTIALS: " + err.Error())
+		}
+		maybeCreds = string(contents)
+	}
+
+	return maybeCreds, project
 }
 
 func getTestRMQCreds(t *testing.T) (string, string, string) {
@@ -165,7 +176,7 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 	}
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
-		Providers: map[string]terraform.ResourceProvider{
+		Providers: map[string]*schema.Provider{
 			"vault": rootProvider,
 		},
 		Steps: []resource.TestStep{
@@ -225,7 +236,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	//Create a test namespace and make sure it stays there
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
-		Providers: map[string]terraform.ResourceProvider{
+		Providers: map[string]*schema.Provider{
 			"vault": rootProvider,
 		},
 		Steps: []resource.TestStep{
@@ -250,7 +261,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	// Create a policy with sudo permissions and an orphaned periodic token within the test namespace
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
-		Providers: map[string]terraform.ResourceProvider{
+		Providers: map[string]*schema.Provider{
 			"vault": nsProvider,
 		},
 		Steps: []resource.TestStep{
@@ -396,7 +407,7 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 		//Finally test that you can do stuff with the new token by creating a sub namespace
 		resource.Test(t, resource.TestCase{
 			PreCheck: func() { testAccPreCheck(t) },
-			Providers: map[string]terraform.ResourceProvider{
+			Providers: map[string]*schema.Provider{
 				"vault": ns2Provider,
 			},
 			Steps: []resource.TestStep{

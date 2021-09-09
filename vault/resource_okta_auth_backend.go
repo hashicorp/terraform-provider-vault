@@ -8,10 +8,11 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/helper"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var oktaAuthType = "okta"
@@ -573,7 +574,7 @@ func resourceOktaGroupHash(v interface{}) int {
 		return 0
 	}
 	if v, ok := m["group_name"]; ok {
-		return hashcode.String(v.(string))
+		return helper.HashCodeString(v.(string))
 	}
 
 	return 0
@@ -585,7 +586,7 @@ func resourceOktaUserHash(v interface{}) int {
 		return 0
 	}
 	if v, ok := m["username"]; ok {
-		return hashcode.String(v.(string))
+		return helper.HashCodeString(v.(string))
 	}
 
 	return 0

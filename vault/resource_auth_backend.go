@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -194,7 +194,6 @@ func authBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			}
 
 			log.Printf("[INFO] Written %s auth tune to '%q'", backendType, path)
-			d.SetPartial("tune")
 		}
 	}
 

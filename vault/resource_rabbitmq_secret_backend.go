@@ -2,7 +2,7 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 	"log"
 	"strings"
@@ -109,11 +109,6 @@ func rabbitmqSecretBackendCreate(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[DEBUG] Mounted Rabbitmq backend at %q", path)
 	d.SetId(path)
 
-	d.SetPartial("path")
-	d.SetPartial("description")
-	d.SetPartial("default_lease_ttl_seconds")
-	d.SetPartial("max_lease_ttl_seconds")
-
 	log.Printf("[DEBUG] Writing connection credentials to %q", path+"/config/connection")
 	data := map[string]interface{}{
 		"connection_uri":    connectionUri,
@@ -126,10 +121,6 @@ func rabbitmqSecretBackendCreate(d *schema.ResourceData, meta interface{}) error
 		return fmt.Errorf("error configuring connection credentials for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote connection credentials to %q", path+"/config/connection")
-	d.SetPartial("connection_url")
-	d.SetPartial("username")
-	d.SetPartial("password")
-	d.SetPartial("verify_connection")
 	d.Partial(false)
 	return rabbitmqSecretBackendRead(d, meta)
 }
@@ -179,8 +170,6 @@ func rabbitmqSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 			return fmt.Errorf("error updating mount TTLs for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
-		d.SetPartial("default_lease_ttl_seconds")
-		d.SetPartial("max_lease_ttl_seconds")
 	}
 	if d.HasChange("connection_uri") || d.HasChange("username") || d.HasChange("password") || d.HasChange("verify_connection") {
 		log.Printf("[DEBUG] Updating connecion credentials at %q", path+"/config/connection")
@@ -195,10 +184,6 @@ func rabbitmqSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 			return fmt.Errorf("error configuring connection credentials for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated root credentials at %q", path+"/config/connection")
-		d.SetPartial("connection_url")
-		d.SetPartial("username")
-		d.SetPartial("password")
-		d.SetPartial("verify_connection")
 	}
 	d.Partial(false)
 	return rabbitmqSecretBackendRead(d, meta)

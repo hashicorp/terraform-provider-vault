@@ -6,8 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/encryption"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -266,23 +265,31 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		d.Set("wrapped_token", resp.WrapInfo.Token)
 		d.Set("wrapping_accessor", resp.WrapInfo.Accessor)
 	} else {
-		if v, ok := d.GetOk("pgp_key"); ok {
-			pgpKey := v.(string)
-			encryptionKey, err := encryption.RetrieveGPGKey(pgpKey)
-			if err != nil {
-				return err
+		/*
+				TODO: handle the removal of PGP encryption support from the TF plugin SDKv2
+			    https://www.terraform.io/docs/extend/guides/v2-upgrade-guide.html#removal-of-helper-encryption-package
+				There is movement toward a more general way of encrypting a the TF state here:
+				https://github.com/hashicorp/terraform/issues/516
+		*/
+		/*
+			if v, ok := d.GetOk("pgp_key"); ok {
+				pgpKey := v.(string)
+				encryptionKey, err := encryption.RetrieveGPGKey(pgpKey)
+				if err != nil {
+					return err
+				}
+				_, encrypted, err := encryption.EncryptValue(encryptionKey, resp.Auth.ClientToken, "Vault Token")
+				if err != nil {
+					return err
+				}
+				d.Set("client_token", "")
+				d.Set("encrypted_client_token", encrypted)
+			} else {
+				d.Set("pgp_key", "")
+				d.Set("client_token", resp.Auth.ClientToken)
+				d.Set("encrypted_client_token", "")
 			}
-			_, encrypted, err := encryption.EncryptValue(encryptionKey, resp.Auth.ClientToken, "Vault Token")
-			if err != nil {
-				return err
-			}
-			d.Set("client_token", "")
-			d.Set("encrypted_client_token", encrypted)
-		} else {
-			d.Set("pgp_key", "")
-			d.Set("client_token", resp.Auth.ClientToken)
-			d.Set("encrypted_client_token", "")
-		}
+		*/
 	}
 
 	d.SetId(accessor)
