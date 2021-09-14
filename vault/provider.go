@@ -764,6 +764,10 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	client.SetMaxRetries(d.Get("max_retries").(int))
 
+	var newState string
+	//Leverage Vault helpers for eventual consistency on login
+	client = client.WithResponseCallbacks(api.RecordState(&newState))
+
 	// Try an get the token from the config or token helper
 	token, err := providerToken(d)
 	if err != nil {
@@ -855,6 +859,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	// Set the token to the generated child token
 	client.SetToken(childToken)
+
+	client = client.WithRequestCallbacks(api.RequireState(newState)).WithResponseCallbacks()
 
 	// Set the namespace to the requested namespace, if provided
 	namespace := d.Get("namespace").(string)
