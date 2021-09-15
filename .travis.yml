@@ -12,6 +12,3 @@ deploy:
   on:
     tags: true
     condition: "$TRAVIS_OS_NAME = linux"
-env:
-  global:
-  - secure: izbzKpFi9TiYq69UXroL0WQxuBHTFlGYLPSCnLRgWPNJBjNsG0JozMrGqKXQwrV68Y04ThbPAJygOYK+CgSNKQI11tvBB/YGhp4u3ERQdCGeHAYN71i05r2Br9BL8+K5mlcQak8oL8Q9A6FlMCYyfLZ1epQLgqRwazbNM37M26JzLcH0nApW48N2p2qXyjumsvhm8Nx61UlO+zh9ykgqQ7HIS27jYlDkO09Wh3/1mv3FW5P0n1qVVd95o1a5ReIcI5nde+snJ/D1w2mku/vhkdewkCIwpI2PfqbKf32XfD2d97l2CtN/Cqt0U2fxxbGSDqgtF8dv0YEgvtBk3EI+WKwZmVMVx3cFYbwQBRfqQYEVGZc4OCecFWi6ahu69Hum+saYZgStWcFf6Ptgc+EJ9tlClep/2UNOqa/1NuOmI31g+FhvBXOt4nuwuIvJnmYOj+cKlNnbchNgTyFJPy0rWX1VijkJ4CJ3wc6/icfNZkCrVXIQhkAjnyN5xyUm46peaMVywwXdcTHSTAR8hPLqpJTZz33XkXjvAeNhZsl0JJW/u5bWttptetnLXIzf+Wdzk7UWkBiO431Ymiph5CF/bkGNetzdvmMHRhj0/w/ffJPfaxcCKU/k92FY+lqRzfdx98FAcnI1BWol/whTv0gHxo8021uxDklW5tAtURMwFFQ=
