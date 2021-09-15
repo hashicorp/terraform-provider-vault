@@ -2,6 +2,9 @@
 
 FEATURES:
 * **New Database Resource**: Added support for the `snowflake-database-plugin` to `vault_database_secret_backend_connection` ([#983](https://github.com/hashicorp/terraform-provider-vault/pull/983))
+* `resource/vault_raft_snapshot_agent_config`: Provision [Raft Snapshot Agent Configurations](https://www.vaultproject.io/api-docs/system/storage/raftautosnapshots) in Vault Enterprise. ([#1139](https://github.com/hashicorp/terraform-provider-vault/pull/1139))
+
+
 
 IMPROVEMENTS:
 * `resource/database_secret_backend_connection`: Add username_template to vault_database_secret_backend_connection ([#1103](https://github.com/hashicorp/terraform-provider-vault/pull/1103))
