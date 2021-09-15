@@ -72,8 +72,9 @@ The following arguments are supported:
 * `bound_subject` - (Optional) If set, requires that the `sub` claim matches
   this value.
 
-* `bound_claims` - (Optional) If set, a map of claims/values to match against.
-  A claim's value may be a single string or a comma-separated string list.
+* `bound_claims` - (Optional) If set, a map of claims to values to match against.
+  A claim's value must be a string, which may contain one value or multiple
+  comma-separated values, e.g. `"red"` or `"red,green,blue"`.
 
 * `bound_claims_type` - (Optional) How to interpret values in the claims/values
   map (`bound_claims`): can be either `string` (exact match) or `glob` (wildcard
