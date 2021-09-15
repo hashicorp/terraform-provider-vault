@@ -1,4 +1,4 @@
-## 2.24.0 (Unreleased)
+## 2.24.0 (September 15, 2021)
 
 FEATURES:
 * **New Database Resource**: Added support for the `snowflake-database-plugin` to `vault_database_secret_backend_connection` ([#983](https://github.com/hashicorp/terraform-provider-vault/pull/983))
