@@ -27,6 +27,9 @@ resource "vault_jwt_auth_backend_role" "example" {
   token_policies  = ["default", "dev", "prod"]
 
   bound_audiences = ["https://myco.test"]
+  bound_claims = {
+    color = "red,green,blue"
+  }
   user_claim      = "https://vault/user"
   role_type       = "jwt"
 }
@@ -69,8 +72,9 @@ The following arguments are supported:
 * `bound_subject` - (Optional) If set, requires that the `sub` claim matches
   this value.
 
-* `bound_claims` - (Optional) If set, a map of claims/values to match against.
-  The expected value may be a single string or a list of strings.
+* `bound_claims` - (Optional) If set, a map of claims to values to match against.
+  A claim's value must be a string, which may contain one value or multiple
+  comma-separated values, e.g. `"red"` or `"red,green,blue"`.
 
 * `bound_claims_type` - (Optional) How to interpret values in the claims/values
   map (`bound_claims`): can be either `string` (exact match) or `glob` (wildcard
