@@ -2,10 +2,9 @@ package vault
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
-
-	"os"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
