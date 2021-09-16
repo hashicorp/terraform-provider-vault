@@ -119,9 +119,9 @@ resource "vault_auth_backend" "githubB" {
 }
 
 resource "vault_identity_entity_alias" "entity-alias" {
-  name = "${vault_identity_entity.entity%s.name}"
-  mount_accessor = "${vault_auth_backend.github%s.accessor}"
-  canonical_id = "${vault_identity_entity.entity%s.id}"
+  name = vault_identity_entity.entity%s.name
+  mount_accessor = vault_auth_backend.github%s.accessor
+  canonical_id = vault_identity_entity.entity%s.id
 }
 `, entityName, entityName, entityName, entityName, entityId, entityId, entityId)
 
@@ -130,9 +130,9 @@ resource "vault_identity_entity_alias" "entity-alias" {
 	if dupeAlias {
 		ret += fmt.Sprintf(`
 resource "vault_identity_entity_alias" "entity-alias-dupe" {
-  name = "${vault_identity_entity.entity%s.name}"
-  mount_accessor = "${vault_auth_backend.githubA.accessor}"
-  canonical_id = "${vault_identity_entity.entity%s.id}"
+  name = vault_identity_entity.entity%s.name
+  mount_accessor = vault_auth_backend.githubA.accessor
+  canonical_id = vault_identity_entity.entity%s.id
 }
 `, entityId, entityId)
 	}

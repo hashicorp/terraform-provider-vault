@@ -166,7 +166,7 @@ resource "vault_mount" "example" {
 
 resource "vault_ssh_secret_backend_role" "test_role" {
 	name                    = "%s"
-	backend                 = "${vault_mount.example.path}"
+	backend                 = vault_mount.example.path
 	key_type                = "ca"
 	allow_user_certificates = true
 }
@@ -183,7 +183,7 @@ resource "vault_mount" "example" {
 
 resource "vault_ssh_secret_backend_role" "test_role" {
 	name                     = "%s"
-	backend                  = "${vault_mount.example.path}"
+	backend                  = vault_mount.example.path
 	allow_bare_domains       = true
 	allow_host_certificates  = true
 	allow_subdomains         = true
@@ -216,7 +216,7 @@ resource "vault_mount" "example" {
 
 resource "vault_ssh_secret_backend_role" "test_role" {
 	name                     = "%s"
-	backend                  = "${vault_mount.example.path}"
+	backend                  = vault_mount.example.path
 	allowed_users            = "usr1,usr2"
 	default_user             = "usr"
 	key_type                 = "otp"

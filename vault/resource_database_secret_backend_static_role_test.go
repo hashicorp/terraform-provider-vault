@@ -148,7 +148,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["*"]
 
@@ -158,8 +158,8 @@ resource "vault_database_secret_backend_connection" "test" {
 }
 
 resource "vault_database_secret_backend_static_role" "test" {
-  backend = "${vault_mount.db.path}"
-  db_name = "${vault_database_secret_backend_connection.test.name}"
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
   name = "%s"
   username = "%s"
   rotation_period = 3600
@@ -176,7 +176,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["*"]
 
@@ -186,8 +186,8 @@ resource "vault_database_secret_backend_connection" "test" {
 }
 
 resource "vault_database_secret_backend_static_role" "test" {
-  backend = "${vault_mount.db.path}"
-  db_name = "${vault_database_secret_backend_connection.test.name}"
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
   name = "%s"
   username = "%s"
   rotation_period = 1800

@@ -83,7 +83,7 @@ resource "vault_azure_secret_backend" "azure" {
 }
 
 resource "vault_azure_secret_backend_role" "test_azure_roles" {
-  backend     = "${vault_azure_secret_backend.azure.path}"
+  backend     = vault_azure_secret_backend.azure.path
   role        = "%[6]s-azure-roles"
   ttl         = 300
   max_ttl     = 600
@@ -96,7 +96,7 @@ resource "vault_azure_secret_backend_role" "test_azure_roles" {
 }
 
 resource "vault_azure_secret_backend_role" "test_azure_groups" {
-  backend     = "${vault_azure_secret_backend.azure.path}"
+  backend     = vault_azure_secret_backend.azure.path
   role        = "%[6]s-azure-groups"
   ttl         = 300
   max_ttl     = 600

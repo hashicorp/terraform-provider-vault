@@ -522,7 +522,7 @@ resource "vault_auth_backend" "kubernetes" {
 }
 
 resource "vault_kubernetes_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.kubernetes.path}"
+  backend = vault_auth_backend.kubernetes.path
   role_name = %q
   bound_service_account_names = ["example"]
   bound_service_account_namespaces = ["example"]
@@ -539,7 +539,7 @@ resource "vault_auth_backend" "kubernetes" {
 }
 
 resource "vault_kubernetes_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.kubernetes.path}"
+  backend = vault_auth_backend.kubernetes.path
   role_name = %q
   bound_service_account_names = ["example"]
   bound_service_account_namespaces = ["example"]
@@ -557,7 +557,7 @@ resource "vault_auth_backend" "kubernetes" {
 }
 
 resource "vault_kubernetes_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.kubernetes.path}"
+  backend = vault_auth_backend.kubernetes.path
   role_name = %q
   bound_service_account_names = ["example"]
   bound_service_account_namespaces = ["example"]
@@ -577,7 +577,7 @@ resource "vault_auth_backend" "kubernetes" {
 }
 
 resource "vault_kubernetes_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.kubernetes.path}"
+  backend = vault_auth_backend.kubernetes.path
   role_name = %q
   bound_service_account_names = ["example"]
   bound_service_account_namespaces = ["example"]

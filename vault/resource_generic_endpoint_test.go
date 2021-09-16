@@ -74,7 +74,7 @@ EOT
 
 resource "vault_auth_backend" "userpass" {
   type = "userpass"
-  path = "${var.up_path}"
+  path = var.up_path
 }
 
 resource "vault_generic_endpoint" "u1" {

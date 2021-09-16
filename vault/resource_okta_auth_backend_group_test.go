@@ -71,7 +71,7 @@ resource "vault_okta_auth_backend" "test" {
 }
 
 resource "vault_okta_auth_backend_group" "test" {
-    path = "${vault_okta_auth_backend.test.path}"
+    path = vault_okta_auth_backend.test.path
     group_name = "foo"
     policies = ["one", "two", "default"]
 }
@@ -86,7 +86,7 @@ resource "vault_okta_auth_backend" "test" {
 }
 
 resource "vault_okta_auth_backend_group" "test" {
-    path = "${vault_okta_auth_backend.test.path}"
+    path = vault_okta_auth_backend.test.path
     group_name = "foo/bar"
     policies = ["one", "two", "default"]
 }

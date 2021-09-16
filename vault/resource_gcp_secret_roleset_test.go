@@ -317,7 +317,7 @@ CREDS
 }
 
 resource "vault_gcp_secret_roleset" "test" {
-  backend = "${vault_gcp_secret_backend.test.path}"
+  backend = vault_gcp_secret_backend.test.path
   roleset = "%s"
   secret_type = "access_token"
   project = "%s"
@@ -351,7 +351,7 @@ CREDS
 }
 
 resource "vault_gcp_secret_roleset" "test" {
-  backend = "${vault_gcp_secret_backend.test.path}"
+  backend = vault_gcp_secret_backend.test.path
   roleset = "%s"
   secret_type = "service_account_key"
   project = "%s"

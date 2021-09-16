@@ -316,7 +316,7 @@ CREDS
 }
 
 resource "vault_gcp_secret_static_account" "test" {
-  backend 			 = "${vault_gcp_secret_backend.test.path}"
+  backend 			 = vault_gcp_secret_backend.test.path
 	static_account = "%s"
   secret_type 	 = "access_token"
   token_scopes   = ["https://www.googleapis.com/auth/cloud-platform"]
@@ -338,7 +338,7 @@ CREDS
 }
 
 resource "vault_gcp_secret_static_account" "test" {
-  backend 			 = "${vault_gcp_secret_backend.test.path}"
+  backend 			 = vault_gcp_secret_backend.test.path
 	static_account = "%s"
   secret_type 	 = "access_token"
   token_scopes   = ["https://www.googleapis.com/auth/cloud-platform"]
@@ -373,7 +373,7 @@ CREDS
 }
 
 resource "vault_gcp_secret_static_account" "test" {
-  backend 			 = "${vault_gcp_secret_backend.test.path}"
+  backend 			 = vault_gcp_secret_backend.test.path
 	static_account = "%s"
   secret_type 	 = "service_account_key"
   token_scopes   = ["https://www.googleapis.com/auth/cloud-platform"]

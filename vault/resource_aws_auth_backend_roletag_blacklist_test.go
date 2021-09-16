@@ -109,7 +109,7 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_roletag_blacklist" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   safety_buffer = 8600
   disable_periodic_tidy = true
 }`, backend)
@@ -123,7 +123,7 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_roletag_blacklist" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   safety_buffer = 3600
   disable_periodic_tidy = true
 }`, backend)
@@ -137,7 +137,7 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_roletag_blacklist" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   safety_buffer = 3600
   disable_periodic_tidy = false
 }`, backend)

@@ -107,7 +107,7 @@ resource "vault_ad_secret_backend" "config" {
 }
 
 resource "vault_ad_secret_library" "test" {
-    backend = "${vault_ad_secret_backend.config.backend}"
+    backend = vault_ad_secret_backend.config.backend
     name = "%s"
     service_account_names = [%s]
     ttl = %d

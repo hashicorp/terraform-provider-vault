@@ -118,7 +118,7 @@ resource "vault_pki_secret_backend" "test-root" {
 resource "vault_pki_secret_backend_config_urls" "test" {
   depends_on = [ "vault_pki_secret_backend.test-root" ]
 
-  backend = "${vault_pki_secret_backend.test-root.path}"
+  backend = vault_pki_secret_backend.test-root.path
 
   issuing_certificates = ["%s"]
   crl_distribution_points = ["%s"]

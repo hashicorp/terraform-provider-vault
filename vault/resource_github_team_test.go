@@ -122,7 +122,7 @@ resource "vault_github_auth_backend" "gh" {
 }
 
 resource "vault_github_team" "team" {
-	backend = "${vault_github_auth_backend.gh.id}"
+	backend = vault_github_auth_backend.gh.id
 	team = "%s"
 	policies = %s
 }

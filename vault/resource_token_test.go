@@ -84,7 +84,7 @@ EOT
 }
 
 resource "vault_token" "test" {
-	policies = [ "${vault_policy.test.name}" ]
+	policies = [ vault_policy.test.name ]
 	ttl = "60s"
 }`
 }
@@ -127,7 +127,7 @@ EOT
 }
 
 resource "vault_token" "test" {
-	policies = [ "${vault_policy.test.name}" ]
+	policies = [ vault_policy.test.name ]
 	no_parent = true
     no_default_policy = true
 	renewable = true
@@ -165,7 +165,7 @@ EOT
 }
 
 resource "vault_token" "test" {
-	policies = [ "${vault_policy.test.name}" ]
+	policies = [ vault_policy.test.name ]
 	ttl = "60s"
 }`
 }
@@ -226,7 +226,7 @@ EOT
 }
 
 resource "vault_token" "test" {
-	policies = [ "${vault_policy.test.name}" ]
+	policies = [ vault_policy.test.name ]
 	ttl = "10s"
 }`
 }
@@ -295,7 +295,7 @@ EOT
 }
 
 resource "vault_token" "test" {
-	policies = [ "${vault_policy.test.name}" ]
+	policies = [ vault_policy.test.name ]
 	renewable = true
 	ttl = "30s"
 	renew_min_lease = 10
@@ -464,7 +464,7 @@ EOT
 
 resource "vault_token" "test" {
 	ttl      = "60s"
-	policies = [ "${vault_policy.test.name}" ]
+	policies = [ vault_policy.test.name ]
 	pgp_key  = "keybase:terraformacctest"
 }`
 }

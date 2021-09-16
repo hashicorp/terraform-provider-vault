@@ -260,7 +260,7 @@ resource "vault_identity_entity" "entity" {
 }
 
 resource "vault_identity_entity_policies" "policies" {
-  entity_id = "${vault_identity_entity.entity.id}"
+  entity_id = vault_identity_entity.entity.id
   policies = ["test"]
 }`, entity)
 }
@@ -273,7 +273,7 @@ resource "vault_identity_entity" "entity" {
 }
 
 resource "vault_identity_entity_policies" "policies" {
-  entity_id = "${vault_identity_entity.entity.id}"
+  entity_id = vault_identity_entity.entity.id
   policies = ["dev", "test"]
 }`, entity)
 }
@@ -286,14 +286,14 @@ resource "vault_identity_entity" "entity" {
 }
 
 resource "vault_identity_entity_policies" "dev" {
-	entity_id = "${vault_identity_entity.entity.id}"
+	entity_id = vault_identity_entity.entity.id
   exclusive = false
   policies = ["dev"]
 }
 
 
 resource "vault_identity_entity_policies" "test" {
-  entity_id = "${vault_identity_entity.entity.id}"
+  entity_id = vault_identity_entity.entity.id
   exclusive = false
   policies = ["test"]
 }
@@ -308,14 +308,14 @@ resource "vault_identity_entity" "entity" {
 }
 
 resource "vault_identity_entity_policies" "dev" {
-	entity_id = "${vault_identity_entity.entity.id}"
+	entity_id = vault_identity_entity.entity.id
   exclusive = false
   policies = ["dev"]
 }
 
 
 resource "vault_identity_entity_policies" "test" {
-  entity_id = "${vault_identity_entity.entity.id}"
+  entity_id = vault_identity_entity.entity.id
   exclusive = false
   policies = ["foo"]
 }

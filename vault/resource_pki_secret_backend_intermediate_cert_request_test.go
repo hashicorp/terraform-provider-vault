@@ -68,7 +68,7 @@ resource "vault_pki_secret_backend" "test" {
 
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
   depends_on = [ "vault_pki_secret_backend.test" ]
-  backend = "${vault_pki_secret_backend.test.path}"
+  backend = vault_pki_secret_backend.test.path
   type = "internal"
   common_name = "test.my.domain"
   uri_sans = ["spiffe://test.my.domain"]

@@ -142,7 +142,7 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.approle.path}"
+  backend = vault_auth_backend.approle.path
   role_name = "%s"
   token_policies = ["default", "dev", "prod"]
 }
@@ -161,14 +161,14 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.approle.path}"
+  backend = vault_auth_backend.approle.path
   role_name = "%s"
   token_policies = ["default", "dev", "prod"]
 }
 
 resource "vault_approle_auth_backend_role_secret_id" "secret_id" {
-  role_name = "${vault_approle_auth_backend_role.role.role_name}"
-  backend = "${vault_auth_backend.approle.path}"
+  role_name = vault_approle_auth_backend_role.role.role_name
+  backend = vault_auth_backend.approle.path
   cidr_list = ["10.148.0.0/20", "10.150.0.0/20"]
   metadata = <<EOF
 {
@@ -188,14 +188,14 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.approle.path}"
+  backend = vault_auth_backend.approle.path
   role_name = "%s"
   token_policies = ["default", "dev", "prod"]
 }
 
 resource "vault_approle_auth_backend_role_secret_id" "secret_id" {
-  role_name = "${vault_approle_auth_backend_role.role.role_name}"
-  backend = "${vault_auth_backend.approle.path}"
+  role_name = vault_approle_auth_backend_role.role.role_name
+  backend = vault_auth_backend.approle.path
   wrapping_ttl = "60s"
 }`, backend, role)
 }

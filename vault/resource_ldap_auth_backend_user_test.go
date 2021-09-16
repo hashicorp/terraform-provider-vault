@@ -323,7 +323,7 @@ resource "vault_auth_backend" "ldap" {
 }
 
 resource "vault_ldap_auth_backend_user" "test" {
-    backend  = "${vault_auth_backend.ldap.path}"
+    backend  = vault_auth_backend.ldap.path
     username = "%s"
     policies = %s
     groups   = %s

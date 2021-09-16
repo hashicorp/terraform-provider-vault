@@ -105,7 +105,7 @@ resource "vault_github_auth_backend" "gh" {
 }
 
 resource "vault_github_user" "user" {
-	backend = "${vault_github_auth_backend.gh.id}"
+	backend = vault_github_auth_backend.gh.id
 	user = "%s"
 	policies = %s
 }
