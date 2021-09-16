@@ -351,7 +351,7 @@ resource "vault_auth_backend" "gcp" {
 }
 
 resource "vault_gcp_auth_backend_role" "test" {
-    backend                = "${vault_auth_backend.gcp.path}"
+    backend                = vault_auth_backend.gcp.path
     role                   = "%s"
     type                   = "iam"
     bound_service_accounts = ["%s"]
@@ -375,7 +375,7 @@ resource "vault_auth_backend" "gcp" {
 }
 
 resource "vault_gcp_auth_backend_role" "test" {
-    backend                = "${vault_auth_backend.gcp.path}"
+    backend                = vault_auth_backend.gcp.path
     role                   = "%s"
     type                   = "iam"
     bound_service_accounts = ["%s"]
@@ -396,7 +396,7 @@ resource "vault_auth_backend" "gcp" {
 }
 
 resource "vault_gcp_auth_backend_role" "test" {
-    backend                = "${vault_auth_backend.gcp.path}"
+    backend                = vault_auth_backend.gcp.path
     role                   = "%s"
     type                   = "gce"
     bound_projects         = ["%s"]
@@ -421,7 +421,7 @@ resource "vault_auth_backend" "gcp" {
 }
 
 resource "vault_gcp_auth_backend_role" "test" {
-    backend                = "${vault_auth_backend.gcp.path}"
+    backend                = vault_auth_backend.gcp.path
     role                   = "%s"
     type                   = "iam"
     bound_service_accounts = ["%s"]

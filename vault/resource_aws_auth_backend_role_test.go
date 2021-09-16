@@ -393,7 +393,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_ami_ids = ["ami-8c1be5f6"]
@@ -418,7 +418,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/*"]
@@ -436,7 +436,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/*"]
@@ -454,7 +454,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/MyRole/*"]
@@ -472,7 +472,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/MyRole/*"]
@@ -489,7 +489,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/MyRole/*"]
@@ -504,7 +504,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "ec2"
   bound_ami_ids = ["ami-8c1be5f6"]
@@ -530,7 +530,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "ec2"
   bound_ami_ids = ["ami-8c1be5f6"]

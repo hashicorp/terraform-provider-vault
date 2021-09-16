@@ -43,15 +43,15 @@ resource "vault_ad_secret_backend" "config" {
 }
 
 resource "vault_ad_secret_role" "role" {
-    backend = "${vault_ad_secret_backend.config.backend}"
+    backend = vault_ad_secret_backend.config.backend
     role = "%s"
     service_account_name = "%s"
     ttl = %d
 }
 
 data "vault_ad_access_credentials" "creds" {
-  backend = "${vault_ad_secret_backend.config.backend}"
-  role    = "${vault_ad_secret_role.role.role}"
+  backend = vault_ad_secret_backend.config.backend
+  role    = vault_ad_secret_role.role.role
 }
 
 `, backend, bindDN, bindPass, url, role, serviceAccountName, ttl)

@@ -359,7 +359,7 @@ EOT
 }
 
 resource "vault_token" "test" {
-	policies = [ "${vault_policy.test.name}" ]
+	policies = [ vault_policy.test.name ]
 	ttl = "60s"
 }`
 }

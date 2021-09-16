@@ -124,7 +124,7 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_sts_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   account_id = "%s"
   sts_role = "%s"
 }

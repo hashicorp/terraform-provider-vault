@@ -256,7 +256,7 @@ resource "vault_identity_group" "group" {
 }
 
 resource "vault_identity_group_policies" "policies" {
-  group_id = "${vault_identity_group.group.id}"
+  group_id = vault_identity_group.group.id
   policies = ["test"]
 }`)
 }
@@ -268,7 +268,7 @@ resource "vault_identity_group" "group" {
 }
 
 resource "vault_identity_group_policies" "policies" {
-  group_id = "${vault_identity_group.group.id}"
+  group_id = vault_identity_group.group.id
   policies = ["dev", "test"]
 }`)
 }
@@ -280,14 +280,14 @@ resource "vault_identity_group" "group" {
 }
 
 resource "vault_identity_group_policies" "dev" {
-	group_id = "${vault_identity_group.group.id}"
+	group_id = vault_identity_group.group.id
   exclusive = false
   policies = ["dev"]
 }
 
 
 resource "vault_identity_group_policies" "test" {
-  group_id = "${vault_identity_group.group.id}"
+  group_id = vault_identity_group.group.id
   exclusive = false
   policies = ["test"]
 }
@@ -301,14 +301,14 @@ resource "vault_identity_group" "group" {
 }
 
 resource "vault_identity_group_policies" "dev" {
-	group_id = "${vault_identity_group.group.id}"
+	group_id = vault_identity_group.group.id
   exclusive = false
   policies = ["dev"]
 }
 
 
 resource "vault_identity_group_policies" "test" {
-  group_id = "${vault_identity_group.group.id}"
+  group_id = vault_identity_group.group.id
   exclusive = false
   policies = ["foo"]
 }

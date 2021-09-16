@@ -637,7 +637,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
@@ -660,7 +660,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
@@ -684,7 +684,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
@@ -706,7 +706,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
@@ -728,7 +728,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
@@ -748,7 +748,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
@@ -768,7 +768,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
@@ -792,7 +792,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
@@ -817,7 +817,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
@@ -847,7 +847,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
 
@@ -872,7 +872,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
@@ -892,7 +892,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
@@ -912,7 +912,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
@@ -932,7 +932,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
@@ -953,7 +953,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]

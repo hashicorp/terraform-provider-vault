@@ -417,7 +417,7 @@ resource "vault_identity_entity" "dev" {
 
 resource "vault_identity_group_member_entity_ids" "member_entity_ids" {
   group_id = vault_identity_group.group.id
-  member_entity_ids = ["${vault_identity_entity.dev.id}"]
+  member_entity_ids = [vault_identity_entity.dev.id]
 }`, devEntityName)
 }
 
@@ -443,7 +443,7 @@ resource "vault_identity_entity" "test" {
 
 resource "vault_identity_group_member_entity_ids" "member_entity_ids" {
 	group_id = vault_identity_group.group.id
-	member_entity_ids = ["${vault_identity_entity.dev.id}", "${vault_identity_entity.test.id}"]
+	member_entity_ids = [vault_identity_entity.dev.id, vault_identity_entity.test.id]
 }`, devEntityName, testEntityName)
 }
 
@@ -463,7 +463,7 @@ resource "vault_identity_entity" "dev_entity" {
 resource "vault_identity_group_member_entity_ids" "dev" {
 	group_id = vault_identity_group.group.id
   	exclusive = false
-  	member_entity_ids = ["${vault_identity_entity.dev_entity.id}"]
+  	member_entity_ids = [vault_identity_entity.dev_entity.id]
 }
 
 
@@ -497,14 +497,14 @@ resource "vault_identity_entity" "test_entity" {
 resource "vault_identity_group_member_entity_ids" "dev" {
 	group_id = vault_identity_group.group.id
   	exclusive = false
-  	member_entity_ids = ["${vault_identity_entity.dev_entity.id}"]
+  	member_entity_ids = [vault_identity_entity.dev_entity.id]
 }
 
 
 resource "vault_identity_group_member_entity_ids" "test" {
 	group_id = vault_identity_group.group.id
 	exclusive = false
-	member_entity_ids = ["${vault_identity_entity.test_entity.id}"]
+	member_entity_ids = [vault_identity_entity.test_entity.id]
 }
 `, devEntityName, testEntityName)
 }
@@ -532,13 +532,13 @@ resource "vault_identity_entity" "foo_entity" {
 resource "vault_identity_group_member_entity_ids" "dev" {
 	group_id = vault_identity_group.group.id
 	exclusive = false
-	member_entity_ids = ["${vault_identity_entity.dev_entity.id}"]
+	member_entity_ids = [vault_identity_entity.dev_entity.id]
 }
 
 resource "vault_identity_group_member_entity_ids" "test" {
   	group_id = vault_identity_group.group.id
 	exclusive = false
-	member_entity_ids = ["${vault_identity_entity.foo_entity.id}"]
+	member_entity_ids = [vault_identity_entity.foo_entity.id]
 }
 `, devEntityName, fooEntityName)
 }

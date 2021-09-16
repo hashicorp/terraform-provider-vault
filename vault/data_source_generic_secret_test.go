@@ -66,7 +66,7 @@ EOT
 }
 
 data "vault_generic_secret" "test" {
-    path = "${vault_generic_secret.test.path}"
+    path = vault_generic_secret.test.path
     version = -1
 }
 `, mount, path)
@@ -93,7 +93,7 @@ EOT
 }
 
 data "vault_generic_secret" "test" {
-    path = "${vault_generic_secret.test.path}"
+    path = vault_generic_secret.test.path
     version = 1
 }
 `, mount, path)
@@ -120,7 +120,7 @@ EOT
 }
 
 data "vault_generic_secret" "test" {
-    path = "${vault_generic_secret.test.path}"
+    path = vault_generic_secret.test.path
     version = 0
 }
 `, mount, path)
@@ -146,7 +146,7 @@ EOT
 }
 
 data "vault_generic_secret" "test" {
-    path = "${vault_generic_secret.test.path}"
+    path = vault_generic_secret.test.path
 }
 
 `

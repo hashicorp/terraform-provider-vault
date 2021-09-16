@@ -152,7 +152,7 @@ resource "vault_mount" "transit" {
 }
 
 resource "vault_transit_secret_backend_key" "test" {
-  backend = "${vault_mount.transit.path}"
+  backend = vault_mount.transit.path
   name = "%s"
   deletion_allowed = true
 }
@@ -167,7 +167,7 @@ resource "vault_mount" "transit" {
 }
 
 resource "vault_transit_secret_backend_key" "test" {
-  backend = "${vault_mount.transit.path}"
+  backend = vault_mount.transit.path
   name = "%s"
   deletion_allowed = true
   type = "rsa-4096"
@@ -183,7 +183,7 @@ resource "vault_mount" "transit" {
 }
 
 resource "vault_transit_secret_backend_key" "test" {
-  backend = "${vault_mount.transit.path}"
+  backend = vault_mount.transit.path
   name = "%s"
   deletion_allowed = true
   type = "rsa-4096"
@@ -203,7 +203,7 @@ resource "vault_mount" "transit" {
 }
 
 resource "vault_transit_secret_backend_key" "test" {
-  backend = "${vault_mount.transit.path}"
+  backend = vault_mount.transit.path
   name = "%s"
   min_decryption_version = 1
   min_encryption_version = 1
@@ -222,7 +222,7 @@ resource "vault_mount" "transit" {
 }
 
 resource "vault_transit_secret_backend_key" "test" {
-  backend = "${vault_mount.transit.path}"
+  backend = vault_mount.transit.path
   name = "%s"
   min_decryption_version = 1
   min_encryption_version = 1

@@ -64,7 +64,7 @@ resource "vault_pki_secret_backend" "test" {
 
 resource "vault_pki_secret_backend_config_ca" "test" {
   depends_on = [ "vault_pki_secret_backend.test" ]
-  backend = "${vault_pki_secret_backend.test.path}"
+  backend = vault_pki_secret_backend.test.path
   pem_bundle = <<EOT
 -----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAwvEHeJCXnFgi88rE1dTX6FHdBPK0wSjedh0ywVnCZxLWbBv/

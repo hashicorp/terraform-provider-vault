@@ -34,7 +34,7 @@ resource "vault_auth_backend" "test" {
 }
 
 data "vault_auth_backend" "test" {
-	path = "${vault_auth_backend.test.path}"
+	path = vault_auth_backend.test.path
 }
 
 `
@@ -47,7 +47,7 @@ resource "vault_auth_backend" "test" {
 }
 
 data "vault_auth_backend" "test" {
-	path = "${vault_auth_backend.test.path}"
+	path = vault_auth_backend.test.path
 }
 `, path)
 }

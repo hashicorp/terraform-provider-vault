@@ -77,7 +77,7 @@ resource "vault_pki_secret_backend" "test" {
 
 resource "vault_pki_secret_backend_root_cert" "test" {
   depends_on = [ "vault_pki_secret_backend.test" ]
-  backend = "${vault_pki_secret_backend.test.path}"
+  backend = vault_pki_secret_backend.test.path
   type = "internal"
   common_name = "test Root CA"
   ttl = "86400"

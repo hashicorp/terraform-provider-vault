@@ -149,7 +149,7 @@ resource "vault_rabbitmq_secret_backend" "test" {
 }
 
 resource "vault_rabbitmq_secret_backend_role" "test" {
-  backend = "${vault_rabbitmq_secret_backend.test.path}"
+  backend = vault_rabbitmq_secret_backend.test.path
   name = "%s"
   tags = %q
   vhost {
@@ -175,7 +175,7 @@ resource "vault_rabbitmq_secret_backend" "test" {
 }
 
 resource "vault_rabbitmq_secret_backend_role" "test" {
-  backend = "${vault_rabbitmq_secret_backend.test.path}"
+  backend = vault_rabbitmq_secret_backend.test.path
   name = "%s"
   tags = %q
   vhost {

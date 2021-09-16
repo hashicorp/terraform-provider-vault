@@ -103,7 +103,7 @@ func testGCPAuthBackendCheck_attrs() resource.TestCheckFunc {
 func testGCPAuthBackendConfig_basic(path, credentials string) string {
 	return fmt.Sprintf(`
 variable "json_credentials" {
-  type = "string"
+  type = string
   default = %q
 }
 

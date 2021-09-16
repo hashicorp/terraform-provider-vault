@@ -271,8 +271,8 @@ resource "vault_identity_group" "group" {
     version = "2"
   }
 
-  member_entity_ids = ["${vault_identity_entity.entity.id}"]
-  member_group_ids = ["${vault_identity_group.other_group.id}"]
+  member_entity_ids = [vault_identity_entity.entity.id]
+  member_group_ids = [vault_identity_group.other_group.id]
 }
 
 resource "vault_identity_entity" "entity" {

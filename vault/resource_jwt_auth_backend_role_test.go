@@ -559,7 +559,7 @@ resource "vault_auth_backend" "jwt" {
 }
 
 resource "vault_jwt_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.jwt.path}"
+  backend = vault_auth_backend.jwt.path
 	role_name = "%s"
 	role_type = "jwt"
 
@@ -576,7 +576,7 @@ resource "vault_auth_backend" "jwt" {
 }
 
 resource "vault_jwt_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.jwt.path}"
+  backend = vault_auth_backend.jwt.path
 	role_name = "%s"
 	role_type = "jwt"
 
@@ -594,7 +594,7 @@ resource "vault_auth_backend" "jwt" {
 }
 
 resource "vault_jwt_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.jwt.path}"
+  backend = vault_auth_backend.jwt.path
   role_name = "%s"
   role_type = "jwt"
 
@@ -633,7 +633,7 @@ resource "vault_jwt_auth_backend" "jwt" {
 }
 
 resource "vault_jwt_auth_backend_role" "role" {
-  backend = "${vault_jwt_auth_backend.jwt.path}"
+  backend = vault_jwt_auth_backend.jwt.path
   role_name = "%s"
   role_type = "oidc"
   allowed_redirect_uris = ["http://localhost:8080"]
@@ -668,7 +668,7 @@ resource "vault_auth_backend" "jwt" {
 }
 
 resource "vault_jwt_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.jwt.path}"
+  backend = vault_auth_backend.jwt.path
 	role_name = "%s"
 	role_type = "jwt"
 
@@ -697,7 +697,7 @@ resource "vault_auth_backend" "jwt" {
 }
 
 resource "vault_jwt_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.jwt.path}"
+  backend = vault_auth_backend.jwt.path
   role_name = "%s"
   role_type = "jwt"
 
@@ -721,7 +721,7 @@ resource "vault_auth_backend" "jwt" {
 }
 
 resource "vault_jwt_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.jwt.path}"
+  backend = vault_auth_backend.jwt.path
 	role_name = "%s"
 	role_type = "jwt"
 

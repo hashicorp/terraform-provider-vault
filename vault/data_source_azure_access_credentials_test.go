@@ -49,7 +49,7 @@ resource "vault_azure_secret_backend" "test" {
 }
 
 resource "vault_azure_secret_backend_role" "test" {
-	backend = "${vault_azure_secret_backend.test.path}"
+	backend = vault_azure_secret_backend.test.path
 	role = "my-role"
 	azure_roles {
 		role_name = "Reader"
@@ -60,8 +60,8 @@ resource "vault_azure_secret_backend_role" "test" {
 }
 
 data "vault_azure_access_credentials" "test" {
-    backend = "${vault_azure_secret_backend.test.path}"
-    role = "${vault_azure_secret_backend_role.test.role}"
+    backend = vault_azure_secret_backend.test.path
+    role = vault_azure_secret_backend_role.test.role
     validate_creds = true
 	num_sequential_successes = {{numSequentialSuccesses}}
 	num_seconds_between_tests = 1

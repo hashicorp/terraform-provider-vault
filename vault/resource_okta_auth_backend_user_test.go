@@ -39,7 +39,7 @@ resource "vault_okta_auth_backend" "test" {
 }
 
 resource "vault_okta_auth_backend_user" "test" {
-    path = "${vault_okta_auth_backend.test.path}"
+    path = vault_okta_auth_backend.test.path
     username = "user_test"
     groups = ["one", "two"]
     policies = ["three"]
