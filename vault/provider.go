@@ -811,50 +811,53 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		tokenName = "terraform"
 	}
 
-	// In order to enforce our relatively-short lease TTL, we derive a
-	// temporary child token that inherits all of the policies of the
-	// token we were given but expires after max_lease_ttl_seconds.
-	//
-	// The intent here is that Terraform will need to re-fetch any
-	// secrets on each run and so we limit the exposure risk of secrets
-	// that end up stored in the Terraform state, assuming that they are
-	// credentials that Vault is able to revoke.
-	//
-	// Caution is still required with state files since not all secrets
-	// can explicitly be revoked, and this limited scope won't apply to
-	// any secrets that are *written* by Terraform to Vault.
+	maxTTL := d.Get("max_lease_ttl_seconds").(int)
+	if maxTTL != 0 {
+		// In order to enforce our relatively-short lease TTL, we derive a
+		// temporary child token that inherits all of the policies of the
+		// token we were given but expires after max_lease_ttl_seconds.
+		//
+		// The intent here is that Terraform will need to re-fetch any
+		// secrets on each run and so we limit the exposure risk of secrets
+		// that end up stored in the Terraform state, assuming that they are
+		// credentials that Vault is able to revoke.
+		//
+		// Caution is still required with state files since not all secrets
+		// can explicitly be revoked, and this limited scope won't apply to
+		// any secrets that are *written* by Terraform to Vault.
 
-	// Set the namespace to the token's namespace only for the
-	// child token creation
-	tokenInfo, err := client.Auth().Token().LookupSelf()
-	if err != nil {
-		return nil, err
-	}
-	if tokenNamespaceRaw, ok := tokenInfo.Data["namespace_path"]; ok {
-		tokenNamespace := tokenNamespaceRaw.(string)
-		if tokenNamespace != "" {
-			client.SetNamespace(tokenNamespace)
+		// Set the namespace to the token's namespace only for the
+		// child token creation
+		tokenInfo, err := client.Auth().Token().LookupSelf()
+		if err != nil {
+			return nil, err
 		}
+		if tokenNamespaceRaw, ok := tokenInfo.Data["namespace_path"]; ok {
+			tokenNamespace := tokenNamespaceRaw.(string)
+			if tokenNamespace != "" {
+				client.SetNamespace(tokenNamespace)
+			}
+		}
+
+		renewable := false
+		childTokenLease, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			DisplayName:    tokenName,
+			TTL:            fmt.Sprintf("%ds", maxTTL),
+			ExplicitMaxTTL: fmt.Sprintf("%ds", maxTTL),
+			Renewable:      &renewable,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create limited child token: %s", err)
+		}
+
+		childToken := childTokenLease.Auth.ClientToken
+		policies := childTokenLease.Auth.Policies
+
+		log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
+
+		// Set the token to the generated child token
+		client.SetToken(childToken)
 	}
-
-	renewable := false
-	childTokenLease, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		DisplayName:    tokenName,
-		TTL:            fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
-		ExplicitMaxTTL: fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
-		Renewable:      &renewable,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create limited child token: %s", err)
-	}
-
-	childToken := childTokenLease.Auth.ClientToken
-	policies := childTokenLease.Auth.Policies
-
-	log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
-
-	// Set the token to the generated child token
-	client.SetToken(childToken)
 
 	// Set the namespace to the requested namespace, if provided
 	namespace := d.Get("namespace").(string)
