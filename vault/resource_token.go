@@ -143,18 +143,6 @@ func tokenResource() *schema.Resource {
 				Description: "The client wrapping accessor.",
 				Sensitive:   true,
 			},
-			"pgp_key": {
-				Type:        schema.TypeString,
-				ForceNew:    true,
-				Optional:    true,
-				Description: "The PGP key (base64 encoded) to encrypt the token.",
-			},
-			"encrypted_client_token": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "The client token encrypted using the provided PGP key.",
-				Sensitive:   true,
-			},
 		},
 	}
 }
@@ -257,7 +245,6 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		} else {
 			accessor = resp.Auth.Accessor
 		}
-
 		log.Printf("[DEBUG] Created token accessor %q", accessor)
 	}
 
@@ -271,25 +258,7 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 				There is movement toward a more general way of encrypting a the TF state here:
 				https://github.com/hashicorp/terraform/issues/516
 		*/
-		/*
-			if v, ok := d.GetOk("pgp_key"); ok {
-				pgpKey := v.(string)
-				encryptionKey, err := encryption.RetrieveGPGKey(pgpKey)
-				if err != nil {
-					return err
-				}
-				_, encrypted, err := encryption.EncryptValue(encryptionKey, resp.Auth.ClientToken, "Vault Token")
-				if err != nil {
-					return err
-				}
-				d.Set("client_token", "")
-				d.Set("encrypted_client_token", encrypted)
-			} else {
-				d.Set("pgp_key", "")
-				d.Set("client_token", resp.Auth.ClientToken)
-				d.Set("encrypted_client_token", "")
-			}
-		*/
+		d.Set("client_token", resp.Auth.ClientToken)
 	}
 
 	d.SetId(accessor)
@@ -328,12 +297,6 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("renewable", resp.Data["renewable"])
 	d.Set("display_name", strings.TrimPrefix(resp.Data["display_name"].(string), "token-"))
 	d.Set("num_uses", resp.Data["num_uses"])
-	if _, ok := d.GetOk("pgp_key"); !ok {
-		d.Set("pgp_key", "")
-	}
-	if _, ok := d.GetOk("encrypted_client_token"); !ok {
-		d.Set("encrypted_client_token", "")
-	}
 
 	issueTimeStr, ok := resp.Data["issue_time"].(string)
 	if !ok {

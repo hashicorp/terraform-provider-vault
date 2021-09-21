@@ -97,7 +97,7 @@ func TestAccOktaAuthBackend_invalid_ttl(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccOktaAuthConfig_invalid_ttl(path, organization),
-				ExpectError: regexp.MustCompile(`invalid value for "ttl", could not parse "invalid_ttl"$`),
+				ExpectError: regexp.MustCompile(`Error: invalid value for "ttl", could not parse "invalid_ttl"`),
 			},
 		},
 	})
@@ -114,7 +114,7 @@ func TestAccOktaAuthBackend_invalid_max_ttl(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccOktaAuthConfig_invalid_max_ttl(path, organization),
-				ExpectError: regexp.MustCompile(`invalid value for "max_ttl", could not parse "invalid_max_ttl"$`),
+				ExpectError: regexp.MustCompile(`Error: invalid value for "max_ttl", could not parse "invalid_max_ttl"`),
 			},
 		},
 	})
