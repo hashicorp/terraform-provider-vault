@@ -209,7 +209,7 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["bindpass"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("case_sensitive_names"); ok {
+	if v, ok := d.GetOkExists("case_sensitive_names"); ok {
 		data["case_sensitive_names"] = v.(bool)
 	}
 	
