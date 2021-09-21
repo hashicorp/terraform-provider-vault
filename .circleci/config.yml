@@ -43,6 +43,7 @@ jobs:
             echo 'export MONGODB_URL="mongodb://root:mongodb@localhost:27017/admin?ssl=false"' >> $BASH_ENV
       - run:
           name: "Run Tests"
+          no_output_timeout: 20m
           command: |
             go test -v ./...
       - run:
