@@ -33,6 +33,8 @@ The following arguments are supported:
 
 * `starttls` - (Optional) Control use of TLS when conecting to LDAP
 
+* `case_sensitive_names` - (Optional) Control case senstivity of objects fetched from LDAP, this is used for object matching in vault
+
 * `tls_min_version` - (Optional) Minimum acceptable version of TLS
 
 * `tls_max_version` - (Optional) Maximum acceptable version of TLS
