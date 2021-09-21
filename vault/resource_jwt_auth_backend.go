@@ -236,13 +236,13 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	d.Set("path", path)
 
-	backend, err := getJwtAuthBackendIfPresent(client, path)
+	mount, err := getAuthMountIfPresent(client, path)
 
 	if err != nil {
 		return fmt.Errorf("unable to check auth backends in Vault for path %s: %s", path, err)
 	}
 
-	if backend == nil {
+	if mount == nil {
 		// If we fell out here then we didn't find our Auth in the list.
 		d.SetId("")
 		return nil
@@ -255,15 +255,15 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if config == nil {
-		log.Printf("[WARN] JWT auth backend config %q not found, removing from state", path)
+		log.Printf("[WARN] JWT auth mount config %q not found, removing from state", path)
 		d.SetId("")
 		return nil
 	}
 
-	d.Set("type", backend.Type)
-	d.Set("local", backend.Local)
+	d.Set("type", mount.Type)
+	d.Set("local", mount.Local)
 
-	d.Set("accessor", backend.Accessor)
+	d.Set("accessor", mount.Accessor)
 	for _, configOption := range matchingJwtMountConfigOptions {
 		// The oidc_client_secret is sensitive so it will not be in the response
 		// Our options are to always assume it must be updated or always assume it
@@ -365,24 +365,6 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 func jwtConfigEndpoint(path string) string {
 	return fmt.Sprintf("/auth/%s/config", path)
-}
-
-func getJwtAuthBackendIfPresent(client *api.Client, path string) (*api.AuthMount, error) {
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return nil, fmt.Errorf("error reading from Vault: %s", err)
-	}
-
-	configuredPath := path + "/"
-
-	for authBackendPath, auth := range auths {
-
-		if authBackendPath == configuredPath {
-			return auth, nil
-		}
-	}
-
-	return nil, nil
 }
 
 func getJwtPath(d *schema.ResourceData) string {
