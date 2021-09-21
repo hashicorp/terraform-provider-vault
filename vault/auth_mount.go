@@ -115,3 +115,21 @@ func authMountDisable(client *api.Client, path string) error {
 
 	return nil
 }
+
+func getAuthMountIfPresent(client *api.Client, path string) (*api.AuthMount, error) {
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		return nil, fmt.Errorf("error reading from Vault: %s", err)
+	}
+
+	configuredPath := path + "/"
+
+	for authBackendPath, auth := range auths {
+
+		if authBackendPath == configuredPath {
+			return auth, nil
+		}
+	}
+
+	return nil, nil
+}
