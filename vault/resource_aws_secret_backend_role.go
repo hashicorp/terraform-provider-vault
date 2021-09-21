@@ -37,10 +37,9 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Description: "The path of the AWS Secret Backend the role belongs to.",
 			},
 			"policy_arns": {
-				Type:          schema.TypeSet,
-				Optional:      true,
-				ConflictsWith: []string{"policy", "policy_arn"},
-				Description:   "ARN for an existing IAM policy the role should use.",
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Description: "ARN for an existing IAM policy the role should use.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -48,7 +47,6 @@ func awsSecretBackendRoleResource() *schema.Resource {
 			"policy_document": {
 				Type:             schema.TypeString,
 				Optional:         true,
-				ConflictsWith:    []string{"policy_arn", "policy"},
 				Description:      "IAM policy the role should use in JSON format.",
 				DiffSuppressFunc: util.JsonDiffSuppress,
 			},
@@ -62,10 +60,9 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Optional:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"policy", "policy_arn"},
-				Description:   "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is 'assumed_role'",
+				Optional:    true,
+				ForceNew:    true,
+				Description: "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is 'assumed_role'",
 			},
 			"iam_groups": {
 				Type: schema.TypeSet,

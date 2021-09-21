@@ -224,12 +224,6 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	log.Printf("[INFO] Read github auth tune from '%q/tune'", path)
-
-	authMount, err := authMountInfoGet(client, d.Id())
-	if err != nil {
-		return err
-	}
 	ttlS := flattenVaultDuration(dt.Data["ttl"])
 	maxTtlS := flattenVaultDuration(dt.Data["max_ttl"])
 
@@ -260,7 +254,7 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("path", d.Id())
 	d.Set("organization", dt.Data["organization"])
 	d.Set("base_url", dt.Data["base_url"])
-	d.Set("description", authMount.Description)
+	d.Set("description", mount.Description)
 	d.Set("accessor", mount.Accessor)
 
 	return nil
