@@ -58,6 +58,7 @@ func ldapAuthBackendResource() *schema.Resource {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
+			Default: false,
 		},
 		"userdn": {
 			Type:     schema.TypeString,
