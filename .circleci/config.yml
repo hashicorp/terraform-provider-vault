@@ -31,22 +31,22 @@ jobs:
       - run:
           name: "Set Environment Variables"
           command: |
-            echo 'export VAULT_TOKEN="root"' >> $BASH_ENV
-            echo 'export VAULT_ADDR="http://127.0.0.1:8200"' >> $BASH_ENV
-            echo 'export TF_ACC="1"' >> $BASH_ENV
-            echo 'export TF_ACC_TERRAFORM_VERSION="1.0.0"' >> $BASH_ENV
             echo 'GO111MODULE=on' >> $BASH_ENV
             echo 'export GOBIN=$GOPATH/bin' >> $BASH_ENV
-            echo 'export MYSQL_URL="root:mysql@tcp(127.0.0.1:3306)/"' >> $BASH_ENV
-            echo 'export MYSQL_CONNECTION_URL="{{username}}:{{password}}@tcp(127.0.0.1:3306)/"' >> $BASH_ENV
-            echo 'export MYSQL_CONNECTION_USERNAME="root"' >> $BASH_ENV
-            echo 'export MYSQL_CONNECTION_PASSWORD="mysql"' >> $BASH_ENV
-            echo 'export MONGODB_URL="mongodb://root:mongodb@localhost:27017/admin?ssl=false"' >> $BASH_ENV
       - run:
           name: "Run Tests"
-          no_output_timeout: 25m
+          no_output_timeout: 30m
           command: |
-            go test -v  -timeout 20m ./...
+            export VAULT_TOKEN="root"
+            export VAULT_ADDR="http://127.0.0.1:8200"
+            export TF_ACC_TERRAFORM_VERSION="1.0.0"
+            export MYSQL_URL="root:mysql@tcp(127.0.0.1:3306)/"
+            export MYSQL_CONNECTION_URL="{{username}}:{{password}}@tcp(127.0.0.1:3306)/"
+            export MYSQL_CONNECTION_USERNAME="root"
+            export MYSQL_CONNECTION_PASSWORD="mysql"
+            export MONGODB_URL="mongodb://root:mongodb@localhost:27017/admin?ssl=false"
+            printenv | sort
+            make testacc TESTARGS='-v'
       - run:
           name: "Run Build"
           command: |
