@@ -39,13 +39,12 @@ jobs:
           command: |
             export VAULT_TOKEN="root"
             export VAULT_ADDR="http://127.0.0.1:8200"
-            export TF_ACC_TERRAFORM_VERSION="1.0.0"
+            export TF_ACC_TERRAFORM_VERSION="1.0.7"
             export MYSQL_URL="root:mysql@tcp(127.0.0.1:3306)/"
             export MYSQL_CONNECTION_URL="{{username}}:{{password}}@tcp(127.0.0.1:3306)/"
             export MYSQL_CONNECTION_USERNAME="root"
             export MYSQL_CONNECTION_PASSWORD="mysql"
             export MONGODB_URL="mongodb://root:mongodb@localhost:27017/admin?ssl=false"
-            printenv | sort
             make testacc TESTARGS='-v'
       - run:
           name: "Run Build"
