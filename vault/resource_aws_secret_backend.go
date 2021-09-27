@@ -255,10 +255,6 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		if region == "" {
 			d.Set("region", "us-east-1")
 		}
-		if iamEndpoint != "" {
-		}
-		if stsEndpoint != "" {
-		}
 	}
 	d.Partial(false)
 	return awsSecretBackendRead(d, meta)

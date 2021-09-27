@@ -155,11 +155,6 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 	log.Printf("[INFO] Github auth config successfully written to '%q'", configPath)
 
-	if _, ok := data["ttl"]; ok {
-	}
-	if _, ok := data["max_ttl"]; ok {
-	}
-
 	if d.HasChange("tune") {
 		log.Printf("[INFO] Github Auth '%q' tune configuration changed", d.Id())
 		if raw, ok := d.GetOk("tune"); ok {
