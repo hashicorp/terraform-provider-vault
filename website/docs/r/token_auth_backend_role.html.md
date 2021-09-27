@@ -39,7 +39,7 @@ The following arguments are supported:
 
 * `orphan` (Optional) If true, tokens created against this policy will be orphan tokens.
 
-* `renewable` (Optional) Wether to disable the ability of the token to be renewed past its initial TTL.
+* `renewable` (Optional) Whether to disable the ability of the token to be renewed past its initial TTL.
 
 * `path_suffix` (Optional) Tokens created against this role will have the given suffix as part of their path in addition to the role name.
 

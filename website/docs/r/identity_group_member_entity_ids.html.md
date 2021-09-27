@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_identity_group_member_entity_ids resource"
-sidebar_current: "docs-vault-resource-identity-group-meber-entity-ids"
+sidebar_current: "docs-vault-resource-identity-group-member-entity-ids"
 description: |-
   Manages member entities for an Identity Group for Vault.
 ---
