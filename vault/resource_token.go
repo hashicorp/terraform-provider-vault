@@ -252,12 +252,6 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		d.Set("wrapped_token", resp.WrapInfo.Token)
 		d.Set("wrapping_accessor", resp.WrapInfo.Accessor)
 	} else {
-		/*
-				TODO: handle the removal of PGP encryption support from the TF plugin SDKv2
-			    https://www.terraform.io/docs/extend/guides/v2-upgrade-guide.html#removal-of-helper-encryption-package
-				There is movement toward a more general way of encrypting a the TF state here:
-				https://github.com/hashicorp/terraform/issues/516
-		*/
 		d.Set("client_token", resp.Auth.ClientToken)
 	}
 
