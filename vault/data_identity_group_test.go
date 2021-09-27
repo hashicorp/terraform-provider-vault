@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	r "github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
@@ -17,10 +16,10 @@ import (
 func TestDataSourceIdentityGroupName(t *testing.T) {
 	group := acctest.RandomWithPrefix("test-group")
 
-	r.Test(t, r.TestCase{
+	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []r.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityGroup_configName(group),
 				Check: resource.ComposeTestCheckFunc(
@@ -37,10 +36,10 @@ func TestDataSourceIdentityGroupName(t *testing.T) {
 func TestDataSourceIdentityGroupAlias(t *testing.T) {
 	group := acctest.RandomWithPrefix("test-group")
 
-	r.Test(t, r.TestCase{
+	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []r.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityGroup_configAlias(group),
 				Check: resource.ComposeTestCheckFunc(

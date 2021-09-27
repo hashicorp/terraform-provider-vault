@@ -5,15 +5,15 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	r "github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 func TestDataSourceGenericSecret(t *testing.T) {
-	r.Test(t, r.TestCase{
+	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []r.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceGenericSecret_config,
 				Check:  testDataSourceGenericSecret_check,
@@ -25,10 +25,10 @@ func TestDataSourceGenericSecret(t *testing.T) {
 func TestV2Secret(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-acctest-kv/")
 	path := acctest.RandomWithPrefix("foo")
-	r.Test(t, r.TestCase{
+	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []r.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config: testv2DataSourceGenericSecret_config(mount, path),
 				Check:  testDataSourceGenericSecret_check,
