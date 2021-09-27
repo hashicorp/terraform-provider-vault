@@ -19,7 +19,7 @@ jobs:
       - image: circleci/mysql:latest
         environment:
           - MYSQL_ROOT_PASSWORD=mysql
-      - image: vault:latest
+      - image: hashicorp/vault:latest
         environment:
           - VAULT_DEV_ROOT_TOKEN_ID=root
     working_directory: /go/src/github.com/hashicorp/terraform-provider-vault
@@ -34,6 +34,7 @@ jobs:
             echo 'export VAULT_TOKEN="root"' >> $BASH_ENV
             echo 'export VAULT_ADDR="http://127.0.0.1:8200"' >> $BASH_ENV
             echo 'export TF_ACC="1"' >> $BASH_ENV
+            echo 'export TF_ACC_TERRAFORM_VERSION="1.0.0"' >> $BASH_ENV
             echo 'GO111MODULE=on' >> $BASH_ENV
             echo 'export GOBIN=$GOPATH/bin' >> $BASH_ENV
             echo 'export MYSQL_URL="root:mysql@tcp(127.0.0.1:3306)/"' >> $BASH_ENV
