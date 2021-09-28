@@ -34,7 +34,7 @@ In addition to the fields above, the following attributes are exported:
 
 * `max_lease_ttl_seconds` - The maximum lease duration in seconds.
 
-* `listing_visibility` - Speficies whether to show this mount in the UI-specific listing endpoint.
+* `listing_visibility` - Specifies whether to show this mount in the UI-specific listing endpoint.
 
 * `local` - Specifies if the auth method is local only.
 
