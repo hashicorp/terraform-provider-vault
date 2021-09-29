@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -118,11 +118,6 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Mounted AWS backend at %q", path)
 	d.SetId(path)
 
-	d.SetPartial("path")
-	d.SetPartial("description")
-	d.SetPartial("default_lease_ttl_seconds")
-	d.SetPartial("max_lease_ttl_seconds")
-
 	log.Printf("[DEBUG] Writing root credentials to %q", path+"/config/root")
 	data := map[string]interface{}{
 		"access_key": accessKey,
@@ -142,17 +137,8 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error configuring root credentials for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote root credentials to %q", path+"/config/root")
-	d.SetPartial("access_key")
-	d.SetPartial("secret_key")
 	if region == "" {
 		d.Set("region", "us-east-1")
-	}
-	d.SetPartial("region")
-	if iamEndpoint != "" {
-		d.SetPartial("iam_endpoint")
-	}
-	if stsEndpoint != "" {
-		d.SetPartial("sts_endpoint")
 	}
 	d.Partial(false)
 
@@ -242,8 +228,6 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error updating mount TTLs for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
-		d.SetPartial("default_lease_ttl_seconds")
-		d.SetPartial("max_lease_ttl_seconds")
 	}
 	if d.HasChange("access_key") || d.HasChange("secret_key") || d.HasChange("region") || d.HasChange("iam_endpoint") || d.HasChange("sts_endpoint") {
 		log.Printf("[DEBUG] Updating root credentials at %q", path+"/config/root")
@@ -268,17 +252,8 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error configuring root credentials for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated root credentials at %q", path+"/config/root")
-		d.SetPartial("access_key")
-		d.SetPartial("secret_key")
 		if region == "" {
 			d.Set("region", "us-east-1")
-		}
-		d.SetPartial("region")
-		if iamEndpoint != "" {
-			d.SetPartial("iam_endpoint")
-		}
-		if stsEndpoint != "" {
-			d.SetPartial("sts_endpoint")
 		}
 	}
 	d.Partial(false)

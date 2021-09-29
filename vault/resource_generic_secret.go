@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -51,7 +51,6 @@ func genericSecretResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Attempt to read the token from Vault if true; if false, drift won't be detected.",
-				Removed:     "Use disable_read instead.",
 			},
 
 			"disable_read": {

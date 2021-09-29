@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -111,8 +111,6 @@ func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 	log.Printf("[DEBUG] Mounted Azure backend at %q", path)
 	d.SetId(path)
-
-	d.SetPartial("path")
 
 	log.Printf("[DEBUG] Writing Azure configuration to %q", configPath)
 	if _, err := client.Logical().Write(configPath, data); err != nil {

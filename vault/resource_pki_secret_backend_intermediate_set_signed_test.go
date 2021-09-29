@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 	"strconv"
 )
@@ -73,7 +73,7 @@ resource "vault_pki_secret_backend" "test-intermediate" {
 
 resource "vault_pki_secret_backend_root_cert" "test" {
   depends_on = [ "vault_pki_secret_backend.test-intermediate" ]
-  backend = "${vault_pki_secret_backend.test-root.path}"
+  backend = vault_pki_secret_backend.test-root.path
   type = "internal"
   common_name = "test Root CA"
   ttl = "86400"
@@ -91,15 +91,15 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
   depends_on = [ "vault_pki_secret_backend_root_cert.test" ]
-  backend = "${vault_pki_secret_backend.test-intermediate.path}"
+  backend = vault_pki_secret_backend.test-intermediate.path
   type = "internal"
   common_name = "test Root CA"
 }
 
 resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
   depends_on = [ "vault_pki_secret_backend_intermediate_cert_request.test" ]
-  backend = "${vault_pki_secret_backend.test-root.path}"
-  csr = "${vault_pki_secret_backend_intermediate_cert_request.test.csr}"
+  backend = vault_pki_secret_backend.test-root.path
+  csr = vault_pki_secret_backend_intermediate_cert_request.test.csr
   common_name = "test Intermediate CA"
   exclude_cn_from_sans = true
   ou = "test"
@@ -111,7 +111,7 @@ resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
 
 resource "vault_pki_secret_backend_intermediate_set_signed" "test" {
   depends_on = [ "vault_pki_secret_backend_root_sign_intermediate.test" ]
-  backend = "${vault_pki_secret_backend.test-intermediate.path}"
-  certificate = "${vault_pki_secret_backend_root_sign_intermediate.test.certificate}"
+  backend = vault_pki_secret_backend.test-intermediate.path
+  certificate = vault_pki_secret_backend_root_sign_intermediate.test.certificate
 }`, rootPath, intermediatePath)
 }

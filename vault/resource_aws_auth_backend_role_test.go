@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -169,7 +169,7 @@ func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
 						"bound_iam_principal_arns.#", "1"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"bound_iam_principal_arns.3878455414", "arn:aws:iam::123456789012:role/MyRole/*"),
+						"bound_iam_principal_arns.0", "arn:aws:iam::123456789012:role/MyRole/*"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
 						"token_ttl", "30"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
@@ -177,9 +177,9 @@ func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
 						"token_policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"token_policies.1971754988", "default"),
+						"token_policies.0", "default"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"token_policies.326271447", "dev"),
+						"token_policies.1", "dev"),
 				),
 			},
 			{
@@ -393,7 +393,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_ami_ids = ["ami-8c1be5f6"]
@@ -418,7 +418,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/*"]
@@ -436,7 +436,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/*"]
@@ -454,7 +454,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/MyRole/*"]
@@ -472,7 +472,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/MyRole/*"]
@@ -489,7 +489,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/MyRole/*"]
@@ -504,7 +504,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "ec2"
   bound_ami_ids = ["ami-8c1be5f6"]
@@ -530,7 +530,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "ec2"
   bound_ami_ids = ["ami-8c1be5f6"]

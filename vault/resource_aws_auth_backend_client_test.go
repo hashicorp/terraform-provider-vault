@@ -5,9 +5,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -106,7 +106,7 @@ func TestAccAWSAuthBackendClientStsRegionNoEndpoint(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccAWSAuthBackendClientConfigSTSRegionNoEndpoint(backend),
-				ExpectError: regexp.MustCompile("both sts_endpoint and sts_region need to be set"),
+				ExpectError: regexp.MustCompile("Error: both sts_endpoint and sts_region need to be set"),
 			},
 		},
 	})
@@ -186,7 +186,7 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "client" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "AWSACCESSKEY"
   secret_key = "AWSSECRETKEY"
   ec2_endpoint = "http://vault.test/ec2"
@@ -207,7 +207,7 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "client" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "UPDATEDAWSACCESSKEY"
   secret_key = "UPDATEDAWSSECRETKEY"
   ec2_endpoint = "http://updated.vault.test/ec2"
@@ -227,7 +227,7 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "client" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "AWSACCESSKEY"
   ec2_endpoint = "http://vault.test/ec2"
   iam_endpoint = "http://vault.test/iam"
@@ -246,7 +246,7 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "client" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "AWSACCESSKEY"
   ec2_endpoint = "http://updated2.vault.test/ec2"
   iam_endpoint = "http://updated2.vault.test/iam"
@@ -265,7 +265,7 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "client" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "AWSACCESSKEY"
   ec2_endpoint = "http://vault.test/ec2"
   iam_endpoint = "http://vault.test/iam"

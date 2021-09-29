@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccOktaAuthBackend_basic(t *testing.T) {
@@ -96,7 +97,7 @@ func TestAccOktaAuthBackend_invalid_ttl(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccOktaAuthConfig_invalid_ttl(path, organization),
-				ExpectError: regexp.MustCompile(`invalid value for "ttl", could not parse "invalid_ttl"$`),
+				ExpectError: regexp.MustCompile(`Error: invalid value for "ttl", could not parse "invalid_ttl"`),
 			},
 		},
 	})
@@ -113,7 +114,7 @@ func TestAccOktaAuthBackend_invalid_max_ttl(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccOktaAuthConfig_invalid_max_ttl(path, organization),
-				ExpectError: regexp.MustCompile(`invalid value for "max_ttl", could not parse "invalid_max_ttl"$`),
+				ExpectError: regexp.MustCompile(`Error: invalid value for "max_ttl", could not parse "invalid_max_ttl"`),
 			},
 		},
 	})

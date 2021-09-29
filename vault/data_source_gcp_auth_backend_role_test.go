@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccGCPAuthBackendRoleDataSource_basic(t *testing.T) {
@@ -29,7 +29,7 @@ func TestAccGCPAuthBackendRoleDataSource_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccGCPAuthBackendRoleDataSourceConfig_basic(backend, name),
+				Config: testAccGCPAuthBackendRoleDataSourceConfig_basic(backend, name, serviceAccount, projectId),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vault_gcp_auth_backend_role.gcp_role",
 						"backend", backend),
@@ -72,7 +72,7 @@ func TestAccGCPAuthBackendRoleDataSource_gce(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccGCPAuthBackendRoleDataSourceConfig_basic(backend, name),
+				Config: testAccGCPAuthBackendRoleDataSourceConfig_gce(backend, name, projectId),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vault_gcp_auth_backend_role.gcp_role",
 						"backend", backend),
@@ -90,7 +90,15 @@ func TestAccGCPAuthBackendRoleDataSource_gce(t *testing.T) {
 	})
 }
 
-func testAccGCPAuthBackendRoleDataSourceConfig_basic(backend, role string) string {
+func testAccGCPAuthBackendRoleDataSourceConfig_basic(backend, name, serviceAccount, projectId string) string {
+	return testGCPAuthBackendRoleConfig_basic(backend, name, serviceAccount, projectId) + "\n" + testAccGCPAuthBackendRoleDataSourceConfig(backend, name)
+}
+
+func testAccGCPAuthBackendRoleDataSourceConfig_gce(backend, name, projectId string) string {
+	return testGCPAuthBackendRoleConfig_gce(backend, name, projectId) + "\n" + testAccGCPAuthBackendRoleDataSourceConfig(backend, name)
+}
+
+func testAccGCPAuthBackendRoleDataSourceConfig(backend, role string) string {
 	return fmt.Sprintf(`
 data "vault_gcp_auth_backend_role" "gcp_role" {
   backend = "%s"

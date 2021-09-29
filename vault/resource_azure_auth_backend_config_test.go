@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -77,7 +77,7 @@ resource "vault_auth_backend" "azure" {
 }
 
 resource "vault_azure_auth_backend_config" "config" {
-  backend = "${vault_auth_backend.azure.path}"
+  backend = vault_auth_backend.azure.path
   tenant_id = "11111111-2222-3333-4444-555555555555"
   client_id = "11111111-2222-3333-4444-555555555555"
   client_secret = "12345678901234567890"
@@ -140,7 +140,7 @@ resource "vault_auth_backend" "azure" {
 }
 
 resource "vault_azure_auth_backend_config" "config" {
-  backend = "${vault_auth_backend.azure.path}"
+  backend = vault_auth_backend.azure.path
   tenant_id = "11111111-2222-3333-4444-555555555555"
   client_id = "11111111-2222-3333-4444-555555555555"
   client_secret = "12345678901234567890"

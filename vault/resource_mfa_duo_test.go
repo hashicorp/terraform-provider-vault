@@ -6,8 +6,8 @@ import (
 
 	"os"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestMFADuoBasic(t *testing.T) {
@@ -50,7 +50,7 @@ resource "vault_auth_backend" "userpass" {
 
 resource "vault_mfa_duo" "test" {
   name                  = %q
-  mount_accessor        = "${vault_auth_backend.userpass.accessor}"
+  mount_accessor        = vault_auth_backend.userpass.accessor
   secret_key            = "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz"
   integration_key       = "BIACEUEAXI20BNWTEYXT"
   api_hostname          = "api-2b5c39f5.duosecurity.com"

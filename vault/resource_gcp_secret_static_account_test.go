@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 	"golang.org/x/oauth2/google"
 )
@@ -57,7 +57,7 @@ func TestGCPSecretStaticAccount(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "service_account_email", serviceAccountEmail),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "service_account_project", project),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "token_scopes.#", "1"),
-					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "token_scopes.2400041053", "https://www.googleapis.com/auth/cloud-platform"),
+					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "token_scopes.0", "https://www.googleapis.com/auth/cloud-platform"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "binding.#", "0"),
 				),
 			},
@@ -72,11 +72,11 @@ func TestGCPSecretStaticAccount(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "service_account_email", serviceAccountEmail),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "service_account_project", project),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "token_scopes.#", "1"),
-					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "token_scopes.2400041053", "https://www.googleapis.com/auth/cloud-platform"),
+					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "token_scopes.0", "https://www.googleapis.com/auth/cloud-platform"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "binding.#", "1"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", fmt.Sprintf("binding.%d.resource", initialHash), fmt.Sprintf("//cloudresourcemanager.googleapis.com/projects/%s", project)),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", fmt.Sprintf("binding.%d.roles.#", initialHash), "1"),
-					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", fmt.Sprintf("binding.%d.roles.3993311253", initialHash), initialRole),
+					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", fmt.Sprintf("binding.%d.roles.0", initialHash), initialRole),
 				),
 			},
 			{
@@ -96,11 +96,11 @@ func TestGCPSecretStaticAccount(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "service_account_email", serviceAccountEmail),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "service_account_project", project),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "token_scopes.#", "1"),
-					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "token_scopes.2400041053", "https://www.googleapis.com/auth/cloud-platform"),
+					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "token_scopes.0", "https://www.googleapis.com/auth/cloud-platform"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "binding.#", "1"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", fmt.Sprintf("binding.%d.resource", updatedHash), fmt.Sprintf("//cloudresourcemanager.googleapis.com/projects/%s", project)),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", fmt.Sprintf("binding.%d.roles.#", updatedHash), "1"),
-					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", fmt.Sprintf("binding.%d.roles.2133424675", updatedHash), updatedRole),
+					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", fmt.Sprintf("binding.%d.roles.0", updatedHash), updatedRole),
 				),
 			},
 			{
@@ -116,7 +116,7 @@ func TestGCPSecretStaticAccount(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", "binding.#", "1"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", fmt.Sprintf("binding.%d.resource", keyHash), fmt.Sprintf("//cloudresourcemanager.googleapis.com/projects/%s", project)),
 					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", fmt.Sprintf("binding.%d.roles.#", keyHash), "1"),
-					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", fmt.Sprintf("binding.%d.roles.2133424675", keyHash), updatedRole),
+					resource.TestCheckResourceAttr("vault_gcp_secret_static_account.test", fmt.Sprintf("binding.%d.roles.0", keyHash), updatedRole),
 				),
 			},
 		},
@@ -316,7 +316,7 @@ CREDS
 }
 
 resource "vault_gcp_secret_static_account" "test" {
-  backend 			 = "${vault_gcp_secret_backend.test.path}"
+  backend 			 = vault_gcp_secret_backend.test.path
 	static_account = "%s"
   secret_type 	 = "access_token"
   token_scopes   = ["https://www.googleapis.com/auth/cloud-platform"]
@@ -338,7 +338,7 @@ CREDS
 }
 
 resource "vault_gcp_secret_static_account" "test" {
-  backend 			 = "${vault_gcp_secret_backend.test.path}"
+  backend 			 = vault_gcp_secret_backend.test.path
 	static_account = "%s"
   secret_type 	 = "access_token"
   token_scopes   = ["https://www.googleapis.com/auth/cloud-platform"]
@@ -373,7 +373,7 @@ CREDS
 }
 
 resource "vault_gcp_secret_static_account" "test" {
-  backend 			 = "${vault_gcp_secret_backend.test.path}"
+  backend 			 = vault_gcp_secret_backend.test.path
 	static_account = "%s"
   secret_type 	 = "service_account_key"
   token_scopes   = ["https://www.googleapis.com/auth/cloud-platform"]
