@@ -82,47 +82,9 @@ func azureAuthBackendRoleResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-
-		// Deprecated
-		"ttl": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "The TTL period of tokens issued using this role, provided as the number of seconds.",
-			Deprecated:    "use `token_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_ttl"},
-		},
-		"max_ttl": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "The maximum allowed lifetime of tokens issued using this role, provided as the number of seconds.",
-			Deprecated:    "use `token_max_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_max_ttl"},
-		},
-		"period": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this field. The maximum allowed lifetime of token issued using this role. Specified as a number of seconds.",
-			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_period"},
-		},
-		"policies": {
-			Type:     schema.TypeList,
-			Optional: true,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Description:   "Policies to be set on tokens issued using this role.",
-			Deprecated:    "use `token_policies` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_policies"},
-		},
 	}
 
-	addTokenFields(fields, &addTokenFieldsConfig{
-		TokenMaxTTLConflict:   []string{"max_ttl"},
-		TokenPoliciesConflict: []string{"policies"},
-		TokenPeriodConflict:   []string{"period"},
-		TokenTTLConflict:      []string{"ttl"},
-	})
+	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
 		Create: azureAuthBackendRoleCreate,
@@ -149,20 +111,6 @@ func azureAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 
 	data := map[string]interface{}{}
 	updateTokenFields(d, data, true)
-
-	// Deprecated Fields
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(int)
-	}
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(int)
-	}
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(int)
-	}
-	if v, ok := d.GetOk("policies"); ok {
-		data["policies"] = v.([]interface{})
-	}
 
 	if _, ok := d.GetOk("bound_service_principal_ids"); ok {
 		iSPI := d.Get("bound_service_principal_ids").([]interface{})
@@ -348,20 +296,6 @@ func azureAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 
 	data := map[string]interface{}{}
 	updateTokenFields(d, data, false)
-
-	// Deprecated Fields
-	if d.HasChange("ttl") {
-		data["ttl"] = d.Get("ttl").(int)
-	}
-	if d.HasChange("max_ttl") {
-		data["max_ttl"] = d.Get("max_ttl").(int)
-	}
-	if d.HasChange("period") {
-		data["period"] = d.Get("period").(int)
-	}
-	if d.HasChange("policies") {
-		data["policies"] = d.Get("policies").([]interface{})
-	}
 
 	if _, ok := d.GetOk("bound_service_principal_ids"); ok {
 		iSPI := d.Get("bound_service_principal_ids").([]interface{})
