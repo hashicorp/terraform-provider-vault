@@ -1,3 +1,7 @@
+## 3.0.0 (Unreleased)
+IMPROVEMENTS:
+* Upgrade Terraform Plugin SDK to v2
+
 ## 2.24.0 (September 15, 2021)
 
 FEATURES:
