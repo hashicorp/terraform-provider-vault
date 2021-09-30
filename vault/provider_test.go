@@ -291,7 +291,7 @@ EOT
 resource "vault_approle_auth_backend_role" "admin" {
     backend = vault_auth_backend.approle.path
 	role_name = "admin"
-	policies = [vault_policy.admin.name]
+	token_policies = [vault_policy.admin.name]
 }
 
 resource "vault_approle_auth_backend_role_secret_id" "admin" {
