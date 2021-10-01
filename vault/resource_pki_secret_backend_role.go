@@ -134,6 +134,13 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"allowed_uri_sans_template": {
+				Type:        schema.TypeBool,
+				Required:    false,
+				Optional:    true,
+				Description: "Flag to indicate that `allowed_uri_sans` specifies a template expression (e.g. {{identity.entity.aliases.<mount accessor>.name}})",
+				Default:     false,
+			},
 			"allowed_other_sans": {
 				Type:        schema.TypeList,
 				Required:    false,
@@ -362,6 +369,7 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 		"enforce_hostnames":                  d.Get("enforce_hostnames"),
 		"allow_ip_sans":                      d.Get("allow_ip_sans"),
 		"allowed_uri_sans":                   d.Get("allowed_uri_sans"),
+		"allowed_uri_sans_template":          d.Get("allowed_uri_sans_template"),
 		"allowed_other_sans":                 d.Get("allowed_other_sans"),
 		"server_flag":                        d.Get("server_flag"),
 		"client_flag":                        d.Get("client_flag"),
@@ -487,6 +495,7 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("enforce_hostnames", secret.Data["enforce_hostnames"])
 	d.Set("allow_ip_sans", secret.Data["allow_ip_sans"])
 	d.Set("allowed_uri_sans", secret.Data["allowed_uri_sans"])
+	d.Set("allowed_uri_sans_template", secret.Data["allowed_uri_sans_template"])
 	d.Set("allowed_other_sans", secret.Data["allowed_other_sans"])
 	d.Set("server_flag", secret.Data["server_flag"])
 	d.Set("client_flag", secret.Data["client_flag"])
@@ -557,6 +566,7 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 		"enforce_hostnames":                  d.Get("enforce_hostnames"),
 		"allow_ip_sans":                      d.Get("allow_ip_sans"),
 		"allowed_uri_sans":                   d.Get("allowed_uri_sans"),
+		"allowed_uri_sans_template":          d.Get("allowed_uri_sans_template"),
 		"allowed_other_sans":                 d.Get("allowed_other_sans"),
 		"server_flag":                        d.Get("server_flag"),
 		"client_flag":                        d.Get("client_flag"),

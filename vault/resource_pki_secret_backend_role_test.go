@@ -85,7 +85,10 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allow_any_name", "false"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "enforce_hostnames", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allow_ip_sans", "true"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_uri_sans.#", "2"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_uri_sans.0", "uri.test.domain"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_uri_sans.1", "spiffe://{{identity.entity.name}}"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_uri_sans_template", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_other_sans.0", "1.2.3.4.5.5;UTF8:test"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "server_flag", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "client_flag", "true"),
@@ -191,7 +194,8 @@ resource "vault_pki_secret_backend_role" "test" {
   allow_any_name = false
   enforce_hostnames = true
   allow_ip_sans = true
-  allowed_uri_sans = ["uri.test.domain"]
+  allowed_uri_sans = ["uri.test.domain", "spiffe://{{identity.entity.name}}"]
+  allowed_uri_sans_template = true
   allowed_other_sans = ["1.2.3.4.5.5;UTF8:test"]
   server_flag = true
   client_flag = true
