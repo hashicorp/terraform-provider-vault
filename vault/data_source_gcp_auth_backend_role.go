@@ -122,7 +122,7 @@ func gcpAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Read gcp auth backend role %q ID", path)
 
 	if resp == nil {
-		return nil
+		return fmt.Errorf("role not found at %q", path)
 	}
 
 	d.SetId(path)
