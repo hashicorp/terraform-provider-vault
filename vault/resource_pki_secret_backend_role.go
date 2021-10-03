@@ -176,7 +176,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Required:     false,
 				Optional:     true,
 				Description:  "The type of generated keys.",
-				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519"}, false),
 				Default:      "rsa",
 			},
 			"key_bits": {
