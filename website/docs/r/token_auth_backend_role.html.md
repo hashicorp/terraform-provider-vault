@@ -82,22 +82,6 @@ These arguments are common across several Authentication Token resources since V
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
 
-### Deprecated Arguments
-
-These arguments are deprecated since Vault 1.2 in favour of the common token arguments
-documented above.
-
-* `explicit_max_ttl` (Optional; Deprecated, use `token_explicit_max_ttl` instead) If set, the
-  token will have an explicit max TTL set upon it.
-
-* `period` - (Optional; Deprecated, use `token_period` instead if you are running Vault >= 1.2) If set, indicates that the
-  token generated using this role should never expire. The token should be renewed within the
-  duration specified by this value. At each renewal, the token's TTL will be set to the
-  value of this field. Specified in seconds.
-
-* `bound_cidrs` - (Optional; Deprecated, use `token_bound_cidrs` instead if you are running Vault >= 1.2) If set, a list of
-  CIDRs valid as the source address for login requests. This value is also encoded into any resulting token.
-
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

@@ -28,8 +28,8 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "organization", "vault"),
-					resource.TestCheckResourceAttr(resName, "ttl", "20m"),
-					resource.TestCheckResourceAttr(resName, "max_ttl", "50m"),
+					resource.TestCheckResourceAttr(resName, "token_ttl", "1200"),
+					resource.TestCheckResourceAttr(resName, "token_max_ttl", "3000"),
 					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuth.Accessor),
 				),
 			},
@@ -40,8 +40,8 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "organization", "other_vault"),
-					resource.TestCheckResourceAttr(resName, "ttl", "40m"),
-					resource.TestCheckResourceAttr(resName, "max_ttl", "1h40m"),
+					resource.TestCheckResourceAttr(resName, "token_ttl", "2400"),
+					resource.TestCheckResourceAttr(resName, "token_max_ttl", "6000"),
 					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuth.Accessor),
 				),
 			},
@@ -225,8 +225,8 @@ func testAccGithubAuthBackendConfig_basic(backend string) string {
 resource "vault_github_auth_backend" "gh" {
 	path = "%s"
 	organization = "vault"
-	ttl = "20m"
-	max_ttl = "50m" 
+	token_ttl = 1200
+	token_max_ttl = 3000
 }
 `, backend)
 }
@@ -236,8 +236,8 @@ func testAccGithubAuthBackendConfig_updated(backend string) string {
 resource "vault_github_auth_backend" "gh" {
   	path = "%s"
 	organization = "other_vault"
-	ttl = "40m"
-	max_ttl = "1h40m"
+	token_ttl = 2400
+	token_max_ttl = 6000
 }
 `, backend)
 }

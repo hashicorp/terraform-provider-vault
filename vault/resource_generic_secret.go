@@ -47,12 +47,6 @@ func genericSecretResource() *schema.Resource {
 				Sensitive:    true,
 			},
 
-			"allow_read": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Description: "Attempt to read the token from Vault if true; if false, drift won't be detected.",
-			},
-
 			"disable_read": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -163,11 +157,6 @@ func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error
 func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 	var data map[string]interface{}
 	shouldRead := !d.Get("disable_read").(bool)
-	if !shouldRead {
-		// if disable_read is set to false or unset (we can't know which)
-		// and allow_read is set to true, go with allow_read.
-		shouldRead = d.Get("allow_read").(bool)
-	}
 
 	path := d.Id()
 

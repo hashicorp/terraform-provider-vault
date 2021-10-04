@@ -38,7 +38,7 @@ resource "vault_aws_auth_backend_role" "role" {
     role = "%s"
     auth_type = "ec2"
     bound_account_ids = ["123456789012"]
-    policies = ["dev", "prod", "qa", "test"]
+    token_policies = ["dev", "prod", "qa", "test"]
     role_tag = "VaultRoleTag"
 }
 
