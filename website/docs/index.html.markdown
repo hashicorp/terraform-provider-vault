@@ -124,7 +124,7 @@ variables in order to keep credential information out of the configuration.
 
 * `auth_login` - (Optional) A configuration block, described below, that
   attempts to authenticate using the `auth/<method>/login` path to
-  aquire a token which Terraform will use. Terraform still issues itself
+  acquire a token which Terraform will use. Terraform still issues itself
   a limited child token using auth/token/create in order to enforce a short
   TTL and limit exposure.
 

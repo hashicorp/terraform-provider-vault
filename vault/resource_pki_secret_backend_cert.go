@@ -1,13 +1,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -245,7 +246,7 @@ func pkiSecretBackendCertNeedsRenewed(autoRenew bool, expiration int, minSecRema
 	return time.Now().After(renewTime)
 }
 
-func pkiSecretBackendCertDiff(d *schema.ResourceDiff, meta interface{}) error {
+func pkiSecretBackendCertDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	if d.Id() == "" {
 		return nil
 	}

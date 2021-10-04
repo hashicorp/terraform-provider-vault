@@ -7,10 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccIdentityGroupPoliciesExclusive(t *testing.T) {
@@ -28,8 +29,8 @@ func TestAccIdentityGroupPoliciesExclusive(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityGroupPoliciesCheckAttrs("vault_identity_group_policies.policies"),
 					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.0", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.policies", "policies.1", "test"),
 				),
 			},
 		},
@@ -46,9 +47,9 @@ func TestAccIdentityGroupPoliciesNonExclusive(t *testing.T) {
 				Config: testAccIdentityGroupPoliciesConfigNonExclusive(),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.0", "dev"),
 					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.0", "test"),
 				),
 			},
 			{
@@ -56,9 +57,9 @@ func TestAccIdentityGroupPoliciesNonExclusive(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityGroupPoliciesCheckLogical("vault_identity_group.group", []string{"dev", "foo"}),
 					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.dev", "policies.0", "dev"),
 					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.804021650", "foo"),
+					resource.TestCheckResourceAttr("vault_identity_group_policies.test", "policies.0", "foo"),
 				),
 			},
 		},
@@ -256,7 +257,7 @@ resource "vault_identity_group" "group" {
 }
 
 resource "vault_identity_group_policies" "policies" {
-  group_id = "${vault_identity_group.group.id}"
+  group_id = vault_identity_group.group.id
   policies = ["test"]
 }`)
 }
@@ -268,7 +269,7 @@ resource "vault_identity_group" "group" {
 }
 
 resource "vault_identity_group_policies" "policies" {
-  group_id = "${vault_identity_group.group.id}"
+  group_id = vault_identity_group.group.id
   policies = ["dev", "test"]
 }`)
 }
@@ -280,14 +281,14 @@ resource "vault_identity_group" "group" {
 }
 
 resource "vault_identity_group_policies" "dev" {
-	group_id = "${vault_identity_group.group.id}"
+	group_id = vault_identity_group.group.id
   exclusive = false
   policies = ["dev"]
 }
 
 
 resource "vault_identity_group_policies" "test" {
-  group_id = "${vault_identity_group.group.id}"
+  group_id = vault_identity_group.group.id
   exclusive = false
   policies = ["test"]
 }
@@ -301,14 +302,14 @@ resource "vault_identity_group" "group" {
 }
 
 resource "vault_identity_group_policies" "dev" {
-	group_id = "${vault_identity_group.group.id}"
+	group_id = vault_identity_group.group.id
   exclusive = false
   policies = ["dev"]
 }
 
 
 resource "vault_identity_group_policies" "test" {
-  group_id = "${vault_identity_group.group.id}"
+  group_id = vault_identity_group.group.id
   exclusive = false
   policies = ["foo"]
 }

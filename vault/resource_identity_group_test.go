@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -44,7 +44,7 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 					testAccIdentityGroupCheckAttrs(),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "type", "external"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.0", "test"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "metadata.version", "1"),
 				),
 			},
@@ -56,8 +56,8 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_identity_group.group", "type", "internal"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "metadata.version", "2"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.0", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1", "test"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "member_entity_ids.#", "0"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "member_group_ids.#", "0"),
 				),
@@ -76,8 +76,8 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 					testAccIdentityGroupCheckAttrs(),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "type", "internal"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.0", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1", "test"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "member_entity_ids.#", "1"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "member_group_ids.#", "1"),
 				),
@@ -271,8 +271,8 @@ resource "vault_identity_group" "group" {
     version = "2"
   }
 
-  member_entity_ids = ["${vault_identity_entity.entity.id}"]
-  member_group_ids = ["${vault_identity_group.other_group.id}"]
+  member_entity_ids = [vault_identity_entity.entity.id]
+  member_group_ids = [vault_identity_group.other_group.id]
 }
 
 resource "vault_identity_entity" "entity" {

@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -122,7 +122,7 @@ resource "vault_github_auth_backend" "gh" {
 }
 
 resource "vault_github_team" "team" {
-	backend = "${vault_github_auth_backend.gh.id}"
+	backend = vault_github_auth_backend.gh.id
 	team = "%s"
 	policies = %s
 }

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -316,7 +316,7 @@ resource "vault_cert_auth_backend_role" "test" {
 %s
 __CERTIFICATE__
     allowed_names  = [%s]
-    backend        = "${vault_auth_backend.cert.path}"
+    backend        = vault_auth_backend.cert.path
     token_ttl      = 300
     token_max_ttl  = 600
     token_policies = ["test_policy_1", "test_policy_2"]
@@ -345,7 +345,7 @@ resource "vault_cert_auth_backend_role" "test" {
 %s
 __CERTIFICATE__
     allowed_names  = [%s]
-    backend        = "${vault_auth_backend.cert.path}"
+    backend        = vault_auth_backend.cert.path
 }
 
 `, backend, name, certificate, strings.Join(quotedNames, ", "))
@@ -371,7 +371,7 @@ resource "vault_cert_auth_backend_role" "test" {
 %s
 __CERTIFICATE__
     allowed_names  = [%s]
-    backend        = "${vault_auth_backend.cert.path}"
+    backend        = vault_auth_backend.cert.path
     ttl            = 300
     max_ttl        = 600
     policies       = ["test_policy_1", "test_policy_2"]

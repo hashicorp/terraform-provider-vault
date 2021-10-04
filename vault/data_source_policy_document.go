@@ -7,8 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/helper"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 type Policy struct {
@@ -186,7 +187,7 @@ func policyDocumentDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 	if err != nil {
 		return fmt.Errorf("failed to store policy hcl: %s", err)
 	}
-	d.SetId(strconv.Itoa(hashcode.String(policyHCL)))
+	d.SetId(strconv.Itoa(helper.HashCodeString(policyHCL)))
 
 	return nil
 }

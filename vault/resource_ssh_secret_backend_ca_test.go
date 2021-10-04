@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -90,7 +90,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_ssh_secret_backend_ca" "test" {
-  backend              = "${vault_mount.test.path}"
+  backend              = vault_mount.test.path
   generate_signing_key = true
 }`, backend)
 }
@@ -104,7 +104,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_ssh_secret_backend_ca" "test" {
-  backend     = "${vault_mount.test.path}"
+  backend     = vault_mount.test.path
   private_key = <<EOF
 -----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAu/5/sDSqVMV6USjgPkGcHM9X3ENtgMU4AFrKAMCV85qbGhgR

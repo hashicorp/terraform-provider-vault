@@ -3,12 +3,12 @@ layout: "vault"
 page_title: "Vault: vault_github_auth_backend resource"
 sidebar_current: "docs-vault-github-auth-backend"
 description: |-
-  Manages Github Auth mounts in Vault.
+  Manages GitHub Auth mounts in Vault.
 ---
 
 # vault\_github\_auth\_backend
 
-Manages a Github Auth mount in a Vault server. See the [Vault
+Manages a GitHub Auth mount in a Vault server. See the [Vault
 documentation](https://www.vaultproject.io/docs/auth/github/) for more
 information.
 
@@ -35,7 +35,7 @@ The following arguments are supported:
 * `description` - (Optional) Specifies the description of the mount.
   This overrides the current stored value, if any.
 
-* tune - (Optional) Extra configuration block. Structure is documented below.
+* `tune` - (Optional) Extra configuration block. Structure is documented below.
 
 The `tune` block is used to tune the auth backend:
 
@@ -127,7 +127,7 @@ documented above.
 
 ## Import
 
-Github authentication mounts can be imported using the `path`, e.g.
+GitHub authentication mounts can be imported using the `path`, e.g.
 
 ```
 $ terraform import vault_github_auth_backend.example github

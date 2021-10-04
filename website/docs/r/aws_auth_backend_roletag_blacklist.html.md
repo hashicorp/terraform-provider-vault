@@ -30,7 +30,7 @@ The following arguments are supported:
 * `backend` - (Required) The path the AWS auth backend being configured was
 	mounted at.
 
-* `safety_buffer` - (Oprtional) The amount of extra time that must have passed
+* `safety_buffer` - (Optional) The amount of extra time that must have passed
   beyond the roletag expiration, before it is removed from the backend storage.
   Defaults to 259,200 seconds, or 72 hours.
 

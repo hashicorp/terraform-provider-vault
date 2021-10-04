@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -414,7 +414,7 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.approle.path}"
+  backend = vault_auth_backend.approle.path
   role_name = "%s"
   token_policies = ["default", "dev", "prod"]
 }`, backend, role)
@@ -428,7 +428,7 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.approle.path}"
+  backend = vault_auth_backend.approle.path
   role_name = "%s"
   token_policies = ["default", "dev"]
 }`, backend, role)
@@ -442,7 +442,7 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.approle.path}"
+  backend = vault_auth_backend.approle.path
   role_name = "%s"
   role_id = "%s"
   bind_secret_id = false
@@ -464,7 +464,7 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.approle.path}"
+  backend = vault_auth_backend.approle.path
   role_name = "%s"
   role_id = "%s"
   bind_secret_id = true
@@ -485,7 +485,7 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.approle.path}"
+  backend = vault_auth_backend.approle.path
   role_name = "%s"
   role_id = "%s"
   bind_secret_id = false
@@ -507,7 +507,7 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.approle.path}"
+  backend = vault_auth_backend.approle.path
   role_name = "%s"
   role_id = "%s"
   bind_secret_id = true
@@ -582,7 +582,7 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.approle.path}"
+  backend = vault_auth_backend.approle.path
   role_name = "%s"
   policies = ["default", "dev", "prod"]
 	period = 86400
@@ -597,7 +597,7 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.approle.path}"
+  backend = vault_auth_backend.approle.path
   role_name = "%s"
   token_policies = ["default", "dev", "prod"]
 	token_period = 86400

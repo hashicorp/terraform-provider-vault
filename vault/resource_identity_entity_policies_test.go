@@ -7,11 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
@@ -30,8 +31,8 @@ func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityEntityPoliciesCheckAttrs("vault_identity_entity_policies.policies"),
 					resource.TestCheckResourceAttr("vault_identity_entity_policies.policies", "policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_identity_entity_policies.policies", "policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_entity_policies.policies", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.policies", "policies.0", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.policies", "policies.1", "test"),
 				),
 			},
 		},
@@ -49,9 +50,9 @@ func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
 				Config: testAccIdentityEntityPoliciesConfigNonExclusive(entity),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.0", "dev"),
 					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.0", "test"),
 				),
 			},
 			{
@@ -59,9 +60,9 @@ func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityEntityPoliciesCheckLogical("vault_identity_entity.entity", []string{"dev", "foo"}),
 					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.326271447", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.0", "dev"),
 					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.804021650", "foo"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.0", "foo"),
 				),
 			},
 		},
@@ -260,7 +261,7 @@ resource "vault_identity_entity" "entity" {
 }
 
 resource "vault_identity_entity_policies" "policies" {
-  entity_id = "${vault_identity_entity.entity.id}"
+  entity_id = vault_identity_entity.entity.id
   policies = ["test"]
 }`, entity)
 }
@@ -273,7 +274,7 @@ resource "vault_identity_entity" "entity" {
 }
 
 resource "vault_identity_entity_policies" "policies" {
-  entity_id = "${vault_identity_entity.entity.id}"
+  entity_id = vault_identity_entity.entity.id
   policies = ["dev", "test"]
 }`, entity)
 }
@@ -286,14 +287,14 @@ resource "vault_identity_entity" "entity" {
 }
 
 resource "vault_identity_entity_policies" "dev" {
-	entity_id = "${vault_identity_entity.entity.id}"
+	entity_id = vault_identity_entity.entity.id
   exclusive = false
   policies = ["dev"]
 }
 
 
 resource "vault_identity_entity_policies" "test" {
-  entity_id = "${vault_identity_entity.entity.id}"
+  entity_id = vault_identity_entity.entity.id
   exclusive = false
   policies = ["test"]
 }
@@ -308,14 +309,14 @@ resource "vault_identity_entity" "entity" {
 }
 
 resource "vault_identity_entity_policies" "dev" {
-	entity_id = "${vault_identity_entity.entity.id}"
+	entity_id = vault_identity_entity.entity.id
   exclusive = false
   policies = ["dev"]
 }
 
 
 resource "vault_identity_entity_policies" "test" {
-  entity_id = "${vault_identity_entity.entity.id}"
+  entity_id = vault_identity_entity.entity.id
   exclusive = false
   policies = ["foo"]
 }

@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const gcpJSONCredentials string = `
@@ -102,7 +103,7 @@ func testGCPAuthBackendCheck_attrs() resource.TestCheckFunc {
 func testGCPAuthBackendConfig_basic(path, credentials string) string {
 	return fmt.Sprintf(`
 variable "json_credentials" {
-  type = "string"
+  type = string
   default = %q
 }
 

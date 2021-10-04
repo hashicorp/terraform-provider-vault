@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
@@ -104,7 +104,7 @@ resource "vault_ad_secret_backend" "config" {
 }
 
 resource "vault_ad_secret_role" "role" {
-    backend = "${vault_ad_secret_backend.config.backend}"
+    backend = vault_ad_secret_backend.config.backend
     role = "%s"
     service_account_name = "%s"
     ttl = %d

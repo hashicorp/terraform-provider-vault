@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func awsSecretBackendRoleResource() *schema.Resource {
@@ -36,35 +37,18 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Description: "The path of the AWS Secret Backend the role belongs to.",
 			},
 			"policy_arns": {
-				Type:          schema.TypeSet,
-				Optional:      true,
-				ConflictsWith: []string{"policy", "policy_arn"},
-				Description:   "ARN for an existing IAM policy the role should use.",
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Description: "ARN for an existing IAM policy the role should use.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
-			"policy_arn": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ConflictsWith: []string{"policy_document", "policy", "policy_arns", "role_arns"},
-				Description:   "ARN for an existing IAM policy the role should use.",
-				Removed:       `Use "policy_arns".`,
-			},
 			"policy_document": {
 				Type:             schema.TypeString,
 				Optional:         true,
-				ConflictsWith:    []string{"policy_arn", "policy"},
 				Description:      "IAM policy the role should use in JSON format.",
 				DiffSuppressFunc: util.JsonDiffSuppress,
-			},
-			"policy": {
-				Type:             schema.TypeString,
-				Optional:         true,
-				ConflictsWith:    []string{"policy_arns", "policy_arn", "policy_document", "role_arns"},
-				Description:      "IAM policy the role should use in JSON format.",
-				DiffSuppressFunc: util.JsonDiffSuppress,
-				Removed:          `Use "policy_document".`,
 			},
 			"credential_type": {
 				Type:        schema.TypeString,
@@ -76,10 +60,9 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Optional:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"policy", "policy_arn"},
-				Description:   "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is 'assumed_role'",
+				Optional:    true,
+				ForceNew:    true,
+				Description: "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is 'assumed_role'",
 			},
 			"iam_groups": {
 				Type: schema.TypeSet,

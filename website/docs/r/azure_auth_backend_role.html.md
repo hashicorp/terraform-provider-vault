@@ -55,7 +55,7 @@ The following arguments are supported:
   field.
 
 * `bound_resource_groups` - (Optional) If set, defines a constraint on the virtual
-  machiness that can perform the login operation that they be associated with
+  machines that can perform the login operation that they be associated with
   the resource group that matches the value specified by this field.
 
 * `bound_scale_sets` - (Optional) If set, defines a constraint on the virtual

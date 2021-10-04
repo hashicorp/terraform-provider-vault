@@ -79,7 +79,7 @@ arguments documented above.
 
 * `max_lease_ttl_seconds` - (Optional; Deprecated, use `tune.max_lease_ttl` if you are using Vault provider version >= 1.8) The maximum lease duration in seconds.
 
-* `listing_visibility` - (Optional; Deprecated, use `tune.listing_visibility` if you are using Vault provider version >= 1.8) Speficies whether to show this mount in the UI-specific listing endpoint.
+* `listing_visibility` - (Optional; Deprecated, use `tune.listing_visibility` if you are using Vault provider version >= 1.8) Specifies whether to show this mount in the UI-specific listing endpoint.
 
 ## Import
 

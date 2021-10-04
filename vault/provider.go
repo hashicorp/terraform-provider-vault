@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/logging"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/mutexkv"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/vault/api"
 	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/config"
@@ -33,7 +33,7 @@ const (
 // Use this when you need to have multiple resources or even multiple instances
 // of the same resource write to the same path in Vault.
 // The key of the mutex should be the path in Vault.
-var vaultMutexKV = mutexkv.NewMutexKV()
+var vaultMutexKV = helper.NewMutexKV()
 
 func Provider() *schema.Provider {
 	dataSourcesMap, err := parse(DataSourceRegistry)

@@ -7,20 +7,19 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	r "github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
 func TestDataSourceIdentityEntityName(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 
-	r.Test(t, r.TestCase{
+	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []r.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityEntity_configName(entity),
 				Check: resource.ComposeTestCheckFunc(
@@ -37,10 +36,10 @@ func TestDataSourceIdentityEntityName(t *testing.T) {
 func TestDataSourceIdentityEntityAlias(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 
-	r.Test(t, r.TestCase{
+	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []r.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityEntity_configAlias(entity),
 				Check: resource.ComposeTestCheckFunc(

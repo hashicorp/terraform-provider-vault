@@ -2,10 +2,11 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccGCPAuthBackendRoleDataSource_basic(t *testing.T) {
@@ -29,7 +30,7 @@ func TestAccGCPAuthBackendRoleDataSource_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccGCPAuthBackendRoleDataSourceConfig_basic(backend, name),
+				Config: testAccGCPAuthBackendRoleDataSourceConfig_basic(backend, name, serviceAccount, projectId),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vault_gcp_auth_backend_role.gcp_role",
 						"backend", backend),
@@ -72,7 +73,7 @@ func TestAccGCPAuthBackendRoleDataSource_gce(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccGCPAuthBackendRoleDataSourceConfig_basic(backend, name),
+				Config: testAccGCPAuthBackendRoleDataSourceConfig_gce(backend, name, projectId),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vault_gcp_auth_backend_role.gcp_role",
 						"backend", backend),
@@ -90,7 +91,33 @@ func TestAccGCPAuthBackendRoleDataSource_gce(t *testing.T) {
 	})
 }
 
-func testAccGCPAuthBackendRoleDataSourceConfig_basic(backend, role string) string {
+func TestAccGCPAuthBackendRoleDataSource_none(t *testing.T) {
+	backend := acctest.RandomWithPrefix("gcp")
+	name := acctest.RandomWithPrefix("tf-test-gcp-role")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccGCPAuthBackendRoleDataSourceConfig(backend, name),
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf("role not found at %q", gcpRoleResourcePath(backend, name)),
+				),
+			},
+		},
+	})
+}
+
+func testAccGCPAuthBackendRoleDataSourceConfig_basic(backend, name, serviceAccount, projectId string) string {
+	return testGCPAuthBackendRoleConfig_basic(backend, name, serviceAccount, projectId) + "\n" + testAccGCPAuthBackendRoleDataSourceConfig(backend, name)
+}
+
+func testAccGCPAuthBackendRoleDataSourceConfig_gce(backend, name, projectId string) string {
+	return testGCPAuthBackendRoleConfig_gce(backend, name, projectId) + "\n" + testAccGCPAuthBackendRoleDataSourceConfig(backend, name)
+}
+
+func testAccGCPAuthBackendRoleDataSourceConfig(backend, role string) string {
 	return fmt.Sprintf(`
 data "vault_gcp_auth_backend_role" "gcp_role" {
   backend = "%s"

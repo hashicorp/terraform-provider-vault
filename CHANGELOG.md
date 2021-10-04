@@ -1,7 +1,15 @@
-## 2.24.0 (Unreleased)
+## 3.0.0 (Unreleased)
+IMPROVEMENTS:
+* Upgrade Terraform Plugin SDK to v2
+
+BUGS:
+* `data/gcp_auth_backend_role`: Report an error when attempting to access a nonexistent role. ([#1184](https://github.com/hashicorp/terraform-provider-vault/pull/1184))
+
+## 2.24.0 (September 15, 2021)
 
 FEATURES:
 * **New Database Resource**: Added support for the `snowflake-database-plugin` to `vault_database_secret_backend_connection` ([#983](https://github.com/hashicorp/terraform-provider-vault/pull/983))
+* `resource/vault_raft_snapshot_agent_config`: Provision [Raft Snapshot Agent Configurations](https://www.vaultproject.io/api-docs/system/storage/raftautosnapshots) in Vault Enterprise. ([#1139](https://github.com/hashicorp/terraform-provider-vault/pull/1139))
 
 IMPROVEMENTS:
 * `resource/database_secret_backend_connection`: Add username_template to vault_database_secret_backend_connection ([#1103](https://github.com/hashicorp/terraform-provider-vault/pull/1103))

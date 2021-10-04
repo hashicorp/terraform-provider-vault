@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -48,8 +48,8 @@ func TestAccIdentityEntityUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "name", fmt.Sprintf("%s-2", entity)),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "metadata.version", "2"),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.0", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.1", "test"),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "disabled", "true"),
 				),
 			},

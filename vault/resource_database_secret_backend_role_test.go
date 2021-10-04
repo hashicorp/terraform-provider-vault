@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -110,7 +110,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
 
@@ -120,8 +120,8 @@ resource "vault_database_secret_backend_connection" "test" {
 }
 
 resource "vault_database_secret_backend_role" "test" {
-  backend = "${vault_mount.db.path}"
-  db_name = "${vault_database_secret_backend_connection.test.name}"
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
   name = "%s"
   default_ttl = 3600
   max_ttl = 7200
@@ -138,7 +138,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
 
@@ -148,8 +148,8 @@ resource "vault_database_secret_backend_connection" "test" {
 }
 
 resource "vault_database_secret_backend_role" "test" {
-  backend = "${vault_mount.db.path}"
-  db_name = "${vault_database_secret_backend_connection.test.name}"
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
   name = "%s"
   default_ttl = 1800
   max_ttl = 3600
