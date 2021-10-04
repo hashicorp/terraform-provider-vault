@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
@@ -15,7 +16,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/config"
-	"github.com/hashicorp/vault/vault"
 )
 
 const (
@@ -708,8 +708,11 @@ func providerToken(d *schema.ResourceData) (string, error) {
 
 func RecordMultipleStates(lastStates ...string) func(*api.Response) {
 	return func(resp *api.Response) {
+		var m sync.Mutex
 		newState := resp.Header.Get("X-Vault-Index")
-		lastStates = vault.MergeStates(lastStates, newState)
+		m.Lock()
+		lastStates = api.MergeStates(lastStates, newState)
+		m.Unlock()
 	}
 }
 
@@ -875,7 +878,12 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if namespace != "" {
 		client.SetNamespace(namespace)
 	}
-	return client, nil
+
+	configuredClientWithState := &ClientWithState{
+		Client: client,
+		States: lastStates,
+	}
+	return configuredClientWithState, nil
 }
 
 func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {
@@ -929,4 +937,9 @@ func signAWSLogin(parameters map[string]interface{}) error {
 	parameters["iam_request_body"] = loginData["iam_request_body"]
 
 	return nil
+}
+
+type ClientWithState struct {
+	Client *api.Client
+	States []string
 }
