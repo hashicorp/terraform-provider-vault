@@ -37,6 +37,15 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 			ForceNew:    true,
 			Description: "Name of the role.",
 		},
+		"allowed_entity_aliases": {
+			Type:     schema.TypeSet,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
+			Description: "List of allowed entity aliases for given role.",
+		},
 		"allowed_policies": {
 			Type:     schema.TypeSet,
 			Optional: true,
@@ -120,6 +129,7 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 func tokenAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
 	setTokenFields(d, data, tokenAuthBackendRoleTokenConfig())
 
+	data["allowed_entity_aliases"] = d.Get("allowed_entity_aliases").(*schema.Set).List()
 	data["allowed_policies"] = d.Get("allowed_policies").(*schema.Set).List()
 	data["disallowed_policies"] = d.Get("disallowed_policies").(*schema.Set).List()
 	data["orphan"] = d.Get("orphan").(bool)
@@ -227,7 +237,7 @@ func tokenAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	for _, k := range []string{"allowed_policies", "disallowed_policies", "orphan", "path_suffix", "renewable"} {
+	for _, k := range []string{"allowed_entity_aliases", "allowed_policies", "disallowed_policies", "orphan", "path_suffix", "renewable"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return fmt.Errorf("error reading %s for Token auth backend role %q: %q", k, path, err)
 		}

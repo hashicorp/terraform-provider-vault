@@ -16,14 +16,15 @@ information.
 
 ```hcl
 resource "vault_token_auth_backend_role" "example" {
-  role_name           = "my-role"
-  allowed_policies    = ["dev", "test"]
-  disallowed_policies = ["default"]
-  orphan              = true
-  period              = "86400"
-  renewable           = true
-  explicit_max_ttl    = "115200"
-  path_suffix         = "path-suffix"
+  role_name              = "my-role"
+  allowed_entity_aliases = ["alias1", "alias2"]
+  allowed_policies       = ["dev", "test"]
+  disallowed_policies    = ["default"]
+  orphan                 = true
+  period                 = "86400"
+  renewable              = true
+  explicit_max_ttl       = "115200"
+  path_suffix            = "path-suffix"
 }
 ```
 
@@ -32,6 +33,8 @@ resource "vault_token_auth_backend_role" "example" {
 The following arguments are supported:
 
 * `role_name` - (Required) The name of the role.
+
+* `allowed_entity_aliases` (Optional) List of allowed entity aliases for given role.
 
 * `allowed_policies` (Optional) List of allowed policies for given role.
 
