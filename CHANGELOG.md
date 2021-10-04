@@ -1,7 +1,7 @@
 ## 2.24.1 (Unreleased)
 
 BUGS:
-* `resource/resource/vault_raft_snapshot_agent_config`: Fix bug where cloud provider was missing and google_endpoint is returned as false instead of null ([#1173] (https://github.com/hashicorp/terraform-provider-vault/pull/1173))
+* `resource/resource/vault_raft_snapshot_agent_config`: Fix bug where cloud provider was missing and google_endpoint is returned as false instead of null ([#1173](https://github.com/hashicorp/terraform-provider-vault/pull/1173))
 
 ## 2.24.0 (September 15, 2021)
 
