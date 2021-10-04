@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/config"
+	"github.com/hashicorp/vault/vault"
 )
 
 const (
@@ -705,6 +706,13 @@ func providerToken(d *schema.ResourceData) (string, error) {
 	return strings.TrimSpace(token), nil
 }
 
+func RecordMultipleStates(lastStates ...string) func(*api.Response) {
+	return func(resp *api.Response) {
+		newState := resp.Header.Get("X-Vault-Index")
+		lastStates = vault.MergeStates(lastStates, newState)
+	}
+}
+
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	clientConfig := api.DefaultConfig()
 	addr := d.Get("address").(string)
@@ -764,9 +772,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	client.SetMaxRetries(d.Get("max_retries").(int))
 
-	var newState string
+	var lastStates []string
 	//Leverage Vault helpers for eventual consistency on login
-	client = client.WithResponseCallbacks(api.RecordState(&newState))
+	client = client.WithResponseCallbacks(RecordMultipleStates(lastStates...))
 
 	// Try an get the token from the config or token helper
 	token, err := providerToken(d)
@@ -860,7 +868,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	// Set the token to the generated child token
 	client.SetToken(childToken)
 
-	client = client.WithRequestCallbacks(api.RequireState(newState)).WithResponseCallbacks()
+	client = client.WithRequestCallbacks(api.RequireState(lastStates...)).WithResponseCallbacks()
 
 	// Set the namespace to the requested namespace, if provided
 	namespace := d.Get("namespace").(string)
