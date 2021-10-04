@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -84,6 +85,24 @@ func TestAccGCPAuthBackendRoleDataSource_gce(t *testing.T) {
 						"role_id"),
 					resource.TestCheckResourceAttr("data.vault_gcp_auth_backend_role.gcp_role",
 						"bound_labels.#", "2"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccGCPAuthBackendRoleDataSource_none(t *testing.T) {
+	backend := acctest.RandomWithPrefix("gcp")
+	name := acctest.RandomWithPrefix("tf-test-gcp-role")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccGCPAuthBackendRoleDataSourceConfig(backend, name),
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf("role not found at %q", gcpRoleResourcePath(backend, name)),
 				),
 			},
 		},
