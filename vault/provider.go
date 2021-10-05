@@ -707,8 +707,8 @@ func providerToken(d *schema.ResourceData) (string, error) {
 }
 
 func RecordMultipleStates(lastStates ...string) func(*api.Response) {
+	var m sync.Mutex
 	return func(resp *api.Response) {
-		var m sync.Mutex
 		newState := resp.Header.Get("X-Vault-Index")
 		m.Lock()
 		lastStates = api.MergeStates(lastStates, newState)
