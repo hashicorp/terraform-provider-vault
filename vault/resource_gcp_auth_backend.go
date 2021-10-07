@@ -113,7 +113,7 @@ func gcpAuthBackendConfigPath(path string) string {
 }
 
 func gcpAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	authType := gcpAuthType
 	path := d.Get("path").(string)
@@ -137,7 +137,7 @@ func gcpAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := gcpAuthBackendConfigPath(d.Id())
 	data := map[string]interface{}{}
@@ -159,7 +159,7 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := gcpAuthBackendConfigPath(d.Id())
 
 	log.Printf("[DEBUG] Reading gcp auth backend config %q", path)
@@ -198,7 +198,7 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting gcp auth backend %q", path)
@@ -212,7 +212,7 @@ func gcpAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := gcpAuthBackendConfigPath(d.Id())
 
 	log.Printf("[DEBUG] Checking if gcp auth backend %q exists", path)

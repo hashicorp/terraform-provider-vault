@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -53,7 +52,7 @@ func awsAuthBackendRoleTagBlacklistResource() *schema.Resource {
 }
 
 func awsAuthBackendRoleTagBlacklistWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	backend := d.Get("backend").(string)
 	data := map[string]interface{}{
@@ -78,7 +77,7 @@ func awsAuthBackendRoleTagBlacklistWrite(d *schema.ResourceData, meta interface{
 }
 
 func awsAuthBackendRoleTagBlacklistRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 
@@ -109,7 +108,7 @@ func awsAuthBackendRoleTagBlacklistRead(d *schema.ResourceData, meta interface{}
 }
 
 func awsAuthBackendRoleTagBlacklistDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Removing roletag blacklist %q from AWS auth backend", path)
@@ -123,7 +122,7 @@ func awsAuthBackendRoleTagBlacklistDelete(d *schema.ResourceData, meta interface
 }
 
 func awsAuthBackendRoleTagBlacklistExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 

@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -209,7 +208,7 @@ func (tester *memberEntityTester) CheckNoMemberEntity(resourceString string) res
 }
 
 func testAccCheckidentityGroupMemberEntityIdsDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ClientFactory).Client()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_group_member_entity_ids" {
@@ -261,7 +260,7 @@ func testAccIdentityGroupMemberEntityIdsCheckAttrs(resource string) resource.Tes
 		id := instanceState.ID
 
 		path := identityGroupIDPath(id)
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ClientFactory).Client()
 		resp, err := client.Logical().Read(path)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", path)
@@ -356,7 +355,7 @@ func testAccIdentityGroupMemberEntityIdsCheckLogical(resource string, member_ent
 		id := instanceState.ID
 
 		path := identityGroupIDPath(id)
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ClientFactory).Client()
 		resp, err := client.Logical().Read(path)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", path)

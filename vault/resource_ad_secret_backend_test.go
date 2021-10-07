@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestADSecretBackend(t *testing.T) {
@@ -55,7 +54,7 @@ func TestADSecretBackend(t *testing.T) {
 }
 
 func testAccADSecretBackendCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ClientFactory).Client()
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {

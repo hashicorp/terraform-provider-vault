@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestAccIdentityOidcKeyAllowedClientId(t *testing.T) {
@@ -53,7 +52,7 @@ func TestAccIdentityOidcKeyAllowedClientId(t *testing.T) {
 }
 
 func testAccCheckIdentityOidcKeyAllowedClientIdDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ClientFactory).Client()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_oidc_key_allowed_client_id" {
@@ -88,7 +87,7 @@ func testAccIdentityOidcKeyAllowedClientIdCheckAttrs(clientIDResource string, cl
 		}
 
 		id := instanceState.ID
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ClientFactory).Client()
 		resp, err := identityOidcKeyApiRead(id, client)
 		if err != nil {
 			return err

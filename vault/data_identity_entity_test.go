@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestDataSourceIdentityEntityName(t *testing.T) {
@@ -67,7 +66,7 @@ func testDataSourceIdentityEntity_check() resource.TestCheckFunc {
 		}
 
 		id := instanceState.ID
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ClientFactory).Client()
 
 		resp, err := identityEntityLookup(client, map[string]interface{}{"id": id})
 		if err != nil {

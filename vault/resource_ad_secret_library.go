@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -71,7 +71,7 @@ func adSecretBackendLibraryResource() *schema.Resource {
 }
 
 func createLibraryResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	backend := d.Get("backend").(string)
 	set := d.Get("name").(string)
 	setPath := fmt.Sprintf("%s/library/%s", backend, set)
@@ -105,7 +105,7 @@ func createLibraryResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readLibraryResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	setPath := d.Id()
 	log.Printf("[DEBUG] Reading %q", setPath)
 
@@ -165,7 +165,7 @@ func readLibraryResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateLibraryResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	setPath := d.Id()
 	log.Printf("[DEBUG] Updating %q", setPath)
 
@@ -194,7 +194,7 @@ func updateLibraryResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func deleteLibraryResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	setPath := d.Id()
 	log.Printf("[DEBUG] Deleting %q", setPath)
 

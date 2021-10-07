@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 const identityOidcRolePathTemplate = "identity/oidc/role/%s"
@@ -67,7 +66,7 @@ func identityOidcRoleUpdateFields(d *schema.ResourceData, data map[string]interf
 }
 
 func identityOidcRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	name := d.Get("name").(string)
 
@@ -90,7 +89,7 @@ func identityOidcRoleCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	name := d.Id()
 	path := identityOidcRolePath(name)
 	log.Printf("[DEBUG] Updating IdentityOidcRole %s at %s", name, path)
@@ -110,7 +109,7 @@ func identityOidcRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	name := d.Id()
 	path := identityOidcRolePath(name)
 
@@ -136,7 +135,7 @@ func identityOidcRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	name := d.Id()
 	path := identityOidcRolePath(name)
 
@@ -151,7 +150,7 @@ func identityOidcRoleDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	name := d.Id()
 	path := identityOidcRolePath(name)
 

@@ -182,7 +182,7 @@ var (
 )
 
 func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	authType := d.Get("type").(string)
 	path := getJwtPath(d)
@@ -206,7 +206,7 @@ func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func jwtAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := getJwtPath(d)
 
@@ -222,7 +222,7 @@ func jwtAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := getJwtPath(d)
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
@@ -319,7 +319,7 @@ func convertProviderConfigValues(input map[string]interface{}) (map[string]inter
 }
 
 func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := getJwtPath(d)
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)

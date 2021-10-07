@@ -1,14 +1,15 @@
 package vault
 
 import (
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"testing"
 
+	"github.com/hashicorp/terraform-provider-vault/util"
+
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
@@ -75,7 +76,7 @@ func TestAccRaftSnapshotAgentConfig_import(t *testing.T) {
 }
 
 func testAccRaftSnapshotAgentConfigCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ClientFactory).Client()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_raft_snapshot_agent_config" {

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -75,7 +74,7 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 }
 
 func databaseSecretBackendStaticRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -105,7 +104,7 @@ func databaseSecretBackendStaticRoleWrite(d *schema.ResourceData, meta interface
 }
 
 func databaseSecretBackendStaticRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 
@@ -165,7 +164,7 @@ func databaseSecretBackendStaticRoleRead(d *schema.ResourceData, meta interface{
 }
 
 func databaseSecretBackendStaticRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting static role %q", path)
@@ -178,7 +177,7 @@ func databaseSecretBackendStaticRoleDelete(d *schema.ResourceData, meta interfac
 }
 
 func databaseSecretBackendStaticRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", path)

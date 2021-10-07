@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -52,7 +51,7 @@ func awsAuthBackendIdentityWhitelistResource() *schema.Resource {
 }
 
 func awsAuthBackendIdentityWhitelistWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	backend := d.Get("backend").(string)
 	data := map[string]interface{}{}
@@ -81,7 +80,7 @@ func awsAuthBackendIdentityWhitelistWrite(d *schema.ResourceData, meta interface
 }
 
 func awsAuthBackendIdentityWhitelistRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 
@@ -110,7 +109,7 @@ func awsAuthBackendIdentityWhitelistRead(d *schema.ResourceData, meta interface{
 }
 
 func awsAuthBackendIdentityWhitelistDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Removing identity whitelist %q from AWS auth backend", path)
@@ -124,7 +123,7 @@ func awsAuthBackendIdentityWhitelistDelete(d *schema.ResourceData, meta interfac
 }
 
 func awsAuthBackendIdentityWhitelistExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 

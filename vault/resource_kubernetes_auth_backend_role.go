@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -121,7 +119,7 @@ func kubernetesAuthBackendRoleBackendFromPath(path string) (string, error) {
 }
 
 func kubernetesAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role_name").(string)
@@ -144,7 +142,7 @@ func kubernetesAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) e
 }
 
 func kubernetesAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	backend, err := kubernetesAuthBackendRoleBackendFromPath(path)
@@ -190,7 +188,7 @@ func kubernetesAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 }
 
 func kubernetesAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating Kubernetes auth backend role %q", path)
@@ -212,7 +210,7 @@ func kubernetesAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) e
 }
 
 func kubernetesAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting Kubernetes auth backend role %q", path)
@@ -230,7 +228,7 @@ func kubernetesAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func kubernetesAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if Kubernetes auth backend role %q exists", path)

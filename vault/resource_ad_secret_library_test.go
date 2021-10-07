@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestAccADSecretBackendLibrary_basic(t *testing.T) {
@@ -75,7 +74,7 @@ func TestAccADSecretBackendLibrary_import(t *testing.T) {
 }
 
 func testAccADSecretBackendLibraryCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ClientFactory).Client()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ad_secret_library" {

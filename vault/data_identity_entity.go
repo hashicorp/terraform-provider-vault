@@ -213,7 +213,7 @@ func identityEntityLookup(client *api.Client, data map[string]interface{}) (*api
 }
 
 func identityEntityDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	data := map[string]interface{}{}
 

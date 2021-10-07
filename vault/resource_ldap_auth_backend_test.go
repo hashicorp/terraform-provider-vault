@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestLDAPAuthBackend_import(t *testing.T) {
@@ -100,7 +99,7 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 }
 
 func testLDAPAuthBackendDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ClientFactory).Client()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ldap_auth_backend" {
@@ -134,7 +133,7 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 			return fmt.Errorf("expected ID to be %q, got %q instead", endpoint, instanceState.ID)
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ClientFactory).Client()
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {
 			return err

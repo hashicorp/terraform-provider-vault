@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -53,7 +52,7 @@ func awsAuthBackendSTSRoleResource() *schema.Resource {
 }
 
 func awsAuthBackendSTSRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	backend := d.Get("backend").(string)
 	accountID := d.Get("account_id").(string)
@@ -78,7 +77,7 @@ func awsAuthBackendSTSRoleCreate(d *schema.ResourceData, meta interface{}) error
 }
 
 func awsAuthBackendSTSRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 
@@ -111,7 +110,7 @@ func awsAuthBackendSTSRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendSTSRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	stsRole := d.Get("sts_role").(string)
 	path := d.Id()
@@ -129,7 +128,7 @@ func awsAuthBackendSTSRoleUpdate(d *schema.ResourceData, meta interface{}) error
 }
 
 func awsAuthBackendSTSRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting STS role %q from AWS auth backend", path)
@@ -143,7 +142,7 @@ func awsAuthBackendSTSRoleDelete(d *schema.ResourceData, meta interface{}) error
 }
 
 func awsAuthBackendSTSRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if STS role %q exists in AWS auth backend", path)

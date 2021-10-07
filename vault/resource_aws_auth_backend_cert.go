@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -64,7 +63,7 @@ func awsAuthBackendCertResource() *schema.Resource {
 }
 
 func awsAuthBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	backend := d.Get("backend").(string)
 	certType := d.Get("type").(string)
@@ -91,7 +90,7 @@ func awsAuthBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendCertRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 
@@ -130,7 +129,7 @@ func awsAuthBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Removing cert %q from AWS auth backend", path)
@@ -144,7 +143,7 @@ func awsAuthBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendCertExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 

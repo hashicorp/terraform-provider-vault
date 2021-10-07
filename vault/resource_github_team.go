@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func githubTeamResource() *schema.Resource {
@@ -58,7 +57,7 @@ func githubTeamCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubTeamUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -80,7 +79,7 @@ func githubTeamUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubTeamRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	dt, err := client.Logical().Read(path)
@@ -108,7 +107,7 @@ func githubTeamRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubTeamDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	_, err := client.Logical().Delete(d.Id())
 	if err != nil {

@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 func oktaAuthBackendGroupResource() *schema.Resource {
@@ -68,7 +67,7 @@ func oktaAuthBackendGroupResource() *schema.Resource {
 }
 
 func oktaAuthBackendGroupWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Get("path").(string)
 	groupName := d.Get("group_name").(string)
@@ -96,7 +95,7 @@ func oktaAuthBackendGroupWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendGroupRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	id := d.Id()
 
 	backend, err := oktaAuthBackendGroupPathFromID(id)
@@ -135,7 +134,7 @@ func oktaAuthBackendGroupRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendGroupDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Get("path").(string)
 	group := d.Get("group_name").(string)
@@ -152,7 +151,7 @@ func oktaAuthBackendGroupDelete(d *schema.ResourceData, meta interface{}) error 
 }
 
 func oktaAuthBackendGroupExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	id := d.Id()
 
 	backend, err := oktaAuthBackendGroupPathFromID(id)

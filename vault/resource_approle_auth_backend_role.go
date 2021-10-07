@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -122,7 +121,7 @@ func approleAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 }
 
 func approleAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role_name").(string)
@@ -156,7 +155,7 @@ func approleAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	backend, err := approleAuthBackendRoleBackendFromPath(path)
@@ -209,7 +208,7 @@ func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func approleAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating AppRole auth backend role %q", path)
@@ -242,7 +241,7 @@ func approleAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func approleAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting AppRole auth backend role %q", path)
@@ -260,7 +259,7 @@ func approleAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) erro
 }
 
 func approleAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if AppRole auth backend role %q exists", path)

@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestGCPAuthBackend_pathRegex(t *testing.T) {
@@ -133,7 +132,7 @@ func TestGCPAuthBackendRole_gce(t *testing.T) {
 }
 
 func testGCPAuthBackendRoleDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ClientFactory).Client()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_gcp_auth_backend_role" {
@@ -167,7 +166,7 @@ func testGCPAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckF
 			return fmt.Errorf("expected ID to be %q, got %q instead", endpoint, instanceState.ID)
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ClientFactory).Client()
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {
 			return err

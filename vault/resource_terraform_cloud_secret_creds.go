@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func terraformCloudSecretCredsResource() *schema.Resource {
@@ -59,7 +58,7 @@ func terraformCloudSecretCredsResource() *schema.Resource {
 }
 
 func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
 	path := fmt.Sprintf("%s/creds/%s", backend, role)
@@ -100,7 +99,7 @@ func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 }
 
 func deleteTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	leaseId := d.Get("lease_id").(string)
 
 	if leaseId != "" {
@@ -126,7 +125,7 @@ func updateTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 }
 
 func readTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	leaseId := d.Get("lease_id")
 
 	if leaseId != "" {

@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestAccAWSAuthBackendClient_import(t *testing.T) {
@@ -113,7 +112,7 @@ func TestAccAWSAuthBackendClientStsRegionNoEndpoint(t *testing.T) {
 }
 
 func testAccCheckAWSAuthBackendClientDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ClientFactory).Client()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_aws_auth_backend_client" {
@@ -148,7 +147,7 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 			return fmt.Errorf("expected ID to be %q, got %q", "auth/"+backend+"/config/client", endpoint)
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ClientFactory).Client()
 		resp, err := client.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("error reading back AWS auth client config from %q: %s", endpoint, err)

@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestAccPasswordPolicy(t *testing.T) {
@@ -61,7 +60,7 @@ func TestAccPasswordPolicy_import(t *testing.T) {
 }
 
 func testAccPasswordPolicyCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ClientFactory).Client()
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_password_policy" {
 			continue

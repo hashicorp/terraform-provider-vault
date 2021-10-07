@@ -11,10 +11,11 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/vault/api"
 	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/config"
+
+	"github.com/hashicorp/terraform-provider-vault/helper"
 )
 
 const (
@@ -29,11 +30,13 @@ const (
 	UnknownPath = "unknown"
 )
 
-// This is a global MutexKV for use within this provider.
-// Use this when you need to have multiple resources or even multiple instances
-// of the same resource write to the same path in Vault.
-// The key of the mutex should be the path in Vault.
-var vaultMutexKV = helper.NewMutexKV()
+var (
+	// This is a global MutexKV for use within this provider.
+	// Use this when you need to have multiple resources or even multiple instances
+	// of the same resource write to the same path in Vault.
+	// The key of the mutex should be the path in Vault.
+	vaultMutexKV = helper.NewMutexKV()
+)
 
 func Provider() *schema.Provider {
 	dataSourcesMap, err := parse(DataSourceRegistry)
@@ -739,11 +742,12 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	clientConfig.HttpClient.Transport = logging.NewTransport("Vault", clientConfig.HttpClient.Transport)
 
-	client, err := api.NewClient(clientConfig)
+	factory, err := NewClientFactory(clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
 	}
 
+	client := factory.Client()
 	client.SetCloneHeaders(true)
 
 	// Set headers if provided
@@ -764,7 +768,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	client.SetMaxRetries(d.Get("max_retries").(int))
 
-	// Try an get the token from the config or token helper
+	// Try to get the token from the config or token helper
 	token, err := providerToken(d)
 	if err != nil {
 		return nil, err
@@ -861,7 +865,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if namespace != "" {
 		client.SetNamespace(namespace)
 	}
-	return client, nil
+
+	return factory, nil
 }
 
 func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {

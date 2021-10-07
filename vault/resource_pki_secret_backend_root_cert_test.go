@@ -5,11 +5,11 @@ import (
 	"strings"
 	"testing"
 
+	"strconv"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
-	"strconv"
 )
 
 func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
@@ -44,7 +44,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 }
 
 func testPkiSecretBackendRootCertificateDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ClientFactory).Client()
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {

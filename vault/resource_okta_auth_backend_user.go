@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 func oktaAuthBackendUserResource() *schema.Resource {
@@ -75,7 +74,7 @@ func oktaAuthBackendUserResource() *schema.Resource {
 }
 
 func oktaAuthBackendUserWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	username := d.Get("username").(string)
 	path := d.Get("path").(string)
@@ -111,7 +110,7 @@ func oktaAuthBackendUserWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendUserRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Get("path").(string)
 	username := d.Get("username").(string)
@@ -142,7 +141,7 @@ func oktaAuthBackendUserRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendUserDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Get("path").(string)
 	username := d.Get("username").(string)

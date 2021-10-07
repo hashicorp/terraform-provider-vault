@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -111,7 +111,7 @@ func approleAuthBackendRoleSecretIDResource() *schema.Resource {
 }
 
 func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	factory := meta.(*ClientFactory)
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role_name").(string)
@@ -144,11 +144,13 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 
 	wrappingTTL, wrapped := d.GetOk("wrapping_ttl")
 
+	client := factory.Client()
 	if wrapped {
 		var err error
 
 		token := client.Token()
-		if client, err = client.Clone(); err != nil {
+		client, err = factory.Clone()
+		if err != nil {
 			return fmt.Errorf("error cloning client: %s", err)
 		}
 		client.SetToken(token)
@@ -182,7 +184,7 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 }
 
 func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	id := d.Id()
 
 	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)
@@ -258,7 +260,7 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 }
 
 func approleAuthBackendRoleSecretIDDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	id := d.Id()
 	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)
 	if err != nil {
@@ -288,7 +290,7 @@ func approleAuthBackendRoleSecretIDDelete(d *schema.ResourceData, meta interface
 }
 
 func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	id := d.Id()
 
 	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)

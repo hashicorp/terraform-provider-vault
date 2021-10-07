@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -191,7 +190,7 @@ func setSlice(d *schema.ResourceData, tfFieldName, vaultFieldName string, data m
 }
 
 func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -295,7 +294,7 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	backend, err := awsAuthBackendRoleBackendFromPath(path)
@@ -391,7 +390,7 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating AWS auth backend role %q", path)
@@ -497,7 +496,7 @@ func isEc2(authType, inferred string) bool {
 }
 
 func awsAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting AWS auth backend role %q", path)
@@ -511,7 +510,7 @@ func awsAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if AWS auth backend role %q exists", path)

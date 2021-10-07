@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 )
 
 const testCertificate = `
@@ -119,7 +118,7 @@ func TestCertAuthBackend(t *testing.T) {
 }
 
 func testCertAuthBackendDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ClientFactory).Client()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_cert_auth_backend_role" {
@@ -153,7 +152,7 @@ func testCertAuthBackendCheck_attrs(backend, name string) resource.TestCheckFunc
 			return fmt.Errorf("expected ID to be %q, got %q instead", endpoint, instanceState.ID)
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ClientFactory).Client()
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {
 			return err

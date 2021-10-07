@@ -6,7 +6,6 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func genericEndpointResource() *schema.Resource {
@@ -88,7 +87,7 @@ func genericEndpointResource() *schema.Resource {
 }
 
 func genericEndpointResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data)
@@ -151,7 +150,7 @@ func genericEndpointResourceDelete(d *schema.ResourceData, meta interface{}) err
 	shouldDelete := !d.Get("disable_delete").(bool)
 
 	if shouldDelete {
-		client := meta.(*api.Client)
+		client := meta.(*ClientFactory).Client()
 
 		path := d.Id()
 
@@ -172,7 +171,7 @@ func genericEndpointResourceRead(d *schema.ResourceData, meta interface{}) error
 	ignore_absent_fields := d.Get("ignore_absent_fields").(bool)
 
 	if shouldRead {
-		client := meta.(*api.Client)
+		client := meta.(*ClientFactory).Client()
 
 		log.Printf("[DEBUG] Reading %s from Vault", path)
 		data, err := client.Logical().Read(path)

@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func nomadAccessCredentialsDataSource() *schema.Resource {
@@ -38,7 +37,7 @@ func nomadAccessCredentialsDataSource() *schema.Resource {
 }
 
 func readNomadCredsResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
 	path := fmt.Sprintf("%s/creds/%s", backend, role)

@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
@@ -72,7 +71,7 @@ func testPkiSecretBackendConfigUrlsDestroy(s *terraform.State) error {
 func listPkiPaths(s *terraform.State) ([]string, error) {
 	var paths []string
 
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ClientFactory).Client()
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {

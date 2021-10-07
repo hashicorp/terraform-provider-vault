@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestResourceGenericEndpoint(t *testing.T) {
@@ -171,7 +170,7 @@ func testResourceGenericEndpoint_initialCheck(s *terraform.State) error {
 
 func testResourceGenericEndpoint_destroyCheck(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ClientFactory).Client()
 
 		for _, rs := range s.RootModule().Resources {
 			if rs.Type != "vault_generic_endpoint" {

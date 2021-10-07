@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestAccIdentityOidcKey(t *testing.T) {
@@ -91,7 +90,7 @@ func TestAccIdentityOidcKeyUpdate(t *testing.T) {
 }
 
 func testAccCheckIdentityOidcKeyDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ClientFactory).Client()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_oidc_key" {
@@ -123,7 +122,7 @@ func testAccIdentityOidcKeyCheckAttrs() resource.TestCheckFunc {
 
 		id := instanceState.ID
 		path := identityOidcKeyPath(id)
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ClientFactory).Client()
 		resp, err := identityOidcKeyApiRead(id, client)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", id)

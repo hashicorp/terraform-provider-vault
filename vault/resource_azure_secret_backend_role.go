@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func azureSecretBackendRoleResource() *schema.Resource {
@@ -151,7 +150,7 @@ func azureSecretBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 }
 
 func azureSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -177,7 +176,7 @@ func azureSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func azureSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading Azure Secret role %q", path)
@@ -221,7 +220,7 @@ func azureSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func azureSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ClientFactory).Client()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting Azure Secret role %q", path)
