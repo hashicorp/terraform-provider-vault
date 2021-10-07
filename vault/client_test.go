@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 	"testing"
 
@@ -198,7 +199,7 @@ func TestClientFactory_requireStates(t *testing.T) {
 
 func testHTTPServer(t *testing.T, address string, handler http.Handler) (net.Listener, *http.Server) {
 	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	ln, err := net.Listen("tcp", address)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,17 +212,41 @@ func testHTTPServer(t *testing.T, address string, handler http.Handler) (net.Lis
 }
 
 func TestClientFactory_Client(t *testing.T) {
+	b64enc := func(s string) string {
+		return base64.StdEncoding.EncodeToString([]byte(s))
+	}
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set(indexHeaderName, strings.TrimLeft(req.URL.Path, "/"))
+	})
+
 	tests := []struct {
 		name       string
 		handler    http.Handler
 		wantStates []string
+		states     []string
 	}{
 		{
-			name: "basic",
-			handler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				w.Header().Set(indexHeaderName, "foo")
-			}),
-			wantStates: []string{"foo"},
+			name:    "basic",
+			handler: handler,
+			wantStates: []string{
+				b64enc("v1:cid:0:1:"),
+			},
+			states: []string{
+				b64enc("v1:cid:0:1:"),
+			},
+		},
+		{
+			name:    "multiple",
+			handler: handler,
+			wantStates: []string{
+				b64enc("v1:cid:0:1:"),
+				b64enc("v1:cid:1:0:"),
+			},
+			states: []string{
+				b64enc("v1:cid:0:1:"),
+				b64enc("v1:cid:1:0:"),
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -249,17 +274,26 @@ func TestClientFactory_Client(t *testing.T) {
 			w.init()
 
 			client = w.Client()
-			req := client.NewRequest("GET", "/")
-			req.Headers.Set(indexHeaderName, "foo")
-			resp, err := client.RawRequestWithContext(context.Background(), req)
-			if err != nil {
-				t.Fatal(err)
-			}
+			var wg sync.WaitGroup
+			for _, expected := range tt.states {
+				wg.Add(1)
+				go func(expected string) {
+					defer wg.Done()
 
-			actualValues := resp.Header.Values(indexHeaderName)
-			if !reflect.DeepEqual(tt.wantStates, actualValues) {
-				t.Errorf("Response(): expected header values %v, actual %v", tt.wantStates, actualValues)
+					req := client.NewRequest("GET", "/"+expected)
+					req.Headers.Set(indexHeaderName, expected)
+					resp, err := client.RawRequestWithContext(context.Background(), req)
+					if err != nil {
+						t.Fatal(err)
+					}
+					// validate that the server provided a valid header value in its response
+					actual := resp.Header.Get(indexHeaderName)
+					if actual != expected {
+						t.Errorf("expected header value %v, actual %v", expected, actual)
+					}
+				}(expected)
 			}
+			wg.Wait()
 
 			if !reflect.DeepEqual(tt.wantStates, w.states) {
 				t.Errorf("RawRequestWithContext(): expected states %v, actual %v", tt.wantStates, w.states)

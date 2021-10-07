@@ -23,7 +23,7 @@ func (w *ClientFactory) Client() *api.Client {
 	return w.client
 }
 
-// Clone this factories Client
+// Clone this factory's Client
 func (w *ClientFactory) Clone() (*api.Client, error) {
 	c, err := w.Client().Clone()
 	if err != nil {
