@@ -209,18 +209,7 @@ func testHTTPServer(t *testing.T, address string, handler http.Handler) (net.Lis
 	return ln, server
 }
 
-func sendRequest(client *api.Client, headerValue string) (*api.Response, error) {
-	req := client.NewRequest("GET", "/"+headerValue)
-	req.Headers.Set(indexHeaderName, headerValue)
-	resp, err := client.RawRequestWithContext(context.Background(), req)
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
-}
-
-func testSetupServer(t *testing.T, handler http.Handler) (*ClientFactory, *http.Server) {
+func setupFactoryTest(t *testing.T, handler http.Handler) (*ClientFactory, *http.Server) {
 	t.Helper()
 	config := api.DefaultConfig()
 
@@ -240,18 +229,20 @@ func testSetupServer(t *testing.T, handler http.Handler) (*ClientFactory, *http.
 	return w, server
 }
 
-func testValidateResponseHeader(t *testing.T, client *api.Client, headerValue string) error {
+func testRequest(t *testing.T, client *api.Client, headerValue string) {
 	t.Helper()
-	resp, err := sendRequest(client, headerValue)
+	req := client.NewRequest("GET", "/"+headerValue)
+	req.Headers.Set(indexHeaderName, headerValue)
+	resp, err := client.RawRequestWithContext(context.Background(), req)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
+
 	// validate that the server provided a valid header value in its response
 	actual := resp.Header.Get(indexHeaderName)
 	if actual != headerValue {
-		return fmt.Errorf("expected header value %v, actual %v", headerValue, actual)
+		t.Errorf("expected header value %v, actual %v", headerValue, actual)
 	}
-	return nil
 }
 
 func TestClientFactory_Client(t *testing.T) {
@@ -295,7 +286,7 @@ func TestClientFactory_Client(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			w, server := testSetupServer(t, tt.handler)
+			w, server := setupFactoryTest(t, tt.handler)
 			defer server.Close()
 
 			client := w.Client()
@@ -304,13 +295,13 @@ func TestClientFactory_Client(t *testing.T) {
 				wg.Add(1)
 				go func(expected string) {
 					defer wg.Done()
-					testValidateResponseHeader(t, client, expected)
+					testRequest(t, client, expected)
 				}(expected)
 			}
 			wg.Wait()
 
 			if !reflect.DeepEqual(tt.wantStates, w.states) {
-				t.Errorf("RawRequestWithContext(): expected states %v, actual %v", tt.wantStates, w.states)
+				t.Errorf("expected states %v, actual %v", tt.wantStates, w.states)
 			}
 		})
 	}
@@ -329,54 +320,57 @@ func TestClientFactory_Clone(t *testing.T) {
 		name       string
 		handler    http.Handler
 		wantStates []string
-		states     []struct {
-			h1 string
-			h2 string
-		}
+		c1vals     []string
+		c2vals     []string
 	}{
 		{
 			name:    "basic",
 			handler: handler,
 			wantStates: []string{
-				b64enc("v1:cid:0:1:"),
-				b64enc("v1:cid:1:0:"),
+				b64enc("v1:cid:0:4:"),
 			},
-			states: []struct {
-				h1 string
-				h2 string
-			}{
-				{
-					h1: b64enc("v1:cid:0:1:"),
-					h2: b64enc("v1:cid:1:0:"),
-				},
+			c1vals: []string{
+				b64enc("v1:cid:0:4:"),
+			},
+			c2vals: []string{
+				b64enc("v1:cid:0:3:"),
 			},
 		},
 		{
 			name:    "multiple",
 			handler: handler,
 			wantStates: []string{
-				b64enc("v1:cid:0:2:"),
-				b64enc("v1:cid:2:0:"),
+				b64enc("v1:cid:0:4:"),
 			},
-			states: []struct {
-				h1 string
-				h2 string
-			}{
-				{
-					h1: b64enc("v1:cid:0:1:"),
-					h2: b64enc("v1:cid:1:0:"),
-				},
-				{
-					h1: b64enc("v1:cid:0:2:"),
-					h2: b64enc("v1:cid:2:0:"),
-				},
+			c1vals: []string{
+				b64enc("v1:cid:0:4:"),
+				b64enc("v1:cid:0:2:"),
+			},
+			c2vals: []string{
+				b64enc("v1:cid:0:3:"),
+				b64enc("v1:cid:0:1:"),
+			},
+		},
+		{
+			name:    "multiple_duplicates",
+			handler: handler,
+			wantStates: []string{
+				b64enc("v1:cid:0:4:"),
+			},
+			c1vals: []string{
+				b64enc("v1:cid:0:4:"),
+				b64enc("v1:cid:0:2:"),
+			},
+			c2vals: []string{
+				b64enc("v1:cid:0:4:"),
+				b64enc("v1:cid:0:2:"),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			w, server := testSetupServer(t, tt.handler)
+			w, server := setupFactoryTest(t, tt.handler)
 			defer server.Close()
 
 			c1 := w.Client()
@@ -386,19 +380,21 @@ func TestClientFactory_Clone(t *testing.T) {
 			}
 
 			var wg sync.WaitGroup
-			for _, headers := range tt.states {
-				wg.Add(1)
-				go func(headerVal string) {
-					defer wg.Done()
-					testValidateResponseHeader(t, c1, headerVal)
 
-				}(headers.h1)
-				testValidateResponseHeader(t, c2, headers.h2)
+			request := func(client *api.Client, headerVal string) {
+				defer wg.Done()
+				testRequest(t, c1, headerVal)
+			}
+
+			for i := 0; i < len(tt.c1vals); i++ {
+				wg.Add(2)
+				go request(c1, tt.c1vals[i])
+				go request(c2, tt.c2vals[i])
 			}
 			wg.Wait()
 
 			if !reflect.DeepEqual(tt.wantStates, w.states) {
-				t.Errorf("RawRequestWithContext(): expected states %v, actual %v", tt.wantStates, w.states)
+				t.Errorf("expected states %v, actual %v", tt.wantStates, w.states)
 			}
 		})
 	}
