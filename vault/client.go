@@ -13,9 +13,10 @@ const indexHeaderName = "X-Vault-Index"
 // model (VLT-146).
 // All Client instances share the same replication state store.
 type ClientFactory struct {
-	m      *sync.RWMutex
-	client *api.Client
-	states []string
+	m           sync.RWMutex
+	states      []string
+	client      *api.Client
+	initialized bool
 }
 
 // Client for this factory
@@ -24,22 +25,27 @@ func (w *ClientFactory) Client() *api.Client {
 }
 
 // Clone this factory's Client
+// Note: even though it is possible to clone the clone, it should be avoided as the
+// clone will no longer track replication states.
 func (w *ClientFactory) Clone() (*api.Client, error) {
 	c, err := w.Client().Clone()
 	if err != nil {
 		return nil, err
 	}
+
 	return w.registerCallbacks(c), nil
 }
 
 func (w *ClientFactory) init() {
-	w.m.Lock()
-	defer w.m.Unlock()
-	if w.states != nil {
-		panic("already initialized")
+	if w.initialized {
+		return
 	}
-	w.states = []string{}
+	if w.states == nil {
+		w.states = []string{}
+	}
+
 	w.client = w.registerCallbacks(w.client)
+	w.initialized = true
 }
 
 func (w *ClientFactory) registerCallbacks(c *api.Client) *api.Client {
@@ -72,7 +78,6 @@ func NewClientFactory(config *api.Config) (*ClientFactory, error) {
 	}
 
 	wrapper := &ClientFactory{
-		m:      &sync.RWMutex{},
 		client: client,
 	}
 	wrapper.init()

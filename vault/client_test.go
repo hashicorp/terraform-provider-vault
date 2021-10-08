@@ -111,7 +111,6 @@ func TestClientFactory_recordStates(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &ClientFactory{
-				m:      &sync.RWMutex{},
 				states: []string{},
 			}
 
@@ -169,7 +168,6 @@ func TestClientFactory_requireStates(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &ClientFactory{
-				m:      &sync.RWMutex{},
 				states: tt.states,
 			}
 
@@ -257,23 +255,17 @@ func TestClientFactory_Client(t *testing.T) {
 			defer server.Close()
 
 			config.Address = fmt.Sprintf("http://%s", ln.Addr())
-			client, err := api.NewClient(config)
+
+			w, err := NewClientFactory(config)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			w := &ClientFactory{
-				m:      &sync.RWMutex{},
-				client: client,
-			}
-			if got := w.Client(); !reflect.DeepEqual(got, client) {
-				t.Errorf("Client() = %v, want %v", got, client)
+			if actual := w.Client(); !reflect.DeepEqual(actual, w.client) {
+				t.Errorf("Client(): expected %v, actual %v", actual, w.client)
 			}
 
-			// initialize the Client with the expected callbacks
-			w.init()
-
-			client = w.Client()
+			client := w.Client()
 			var wg sync.WaitGroup
 			for _, expected := range tt.states {
 				wg.Add(1)
@@ -302,4 +294,4 @@ func TestClientFactory_Client(t *testing.T) {
 	}
 }
 
-// TODO : add tests for CLone() especially focused on testing concurrency
+// TODO : add tests for Clone() especially focused on testing concurrency
