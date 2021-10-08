@@ -209,6 +209,36 @@ func testHTTPServer(t *testing.T, address string, handler http.Handler) (net.Lis
 	return ln, server
 }
 
+func sendRequest(client *api.Client, headerValue string) (*api.Response, error) {
+	req := client.NewRequest("GET", "/"+headerValue)
+	req.Headers.Set(indexHeaderName, headerValue)
+	resp, err := client.RawRequestWithContext(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func setupServer(t *testing.T, handler http.Handler) (*ClientFactory, *http.Server) {
+	config := api.DefaultConfig()
+
+	ln, server := testHTTPServer(t, "127.0.0.1:0", handler)
+
+	config.Address = fmt.Sprintf("http://%s", ln.Addr())
+
+	w, err := NewClientFactory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if actual := w.Client(); !reflect.DeepEqual(actual, w.client) {
+		t.Errorf("Client(): expected %v, actual %v", actual, w.client)
+	}
+
+	return w, server
+}
+
 func TestClientFactory_Client(t *testing.T) {
 	b64enc := func(s string) string {
 		return base64.StdEncoding.EncodeToString([]byte(s))
@@ -249,21 +279,9 @@ func TestClientFactory_Client(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := api.DefaultConfig()
 
-			ln, server := testHTTPServer(t, "127.0.0.1:0", tt.handler)
+			w, server := setupServer(t, tt.handler)
 			defer server.Close()
-
-			config.Address = fmt.Sprintf("http://%s", ln.Addr())
-
-			w, err := NewClientFactory(config)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if actual := w.Client(); !reflect.DeepEqual(actual, w.client) {
-				t.Errorf("Client(): expected %v, actual %v", actual, w.client)
-			}
 
 			client := w.Client()
 			var wg sync.WaitGroup
@@ -272,9 +290,7 @@ func TestClientFactory_Client(t *testing.T) {
 				go func(expected string) {
 					defer wg.Done()
 
-					req := client.NewRequest("GET", "/"+expected)
-					req.Headers.Set(indexHeaderName, expected)
-					resp, err := client.RawRequestWithContext(context.Background(), req)
+					resp, err := sendRequest(client, expected)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -293,5 +309,3 @@ func TestClientFactory_Client(t *testing.T) {
 		})
 	}
 }
-
-// TODO : add tests for Clone() especially focused on testing concurrency
