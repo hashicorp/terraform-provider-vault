@@ -220,7 +220,8 @@ func sendRequest(client *api.Client, headerValue string) (*api.Response, error) 
 	return resp, nil
 }
 
-func setupServer(t *testing.T, handler http.Handler) (*ClientFactory, *http.Server) {
+func testSetupServer(t *testing.T, handler http.Handler) (*ClientFactory, *http.Server) {
+	t.Helper()
 	config := api.DefaultConfig()
 
 	ln, server := testHTTPServer(t, "127.0.0.1:0", handler)
@@ -239,7 +240,8 @@ func setupServer(t *testing.T, handler http.Handler) (*ClientFactory, *http.Serv
 	return w, server
 }
 
-func validateResponseHeader(client *api.Client, headerValue string) error {
+func testValidateResponseHeader(t *testing.T, client *api.Client, headerValue string) error {
+	t.Helper()
 	resp, err := sendRequest(client, headerValue)
 	if err != nil {
 		return err
@@ -293,7 +295,7 @@ func TestClientFactory_Client(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			w, server := setupServer(t, tt.handler)
+			w, server := testSetupServer(t, tt.handler)
 			defer server.Close()
 
 			client := w.Client()
@@ -302,7 +304,7 @@ func TestClientFactory_Client(t *testing.T) {
 				wg.Add(1)
 				go func(expected string) {
 					defer wg.Done()
-					validateResponseHeader(client, expected)
+					testValidateResponseHeader(t, client, expected)
 				}(expected)
 			}
 			wg.Wait()
@@ -374,7 +376,7 @@ func TestClientFactory_Clone(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			w, server := setupServer(t, tt.handler)
+			w, server := testSetupServer(t, tt.handler)
 			defer server.Close()
 
 			c1 := w.Client()
@@ -388,10 +390,10 @@ func TestClientFactory_Clone(t *testing.T) {
 				wg.Add(1)
 				go func(headerVal string) {
 					defer wg.Done()
-					validateResponseHeader(c1, headerVal)
+					testValidateResponseHeader(t, c1, headerVal)
 
 				}(headers.h1)
-				validateResponseHeader(c2, headers.h2)
+				testValidateResponseHeader(t, c2, headers.h2)
 			}
 			wg.Wait()
 
