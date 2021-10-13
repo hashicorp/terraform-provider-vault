@@ -244,7 +244,7 @@ func parseDurationSeconds(i interface{}) (string, error) {
 }
 
 func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	authType := oktaAuthType
 	desc := d.Get("description").(string)
@@ -267,7 +267,7 @@ func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	path := d.Id()
 
@@ -283,11 +283,11 @@ func oktaAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	return isOktaAuthBackendPresent(meta.(*ClientFactory).Client(), d.Id())
+	return isOktaAuthBackendPresent(meta.(*api.Client), d.Id())
 }
 
 func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	path := d.Id()
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
@@ -385,7 +385,7 @@ func oktaReadAuthConfig(client *api.Client, path string, d *schema.ResourceData)
 }
 
 func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	path := d.Id()
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)

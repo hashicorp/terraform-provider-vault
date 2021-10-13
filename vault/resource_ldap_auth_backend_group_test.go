@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/vault/api"
 )
 
 func TestLDAPAuthBackendGroup_import(t *testing.T) {
@@ -63,7 +64,7 @@ func TestLDAPAuthBackendGroup_basic(t *testing.T) {
 }
 
 func testLDAPAuthBackendGroupDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ClientFactory).Client()
+	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ldap_auth_backend_group" {
@@ -97,7 +98,7 @@ func testLDAPAuthBackendGroupCheck_attrs(backend, groupname string) resource.Tes
 			return fmt.Errorf("expected id to be %q, got %q instead", endpoint, instanceState.ID)
 		}
 
-		client := testProvider.Meta().(*ClientFactory).Client()
+		client := testProvider.Meta().(*api.Client)
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {
 			return err

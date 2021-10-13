@@ -160,7 +160,7 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 }
 
 func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	name := d.Get("name").(string)
 	typeValue := d.Get("type").(string)
@@ -200,7 +200,7 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityGroup %q", id)
@@ -226,7 +226,7 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	id := d.Id()
 
 	resp, err := readIdentityGroup(client, id)
@@ -255,7 +255,7 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	id := d.Id()
 
 	path := identityGroupIDPath(id)
@@ -274,7 +274,7 @@ func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	id := d.Id()
 	key := id
 

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 )
 
 func TestAccIdentityEntity(t *testing.T) {
@@ -107,7 +108,7 @@ func TestAccIdentityEntityUpdateRemovePolicies(t *testing.T) {
 }
 
 func testAccCheckIdentityEntityDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ClientFactory).Client()
+	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_entity" {
@@ -139,7 +140,7 @@ func testAccIdentityEntityCheckAttrs() resource.TestCheckFunc {
 		id := instanceState.ID
 
 		path := identityEntityIDPath(id)
-		client := testProvider.Meta().(*ClientFactory).Client()
+		client := testProvider.Meta().(*api.Client)
 		resp, err := client.Logical().Read(path)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", path)

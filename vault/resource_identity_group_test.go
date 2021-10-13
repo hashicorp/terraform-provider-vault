@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 )
 
 func TestAccIdentityGroup(t *testing.T) {
@@ -112,7 +113,7 @@ func TestAccIdentityGroupExternal(t *testing.T) {
 }
 
 func testAccCheckIdentityGroupDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ClientFactory).Client()
+	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_group" {
@@ -144,7 +145,7 @@ func testAccIdentityGroupCheckAttrs() resource.TestCheckFunc {
 		id := instanceState.ID
 
 		path := identityGroupIDPath(id)
-		client := testProvider.Meta().(*ClientFactory).Client()
+		client := testProvider.Meta().(*api.Client)
 		resp, err := client.Logical().Read(path)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", path)

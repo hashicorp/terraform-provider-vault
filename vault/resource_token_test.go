@@ -8,10 +8,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 )
 
 func testResourceTokenCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ClientFactory).Client()
+	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_token" {
@@ -307,7 +308,7 @@ func testResourceTokenLookup(n string) resource.TestCheckFunc {
 			return fmt.Errorf("No ID is set")
 		}
 
-		client := testProvider.Meta().(*ClientFactory).Client()
+		client := testProvider.Meta().(*api.Client)
 
 		_, err := client.Auth().Token().LookupAccessor(rs.Primary.ID)
 		if err != nil {
@@ -329,7 +330,7 @@ func testResourceTokenCheckExpireTime(n string) resource.TestCheckFunc {
 			return fmt.Errorf("No ID is set")
 		}
 
-		client := testProvider.Meta().(*ClientFactory).Client()
+		client := testProvider.Meta().(*api.Client)
 
 		token, err := client.Auth().Token().LookupAccessor(rs.Primary.ID)
 		if err != nil {
@@ -398,7 +399,7 @@ func testResourceTokenWaitRenewMinLeaseTime(n string) resource.TestCheckFunc {
 			return fmt.Errorf("No ID is set")
 		}
 
-		client := testProvider.Meta().(*ClientFactory).Client()
+		client := testProvider.Meta().(*api.Client)
 
 		token, err := client.Auth().Token().LookupAccessor(rs.Primary.ID)
 		if err != nil {

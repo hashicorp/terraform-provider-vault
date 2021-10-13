@@ -62,7 +62,7 @@ func githubAuthBackendResource() *schema.Resource {
 func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	var description string
 
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	path := strings.Trim(d.Get("path").(string), "/")
 
 	if v, ok := d.GetOk("description"); ok {
@@ -87,7 +87,7 @@ func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
@@ -141,7 +141,7 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
 
@@ -213,5 +213,5 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	return authMountDisable(meta.(*ClientFactory).Client(), d.Id())
+	return authMountDisable(meta.(*api.Client), d.Id())
 }

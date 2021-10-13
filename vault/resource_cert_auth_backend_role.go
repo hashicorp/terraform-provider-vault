@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/vault/api"
 )
 
 func certAuthBackendRoleResource() *schema.Resource {
@@ -111,7 +113,7 @@ func certCertResourcePath(backend, name string) string {
 }
 
 func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -164,7 +166,7 @@ func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -211,7 +213,7 @@ func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading cert %q", path)
@@ -302,7 +304,7 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func certAuthResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting cert %q", path)

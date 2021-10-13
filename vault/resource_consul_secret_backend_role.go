@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -85,7 +86,7 @@ func consulSecretBackendRoleGetBackend(d *schema.ResourceData) string {
 }
 
 func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	name := d.Get("name").(string)
 
@@ -126,7 +127,7 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 }
 
 func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	upgradeOldID(d)
 
@@ -173,7 +174,7 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 }
 
 func consulSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	path := d.Id()
 
@@ -187,7 +188,7 @@ func consulSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) err
 }
 
 func consulSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	upgradeOldID(d)
 

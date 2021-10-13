@@ -82,7 +82,7 @@ func identityOidcKeyUpdateFields(d *schema.ResourceData, data map[string]interfa
 }
 
 func identityOidcKeyCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	name := d.Get("name").(string)
 	path := identityOidcKeyPath(name)
@@ -103,7 +103,7 @@ func identityOidcKeyCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	name := d.Id()
 	path := identityOidcKeyPath(name)
 
@@ -123,7 +123,7 @@ func identityOidcKeyUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	name := d.Id()
 
 	resp, err := identityOidcKeyApiRead(name, client)
@@ -147,7 +147,7 @@ func identityOidcKeyRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	name := d.Id()
 	path := identityOidcKeyPath(name)
 
@@ -165,7 +165,7 @@ func identityOidcKeyDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	name := d.Id()
 
 	log.Printf("[DEBUG] Checking if IdentityOidcKey %s exists", name)

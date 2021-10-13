@@ -75,7 +75,7 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 }
 
 func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
 	address := d.Get("address").(string)
@@ -128,7 +128,7 @@ func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{})
 }
 
 func terraformCloudSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	backend := d.Id()
 	configPath := terraformCloudSecretBackendConfigPath(backend)
@@ -173,7 +173,7 @@ func terraformCloudSecretBackendRead(d *schema.ResourceData, meta interface{}) e
 }
 
 func terraformCloudSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	backend := d.Id()
 	configPath := terraformCloudSecretBackendConfigPath(backend)
@@ -213,7 +213,7 @@ func terraformCloudSecretBackendUpdate(d *schema.ResourceData, meta interface{})
 }
 
 func terraformCloudSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	backend := d.Id()
 
@@ -227,7 +227,7 @@ func terraformCloudSecretBackendDelete(d *schema.ResourceData, meta interface{})
 }
 
 func terraformCloudSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	backend := d.Id()
 

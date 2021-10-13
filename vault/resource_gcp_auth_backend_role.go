@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -166,7 +168,7 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, cr
 }
 
 func gcpAuthResourceCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -189,7 +191,7 @@ func gcpAuthResourceCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -206,7 +208,7 @@ func gcpAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading GCP role %q", path)
@@ -268,7 +270,7 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting GCP role %q", path)
@@ -282,7 +284,7 @@ func gcpAuthResourceDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthResourceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Checking if gcp auth role %q exists", path)

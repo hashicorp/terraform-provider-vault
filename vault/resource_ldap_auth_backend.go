@@ -165,7 +165,7 @@ func ldapAuthBackendConfigPath(path string) string {
 }
 
 func ldapAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	path := d.Get("path").(string)
 	options := &api.EnableAuthOptions{
@@ -187,7 +187,7 @@ func ldapAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	path := ldapAuthBackendConfigPath(d.Id())
 	data := map[string]interface{}{}
@@ -283,7 +283,7 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	path := d.Id()
 	auths, err := client.Sys().ListAuth()
@@ -345,7 +345,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func ldapAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting LDAP auth backend %q", path)
@@ -359,7 +359,7 @@ func ldapAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func ldapAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	path := ldapAuthBackendConfigPath(d.Id())
 
 	log.Printf("[DEBUG] Checking if LDAP auth backend %q exists", path)

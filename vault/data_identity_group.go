@@ -188,7 +188,7 @@ func identityGroupLookup(client *api.Client, data map[string]interface{}) (*api.
 }
 
 func identityGroupDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	data := map[string]interface{}{}
 

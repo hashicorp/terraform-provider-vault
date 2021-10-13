@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 )
 
 func TestPkiSecretBackendSign_basic(t *testing.T) {
@@ -34,7 +35,7 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 }
 
 func testPkiSecretBackendSignDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ClientFactory).Client()
+	client := testProvider.Meta().(*api.Client)
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {

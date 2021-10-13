@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 )
 
 // This is light on testing as most of the code is covered by `resource_okta_auth_backend_test.go`
@@ -108,7 +109,7 @@ func testAccOktaAuthBackendGroup_InitialCheck(s *terraform.State) error {
 
 func testAccOktaAuthBackendGroup_Destroyed(path, groupName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*ClientFactory).Client()
+		client := testProvider.Meta().(*api.Client)
 
 		group, err := client.Logical().Read(fmt.Sprintf("/auth/%s/groups/%s", path, groupName))
 		if err != nil {

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 )
 
 var snapshotAutoPath = "sys/storage/raft/snapshot-auto/config/%s"
@@ -275,7 +276,7 @@ func buildConfigFromResourceData(d *schema.ResourceData) (map[string]interface{}
 }
 
 func createOrUpdateSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	name := d.Get("name").(string)
 	path := fmt.Sprintf(snapshotAutoPath, name)
 
@@ -295,7 +296,7 @@ func createOrUpdateSnapshotAgentConfigResource(d *schema.ResourceData, meta inte
 }
 
 func readSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	name := d.Id()
 	configPath := fmt.Sprintf(snapshotAutoPath, name)
@@ -474,7 +475,7 @@ func readSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) e
 }
 
 func deleteSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	name := d.Id()
 	path := fmt.Sprintf(snapshotAutoPath, name)
 

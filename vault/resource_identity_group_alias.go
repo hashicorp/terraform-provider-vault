@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 )
 
 const identityGroupAliasPath = "/identity/group-alias"
@@ -43,7 +44,7 @@ func identityGroupAliasResource() *schema.Resource {
 }
 
 func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	name := d.Get("name").(string)
 	mountAccessor := d.Get("mount_accessor").(string)
@@ -69,7 +70,7 @@ func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityGroupAlias %q", id)
@@ -107,7 +108,7 @@ func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	id := d.Id()
 
 	path := identityGroupAliasIDPath(id)
@@ -134,7 +135,7 @@ func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	id := d.Id()
 
 	path := identityGroupAliasIDPath(id)
@@ -150,7 +151,7 @@ func identityGroupAliasDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	id := d.Id()
 
 	path := identityGroupAliasIDPath(id)

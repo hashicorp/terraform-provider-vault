@@ -1,4 +1,4 @@
-TEST?=$$(go list ./... | grep '/vault$$')
+TEST?=$$(go list ./...)
 GOFMT_FILES?=$$(find . -name '*.go')
 WEBSITE_REPO=github.com/hashicorp/terraform-website
 PKG_NAME=vault

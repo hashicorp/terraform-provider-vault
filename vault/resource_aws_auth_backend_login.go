@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/vault/api"
 )
 
 func awsAuthBackendLoginResource() *schema.Resource {
@@ -148,7 +150,7 @@ func awsAuthBackendLoginCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	backend := strings.Trim(d.Get("backend").(string), "/")
 	path := "auth/" + backend + "/login"
@@ -228,7 +230,7 @@ func awsAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendLoginDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	accessor := d.Get("accessor").(string)
 	token, ok := d.GetOk("client_token")

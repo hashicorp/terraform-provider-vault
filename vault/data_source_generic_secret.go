@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/vault/api"
 )
 
 func genericSecretDataSource() *schema.Resource {
@@ -69,7 +71,7 @@ func genericSecretDataSource() *schema.Resource {
 }
 
 func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	path := d.Get("path").(string)
 

@@ -29,7 +29,7 @@ func TestResourceAuth(t *testing.T) {
 }
 
 func testAccCheckAuthBackendDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ClientFactory).Client()
+	client := testProvider.Meta().(*api.Client)
 
 	auths, err := client.Sys().ListAuth()
 	if err != nil {
@@ -95,7 +95,7 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 			return fmt.Errorf("unexpected auth local")
 		}
 
-		client := testProvider.Meta().(*ClientFactory).Client()
+		client := testProvider.Meta().(*api.Client)
 		auths, err := client.Sys().ListAuth()
 
 		if err != nil {
@@ -156,7 +156,7 @@ func testResourceAuth_updateCheck(s *terraform.State) error {
 		return fmt.Errorf("unexpected auth name")
 	}
 
-	client := testProvider.Meta().(*ClientFactory).Client()
+	client := testProvider.Meta().(*api.Client)
 	auths, err := client.Sys().ListAuth()
 
 	if err != nil {
@@ -251,7 +251,7 @@ resource "vault_auth_backend" "test" {
 
 func checkAuthMount(backend string, checker func(*api.AuthMount) error) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*ClientFactory).Client()
+		client := testProvider.Meta().(*api.Client)
 		auths, err := client.Sys().ListAuth()
 
 		if err != nil {

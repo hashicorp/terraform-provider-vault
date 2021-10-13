@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/vault/api"
 )
 
 func TestAccNomadSecretBackendRoleClientBasic(t *testing.T) {
@@ -84,7 +85,7 @@ func TestAccNomadSecretBackendRoleImport(t *testing.T) {
 }
 
 func testAccNomadSecretBackendRoleCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ClientFactory).Client()
+	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_nomad_secret_role" {

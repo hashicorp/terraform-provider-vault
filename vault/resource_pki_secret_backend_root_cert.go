@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/hashicorp/vault/api"
 )
 
 func pkiSecretBackendRootCertResource() *schema.Resource {
@@ -193,7 +194,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 }
 
 func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
 	rootType := d.Get("type").(string)
@@ -292,7 +293,7 @@ func pkiSecretBackendRootCertUpdate(d *schema.ResourceData, m interface{}) error
 }
 
 func pkiSecretBackendRootCertDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
 

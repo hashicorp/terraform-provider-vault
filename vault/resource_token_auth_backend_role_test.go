@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 )
 
 func TestAccTokenAuthBackendRoleImport(t *testing.T) {
@@ -123,7 +124,7 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 }
 
 func testAccCheckTokenAuthBackendRoleDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ClientFactory).Client()
+	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_token_auth_backend_role" {
@@ -143,7 +144,7 @@ func testAccCheckTokenAuthBackendRoleDestroy(s *terraform.State) error {
 func testAccTokenAuthBackendRoleCheck_deleted(role string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		endpoint := "auth/token/roles"
-		client := testProvider.Meta().(*ClientFactory).Client()
+		client := testProvider.Meta().(*api.Client)
 
 		resp, err := client.Logical().List(endpoint)
 
@@ -179,7 +180,7 @@ func testAccTokenAuthBackendRoleCheck_attrs(role string) resource.TestCheckFunc 
 			return fmt.Errorf("expected ID to be %q, got %q instead", "auth/token/roles/"+role, endpoint)
 		}
 
-		client := testProvider.Meta().(*ClientFactory).Client()
+		client := testProvider.Meta().(*api.Client)
 		resp, err := client.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", endpoint)

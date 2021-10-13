@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 )
 
 func TestAlicloudAuthBackendRole_basic(t *testing.T) {
@@ -47,7 +48,7 @@ func TestAlicloudAuthBackendRole_basic(t *testing.T) {
 }
 
 func testAlicloudAuthBackedRoleDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ClientFactory).Client()
+	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_alicloud_auth_backend_role" {

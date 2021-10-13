@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -78,7 +79,7 @@ func terraformCloudSecretRoleGetBackend(d *schema.ResourceData) string {
 }
 
 func terraformCloudSecretRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	name := d.Get("name").(string)
 
@@ -119,7 +120,7 @@ func terraformCloudSecretRoleWrite(d *schema.ResourceData, meta interface{}) err
 }
 
 func terraformCloudSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	path := d.Id()
 	name, err := terraformCloudSecretRoleNameFromPath(path)
@@ -161,7 +162,7 @@ func terraformCloudSecretRoleRead(d *schema.ResourceData, meta interface{}) erro
 }
 
 func terraformCloudSecretRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	path := d.Id()
 
@@ -175,7 +176,7 @@ func terraformCloudSecretRoleDelete(d *schema.ResourceData, meta interface{}) er
 }
 
 func terraformCloudSecretRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	path := d.Id()
 

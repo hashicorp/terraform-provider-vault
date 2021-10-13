@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/vault/api"
 )
 
 func TestAccNomadSecretBackend(t *testing.T) {
@@ -62,7 +63,7 @@ func TestAccNomadSecretBackend(t *testing.T) {
 }
 
 func testAccNomadSecretBackendCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ClientFactory).Client()
+	client := testProvider.Meta().(*api.Client)
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {

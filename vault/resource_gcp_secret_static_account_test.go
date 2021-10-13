@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 	"golang.org/x/oauth2/google"
 )
 
@@ -140,7 +141,7 @@ func testGCPSecretStaticAccount_attrs(backend, staticAccount string) resource.Te
 			return fmt.Errorf("expected ID to be %q, got %q instead", backend+"/static-account/"+staticAccount, endpoint)
 		}
 
-		client := testProvider.Meta().(*ClientFactory).Client()
+		client := testProvider.Meta().(*api.Client)
 		resp, err := client.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", endpoint)
@@ -288,7 +289,7 @@ func testGCPSecretStaticAccount_attrs(backend, staticAccount string) resource.Te
 }
 
 func testGCPSecretStaticAccountDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ClientFactory).Client()
+	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_gcp_secret_static_account" {

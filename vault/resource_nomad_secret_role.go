@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -65,7 +66,7 @@ func nomadSecretBackendRoleResource() *schema.Resource {
 }
 
 func createNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
 	roleType := d.Get("type").(string)
@@ -112,7 +113,7 @@ func createNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	rolePath := d.Id()
 	log.Printf("[DEBUG] Reading %q", rolePath)
 
@@ -162,7 +163,7 @@ func readNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	rolePath := d.Id()
 	roleType := d.Get("type").(string)
 	if roleType == "" {
@@ -200,7 +201,7 @@ func updateNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func deleteNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	rolePath := d.Id()
 	log.Printf("[DEBUG] Deleting %q", rolePath)
 

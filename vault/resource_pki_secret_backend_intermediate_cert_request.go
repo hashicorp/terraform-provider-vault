@@ -2,11 +2,11 @@ package vault
 
 import (
 	"fmt"
-	"log"
-	"strings"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/hashicorp/vault/api"
+	"log"
+	"strings"
 )
 
 func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
@@ -171,7 +171,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 }
 
 func pkiSecretBackendIntermediateCertRequestCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
 	intermediateType := d.Get("type").(string)

@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 )
 
 const (
@@ -124,7 +125,7 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 }
 
 func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
 	credType := d.Get("type").(string)

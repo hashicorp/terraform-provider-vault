@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 )
 
 func TestDataSourceIdentityGroupName(t *testing.T) {
@@ -66,7 +67,7 @@ func testDataSourceIdentityGroup_check(resource string) resource.TestCheckFunc {
 		}
 
 		id := instanceState.ID
-		client := testProvider.Meta().(*ClientFactory).Client()
+		client := testProvider.Meta().(*api.Client)
 
 		resp, err := identityGroupLookup(client, map[string]interface{}{"id": id})
 		if err != nil {

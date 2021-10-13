@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -67,7 +68,7 @@ func ldapAuthBackendUserResourcePath(backend, username string) string {
 }
 
 func ldapAuthBackendUserResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
 	username := d.Get("username").(string)
@@ -98,7 +99,7 @@ func ldapAuthBackendUserResourceWrite(d *schema.ResourceData, meta interface{}) 
 }
 
 func ldapAuthBackendUserResourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	path := d.Id()
 
 	backend, err := ldapAuthBackendUserBackendFromPath(path)
@@ -147,7 +148,7 @@ func ldapAuthBackendUserResourceRead(d *schema.ResourceData, meta interface{}) e
 }
 
 func ldapAuthBackendUserResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting LDAP user %q", path)
@@ -161,7 +162,7 @@ func ldapAuthBackendUserResourceDelete(d *schema.ResourceData, meta interface{})
 }
 
 func ldapAuthBackendUserResourceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ClientFactory).Client()
+	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Checking if LDAP user %q exists", path)
