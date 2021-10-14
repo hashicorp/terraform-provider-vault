@@ -64,6 +64,10 @@ The following arguments are supported:
 
 * `max_lease_ttl_seconds` - (Optional) Maximum possible lease duration for tokens and secrets in seconds
 
+* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will not be HMAC'd by audit devices in the response data object.
+
+* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will not be HMAC'd by audit devices in the request data object.
+
 * `local` - (Optional) Boolean flag that can be explicitly set to true to enforce local mount in HA environment
 
 * `options` - (Optional) Specifies mount type specific options that are passed to the backend

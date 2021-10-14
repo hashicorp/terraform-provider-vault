@@ -109,6 +109,26 @@ func TestResourceMount_SealWrap(t *testing.T) {
 	})
 }
 
+// Test Audit HMAC Request Keys attributes
+
+func TestResourceMount_AuditNonHMACRequestKeys(t *testing.T) {
+	path := "example-" + acctest.RandString(10)
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceMount_InitialConfigAuditNonHMACRequestKeys(path),
+				Check:  testResourceMount_InitialCheckAuditNonHMACRequestKeys(path),
+			},
+			{
+				Config: testResourceMount_UpdateConfigAuditNonHMACRequestKeys,
+				Check:  testResourceMount_UpdateAuditNonHMACRequestKeys,
+			},
+		},
+	})
+}
+
 func TestResourceMount_KVV2(t *testing.T) {
 	path := acctest.RandomWithPrefix("example")
 	kvv2Cfg := fmt.Sprintf(`
@@ -476,6 +496,109 @@ func testResourceMount_UpdateCheckSealWrap(s *terraform.State) error {
 
 	if wanted := false; mount.SealWrap != wanted {
 		return fmt.Errorf("seal_wrap is %v; wanted %t", mount.SealWrap, wanted)
+	}
+
+	return nil
+}
+
+func testResourceMount_InitialConfigAuditNonHMACRequestKeys(path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "kv"
+	description = "Example local mount for testing"
+	default_lease_ttl_seconds = 3600
+	max_lease_ttl_seconds = 36000
+	options = {
+		version = "1"
+	}
+	audit_non_hmac_request_keys = ["test1request", "test2request"]
+	audit_non_hmac_response_keys = ["test1response", "test2response"]
+}
+`, path)
+}
+
+func testResourceMount_InitialCheckAuditNonHMACRequestKeys(expectedPath string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["vault_mount.test"]
+		if resourceState == nil {
+			return fmt.Errorf("resource not found in state")
+		}
+
+		instanceState := resourceState.Primary
+		if instanceState == nil {
+			return fmt.Errorf("resource has no primary instance")
+		}
+
+		path := instanceState.ID
+
+		if path != instanceState.Attributes["path"] {
+			return fmt.Errorf("id %q doesn't match path %q", path, instanceState.Attributes["path"])
+		}
+
+		if path != expectedPath {
+			return fmt.Errorf("unexpected path %q, expected %q", path, expectedPath)
+		}
+
+		mount, err := findMount(path)
+		if err != nil {
+			return fmt.Errorf("error reading back mount %q: %s", path, err)
+		}
+
+		if len(mount.Config.AuditNonHMACRequestKeys) < 2 || mount.Config.AuditNonHMACRequestKeys[0] != "test1request" || mount.Config.AuditNonHMACRequestKeys[1] != "test2request" {
+			return fmt.Errorf("audit_non_hmac_request_keys is %v; expected [\"test1request\", \"test2request\"]", mount.Config.AuditNonHMACRequestKeys)
+		}
+
+		if len(mount.Config.AuditNonHMACResponseKeys) < 2 || mount.Config.AuditNonHMACResponseKeys[0] != "test1response" || mount.Config.AuditNonHMACResponseKeys[1] != "test2response" {
+			return fmt.Errorf("audit_non_hmac_response_keys is %v; expected [\"test1response\", \"test2response\"]", mount.Config.AuditNonHMACRequestKeys)
+		}
+
+		return nil
+	}
+}
+
+var testResourceMount_UpdateConfigAuditNonHMACRequestKeys = `
+
+resource "vault_mount" "test" {
+	path = "remountingExample"
+	type = "kv"
+	description = "Example mount for testing"
+	default_lease_ttl_seconds = 7200
+	max_lease_ttl_seconds = 72000
+	options = {
+		version = "1"
+	}
+	audit_non_hmac_request_keys = ["test3request", "test4request"]
+	audit_non_hmac_response_keys = ["test3response", "test4response"]
+}
+
+`
+
+func testResourceMount_UpdateAuditNonHMACRequestKeys(s *terraform.State) error {
+	resourceState := s.Modules[0].Resources["vault_mount.test"]
+	instanceState := resourceState.Primary
+
+	path := instanceState.ID
+
+	if path != instanceState.Attributes["path"] {
+		return fmt.Errorf("id doesn't match path")
+	}
+
+	if path != "remountingExample" {
+		return fmt.Errorf("unexpected path value")
+	}
+
+	mount, err := findMount(path)
+	if err != nil {
+		return fmt.Errorf("error reading back mount: %s", err)
+	}
+
+	if len(mount.Config.AuditNonHMACRequestKeys) < 2 || mount.Config.AuditNonHMACRequestKeys[0] != "test3request" || mount.Config.AuditNonHMACRequestKeys[1] != "test4request" {
+		return fmt.Errorf("audit_non_hmac_request_keys is %v; expected [\"test3request\", \"test4request\"]", mount.Config.AuditNonHMACRequestKeys)
+	}
+
+	if len(mount.Config.AuditNonHMACResponseKeys) < 2 || mount.Config.AuditNonHMACResponseKeys[0] != "test3response" || mount.Config.AuditNonHMACResponseKeys[1] != "test4response" {
+		return fmt.Errorf("audit_non_hmac_response_keys is %v; expected [\"test3response\", \"test4response\"]", mount.Config.AuditNonHMACRequestKeys)
 	}
 
 	return nil
