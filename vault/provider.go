@@ -11,10 +11,11 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/vault/api"
 	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/config"
+
+	"github.com/hashicorp/terraform-provider-vault/helper"
 )
 
 const (
@@ -738,6 +739,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	clientConfig.HttpClient.Transport = logging.NewTransport("Vault", clientConfig.HttpClient.Transport)
+
+	// enable ReadYourWrites to support read-after-write on Vault Enterprise
+	clientConfig.ReadYourWrites = true
 
 	client, err := api.NewClient(clientConfig)
 	if err != nil {
