@@ -19,7 +19,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.1
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.8.0
 	github.com/hashicorp/vault v1.2.0
-	github.com/hashicorp/vault/api v1.1.2-0.20211014185131-e24037fa8f71
+	github.com/hashicorp/vault/api v1.2.0
 	github.com/hashicorp/vault/sdk v0.2.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/rainycape/unidecode v0.0.0-20150907023854-cb7f23ec59be // indirect
