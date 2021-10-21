@@ -95,6 +95,12 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			Optional:    true,
 			Description: "Map of claims/values to match against. The expected value may be a single string or a comma-separated string list.",
 		},
+		"disable_claims_comma_separation": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "If set, treats all bound claims map values as strings and disables comma separation.",
+		},
 		"claim_mappings": {
 			Type:        schema.TypeMap,
 			Optional:    true,
@@ -393,18 +399,24 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 		data["bound_claims_type"] = v.(string)
 	}
 
+	disableCommaSep := false
+	if v, ok := d.GetOkExists("disable_claims_comma_separation"); ok {
+		disableCommaSep = v.(bool)
+		data["disable_claims_comma_separation"] = disableCommaSep
+	}
+
 	if v, ok := d.GetOk("bound_claims"); ok {
 		boundClaims := make(map[string]interface{})
 		for key, val := range v.(map[string]interface{}) {
 			valStr := val.(string)
-			if strings.Contains(valStr, ",") {
+			if disableCommaSep || !strings.Contains(valStr, ",") {
+				boundClaims[key] = valStr
+			} else {
 				vals := strings.Split(valStr, ",")
 				for i := range vals {
 					vals[i] = strings.TrimSpace(vals[i])
 				}
 				boundClaims[key] = vals
-			} else {
-				boundClaims[key] = valStr
 			}
 		}
 		data["bound_claims"] = boundClaims
