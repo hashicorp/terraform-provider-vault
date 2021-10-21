@@ -70,9 +70,10 @@ func TestAccJWTAuthBackendRole_import(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "vault_jwt_auth_backend_role.role",
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            "vault_jwt_auth_backend_role.role",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"disable_claims_comma_separation"},
 			},
 		},
 	})
