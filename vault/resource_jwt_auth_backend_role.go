@@ -241,6 +241,10 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("bound_claims_type", v)
 	}
 
+	if v, ok := resp.Data["disable_claims_comma_separation"]; ok {
+		d.Set("disable_claims_comma_separation", v)
+	}
+
 	if resp.Data["bound_claims"] != nil {
 		boundClaims := make(map[string]interface{})
 		respBoundClaims := resp.Data["bound_claims"].(map[string]interface{})
