@@ -118,7 +118,7 @@ provider "vault" {
 ## Data Source: `vault_kubernetes_auth_backend_role`
 
 ### Deprecated fields have been removed
-The following deprecated fields have been removed and will now throw an error if you try to use them:
+The following deprecated fields have been removed:
 
 * `bound_cidrs` - use `token_bound_cidrs` instead.
 
