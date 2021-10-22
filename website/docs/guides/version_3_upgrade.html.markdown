@@ -33,6 +33,14 @@ have been removed.
 While you may see some small changes in your configurations as a result of
 these changes, we don't expect you'll need to make any major refactorings.
 
+## Which Terraform versions are supported?
+
+Terraform versions `0.12.x` and greater are fully supported. Support for `0.11.x` has been removed.
+If you are still on one of the `0.11.x` versions we recommend upgrading to the latest stable release of Terraform.
+
+Please see the [Terraform Upgrade Guide](https://www.terraform.io/upgrade-guides/index.html)
+for more info about upgrading Terraform.
+
 ## I accidentally upgraded to 3.0.0, how do I downgrade to `2.X`?
 
 If you've inadvertently upgraded to `3.0.0`, first see the
@@ -115,6 +123,7 @@ provider "vault" {
   version = "~> 3.0.0"
 }
 ```
+
 ## Data Source: `vault_kubernetes_auth_backend_role`
 
 ### Deprecated fields have been removed
@@ -132,14 +141,12 @@ The following deprecated fields have been removed:
 
 * `num_uses` - use `token_num_uses` instead.
 
-Specifying any of these fields in your config or trying to interpolate them in your config will raise an error. Use the list variations instead.
-
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_approle_auth_backend_role`
 
 ### Deprecated fields have been removed
-The following deprecated fields have been removed and will now throw an error if you try to use them:
-
+The following deprecated fields have been removed:
 
 * `bound_cidr_list` - use `secret_id_bound_cidrs` instead.
 
@@ -147,14 +154,12 @@ The following deprecated fields have been removed and will now throw an error if
 
 * `period` - use `token_period` instead.
 
-
-Specifying any of these fields in your config or trying to interpolate them in your config will raise an error. Use the list variations instead.
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_auth_backend`
 
 ### Deprecated fields have been removed
-The following deprecated fields have been removed and will now throw an error if you try to use them:
-
+The following deprecated fields have been removed:
 
 * `default_lease_ttl_seconds` - use `tune.default_lease_ttl` instead.
 
@@ -162,12 +167,12 @@ The following deprecated fields have been removed and will now throw an error if
 
 * `listing_visibility` - use `tune.listing_visibility` instead.
 
-Specifying any of these fields in your config or trying to interpolate them in your config will raise an error. Use the list variations instead.
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_aws_auth_backend_role`
 
 ### Deprecated fields have been removed
-The following deprecated fields have been removed and will now throw an error if you try to use them:
+The following deprecated fields have been removed:
 
 * `ttl` - use `token_ttl` instead.
 
@@ -177,13 +182,12 @@ The following deprecated fields have been removed and will now throw an error if
 
 * `period` - use `token_period` instead.
 
-
-Specifying any of these fields in your config or trying to interpolate them in your config will raise an error. Use the list variations instead.
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_azure_auth_backend_role`
 
 ### Deprecated fields have been removed
-The following deprecated fields have been removed and will now throw an error if you try to use them:
+The following deprecated fields have been removed:
 
 * `ttl` - use `token_ttl` instead.
 
@@ -193,12 +197,13 @@ The following deprecated fields have been removed and will now throw an error if
 
 * `period` - use `token_period` instead.
 
-Specifying any of these fields in your config or trying to interpolate them in your config will raise an error. Use the list variations instead.
+
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_cert_auth_backend_role`
 
 ### Deprecated fields have been removed
-The following deprecated fields have been removed and will now throw an error if you try to use them:
+The following deprecated fields have been removed:
 
 * `bound_cidrs` - use `token_bound_cidrs` instead.
 
@@ -210,57 +215,62 @@ The following deprecated fields have been removed and will now throw an error if
 
 * `period` - use `token_period` instead.
 
-Specifying any of these fields in your config or trying to interpolate them in your config will raise an error. Use the list variations instead.
+
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_consul_secret_backend_role`
 
 ### Deprecated fields have been removed
-The following deprecated fields have been removed and will now throw an error if you try to use them:
+The following deprecated fields have been removed:
 
 * `path` - use `backend` instead.
 
 
-Specifying any of these fields in your config or trying to interpolate them in your config will raise an error. Use the list variations instead.
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_gcp_auth_backend_role`
 
 ### Deprecated fields have been removed
-The following deprecated fields have been removed and will now throw an error if you try to use them:
+The following deprecated fields have been removed:
 
 * `project_id` - use `bound_projects` instead.
 
-Specifying any of these fields in your config or trying to interpolate them in your config will raise an error. Use the list variations instead.
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_generic_secret`
 
 ### Deprecated fields have been removed
-The following deprecated fields have been removed and will now throw an error if you try to use them:
+The following deprecated fields have been removed:
 
 * `allow_read` - use `disable_read` instead.
 
-Specifying any of these fields in your config or trying to interpolate them in your config will raise an error. Use the list variations instead.
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_github_auth_backend`
 
 ### Deprecated fields have been removed
-The following deprecated fields have been removed and will now throw an error if you try to use them:
+The following deprecated fields have been removed:
 
 * `ttl` - use `token_ttl` instead.
 
 * `max_ttl` - use `token_max_ttl` instead.
 
-Specifying any of these fields in your config or trying to interpolate them in your config will raise an error. Use the list variations instead.
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_jwt_auth_backend_role`
 
 ### Deprecated fields have been removed
-The following deprecated fields have been removed and will now throw an error if you try to use them:
+The following deprecated fields have been removed:
 
 * `groups_claim_delimiter_pattern` - no alternate exists.
 
-Specifying any of these fields in your config or trying to interpolate them in your config will raise an error. Use the list variations instead.
+
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_kubernetes_auth_backend_role`
+
+### Deprecated fields have been removed
+The following deprecated fields have been removed:
 
 * `num_uses` - use `token_num_uses` instead.
 
@@ -274,10 +284,7 @@ Specifying any of these fields in your config or trying to interpolate them in y
 
 * `bound_cidrs` - use `token_bound_cidrs` instead.
 
-### Deprecated fields have been removed
-The following deprecated fields have been removed and will now throw an error if you try to use them:
-
-Specifying any of these fields in your config or trying to interpolate them in your config will raise an error. Use the list variations instead.
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_token`
 
@@ -288,12 +295,12 @@ Please see [Sensitive State Best Practices](https://www.terraform.io/docs/extend
 * `encrypted_client_token` - removed.
 * `pgp_key` - removed
 
-Specifying any of these fields in your config or trying to interpolate them in your config will raise an error. Use the list variations instead.
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_token_auth_backend_role`
 
 ### Deprecated fields have been removed
-The following deprecated fields have been removed and will now throw an error if you try to use them:
+The following deprecated fields have been removed:
 
 * `explicit_max_ttl` use `token_explicit_max_ttl` instead.
 
@@ -301,4 +308,4 @@ The following deprecated fields have been removed and will now throw an error if
 
 * `bound_cidrs` - use `token_bound_cidrs` instead.
 
-Specifying any of these fields in your config or trying to interpolate them in your config will raise an error. Use the list variations instead.
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
