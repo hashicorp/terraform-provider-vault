@@ -31,7 +31,7 @@ In addition to the aforementioned SDK upgrade all previously deprecated fields
 have been removed.
 
 While you may see some small changes in your configurations as a result of
-these changes, we don't expect you'll need to make any major refactorings.k
+these changes, we don't expect you'll need to make any major refactorings.
 
 ## I accidentally upgraded to 3.0.0, how do I downgrade to `2.X`?
 
