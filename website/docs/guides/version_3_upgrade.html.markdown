@@ -197,7 +197,6 @@ The following deprecated fields have been removed:
 
 * `period` - use `token_period` instead.
 
-
 _Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_cert_auth_backend_role`
@@ -215,7 +214,6 @@ The following deprecated fields have been removed:
 
 * `period` - use `token_period` instead.
 
-
 _Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_consul_secret_backend_role`
@@ -224,7 +222,6 @@ _Specifying any of the fields above in your config or trying to interpolate them
 The following deprecated fields have been removed:
 
 * `path` - use `backend` instead.
-
 
 _Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
@@ -264,7 +261,6 @@ The following deprecated fields have been removed:
 
 * `groups_claim_delimiter_pattern` - no alternate exists.
 
-
 _Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
 ## Resource: `vault_kubernetes_auth_backend_role`
@@ -293,6 +289,7 @@ The following fields have been removed as they are no longer supported by the [T
 Please see [Sensitive State Best Practices](https://www.terraform.io/docs/extend/best-practices/sensitive-state.html#don-39-t-encrypt-state) for more info.
 
 * `encrypted_client_token` - removed.
+ 
 * `pgp_key` - removed
 
 _Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
