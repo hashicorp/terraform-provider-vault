@@ -7,6 +7,11 @@ description: |-
 
 ---
 
+-> The `2.x` series of the Vault Provider is now in maintenance mode.
+It will only receive critical fixes on a case by case basis.
+All new feature development has been moved to the `3.x` series of the provider.
+Please see the [3.0.0 Upgrade Guide](./version_3_upgrade.html) for more details.
+
 # Terraform Vault Provider 2.0.0 Upgrade Guide
 
 Version `2.0.0` of the Vault provider for Terraform is a major release and

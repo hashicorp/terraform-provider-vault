@@ -14,13 +14,13 @@ includes some changes that you will need to consider when upgrading. This guide
 is intended to help with that process and focuses only on the changes necessary
 to upgrade from version `2.24.0` to `3.0.0`.
 
-Please follow the [2.0.0 Upgrade Guide](./version_2_upgrade.html) if you are
-upgrading from `1.9.x`.
-
 Most of the changes outlined in this guide have been previously marked as
 deprecated in the Terraform `plan`/`apply` output throughout previous provider
 releases, up to and including 2.24.0. These changes, such as deprecation notices,
 can always be found in the [CHANGELOG](https://github.com/hashicorp/terraform-provider-vault/blob/master/CHANGELOG.md).
+
+-> If you are upgrading from `1.9.x`. Please follow the
+[2.0.0 Upgrade Guide](./version_2_upgrade.html) before proceeding any further.
 
 ## Why version 3.0.0?
 
