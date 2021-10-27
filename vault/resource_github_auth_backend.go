@@ -166,7 +166,7 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[DEBUG] Reading github auth tune from '%q/tune'", path)
-	rawTune, err := authMountTuneGet(client, path)
+	rawTune, err := authMountConfigGet(client, path)
 	if err != nil {
 		return fmt.Errorf("error reading tune information from Vault: %s", err)
 	}

@@ -114,8 +114,10 @@ func TestResourceMount_KVV2(t *testing.T) {
 				path = "%s"
 				type = "kv-v2"
 				description = "Example mount for testing"
-				default_lease_ttl_seconds = 3600
-				max_lease_ttl_seconds = 36000
+				config {
+					default_lease_ttl = "1h"
+					max_lease_ttl = "10h"
+				}
 			}`, path)
 	resource.Test(t, resource.TestCase{
 
@@ -176,8 +178,10 @@ resource "vault_mount" "test" {
 	path = "%s"
 	type = "%s"
 	description = "Example mount for testing"
-	default_lease_ttl_seconds = 3600
-	max_lease_ttl_seconds = 36000
+	config {
+		default_lease_ttl = "1h"
+		max_lease_ttl = "10h"
+	}
 	options = {
 		version = "1"
 	}
@@ -242,8 +246,10 @@ resource "vault_mount" "test" {
 	path = "remountingExample"
 	type = "kv"
 	description = "Updated example mount for testing"
-	default_lease_ttl_seconds = 7200
-	max_lease_ttl_seconds = 72000
+	config {
+		default_lease_ttl = "2h"
+		max_lease_ttl = "20h"
+	}
 	options = {
 		version = "1"
 	}
@@ -299,8 +305,10 @@ resource "vault_mount" "test" {
 	path = "%s"
 	type = "kv"
 	description = "Example local mount for testing"
-	default_lease_ttl_seconds = 3600
-	max_lease_ttl_seconds = 36000
+	config {
+		default_lease_ttl = "1h"
+		max_lease_ttl = "10h"
+	}
 	local = true
 	options = {
 		version = "1"
@@ -350,8 +358,10 @@ resource "vault_mount" "test" {
 	path = "remountingExample"
 	type = "kv"
 	description = "Example mount for testing"
-	default_lease_ttl_seconds = 7200
-	max_lease_ttl_seconds = 72000
+	config {
+		default_lease_ttl = "2h"
+		max_lease_ttl = "20h"
+	}
 	local = false
 	options = {
 		version = "1"
@@ -392,8 +402,10 @@ resource "vault_mount" "test" {
 	path = "%s"
 	type = "kv"
 	description = "Example local mount for testing"
-	default_lease_ttl_seconds = 3600
-	max_lease_ttl_seconds = 36000
+	config {
+		default_lease_ttl = "1h"
+		max_lease_ttl = "10h"
+	}
 	options = {
 		version = "1"
 	}
@@ -443,8 +455,10 @@ resource "vault_mount" "test" {
 	path = "remountingExample"
 	type = "kv"
 	description = "Example mount for testing"
-	default_lease_ttl_seconds = 7200
-	max_lease_ttl_seconds = 72000
+	config {
+		default_lease_ttl = "2h"
+		max_lease_ttl = "20h"
+	}
 	options = {
 		version = "1"
 	}
@@ -521,8 +535,10 @@ resource "vault_mount" "test" {
 	path = "%s"
 	type = "transit"
 	description = "Example mount for testing"
-	default_lease_ttl_seconds = 3600
-	max_lease_ttl_seconds = 36000
+	config {
+		default_lease_ttl = "1h"
+		max_lease_ttl = "10h"
+	}
 }
 `, path)
 }
@@ -533,8 +549,10 @@ resource "vault_mount" "test" {
 	path = "%s"
 	type = "transit"
 	description = "Example mount for testing"
-	default_lease_ttl_seconds = 3600
-	max_lease_ttl_seconds = 36000
+	config {
+		default_lease_ttl = "1h"
+		max_lease_ttl = "10h"
+	}
 	external_entropy_access = %t
 }
 `, path, externalEntropyAccess)

@@ -60,8 +60,10 @@ resource "vault_mount" "test-root" {
   path = "%s"
   type = "pki"
   description = "test root"
-  default_lease_ttl_seconds = "8640000"
-  max_lease_ttl_seconds = "8640000"
+  config {
+	  default_lease_ttl = "2400h"
+  	  max_lease_ttl = "2400h"
+  }
 }
 
 resource "vault_pki_secret_backend_root_cert" "test-ca" {

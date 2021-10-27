@@ -6,11 +6,73 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
-func expandAuthMethodTune(rawL []interface{}) api.MountConfigInput {
+func sharedAuthAndMountSchema(fields map[string]*schema.Schema) *schema.Schema {
+	baseFields := map[string]*schema.Schema{
+		"default_lease_ttl": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Description:  "Specifies the default time-to-live duration. This overrides the global default. A value of 0 is equivalent to the system default TTL",
+			ValidateFunc: validateDuration,
+		},
+		"max_lease_ttl": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Description:  "Specifies the maximum time-to-live duration. This overrides the global default. A value of 0 are equivalent and set to the system max TTL.",
+			ValidateFunc: validateDuration,
+		},
+		"audit_non_hmac_request_keys": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Description: "Specifies the list of keys that will not be HMAC'd by audit devices in the request data object.",
+			Elem:        &schema.Schema{Type: schema.TypeString},
+		},
+		"audit_non_hmac_response_keys": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Description: "Specifies the list of keys that will not be HMAC'd by audit devices in the response data object.",
+			Elem:        &schema.Schema{Type: schema.TypeString},
+		},
+		"listing_visibility": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Description:  "Specifies whether to show this mount in the UI-specific listing endpoint. Valid values are \"unauth\" or \"hidden\". If not set, behaves like \"hidden\".",
+			ValidateFunc: validation.StringInSlice([]string{"unauth", "hidden"}, false),
+		},
+		"passthrough_request_headers": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Description: "List of headers to whitelist and pass from the request to the backend.",
+			Elem:        &schema.Schema{Type: schema.TypeString},
+		},
+		"allowed_response_headers": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Description: "List of headers to whitelist and allowing a plugin to include them in the response.",
+			Elem:        &schema.Schema{Type: schema.TypeString},
+		},
+	}
+
+	for k, v := range fields {
+		baseFields[k] = v
+	}
+	return &schema.Schema{
+		Type:       schema.TypeSet,
+		Optional:   true,
+		Computed:   true,
+		MaxItems:   1,
+		ConfigMode: schema.SchemaConfigModeAttr,
+		Elem: &schema.Resource{
+			Schema: baseFields,
+		},
+	}
+}
+func expandMountConfigInput(rawL []interface{}) api.MountConfigInput {
 	data := api.MountConfigInput{}
 	if len(rawL) == 0 {
 		return data
@@ -41,12 +103,19 @@ func expandAuthMethodTune(rawL []interface{}) api.MountConfigInput {
 	if v, ok := raw["token_type"]; ok {
 		data.TokenType = v.(string)
 	}
+	if v, ok := raw["force_no_cache"]; ok {
+		data.ForceNoCache = v.(bool)
+	}
 	return data
 }
 
-func flattenAuthMethodTune(dt *api.MountConfigOutput) map[string]interface{} {
+func flattenAuthMountConfig(dt *api.MountConfigOutput) map[string]interface{} {
+	m := flattenMountConfigShared(dt)
+	m["token_type"] = dt.TokenType
+	return m
+}
+func flattenMountConfigShared(dt *api.MountConfigOutput) map[string]interface{} {
 	m := make(map[string]interface{})
-
 	m["default_lease_ttl"] = flattenVaultDuration(dt.DefaultLeaseTTL)
 	m["max_lease_ttl"] = flattenVaultDuration(dt.MaxLeaseTTL)
 	if len(dt.AuditNonHMACRequestKeys) > 0 && dt.AuditNonHMACRequestKeys[0] != "" {
@@ -62,7 +131,11 @@ func flattenAuthMethodTune(dt *api.MountConfigOutput) map[string]interface{} {
 	if len(dt.AllowedResponseHeaders) > 0 && dt.AllowedResponseHeaders[0] != "" {
 		m["allowed_response_headers"] = flattenStringSlice(dt.AllowedResponseHeaders)
 	}
-	m["token_type"] = dt.TokenType
+	return m
+}
+func flattenMountConfig(dt *api.MountConfigOutput) map[string]interface{} {
+	m := flattenMountConfigShared(dt)
+	m["force_no_cache"] = dt.ForceNoCache
 	return m
 }
 

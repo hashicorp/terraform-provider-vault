@@ -42,24 +42,6 @@ func MountResource() *schema.Resource {
 				Description: "Human-friendly description of the mount",
 			},
 
-			"default_lease_ttl_seconds": {
-				Type:        schema.TypeInt,
-				Required:    false,
-				Optional:    true,
-				Computed:    true,
-				ForceNew:    false,
-				Description: "Default lease duration for tokens and secrets in seconds",
-			},
-
-			"max_lease_ttl_seconds": {
-				Type:        schema.TypeInt,
-				Required:    false,
-				Optional:    true,
-				Computed:    true,
-				ForceNew:    false,
-				Description: "Maximum possible lease duration for tokens and secrets in seconds",
-			},
-
 			"accessor": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -100,20 +82,22 @@ func MountResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Enable the secrets engine to access Vault's external entropy source",
 			},
+			"config": mountConfigSchema(),
 		},
 	}
 }
 
 func mountWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
+	var config api.MountConfigInput
+	if rawConfig, ok := d.GetOk("config"); ok {
+		config = expandMountConfigInput(rawConfig.(*schema.Set).List())
+	}
 
 	info := &api.MountInput{
-		Type:        d.Get("type").(string),
-		Description: d.Get("description").(string),
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
-		},
+		Type:                  d.Get("type").(string),
+		Description:           d.Get("description").(string),
+		Config:                config,
 		Local:                 d.Get("local").(bool),
 		Options:               opts(d),
 		SealWrap:              d.Get("seal_wrap").(bool),
@@ -135,16 +119,19 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 
 func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-
-	config := api.MountConfigInput{
-		DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
-		MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
-		Options:         opts(d),
+	var config api.MountConfigInput
+	var tuneChange = false
+	if rawConfig, ok := d.GetOk("config"); ok {
+		config = expandMountConfigInput(rawConfig.(*schema.Set).List())
 	}
-
 	if d.HasChange("description") {
 		description := fmt.Sprintf("%s", d.Get("description"))
 		config.Description = &description
+		tuneChange = true
+	}
+	if d.HasChange("options") {
+		config.Options = opts(d)
+		tuneChange = true
 	}
 
 	path := d.Id()
@@ -164,11 +151,11 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[DEBUG] Updating mount %s in Vault", path)
-
-	if err := client.Sys().TuneMount(path, config); err != nil {
-		return fmt.Errorf("error updating Vault: %s", err)
+	if d.HasChange("config") || tuneChange {
+		if err := client.Sys().TuneMount(path, config); err != nil {
+			return fmt.Errorf("error updating Vault: %s", err)
+		}
 	}
-
 	return mountRead(d, meta)
 }
 
@@ -226,13 +213,19 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("path", path)
 	d.Set("type", mount.Type)
 	d.Set("description", mount.Description)
-	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
-	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
 	d.Set("accessor", mount.Accessor)
 	d.Set("local", mount.Local)
 	d.Set("options", mount.Options)
 	d.Set("seal_wrap", mount.SealWrap)
 	d.Set("external_entropy_access", mount.ExternalEntropyAccess)
+	rawConfig, err := mountConfigGet(client, path)
+	if err != nil {
+		return fmt.Errorf("error reading tune information from Vault: %s", err)
+	}
+	if err := d.Set("config", []map[string]interface{}{rawConfig}); err != nil {
+		log.Printf("[ERROR] Error when setting tune config from path '%q/tune' to state: %s", path, err)
+		return err
+	}
 
 	return nil
 }
@@ -245,4 +238,13 @@ func opts(d *schema.ResourceData) map[string]string {
 		}
 	}
 	return options
+}
+
+func mountConfigGet(client *api.Client, path string) (map[string]interface{}, error) {
+	tune, err := client.Sys().MountConfig(path)
+	if err != nil {
+		log.Printf("[ERROR] Error when reading tune config from path %q: %s", path+"/tune", err)
+		return nil, err
+	}
+	return flattenMountConfig(tune), nil
 }

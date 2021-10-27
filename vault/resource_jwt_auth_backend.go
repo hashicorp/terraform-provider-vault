@@ -281,7 +281,7 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[DEBUG] Reading jwt auth tune from %q", path+"/tune")
-	rawTune, err := authMountTuneGet(client, "auth/"+path)
+	rawTune, err := authMountConfigGet(client, "auth/"+path)
 	if err != nil {
 		return fmt.Errorf("error reading tune information from Vault: %s", err)
 	}
