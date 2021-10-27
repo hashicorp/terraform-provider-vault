@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
-	"strconv"
 )
 
 func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
@@ -52,7 +52,7 @@ func testPkiSecretBackendRootCertificateDestroy(s *terraform.State) error {
 	}
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_pki_secret_backend" {
+		if rs.Type != "vault_mount" {
 			continue
 		}
 		for path, mount := range mounts {
@@ -68,16 +68,17 @@ func testPkiSecretBackendRootCertificateDestroy(s *terraform.State) error {
 
 func testPkiSecretBackendRootCertificateConfig_basic(path string) string {
 	return fmt.Sprintf(`
-resource "vault_pki_secret_backend" "test" {
+resource "vault_mount" "test" {
   path = "%s"
+  type = "pki"
   description = "test"
   default_lease_ttl_seconds = "86400"
   max_lease_ttl_seconds     = "86400"
 }
 
 resource "vault_pki_secret_backend_root_cert" "test" {
-  depends_on = [ "vault_pki_secret_backend.test" ]
-  backend = vault_pki_secret_backend.test.path
+  depends_on = [ "vault_mount.test" ]
+  backend = vault_mount.test.path
   type = "internal"
   common_name = "test Root CA"
   ttl = "86400"

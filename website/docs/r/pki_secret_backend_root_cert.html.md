@@ -21,10 +21,8 @@ for more details.
 
 ```hcl
 resource "vault_pki_secret_backend_root_cert" "test" {
-  depends_on = [vault_pki_secret_backend.pki]
-
-  backend = vault_pki_secret_backend.pki.path
-
+  depends_on            = [vault_mount.pki]
+  backend               = vault_mount.pki.path
   type                  = "internal"
   common_name           = "Root CA"
   ttl                   = "315360000"

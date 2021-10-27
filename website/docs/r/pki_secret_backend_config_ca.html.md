@@ -21,9 +21,9 @@ for more details.
 
 ```hcl
 resource "vault_pki_secret_backend_config_ca" "intermediate" {
-  depends_on = [vault_pki_secret_backend.intermediate]
+  depends_on = [vault_mount.intermediate]
 
-  backend = vault_pki_secret_backend.intermediate.path
+  backend = vault_mount.intermediate.path
   
   pem_bundle = <<EOT
 -----BEGIN RSA PRIVATE KEY-----

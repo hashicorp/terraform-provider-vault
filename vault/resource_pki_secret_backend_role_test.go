@@ -122,13 +122,14 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 
 func testPkiSecretBackendRoleConfig_basic(name, path string) string {
 	return fmt.Sprintf(`
-resource "vault_pki_secret_backend" "pki" {
+resource "vault_mount" "pki" {
   path = "%s"
+  type = "pki"
 }
 
 resource "vault_pki_secret_backend_role" "test" {
-  depends_on = [ "vault_pki_secret_backend.pki" ]
-  backend = vault_pki_secret_backend.pki.path
+  depends_on = [ "vault_mount.pki" ]
+  backend = vault_mount.pki.path
   name = "%s"
   ttl = 3600
   max_ttl = 7200
@@ -170,13 +171,14 @@ resource "vault_pki_secret_backend_role" "test" {
 
 func testPkiSecretBackendRoleConfig_updated(name, path string) string {
 	return fmt.Sprintf(`
-resource "vault_pki_secret_backend" "pki" {
+resource "vault_mount" "pki" {
   path = "%s"
+  type = "pki"
 }
 
 resource "vault_pki_secret_backend_role" "test" {
-  depends_on = [ "vault_pki_secret_backend.pki" ]
-  backend = vault_pki_secret_backend.pki.path
+  depends_on = [ "vault_mount.pki" ]
+  backend = vault_mount.pki.path
   name = "%s"
   ttl = 1800
   max_ttl = 3600
