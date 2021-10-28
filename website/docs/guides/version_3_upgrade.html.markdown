@@ -27,8 +27,8 @@ can always be found in the [CHANGELOG](https://github.com/hashicorp/terraform-pr
 We introduced version `3.0.0` of the Vault provider in order to upgrade to the
 [Terraform Plugin SDKv2](https://www.terraform.io/docs/extend/sdkv2-intro.html).
 The change was deemed significant enough to warrant the major version bump.
-In addition to the aforementioned SDK upgrade all previously deprecated fields
-have been removed.
+In addition to the aforementioned SDK upgrade all previously deprecated fields,
+and resources have been removed.
 
 While you may see some small changes in your configurations as a result of
 these changes, we don't expect you'll need to make any major refactorings.
@@ -72,6 +72,7 @@ state changes in the meantime.
 
 - [Data Source: `vault_kubernetes_auth_backend_role`](#data-source-vault_kubernetes_auth_backend_role)
 
+- [Resource: `vault_ad_secret_backend`](#resource-vault_ad_secret_backend)
 - [Resource: `vault_approle_auth_backend_role`](#resource-vault_approle_auth_backend_role)
 - [Resource: `vault_auth_backend`](#resource-vault_auth_backend)
 - [Resource: `vault_aws_auth_backend_role`](#resource-vault_aws_auth_backend_role)
@@ -141,6 +142,17 @@ The following deprecated fields have been removed:
 * `period` - use `token_period` instead.
 
 * `num_uses` - use `token_num_uses` instead.
+
+_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
+
+## Resource: `vault_ad_secret_backend`
+
+### Deprecated fields have been removed
+The following deprecated fields have been removed:
+
+* `formatter` - use `password_policy` instead.
+
+* `length` - use `password_policy` instead.
 
 _Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 
