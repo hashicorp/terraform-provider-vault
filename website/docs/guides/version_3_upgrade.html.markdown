@@ -301,7 +301,7 @@ resource "vault_mount" "pki-example" {
 }
 ```
 
-_Attempting to provision the resource above will raise an error._
+_Attempting to provision a `vault_pki_secret_backend` resource will raise an error._
 
 ## Resource: `vault_token`
 
