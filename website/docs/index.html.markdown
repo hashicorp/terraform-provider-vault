@@ -267,6 +267,22 @@ provider "vault" {
 }
 ```
 
+If the `X-Vault-AWS-IAM-Server-ID` was configured as part of the AWS auth method, specify the `header_value` within the `parameters` block:
+
+```hcl
+provider "vault" {
+  address = "http://127.0.0.1:8200"
+  auth_login {
+    path = "auth/aws/login"
+    method = "aws"
+    parameters = {
+      role = "dev-role-iam"
+      header_value = "vault.example.com"
+    }
+  }
+}
+```
+
 ## Namespace support
 
 The Vault provider supports managing [Namespaces][namespaces] (a feature of
