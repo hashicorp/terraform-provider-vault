@@ -267,7 +267,7 @@ provider "vault" {
 }
 ```
 
-If the `X-Vault-AWS-IAM-Server-ID` was configured as part of the AWS auth method, specify the `header_value` within the `parameters` block:
+If the Vault server's AWS auth method requires the `X-Vault-AWS-IAM-Server-ID` header to be set by clients, specify the server ID in `header_value` within the `parameters` block:
 
 ```hcl
 provider "vault" {
