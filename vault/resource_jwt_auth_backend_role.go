@@ -241,10 +241,6 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("bound_claims_type", v)
 	}
 
-	if v, ok := resp.Data["disable_bound_claims_parsing"]; ok {
-		d.Set("disable_bound_claims_parsing", v)
-	}
-
 	if resp.Data["bound_claims"] != nil {
 		boundClaims := make(map[string]interface{})
 		respBoundClaims := resp.Data["bound_claims"].(map[string]interface{})
@@ -403,25 +399,23 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 		data["bound_claims_type"] = v.(string)
 	}
 
-	disableParseClaims := false
-	if v, ok := d.GetOkExists("disable_bound_claims_parsing"); ok {
-		disableParseClaims = v.(bool)
-		data["disable_bound_claims_parsing"] = disableParseClaims
-	}
-
 	if v, ok := d.GetOk("bound_claims"); ok {
+		var disableParseClaims bool
+		if v, ok := d.GetOkExists("disable_bound_claims_parsing"); ok {
+			disableParseClaims = v.(bool)
+		}
+
 		boundClaims := make(map[string]interface{})
 		for key, val := range v.(map[string]interface{}) {
-			valStr := val.(string)
-			if !disableParseClaims && strings.Contains(valStr, ",") {
-				vals := strings.Split(valStr, ",")
-				for i := range vals {
-					vals[i] = strings.TrimSpace(vals[i])
+			var claims []string
+			if !disableParseClaims {
+				for _, v := range strings.Split(val.(string), ",") {
+					claims = append(claims, strings.TrimSpace(v))
 				}
-				boundClaims[key] = vals
 			} else {
-				boundClaims[key] = valStr
+				claims = append(claims, strings.TrimSpace(val.(string)))
 			}
+			boundClaims[key] = claims
 		}
 		data["bound_claims"] = boundClaims
 	}
