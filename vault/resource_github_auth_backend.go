@@ -74,7 +74,6 @@ func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 		Type:        "github",
 		Description: description,
 	})
-
 	if err != nil {
 		return fmt.Errorf("error enabling github auth backend at '%s': %s", path, err)
 	}
@@ -105,7 +104,6 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Writing github auth config to '%q'", configPath)
 	_, err := client.Logical().Write(configPath, data)
-
 	if err != nil {
 		d.SetId("")
 		return fmt.Errorf("error writing github config to '%q': %s", configPath, err)
@@ -176,32 +174,7 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	ttlS := flattenVaultDuration(dt.Data["ttl"])
-	maxTtlS := flattenVaultDuration(dt.Data["max_ttl"])
-
 	readTokenFields(d, dt)
-
-	// Check if the user is using the deprecated `ttl`
-	if _, deprecated := d.GetOk("ttl"); deprecated {
-		// Then we see if `token_ttl` was set and unset it
-		// Vault will still return `ttl`
-		if _, ok := d.GetOk("token_ttl"); ok {
-			d.Set("token_ttl", nil)
-		}
-
-		d.Set("ttl", ttlS)
-	}
-
-	// Check if the user is using the deprecated `max_ttl`
-	if _, deprecated := d.GetOk("max_ttl"); deprecated {
-		// Then we see if `token_max_ttl` was set and unset it
-		// Vault will still return `max_ttl`
-		if _, ok := d.GetOk("token_max_ttl"); ok {
-			d.Set("token_max_ttl", nil)
-		}
-
-		d.Set("max_ttl", maxTtlS)
-	}
 
 	d.Set("path", d.Id())
 	d.Set("organization", dt.Data["organization"])

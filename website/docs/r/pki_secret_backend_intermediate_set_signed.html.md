@@ -21,8 +21,7 @@ for more details.
 
 ```hcl
 resource "vault_pki_secret_backend_intermediate_set_signed" "intermediate" { 
-  backend = vault_pki_secret_backend.intermediate.path
-
+  backend     = vault_mount.intermediate.path
   certificate = "<...>"
 }
 ```

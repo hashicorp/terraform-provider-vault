@@ -204,60 +204,6 @@ func azureAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	readTokenFields(d, resp)
 
-	// Check if the user is using the deprecated `policies`
-	if _, deprecated := d.GetOk("policies"); deprecated {
-		// Then we see if `token_policies` was set and unset it
-		// Vault will still return `policies`
-		if _, ok := d.GetOk("token_policies"); ok {
-			d.Set("token_policies", nil)
-		}
-
-		if v, ok := resp.Data["policies"]; ok {
-			d.Set("policies", v)
-		}
-
-	}
-
-	// Check if the user is using the deprecated `period`
-	if _, deprecated := d.GetOk("period"); deprecated {
-		// Then we see if `token_period` was set and unset it
-		// Vault will still return `period`
-		if _, ok := d.GetOk("token_period"); ok {
-			d.Set("token_period", nil)
-		}
-
-		if v, ok := resp.Data["period"]; ok {
-			d.Set("period", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `ttl`
-	if _, deprecated := d.GetOk("ttl"); deprecated {
-		// Then we see if `token_ttl` was set and unset it
-		// Vault will still return `ttl`
-		if _, ok := d.GetOk("token_ttl"); ok {
-			d.Set("token_ttl", nil)
-		}
-
-		if v, ok := resp.Data["ttl"]; ok {
-			d.Set("ttl", v)
-		}
-
-	}
-
-	// Check if the user is using the deprecated `max_ttl`
-	if _, deprecated := d.GetOk("max_ttl"); deprecated {
-		// Then we see if `token_max_ttl` was set and unset it
-		// Vault will still return `max_ttl`
-		if _, ok := d.GetOk("token_max_ttl"); ok {
-			d.Set("token_max_ttl", nil)
-		}
-
-		if v, ok := resp.Data["max_ttl"]; ok {
-			d.Set("max_ttl", v)
-		}
-	}
-
 	d.Set("backend", backend)
 	d.Set("role", role)
 

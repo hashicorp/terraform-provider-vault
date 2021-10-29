@@ -40,7 +40,7 @@ func testPkiSecretBackendCrlConfigDestroy(s *terraform.State) error {
 	}
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_pki_secret_backend" {
+		if rs.Type != "vault_mount" {
 			continue
 		}
 		for path, mount := range mounts {

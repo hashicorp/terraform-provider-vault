@@ -595,10 +595,6 @@ var (
 			Resource:      passwordPolicyResource(),
 			PathInventory: []string{"/sys/policy/password/{name}"},
 		},
-		"vault_pki_secret_backend": {
-			Resource:      pkiSecretBackendResource(),
-			PathInventory: []string{UnknownPath},
-		},
 		"vault_pki_secret_backend_cert": {
 			Resource:      pkiSecretBackendCertResource(),
 			PathInventory: []string{"/pki/issue/{role}"},
