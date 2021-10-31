@@ -151,6 +151,12 @@ func pkiSecretBackendCertResource() *schema.Resource {
 				Computed:    true,
 				Description: "The certificate expiration.",
 			},
+			"auto_revoke": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "If enabled, the certificate will be revoked if the resource is destroyed",
+			},
 		},
 	}
 }
@@ -286,6 +292,30 @@ func pkiSecretBackendCertUpdate(d *schema.ResourceData, m interface{}) error {
 }
 
 func pkiSecretBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
+	if !(d.Get("auto_revoke").(bool)) {
+		return nil
+	}
+
+	client := meta.(*api.Client)
+
+	backend := d.Get("backend").(string)
+	path := strings.Trim(backend, "/") + "/revoke"
+
+	serialNumber := d.Get("serial_number").(string)
+	commonName := d.Get("common_name").(string)
+
+	data := map[string]interface{}{
+		"serial_number": serialNumber,
+	}
+
+	log.Printf("[DEBUG] Revoking certificate %s with serial number %s on PKI secret backend %q", commonName, serialNumber, backend)
+	_, err := client.Logical().Write(path, data)
+	if err != nil {
+		return fmt.Errorf("error revoking certificate %s with serial number %s for PKI secret backend %q: %s", commonName, serialNumber,
+			backend, err)
+	}
+	log.Printf("[DEBUG] Revoked certificate %s with serial number %s on PKI secret backend %q", commonName, serialNumber, backend)
+
 	return nil
 }
 
