@@ -70,9 +70,10 @@ func TestAccJWTAuthBackendRole_import(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "vault_jwt_auth_backend_role.role",
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            "vault_jwt_auth_backend_role.role",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"disable_bound_claims_parsing"},
 			},
 		},
 	})
@@ -327,6 +328,40 @@ func TestAccJWTAuthBackendRoleOIDC_full(t *testing.T) {
 	})
 }
 
+func TestAccJWTAuthBackendRoleOIDC_disableParsing(t *testing.T) {
+	backend := acctest.RandomWithPrefix("jwt")
+	role := acctest.RandomWithPrefix("test-role")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckJWTAuthBackendRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendRoleConfigOIDC_disableParsing(backend, role),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"backend", backend),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"role_name", role),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"user_claim", "https://vault/user"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"bound_claims_type", "string"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"bound_claims.%", "2"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"bound_claims.department", "engineering,admin"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"bound_claims.sector", "7g"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"disable_bound_claims_parsing", "true"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccJWTAuthBackendRole_fullUpdate(t *testing.T) {
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
@@ -568,6 +603,38 @@ resource "vault_jwt_auth_backend_role" "role" {
   }
 
   verbose_oidc_logging = true
+}`, backend, role)
+}
+
+func testAccJWTAuthBackendRoleConfigOIDC_disableParsing(backend, role string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "jwt" {
+  type = "oidc"
+  path = "%s"
+  oidc_discovery_url = "https://myco.auth0.com/"
+  oidc_client_id = "client"
+  oidc_client_secret = "secret"
+  lifecycle {
+  ignore_changes = [
+     # Ignore changes to oidc_client_secret inside the tests
+     "oidc_client_secret"
+    ]
+  }
+}
+
+resource "vault_jwt_auth_backend_role" "role" {
+  backend = vault_jwt_auth_backend.jwt.path
+  role_name = "%s"
+  role_type = "jwt"
+
+  user_claim = "https://vault/user"
+  token_policies = ["default", "dev", "prod"]
+  bound_claims_type = "string"
+  bound_claims = {
+    department = "engineering,admin"
+    sector = "7g"
+  }
+  disable_bound_claims_parsing = true
 }`, backend, role)
 }
 
