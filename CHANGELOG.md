@@ -2,6 +2,7 @@
 IMPROVEMENTS:
 * Upgrade Terraform Plugin SDK to v2
 * Add support for client controlled consistency on Vault Enterprise ([#1188](https://github.com/hashicorp/terraform-provider-vault/pull/1188))
+* `resource_jwt_auth_backend_role`: Add field to disable `bound_claims` comma separation ([#1200](https://github.com/hashicorp/terraform-provider-vault/pull/1200))
 
 BUGS:
 * `data/gcp_auth_backend_role`: Report an error when attempting to access a nonexistent role. ([#1184](https://github.com/hashicorp/terraform-provider-vault/pull/1184))
