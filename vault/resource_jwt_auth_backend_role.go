@@ -99,7 +99,7 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Default:     false,
-			Description: "If set, treats all bound claims map values as strings and disables comma separation while parsing.",
+			Description: "Disable bound claim value parsing. Useful when values contain commas.",
 		},
 		"claim_mappings": {
 			Type:        schema.TypeMap,
