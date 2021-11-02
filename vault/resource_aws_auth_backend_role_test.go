@@ -258,6 +258,7 @@ func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestChe
 			{NameInVault: "bound_iam_role_arn", NameInProvider: "bound_iam_role_arns", PreviousNameInProvider: "bound_iam_role_arn"},
 			{NameInVault: "bound_iam_instance_profile_arn", NameInProvider: "bound_iam_instance_profile_arns", PreviousNameInProvider: "bound_iam_instance_profile_arn"},
 			{NameInVault: "bound_ec2_instance_id", NameInProvider: "bound_ec2_instance_ids", PreviousNameInProvider: "bound_ec2_instance_id"},
+			{NameInVault: "role_id", NameInProvider: "role_id"},
 			{NameInVault: "role_tag", NameInProvider: "role_tag"},
 			{NameInVault: "bound_iam_principal_arn", NameInProvider: "bound_iam_principal_arns", PreviousNameInProvider: "bound_iam_principal_arn"},
 			{NameInVault: "inferred_entity_type", NameInProvider: "inferred_entity_type"},
