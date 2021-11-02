@@ -114,10 +114,11 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 							Description: "Cassandra hosts to connect to.",
 						},
 						"port": {
-							Type:        schema.TypeInt,
-							Optional:    true,
-							Description: "The transport port to use to connect to Cassandra.",
-							Default:     9042,
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Description:  "The transport port to use to connect to Cassandra.",
+							ValidateFunc: validation.IsPortNumber,
+							Default:      9042,
 						},
 						"username": {
 							Type:        schema.TypeString,
@@ -149,10 +150,11 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 							Sensitive:   true,
 						},
 						"pem_json": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "Specifies JSON containing a certificate and private key; a certificate, private key, and issuing CA certificate; or just a CA certificate.",
-							Sensitive:   true,
+							Type:         schema.TypeString,
+							Optional:     true,
+							Description:  "Specifies JSON containing a certificate and private key; a certificate, private key, and issuing CA certificate; or just a CA certificate.",
+							Sensitive:    true,
+							ValidateFunc: validation.StringIsJSON,
 						},
 						"protocol_version": {
 							Type:        schema.TypeInt,
