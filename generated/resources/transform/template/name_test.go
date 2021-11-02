@@ -35,7 +35,12 @@ func TestTemplateName(t *testing.T) {
 		CheckDestroy: destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: basicConfig(path, "regex", `(\\d{4})-(\\d{4})-(\\d{4})-(\\d{4})`, "numerics"),
+				Config: basicConfig(path, "regex",
+					`(\\d{4})-(\\d{4})-(\\d{4})-(\\d{4})`,
+					"numerics",
+					"$1-$2-$3-$4",
+					`{ "last-four" = "$4" }`,
+				),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "path", path),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "name", "ccn"),
@@ -45,7 +50,12 @@ func TestTemplateName(t *testing.T) {
 				),
 			},
 			{
-				Config: basicConfig(path, "regex", `(\\d{9})`, "builtin/numeric"),
+				Config: basicConfig(path, "regex",
+					`(\\d{9})`,
+					"builtin/numeric",
+					"$1",
+					`{ "only" = "$1" }`,
+				),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "path", path),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "name", "ccn"),
@@ -81,23 +91,27 @@ func destroy(s *terraform.State) error {
 	return nil
 }
 
-func basicConfig(path, tp, pattern, alphabet string) string {
+func basicConfig(path, tp, pattern, alphabet, encodeFormat, decodeFormats string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "transform" {
   path = "%s"
   type = "transform"
 }
+
 resource "vault_transform_alphabet_name" "numerics" {
-  path = vault_mount.transform.path
-  name = "numerics"
+  path     = vault_mount.transform.path
+  name     = "numerics"
   alphabet = "0123456789"
 }
+
 resource "vault_transform_template_name" "test" {
   path = vault_transform_alphabet_name.numerics.path
-  name = "ccn"
-  type = "%s"
-  pattern = "%s"
-  alphabet = "%s"
+  name           = "ccn"
+  type           = "%s"
+  pattern        = "%s"
+  alphabet       = "%s"
+  encode_format  = "%s"
+  decode_formats = %s
 }
-`, path, tp, pattern, alphabet)
+`, path, tp, pattern, alphabet, encodeFormat, decodeFormats)
 }
