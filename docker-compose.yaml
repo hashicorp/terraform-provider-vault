@@ -32,3 +32,13 @@ services:
       "discovery.type": "single-node"
       "xpack.security.enabled": "true"
       "ELASTIC_PASSWORD": "elastic"
+
+  influxdb:
+    image: influxdb:1.7.11-alpine
+    ports:
+    - "8086:8086"
+    environment:
+      "DOCKER_INFLUXDB_INIT_USERNAME": "admin"
+      "DOCKER_INFLUXDB_INIT_PASSWORD": "password"
+      "DOCKER_INFLUXDB_INIT_ORG": "test"
+      "DOCKER_INFLUXDB_INIT_BUCKET": "test"

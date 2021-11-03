@@ -234,11 +234,11 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 							Default:     5,
 							Description: "The number of seconds to use as a connection timeout.",
 						},
-						"username_template": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "Template describing how dynamic usernames are generated.",
-						},
+						// "username_template": {
+						// 	Type:        schema.TypeString,
+						// 	Optional:    true,
+						// 	Description: "Template describing how dynamic usernames are generated.",
+						// },
 					},
 				},
 				MaxItems:      1,
@@ -828,9 +828,6 @@ func setInfluxDBDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 	}
 	if v, ok := d.GetOkExists(prefix + "connect_timeout"); ok {
 		data["connect_timeout"] = v.(int)
-	}
-	if v, ok := d.GetOkExists(prefix + "username_template"); ok {
-		data["username_template"] = v.(string)
 	}
 }
 
