@@ -138,7 +138,7 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 	for _, field := range requestFields {
 		if val, ok := resp.Data[field]; ok {
 			if err := d.Set(field, val); err != nil {
-				return fmt.Errorf("error setting state key 'type': %s", err)
+				return fmt.Errorf("error setting state key %q: %s", field, err)
 			}
 		}
 	}
