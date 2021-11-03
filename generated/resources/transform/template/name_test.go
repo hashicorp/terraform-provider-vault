@@ -47,14 +47,16 @@ func TestTemplateName(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "type", "regex"),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "pattern", `(\d{4})-(\d{4})-(\d{4})-(\d{4})`),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "alphabet", "numerics"),
+					resource.TestCheckResourceAttr("vault_transform_template_name.test", "encode_format", "$1-$2-$3-$4"),
+					resource.TestCheckResourceAttr("vault_transform_template_name.test", "decode_formats.last-four", "$4"),
 				),
 			},
 			{
 				Config: basicConfig(path, "regex",
 					`(\\d{9})`,
 					"builtin/numeric",
-					"$1",
-					`{ "only" = "$1" }`,
+					"",
+					"",
 				),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "path", path),
@@ -62,6 +64,8 @@ func TestTemplateName(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "type", "regex"),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "pattern", `(\d{9})`),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "alphabet", "builtin/numeric"),
+					resource.TestCheckResourceAttr("vault_transform_template_name.test", "encode_format", ""),
+					resource.TestCheckNoResourceAttr("vault_transform_template_name.test", "decode_formats"),
 				),
 			},
 			{
@@ -92,26 +96,39 @@ func destroy(s *terraform.State) error {
 }
 
 func basicConfig(path, tp, pattern, alphabet, encodeFormat, decodeFormats string) string {
-	return fmt.Sprintf(`
+	config := fmt.Sprintf(`
 resource "vault_mount" "transform" {
   path = "%s"
   type = "transform"
 }
 
 resource "vault_transform_alphabet_name" "numerics" {
-  path     = vault_mount.transform.path
-  name     = "numerics"
+  path = vault_mount.transform.path
+  name = "numerics"
   alphabet = "0123456789"
 }
 
 resource "vault_transform_template_name" "test" {
   path = vault_transform_alphabet_name.numerics.path
-  name           = "ccn"
-  type           = "%s"
-  pattern        = "%s"
-  alphabet       = "%s"
-  encode_format  = "%s"
-  decode_formats = %s
-}
-`, path, tp, pattern, alphabet, encodeFormat, decodeFormats)
+  name = "ccn"
+  type = "%s"`, path, tp)
+
+	if pattern != "" {
+		config += fmt.Sprintf(`
+  pattern = "%s"`, pattern)
+	}
+	if alphabet != "" {
+		config += fmt.Sprintf(`
+  alphabet = "%s"`, alphabet)
+	}
+	if encodeFormat != "" {
+		config += fmt.Sprintf(`
+  encode_format = "%s"`, encodeFormat)
+	}
+	if decodeFormats != "" {
+		config += fmt.Sprintf(`
+  decode_formats = %s`, decodeFormats)
+	}
+
+	return config + "\n}\n"
 }

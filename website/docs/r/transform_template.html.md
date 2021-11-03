@@ -60,6 +60,6 @@ The following arguments are supported:
 * `pattern` - (Optional) The pattern used for matching. Currently, only regular expression pattern is supported.
 * `type` - (Optional) The pattern type to use for match detection. Currently, only regex is supported.
 * `encode_format` - (Optional) - The regular expression template used to format encoded values.
-  (requires Vault 1.9+)
+  (requires Vault Enterprise 1.9+)
 * `decode_formats` - (Optional) - Optional mapping of name to regular expression template, used to customize
-  the decoded output. (requires Vault 1.9+)
+  the decoded output. (requires Vault Enterprise 1.9+)
