@@ -4,9 +4,11 @@ IMPROVEMENTS:
 * Add support for client controlled consistency on Vault Enterprise ([#1188](https://github.com/hashicorp/terraform-provider-vault/pull/1188))
 * `resource/jwt_auth_backend_role`: Add field `disable_bound_claims_parsing` to disable bound claim value parsing, which is useful when values contain commas ([#1200](https://github.com/hashicorp/terraform-provider-vault/pull/1200))
 * `resource/transform_template`: Add `encode_format` and `decode_formats` fields for `Vault Enterprise` with the `Advanced Data Protection Transform Module` ([#1214](https://github.com/hashicorp/terraform-provider-vault/pull/1214))
+* `data/generic_secret`: Store `lease_start_time` UTC. ([#1216](https://github.com/hashicorp/terraform-provider-vault/pull/1216))
 
 BUGS:
 * `data/gcp_auth_backend_role`: Report an error when attempting to access a nonexistent role. ([#1184](https://github.com/hashicorp/terraform-provider-vault/pull/1184))
+* `data/generic_secret`: Ensure `lease_start_time` is stored in RFC3339 format. ([#770](https://github.com/hashicorp/terraform-provider-vault/pull/770))
 
 ## 2.24.0 (September 15, 2021)
 

@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -22,7 +23,7 @@ func TestDataSourceGenericSecret(t *testing.T) {
 	})
 }
 
-func TestV2Secret(t *testing.T) {
+func TestDataSourceGenericSecret_v2(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-acctest-kv/")
 	path := acctest.RandomWithPrefix("foo")
 	resource.Test(t, resource.TestCase{
@@ -30,22 +31,22 @@ func TestV2Secret(t *testing.T) {
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testv2DataSourceGenericSecret_config(mount, path),
+				Config: testDataSourceV2Secret_config(mount, path),
 				Check:  testDataSourceGenericSecret_check,
 			},
 			{
-				Config: testv2DataSourceGenericSecretUpdated_config(mount, path),
+				Config: testDataSourceV2SecretUpdated_config(mount, path),
 				Check:  testDataSourceGenericSecret_check,
 			},
 			{
-				Config: testv2DataSourceGenericSecretUpdatedLatest_config(mount, path),
+				Config: testDataSourceV2SecretUpdatedLatest_config(mount, path),
 				Check:  testDataSourceGenericSecretUpdated_check,
 			},
 		},
 	})
 }
 
-func testv2DataSourceGenericSecret_config(mount, path string) string {
+func testDataSourceV2Secret_config(mount, path string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path        = "%s"
@@ -72,7 +73,7 @@ data "vault_generic_secret" "test" {
 `, mount, path)
 }
 
-func testv2DataSourceGenericSecretUpdated_config(mount, path string) string {
+func testDataSourceV2SecretUpdated_config(mount, path string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path        = "%s"
@@ -99,7 +100,7 @@ data "vault_generic_secret" "test" {
 `, mount, path)
 }
 
-func testv2DataSourceGenericSecretUpdatedLatest_config(mount, path string) string {
+func testDataSourceV2SecretUpdatedLatest_config(mount, path string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path        = "%s"
@@ -160,6 +161,23 @@ func testDataSourceGenericSecret_check(s *terraform.State) error {
 	iState := resourceState.Primary
 	if iState == nil {
 		return fmt.Errorf("resource has no primary instance")
+	}
+
+	ts, ok := iState.Attributes["lease_start_time"]
+	if !ok {
+		return fmt.Errorf("lease_start_time not set")
+	}
+
+	t, err := time.Parse(time.RFC3339, ts)
+	if err != nil {
+		return fmt.Errorf("lease_start_time value %q is not in the expected format, err=%s", ts, err)
+	}
+
+	elapsed := time.Now().UTC().Unix() - t.Unix()
+	// give a reasonable amount of buffer to allow for any system contention.
+	maxElapsed := int64(30)
+	if elapsed > maxElapsed {
+		return fmt.Errorf("elapsed lease_start_time %ds exceeds maximum %ds", elapsed, maxElapsed)
 	}
 
 	wantJson := `{"zip":"zap"}`
