@@ -23,7 +23,7 @@ func TestDataSourceGenericSecret(t *testing.T) {
 	})
 }
 
-func TestV2Secret(t *testing.T) {
+func TestDataSourceGenericSecret_v2(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-acctest-kv/")
 	path := acctest.RandomWithPrefix("foo")
 	resource.Test(t, resource.TestCase{
@@ -31,22 +31,22 @@ func TestV2Secret(t *testing.T) {
 		PreCheck:  func() { testAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testv2DataSourceGenericSecret_config(mount, path),
+				Config: testDataSourceV2Secret_config(mount, path),
 				Check:  testDataSourceGenericSecret_check,
 			},
 			{
-				Config: testv2DataSourceGenericSecretUpdated_config(mount, path),
+				Config: testDataSourceV2SecretUpdated_config(mount, path),
 				Check:  testDataSourceGenericSecret_check,
 			},
 			{
-				Config: testv2DataSourceGenericSecretUpdatedLatest_config(mount, path),
+				Config: testDataSourceV2SecretUpdatedLatest_config(mount, path),
 				Check:  testDataSourceGenericSecretUpdated_check,
 			},
 		},
 	})
 }
 
-func testv2DataSourceGenericSecret_config(mount, path string) string {
+func testDataSourceV2Secret_config(mount, path string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path        = "%s"
@@ -73,7 +73,7 @@ data "vault_generic_secret" "test" {
 `, mount, path)
 }
 
-func testv2DataSourceGenericSecretUpdated_config(mount, path string) string {
+func testDataSourceV2SecretUpdated_config(mount, path string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path        = "%s"
@@ -100,7 +100,7 @@ data "vault_generic_secret" "test" {
 `, mount, path)
 }
 
-func testv2DataSourceGenericSecretUpdatedLatest_config(mount, path string) string {
+func testDataSourceV2SecretUpdatedLatest_config(mount, path string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path        = "%s"
