@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -160,6 +161,24 @@ func testDataSourceGenericSecret_check(s *terraform.State) error {
 	iState := resourceState.Primary
 	if iState == nil {
 		return fmt.Errorf("resource has no primary instance")
+	}
+
+	ts, ok := iState.Attributes["lease_start_time"]
+	if !ok {
+		return fmt.Errorf("lease_start_time not set")
+	}
+
+	t, err := time.Parse(time.RFC3339, ts)
+	if err != nil {
+		return fmt.Errorf("lease_start_time value %q is not in the expected format, err=%s", ts, err)
+	}
+
+	elapsed := time.Now().UTC().Unix() - t.Unix()
+	// give a reasonable amount of buffer to allow for any system contention.
+	maxElapsed := int64(30)
+	if elapsed > maxElapsed {
+		return fmt.Errorf(
+			"elapsed lease_start_time %ds exceeds maximum %ds", elapsed, maxElapsed)
 	}
 
 	wantJson := `{"zip":"zap"}`
