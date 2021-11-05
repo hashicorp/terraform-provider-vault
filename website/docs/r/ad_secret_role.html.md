@@ -6,7 +6,7 @@ description: |-
   Creates a role on the Active Directory Secret Backend for Vault.
 ---
 
-# vault\ad\_secret\_role
+# vault\_ad\_secret\_role
 
 Creates a role on an Active Directory Secret Backend for Vault. Roles are
 used to map credentials to existing Active Directory service accounts.
