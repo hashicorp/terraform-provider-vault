@@ -81,7 +81,7 @@ It is derived from the local machine's clock, and is
 recorded in RFC3339 format UTC.
 This can be used to approximate the absolute time represented by
 `lease_duration`, though users must allow for any clock drift and response
-latency relative to the Vault server. (_provided only as a convenience_).
+latency relative to the Vault server. _Provided only as a convenience_.
 
 * `lease_renewable` - `true` if the lease can be renewed using Vault's
 `sys/renew/{lease-id}` endpoint. Terraform does not currently support lease
