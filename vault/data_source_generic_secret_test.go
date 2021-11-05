@@ -177,8 +177,7 @@ func testDataSourceGenericSecret_check(s *terraform.State) error {
 	// give a reasonable amount of buffer to allow for any system contention.
 	maxElapsed := int64(30)
 	if elapsed > maxElapsed {
-		return fmt.Errorf(
-			"elapsed lease_start_time %ds exceeds maximum %ds", elapsed, maxElapsed)
+		return fmt.Errorf("elapsed lease_start_time %ds exceeds maximum %ds", elapsed, maxElapsed)
 	}
 
 	wantJson := `{"zip":"zap"}`
