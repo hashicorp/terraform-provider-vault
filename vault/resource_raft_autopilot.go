@@ -14,7 +14,7 @@ var autopilotDefaults = map[string]interface{}{
 	"dead_server_last_contact_threshold": "24h0m0s",
 	"last_contact_threshold":             "10s",
 	"max_trailing_logs":                  1000,
-	"min_quorum":                         0,
+	"min_quorum":                         3,
 	"server_stabilization_time":          "10s",
 }
 
@@ -22,13 +22,13 @@ func raftAutopilotConfigResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
 		"cleanup_dead_servers": {
 			Type:        schema.TypeBool,
-			Description: "Specifies automatic removal of dead server nodes periodically.",
+			Description: "Specifies whether to remove dead server nodes periodically or when a new server joins. This requires that min-quorum is also set.",
 			Default:     autopilotDefaults["cleanup_dead_servers"],
 			Optional:    true,
 		},
 		"dead_server_last_contact_threshold": {
 			Type:        schema.TypeString,
-			Description: "Limit the amount of time a server can go without leader contact before being considered failed.",
+			Description: "Limit the amount of time a server can go without leader contact before being considered failed. This only takes effect when cleanup_dead_servers is set.",
 			Default:     autopilotDefaults["dead_server_last_contact_threshold"],
 			Optional:    true,
 		},
@@ -46,7 +46,7 @@ func raftAutopilotConfigResource() *schema.Resource {
 		},
 		"min_quorum": {
 			Type:        schema.TypeInt,
-			Description: "Minimum number of servers allowed in a cluster before autopilot can prune dead servers.",
+			Description: "Minimum number of servers allowed in a cluster before autopilot can prune dead servers. This should at least be 3. Applicable only for voting nodes.",
 			Default:     autopilotDefaults["min_quorum"],
 			Optional:    true,
 		},

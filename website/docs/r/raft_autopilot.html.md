@@ -30,11 +30,12 @@ resource "vault_raft_autopilot" "autopilot" {
 
 The following arguments are supported:
 
-- `cleanup_dead_servers` – (Optional) Specifies automatic removal of dead server 
-nodes periodically.
+- `cleanup_dead_servers` – (Optional) Specifies whether to remove dead server nodes
+periodically or when a new server joins. This requires that `min-quorum` is also set.
 
 - `dead_server_last_contact_threshold` - (Optional) Limit the amount of time a 
-server can go without leader contact before being considered failed.
+server can go without leader contact before being considered failed. This only takes
+effect when `cleanup_dead_servers` is set.
 
 - `last_contact_threshold` - (Optional) Limit the amount of time a server can go 
 without leader contact before being considered unhealthy.
@@ -43,7 +44,8 @@ without leader contact before being considered unhealthy.
 that a server can be behind its leader before being considered unhealthy.
 
 - `min_quorum` - (Optional) Minimum number of servers allowed in a cluster before 
-autopilot can prune dead servers.
+autopilot can prune dead servers. This should at least be 3. Applicable only for
+voting nodes.
 
 - `server_stabilization_time` - (Optional) Minimum amount of time a server must be 
 stable in the 'healthy' state before being added to the cluster.
