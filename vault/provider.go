@@ -667,6 +667,10 @@ var (
 			Resource:      raftSnapshotAgentConfigResource(),
 			PathInventory: []string{"/sys/storage/raft/snapshot-auto/config/{name}"},
 		},
+		"vault_raft_autopilot": {
+			Resource:      raftAutopilotConfigResource(),
+			PathInventory: []string{"/sys/storage/raft/autopilot/configuration"},
+		},
 	}
 )
 
