@@ -5,15 +5,17 @@ import (
 	"testing"
 
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
 func TestAccRaftAutopilotConfig_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { util.TestRaftPreCheck(t) },
 		CheckDestroy: testAccRaftAutopilotConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
