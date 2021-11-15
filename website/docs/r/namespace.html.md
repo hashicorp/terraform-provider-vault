@@ -29,3 +29,36 @@ The following arguments are supported:
 ## Attributes Reference
 
 * `id` - ID of the namespace.
+
+## Import
+
+Namespaces can be imported using its `name` as accessor id, e.g.
+
+```
+$ terraform import vault_namespace.example <name>
+```
+
+If the declared resource to be imported is intended to support namespaces using a [provider alias](https://registry.terraform.io/providers/hashicorp/vault/latest/docs#using-provider-aliases) then the <name> is relative to the namespace path, e.g.
+
+```
+
+provider "vault" {
+  # Configuration options
+  namespace = "example"
+  alias     = "example"
+}
+
+resource vault_namespace "example2" {
+  provider = vault.example
+}
+
+$ terraform import vault_namespace.example2 example2
+
+$ terraform state show vault_namespace.example2
+# vault_namespace.example2
+resource "vault_namespace" "example2" {
+    id           = "example/example2/"
+    namespace_id = <known after import>
+    path         = "example2"
+}
+```
