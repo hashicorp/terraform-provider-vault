@@ -45,6 +45,7 @@ jobs:
             export MYSQL_CONNECTION_USERNAME="root"
             export MYSQL_CONNECTION_PASSWORD="mysql"
             export MONGODB_URL="mongodb://root:mongodb@localhost:27017/admin?ssl=false"
+            export SKIP_RAFT_TESTS="true"
             make testacc TESTARGS='-v'
       - run:
           name: "Run Build"
