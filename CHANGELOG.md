@@ -1,4 +1,8 @@
 ## 3.0.0 (Unreleased)
+
+FEATURES:
+* **New Resource** `vault_raft_autopilot`: Configure Vault's [Raft Autopilot settings](https://www.vaultproject.io/api-docs/system/storage/raftautopilot) ([#1210](https://github.com/hashicorp/terraform-provider-vault/pull/1210))
+
 IMPROVEMENTS:
 * Upgrade Terraform Plugin SDK to v2
 * Add support for client controlled consistency on Vault Enterprise ([#1188](https://github.com/hashicorp/terraform-provider-vault/pull/1188))
