@@ -32,13 +32,13 @@ The following arguments are supported:
 
 ## Import
 
-Namespaces can be imported using its `name` as accessor id, e.g.
+Namespaces can be imported using its `name` as accessor id
 
 ```
 $ terraform import vault_namespace.example <name>
 ```
 
-If the declared resource to be imported is intended to support namespaces using a [provider alias](https://registry.terraform.io/providers/hashicorp/vault/latest/docs#using-provider-aliases) then the <name> is relative to the namespace path, e.g.
+If the declared resource is imported and intends to support namespaces using a provider alias, then the name is relative to the namespace path.
 
 ```
 
