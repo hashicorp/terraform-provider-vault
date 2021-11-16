@@ -119,20 +119,6 @@ func TestEntPreCheck(t *testing.T) {
 	}
 }
 
-func TestRaftPreCheck(t *testing.T) {
-	isRaft := os.Getenv("TF_RAFT_ENABLED")
-
-	if isRaft == "" {
-		t.Skip("TF_RAFT_ENABLED is not set, test is applicable only with a Raft Cluster setup")
-	}
-	if v := os.Getenv("VAULT_ADDR"); v == "" {
-		t.Fatal("VAULT_ADDR must be set for acceptance tests")
-	}
-	if v := os.Getenv("VAULT_TOKEN"); v == "" {
-		t.Fatal("VAULT_TOKEN must be set for acceptance tests")
-	}
-}
-
 func GetTestADCreds(t *testing.T) (string, string, string) {
 	adBindDN := os.Getenv("AD_BINDDN")
 	adBindPass := os.Getenv("AD_BINDPASS")
