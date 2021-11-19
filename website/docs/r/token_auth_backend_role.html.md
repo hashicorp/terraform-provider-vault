@@ -20,7 +20,7 @@ resource "vault_token_auth_backend_role" "example" {
   allowed_policies    = ["dev", "test"]
   disallowed_policies = ["default"]
   orphan              = true
-  period              = "86400"
+  token_period        = "86400"
   renewable           = true
   explicit_max_ttl    = "115200"
   path_suffix         = "path-suffix"
