@@ -224,15 +224,14 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 
 	var cidrs []string
 	if cidrList := resp.Data["cidr_list"]; cidrList != nil {
-		switch cidrList.(type) {
+		switch data := cidrList.(type) {
 		case string:
-			if cidrList.(string) != "" {
-				cidrs = strings.Split(cidrList.(string), ",")
+			if data != "" {
+				cidrs = strings.Split(data, ",")
 			}
 		case []interface{}:
-			v := cidrList.([]interface{})
-			cidrs = make([]string, 0, len(v))
-			for _, i := range v {
+			cidrs = make([]string, 0, len(data))
+			for _, i := range data {
 				cidrs = append(cidrs, i.(string))
 			}
 		default:
