@@ -48,6 +48,7 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Type:             schema.TypeString,
 				Optional:         true,
 				Description:      "IAM policy the role should use in JSON format.",
+				ValidateFunc:     ValidateDataJSON,
 				DiffSuppressFunc: util.JsonDiffSuppress,
 			},
 			"credential_type": {
@@ -96,26 +97,18 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	policyARNsIfc, ok := d.GetOk("policy_arns")
 	var policyARNs []interface{}
-	if !ok {
-		policyARN := d.Get("policy_arn")
-		if policyARN != "" {
-			policyARNs = append(policyARNs, policyARN)
-		}
-	} else {
+	if ok {
 		policyARNs = policyARNsIfc.(*schema.Set).List()
 	}
 
-	policy, ok := d.GetOk("policy_document")
-	if !ok {
-		policy = d.Get("policy")
-	}
+	policyDocument := d.Get("policy_document")
 
 	roleARNs := d.Get("role_arns").(*schema.Set).List()
 
 	iamGroups := d.Get("iam_groups").(*schema.Set).List()
 
-	if policy == "" && len(policyARNs) == 0 && len(roleARNs) == 0 && len(iamGroups) == 0 {
-		return fmt.Errorf("at least one of `policy`, `policy_arns`, `role_arns` or `iam_groups` must be set")
+	if policyDocument == "" && len(policyARNs) == 0 && len(roleARNs) == 0 && len(iamGroups) == 0 {
+		return fmt.Errorf("at least one of: `policy_document`, `policy_arns`, `role_arns` or `iam_groups` must be set")
 	}
 
 	credentialType := d.Get("credential_type").(string)
@@ -123,8 +116,8 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{
 		"credential_type": credentialType,
 	}
-	if policy != "" {
-		data["policy_document"] = policy
+	if policyDocument != "" {
+		data["policy_document"] = policyDocument
 	}
 	if len(policyARNs) != 0 {
 		data["policy_arns"] = policyARNs
@@ -188,16 +181,12 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	if _, ok := d.GetOk("policy_document"); ok {
 		d.Set("policy_document", secret.Data["policy_document"])
-	} else if _, ok := d.GetOk("policy"); ok {
-		d.Set("policy", secret.Data["policy_document"])
 	} else if v, ok := secret.Data["policy_document"]; ok {
 		d.Set("policy_document", v)
 	}
 
 	if _, ok := d.GetOk("policy_arns"); ok {
 		d.Set("policy_arns", secret.Data["policy_arns"])
-	} else if _, ok := d.GetOk("policy_arn"); ok {
-		d.Set("policy_arn", secret.Data["policy_arns"])
 	} else if v, ok := secret.Data["policy_arns"]; ok {
 		d.Set("policy_arns", v)
 	}
