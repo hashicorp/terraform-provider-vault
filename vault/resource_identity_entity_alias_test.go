@@ -29,6 +29,7 @@ func TestAccIdentityEntityAlias(t *testing.T) {
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "name", nameEntity, "name"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntity, "id"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubA, "accessor"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, "custom_metadata", nameEntity, "metadata"),
 				),
 			},
 			{
@@ -59,6 +60,7 @@ func TestAccIdentityEntityAlias_Update(t *testing.T) {
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "name", nameEntityA, "name"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntityA, "id"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubA, "accessor"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, "custom_metadata", nameEntityA, "metadata"),
 				),
 			},
 			{
@@ -67,6 +69,7 @@ func TestAccIdentityEntityAlias_Update(t *testing.T) {
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "name", nameEntityB, "name"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntityB, "id"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubB, "accessor"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, "custom_metadata", nameEntityA, "metadata"),
 				),
 			},
 		},
@@ -101,11 +104,17 @@ func testAccIdentityEntityAliasConfig(entityName string, dupeAlias bool, altTarg
 resource "vault_identity_entity" "entityA" {
   name = "%s-A"
   policies = ["test"]
+  metadata = {
+    version = "1"
+  }
 }
 
 resource "vault_identity_entity" "entityB" {
   name = "%s-B"
   policies = ["test"]
+  metadata = {
+    version = "1"
+  }
 }
 
 resource "vault_auth_backend" "githubA" {
@@ -122,8 +131,9 @@ resource "vault_identity_entity_alias" "entity-alias" {
   name = vault_identity_entity.entity%s.name
   mount_accessor = vault_auth_backend.github%s.accessor
   canonical_id = vault_identity_entity.entity%s.id
+  custom_metadata = vault_identity_entity.entity%s.metadata
 }
-`, entityName, entityName, entityName, entityName, entityId, entityId, entityId)
+`, entityName, entityName, entityName, entityName, entityId, entityId, entityId, entityId)
 
 	// This duplicate alias tests the provider's handling of aliases that already exist but aren't
 	// known to the provider.
@@ -133,6 +143,9 @@ resource "vault_identity_entity_alias" "entity-alias-dupe" {
   name = vault_identity_entity.entity%s.name
   mount_accessor = vault_auth_backend.githubA.accessor
   canonical_id = vault_identity_entity.entity%s.id
+  custom_metadata = {
+    version = "1"
+  }
 }
 `, entityId, entityId)
 	}
