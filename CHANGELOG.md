@@ -1,4 +1,4 @@
-## 3.0.1 (Unreleased)
+## 3.0.1 (November 23, 2021)
 
 BUGS:
 * `resource/aws_secret_backend_role_test`: Prevent invalid `policy_arns` from being created ([#1229](https://github.com/hashicorp/terraform-provider-vault/pull/1229))
