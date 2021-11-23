@@ -10,9 +10,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-var (
-	kubernetesAuthBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/config$")
-)
+var kubernetesAuthBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/config$")
 
 func kubernetesAuthBackendConfigResource() *schema.Resource {
 	return &schema.Resource{
@@ -117,7 +115,7 @@ func kubernetesAuthBackendConfigCreate(d *schema.ResourceData, meta interface{})
 		data["issuer"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("disable_iss_validation"); ok {
+	if v := d.Get("disable_iss_validation"); v != nil {
 		data["disable_iss_validation"] = v
 	}
 
