@@ -1,3 +1,8 @@
+## 3.1.0 (Unreleased)
+
+IMPROVEMENTS:
+* `data/policy_document`: Add support for `patch` capability for vault-1.9+. ([#1238](https://github.com/hashicorp/terraform-provider-vault/pull/1238))
+
 ## 3.0.1 (November 23, 2021)
 
 BUGS:
