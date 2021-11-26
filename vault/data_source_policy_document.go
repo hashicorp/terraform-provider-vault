@@ -27,7 +27,16 @@ type PolicyRule struct {
 	DeniedParameters   map[string][]string
 }
 
-var allowedCapabilities = []string{"create", "read", "update", "delete", "list", "sudo", "deny"}
+var allowedCapabilities = []string{
+	"create",
+	"read",
+	"update",
+	"delete",
+	"list",
+	"sudo",
+	"deny",
+	"patch",
+}
 
 func policyDocumentDataSource() *schema.Resource {
 	return &schema.Resource{
@@ -136,7 +145,7 @@ func policyDocumentDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 	policy := &Policy{}
 
 	if rawRules, hasRawRules := d.GetOk("rule"); hasRawRules {
-		var rawRuleIntfs = rawRules.([]interface{})
+		rawRuleIntfs := rawRules.([]interface{})
 		rules := make([]*PolicyRule, len(rawRuleIntfs))
 
 		for i, ruleI := range rawRuleIntfs {
