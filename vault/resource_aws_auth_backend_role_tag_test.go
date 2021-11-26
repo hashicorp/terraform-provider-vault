@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccAWSAuthBackendRoleTag_basic(t *testing.T) {
@@ -34,17 +34,17 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_role" "role" {
-    backend = "${vault_auth_backend.aws.path}"
+    backend = vault_auth_backend.aws.path
     role = "%s"
     auth_type = "ec2"
     bound_account_ids = ["123456789012"]
-    policies = ["dev", "prod", "qa", "test"]
+    token_policies = ["dev", "prod", "qa", "test"]
     role_tag = "VaultRoleTag"
 }
 
 resource "vault_aws_auth_backend_role_tag" "test" {
-    backend = "${vault_auth_backend.aws.path}"
-    role = "${vault_aws_auth_backend_role.role.role}"
+    backend = vault_auth_backend.aws.path
+    role = vault_aws_auth_backend_role.role.role
     policies = ["prod", "dev", "test"]
     max_ttl = "1h"
     instance_id = "i-1234567"

@@ -14,15 +14,13 @@ Creates PKI certificate.
 
 ```hcl
 resource "vault_pki_secret_backend_root_sign_intermediate" "root" {
-  depends_on = [ "vault_pki_secret_backend_intermediate_cert_request.intermediate" ]
-
-  backend = "${vault_pki_secret_backend.root.path}"
-
-  csr = "${vault_pki_secret_backend_intermediate_cert_request.intermediate.csr}"
-  common_name = "Intermediate CA"
+  depends_on           = [vault_pki_secret_backend_intermediate_cert_request.intermediate]
+  backend              = vault_mount.root.path
+  csr                  = vault_pki_secret_backend_intermediate_cert_request.intermediate.csr
+  common_name          = "Intermediate CA"
   exclude_cn_from_sans = true
-  ou = "My OU"
-  organization = "My organization"
+  ou                   = "My OU"
+  organization         = "My organization"
 }
 ```
 

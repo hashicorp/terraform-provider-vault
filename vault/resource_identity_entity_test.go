@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -48,9 +48,60 @@ func TestAccIdentityEntityUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "name", fmt.Sprintf("%s-2", entity)),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "metadata.version", "2"),
 					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.0", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "policies.1", "test"),
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "disabled", "true"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccIdentityEntityUpdateRemoveValues(t *testing.T) {
+	entity := acctest.RandomWithPrefix("test-entity")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccIdentityEntityConfig(entity),
+				Check:  testAccIdentityEntityCheckAttrs(),
+			},
+			{
+				Config: testAccIdentityEntityConfigUpdateRemove(entity),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "name", fmt.Sprintf("%s-2", entity)),
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "external_policies", "false"),
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "disabled", "false"),
+					resource.TestCheckNoResourceAttr("vault_identity_entity.entity", "metadata"),
+					resource.TestCheckNoResourceAttr("vault_identity_entity.entity", "policies")),
+			},
+		},
+	})
+}
+
+// Testing an edge case where external_policies is true but policies
+// are still in the plan. They should be removed from the entity if this
+// bool is true.
+func TestAccIdentityEntityUpdateRemovePolicies(t *testing.T) {
+	entity := acctest.RandomWithPrefix("test-entity")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccIdentityEntityConfig(entity),
+				Check:  testAccIdentityEntityCheckAttrs(),
+			},
+			{
+				Config: testAccIdentityEntityConfigUpdateRemovePolicies(entity),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_identity_entity.entity", "external_policies", "true"),
+					resource.TestCheckNoResourceAttr("vault_identity_entity.entity", "policies")),
 			},
 		},
 	})
@@ -188,5 +239,23 @@ resource "vault_identity_entity" "entity" {
   metadata = {
     version = "2"
   }
+  disabled = true
+  external_policies = false
+}`, entityName)
+}
+
+func testAccIdentityEntityConfigUpdateRemove(entityName string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_entity" "entity" {
+  name = "%s-2"
+}`, entityName)
+}
+
+func testAccIdentityEntityConfigUpdateRemovePolicies(entityName string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_entity" "entity" {
+  name = "%s-2"
+  policies = ["dev", "test"]
+  external_policies = true
 }`, entityName)
 }

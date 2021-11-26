@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const gcpJSONCredentials string = `
@@ -25,14 +27,40 @@ const gcpJSONCredentials string = `
 `
 
 func TestGCPAuthBackend_basic(t *testing.T) {
+	path := resource.PrefixedUniqueId("gcp-basic-")
+
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { util.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPAuthBackendConfig_basic(gcpJSONCredentials),
+				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
 				Check:  testGCPAuthBackendCheck_attrs(),
+			},
+		},
+	})
+}
+
+func TestGCPAuthBackend_import(t *testing.T) {
+	path := resource.PrefixedUniqueId("gcp-import-")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { util.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testGCPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
+				Check:  testGCPAuthBackendCheck_attrs(),
+			},
+			{
+				ResourceName:      "vault_gcp_auth_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"credentials",
+				},
 			},
 		},
 	})
@@ -72,16 +100,17 @@ func testGCPAuthBackendCheck_attrs() resource.TestCheckFunc {
 	}
 }
 
-func testGCPAuthBackendConfig_basic(credentials string) string {
+func testGCPAuthBackendConfig_basic(path, credentials string) string {
 	return fmt.Sprintf(`
 variable "json_credentials" {
-  type = "string"
+  type = string
   default = %q
 }
 
 resource "vault_gcp_auth_backend" "test" {
-  credentials                   = "${var.json_credentials}"
+  path                          = %q
+  credentials                   = var.json_credentials
 }
-`, credentials)
+`, credentials, path)
 
 }

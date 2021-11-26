@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -29,6 +29,8 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "access_key", accessKey),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "secret_key", secretKey),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "region", "us-east-1"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "iam_endpoint", ""),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "sts_endpoint", ""),
 				),
 			},
 			{
@@ -41,6 +43,8 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "access_key", accessKey),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "secret_key", secretKey),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "region", "us-west-1"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "iam_endpoint", "https://iam.amazonaws.com"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "sts_endpoint", "https://sts.us-west-1.amazonaws.com"),
 				),
 			},
 			{
@@ -53,6 +57,8 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "access_key", ""),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "secret_key", ""),
 					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "region", "us-west-1"),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "iam_endpoint", ""),
+					resource.TestCheckResourceAttr("vault_aws_secret_backend.test", "sts_endpoint", ""),
 				),
 			},
 		},
@@ -135,6 +141,9 @@ resource "vault_aws_secret_backend" "test" {
   access_key = "%s"
   secret_key = "%s"
   region = "us-west-1"
+
+  iam_endpoint = "https://iam.amazonaws.com"
+  sts_endpoint = "https://sts.us-west-1.amazonaws.com"
 }`, path, accessKey, secretKey)
 }
 

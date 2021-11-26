@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -28,8 +28,8 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "organization", "vault"),
-					resource.TestCheckResourceAttr(resName, "ttl", "20m"),
-					resource.TestCheckResourceAttr(resName, "max_ttl", "50m"),
+					resource.TestCheckResourceAttr(resName, "token_ttl", "1200"),
+					resource.TestCheckResourceAttr(resName, "token_max_ttl", "3000"),
 					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuth.Accessor),
 				),
 			},
@@ -40,8 +40,8 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "organization", "other_vault"),
-					resource.TestCheckResourceAttr(resName, "ttl", "40m"),
-					resource.TestCheckResourceAttr(resName, "max_ttl", "1h40m"),
+					resource.TestCheckResourceAttr(resName, "token_ttl", "2400"),
+					resource.TestCheckResourceAttr(resName, "token_max_ttl", "6000"),
 					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuth.Accessor),
 				),
 			},
@@ -64,22 +64,22 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 					testAccCheckAuthMountExists(resName, &resAuth),
 					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "path", backend),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.default_lease_ttl", "10m"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.max_lease_ttl", "20m"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.listing_visibility", "hidden"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.audit_non_hmac_request_keys.#", "2"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.audit_non_hmac_request_keys.0", "key1"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.audit_non_hmac_request_keys.1", "key2"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.audit_non_hmac_response_keys.#", "2"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.audit_non_hmac_response_keys.0", "key3"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.audit_non_hmac_response_keys.1", "key4"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.passthrough_request_headers.#", "2"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.passthrough_request_headers.0", "X-Custom-Header"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.passthrough_request_headers.1", "X-Forwarded-To"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.allowed_response_headers.#", "2"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.allowed_response_headers.0", "X-Custom-Response-Header"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.allowed_response_headers.1", "X-Forwarded-Response-To"),
-					resource.TestCheckResourceAttr(resName, "tune.316901839.token_type", "batch"),
+					resource.TestCheckResourceAttr(resName, "tune.0.default_lease_ttl", "10m"),
+					resource.TestCheckResourceAttr(resName, "tune.0.max_lease_ttl", "20m"),
+					resource.TestCheckResourceAttr(resName, "tune.0.listing_visibility", "hidden"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_request_keys.#", "2"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_request_keys.0", "key1"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_request_keys.1", "key2"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_response_keys.#", "2"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_response_keys.0", "key3"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_response_keys.1", "key4"),
+					resource.TestCheckResourceAttr(resName, "tune.0.passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resName, "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
+					resource.TestCheckResourceAttr(resName, "tune.0.passthrough_request_headers.1", "X-Forwarded-To"),
+					resource.TestCheckResourceAttr(resName, "tune.0.allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resName, "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr(resName, "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
+					resource.TestCheckResourceAttr(resName, "tune.0.token_type", "batch"),
 				),
 			},
 			{
@@ -88,21 +88,21 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 					testAccCheckAuthMountExists(resName, &resAuth),
 					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "path", backend),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.default_lease_ttl", "50m"),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.max_lease_ttl", "1h10m"),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.listing_visibility", "unauth"),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.audit_non_hmac_request_keys.#", "1"),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.audit_non_hmac_request_keys.0", "key1"),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.audit_non_hmac_response_keys.#", "0"),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.passthrough_request_headers.#", "3"),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.passthrough_request_headers.0", "X-Custom-Header"),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.passthrough_request_headers.1", "X-Forwarded-To"),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.passthrough_request_headers.2", "X-Mas"),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.allowed_response_headers.#", "3"),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.allowed_response_headers.0", "X-Custom-Response-Header"),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.allowed_response_headers.1", "X-Forwarded-Response-To"),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.allowed_response_headers.2", "X-Mas-Response"),
-					resource.TestCheckResourceAttr(resName, "tune.2811438229.token_type", "default-batch"),
+					resource.TestCheckResourceAttr(resName, "tune.0.default_lease_ttl", "50m"),
+					resource.TestCheckResourceAttr(resName, "tune.0.max_lease_ttl", "1h10m"),
+					resource.TestCheckResourceAttr(resName, "tune.0.listing_visibility", "unauth"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_request_keys.#", "1"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_request_keys.0", "key1"),
+					resource.TestCheckResourceAttr(resName, "tune.0.audit_non_hmac_response_keys.#", "0"),
+					resource.TestCheckResourceAttr(resName, "tune.0.passthrough_request_headers.#", "3"),
+					resource.TestCheckResourceAttr(resName, "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
+					resource.TestCheckResourceAttr(resName, "tune.0.passthrough_request_headers.1", "X-Forwarded-To"),
+					resource.TestCheckResourceAttr(resName, "tune.0.passthrough_request_headers.2", "X-Mas"),
+					resource.TestCheckResourceAttr(resName, "tune.0.allowed_response_headers.#", "3"),
+					resource.TestCheckResourceAttr(resName, "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr(resName, "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
+					resource.TestCheckResourceAttr(resName, "tune.0.allowed_response_headers.2", "X-Mas-Response"),
+					resource.TestCheckResourceAttr(resName, "tune.0.token_type", "default-batch"),
 				),
 			},
 		},
@@ -225,8 +225,8 @@ func testAccGithubAuthBackendConfig_basic(backend string) string {
 resource "vault_github_auth_backend" "gh" {
 	path = "%s"
 	organization = "vault"
-	ttl = "20m"
-	max_ttl = "50m" 
+	token_ttl = 1200
+	token_max_ttl = 3000
 }
 `, backend)
 }
@@ -236,8 +236,8 @@ func testAccGithubAuthBackendConfig_updated(backend string) string {
 resource "vault_github_auth_backend" "gh" {
   	path = "%s"
 	organization = "other_vault"
-	ttl = "40m"
-	max_ttl = "1h40m"
+	token_ttl = 2400
+	token_max_ttl = 6000
 }
 `, backend)
 }

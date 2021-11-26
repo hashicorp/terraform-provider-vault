@@ -3,11 +3,17 @@ package vault
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/vault/api"
+)
+
+var (
+	gcpAuthBackendFromPathRegex  = regexp.MustCompile("^auth/(.+)/role/[^/]+$")
+	gcpAuthRoleNameFromPathRegex = regexp.MustCompile("^auth/.+/role/([^/]+)$")
 )
 
 func gcpAuthBackendRoleResource() *schema.Resource {
@@ -29,12 +35,6 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 			},
 			Optional: true,
 			ForceNew: true,
-		},
-		"project_id": {
-			Type:     schema.TypeString,
-			Optional: true,
-			ForceNew: true,
-			Removed:  `Use "bound_projects"`,
 		},
 		"add_group_aliases": {
 			Type:     schema.TypeBool,
@@ -100,47 +100,9 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-
-		// Deprecated
-		"ttl": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Computed:      true,
-			ConflictsWith: []string{"token_ttl"},
-			Deprecated:    "use `token_ttl` instead if you are running Vault >= 1.2",
-		},
-		"max_ttl": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_max_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_max_ttl"},
-		},
-		"period": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_period"},
-		},
-		"policies": {
-			Type: schema.TypeSet,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_policies` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_policies"},
-		},
 	}
 
-	addTokenFields(fields, &addTokenFieldsConfig{
-		TokenMaxTTLConflict:   []string{"max_ttl"},
-		TokenPeriodConflict:   []string{"period"},
-		TokenPoliciesConflict: []string{"policies"},
-		TokenTTLConflict:      []string{"ttl"},
-	})
+	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
 		SchemaVersion: 1,
@@ -168,28 +130,8 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, cr
 		data["type"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("project_id"); ok {
-		data["project_id"] = v.(string)
-	}
-
 	if v, ok := d.GetOk("bound_projects"); ok {
 		data["bound_projects"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("policies"); ok {
-		data["policies"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("bound_service_accounts"); ok {
@@ -220,8 +162,8 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, cr
 		data["bound_instance_groups"] = v.(*schema.Set).List()
 	}
 
-	if v, ok := d.GetOk("bound_instance_labels"); ok {
-		data["bound_instance_labels"] = v.(*schema.Set).List()
+	if v, ok := d.GetOk("bound_labels"); ok {
+		data["bound_labels"] = v.(*schema.Set).List()
 	}
 }
 
@@ -295,64 +237,22 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 
 	readTokenFields(d, resp)
 
-	// Check if the user is using the deprecated `policies`
-	if _, deprecated := d.GetOk("policies"); deprecated {
-		// Then we see if `token_policies` was set and unset it
-		// Vault will still return `policies`
-		if _, ok := d.GetOk("token_policies"); ok {
-			d.Set("token_policies", nil)
-		}
-
-		if v, ok := resp.Data["policies"]; ok {
-			d.Set("policies", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `period`
-	if _, deprecated := d.GetOk("period"); deprecated {
-		// Then we see if `token_period` was set and unset it
-		// Vault will still return `period`
-		if _, ok := d.GetOk("token_period"); ok {
-			d.Set("token_period", nil)
-		}
-
-		if v, ok := resp.Data["period"]; ok {
-			d.Set("period", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `ttl`
-	if _, deprecated := d.GetOk("ttl"); deprecated {
-		// Then we see if `token_ttl` was set and unset it
-		// Vault will still return `ttl`
-		if _, ok := d.GetOk("token_ttl"); ok {
-			d.Set("token_ttl", nil)
-		}
-
-		if v, ok := resp.Data["ttl"]; ok {
-			d.Set("ttl", v)
-		}
-
-	}
-
-	// Check if the user is using the deprecated `max_ttl`
-	if _, deprecated := d.GetOk("max_ttl"); deprecated {
-		// Then we see if `token_max_ttl` was set and unset it
-		// Vault will still return `max_ttl`
-		if _, ok := d.GetOk("token_max_ttl"); ok {
-			d.Set("token_max_ttl", nil)
-		}
-
-		if v, ok := resp.Data["max_ttl"]; ok {
-			d.Set("max_ttl", v)
-		}
-	}
-
-	for _, k := range []string{"project_id", "bound_projects", "add_group_aliases", "max_jwt_exp", "bound_service_accounts", "bound_zones", "bound_regions", "bound_instance_groups", "bound_labels"} {
+	for _, k := range []string{"bound_projects", "add_group_aliases", "max_jwt_exp", "bound_service_accounts", "bound_zones", "bound_regions", "bound_instance_groups"} {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
 				return fmt.Errorf("error reading %s for GCP Auth Backend Role %q: %q", k, path, err)
 			}
+		}
+	}
+
+	if v, ok := resp.Data["bound_labels"]; ok {
+		labels := []string{}
+		for labelK, labelV := range v.(map[string]interface{}) {
+			labels = append(labels, fmt.Sprintf("%s:%s", labelK, labelV))
+		}
+
+		if err := d.Set("bound_labels", labels); err != nil {
+			return fmt.Errorf("error setting bound_labels for GCP auth backend role: %q", err)
 		}
 	}
 
@@ -398,17 +298,23 @@ func gcpAuthResourceExists(d *schema.ResourceData, meta interface{}) (bool, erro
 }
 
 func gcpAuthResourceBackendFromPath(path string) (string, error) {
-	var parts = strings.Split(path, "/")
-	if len(parts) != 4 {
-		return "", fmt.Errorf("Expected 4 parts in path '%s'", path)
+	if !gcpAuthBackendFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no backend found")
 	}
-	return parts[1], nil
+	res := gcpAuthBackendFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
+	}
+	return res[1], nil
 }
 
 func gcpAuthResourceRoleFromPath(path string) (string, error) {
-	var parts = strings.Split(path, "/")
-	if len(parts) != 4 {
-		return "", fmt.Errorf("Expected 4 parts in path '%s'", path)
+	if !gcpAuthRoleNameFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no role found")
 	}
-	return parts[3], nil
+	res := gcpAuthRoleNameFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for role", len(res))
+	}
+	return res[1], nil
 }

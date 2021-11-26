@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -49,18 +49,18 @@ func TestGCPSecretRoleset(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "secret_type", "access_token"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "project", project),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "token_scopes.#", "1"),
-					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "token_scopes.2400041053", "https://www.googleapis.com/auth/cloud-platform"),
+					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "token_scopes.0", "https://www.googleapis.com/auth/cloud-platform"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "binding.#", "1"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.resource", initialHash), fmt.Sprintf("//cloudresourcemanager.googleapis.com/projects/%s", project)),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.roles.#", initialHash), "1"),
-					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.roles.3993311253", initialHash), initialRole),
+					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.roles.0", initialHash), initialRole),
 				),
 			},
 			{
-				ResourceName:            "vault_gcp_secret_backend.test",
+				ResourceName:            "vault_gcp_secret_roleset.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"credentials"},
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 				Config: updatedConfig,
@@ -73,11 +73,11 @@ func TestGCPSecretRoleset(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "secret_type", "access_token"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "project", project),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "token_scopes.#", "1"),
-					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "token_scopes.2400041053", "https://www.googleapis.com/auth/cloud-platform"),
+					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "token_scopes.0", "https://www.googleapis.com/auth/cloud-platform"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "binding.#", "1"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.resource", updatedHash), fmt.Sprintf("//cloudresourcemanager.googleapis.com/projects/%s", project)),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.roles.#", updatedHash), "1"),
-					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.roles.2133424675", updatedHash), updatedRole),
+					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.roles.0", updatedHash), updatedRole),
 				),
 			},
 			{
@@ -93,7 +93,7 @@ func TestGCPSecretRoleset(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", "binding.#", "1"),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.resource", keyHash), fmt.Sprintf("//cloudresourcemanager.googleapis.com/projects/%s", project)),
 					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.roles.#", keyHash), "1"),
-					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.roles.2133424675", keyHash), updatedRole),
+					resource.TestCheckResourceAttr("vault_gcp_secret_roleset.test", fmt.Sprintf("binding.%d.roles.0", keyHash), updatedRole),
 				),
 			},
 		},
@@ -218,9 +218,9 @@ func testGCPSecretRoleset_attrs(backend, roleset string) resource.TestCheckFunc 
 			return fmt.Errorf("expected %s to have %d entries in state, has %d", "binding", remoteLength, localBindingsLength)
 		}
 
-		flattenedBindings := gcpSecretRolesetFlattenBinding(remoteBindings).(*schema.Set)
+		flattenedBindings := gcpSecretFlattenBinding(remoteBindings).(*schema.Set)
 		for _, remoteBinding := range flattenedBindings.List() {
-			bindingHash := strconv.Itoa(gcpSecretRolesetBindingHash(remoteBinding))
+			bindingHash := strconv.Itoa(gcpSecretBindingHash(remoteBinding))
 
 			remoteResource := remoteBinding.(map[string]interface{})["resource"].(string)
 			localResource := instanceState.Attributes["binding."+bindingHash+".resource"]
@@ -317,7 +317,7 @@ CREDS
 }
 
 resource "vault_gcp_secret_roleset" "test" {
-  backend = "${vault_gcp_secret_backend.test.path}"
+  backend = vault_gcp_secret_backend.test.path
   roleset = "%s"
   secret_type = "access_token"
   project = "%s"
@@ -336,7 +336,7 @@ resource "vault_gcp_secret_roleset" "test" {
 	binding["resource"] = resource
 	binding["roles"] = schema.NewSet(schema.HashString, roles)
 
-	return terraform, gcpSecretRolesetBindingHash(binding)
+	return terraform, gcpSecretBindingHash(binding)
 }
 
 func testGCPSecretRoleset_service_account_key(backend, roleset, credentials, project, role string) (string, int) {
@@ -351,7 +351,7 @@ CREDS
 }
 
 resource "vault_gcp_secret_roleset" "test" {
-  backend = "${vault_gcp_secret_backend.test.path}"
+  backend = vault_gcp_secret_backend.test.path
   roleset = "%s"
   secret_type = "service_account_key"
   project = "%s"
@@ -369,5 +369,5 @@ resource "vault_gcp_secret_roleset" "test" {
 	binding["resource"] = resource
 	binding["roles"] = schema.NewSet(schema.HashString, roles)
 
-	return terraform, gcpSecretRolesetBindingHash(binding)
+	return terraform, gcpSecretBindingHash(binding)
 }

@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -118,11 +118,28 @@ func ldapAuthBackendResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-
+		"local": {
+			Type:        schema.TypeBool,
+			ForceNew:    true,
+			Optional:    true,
+			Default:     false,
+			Description: "Specifies if the auth method is local only",
+		},
 		"accessor": {
 			Type:        schema.TypeString,
 			Computed:    true,
 			Description: "The accessor of the LDAP auth backend",
+		},
+		"client_tls_cert": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Computed: true,
+		},
+		"client_tls_key": {
+			Type:      schema.TypeString,
+			Optional:  true,
+			Computed:  true,
+			Sensitive: true,
 		},
 	}
 
@@ -150,12 +167,15 @@ func ldapAuthBackendConfigPath(path string) string {
 func ldapAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	authType := ldapAuthType
 	path := d.Get("path").(string)
-	desc := d.Get("description").(string)
+	options := &api.EnableAuthOptions{
+		Type:        ldapAuthType,
+		Description: d.Get("description").(string),
+		Local:       d.Get("local").(bool),
+	}
 
 	log.Printf("[DEBUG] Enabling LDAP auth backend %q", path)
-	err := client.Sys().EnableAuth(path, authType, desc)
+	err := client.Sys().EnableAuthWithOptions(path, options)
 	if err != nil {
 		return fmt.Errorf("error enabling ldap auth backend %q: %s", path, err)
 	}
@@ -240,6 +260,14 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["use_token_groups"] = v.(bool)
 	}
 
+	if v, ok := d.GetOk("client_tls_cert"); ok {
+		data["client_tls_cert"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("client_tls_key"); ok {
+		data["client_tls_key"] = v.(string)
+	}
+
 	updateTokenFields(d, data, false)
 
 	log.Printf("[DEBUG] Writing LDAP config %q", path)
@@ -272,6 +300,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("description", authMount.Description)
 	d.Set("accessor", authMount.Accessor)
+	d.Set("local", authMount.Local)
 
 	path = ldapAuthBackendConfigPath(path)
 
@@ -309,7 +338,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("groupattr", resp.Data["groupattr"])
 	d.Set("use_token_groups", resp.Data["use_token_groups"])
 
-	// `bindpass` cannot be read out from the API
+	// `bindpass`, `client_tls_cert` and `client_tls_key` cannot be read out from the API
 	// So... if they drift, they drift.
 
 	return nil

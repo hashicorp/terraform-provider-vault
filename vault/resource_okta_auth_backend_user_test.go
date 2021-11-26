@@ -2,9 +2,9 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 	"strconv"
 	"testing"
@@ -39,7 +39,7 @@ resource "vault_okta_auth_backend" "test" {
 }
 
 resource "vault_okta_auth_backend_user" "test" {
-    path = "${vault_okta_auth_backend.test.path}"
+    path = vault_okta_auth_backend.test.path
     username = "user_test"
     groups = ["one", "two"]
     policies = ["three"]

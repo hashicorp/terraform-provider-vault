@@ -6,9 +6,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -36,16 +37,6 @@ func approleAuthBackendRoleResource() *schema.Resource {
 			Default:     true,
 			Description: "Whether or not to require secret_id to be present when logging in using this AppRole.",
 		},
-		"bound_cidr_list": {
-			Type:        schema.TypeSet,
-			Optional:    true,
-			Description: "List of CIDR blocks that can log in using the AppRole.",
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Deprecated:    "use `secret_id_bound_cidrs` instead",
-			ConflictsWith: []string{"secret_id_bound_cidrs"},
-		},
 		"secret_id_bound_cidrs": {
 			Type:        schema.TypeSet,
 			Optional:    true,
@@ -53,7 +44,6 @@ func approleAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-			ConflictsWith: []string{"bound_cidr_list"},
 		},
 		"secret_id_num_uses": {
 			Type:        schema.TypeInt,
@@ -76,31 +66,9 @@ func approleAuthBackendRoleResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-
-		// Deprecated
-		"policies": {
-			Type:     schema.TypeSet,
-			Optional: true,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Description:   "Policies to be set on tokens issued using this AppRole.",
-			Deprecated:    "use `token_policies` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_policies"},
-		},
-		"period": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "Number of seconds to set the TTL to for issued tokens upon renewal. Makes the token a periodic token, which will never expire as long as it is renewed before the TTL each period.",
-			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_period"},
-		},
 	}
 
-	addTokenFields(fields, &addTokenFieldsConfig{
-		TokenPoliciesConflict: []string{"policies"},
-		TokenPeriodConflict:   []string{"period"},
-	})
+	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
 		Create: approleAuthBackendRoleCreate,
@@ -134,19 +102,6 @@ func approleAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 		if v, ok := d.GetOk("secret_id_bound_cidrs"); ok {
 			data["secret_id_bound_cidrs"] = v.(*schema.Set).List()
 		}
-
-		// Deprecated Fields
-		if v, ok := d.GetOk("period"); ok {
-			data["period"] = v.(int)
-		}
-
-		if v, ok := d.GetOk("policies"); ok {
-			data["policies"] = v.(*schema.Set).List()
-		}
-
-		if v, ok := d.GetOk("bound_cidr_list"); ok {
-			data["bound_cidr_list"] = v.(*schema.Set).List()
-		}
 	} else {
 		if d.HasChange("bind_secret_id") {
 			data["bind_secret_id"] = d.Get("bind_secret_id").(bool)
@@ -162,19 +117,6 @@ func approleAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 
 		if d.HasChange("secret_id_bound_cidrs") {
 			data["secret_id_bound_cidrs"] = d.Get("secret_id_bound_cidrs").(*schema.Set).List()
-		}
-
-		// Deprecated Fields
-		if d.HasChange("period") {
-			data["period"] = d.Get("period").(int)
-		}
-
-		if d.HasChange("policies") {
-			data["policies"] = d.Get("policies").(*schema.Set).List()
-		}
-
-		if d.HasChange("bound_cidr_list") {
-			data["bound_cidr_list"] = d.Get("bound_cidr_list").(*schema.Set).List()
 		}
 	}
 }
@@ -243,42 +185,8 @@ func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 	d.Set("role_name", role)
 	readTokenFields(d, resp)
 
-	// Backward Compatability for Vault < 1.2
-	// Check if the user is using the deprecated `bound_cidr_list`
-	if _, deprecated := d.GetOk("bound_cidr_list"); deprecated {
-		if v, ok := resp.Data["bound_cidr_list"]; ok {
-			d.Set("bound_cidr_list", v)
-		} else if v, ok := resp.Data["secret_id_bound_cidrs"]; ok {
-			d.Set("bound_cidr_list", v)
-		}
-	} else {
-		if v, ok := resp.Data["secret_id_bound_cidrs"]; ok {
-			d.Set("secret_id_bound_cidrs", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `policies`
-	if _, deprecated := d.GetOk("policies"); deprecated {
-		// Then we see if `token_policies` was set and unset it
-		// Vault will still return `policies`
-		if _, ok := d.GetOk("token_policies"); ok {
-			d.Set("token_policies", nil)
-		}
-		if v, ok := resp.Data["policies"]; ok {
-			d.Set("policies", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `period`
-	if _, deprecated := d.GetOk("period"); deprecated {
-		// Then we see if `token_period` was set and unset it
-		// Vault will still return `period`
-		if _, ok := d.GetOk("token_period"); ok {
-			d.Set("token_period", nil)
-		}
-		if v, ok := resp.Data["period"]; ok {
-			d.Set("period", v)
-		}
+	if v, ok := resp.Data["secret_id_bound_cidrs"]; ok {
+		d.Set("secret_id_bound_cidrs", v)
 	}
 
 	for _, k := range []string{"bind_secret_id", "secret_id_num_uses", "secret_id_ttl"} {

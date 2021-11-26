@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -25,9 +25,8 @@ func TestConsulSecretBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "name", name),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "ttl", "0"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.#", "1"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.0", "foo"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test_path", "path", backend),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test_path", "policies.0", "foo"),
 				),
 			},
 			{
@@ -39,10 +38,9 @@ func TestConsulSecretBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "max_ttl", "240"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "local", "true"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "token_type", "client"),
+					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.0", "foo"),
 					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test", "policies.1", "bar"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test_path", "path", backend),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend_role.test_path", "ttl", "120"),
 				),
 			},
 		},
@@ -86,14 +84,6 @@ resource "vault_consul_secret_backend_role" "test" {
     "foo"
   ]
 }
-resource "vault_consul_secret_backend_role" "test_path" {
-  path = vault_consul_secret_backend.test.path
-  name = "%[2]s_path"
-
-  policies = [
-    "foo"
-  ]
-}
 `, backend, token, name)
 }
 
@@ -120,15 +110,6 @@ resource "vault_consul_secret_backend_role" "test" {
   max_ttl = 240
   local = true
   token_type = "client"
-}
-resource "vault_consul_secret_backend_role" "test_path" {
-  path = vault_consul_secret_backend.test.path
-  name = "%[2]s_path"
-
-  policies = [
-    "foo"
-  ]
-  ttl = 120
 }
 `, backend, token, name)
 }

@@ -7,6 +7,11 @@ description: |-
 
 ---
 
+-> The `2.x` series of the Vault Provider is now in maintenance mode.
+It will only receive critical fixes on a case by case basis.
+All new feature development has been moved to the `3.x` series of the provider.
+Please see the [3.0.0 Upgrade Guide](./version_3_upgrade.html) for more details.
+
 # Terraform Vault Provider 2.0.0 Upgrade Guide
 
 Version `2.0.0` of the Vault provider for Terraform is a major release and
@@ -40,10 +45,10 @@ your provider version; if you've constrained the provider to a lower version
 such as shown in the previous version example in that guide, Terraform will pull
 in a `1.X` series release on `terraform init`.
 
-If you've only ran `terraform init` or `terraform plan`, your state will not
+If you've only run `terraform init` or `terraform plan`, your state will not
 have been modified and downgrading your provider is sufficient.
 
-If you've ran `terraform refresh` or `terraform apply`, Terraform may have made
+If you've run `terraform refresh` or `terraform apply`, Terraform may have made
 state changes in the meantime.
 
 - If you're using a *local* state, `terraform refresh` with a downgraded
@@ -60,17 +65,15 @@ state changes in the meantime.
 <!-- TOC depthFrom:2 depthTo:2 -->
 
 - [Provider Version Configuration](#provider-version-configuration)
-- [Data Sources](#data-sources)
-- [Resource: `vault_auth_backend`](#resource-vault-auth-backend)
-- [Resource: `vault_aws_auth_backend_role`](#resource-vault-aws-auth-backend-role)
-- [Resource: `vault_aws_secret_backend_role`](#resource-vault-aws-secret-backend-role)
-- [Resource: `vault_database_secret_backend_role`](#resource-vault-database-secret-backend-role)
-- [Resource: `vault_gcp_auth_backend_role`](#resource-gcp-auth-backend-role)
-- [Resource: `vault_generic_secret`](#resource-vault-generic-secret)
-- [Resource: `vault_pki_secret_backend_config_urls`](#resource-vault-pki-secret-backend-config-urls)
-- [Resource: `vault_pki_secret_backend_role`](#resource-vault-pki-secret-backend-role)
-- [Resource: `vault_pki_secret_backend_sign`](#resource-vault-pki-secret-backend-sign)
-- [Resource: `vault_rabbitmq_secret_backend_role`](#resource-vault-rabbitmq-secret-backend-role)
+- [Resource: `vault_auth_backend`](#resource-vault_auth_backend)
+- [Resource: `vault_aws_auth_backend_role`](#resource-vault_aws_auth_backend_role)
+- [Resource: `vault_database_secret_backend_role`](#resource-vault_database_secret_backend_role)
+- [Resource: `vault_gcp_auth_backend_role`](#resource-vault_gcp_auth_backend_role)
+- [Resource: `vault_generic_secret`](#resource-vault_generic_secret)
+- [Resource: `vault_pki_secret_backend_config_urls`](#resource-vault_pki_secret_backend_config_urls)
+- [Resource: `vault_pki_secret_backend_role`](#resource-vault_pki_secret_backend_role)
+- [Resource: `vault_pki_secret_backend_sign`](#resource-vault_pki_secret_backend_sign)
+- [Resource: `vault_rabbitmq_secret_backend_role`](#resource-vault_rabbitmq_secret_backend_role)
 
 <!-- /TOC -->
 

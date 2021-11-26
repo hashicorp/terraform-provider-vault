@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -75,6 +75,16 @@ func awsSecretBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The AWS region to make API calls against. Defaults to us-east-1.",
 			},
+			"iam_endpoint": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies a custom HTTP IAM endpoint to use.",
+			},
+			"sts_endpoint": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies a custom HTTP STS endpoint to use.",
+			},
 		},
 	}
 }
@@ -89,6 +99,8 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	accessKey := d.Get("access_key").(string)
 	secretKey := d.Get("secret_key").(string)
 	region := d.Get("region").(string)
+	iamEndpoint := d.Get("iam_endpoint").(string)
+	stsEndpoint := d.Get("sts_endpoint").(string)
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting AWS backend at %q", path)
@@ -106,11 +118,6 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Mounted AWS backend at %q", path)
 	d.SetId(path)
 
-	d.SetPartial("path")
-	d.SetPartial("description")
-	d.SetPartial("default_lease_ttl_seconds")
-	d.SetPartial("max_lease_ttl_seconds")
-
 	log.Printf("[DEBUG] Writing root credentials to %q", path+"/config/root")
 	data := map[string]interface{}{
 		"access_key": accessKey,
@@ -119,17 +126,20 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	if region != "" {
 		data["region"] = region
 	}
+	if iamEndpoint != "" {
+		data["iam_endpoint"] = iamEndpoint
+	}
+	if stsEndpoint != "" {
+		data["sts_endpoint"] = stsEndpoint
+	}
 	_, err = client.Logical().Write(path+"/config/root", data)
 	if err != nil {
 		return fmt.Errorf("error configuring root credentials for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote root credentials to %q", path+"/config/root")
-	d.SetPartial("access_key")
-	d.SetPartial("secret_key")
 	if region == "" {
 		d.Set("region", "us-east-1")
 	}
-	d.SetPartial("region")
 	d.Partial(false)
 
 	return awsSecretBackendRead(d, meta)
@@ -185,6 +195,13 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		} else {
 			d.Set("region", "us-east-1")
 		}
+
+		if v, ok := resp.Data["iam_endpoint"].(string); ok {
+			d.Set("iam_endpoint", v)
+		}
+		if v, ok := resp.Data["sts_endpoint"].(string); ok {
+			d.Set("sts_endpoint", v)
+		}
 	}
 
 	d.Set("path", path)
@@ -211,30 +228,33 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error updating mount TTLs for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
-		d.SetPartial("default_lease_ttl_seconds")
-		d.SetPartial("max_lease_ttl_seconds")
 	}
-	if d.HasChange("access_key") || d.HasChange("secret_key") || d.HasChange("region") {
+	if d.HasChange("access_key") || d.HasChange("secret_key") || d.HasChange("region") || d.HasChange("iam_endpoint") || d.HasChange("sts_endpoint") {
 		log.Printf("[DEBUG] Updating root credentials at %q", path+"/config/root")
 		data := map[string]interface{}{
 			"access_key": d.Get("access_key").(string),
 			"secret_key": d.Get("secret_key").(string),
 		}
 		region := d.Get("region").(string)
+		iamEndpoint := d.Get("iam_endpoint").(string)
+		stsEndpoint := d.Get("sts_endpoint").(string)
 		if region != "" {
 			data["region"] = region
+		}
+		if iamEndpoint != "" {
+			data["iam_endpoint"] = iamEndpoint
+		}
+		if stsEndpoint != "" {
+			data["sts_endpoint"] = stsEndpoint
 		}
 		_, err := client.Logical().Write(path+"/config/root", data)
 		if err != nil {
 			return fmt.Errorf("error configuring root credentials for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated root credentials at %q", path+"/config/root")
-		d.SetPartial("access_key")
-		d.SetPartial("secret_key")
 		if region == "" {
 			d.Set("region", "us-east-1")
 		}
-		d.SetPartial("region")
 	}
 	d.Partial(false)
 	return awsSecretBackendRead(d, meta)

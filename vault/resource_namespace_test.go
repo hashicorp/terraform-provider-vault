@@ -2,14 +2,13 @@ package vault
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 
-	"os"
-
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -35,7 +34,7 @@ func TestNamespace_basic(t *testing.T) {
 			{
 				Config:      testNamespaceConfig(namespacePath + "/"),
 				Destroy:     false,
-				ExpectError: regexp.MustCompile("config is invalid: cannot write to a path ending in '/'"),
+				ExpectError: regexp.MustCompile("Error: cannot write to a path ending in '/'"),
 			},
 			{
 				Config: testNestedNamespaceConfig(namespacePath, childPath),

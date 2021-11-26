@@ -27,7 +27,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "postgres" {
-  backend       = "${vault_mount.db.path}"
+  backend       = vault_mount.db.path
   name          = "postgres"
   allowed_roles = ["dev", "prod"]
 
@@ -59,6 +59,8 @@ The following arguments are supported:
 
 * `mongodb` - (Optional) A nested block containing configuration options for MongoDB connections.
 
+* `mongodbatlas` - (Optional) A nested block containing configuration options for MongoDB Atlas connections.
+
 * `hana` - (Optional) A nested block containing configuration options for SAP HanaDB connections.
 
 * `mssql` - (Optional) A nested block containing configuration options for MSSQL connections.
@@ -76,6 +78,8 @@ The following arguments are supported:
 * `oracle` - (Optional) A nested block containing configuration options for Oracle connections.
 
 * `elasticsearch` - (Optional) A nested block containing configuration options for Elasticsearch connections.
+
+* `snowflake` - (Optional) A nested block containing configuration options for Snowflake connections.
 
 Exactly one of the nested blocks of configuration options must be supplied.
 
@@ -112,6 +116,20 @@ Exactly one of the nested blocks of configuration options must be supplied.
   docs](https://www.vaultproject.io/api-docs/secret/databases/mongodb.html#sample-payload)
   for an example.
 
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
+
+### MongoDB Atlas Configuration Options
+
+* `public_key` - (Required) The Public Programmatic API Key used to authenticate with the MongoDB Atlas API.
+
+* `private_key` - (Required) The Private Programmatic API Key used to connect with MongoDB Atlas API.
+
+* `project_id` - (Required) The Project ID the Database User should be created within.
+
+
 ### SAP HanaDB Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -144,6 +162,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
 ### MySQL Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -159,6 +181,14 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
+
+* `tls_certificate_key` - (Optional) x509 certificate for connecting to the database. This must be a PEM encoded version of the private key and the certificate combined.
+
+* `tls_ca` - (Optional) x509 CA file for validating the certificate presented by the MySQL server. Must be PEM encoded.
+
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
 ### PostgreSQL Configuration Options
 
@@ -176,6 +206,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
 ### Oracle Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -192,6 +226,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
 ### Elasticsearch Configuration Options
 
 * `url` - (Required) The URL for Elasticsearch's API. https requires certificate
@@ -200,6 +238,28 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `username` - (Required) The username to be used in the connection.
 
 * `password` - (Required) The password to be used in the connection.
+
+### Snowflake Configuration Options
+
+* `connection_url` - (Required) A URL containing connection information. See
+  the [Vault
+  docs](https://www.vaultproject.io/api-docs/secret/databases/snowflake#sample-payload)
+  for an example.
+
+* `max_open_connections` - (Optional) The maximum number of open connections to
+  use.
+
+* `max_idle_connections` - (Optional) The maximum number of idle connections to
+  maintain.
+
+* `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
+  a connection alive for.
+
+* `username` - (Optional) The username to be used in the connection (the account admin level).
+
+* `password` - (Optional) The password to be used in the connection.
+
+* `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 
 ## Attributes Reference
 

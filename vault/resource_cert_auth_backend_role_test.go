@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -110,40 +110,6 @@ func TestCertAuthBackend(t *testing.T) {
 						"token_ttl", "0"),
 					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
 						"token_max_ttl", "0"),
-					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
-						"allowed_names.#", "2"),
-				),
-			},
-		},
-	})
-}
-
-func TestCertAuthBackend_deprecated(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
-	name := acctest.RandomWithPrefix("tf-test-cert-name")
-
-	allowedNames := []string{
-		acctest.RandomWithPrefix("tf-ident-1"),
-		acctest.RandomWithPrefix("tf-ident-2")}
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testCertAuthBackendDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testCertAuthBackendConfig_deprecated(backend, name, testCertificate, allowedNames),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
-						"backend", backend),
-					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
-						"name", name),
-					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
-						"policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
-						"ttl", "300"),
-					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
-						"max_ttl", "600"),
 					resource.TestCheckResourceAttr("vault_cert_auth_backend_role.test",
 						"allowed_names.#", "2"),
 				),
@@ -316,7 +282,7 @@ resource "vault_cert_auth_backend_role" "test" {
 %s
 __CERTIFICATE__
     allowed_names  = [%s]
-    backend        = "${vault_auth_backend.cert.path}"
+    backend        = vault_auth_backend.cert.path
     token_ttl      = 300
     token_max_ttl  = 600
     token_policies = ["test_policy_1", "test_policy_2"]
@@ -345,36 +311,7 @@ resource "vault_cert_auth_backend_role" "test" {
 %s
 __CERTIFICATE__
     allowed_names  = [%s]
-    backend        = "${vault_auth_backend.cert.path}"
-}
-
-`, backend, name, certificate, strings.Join(quotedNames, ", "))
-
-}
-
-func testCertAuthBackendConfig_deprecated(backend, name, certificate string, allowedNames []string) string {
-	quotedNames := make([]string, len(allowedNames))
-	for idx, name := range allowedNames {
-		quotedNames[idx] = fmt.Sprintf(`"%s"`, name)
-	}
-
-	return fmt.Sprintf(`
-
-resource "vault_auth_backend" "cert" {
-    path = "%s"
-    type = "cert"
-}
-
-resource "vault_cert_auth_backend_role" "test" {
-    name          = "%s"
-    certificate   = <<__CERTIFICATE__
-%s
-__CERTIFICATE__
-    allowed_names  = [%s]
-    backend        = "${vault_auth_backend.cert.path}"
-    ttl            = 300
-    max_ttl        = 600
-    policies       = ["test_policy_1", "test_policy_2"]
+    backend        = vault_auth_backend.cert.path
 }
 
 `, backend, name, certificate, strings.Join(quotedNames, ", "))

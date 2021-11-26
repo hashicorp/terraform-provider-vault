@@ -70,17 +70,6 @@ In addition to the fields above, the following attributes are exported:
 
 * `accessor` - The accessor for this auth method
 
-### Deprecated Arguments
-
-These arguments are deprecated since version 1.8 of the provider in favour of the `tune` block
-arguments documented above.
-
-* `default_lease_ttl_seconds` - (Optional; Deprecated, use `tune.default_lease_ttl` if you are using Vault provider version >= 1.8) The default lease duration in seconds.
-
-* `max_lease_ttl_seconds` - (Optional; Deprecated, use `tune.max_lease_ttl` if you are using Vault provider version >= 1.8) The maximum lease duration in seconds.
-
-* `listing_visibility` - (Optional; Deprecated, use `tune.listing_visibility` if you are using Vault provider version >= 1.8) Speficies whether to show this mount in the UI-specific listing endpoint.
-
 ## Import
 
 Auth methods can be imported using the `path`, e.g.

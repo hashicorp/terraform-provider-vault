@@ -8,8 +8,8 @@ import (
 
 	"encoding/json"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -75,6 +75,13 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+			},
+			"allowed_domains_template": {
+				Type:        schema.TypeBool,
+				Required:    false,
+				Optional:    true,
+				Description: "Flag to indicate that `allowed_domains` specifies a template expression (e.g. {{identity.entity.aliases.<mount accessor>.name}})",
+				Default:     false,
 			},
 			"allow_bare_domains": {
 				Type:        schema.TypeBool,
@@ -169,7 +176,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Required:     false,
 				Optional:     true,
 				Description:  "The type of generated keys.",
-				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519"}, false),
 				Default:      "rsa",
 			},
 			"key_bits": {
@@ -349,6 +356,7 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 		"allow_localhost":                    d.Get("allow_localhost"),
 		"allow_bare_domains":                 d.Get("allow_bare_domains"),
 		"allow_subdomains":                   d.Get("allow_subdomains"),
+		"allowed_domains_template":           d.Get("allowed_domains_template"),
 		"allow_glob_domains":                 d.Get("allow_glob_domains"),
 		"allow_any_name":                     d.Get("allow_any_name"),
 		"enforce_hostnames":                  d.Get("enforce_hostnames"),
@@ -471,6 +479,7 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("max_ttl", secret.Data["max_ttl"])
 	d.Set("allow_localhost", secret.Data["allow_localhost"])
 	d.Set("allowed_domains", allowedDomains)
+	d.Set("allowed_domains_template", secret.Data["allowed_domains_template"])
 	d.Set("allow_bare_domains", secret.Data["allow_bare_domains"])
 	d.Set("allow_subdomains", secret.Data["allow_subdomains"])
 	d.Set("allow_glob_domains", secret.Data["allow_glob_domains"])
@@ -541,6 +550,7 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 		"max_ttl":                            d.Get("max_ttl"),
 		"allow_localhost":                    d.Get("allow_localhost"),
 		"allow_bare_domains":                 d.Get("allow_bare_domains"),
+		"allowed_domains_template":           d.Get("allowed_domains_template"),
 		"allow_subdomains":                   d.Get("allow_subdomains"),
 		"allow_glob_domains":                 d.Get("allow_glob_domains"),
 		"allow_any_name":                     d.Get("allow_any_name"),

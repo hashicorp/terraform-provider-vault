@@ -23,7 +23,7 @@ data "vault_policy_document" "example" {
 
 resource "vault_policy" "example" {
   name   = "example_policy"
-  policy = "${data.vault_policy_document.example.hcl}"
+  policy = data.vault_policy_document.example.hcl
 }
 ```
 

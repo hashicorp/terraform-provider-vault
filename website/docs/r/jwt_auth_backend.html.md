@@ -17,10 +17,10 @@ Manage JWT auth backend:
 
 ```hcl
 resource "vault_jwt_auth_backend" "example" {
-    description  = "Demonstration of the Terraform JWT auth backend"
-    path = "jwt"
-    oidc_discovery_url = "https://myco.auth0.com/"
-    bound_issuer = "https://myco.auth0.com/"
+    description         = "Demonstration of the Terraform JWT auth backend"
+    path                = "jwt"
+    oidc_discovery_url  = "https://myco.auth0.com/"
+    bound_issuer        = "https://myco.auth0.com/"
 }
 ```
 
@@ -28,18 +28,36 @@ Manage OIDC auth backend:
 
 ```hcl
 resource "vault_jwt_auth_backend" "example" {
-    description  = "Demonstration of the Terraform JWT auth backend"
-    path = "oidc"
-    type = "oidc"
-    oidc_discovery_url = "https://myco.auth0.com/"
-    oidc_client_id = "1234567890"
-    oidc_client_secret = "secret123456"
-    bound_issuer = "https://myco.auth0.com/"
+    description         = "Demonstration of the Terraform JWT auth backend"
+    path                = "oidc"
+    type                = "oidc"
+    oidc_discovery_url  = "https://myco.auth0.com/"
+    oidc_client_id      = "1234567890"
+    oidc_client_secret  = "secret123456"
+    bound_issuer        = "https://myco.auth0.com/"
     tune {
         listing_visibility = "unauth"
     }
 }
 ```
+
+Configuring the auth backend with a `provider_config:
+
+```hcl
+resource "vault_jwt_auth_backend" "gsuite" {
+    description = "OIDC backend"
+    oidc_discovery_url = "https://accounts.google.com"
+    path = "oidc"
+    type = "oidc"
+    provider_config = {
+        provider = "gsuite"
+        fetch_groups = true
+        fetch_user_info = true
+        groups_recurse_max_depth = 1
+    }
+}
+```
+
 
 ## Argument Reference
 
@@ -71,7 +89,9 @@ The following arguments are supported:
 
 * `default_role` - (Optional) The default role to use if none is provided during login
 
-* `provider_config` - (Optional) Provider specific handling configuration
+* `provider_config` - (Optional) Provider specific handling configuration. All values may be strings, and the provider will convert to the appropriate type when configuring Vault.
+
+* `local` - (Optional) Specifies if the auth method is local only.
 
 * tune - (Optional) Extra configuration block. Structure is documented below.
 

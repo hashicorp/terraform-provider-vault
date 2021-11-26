@@ -7,14 +7,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-var (
-	approleAuthBackendRoleSecretIDIDRegex = regexp.MustCompile("^backend=(.+)::role=(.+)::accessor=(.+)$")
-)
+var approleAuthBackendRoleSecretIDIDRegex = regexp.MustCompile("^backend=(.+)::role=(.+)::accessor=(.+)$")
 
 func approleAuthBackendRoleSecretIDResource() *schema.Resource {
 	return &schema.Resource{
@@ -158,7 +157,6 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	}
 
 	resp, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error writing AppRole auth backend role SecretID %q: %s", path, err)
 	}
@@ -225,19 +223,20 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 	}
 
 	var cidrs []string
-	switch resp.Data["cidr_list"].(type) {
+	switch data := resp.Data["cidr_list"].(type) {
 	case string:
-		if resp.Data["cidr_list"].(string) != "" {
-			cidrs = strings.Split(resp.Data["cidr_list"].(string), ",")
+		if data != "" {
+			cidrs = strings.Split(data, ",")
 		}
 	case []interface{}:
-		v := resp.Data["cidr_list"].([]interface{})
-		cidrs = make([]string, 0, len(v))
-		for _, i := range v {
+		cidrs = make([]string, 0, len(data))
+		for _, i := range data {
 			cidrs = append(cidrs, i.(string))
 		}
+	case nil:
+		cidrs = make([]string, 0)
 	default:
-		return fmt.Errorf("unknown type %T for cidr_list in response for SecretID %q", resp.Data["cidr_list"], accessor)
+		return fmt.Errorf("unknown type %T for cidr_list in response for SecretID %q", data, accessor)
 	}
 
 	metadata, err := json.Marshal(resp.Data["metadata"])

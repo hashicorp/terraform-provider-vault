@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -219,7 +219,7 @@ resource "vault_auth_backend" "azure" {
 }
 
 resource "vault_azure_auth_backend_role" "test" {
-    backend                     = "${vault_auth_backend.azure.path}"
+    backend                     = vault_auth_backend.azure.path
     role                        = "%s"
     bound_service_principal_ids = ["foo"]
     bound_resource_groups       = ["bar"]
@@ -241,7 +241,7 @@ resource "vault_auth_backend" "azure" {
 }
 
 resource "vault_azure_auth_backend_role" "test" {
-    backend                    = "${vault_auth_backend.azure.path}"
+    backend                    = vault_auth_backend.azure.path
     role                       = "%s"
     token_ttl                  = 300
     token_max_ttl              = 600
@@ -262,7 +262,7 @@ resource "vault_auth_backend" "azure" {
 }
 
 resource "vault_azure_auth_backend_role" "test" {
-    backend                    = "${vault_auth_backend.azure.path}"
+    backend                    = vault_auth_backend.azure.path
     role                       = "%s"
     bound_locations	           = ["west us"]
     bound_resource_groups      = ["test"]

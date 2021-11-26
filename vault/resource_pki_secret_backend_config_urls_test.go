@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -80,7 +80,7 @@ func listPkiPaths(s *terraform.State) ([]string, error) {
 	}
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_pki_secret_backend" {
+		if rs.Type != "vault_mount" {
 			continue
 		}
 		for path, mount := range mounts {
@@ -97,8 +97,9 @@ func listPkiPaths(s *terraform.State) ([]string, error) {
 
 func testPkiSecretBackendCertConfigUrlsConfig_rootOnly(rootPath string) string {
 	return fmt.Sprintf(`
-resource "vault_pki_secret_backend" "test-root" {
+resource "vault_mount" "test-root" {
   path = "%s"
+  type = "pki"
   description = "test root"
   default_lease_ttl_seconds = "8640000"
   max_lease_ttl_seconds = "8640000"
@@ -108,17 +109,18 @@ resource "vault_pki_secret_backend" "test-root" {
 
 func testPkiSecretBackendCertConfigUrlsConfig_basic(rootPath string, issuingCertificates string, crlDistributionPoints string, ocspServers string) string {
 	return fmt.Sprintf(`
-resource "vault_pki_secret_backend" "test-root" {
+resource "vault_mount" "test-root" {
   path = "%s"
+  type = "pki"
   description = "test root"
   default_lease_ttl_seconds = "8640000"
   max_lease_ttl_seconds = "8640000"
 }
 
 resource "vault_pki_secret_backend_config_urls" "test" {
-  depends_on = [ "vault_pki_secret_backend.test-root" ]
+  depends_on = [ "vault_mount.test-root" ]
 
-  backend = "${vault_pki_secret_backend.test-root.path}"
+  backend = vault_mount.test-root.path
 
   issuing_certificates = ["%s"]
   crl_distribution_points = ["%s"]

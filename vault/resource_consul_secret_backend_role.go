@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -33,19 +33,11 @@ func consulSecretBackendRoleResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "The name of an existing role against which to create this Consul credential",
 			},
-			"path": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Description:   "The path of the Consul Secret Backend the role belongs to.",
-				Deprecated:    "use `backend` instead",
-				ConflictsWith: []string{"backend"},
-			},
 			"backend": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ForceNew:      true,
-				Description:   "The path of the Consul Secret Backend the role belongs to.",
-				ConflictsWith: []string{"path"},
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The path of the Consul Secret Backend the role belongs to.",
 			},
 			"policies": {
 				Type:        schema.TypeList,

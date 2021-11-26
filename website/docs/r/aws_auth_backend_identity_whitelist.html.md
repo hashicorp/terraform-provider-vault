@@ -21,7 +21,7 @@ resource "vault_auth_backend" "example" {
 }
 
 resource "vault_aws_auth_backend_identity_whitelist" "example" {
-  backend       = "${vault_auth_backend.example.path}"
+  backend       = vault_auth_backend.example.path
   safety_buffer = 3600
 }
 ```

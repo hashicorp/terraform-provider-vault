@@ -2,12 +2,13 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/vault/api"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 )
 
 func testResourceTokenCheckDestroy(s *terraform.State) error {
@@ -39,7 +40,6 @@ func TestResourceToken_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_duration"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
-					resource.TestCheckResourceAttr("vault_token.test", "encrypted_client_token", ""),
 				),
 			},
 		},
@@ -60,7 +60,6 @@ func TestResourceToken_import(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_duration"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
-					resource.TestCheckResourceAttr("vault_token.test", "encrypted_client_token", ""),
 				),
 			},
 			{
@@ -68,7 +67,7 @@ func TestResourceToken_import(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				// the API can't serve these fields, so ignore them
-				ImportStateVerifyIgnore: []string{"ttl", "lease_duration", "lease_started", "client_token", "encrypted_client_token"},
+				ImportStateVerifyIgnore: []string{"ttl", "lease_duration", "lease_started", "client_token"},
 			},
 		},
 	})
@@ -84,7 +83,7 @@ EOT
 }
 
 resource "vault_token" "test" {
-	policies = [ "${vault_policy.test.name}" ]
+	policies = [ vault_policy.test.name ]
 	ttl = "60s"
 }`
 }
@@ -110,7 +109,6 @@ func TestResourceToken_full(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "59"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
-					resource.TestCheckResourceAttr("vault_token.test", "encrypted_client_token", ""),
 				),
 			},
 		},
@@ -127,7 +125,7 @@ EOT
 }
 
 resource "vault_token" "test" {
-	policies = [ "${vault_policy.test.name}" ]
+	policies = [ vault_policy.test.name ]
 	no_parent = true
     no_default_policy = true
 	renewable = true
@@ -165,7 +163,7 @@ EOT
 }
 
 resource "vault_token" "test" {
-	policies = [ "${vault_policy.test.name}" ]
+	policies = [ vault_policy.test.name ]
 	ttl = "60s"
 }`
 }
@@ -209,7 +207,6 @@ func TestResourceToken_expire(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "9"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
-					resource.TestCheckResourceAttr("vault_token.test", "encrypted_client_token", ""),
 				),
 			},
 		},
@@ -226,7 +223,7 @@ EOT
 }
 
 resource "vault_token" "test" {
-	policies = [ "${vault_policy.test.name}" ]
+	policies = [ vault_policy.test.name ]
 	ttl = "10s"
 }`
 }
@@ -247,7 +244,6 @@ func TestResourceToken_renew(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "29"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
-					resource.TestCheckResourceAttr("vault_token.test", "encrypted_client_token", ""),
 				),
 			},
 			{
@@ -261,7 +257,6 @@ func TestResourceToken_renew(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_duration"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
-					resource.TestCheckResourceAttr("vault_token.test", "encrypted_client_token", ""),
 				),
 			},
 			{
@@ -278,7 +273,6 @@ func TestResourceToken_renew(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "29"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
-					resource.TestCheckResourceAttr("vault_token.test", "encrypted_client_token", ""),
 				),
 			},
 		},
@@ -295,7 +289,7 @@ EOT
 }
 
 resource "vault_token" "test" {
-	policies = [ "${vault_policy.test.name}" ]
+	policies = [ vault_policy.test.name ]
 	renewable = true
 	ttl = "30s"
 	renew_min_lease = 10
@@ -430,41 +424,4 @@ func testResourceTokenWaitRenewMinLeaseTime(n string) resource.TestCheckFunc {
 
 		return nil
 	}
-}
-
-func TestResourceToken_pgp(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testResourceTokenCheckDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testResourceTokenConfig_pgp(),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_token.test", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_token.test", "ttl", "60s"),
-					resource.TestCheckResourceAttrSet("vault_token.test", "lease_duration"),
-					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
-					resource.TestCheckResourceAttr("vault_token.test", "client_token", ""),
-					resource.TestCheckResourceAttrSet("vault_token.test", "encrypted_client_token"),
-				),
-			},
-		},
-	})
-}
-
-func testResourceTokenConfig_pgp() string {
-	return `
-resource "vault_policy" "test" {
-	name   = "test"
-	policy = <<EOT
-path "secret/*" { capabilities = [ "list" ] }
-EOT
-}
-
-resource "vault_token" "test" {
-	ttl      = "60s"
-	policies = [ "${vault_policy.test.name}" ]
-	pgp_key  = "keybase:terraformacctest"
-}`
 }

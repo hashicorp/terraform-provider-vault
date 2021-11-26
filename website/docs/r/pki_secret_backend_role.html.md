@@ -13,15 +13,22 @@ Creates a role on an PKI Secret Backend for Vault.
 ## Example Usage
 
 ```hcl
-resource "vault_pki_secret_backend" "pki" {
-  path = "%s"
+resource "vault_mount" "pki" {
+  path                      = "pki"
+  type                      = "pki"
   default_lease_ttl_seconds = 3600
-  max_lease_ttl_seconds = 86400
+  max_lease_ttl_seconds     = 86400
 }
 
 resource "vault_pki_secret_backend_role" "role" {
-  backend = "${vault_pki_secret_backend.pki.path}"
-  name    = "my_role"
+  backend          = vault_mount.pki.path
+  name             = "my_role"
+  ttl              = 3600
+  allow_ip_sans    = true
+  key_type         = "rsa"
+  key_bits         = 4096
+  allowed_domains  = ["example.com", "my.domain"]
+  allow_subdomains = true
 }
 ```
 
@@ -40,6 +47,8 @@ The following arguments are supported:
 * `allow_localhost` - (Optional) Flag to allow certificates for localhost
 
 * `allowed_domains` - (Optional) List of allowed domains for certificates 
+
+* `allowed_domains_template` - (Optional) Flag, if set, `allowed_domains` can be specified using identity template expressions such as `{{identity.entity.aliases.<mount accessor>.name}}`.
 
 * `allow_bare_domains` - (Optional) Flag to allow certificates matching the actual domain
 

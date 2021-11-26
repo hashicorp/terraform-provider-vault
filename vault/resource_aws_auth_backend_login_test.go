@@ -12,8 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
@@ -176,13 +176,13 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "%s"
   secret_key = "%s"
 }
 
 resource "vault_aws_auth_backend_role" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["%s"]
@@ -191,8 +191,8 @@ resource "vault_aws_auth_backend_role" "test" {
 }
 
 resource "vault_aws_auth_backend_login" "test" {
-  backend = "${vault_auth_backend.aws.path}"
-  role = "${vault_aws_auth_backend_role.test.role}"
+  backend = vault_auth_backend.aws.path
+  role = vault_aws_auth_backend_role.test.role
   iam_http_request_method = "%s"
   iam_request_url = "%s"
   iam_request_headers = "%s"
@@ -209,13 +209,13 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "%s"
   secret_key = "%s"
 }
 
 resource "vault_aws_auth_backend_role" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "ec2"
   policies = ["default"]
@@ -227,8 +227,8 @@ resource "vault_aws_auth_backend_role" "test" {
 }
 
 resource "vault_aws_auth_backend_login" "test" {
-  backend = "${vault_auth_backend.aws.path}"
-  role = "${vault_aws_auth_backend_role.test.role}"
+  backend = vault_auth_backend.aws.path
+  role = vault_aws_auth_backend_role.test.role
   identity = "%s"
   signature = "%s"
 }
@@ -243,13 +243,13 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "%s"
   secret_key = "%s"
 }
 
 resource "vault_aws_auth_backend_role" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "ec2"
   policies = ["default"]
@@ -261,8 +261,8 @@ resource "vault_aws_auth_backend_role" "test" {
 }
 
 resource "vault_aws_auth_backend_login" "test" {
-  backend = "${vault_auth_backend.aws.path}"
-  role = "${vault_aws_auth_backend_role.test.role}"
+  backend = vault_auth_backend.aws.path
+  role = vault_aws_auth_backend_role.test.role
   pkcs7 = "%s"
 }
 `, mountPath, accessKey, secretKey, roleName, ami, account, arn, pkcs7)

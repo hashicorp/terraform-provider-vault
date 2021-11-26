@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func awsSecretBackendRoleResource() *schema.Resource {
@@ -36,35 +37,19 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Description: "The path of the AWS Secret Backend the role belongs to.",
 			},
 			"policy_arns": {
-				Type:          schema.TypeSet,
-				Optional:      true,
-				ConflictsWith: []string{"policy", "policy_arn"},
-				Description:   "ARN for an existing IAM policy the role should use.",
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Description: "ARN for an existing IAM policy the role should use.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
-			"policy_arn": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ConflictsWith: []string{"policy_document", "policy", "policy_arns", "role_arns"},
-				Description:   "ARN for an existing IAM policy the role should use.",
-				Removed:       `Use "policy_arns".`,
-			},
 			"policy_document": {
 				Type:             schema.TypeString,
 				Optional:         true,
-				ConflictsWith:    []string{"policy_arn", "policy"},
 				Description:      "IAM policy the role should use in JSON format.",
+				ValidateFunc:     ValidateDataJSON,
 				DiffSuppressFunc: util.JsonDiffSuppress,
-			},
-			"policy": {
-				Type:             schema.TypeString,
-				Optional:         true,
-				ConflictsWith:    []string{"policy_arns", "policy_arn", "policy_document", "role_arns"},
-				Description:      "IAM policy the role should use in JSON format.",
-				DiffSuppressFunc: util.JsonDiffSuppress,
-				Removed:          `Use "policy_document".`,
 			},
 			"credential_type": {
 				Type:        schema.TypeString,
@@ -76,10 +61,9 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Optional:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"policy", "policy_arn"},
-				Description:   "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is 'assumed_role'",
+				Optional:    true,
+				ForceNew:    true,
+				Description: "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is 'assumed_role'",
 			},
 			"iam_groups": {
 				Type: schema.TypeSet,
@@ -113,26 +97,18 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	policyARNsIfc, ok := d.GetOk("policy_arns")
 	var policyARNs []interface{}
-	if !ok {
-		policyARN := d.Get("policy_arn")
-		if policyARN != "" {
-			policyARNs = append(policyARNs, policyARN)
-		}
-	} else {
+	if ok {
 		policyARNs = policyARNsIfc.(*schema.Set).List()
 	}
 
-	policy, ok := d.GetOk("policy_document")
-	if !ok {
-		policy = d.Get("policy")
-	}
+	policyDocument := d.Get("policy_document")
 
 	roleARNs := d.Get("role_arns").(*schema.Set).List()
 
 	iamGroups := d.Get("iam_groups").(*schema.Set).List()
 
-	if policy == "" && len(policyARNs) == 0 && len(roleARNs) == 0 && len(iamGroups) == 0 {
-		return fmt.Errorf("at least one of `policy`, `policy_arns`, `role_arns` or `iam_groups` must be set")
+	if policyDocument == "" && len(policyARNs) == 0 && len(roleARNs) == 0 && len(iamGroups) == 0 {
+		return fmt.Errorf("at least one of: `policy_document`, `policy_arns`, `role_arns` or `iam_groups` must be set")
 	}
 
 	credentialType := d.Get("credential_type").(string)
@@ -140,8 +116,8 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{
 		"credential_type": credentialType,
 	}
-	if policy != "" {
-		data["policy_document"] = policy
+	if policyDocument != "" {
+		data["policy_document"] = policyDocument
 	}
 	if len(policyARNs) != 0 {
 		data["policy_arns"] = policyARNs
@@ -205,16 +181,12 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	if _, ok := d.GetOk("policy_document"); ok {
 		d.Set("policy_document", secret.Data["policy_document"])
-	} else if _, ok := d.GetOk("policy"); ok {
-		d.Set("policy", secret.Data["policy_document"])
 	} else if v, ok := secret.Data["policy_document"]; ok {
 		d.Set("policy_document", v)
 	}
 
 	if _, ok := d.GetOk("policy_arns"); ok {
 		d.Set("policy_arns", secret.Data["policy_arns"])
-	} else if _, ok := d.GetOk("policy_arn"); ok {
-		d.Set("policy_arn", secret.Data["policy_arns"])
 	} else if v, ok := secret.Data["policy_arns"]; ok {
 		d.Set("policy_arns", v)
 	}

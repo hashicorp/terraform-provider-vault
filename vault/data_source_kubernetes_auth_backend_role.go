@@ -1,12 +1,11 @@
 package vault
 
 import (
-	"strings"
-
 	"fmt"
 	"log"
+	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -40,49 +39,6 @@ func kubernetesAuthBackendRoleDataSource() *schema.Resource {
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Description: "List of namespaces allowed to access this role. If set to \"*\" all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
 			Computed:    true,
-		},
-		// Deprecated
-		"policies": {
-			Type:     schema.TypeSet,
-			Optional: true,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Description: "Policies to be set on tokens issued using this role.",
-			Deprecated:  "use `token_policies` instead if you are running Vault >= 1.2",
-		},
-		"ttl": {
-			Type:        schema.TypeInt,
-			Optional:    true,
-			Description: "Default number of seconds to set as the TTL for issued tokens and at renewal time.",
-			Deprecated:  "use `token_ttl` instead if you are running Vault >= 1.2",
-		},
-		"max_ttl": {
-			Type:        schema.TypeInt,
-			Optional:    true,
-			Description: "Number of seconds after which issued tokens can no longer be renewed.",
-			Deprecated:  "use `token_max_ttl` instead if you are running Vault >= 1.2",
-		},
-		"period": {
-			Type:        schema.TypeInt,
-			Optional:    true,
-			Description: "Number of seconds to set the TTL to for issued tokens upon renewal. Makes the token a periodic token, which will never expire as long as it is renewed before the TTL each period.",
-			Deprecated:  "use `token_period` instead if you are running Vault >= 1.2",
-		},
-		"num_uses": {
-			Type:        schema.TypeInt,
-			Optional:    true,
-			Description: "Number of times issued tokens can be used. Setting this to 0 or leaving it unset means unlimited uses.",
-			Deprecated:  "use `token_num_uses` instead if you are running Vault >= 1.2",
-		},
-		"bound_cidrs": {
-			Type:        schema.TypeSet,
-			Optional:    true,
-			Description: "List of CIDRs valid as the source address for login requests. This value is also encoded into any resulting token.",
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Deprecated: "use `token_bound_cidrs` instead if you are running Vault >= 1.2",
 		},
 		"audience": {
 			Type:        schema.TypeString,
@@ -120,10 +76,14 @@ func kubernetesAuthBackendRoleDataSourceRead(d *schema.ResourceData, meta interf
 	}
 	d.SetId(path)
 
-	readTokenFields(d, resp)
+	if err := readTokenFields(d, resp); err != nil {
+		return err
+	}
 
-	for _, k := range []string{"bound_cidrs", "bound_service_account_names", "bound_service_account_namespaces", "num_uses", "policies", "ttl", "max_ttl", "period", "audience"} {
-		d.Set(k, resp.Data[k])
+	for _, k := range []string{"bound_service_account_names", "bound_service_account_namespaces", "audience"} {
+		if err := d.Set(k, resp.Data[k]); err != nil {
+			return err
+		}
 	}
 	return nil
 }

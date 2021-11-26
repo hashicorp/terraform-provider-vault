@@ -22,12 +22,12 @@ for more details.
 
 ```hcl
 resource "vault_ad_secret_backend" "config" {
-    backend = "ad"
-    binddn = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
-    bindpass = "SuperSecretPassw0rd"
-    url = "ldaps://ad"
-    insecure_tls = "true"
-    userdn = "CN=Users,DC=corp,DC=example,DC=net"
+    backend       = "ad"
+    binddn        = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
+    bindpass      = "SuperSecretPassw0rd"
+    url           = "ldaps://ad"
+    insecure_tls  = "true"
+    userdn        = "CN=Users,DC=corp,DC=example,DC=net"
 }
 ```
 

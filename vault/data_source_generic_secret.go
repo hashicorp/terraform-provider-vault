@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -113,7 +113,7 @@ func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error
 
 	d.Set("lease_id", secret.LeaseID)
 	d.Set("lease_duration", secret.LeaseDuration)
-	d.Set("lease_start_time", time.Now().Format("RFC3339"))
+	d.Set("lease_start_time", time.Now().UTC().Format(time.RFC3339))
 	d.Set("lease_renewable", secret.Renewable)
 
 	return nil

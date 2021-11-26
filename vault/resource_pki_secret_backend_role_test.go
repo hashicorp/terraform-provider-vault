@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -75,8 +75,10 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "ttl", "1800"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "max_ttl", "3600"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allow_localhost", "true"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_domains.#", "1"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_domains.#", "2"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_domains.0", "other.domain"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_domains.1", "{{identity.entity.name}}"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_domains_template", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allow_bare_domains", "false"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allow_subdomains", "true"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allow_glob_domains", "false"),
@@ -120,13 +122,14 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 
 func testPkiSecretBackendRoleConfig_basic(name, path string) string {
 	return fmt.Sprintf(`
-resource "vault_pki_secret_backend" "pki" {
+resource "vault_mount" "pki" {
   path = "%s"
+  type = "pki"
 }
 
 resource "vault_pki_secret_backend_role" "test" {
-  depends_on = [ "vault_pki_secret_backend.pki" ]
-  backend = "${vault_pki_secret_backend.pki.path}"
+  depends_on = [ "vault_mount.pki" ]
+  backend = vault_mount.pki.path
   name = "%s"
   ttl = 3600
   max_ttl = 7200
@@ -168,18 +171,20 @@ resource "vault_pki_secret_backend_role" "test" {
 
 func testPkiSecretBackendRoleConfig_updated(name, path string) string {
 	return fmt.Sprintf(`
-resource "vault_pki_secret_backend" "pki" {
+resource "vault_mount" "pki" {
   path = "%s"
+  type = "pki"
 }
 
 resource "vault_pki_secret_backend_role" "test" {
-  depends_on = [ "vault_pki_secret_backend.pki" ]
-  backend = "${vault_pki_secret_backend.pki.path}"
+  depends_on = [ "vault_mount.pki" ]
+  backend = vault_mount.pki.path
   name = "%s"
   ttl = 1800
   max_ttl = 3600
   allow_localhost = true
-  allowed_domains = ["other.domain"]
+  allowed_domains = ["other.domain", "{{identity.entity.name}}"]
+  allowed_domains_template = true
   allow_bare_domains = false
   allow_subdomains = true
   allow_glob_domains = false

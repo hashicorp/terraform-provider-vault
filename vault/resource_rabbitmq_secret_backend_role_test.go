@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -149,7 +149,7 @@ resource "vault_rabbitmq_secret_backend" "test" {
 }
 
 resource "vault_rabbitmq_secret_backend_role" "test" {
-  backend = "${vault_rabbitmq_secret_backend.test.path}"
+  backend = vault_rabbitmq_secret_backend.test.path
   name = "%s"
   tags = %q
   vhost {
@@ -175,7 +175,7 @@ resource "vault_rabbitmq_secret_backend" "test" {
 }
 
 resource "vault_rabbitmq_secret_backend_role" "test" {
-  backend = "${vault_rabbitmq_secret_backend.test.path}"
+  backend = vault_rabbitmq_secret_backend.test.path
   name = "%s"
   tags = %q
   vhost {

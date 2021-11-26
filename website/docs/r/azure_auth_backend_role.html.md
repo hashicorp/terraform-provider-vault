@@ -22,7 +22,7 @@ resource "vault_auth_backend" "azure" {
 }
 
 resource "vault_azure_auth_backend_role" "example" {
-  backend                         = "${vault_auth_backend.azure.path}"
+  backend                         = vault_auth_backend.azure.path
   role                            = "test-role"
   bound_subscription_ids          = ["11111111-2222-3333-4444-555555555555"]
   bound_resource_groups           = ["123456789012"]
@@ -55,7 +55,7 @@ The following arguments are supported:
   field.
 
 * `bound_resource_groups` - (Optional) If set, defines a constraint on the virtual
-  machiness that can perform the login operation that they be associated with
+  machines that can perform the login operation that they be associated with
   the resource group that matches the value specified by this field.
 
 * `bound_scale_sets` - (Optional) If set, defines a constraint on the virtual
@@ -101,25 +101,6 @@ These arguments are common across several Authentication Token resources since V
   `service` tokens). For token store roles, there are two additional possibilities:
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
-
-### Deprecated Arguments
-
-These arguments are deprecated since Vault 1.2 in favour of the common token arguments
-documented above.
-
-* `ttl` - (Optional; Deprecated, use `token_ttl` instead if you are running Vault >= 1.2) The TTL period of tokens issued
-  using this role, provided as a number of seconds.
-
-* `max_ttl` - (Optional; Deprecated, use `token_max_ttl` instead if you are running Vault >= 1.2) The maximum allowed lifetime of tokens
-  issued using this role, provided as a number of seconds.
-
-* `policies` - (Optional; Deprecated, use `token_policies` instead if you are running Vault >= 1.2) An array of strings
-  specifying the policies to be set on tokens issued using this role.
-
-* `period` - (Optional; Deprecated, use `token_period` instead if you are running Vault >= 1.2) If set, indicates that the
-  token generated using this role should never expire. The token should be renewed within the
-  duration specified by this value. At each renewal, the token's TTL will be set to the
-  value of this field. Specified in seconds.
 
 ## Attributes Reference
 

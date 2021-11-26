@@ -54,10 +54,6 @@ The following arguments are supported:
 * `data_json` - (Required) String containing a JSON-encoded object that will be
   written as the secret data at the given path.
 
-* `allow_read` - (Optional, Deprecated) True/false. Set this to true if your
-  vault authentication is able to read the data, this allows the resource to be
-  compared and updated. Defaults to false.
-
 * `disable_read` - (Optional) True/false. Set this to true if your vault
   authentication is not able to read the data. Setting this to `true` will
   break drift detection. Defaults to false.

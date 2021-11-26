@@ -3,12 +3,12 @@ layout: "vault"
 page_title: "Vault: vault_github_auth_backend resource"
 sidebar_current: "docs-vault-github-auth-backend"
 description: |-
-  Manages Github Auth mounts in Vault.
+  Manages GitHub Auth mounts in Vault.
 ---
 
 # vault\_github\_auth\_backend
 
-Manages a Github Auth mount in a Vault server. See the [Vault
+Manages a GitHub Auth mount in a Vault server. See the [Vault
 documentation](https://www.vaultproject.io/docs/auth/github/) for more
 information.
 
@@ -35,7 +35,7 @@ The following arguments are supported:
 * `description` - (Optional) Specifies the description of the mount.
   This overrides the current stored value, if any.
 
-* tune - (Optional) Extra configuration block. Structure is documented below.
+* `tune` - (Optional) Extra configuration block. Structure is documented below.
 
 The `tune` block is used to tune the auth backend:
 
@@ -114,20 +114,9 @@ These arguments are common across several Authentication Token resources since V
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
 
-### Deprecated Arguments
-
-These arguments are deprecated since Vault 1.2 in favour of the common token arguments
-documented above.
-
-* `ttl` - (Optional; Deprecated, use `token_ttl` instead if you are running Vault >= 1.2) The TTL period of tokens issued
-  using this role. This must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration).
-
-* `max_ttl` - (Optional; Deprecated, use `token_max_ttl` instead if you are running Vault >= 1.2) The maximum allowed lifetime of tokens
-  issued using this role. This must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration).
-
 ## Import
 
-Github authentication mounts can be imported using the `path`, e.g.
+GitHub authentication mounts can be imported using the `path`, e.g.
 
 ```
 $ terraform import vault_github_auth_backend.example github

@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -92,58 +92,9 @@ func certAuthBackendRoleResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-
-		// Deprecated
-		"bound_cidrs": {
-			Type: schema.TypeSet,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_bound_cidrs` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_bound_cidrs"},
-		},
-		"ttl": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_ttl"},
-		},
-		"max_ttl": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_max_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_max_ttl"},
-		},
-		"period": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_period"},
-		},
-		"policies": {
-			Type: schema.TypeSet,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_policies` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_policies"},
-		},
 	}
 
-	addTokenFields(fields, &addTokenFieldsConfig{
-		TokenBoundCidrsConflict: []string{"bound_cidrs"},
-		TokenMaxTTLConflict:     []string{"max_ttl"},
-		TokenPoliciesConflict:   []string{"policies"},
-		TokenPeriodConflict:     []string{"period"},
-		TokenTTLConflict:        []string{"ttl"},
-	})
+	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
 		SchemaVersion: 1,
@@ -202,27 +153,6 @@ func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 		data["display_name"] = v.(string)
 	}
 
-	// Deprecated fields
-	if v, ok := d.GetOk("bound_cidrs"); ok {
-		data["bound_cidrs"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("policies"); ok {
-		data["policies"] = v.(*schema.Set).List()
-	}
-
 	log.Printf("[DEBUG] Writing %q to cert auth backend", path)
 	d.SetId(path)
 	_, err := client.Logical().Write(path, data)
@@ -268,28 +198,8 @@ func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["required_extensions"] = v.(*schema.Set).List()
 	}
 
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("policies"); ok {
-		data["policies"] = v.(*schema.Set).List()
-	}
-
 	if v, ok := d.GetOk("display_name"); ok {
 		data["display_name"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("bound_cidrs"); ok {
-		data["bound_cidrs"] = v.(*schema.Set).List()
 	}
 
 	log.Printf("[DEBUG] Updating %q in cert auth backend", path)
@@ -320,72 +230,6 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	readTokenFields(d, resp)
-
-	// Check if the user is using the deprecated `policies`
-	if _, deprecated := d.GetOk("policies"); deprecated {
-		// Then we see if `token_policies` was set and unset it
-		// Vault will still return `policies`
-		if _, ok := d.GetOk("token_policies"); ok {
-			d.Set("token_policies", nil)
-		}
-
-		if v, ok := resp.Data["policies"]; ok {
-			d.Set("policies", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `period`
-	if _, deprecated := d.GetOk("period"); deprecated {
-		// Then we see if `token_period` was set and unset it
-		// Vault will still return `period`
-		if _, ok := d.GetOk("token_period"); ok {
-			d.Set("token_period", nil)
-		}
-
-		if v, ok := resp.Data["period"]; ok {
-			d.Set("period", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `ttl`
-	if _, deprecated := d.GetOk("ttl"); deprecated {
-		// Then we see if `token_ttl` was set and unset it
-		// Vault will still return `ttl`
-		if _, ok := d.GetOk("token_ttl"); ok {
-			d.Set("token_ttl", nil)
-		}
-
-		if v, ok := resp.Data["ttl"]; ok {
-			d.Set("ttl", v)
-		}
-
-	}
-
-	// Check if the user is using the deprecated `max_ttl`
-	if _, deprecated := d.GetOk("max_ttl"); deprecated {
-		// Then we see if `token_max_ttl` was set and unset it
-		// Vault will still return `max_ttl`
-		if _, ok := d.GetOk("token_max_ttl"); ok {
-			d.Set("token_max_ttl", nil)
-		}
-
-		if v, ok := resp.Data["max_ttl"]; ok {
-			d.Set("max_ttl", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `bound_cidrs`
-	if _, deprecated := d.GetOk("bound_cidrs"); deprecated {
-		// Then we see if `token_bound_cidrs` was set and unset it
-		// Vault will still return `bound_cidrs`
-		if _, ok := d.GetOk("token_bound_cidrs"); ok {
-			d.Set("token_bound_cidrs", nil)
-		}
-
-		if v, ok := resp.Data["bound_cidrs"]; ok {
-			d.Set("bound_cidrs", v)
-		}
-	}
 
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("display_name", resp.Data["display_name"])

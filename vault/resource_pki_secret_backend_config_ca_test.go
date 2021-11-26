@@ -2,14 +2,14 @@ package vault
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
-	"strconv"
 )
 
 func TestPkiSecretBackendConfigCA_basic(t *testing.T) {
@@ -39,7 +39,7 @@ func testPkiSecretBackendConfigCADestroy(s *terraform.State) error {
 	}
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_pki_secret_backend" {
+		if rs.Type != "vault_mount" {
 			continue
 		}
 		for path, mount := range mounts {
@@ -55,16 +55,17 @@ func testPkiSecretBackendConfigCADestroy(s *terraform.State) error {
 
 func testPkiSecretBackendConfigCAConfig_basic(path string) string {
 	return fmt.Sprintf(`
-resource "vault_pki_secret_backend" "test" {
+resource "vault_mount" "test" {
   path = "%s"
+  type = "pki"
   description = "test root"
   default_lease_ttl_seconds = "8640000"
   max_lease_ttl_seconds = "8640000"
 }
 
 resource "vault_pki_secret_backend_config_ca" "test" {
-  depends_on = [ "vault_pki_secret_backend.test" ]
-  backend = "${vault_pki_secret_backend.test.path}"
+  depends_on = [ "vault_mount.test" ]
+  backend = vault_mount.test.path
   pem_bundle = <<EOT
 -----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAwvEHeJCXnFgi88rE1dTX6FHdBPK0wSjedh0ywVnCZxLWbBv/
