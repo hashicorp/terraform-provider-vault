@@ -71,6 +71,15 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN_NAME", ""),
 				Description: "Token name to use for creating the Vault child token.",
 			},
+			"skip_child_token": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_CHILD_TOKEN", false),
+
+				// Setting to true will cause max_lease_ttl_seconds and token_name to be ignored (not used).
+				// Note that this is strongly discouraged due to the potential of exposing sensitive secret data.
+				Description: "Set this to true to prevent the creation of ephemeral child token used by this provider.",
+			},
 			"ca_cert_file": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -137,15 +146,6 @@ func Provider() *schema.Provider {
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", false),
 				Description: "Set this to true only if the target Vault server is an insecure development instance.",
-			},
-			"create_intermediate_child_token": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_CREATE_CHILD_TOKEN", true),
-
-				// Setting to false will cause max_lease_ttl_seconds and token_name to be ignored (not used).
-				// Note that this is strongly discouraged due to the potential of exposing sensitive secret data.
-				Description: "Set this to false to prevent the creation and use of ephemeral child token used by this provider.",
 			},
 			"max_lease_ttl_seconds": {
 				Type:     schema.TypeInt,
@@ -875,8 +875,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, errors.New("no vault token found")
 	}
 
-	createChild := d.Get("create_intermediate_child_token").(bool)
-	if createChild {
+	skipChildToken := d.Get("skip_child_token").(bool)
+	if !skipChildToken {
 		err := providerChildToken(d, client)
 		if err != nil {
 			return nil, err

@@ -630,55 +630,55 @@ func TestAccTokenName(t *testing.T) {
 func TestAccChildToken(t *testing.T) {
 
 	tests := []struct {
-		ChildTokenEnv        string
-		TestChildTokenEnv    bool
-		ChildTokenSchema     string
-		TestChildTokenSchema bool
-		ExpectChildToken     bool
+		skipChildTokenEnv    string
+		useChildTokenEnv     bool
+		skipChildTokenSchema string
+		useChildTokenSchema  bool
+		expectChildToken     bool
 	}{
 		{
-			TestChildTokenSchema: false,
-			TestChildTokenEnv:    false,
-			ExpectChildToken:     true,
+			useChildTokenSchema: false,
+			useChildTokenEnv:    false,
+			expectChildToken:    true,
 		},
 		{
-			ChildTokenEnv:     "",
-			TestChildTokenEnv: true,
-			ExpectChildToken:  true,
+			skipChildTokenEnv: "",
+			useChildTokenEnv:  true,
+			expectChildToken:  true,
 		},
 		{
-			ChildTokenEnv:     "true",
-			TestChildTokenEnv: true,
-			ExpectChildToken:  true,
+			skipChildTokenEnv: "true",
+			useChildTokenEnv:  true,
+			expectChildToken:  false,
 		},
 		{
-			ChildTokenEnv:     "false",
-			TestChildTokenEnv: true,
-			ExpectChildToken:  false,
+			skipChildTokenEnv: "false",
+			useChildTokenEnv:  true,
+			expectChildToken:  true,
 		},
 		{
-			ChildTokenSchema:     "true",
-			TestChildTokenSchema: true,
-			ExpectChildToken:     true,
+			skipChildTokenSchema: "true",
+			useChildTokenSchema:  true,
+			expectChildToken:     false,
 		},
 		{
-			ChildTokenSchema:     "false",
-			TestChildTokenSchema: true,
-			ExpectChildToken:     false,
+			skipChildTokenSchema: "false",
+			useChildTokenSchema:  true,
+			expectChildToken:     true,
 		},
 		{
-			ChildTokenEnv:        "true",
-			TestChildTokenEnv:    true,
-			ChildTokenSchema:     "false",
-			TestChildTokenSchema: true,
-			ExpectChildToken:     false,
+			skipChildTokenEnv:    "true",
+			useChildTokenEnv:     true,
+			skipChildTokenSchema: "false",
+			useChildTokenSchema:  true,
+			expectChildToken:     true,
 		},
 		{
-			ChildTokenEnv:        "false",
-			TestChildTokenEnv:    true,
-			ChildTokenSchema:     "true",
-			TestChildTokenSchema: true,
-			ExpectChildToken:     true,
+			skipChildTokenEnv:    "false",
+			useChildTokenEnv:     true,
+			skipChildTokenSchema: "true",
+			useChildTokenSchema:  true,
+			expectChildToken:     false,
 		},
 	}
 
@@ -689,23 +689,23 @@ func TestAccChildToken(t *testing.T) {
 			Steps: []resource.TestStep{
 				{
 					PreConfig: func() {
-						if test.TestChildTokenEnv {
-							err := os.Setenv("TERRAFORM_VAULT_CREATE_CHILD_TOKEN", test.ChildTokenEnv)
+						if test.useChildTokenEnv {
+							err := os.Setenv("VAULT_SKIP_CHILD_TOKEN", test.skipChildTokenEnv)
 							if err != nil {
 								t.Fatal(err)
 							}
 						} else {
-							err := os.Unsetenv("TERRAFORM_VAULT_CREATE_CHILD_TOKEN")
+							err := os.Unsetenv("VAULT_SKIP_CHILD_TOKEN")
 							if err != nil {
 								t.Fatal(err)
 							}
 						}
 					},
-					Config: testProviderConfig(test.TestChildTokenSchema, `create_intermediate_child_token = `+test.ChildTokenSchema),
-					Check:  checkUsedToken(test.ExpectChildToken),
+					Config: testProviderConfig(test.useChildTokenSchema, `skip_child_token = `+test.skipChildTokenSchema),
+					Check:  checkUsedToken(test.expectChildToken),
 				},
 			},
-			CheckDestroy: testEnvCleanup("TERRAFORM_VAULT_CREATE_CHILD_TOKEN"),
+			CheckDestroy: testEnvCleanup("VAULT_SKIP_CHILD_TOKEN"),
 		})
 	}
 }
