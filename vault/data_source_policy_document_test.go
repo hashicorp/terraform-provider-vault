@@ -19,14 +19,13 @@ func TestDataSourcePolicyDocument(t *testing.T) {
 			},
 		},
 	})
-
 }
 
 var testDataSourcePolicyDocument_config = `
 data "vault_policy_document" "test" {
   rule {
     path                = "secret/test1/*"
-    capabilities        = ["create", "read", "update", "delete", "list"]
+    capabilities        = ["create", "read", "update", "delete", "list", "patch"]
     description         = "test rule 1"
     required_parameters = ["test_param1"]
 
@@ -86,7 +85,7 @@ data "vault_policy_document" "test" {
 
 var testResultPolicyHCLDocument = `# test rule 1
 path "secret/test1/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
+  capabilities = ["create", "read", "update", "delete", "list", "patch"]
   required_parameters = ["test_param1"]
   allowed_parameters = {
     "eggs" = ["foo", "bar"]
