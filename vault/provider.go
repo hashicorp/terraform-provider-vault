@@ -253,6 +253,10 @@ var (
 			Resource:      genericSecretDataSource(),
 			PathInventory: []string{"/secret/data/{path}"},
 		},
+		"vault_generic_secret_metadata": {
+			Resource:      genericSecretMetadataDataSource(),
+			PathInventory: []string{"/secret/data/{path}"},
+		},
 		"vault_policy_document": {
 			Resource:      policyDocumentDataSource(),
 			PathInventory: []string{"/sys/policy/{name}"},
@@ -442,6 +446,10 @@ var (
 		},
 		"vault_generic_secret": {
 			Resource:      genericSecretResource(),
+			PathInventory: []string{GenericPath},
+		},
+		"vault_generic_secret_metadata": {
+			Resource:      genericSecretMetadataResource(),
 			PathInventory: []string{GenericPath},
 		},
 		"vault_jwt_auth_backend": {

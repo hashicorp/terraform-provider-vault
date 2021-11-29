@@ -48,6 +48,23 @@ func versionedSecret(requestedVersion int, path string, client *api.Client) (*ap
 	return secret, nil
 }
 
+func readKVMetadata(path string, client *api.Client) (*api.Secret, error) {
+	mountPath, v2, err := isKVv2(path, client)
+	if err != nil {
+		return nil, err
+	}
+	if !v2 {
+		return nil, fmt.Errorf("secret metadata requires a kv-v2 secret")
+	}
+	path = addPrefixToVKVPath(path, mountPath, "metadata")
+	secretMetadata, err := kvReadRequest(client, path, map[string]string{})
+
+	if err != nil {
+		return nil, err
+	}
+	return secretMetadata, nil
+}
+
 func kvReadRequest(client *api.Client, path string, params map[string]string) (*api.Secret, error) {
 	r := client.NewRequest("GET", "/v1/"+path)
 	for k, v := range params {
