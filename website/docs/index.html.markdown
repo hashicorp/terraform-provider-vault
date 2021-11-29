@@ -147,8 +147,8 @@ variables in order to keep credential information out of the configuration.
   when `TF_LOG` is set to `debug`.
   Only change this setting when the provided token cannot be permitted to
   create child tokens and there is no risk of exposure from the output of
-  Terraform. May be set via the `VAULT_SKIP_CHILD_TOKEN` environment variable.
-  **Note**: Setting to `true` will cause `token_name`
+  Terraform. May be set via the `TERRAFORM_VAULT_SKIP_CHILD_TOKEN` environment
+  variable. **Note**: Setting to `true` will cause `token_name`
   and `max_lease_ttl_seconds` to be ignored.
 
   See the section above on *Using Vault credentials in Terraform configuration*

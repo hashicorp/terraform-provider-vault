@@ -205,7 +205,7 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testHeaderConfig("auth", "123"),
-				Check:  checkTestSecretData("display_name", "token-testtoken"),
+				Check:  checkSelfToken("display_name", "token-testtoken"),
 			},
 		},
 	})
@@ -547,7 +547,7 @@ func TestAccProviderToken(t *testing.T) {
 }
 
 func TestAccTokenName(t *testing.T) {
-
+	defer os.Unsetenv("VAULT_TOKEN_NAME")
 	tests := []struct {
 		TokenNameEnv       string
 		UseTokenNameEnv    bool
@@ -619,15 +619,27 @@ func TestAccTokenName(t *testing.T) {
 						}
 					},
 					Config: testProviderConfig(test.UseTokenNameSchema, `token_name = "`+test.TokenNameSchema+`"`),
-					Check:  checkTestSecretData("display_name", test.WantTokenName),
+					Check:  checkSelfToken("display_name", test.WantTokenName),
 				},
 			},
-			CheckDestroy: testEnvCleanup("VAULT_TOKEN_NAME"),
 		})
 	}
 }
 
 func TestAccChildToken(t *testing.T) {
+	defer os.Unsetenv("TERRAFORM_VAULT_SKIP_CHILD_TOKEN")
+
+	checkTokenUsed := func(expectChildToken bool) resource.TestCheckFunc {
+		if expectChildToken {
+			// If the default child token was created, we expect the token
+			// used by the provider was named the default "token-terraform"
+			return checkSelfToken("display_name", "token-terraform")
+		} else {
+			// If the child token setting was disabled, the used token
+			// should match the user-provided VAULT_TOKEN
+			return checkSelfToken("id", os.Getenv("VAULT_TOKEN"))
+		}
+	}
 
 	tests := []struct {
 		skipChildTokenEnv    string
@@ -690,22 +702,21 @@ func TestAccChildToken(t *testing.T) {
 				{
 					PreConfig: func() {
 						if test.useChildTokenEnv {
-							err := os.Setenv("VAULT_SKIP_CHILD_TOKEN", test.skipChildTokenEnv)
+							err := os.Setenv("TERRAFORM_VAULT_SKIP_CHILD_TOKEN", test.skipChildTokenEnv)
 							if err != nil {
 								t.Fatal(err)
 							}
 						} else {
-							err := os.Unsetenv("VAULT_SKIP_CHILD_TOKEN")
+							err := os.Unsetenv("TERRAFORM_VAULT_SKIP_CHILD_TOKEN")
 							if err != nil {
 								t.Fatal(err)
 							}
 						}
 					},
 					Config: testProviderConfig(test.useChildTokenSchema, `skip_child_token = `+test.skipChildTokenSchema),
-					Check:  checkUsedToken(test.expectChildToken),
+					Check:  checkTokenUsed(test.expectChildToken),
 				},
 			},
-			CheckDestroy: testEnvCleanup("VAULT_SKIP_CHILD_TOKEN"),
 		})
 	}
 }
@@ -724,7 +735,6 @@ func testHeaderConfig(headerName, headerValue string) string {
 // Using the data lookup generic_secret to inspect used token
 // by terraform (this enables check of token name)
 func testProviderConfig(includeProviderConfig bool, config string) string {
-	testConfig := ""
 	providerConfig := fmt.Sprintf(`
 	provider "vault" {
 		%s
@@ -735,14 +745,12 @@ func testProviderConfig(includeProviderConfig bool, config string) string {
 		path = "/auth/token/lookup-self"
 	}`
 	if includeProviderConfig {
-		testConfig = providerConfig + dataConfig
-	} else {
-		testConfig = dataConfig
+		return providerConfig + dataConfig
 	}
-	return testConfig
+	return dataConfig
 }
 
-func checkTestSecretData(attrName string, expectedValue string) resource.TestCheckFunc {
+func checkSelfToken(attrName string, expectedValue string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["data.vault_generic_secret.test"]
 		if resourceState == nil {
@@ -764,25 +772,6 @@ func checkTestSecretData(attrName string, expectedValue string) resource.TestChe
 		}
 
 		return nil
-	}
-}
-
-func checkUsedToken(expectChildToken bool) resource.TestCheckFunc {
-	if expectChildToken {
-		// If the default child token was created, we expect the token
-		// used by the provider was named the default "token-terraform"
-		return checkTestSecretData("display_name", "token-terraform")
-	} else {
-		// If the child token setting was disabled, the used token
-		// should match the user-provided VAULT_TOKEN
-		return checkTestSecretData("id", os.Getenv("VAULT_TOKEN"))
-	}
-}
-
-func testEnvCleanup(envVar string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		err := os.Unsetenv(envVar)
-		return err
 	}
 }
 
