@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
@@ -20,7 +21,7 @@ type connectionStringConfig struct {
 var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
-	dbBackendTypes                                      = []string{"cassandra", "hana", "mongodb", "mssql", "mysql", "mysql_rds", "mysql_aurora", "mysql_legacy", "postgresql", "oracle", "elasticsearch", "snowflake"}
+	dbBackendTypes                                      = []string{"cassandra", "influxdb", "hana", "mongodb", "mssql", "mysql", "mysql_rds", "mysql_aurora", "mysql_legacy", "postgresql", "oracle", "elasticsearch", "snowflake"}
 )
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
@@ -113,10 +114,11 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 							Description: "Cassandra hosts to connect to.",
 						},
 						"port": {
-							Type:        schema.TypeInt,
-							Optional:    true,
-							Description: "The transport port to use to connect to Cassandra.",
-							Default:     9042,
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Description:  "The transport port to use to connect to Cassandra.",
+							ValidateFunc: validation.IsPortNumber,
+							Default:      9042,
 						},
 						"username": {
 							Type:        schema.TypeString,
@@ -148,10 +150,11 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 							Sensitive:   true,
 						},
 						"pem_json": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "Specifies JSON containing a certificate and private key; a certificate, private key, and issuing CA certificate; or just a CA certificate.",
-							Sensitive:   true,
+							Type:         schema.TypeString,
+							Optional:     true,
+							Description:  "Specifies JSON containing a certificate and private key; a certificate, private key, and issuing CA certificate; or just a CA certificate.",
+							Sensitive:    true,
+							ValidateFunc: validation.StringIsJSON,
 						},
 						"protocol_version": {
 							Type:        schema.TypeInt,
@@ -169,6 +172,77 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				},
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith("cassandra", dbBackendTypes),
+			},
+
+			"influxdb": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the influxdb-database-plugin plugin.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Influxdb host to connect to.",
+						},
+						"port": {
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Description:  "The transport port to use to connect to Influxdb.",
+							Default:      8086,
+							ValidateFunc: validation.IsPortNumber,
+						},
+						"username": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Specifies the username to use for superuser access.",
+						},
+						"password": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Specifies the password corresponding to the given username.",
+							Sensitive:   true,
+						},
+						"tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: "Whether to use TLS when connecting to Influxdb.",
+							Default:     true,
+						},
+						"insecure_tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: "Whether to skip verification of the server certificate when using TLS.",
+							Default:     false,
+						},
+						"pem_bundle": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Concatenated PEM blocks containing a certificate and private key; a certificate, private key, and issuing CA certificate; or just a CA certificate.",
+							Sensitive:   true,
+						},
+						"pem_json": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Description:  "Specifies JSON containing a certificate and private key; a certificate, private key, and issuing CA certificate; or just a CA certificate.",
+							Sensitive:    true,
+							ValidateFunc: validation.StringIsJSON,
+						},
+						"connect_timeout": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     5,
+							Description: "The number of seconds to use as a connection timeout.",
+						},
+						"username_template": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Template describing how dynamic usernames are generated.",
+						},
+					},
+				},
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith("influxdb", dbBackendTypes),
 			},
 
 			"mongodb": {
@@ -376,6 +450,8 @@ func getDatabasePluginName(d *schema.ResourceData) (string, error) {
 	switch {
 	case len(d.Get("cassandra").([]interface{})) > 0:
 		return "cassandra-database-plugin", nil
+	case len(d.Get("influxdb").([]interface{})) > 0:
+		return "influxdb-database-plugin", nil
 	case len(d.Get("hana").([]interface{})) > 0:
 		return "hana-database-plugin", nil
 	case len(d.Get("mongodbatlas").([]interface{})) > 0:
@@ -454,6 +530,8 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		if v, ok := d.GetOkExists("cassandra.0.connect_timeout"); ok {
 			data["connect_timeout"] = v.(int)
 		}
+	case "influxdb-database-plugin":
+		setInfluxDBDatabaseConnectionData(d, "influxdb.0.", data)
 	case "hana-database-plugin":
 		setDatabaseConnectionData(d, "hana.0.", data)
 	case "mongodb-database-plugin":
@@ -594,6 +672,61 @@ func getElasticsearchConnectionDetailsFromResponse(d *schema.ResourceData, prefi
 	return []map[string]interface{}{result}
 }
 
+func getInfluxDBConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	result := map[string]interface{}{}
+
+	if v, ok := data["host"]; ok {
+		result["host"] = v.(string)
+	}
+	if v, ok := data["port"]; ok {
+		port, _ := v.(json.Number).Int64()
+		result["port"] = port
+	}
+	if v, ok := data["username"]; ok {
+		result["username"] = v.(string)
+	}
+	if v, ok := data["password"]; ok {
+		result["password"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "password"); ok {
+		// keep the password we have in state/config if the API doesn't return one
+		result["password"] = v.(string)
+	}
+	if v, ok := data["tls"]; ok {
+		result["tls"] = v.(bool)
+	}
+	if v, ok := data["insecure_tls"]; ok {
+		result["insecure_tls"] = v.(bool)
+	}
+	if v, ok := data["pem_bundle"]; ok {
+		result["pem_bundle"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "pem_bundle"); ok {
+		result["pem_bundle"] = v.(string)
+	}
+	if v, ok := data["pem_json"]; ok {
+		result["pem_json"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "pem_json"); ok {
+		result["pem_json"] = v.(string)
+	}
+	if v, ok := data["protocol_version"]; ok {
+		protocol, _ := v.(json.Number).Int64()
+		result["protocol_version"] = int64(protocol)
+	}
+	if v, ok := data["connect_timeout"]; ok {
+		timeout, _ := v.(json.Number).Int64()
+		result["connect_timeout"] = timeout
+	}
+	if v, ok := data["username_template"]; ok {
+		result["username_template"] = v.(string)
+	}
+
+	return []map[string]interface{}{result}
+}
+
 func getSnowflakeConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
 	commonDetails := getConnectionDetailsFromResponse(d, prefix, resp)
 	details := resp.Data["connection_details"]
@@ -665,6 +798,39 @@ func setElasticsearchDatabaseConnectionData(d *schema.ResourceData, prefix strin
 
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
+	}
+}
+
+func setInfluxDBDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	if v, ok := d.GetOkExists(prefix + "host"); ok {
+		data["host"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "port"); ok {
+		data["port"] = v.(int)
+	}
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		data["password"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "tls"); ok {
+		data["tls"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists(prefix + "insecure_tls"); ok {
+		data["insecure_tls"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists(prefix + "pem_bundle"); ok {
+		data["pem_bundle"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "pem_json"); ok {
+		data["pem_json"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "connect_timeout"); ok {
+		data["connect_timeout"] = v.(int)
+	}
+	if v, ok := d.GetOkExists(prefix + "username_template"); ok {
+		data["username_template"] = v.(int)
 	}
 }
 
@@ -815,6 +981,8 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			}
 			d.Set("cassandra", []map[string]interface{}{result})
 		}
+	case "influxdb-database-plugin":
+		d.Set("influxdb", getInfluxDBConnectionDetailsFromResponse(d, "influxdb.0.", resp))
 	case "hana-database-plugin":
 		d.Set("hana", getConnectionDetailsFromResponse(d, "hana.0.", resp))
 	case "mongodb-database-plugin":
