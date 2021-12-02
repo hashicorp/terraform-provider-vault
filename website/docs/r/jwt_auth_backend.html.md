@@ -77,6 +77,10 @@ The following arguments are supported:
 
 * `oidc_client_secret` - (Optional) Client Secret used for OIDC backends
 
+* `oidc_response_mode` - (Optional) The response mode to be used in the OAuth2 request. Allowed values are 'query' and 'form_post'. Defaults to 'query'. If using Vault namespaces, and oidc_response_mode is 'form_post', then 'namespace_in_state' should be set to false.
+
+* `oidc_response_types` - (Optional) List of response types to request. Allowed values are 'code' and 'id_token'. Defaults to `["code"]`. Note: 'id_token' may only be used if 'oidc_response_mode' is set to 'form_post'.
+
 * `jwks_url` - (Optional) JWKS URL to use to authenticate signatures. Cannot be used with "oidc_discovery_url" or "jwt_validation_pubkeys".
 
 * `jwks_ca_pem` - (Optional) The CA certificate or chain of certificates, in PEM format, to use to validate connections to the JWKS URL. If not set, system certificates are used.
@@ -92,6 +96,8 @@ The following arguments are supported:
 * `provider_config` - (Optional) Provider specific handling configuration. All values may be strings, and the provider will convert to the appropriate type when configuring Vault.
 
 * `local` - (Optional) Specifies if the auth method is local only.
+
+* `namespace_in_state` - (Optional) Pass namespace in the OIDC state parameter instead of as a separate query parameter. With this setting, the allowed redirect URL(s) in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the provider side for all vault namespaces that will be authenticating against it. Defaults to true for new configs
 
 * tune - (Optional) Extra configuration block. Structure is documented below.
 
