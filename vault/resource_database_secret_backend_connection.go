@@ -1010,6 +1010,9 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			if v, ok := data["project_id"]; ok {
 				result["project_id"] = v.(string)
 			}
+			if v, ok := data["username_template"]; ok {
+				result["username_template"] = v.(string)
+			}
 			d.Set("mongodbatlas", []map[string]interface{}{result})
 		}
 	case "mssql-database-plugin":
