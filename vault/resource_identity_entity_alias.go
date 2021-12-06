@@ -39,7 +39,6 @@ func identityEntityAliasResource() *schema.Resource {
 				Required:    true,
 				Description: "ID of the entity to which this is an alias.",
 			},
-
 			"custom_metadata": {
 				Type:        schema.TypeMap,
 				Optional:    true,
