@@ -150,9 +150,8 @@ variables in order to keep credential information out of the configuration.
   Terraform. May be set via the `TERRAFORM_VAULT_SKIP_CHILD_TOKEN` environment
   variable. **Note**: Setting to `true` will cause `token_name`
   and `max_lease_ttl_seconds` to be ignored.
-
-  See the section above on *Using Vault credentials in Terraform configuration*
-  for more details on why it is not recommended to disable this setting.
+  Please see [Using Vault credentials in Terraform configuration](#using-vault-credentials-in-terraform-configuration)
+  before enabling this setting.
 
 * `max_lease_ttl_seconds` - (Optional) Used as the duration for the
   intermediate Vault token Terraform issues itself, which in turn limits
