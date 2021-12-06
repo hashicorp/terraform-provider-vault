@@ -276,6 +276,11 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 							Required:    true,
 							Description: "The Project ID the Database User should be created within.",
 						},
+						"username_template": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Username generation template.",
+						},
 					},
 				},
 				MaxItems:      1,
@@ -545,6 +550,9 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		}
 		if v, ok := d.GetOk("mongodbatlas.0.project_id"); ok {
 			data["project_id"] = v.(string)
+		}
+		if v, ok := d.GetOkExists("mongodbatlas.0.username_template"); ok {
+			data["username_template"] = v.(string)
 		}
 	case "mssql-database-plugin":
 		setDatabaseConnectionData(d, "mssql.0.", data)

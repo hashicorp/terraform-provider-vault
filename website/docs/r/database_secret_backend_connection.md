@@ -158,6 +158,10 @@ See the [Vault
 
 * `project_id` - (Required) The Project ID the Database User should be created within.
 
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
+See the [Vault
+  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
 
 ### SAP HanaDB Configuration Options
 
