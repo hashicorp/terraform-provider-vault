@@ -104,12 +104,20 @@ func TestAccIdentityEntityAlias_Metadata(t *testing.T) {
 		CheckDestroy: testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityEntityAliasMetadataConfig(entity),
+				Config: testAccIdentityEntityAliasMetadataConfig(entity, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "name", nameEntityA, "name"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntityA, "id"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubA, "accessor"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "custom_metadata", nameEntityA, "metadata"),
+				),
+			},
+			{
+				Config: testAccIdentityEntityAliasMetadataConfig(entity, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrPair(nameEntityAlias, "name", nameEntityA, "name"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntityA, "id"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubA, "accessor"),
 				),
 			},
 		},
@@ -165,30 +173,36 @@ resource "vault_identity_entity_alias" "entity-alias-dupe" {
 	return ret
 }
 
-func testAccIdentityEntityAliasMetadataConfig(entityName string) string {
+func testAccIdentityEntityAliasMetadataConfig(entityName string, includeMetadata bool) string {
 	entityId := "A"
 
 	ret := fmt.Sprintf(`
-resource "vault_identity_entity" "entityA" {
-  name = "%s-A"
-  policies = ["test"]
-  metadata = {
-    version = "1"
-  }
-}
+	resource "vault_identity_entity" "entityA" {
+	  name = "%s-A"
+	  policies = ["test"]
+	}
+	
+	resource "vault_auth_backend" "githubA" {
+	  type = "github"
+	  path = "githubA-%s"
+	}
 
-resource "vault_auth_backend" "githubA" {
-  type = "github"
-  path = "githubA-%s"
-}
+`, entityName, entityName)
 
-resource "vault_identity_entity_alias" "entity-alias" {
-  name = vault_identity_entity.entity%s.name
-  mount_accessor = vault_auth_backend.github%s.accessor
-  canonical_id = vault_identity_entity.entity%s.id
-  custom_metadata = vault_identity_entity.entity%s.metadata
-}
-`, entityName, entityName, entityId, entityId, entityId, entityId)
+	if includeMetadata {
+		ret += fmt.Sprintf(`resource "vault_identity_entity_alias" "entity-alias" {
+			name = vault_identity_entity.entity%s.name
+			mount_accessor = vault_auth_backend.github%s.accessor
+			canonical_id = vault_identity_entity.entity%s.id
+			custom_metadata = vault_identity_entity.entity%s.metadata
+		  }`, entityId, entityId, entityId, entityId)
+	} else {
+		ret += fmt.Sprintf(`resource "vault_identity_entity_alias" "entity-alias" {
+			name = vault_identity_entity.entity%s.name
+			mount_accessor = vault_auth_backend.github%s.accessor
+			canonical_id = vault_identity_entity.entity%s.id
+		  }`, entityId, entityId, entityId)
+	}
 
 	return ret
 }
