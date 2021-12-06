@@ -150,6 +150,12 @@ func Provider() *schema.Provider {
 
 				Description: "Maximum TTL for secret leases requested by this provider",
 			},
+			"policies": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of extra policies to attach to the child token. Needs sudo capability on auth/token/create",
+				Elem:        &schema.Schema{Type: schema.TypeString},
+			},
 			"max_retries": {
 				Type:     schema.TypeInt,
 				Optional: true,
@@ -842,10 +848,16 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	renewable := false
+	var policies []string
+	for _, policy := range d.Get("policies").([]interface{}) {
+		policies = append(policies, policy.(string))
+	}
+
 	childTokenLease, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 		DisplayName:    tokenName,
 		TTL:            fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
 		ExplicitMaxTTL: fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
+		Policies:       policies,
 		Renewable:      &renewable,
 	})
 	if err != nil {
@@ -853,9 +865,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	childToken := childTokenLease.Auth.ClientToken
-	policies := childTokenLease.Auth.Policies
+	childPolicies := childTokenLease.Auth.Policies
 
-	log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
+	log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(childPolicies, ", "))
 
 	// Set the token to the generated child token
 	client.SetToken(childToken)

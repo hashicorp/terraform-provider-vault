@@ -153,6 +153,13 @@ variables in order to keep credential information out of the configuration.
 * `namespace` - (Optional) Set the namespace to use. May be set via the
   `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
 
+* `policies` - (Optional) A list of policies for the intermediate Vault token Terraform issues itself.
+  This must be a subset of the policies belonging to the token making the request, unless the calling
+  token is root or contains sudo capabilities to `auth/token/create`.
+  If an empty list is specified, Vault will default to all the policies of the calling token.
+  See the section above on _Using Vault credentials in Terraform configuration_
+  for the implications of this setting.
+
 * `headers` - (Optional) A configuration block, described below, that provides headers
 to be sent along with all requests to the Vault server.  This block can be specified
 multiple times.
