@@ -205,7 +205,7 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testHeaderConfig("auth", "123"),
-				Check:  testTokenName_check("token-testtoken"),
+				Check:  checkSelfToken("display_name", "token-testtoken"),
 			},
 		},
 	})
@@ -547,7 +547,7 @@ func TestAccProviderToken(t *testing.T) {
 }
 
 func TestAccTokenName(t *testing.T) {
-
+	defer os.Unsetenv("VAULT_TOKEN_NAME")
 	tests := []struct {
 		TokenNameEnv       string
 		UseTokenNameEnv    bool
@@ -618,8 +618,103 @@ func TestAccTokenName(t *testing.T) {
 							}
 						}
 					},
-					Config: testTokenNameConfig(test.UseTokenNameSchema, test.TokenNameSchema),
-					Check:  testTokenName_check(test.WantTokenName),
+					Config: testProviderConfig(test.UseTokenNameSchema, `token_name = "`+test.TokenNameSchema+`"`),
+					Check:  checkSelfToken("display_name", test.WantTokenName),
+				},
+			},
+		})
+	}
+}
+
+func TestAccChildToken(t *testing.T) {
+	defer os.Unsetenv("TERRAFORM_VAULT_SKIP_CHILD_TOKEN")
+
+	checkTokenUsed := func(expectChildToken bool) resource.TestCheckFunc {
+		if expectChildToken {
+			// If the default child token was created, we expect the token
+			// used by the provider was named the default "token-terraform"
+			return checkSelfToken("display_name", "token-terraform")
+		} else {
+			// If the child token setting was disabled, the used token
+			// should match the user-provided VAULT_TOKEN
+			return checkSelfToken("id", os.Getenv("VAULT_TOKEN"))
+		}
+	}
+
+	tests := []struct {
+		skipChildTokenEnv    string
+		useChildTokenEnv     bool
+		skipChildTokenSchema string
+		useChildTokenSchema  bool
+		expectChildToken     bool
+	}{
+		{
+			useChildTokenSchema: false,
+			useChildTokenEnv:    false,
+			expectChildToken:    true,
+		},
+		{
+			skipChildTokenEnv: "",
+			useChildTokenEnv:  true,
+			expectChildToken:  true,
+		},
+		{
+			skipChildTokenEnv: "true",
+			useChildTokenEnv:  true,
+			expectChildToken:  false,
+		},
+		{
+			skipChildTokenEnv: "false",
+			useChildTokenEnv:  true,
+			expectChildToken:  true,
+		},
+		{
+			skipChildTokenSchema: "true",
+			useChildTokenSchema:  true,
+			expectChildToken:     false,
+		},
+		{
+			skipChildTokenSchema: "false",
+			useChildTokenSchema:  true,
+			expectChildToken:     true,
+		},
+		{
+			skipChildTokenEnv:    "true",
+			useChildTokenEnv:     true,
+			skipChildTokenSchema: "false",
+			useChildTokenSchema:  true,
+			expectChildToken:     true,
+		},
+		{
+			skipChildTokenEnv:    "false",
+			useChildTokenEnv:     true,
+			skipChildTokenSchema: "true",
+			useChildTokenSchema:  true,
+			expectChildToken:     false,
+		},
+	}
+
+	for _, test := range tests {
+		resource.Test(t, resource.TestCase{
+			Providers: testProviders,
+			PreCheck:  func() { testAccPreCheck(t) },
+			Steps: []resource.TestStep{
+				{
+					PreConfig: func() {
+						if test.useChildTokenEnv {
+							err := os.Setenv("TERRAFORM_VAULT_SKIP_CHILD_TOKEN", test.skipChildTokenEnv)
+							if err != nil {
+								t.Fatal(err)
+							}
+						} else {
+							err := os.Unsetenv("TERRAFORM_VAULT_SKIP_CHILD_TOKEN")
+							if err != nil {
+								t.Fatal(err)
+							}
+						}
+					},
+					Config: testProviderConfig(test.useChildTokenSchema, `skip_child_token = `+test.skipChildTokenSchema),
+					Check:  checkTokenUsed(test.expectChildToken),
 				},
 			},
 		})
@@ -628,44 +723,34 @@ func TestAccTokenName(t *testing.T) {
 
 func testHeaderConfig(headerName, headerValue string) string {
 	providerConfig := fmt.Sprintf(`
-	provider "vault" {
 		headers {
 			name  = "%s"
 			value = "%s"
 		}
 		token_name = "testtoken"
-	}
-
-	data "vault_generic_secret" "test" {
-		path = "/auth/token/lookup-self"
-	}
 	`, headerName, headerValue)
-	return providerConfig
+	return testProviderConfig(true, providerConfig)
 }
 
 // Using the data lookup generic_secret to inspect used token
 // by terraform (this enables check of token name)
-func testTokenNameConfig(tokenNameSchema bool, tokenName string) string {
-	testConfig := ""
-	providerConfig := `
-provider "vault" {
-    token_name = "` + tokenName + `"
-}`
+func testProviderConfig(includeProviderConfig bool, config string) string {
+	providerConfig := fmt.Sprintf(`
+	provider "vault" {
+		%s
+	}`, config)
 
 	dataConfig := `
-data "vault_generic_secret" "test" {
-    path = "/auth/token/lookup-self"
-}
-`
-	if tokenNameSchema {
-		testConfig = providerConfig + dataConfig
-	} else {
-		testConfig = dataConfig
+	data "vault_generic_secret" "test" {
+		path = "/auth/token/lookup-self"
+	}`
+	if includeProviderConfig {
+		return providerConfig + dataConfig
 	}
-	return testConfig
+	return dataConfig
 }
 
-func testTokenName_check(expectedTokenName string) resource.TestCheckFunc {
+func checkSelfToken(attrName string, expectedValue string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["data.vault_generic_secret.test"]
 		if resourceState == nil {
@@ -677,13 +762,13 @@ func testTokenName_check(expectedTokenName string) resource.TestCheckFunc {
 			return fmt.Errorf("resource has no primary instance")
 		}
 
-		tokenName, ok := resourceState.Primary.Attributes["data.display_name"]
+		actualValue, ok := resourceState.Primary.Attributes["data."+attrName]
 		if !ok {
-			return fmt.Errorf("cannot access token [%s] for check", "display_name")
+			return fmt.Errorf("cannot access attribute [%s] for check", attrName)
 		}
 
-		if tokenName != expectedTokenName {
-			return fmt.Errorf("token name [%s] expected, but got [%s]", expectedTokenName, tokenName)
+		if actualValue != expectedValue {
+			return fmt.Errorf("%s [%s] expected, but got [%s]", attrName, expectedValue, actualValue)
 		}
 
 		return nil
