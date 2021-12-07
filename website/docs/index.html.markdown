@@ -142,9 +142,8 @@ variables in order to keep credential information out of the configuration.
 
 * `skip_child_token` - (Optional) Set this to `true` to disable
   creation of an intermediate ephemeral Vault token for Terraform to
-  use. This is strongly discouraged in most cases and environments because it
-  can result in the provided Vault token being exposed by Terraform's output
-  when `TF_LOG` is set to `debug`.
+  use. Enabling this is strongly discouraged since it increases
+  the potential for a renewable Vault token being exposed in clear text.
   Only change this setting when the provided token cannot be permitted to
   create child tokens and there is no risk of exposure from the output of
   Terraform. May be set via the `TERRAFORM_VAULT_SKIP_CHILD_TOKEN` environment
