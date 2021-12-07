@@ -1,4 +1,6 @@
-package logging
+package helper
+
+// Customized copy of github.com/hashicorp/terraform-plugin-sdk/helper/logging/transport.go (v2)
 
 import (
 	"bytes"
@@ -7,20 +9,51 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/salt"
 )
+
+// TransportOptions for transport.
+type TransportOptions struct {
+	// HMACRequestHeaders ensure that any configured header's value is
+	// never revealed during logging operations.
+	HMACRequestHeaders []string
+}
 
 type transport struct {
 	name      string
 	transport http.RoundTripper
+	options   *TransportOptions
 }
 
 func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	if IsDebugOrHigher() {
+	if logging.IsDebugOrHigher() {
+		var origHeaders http.Header
+		if len(t.options.HMACRequestHeaders) > 0 && len(req.Header) > 0 {
+			origHeaders = req.Header.Clone()
+			s := salt.NewNonpersistentSalt()
+			for _, k := range t.options.HMACRequestHeaders {
+				if len(req.Header.Values(k)) == 0 {
+					continue
+				}
+
+				req.Header.Del(k)
+				for _, v := range origHeaders[k] {
+					req.Header.Add(k, s.GetIdentifiedHMAC(v))
+				}
+			}
+		}
+
 		reqData, err := httputil.DumpRequestOut(req, true)
 		if err == nil {
 			log.Printf("[DEBUG] "+logReqMsg, t.name, prettyPrintJsonLines(reqData))
 		} else {
 			log.Printf("[ERROR] %s API Request error: %#v", t.name, err)
+		}
+
+		if origHeaders != nil {
+			req.Header = origHeaders
 		}
 	}
 
@@ -29,7 +62,7 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		return resp, err
 	}
 
-	if IsDebugOrHigher() {
+	if logging.IsDebugOrHigher() {
 		respData, err := httputil.DumpResponse(resp, true)
 		if err == nil {
 			log.Printf("[DEBUG] "+logRespMsg, t.name, prettyPrintJsonLines(respData))
@@ -41,8 +74,12 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func NewTransport(name string, t http.RoundTripper) *transport {
-	return &transport{name, t}
+func NewTransport(name string, t http.RoundTripper, opts *TransportOptions) *transport {
+	return &transport{
+		name:      name,
+		transport: t,
+		options:   opts,
+	}
 }
 
 // prettyPrintJsonLines iterates through a []byte line-by-line,
