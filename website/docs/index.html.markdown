@@ -203,6 +203,21 @@ The `headers` configuration block accepts the following arguments:
 
 * `value` - (Required) The value of the header.
 
+## Provider Debugging
+
+Terraform supports various logging options by default.
+These are documented [here](https://www.terraform.io/docs/internals/debugging.html).
+
+~> The environment variables below can be configured to provide extended log output and require log level `DEBUG`
+or higher. It's important to note that any extended log output may **reveal secrets**, so please exercise caution
+when enabling any of the following:
+
+* `TERRAFORM_VAULT_LOG_BODY` - when set to `true` both the request and response body will be logged.
+
+* `TERRAFORM_VAULT_LOG_REQUEST_BODY` - when set to `true` the request body will be logged.
+
+* `TERRAFORM_VAULT_LOG_RESPONSE_BODY` - when set to `true` the response body will be logged.
+
 ## Example Usage
 
 ```hcl

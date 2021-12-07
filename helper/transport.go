@@ -8,10 +8,22 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/salt"
+)
+
+const (
+	// EnvLogBody enables logging of request and response bodies.
+	// Takes precedence over any other log body configuration.
+	EnvLogBody = "TERRAFORM_VAULT_LOG_BODY"
+	// EnvLogRequestBody enables logging the request body.
+	EnvLogRequestBody = "TERRAFORM_VAULT_LOG_REQUEST_BODY"
+	// EnvLogResponseBody enables logging the response body.
+	EnvLogResponseBody = "TERRAFORM_VAULT_LOG_RESPONSE_BODY"
 )
 
 // TransportOptions for transport.
@@ -19,6 +31,35 @@ type TransportOptions struct {
 	// HMACRequestHeaders ensure that any configured header's value is
 	// never revealed during logging operations.
 	HMACRequestHeaders []string
+	// LogRequestBody for all requests, ideally this would only be enabled for debug purposes,
+	// since the request body might contain secrets.
+	LogRequestBody bool
+	// LogResponseBody for all responses, ideally this would only be enabled for debug purposes,
+	// since the response body might contain secrets.
+	LogResponseBody bool
+}
+
+// DefaultTransportOptions for setting up the HTTP transport wrapper.
+func DefaultTransportOptions() *TransportOptions {
+	opts := &TransportOptions{
+		HMACRequestHeaders: []string{
+			"X-Vault-Token",
+		},
+	}
+
+	if logBody, err := strconv.ParseBool(os.Getenv(EnvLogBody)); err == nil {
+		opts.LogRequestBody = logBody
+		opts.LogResponseBody = logBody
+	} else {
+		if logRequestBody, err := strconv.ParseBool(os.Getenv(EnvLogRequestBody)); err == nil {
+			opts.LogRequestBody = logRequestBody
+		}
+		if logResponseBody, err := strconv.ParseBool(os.Getenv(EnvLogResponseBody)); err == nil {
+			opts.LogResponseBody = logResponseBody
+		}
+	}
+
+	return opts
 }
 
 type transport struct {
@@ -45,7 +86,7 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			}
 		}
 
-		reqData, err := httputil.DumpRequestOut(req, true)
+		reqData, err := httputil.DumpRequestOut(req, t.options.LogRequestBody)
 		if err == nil {
 			log.Printf("[DEBUG] "+logReqMsg, t.name, prettyPrintJsonLines(reqData))
 		} else {
@@ -63,7 +104,7 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	if logging.IsDebugOrHigher() {
-		respData, err := httputil.DumpResponse(resp, true)
+		respData, err := httputil.DumpResponse(resp, t.options.LogResponseBody)
 		if err == nil {
 			log.Printf("[DEBUG] "+logRespMsg, t.name, prettyPrintJsonLines(respData))
 		} else {
