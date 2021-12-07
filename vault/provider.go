@@ -749,11 +749,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	clientConfig.HttpClient.Transport = helper.NewTransport(
 		"Vault",
 		clientConfig.HttpClient.Transport,
-		&helper.TransportOptions{
-			HMACRequestHeaders: []string{
-				"X-Vault-Token",
-			},
-		})
+		helper.DefaultTransportOptions(),
+	)
 
 	// enable ReadYourWrites to support read-after-write on Vault Enterprise
 	clientConfig.ReadYourWrites = true
