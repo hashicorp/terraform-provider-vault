@@ -60,6 +60,12 @@ func genericSecretResource() *schema.Resource {
 				Description: "Map of strings read from Vault.",
 				Sensitive:   true,
 			},
+			"delete_key_metadata": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Only applicable for kv-v2 stores. If set, permanently deletes the key metadata and all version data for the specified key.",
+			},
 		},
 	}
 }
@@ -142,7 +148,12 @@ func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error
 	}
 
 	if v2 {
-		path = addPrefixToVKVPath(path, mountPath, "data")
+		deleteKeyMetadata := d.Get("delete_key_metadata").(bool)
+		if deleteKeyMetadata {
+			path = addPrefixToVKVPath(path, mountPath, "metadata")
+		} else {
+			path = addPrefixToVKVPath(path, mountPath, "data")
+		}
 	}
 
 	log.Printf("[DEBUG] Deleting vault_generic_secret from %q", path)
