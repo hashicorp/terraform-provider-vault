@@ -61,11 +61,11 @@ func genericSecretResource() *schema.Resource {
 				Sensitive:   true,
 			},
 
-			"delete_key_metadata": {
+			"delete_all_versions": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
-				Description: "Only applicable for kv-v2 stores. If set, permanently deletes the key metadata and all version data for the specified key.",
+				Description: "Only applicable for kv-v2 stores. If set, permanently deletes all versions for the specified key.",
 			},
 		},
 	}
@@ -149,8 +149,8 @@ func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error
 	}
 
 	if v2 {
-		deleteKeyMetadata := d.Get("delete_key_metadata").(bool)
-		if deleteKeyMetadata {
+		deleteAllVersions := d.Get("delete_all_versions").(bool)
+		if deleteAllVersions {
 			path = addPrefixToVKVPath(path, mountPath, "metadata")
 		} else {
 			path = addPrefixToVKVPath(path, mountPath, "data")

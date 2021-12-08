@@ -112,7 +112,7 @@ resource "vault_mount" "v2" {
 resource "vault_generic_secret" "test" {
     depends_on = ["vault_mount.v2"]
 	path = "%s"
-	delete_key_metadata = true
+	delete_all_versions = true
     data_json = <<EOT
 {
     "zip": "zap"

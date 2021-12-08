@@ -21,7 +21,7 @@ func TestAccGenericSecret_importBasic(t *testing.T) {
 				ResourceName:            "vault_generic_secret.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"delete_key_metadata"},
+				ImportStateVerifyIgnore: []string{"delete_all_versions"},
 			},
 		},
 	})
