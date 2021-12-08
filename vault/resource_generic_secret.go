@@ -60,11 +60,12 @@ func genericSecretResource() *schema.Resource {
 				Description: "Map of strings read from Vault.",
 				Sensitive:   true,
 			},
+
 			"delete_key_metadata": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
-				Description: "Only applicable for kv-v2 stores. If set, permanently deletes the key metadata and all version data for the specified key.",
+				Description: "Only applicable for kv-v2 stores. If set, permanently destroys the key metadata and all version data for the specified key.",
 			},
 		},
 	}

@@ -58,6 +58,11 @@ The following arguments are supported:
   authentication is not able to read the data. Setting this to `true` will
   break drift detection. Defaults to false.
 
+* `delete_key_metadata` - (Optional) true/false.  Only applicable for kv-v2 stores.
+  If set to `true`, permanently deletes the key metadata and all version data for
+  the specified key. The default behavior is to delete the latest version of the
+  secret.
+
 ## Required Vault Capabilities
 
 Use of this resource requires the `create` or `update` capability

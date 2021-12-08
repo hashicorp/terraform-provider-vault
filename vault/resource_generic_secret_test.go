@@ -18,7 +18,7 @@ func TestResourceGenericSecret(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(path),
-				Check:  testResourceGenericSecret_initialCheck(path),
+				Check:  testResourceGenericSecret_initialCheck(path, false),
 			},
 			{
 				Config: testResourceGenericSecret_updateConfig,
@@ -36,7 +36,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(path),
-				Check:  testResourceGenericSecret_initialCheck(path),
+				Check:  testResourceGenericSecret_initialCheck(path, false),
 			},
 			{
 				PreConfig: func() {
@@ -47,7 +47,33 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 					}
 				},
 				Config: testResourceGenericSecret_initialConfig(path),
-				Check:  testResourceGenericSecret_initialCheck(path),
+				Check:  testResourceGenericSecret_initialCheck(path, false),
+			},
+		},
+	})
+}
+
+func TestResourceGenericSecret_deleteKeyMetadata(t *testing.T) {
+	path := acctest.RandomWithPrefix("secretsv2/test")
+	pathMetadata := "secretsv2/metadata/test"
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceGenericSecret_initialConfig_v2(path),
+				Check:  testResourceGenericSecret_initialCheck(path, true),
+			},
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*api.Client)
+					_, err := client.Logical().Delete(pathMetadata)
+					if err != nil {
+						t.Fatalf("unable to manually delete key metadata via the SDK: %s", err)
+					}
+				},
+				Config: testResourceGenericSecret_initialConfig_v2(path),
+				Check:  testResourceGenericSecret_initialCheck(path, true),
 			},
 		},
 	})
@@ -74,7 +100,28 @@ EOT
 }`, path)
 }
 
-func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCheckFunc {
+func testResourceGenericSecret_initialConfig_v2(path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "v2" {
+	path = "secretsv2"
+	type = "kv"
+	options = {
+		version = "2"
+	}
+}
+resource "vault_generic_secret" "test" {
+    depends_on = ["vault_mount.v2"]
+	path = "%s"
+	delete_key_metadata = true
+    data_json = <<EOT
+{
+    "zip": "zap"
+}
+EOT
+}`, path)
+}
+
+func testResourceGenericSecret_initialCheck(expectedPath string, isV2 bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_generic_secret.test"]
 		if resourceState == nil {
@@ -96,13 +143,36 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 		}
 
 		client := testProvider.Meta().(*api.Client)
-		secret, err := client.Logical().Read(path)
-		if err != nil {
-			return fmt.Errorf("error reading back secret: %s", err)
+		var secret *api.Secret
+		var data map[string]interface{}
+		if isV2 {
+			secretList, err := client.Logical().List("secretsv2/metadata")
+			if err != nil {
+				return fmt.Errorf("unable to list secrets metadata: %s", err)
+			}
+
+			if secretList == nil {
+				return fmt.Errorf("expected kv-v2 secrets, got nil")
+			}
+			keys := secretList.Data["keys"].([]interface{})
+			secret, err = client.Logical().Read(fmt.Sprintf("secretsv2/data/%s", keys[0]))
+			if secret == nil {
+				return fmt.Errorf("no secret found at secretsv2/data/%s", keys[0])
+			}
+
+			data = secret.Data["data"].(map[string]interface{})
+		} else {
+			var err error
+			secret, err = client.Logical().Read(path)
+			if err != nil {
+				return fmt.Errorf("error reading back secret: %s", err)
+			}
+
+			data = secret.Data
 		}
 
 		// Test the JSON
-		if got, want := secret.Data["zip"], "zap"; got != want {
+		if got, want := data["zip"], "zap"; got != want {
 			return fmt.Errorf("'zip' data is %q; want %q", got, want)
 		}
 
