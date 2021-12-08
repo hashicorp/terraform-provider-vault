@@ -3,6 +3,7 @@
 IMPROVEMENTS:
 * `data/policy_document`: Add support for `patch` capability for vault-1.9+. ([#1238](https://github.com/hashicorp/terraform-provider-vault/pull/1238))
 * `resource/database_secret_backend_connection`: Add support for InfluxDB connections ([#1121](https://github.com/hashicorp/terraform-provider-vault/pull/1121))
+* `resource/generic_secret`: Add support for deleting key metadata and all version data for a secret ([#1254](https://github.com/hashicorp/terraform-provider-vault/pull/1254))
 
 ## 3.0.1 (November 23, 2021)
 
