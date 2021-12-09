@@ -95,10 +95,8 @@ func TestAccIdentityEntityAlias_Metadata(t *testing.T) {
 	entity := acctest.RandomWithPrefix("my-entity")
 
 	nameEntityA := "vault_identity_entity.entityA"
-	nameEntityB := "vault_identity_entity.entityB"
 	nameEntityAlias := "vault_identity_entity_alias.entity-alias"
 	nameGithubA := "vault_auth_backend.githubA"
-	nameGithubB := "vault_auth_backend.githubB"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -111,16 +109,17 @@ func TestAccIdentityEntityAlias_Metadata(t *testing.T) {
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "name", nameEntityA, "name"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntityA, "id"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubA, "accessor"),
-					resource.TestCheckResourceAttrPair(nameEntityAlias, "custom_metadata", nameEntityA, "metadata"),
+					resource.TestCheckResourceAttr(nameEntityAlias, "custom_metadata.%", "0"),
 				),
 			},
 			{
 				Config: testAccIdentityEntityAliasMetadataConfig(entity, true),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrPair(nameEntityAlias, "name", nameEntityB, "name"),
-					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntityB, "id"),
-					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubB, "accessor"),
-					resource.TestCheckResourceAttrPair(nameEntityAlias, "custom_metadata", nameEntityB, "metadata"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, "name", nameEntityA, "name"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntityA, "id"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubA, "accessor"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, "custom_metadata.version", nameEntityA, "metadata.version"),
+					resource.TestCheckResourceAttr(nameEntityAlias, "custom_metadata.%", "1"),
 				),
 			},
 		},
@@ -176,27 +175,16 @@ resource "vault_identity_entity_alias" "entity-alias-dupe" {
 	return ret
 }
 
-func testAccIdentityEntityAliasMetadataConfig(entityName string, altTarget bool) string {
+func testAccIdentityEntityAliasMetadataConfig(entityName string, includeMetadata bool) string {
 	entityId := "A"
-	if altTarget {
-		entityId = "B"
-	}
 
 	ret := fmt.Sprintf(`
 	resource "vault_identity_entity" "entityA" {
 	  name = "%s-A"
 	  policies = ["test"]
 	  metadata = {
-        version = "1"
-      }
-	}
-
-	resource "vault_identity_entity" "entityB" {
-	  name = "%s-B"
-	  policies = ["test"]
-	  metadata = {
-        version = "2"
-      }
+          version = "1"
+        }
 	}
 
 	resource "vault_auth_backend" "githubA" {
@@ -204,18 +192,24 @@ func testAccIdentityEntityAliasMetadataConfig(entityName string, altTarget bool)
 	  path = "githubA-%s"
 	}
 
-	resource "vault_auth_backend" "githubB" {
-	  type = "github"
-	  path = "githubB-%s"
-	}
+`, entityName, entityName)
 
+	if includeMetadata {
+		ret += fmt.Sprintf(`
 	resource "vault_identity_entity_alias" "entity-alias" {
-		name = vault_identity_entity.entity%s.name
-		mount_accessor = vault_auth_backend.github%s.accessor
-		canonical_id = vault_identity_entity.entity%s.id
-		custom_metadata = vault_identity_entity.entity%s.metadata
+	  name = vault_identity_entity.entity%s.name
+	  mount_accessor = vault_auth_backend.github%s.accessor
+	  canonical_id = vault_identity_entity.entity%s.id
+	  custom_metadata = vault_identity_entity.entity%s.metadata
+	}`, entityId, entityId, entityId, entityId)
+	} else {
+		ret += fmt.Sprintf(`
+	resource "vault_identity_entity_alias" "entity-alias" {
+	  name = vault_identity_entity.entity%s.name
+	  mount_accessor = vault_auth_backend.github%s.accessor
+	  canonical_id = vault_identity_entity.entity%s.id
+	}`, entityId, entityId, entityId)
 	}
-`, entityName, entityName, entityName, entityName, entityId, entityId, entityId, entityId)
 
 	return ret
 }
