@@ -1,3 +1,16 @@
+## 3.1.0 (Unreleased)
+
+IMPROVEMENTS:
+* `data/policy_document`: Add support for `patch` capability for vault-1.9+. ([#1238](https://github.com/hashicorp/terraform-provider-vault/pull/1238))
+* `resource/database_secret_backend_connection`: Add support for InfluxDB connections ([#1121](https://github.com/hashicorp/terraform-provider-vault/pull/1121))
+
+## 3.0.1 (November 23, 2021)
+
+BUGS:
+* `resource/aws_secret_backend_role`: Prevent invalid `policy_arns` from being created ([#1229](https://github.com/hashicorp/terraform-provider-vault/pull/1229))
+* `resource/approle_auth_backend_secret_id`: Handle `nil` `cidr_list` introduced in [vault-1.9.0](https://github.com/hashicorp/vault/issues/13226) ([#1230](https://github.com/hashicorp/terraform-provider-vault/pull/1230))
+* `resource/kubernetes_auth_backend_config`: Ensure `disable_iss_validation` is properly set in vault-1.9+ ([#1231](https://github.com/hashicorp/terraform-provider-vault/pull/1231))
+
 ## 3.0.0 (November 17, 2021)
 
 FEATURES:

@@ -81,6 +81,8 @@ The following arguments are supported:
 
 * `snowflake` - (Optional) A nested block containing configuration options for Snowflake connections.
 
+* `influxdb` - (Optional) A nested block containing configuration options for InfluxDB connections.
+
 Exactly one of the nested blocks of configuration options must be supplied.
 
 ### Cassandra Configuration Options
@@ -108,6 +110,33 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `connect_timeout` - (Optional) The number of seconds to use as a connection
   timeout.
+
+### InfluxDB Configuration Options
+
+* `host` - (Required) The host to connect to.
+
+* `username` - (Required) The username to authenticate with.
+
+* `password` - (Required) The password to authenticate with.
+
+* `port` - (Optional) The default port to connect to if no port is specified as
+  part of the host.
+
+* `tls` - (Optional) Whether to use TLS when connecting to Cassandra.
+
+* `insecure_tls` - (Optional) Whether to skip verification of the server
+  certificate when using TLS.
+
+* `pem_bundle` - (Optional) Concatenated PEM blocks configuring the certificate
+  chain.
+
+* `pem_json` - (Optional) A JSON structure configuring the certificate chain.
+
+* `username_template` - (Optional) Template describing how dynamic usernames are generated.
+
+* `connect_timeout` - (Optional) The number of seconds to use as a connection
+  timeout.
+
 
 ### MongoDB Configuration Options
 

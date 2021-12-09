@@ -1,12 +1,12 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_ad_secret_backend_role resource"
-sidebar_current: "docs-vault-resource-ad-secret-backend-role"
+page_title: "Vault: vault_ad_secret_role resource"
+sidebar_current: "docs-vault-resource-ad-secret-role"
 description: |-
   Creates a role on the Active Directory Secret Backend for Vault.
 ---
 
-# vault\ad\_secret\_backend\_role
+# vault\_ad\_secret\_role
 
 Creates a role on an Active Directory Secret Backend for Vault. Roles are
 used to map credentials to existing Active Directory service accounts.
@@ -65,5 +65,5 @@ account mapped to this role.
 AD secret backend roles can be imported using the `path`, e.g.
 
 ```
-$ terraform import vault_ad_secret_backend_role.role ad/roles/bob
+$ terraform import vault_ad_secret_role.role ad/roles/bob
 ```

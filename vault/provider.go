@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
@@ -70,6 +69,15 @@ func Provider() *schema.Provider {
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN_NAME", ""),
 				Description: "Token name to use for creating the Vault child token.",
+			},
+			"skip_child_token": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_SKIP_CHILD_TOKEN", false),
+
+				// Setting to true will cause max_lease_ttl_seconds and token_name to be ignored (not used).
+				// Note that this is strongly discouraged due to the potential of exposing sensitive secret data.
+				Description: "Set this to true to prevent the creation of ephemeral child token used by this provider.",
 			},
 			"ca_cert_file": {
 				Type:        schema.TypeString,
@@ -148,7 +156,7 @@ func Provider() *schema.Provider {
 				// after Terraform has finished running.
 				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_MAX_TTL", 1200),
 
-				Description: "Maximum TTL for secret leases requested by this provider",
+				Description: "Maximum TTL for secret leases requested by this provider.",
 			},
 			"max_retries": {
 				Type:     schema.TypeInt,
@@ -161,7 +169,7 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
-				Description: "The namespace to use. Available only for Vault Enterprise",
+				Description: "The namespace to use. Available only for Vault Enterprise.",
 			},
 			"headers": {
 				Type:        schema.TypeList,
@@ -738,7 +746,11 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, fmt.Errorf("failed to configure TLS for Vault API: %s", err)
 	}
 
-	clientConfig.HttpClient.Transport = logging.NewTransport("Vault", clientConfig.HttpClient.Transport)
+	clientConfig.HttpClient.Transport = helper.NewTransport(
+		"Vault",
+		clientConfig.HttpClient.Transport,
+		helper.DefaultTransportOptions(),
+	)
 
 	// enable ReadYourWrites to support read-after-write on Vault Enterprise
 	clientConfig.ReadYourWrites = true
@@ -810,6 +822,23 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, errors.New("no vault token found")
 	}
 
+	skipChildToken := d.Get("skip_child_token").(bool)
+	if !skipChildToken {
+		err := setChildToken(d, client)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Set the namespace to the requested namespace, if provided
+	namespace := d.Get("namespace").(string)
+	if namespace != "" {
+		client.SetNamespace(namespace)
+	}
+	return client, nil
+}
+
+func setChildToken(d *schema.ResourceData, c *api.Client) error {
 	tokenName := d.Get("token_name").(string)
 	if tokenName == "" {
 		tokenName = "terraform"
@@ -830,26 +859,26 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	// Set the namespace to the token's namespace only for the
 	// child token creation
-	tokenInfo, err := client.Auth().Token().LookupSelf()
+	tokenInfo, err := c.Auth().Token().LookupSelf()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if tokenNamespaceRaw, ok := tokenInfo.Data["namespace_path"]; ok {
 		tokenNamespace := tokenNamespaceRaw.(string)
 		if tokenNamespace != "" {
-			client.SetNamespace(tokenNamespace)
+			c.SetNamespace(tokenNamespace)
 		}
 	}
 
 	renewable := false
-	childTokenLease, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+	childTokenLease, err := c.Auth().Token().Create(&api.TokenCreateRequest{
 		DisplayName:    tokenName,
 		TTL:            fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
 		ExplicitMaxTTL: fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
 		Renewable:      &renewable,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create limited child token: %s", err)
+		return fmt.Errorf("failed to create limited child token: %s", err)
 	}
 
 	childToken := childTokenLease.Auth.ClientToken
@@ -858,14 +887,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
 
 	// Set the token to the generated child token
-	client.SetToken(childToken)
+	c.SetToken(childToken)
 
-	// Set the namespace to the requested namespace, if provided
-	namespace := d.Get("namespace").(string)
-	if namespace != "" {
-		client.SetNamespace(namespace)
-	}
-	return client, nil
+	return nil
 }
 
 func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {

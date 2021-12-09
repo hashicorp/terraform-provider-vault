@@ -141,6 +141,48 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseSecretBackendConnection_influxdb(t *testing.T) {
+	host := os.Getenv("INFLUXDB_HOST")
+	if host == "" {
+		t.Skip("INFLUXDB_HOST not set")
+	}
+
+	username := os.Getenv("INFLUXDB_USERNAME")
+	password := os.Getenv("INFLUXDB_PASSWORD")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+	resourceName := "vault_database_secret_backend_connection.test"
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_influxdb(name, backend, host, username, password),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(resourceName, "root_rotation_statements.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr(resourceName, "verify_connection", "true"),
+					resource.TestCheckResourceAttr(resourceName, "influxdb.0.host", host),
+					resource.TestCheckResourceAttr(resourceName, "influxdb.0.port", "8086"),
+					resource.TestCheckResourceAttr(resourceName, "influxdb.0.username", username),
+					resource.TestCheckResourceAttr(resourceName, "influxdb.0.password", password),
+					resource.TestCheckResourceAttr(resourceName, "influxdb.0.tls", "false"),
+					resource.TestCheckResourceAttr(resourceName, "influxdb.0.insecure_tls", "false"),
+					resource.TestCheckResourceAttr(resourceName, "influxdb.0.pem_bundle", ""),
+					resource.TestCheckResourceAttr(resourceName, "influxdb.0.pem_json", ""),
+					resource.TestCheckResourceAttr(resourceName, "influxdb.0.connect_timeout", "5"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
 	public_key := os.Getenv("MONGODB_ATLAS_PUBLIC_KEY")
 	if public_key == "" {
@@ -671,6 +713,29 @@ resource "vault_database_secret_backend_connection" "test" {
     password = "%s"
     tls = false
     protocol_version = 5
+  }
+}
+`, path, name, host, username, password)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_influxdb(name, path, host, username, password string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend                  = vault_mount.db.path
+  name                     = "%s"
+  allowed_roles            = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  influxdb {
+    host     = "%s"
+    username = "%s"
+    password = "%s"
+    tls      = false
   }
 }
 `, path, name, host, username, password)
