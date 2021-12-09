@@ -96,6 +96,48 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 	})
 }
 
+func TestAccIdentityGroupExternalPolicies(t *testing.T) {
+	group := acctest.RandomWithPrefix("test-group")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckIdentityGroupDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccIdentityGroupExternalPoliciesConfig(group, "foobar"),
+				Check: resource.ComposeTestCheckFunc(
+					// Initially the state will have zero policies because the policies are added AFTER
+					// the resource
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "0"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "metadata.text", "foobar"),
+				),
+			},
+			{
+				Config: testAccIdentityGroupExternalPoliciesConfig(group, "foobar"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityGroupCheckAttrs(),
+					// A no diff apply will update the state
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "2"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.0", "bar"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1", "foo"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "metadata.text", "foobar"),
+				),
+			},
+			{
+				Config: testAccIdentityGroupExternalPoliciesConfig(group, "baz"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityGroupCheckAttrs(),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "2"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.0", "bar"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1", "foo"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "metadata.text", "baz"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccIdentityGroupExternal(t *testing.T) {
 	group := acctest.RandomWithPrefix("test-group")
 
@@ -302,4 +344,23 @@ resource "vault_identity_group" "group" {
   member_entity_ids = ["member entities can't be set for external groups"]
   member_group_ids = ["member groups can't be set for external groups"]
 }`, groupName)
+}
+
+func testAccIdentityGroupExternalPoliciesConfig(groupName string, metadata string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_group" "group" {
+  name = "%s"
+  metadata = {
+    text = "%s"
+  }
+  external_policies = true
+}
+
+resource "vault_identity_group_policies" "test" {
+  group_id = vault_identity_group.group.id
+  exclusive = false
+  policies = ["foo", "bar"]
+}
+
+`, groupName, metadata)
 }

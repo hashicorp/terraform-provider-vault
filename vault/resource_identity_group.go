@@ -110,7 +110,7 @@ func identityGroupResource() *schema.Resource {
 	}
 }
 
-func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface{}, create bool) error {
+func identityGroupUpdateFields(d *schema.ResourceData, meta interface{}, data map[string]interface{}, create bool) error {
 	if create {
 		if name, ok := d.GetOk("name"); ok {
 			data["name"] = name
@@ -142,11 +142,17 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 				data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
 				data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
 			}
-			// Edge case where if external_policies is true, no policies
-			// should be configured on the entity.
+			// Edge case where if external_policies is true, we will set policies to whatever that is
+			// already configured on the group to prevent removal
 			data["external_policies"] = d.Get("external_policies").(bool)
 			if data["external_policies"].(bool) {
-				data["policies"] = nil
+				client := meta.(*api.Client)
+				id := d.Id()
+				apiPolicies, err := readIdentityGroupPolicies(client, id)
+				if err != nil {
+					return err
+				}
+				data["policies"] = apiPolicies
 			}
 			// if external_member_entity_ids is true, member_entity_ids will be nil
 			data["external_member_entity_ids"] = d.Get("external_member_entity_ids").(bool)
@@ -171,7 +177,7 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 		"type": typeValue,
 	}
 
-	if err := identityGroupUpdateFields(d, data, true); err != nil {
+	if err := identityGroupUpdateFields(d, meta, data, true); err != nil {
 		return fmt.Errorf("error writing IdentityGroup to %q: %s", name, err)
 	}
 
@@ -211,7 +217,7 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	data := map[string]interface{}{}
 
-	if err := identityGroupUpdateFields(d, data, false); err != nil {
+	if err := identityGroupUpdateFields(d, meta, data, false); err != nil {
 		return fmt.Errorf("error updating IdentityGroup %q: %s", id, err)
 	}
 
