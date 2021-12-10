@@ -121,6 +121,8 @@ func identityEntityAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 	if customMetadata, ok := d.GetOk("custom_metadata"); ok {
 		data["custom_metadata"] = customMetadata
+	} else {
+		data["custom_metadata"] = make(map[string]interface{})
 	}
 
 	_, err = client.Logical().Write(path, data)
