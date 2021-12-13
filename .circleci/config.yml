@@ -10,7 +10,7 @@ workflows:
 jobs:
   build:
     docker:
-      - image: docker.mirror.hashicorp.services/circleci/golang:1.17.2
+      - image: docker.mirror.hashicorp.services/cimg/go:1.17.2
       - image: circleci/mongo:latest
         environment:
           - MONGO_INITDB_ROOT_USERNAME: root
