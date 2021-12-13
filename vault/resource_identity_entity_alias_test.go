@@ -178,13 +178,13 @@ resource "vault_identity_entity_alias" "entity-alias-dupe" {
 	return ret
 }
 
-func testAccIdentityEntityAliasMetadataConfig(entityName string, altTarget bool) string {
+func testAccIdentityEntityAliasMetadataConfig(entityPrefix string, entitySuffix bool) string {
 	entityId := "A"
-	if altTarget {
+	if entitySuffix {
 		entityId = "B"
 	}
 
-	ret := fmt.Sprintf(`
+	result := fmt.Sprintf(`
 	resource "vault_identity_entity" "entityA" {
 		name = "%s-A"
 		policies = ["test"]
@@ -218,7 +218,7 @@ func testAccIdentityEntityAliasMetadataConfig(entityName string, altTarget bool)
 		custom_metadata = vault_identity_entity.entity%s.metadata
 	  }
 
-`, entityName, entityName, entityName, entityName, entityId, entityId, entityId, entityId)
+`, entityPrefix, entityPrefix, entityPrefix, entityPrefix, entityId, entityId, entityId, entityId)
 
-	return ret
+	return result
 }

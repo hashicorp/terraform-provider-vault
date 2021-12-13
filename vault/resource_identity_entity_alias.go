@@ -104,10 +104,9 @@ func identityEntityAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	data := map[string]interface{}{
-		"name":            resp.Data["name"],
-		"mount_accessor":  resp.Data["mount_accessor"],
-		"canonical_id":    resp.Data["canonical_id"],
-		"custom_metadata": resp.Data["custom_metadata"],
+		"name":           resp.Data["name"],
+		"mount_accessor": resp.Data["mount_accessor"],
+		"canonical_id":   resp.Data["canonical_id"],
 	}
 
 	if name, ok := d.GetOk("name"); ok {
@@ -119,11 +118,8 @@ func identityEntityAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 	if canonicalID, ok := d.GetOk("canonical_id"); ok {
 		data["canonical_id"] = canonicalID
 	}
-	if customMetadata, ok := d.GetOk("custom_metadata"); ok {
-		data["custom_metadata"] = customMetadata
-	} else {
-		data["custom_metadata"] = make(map[string]interface{})
-	}
+
+	data["custom_metadata"] = d.Get("custom_metadata").(map[string]interface{})
 
 	_, err = client.Logical().Write(path, data)
 
@@ -156,7 +152,7 @@ func identityEntityAliasRead(d *schema.ResourceData, meta interface{}) error {
 	d.SetId(resp.Data["id"].(string))
 	for _, k := range []string{"name", "mount_accessor", "canonical_id", "custom_metadata"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return fmt.Errorf("error setting state key \"%s\" on IdentityEntityAlias %q: %s", k, id, err)
+			return fmt.Errorf("error setting state key %q on IdentityEntityAlias %q:  err=%q", k, id, err)
 		}
 	}
 	return nil
