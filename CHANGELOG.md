@@ -22,6 +22,7 @@ IMPROVEMENTS:
 * `resource/jwt_auth_backend_role`: Add field `disable_bound_claims_parsing` to disable bound claim value parsing, which is useful when values contain commas ([#1200](https://github.com/hashicorp/terraform-provider-vault/pull/1200))
 * `resource/transform_template`: Add `encode_format` and `decode_formats` fields for `Vault Enterprise` with the `Advanced Data Protection Transform Module` ([#1214](https://github.com/hashicorp/terraform-provider-vault/pull/1214))
 * `data/generic_secret`: Store `lease_start_time` UTC. ([#1216](https://github.com/hashicorp/terraform-provider-vault/pull/1216))
+* `resource/identity_entity_alias`: Add support for configuring `custom_metadata`. ([#1235](https://github.com/hashicorp/terraform-provider-vault/pull/1235))
 
 BUGS:
 * `data/gcp_auth_backend_role`: Report an error when attempting to access a nonexistent role. ([#1184](https://github.com/hashicorp/terraform-provider-vault/pull/1184))
