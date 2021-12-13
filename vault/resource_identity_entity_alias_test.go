@@ -100,6 +100,8 @@ func TestAccIdentityEntityAlias_Metadata(t *testing.T) {
 	nameGithubA := "vault_auth_backend.githubA"
 	nameGithubB := "vault_auth_backend.githubB"
 
+	// TODO add back empty custom_metadata update tests
+	// once bug in Vault is resolved
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testProviders,
