@@ -53,7 +53,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 	})
 }
 
-func TestResourceGenericSecret_deleteKeyMetadata(t *testing.T) {
+func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 	path := acctest.RandomWithPrefix("secretsv2/test")
 	pathMetadata := "secretsv2/metadata/test"
 	resource.Test(t, resource.TestCase{
@@ -146,15 +146,15 @@ func testResourceGenericSecret_initialCheck(expectedPath string, isV2 bool) reso
 		var secret *api.Secret
 		var data map[string]interface{}
 		if isV2 {
-			secretList, err := client.Logical().List("secretsv2/metadata")
+			resp, err := client.Logical().List("secretsv2/metadata")
 			if err != nil {
 				return fmt.Errorf("unable to list secrets metadata: %s", err)
 			}
 
-			if secretList == nil {
+			if resp == nil {
 				return fmt.Errorf("expected kv-v2 secrets, got nil")
 			}
-			keys := secretList.Data["keys"].([]interface{})
+			keys := resp.Data["keys"].([]interface{})
 			secret, err = client.Logical().Read(fmt.Sprintf("secretsv2/data/%s", keys[0]))
 			if secret == nil {
 				return fmt.Errorf("no secret found at secretsv2/data/%s", keys[0])
