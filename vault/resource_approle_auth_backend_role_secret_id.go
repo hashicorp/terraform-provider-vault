@@ -314,8 +314,8 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 		"secret_id_accessor": accessor,
 	})
 	if err != nil {
-		// We need to check if the secret_id has expired
-		if util.IsExpiredTokenErr(err) {
+		// We need to check if the secret_id has expired or if 404 was returned
+		if util.IsExpiredTokenErr(err) || util.Is404(err) {
 			return false, nil
 		}
 		return true, fmt.Errorf("error checking if AppRole auth backend role SecretID %q exists: %s", id, err)
