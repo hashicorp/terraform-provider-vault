@@ -57,4 +57,4 @@ jobs:
           command: |
             cd cmd/coverage/
             go build
-            ./coverage -openapi-doc=/go/src/github.com/hashicorp/terraform-provider-vault/testdata/openapi.json
+            ./coverage -openapi-doc=/tmp/go/src/github.com/hashicorp/terraform-provider-vault/testdata/openapi.json
