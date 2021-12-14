@@ -22,7 +22,7 @@ jobs:
       - image: hashicorp/vault:latest
         environment:
           - VAULT_DEV_ROOT_TOKEN_ID=root
-    working_directory: /go/src/github.com/hashicorp/terraform-provider-vault
+    working_directory: /tmp/go/src/github.com/hashicorp/terraform-provider-vault
     steps:
       - checkout
       - run:
