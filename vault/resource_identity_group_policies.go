@@ -117,7 +117,13 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 	} else {
 		userPolicies := d.Get("policies").(*schema.Set).List()
 		newPolicies := make([]string, 0)
-		apiPolicies := resp.Data["policies"].([]interface{})
+
+		var apiPolicies []interface{}
+		if val, ok := resp.Data["policies"]; ok && val != nil {
+			apiPolicies = val.([]interface{})
+		} else {
+			apiPolicies = make([]interface{}, 0)
+		}
 
 		for _, policy := range userPolicies {
 			if found, _ := util.SliceHasElement(apiPolicies, policy); found {
