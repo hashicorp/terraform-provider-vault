@@ -69,7 +69,7 @@ func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 					client := testProvider.Meta().(*api.Client)
 					_, err := client.Logical().Delete(pathMetadata)
 					if err != nil {
-						t.Fatalf("unable to manually delete key metadata via the SDK: %s", err)
+						t.Fatalf("unable to manually delete key metadata: %s", err)
 					}
 				},
 				Config: testResourceGenericSecret_initialConfig_v2(path),
