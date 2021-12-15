@@ -48,8 +48,8 @@ jobs:
             export MYSQL_CONNECTION_URL="{{username}}:{{password}}@tcp(127.0.0.1:3306)/"
             export MYSQL_CONNECTION_USERNAME="root"
             export MYSQL_CONNECTION_PASSWORD="mysql"
-            export MONGODB_URL="mongodb://root:mongodb@localhost:27017/admin?ssl=false"
-            export MSSQL_URL="mssql://sa:yourStrong1000Password@localhost:1443"
+            export MONGODB_URL="mongodb://root:mongodb@127.0.0.1:27017/admin?ssl=false"
+            export MSSQL_URL="sqlserver://sa:yourStrong1000Password@127.0.0.1:1433"
             # This will be removed after VAULT-4324 is fixed
             export SKIP_RAFT_TESTS='true'
             make testacc TESTARGS='-v'
