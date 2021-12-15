@@ -15,7 +15,7 @@ import (
 
 var approleAuthBackendRoleSecretIDIDRegex = regexp.MustCompile("^backend=(.+)::role=(.+)::accessor=(.+)$")
 
-func approleAuthBackendRoleSecretIDResource() *schema.Resource {
+func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 	return &schema.Resource{
 		Create: approleAuthBackendRoleSecretIDCreate,
 		Read:   approleAuthBackendRoleSecretIDRead,
@@ -53,8 +53,8 @@ func approleAuthBackendRoleSecretIDResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "JSON-encoded secret data to write.",
-				StateFunc:    NormalizeDataJSON,
-				ValidateFunc: ValidateDataJSON,
+				StateFunc:    NormalizeDataJSONFunc(name),
+				ValidateFunc: ValidateDataJSONFunc(name),
 				ForceNew:     true,
 				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 					if old == "{}" && new == "" {
@@ -136,7 +136,14 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 		data["cidr_list"] = strings.Join(cidrs, ",")
 	}
 	if v, ok := d.GetOk("metadata"); ok {
-		data["metadata"] = NormalizeDataJSON(v)
+		name := "vault_approle_auth_backend_role_secret_id"
+		result, err := normalizeDataJSON(v.(string))
+		if err != nil {
+			log.Printf("[ERROR] Failed to normalize JSON data %q, resource=%q, key=%q, err=%s",
+				v, name, "metadata", err)
+			return err
+		}
+		data["metadata"] = result
 	} else {
 		data["metadata"] = ""
 	}
