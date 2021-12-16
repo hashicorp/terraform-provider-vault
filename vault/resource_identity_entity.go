@@ -1,15 +1,22 @@
 package vault
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"math"
+	"net/http"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const identityEntityPath = "/identity/entity"
+
+var entityNotFoundError = errors.New("entity not found")
 
 func identityEntityResource() *schema.Resource {
 	return &schema.Resource{
@@ -117,7 +124,6 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 	identityEntityUpdateFields(d, data, true)
 
 	resp, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error writing IdentityEntity to %q: %s", name, err)
 	}
@@ -155,7 +161,6 @@ func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
 	identityEntityUpdateFields(d, data, false)
 
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error updating IdentityEntity %q: %s", id, err)
 	}
@@ -168,14 +173,15 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	resp, err := readIdentityEntity(client, id)
+	resp, err := readIdentityEntity(client, id, d.IsNewResource())
 	if err != nil {
 		// We need to check if the secret_id has expired
-		if util.IsExpiredTokenErr(err) {
+		if resp == nil && util.IsExpiredTokenErr(err) {
 			return nil
 		}
 		return fmt.Errorf("error reading IdentityEntity %q: %s", id, err)
 	}
+
 	log.Printf("[DEBUG] Read IdentityEntity %s", id)
 	if resp == nil {
 		log.Printf("[WARN] IdentityEntity %q not found, removing from state", id)
@@ -242,12 +248,9 @@ func identityEntityIDPath(id string) string {
 }
 
 func readIdentityEntityPolicies(client *api.Client, entityID string) ([]interface{}, error) {
-	resp, err := readIdentityEntity(client, entityID)
+	resp, err := readIdentityEntity(client, entityID, false)
 	if err != nil {
 		return nil, err
-	}
-	if resp == nil {
-		return nil, fmt.Errorf("error IdentityEntity %s does not exist", entityID)
 	}
 
 	if v, ok := resp.Data["policies"]; ok && v != nil {
@@ -256,14 +259,48 @@ func readIdentityEntityPolicies(client *api.Client, entityID string) ([]interfac
 	return make([]interface{}, 0), nil
 }
 
-// May return nil if entity does not exist
-func readIdentityEntity(client *api.Client, entityID string) (*api.Secret, error) {
+func readIdentityEntity(client *api.Client, entityID string, retry bool) (*api.Secret, error) {
 	path := identityEntityIDPath(entityID)
-	log.Printf("[DEBUG] Reading Entity %s from %q", entityID, path)
+	log.Printf("[DEBUG] Reading Entity %q from %q", entityID, path)
+
+	return readEntity(client, path, retry)
+}
+
+func readEntity(client *api.Client, path string, retry bool) (*api.Secret, error) {
+	log.Printf("[DEBUG] Reading Entity from %q", path)
+
+	var err error
+	if retry {
+		client, err = client.Clone()
+		if err != nil {
+			return nil, err
+		}
+
+		maxRetries := client.MaxRetries()
+		if maxRetries == 0 {
+			maxRetries = DefaultMaxHTTPRetries
+		}
+
+		client.SetMaxRetries(getMaxGETRetries(maxRetries))
+		client.SetCheckRetry(util.StatusCheckRetry(http.StatusNotFound))
+	}
 
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return resp, fmt.Errorf("failed reading IdentityEntity %s from %s", entityID, path)
+		return resp, fmt.Errorf("failed reading %q", path)
 	}
+
+	if resp == nil {
+		return nil, fmt.Errorf("%s: %q", entityNotFoundError, path)
+	}
+
 	return resp, nil
+}
+
+func isIdentityNotFoundError(err error) bool {
+	return err != nil && strings.HasPrefix(err.Error(), entityNotFoundError.Error())
+}
+
+func getMaxGETRetries(maxRetries int) int {
+	return int(math.Ceil(float64(maxRetries) * MaxGetRetriesMultiplier))
 }

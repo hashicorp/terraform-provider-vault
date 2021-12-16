@@ -5,8 +5,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func identityEntityPoliciesResource() *schema.Resource {
@@ -96,7 +97,7 @@ func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error 
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	resp, err := readIdentityEntity(client, id)
+	resp, err := readIdentityEntity(client, id, d.IsNewResource())
 	if err != nil {
 		return err
 	}

@@ -77,13 +77,13 @@ func testAccCheckidentityEntityPoliciesDestroy(s *terraform.State) error {
 			continue
 		}
 
-		entity, err := readIdentityEntity(client, rs.Primary.ID)
-		if err != nil {
+		if _, err := readIdentityEntity(client, rs.Primary.ID, false); err != nil {
+			if isIdentityNotFoundError(err) {
+				continue
+			}
 			return err
 		}
-		if entity == nil {
-			continue
-		}
+
 		apiPolicies, err := readIdentityEntityPolicies(client, rs.Primary.ID)
 		if err != nil {
 			return err

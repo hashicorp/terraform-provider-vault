@@ -5,8 +5,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const identityGroupPath = "/identity/group"
@@ -176,7 +177,6 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	resp, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error writing IdentityGroup to %q: %s", name, err)
 	}
@@ -216,7 +216,6 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error updating IdentityGroup %q: %s", id, err)
 	}
@@ -229,7 +228,7 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	resp, err := readIdentityGroup(client, id)
+	resp, err := readIdentityGroup(client, id, d.IsNewResource())
 	if err != nil {
 		// We need to check if the secret_id has expired
 		if util.IsExpiredTokenErr(err) {
@@ -285,7 +284,7 @@ func identityGroupExists(d *schema.ResourceData, meta interface{}) (bool, error)
 	}
 
 	log.Printf("[DEBUG] Checking if IdentityGroup %q exists", key)
-	resp, err := readIdentityGroup(client, id)
+	resp, err := readIdentityGroup(client, id, true)
 	if err != nil {
 		return true, fmt.Errorf("error checking if IdentityGroup %q exists: %s", key, err)
 	}
@@ -301,13 +300,10 @@ func identityGroupIDPath(id string) string {
 	return fmt.Sprintf("%s/id/%s", identityGroupPath, id)
 }
 
-func readIdentityGroupPolicies(client *api.Client, groupID string) ([]interface{}, error) {
-	resp, err := readIdentityGroup(client, groupID)
+func readIdentityGroupPolicies(client *api.Client, groupID string, retry bool) ([]interface{}, error) {
+	resp, err := readIdentityGroup(client, groupID, retry)
 	if err != nil {
 		return nil, err
-	}
-	if resp == nil {
-		return nil, fmt.Errorf("error IdentityGroup %s does not exist", groupID)
 	}
 
 	if v, ok := resp.Data["policies"]; ok && v != nil {
@@ -316,8 +312,8 @@ func readIdentityGroupPolicies(client *api.Client, groupID string) ([]interface{
 	return make([]interface{}, 0), nil
 }
 
-func readIdentityGroupMemberEntityIds(client *api.Client, groupID string) ([]interface{}, error) {
-	resp, err := readIdentityGroup(client, groupID)
+func readIdentityGroupMemberEntityIds(client *api.Client, groupID string, retry bool) ([]interface{}, error) {
+	resp, err := readIdentityGroup(client, groupID, retry)
 	if err != nil {
 		return nil, err
 	}
@@ -332,13 +328,9 @@ func readIdentityGroupMemberEntityIds(client *api.Client, groupID string) ([]int
 }
 
 // This function may return `nil` for the IdentityGroup if it does not exist
-func readIdentityGroup(client *api.Client, groupID string) (*api.Secret, error) {
+func readIdentityGroup(client *api.Client, groupID string, retry bool) (*api.Secret, error) {
 	path := identityGroupIDPath(groupID)
 	log.Printf("[DEBUG] Reading IdentityGroup %s from %q", groupID, path)
 
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return resp, fmt.Errorf("failed reading IdentityGroup %s from %s", groupID, path)
-	}
-	return resp, nil
+	return readEntity(client, path, retry)
 }

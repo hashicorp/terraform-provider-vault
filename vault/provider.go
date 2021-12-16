@@ -29,6 +29,12 @@ const (
 	// versions of Vault.
 	// We aim to deprecate items in this category.
 	UnknownPath = "unknown"
+
+	// DefaultMaxHTTPRetries is used for configuring the api.Client's MaxRetries.
+	DefaultMaxHTTPRetries = 2
+
+	// MaxGetRetriesMultiplier is used
+	MaxGetRetriesMultiplier = 1.5
 )
 
 // This is a global MutexKV for use within this provider.
@@ -164,7 +170,7 @@ func Provider() *schema.Provider {
 				Type:     schema.TypeInt,
 				Optional: true,
 
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", 2),
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", DefaultMaxHTTPRetries),
 				Description: "Maximum number of retries when a 5xx error code is encountered.",
 			},
 			"namespace": {
@@ -756,6 +762,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	// enable ReadYourWrites to support read-after-write on Vault Enterprise
 	clientConfig.ReadYourWrites = true
+
+	// set default MaxRetries
+	clientConfig.MaxRetries = DefaultMaxHTTPRetries
 
 	client, err := api.NewClient(clientConfig)
 	if err != nil {

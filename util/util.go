@@ -1,9 +1,11 @@
 package util
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"reflect"
 	"regexp"
@@ -11,9 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 )
 
 func JsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
@@ -327,4 +331,23 @@ func PathParameters(endpoint, vaultPath string) (map[string]string, error) {
 		result[fieldName] = match[i]
 	}
 	return result, nil
+}
+
+// StatusCheckRetry for any response having a status code in statusCode.
+func StatusCheckRetry(statusCodes ...int) retryablehttp.CheckRetry {
+	return func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		// ensure that the client controlled consistency policy is honoured.
+		if retry, err := api.DefaultRetryPolicy(ctx, resp, err); err != nil || retry {
+			return retry, err
+		}
+
+		if resp != nil {
+			for _, code := range statusCodes {
+				if code == resp.StatusCode {
+					return true, nil
+				}
+			}
+		}
+		return false, nil
+	}
 }
