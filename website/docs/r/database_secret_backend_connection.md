@@ -195,7 +195,7 @@ See the [Vault
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
  
-* `contain_db` - (Optional bool: false) For Vault v1.9+. Set to true when the target is a 
+* `contained_db` - (Optional bool: false) For Vault v1.9+. Set to true when the target is a
   Contained Database, e.g. AzureSQL.
   See the [Vault
   docs](https://www.vaultproject.io/api/secret/databases/mssql#contained_db)

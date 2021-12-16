@@ -465,7 +465,7 @@ func mysqlConnectionStringResource() *schema.Resource {
 
 func mssqlConnectionStringResource() *schema.Resource {
 	r := connectionStringResource(&connectionStringConfig{})
-	r.Schema["contain_db"] = &schema.Schema{
+	r.Schema["contained_db"] = &schema.Schema{
 		Type:        schema.TypeBool,
 		Optional:    true,
 		Description: "Set to true when the target is a Contained Database, e.g. AzureSQL.",

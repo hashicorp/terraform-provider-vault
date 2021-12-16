@@ -292,7 +292,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_connection_lifetime", "0"),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.contain_db", "false"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.contained_db", "false"),
 				),
 			},
 		},
@@ -852,6 +852,7 @@ resource "vault_database_secret_backend_connection" "test" {
 
   mssql {
 	  connection_url = "%s"
+	  contained_db   = false
   }
 }
 `, path, name, connURL)
