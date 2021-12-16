@@ -6,7 +6,6 @@ import (
 	"log"
 	"math"
 	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -16,7 +15,7 @@ import (
 
 const identityEntityPath = "/identity/entity"
 
-var entityNotFoundError = errors.New("entity not found")
+var errEntityNotFound = errors.New("entity not found")
 
 func identityEntityResource() *schema.Resource {
 	return &schema.Resource{
@@ -291,14 +290,14 @@ func readEntity(client *api.Client, path string, retry bool) (*api.Secret, error
 	}
 
 	if resp == nil {
-		return nil, fmt.Errorf("%s: %q", entityNotFoundError, path)
+		return nil, fmt.Errorf("%w: %q", errEntityNotFound, path)
 	}
 
 	return resp, nil
 }
 
 func isIdentityNotFoundError(err error) bool {
-	return err != nil && strings.HasPrefix(err.Error(), entityNotFoundError.Error())
+	return err != nil && errors.Is(err, errEntityNotFound)
 }
 
 func getMaxGETRetries(maxRetries int) int {

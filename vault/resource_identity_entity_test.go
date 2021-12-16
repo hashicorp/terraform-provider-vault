@@ -311,7 +311,7 @@ func TestReadEntity(t *testing.T) {
 				retryStatus: http.StatusNotFound,
 			},
 			expectedRetries: getMaxGETRetries(DefaultMaxHTTPRetries),
-			wantError: fmt.Errorf(`%s: %q`, entityNotFoundError,
+			wantError: fmt.Errorf(`%w: %q`, errEntityNotFound,
 				identityEntityIDPath("retry-exhausted-default-max-404")),
 		},
 		{
@@ -334,7 +334,7 @@ func TestReadEntity(t *testing.T) {
 			},
 			expectedRetries: getMaxGETRetries(5),
 			maxRetries:      5,
-			wantError: fmt.Errorf(`%s: %q`, entityNotFoundError,
+			wantError: fmt.Errorf(`%w: %q`, errEntityNotFound,
 				identityEntityIDPath("retry-exhausted-custom-max-404")),
 		},
 		{
@@ -378,13 +378,21 @@ func TestReadEntity(t *testing.T) {
 				if err == nil {
 					t.Fatal("expected an error")
 				}
+
 				if tt.wantError.Error() != err.Error() {
 					t.Errorf("expected err %q, actual %q", tt.wantError, err)
+				}
+
+				if tt.retryHandler.retryStatus == http.StatusNotFound {
+					if !isIdentityNotFoundError(err) {
+						t.Errorf("expected an errEntityNotFound err %q, actual %q", errEntityNotFound, err)
+					}
 				}
 			} else {
 				if err != nil {
 					t.Fatal("unexpected error", err)
 				}
+
 				var data map[string]interface{}
 				if err := json.Unmarshal(tt.retryHandler.respData, &data); err != nil {
 					t.Fatalf("invalid test data %#v, err=%s", tt.retryHandler.respData, err)
@@ -402,6 +410,38 @@ func TestReadEntity(t *testing.T) {
 			retries := r.requests - 1
 			if tt.expectedRetries != retries {
 				t.Fatalf("expected %d retries, actual %d", tt.expectedRetries, retries)
+			}
+		})
+	}
+}
+
+func TestIsEntityNotFoundError(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "default",
+			err:      errEntityNotFound,
+			expected: true,
+		},
+		{
+			name:     "wrapped",
+			err:      fmt.Errorf("%w: foo", errEntityNotFound),
+			expected: true,
+		},
+		{
+			name:     "not",
+			err:      fmt.Errorf("%s: foo", errEntityNotFound),
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := isIdentityNotFoundError(tt.err)
+			if actual != tt.expected {
+				t.Fatalf("isIdentityNotFoundError(): expected %v, actual %v", tt.expected, actual)
 			}
 		})
 	}
