@@ -15,7 +15,7 @@ func TestAccGenericSecret_importBasic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(path),
-				Check:  testResourceGenericSecret_initialCheck(path, false),
+				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{
 				ResourceName:            "vault_generic_secret.test",
