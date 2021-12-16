@@ -61,11 +61,11 @@ func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 		CheckDestroy: testAllVersionDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceGenericSecret_initialConfig_v2(path),
+				Config: testResourceGenericSecret_initialConfig_v2(path, false),
 				Check:  testResourceGenericSecret_initialCheck_V2(path, false),
 			},
 			{
-				Config: testResourceGenericSecret_updateConfig_v2(path),
+				Config: testResourceGenericSecret_initialConfig_v2(path, true),
 				Check:  testResourceGenericSecret_initialCheck_V2(path, true),
 			},
 		},
@@ -93,7 +93,7 @@ EOT
 }`, path)
 }
 
-func testResourceGenericSecret_initialConfig_v2(path string) string {
+func testResourceGenericSecret_initialConfig_v2(path string, isUpdate bool) string {
 	result := fmt.Sprintf(`
 resource "vault_mount" "v2" {
 	path = "secretsv2"
@@ -103,6 +103,9 @@ resource "vault_mount" "v2" {
 	}
 }
 
+`)
+	if !isUpdate {
+		result += fmt.Sprintf(`
 resource "vault_generic_secret" "test" {
 	depends_on = ["vault_mount.v2"]
 	path = "%s"
@@ -113,20 +116,8 @@ resource "vault_generic_secret" "test" {
 }
 EOT
 }`, path)
-
-	return result
-}
-
-func testResourceGenericSecret_updateConfig_v2(path string) string {
-	result := fmt.Sprintf(`
-resource "vault_mount" "v2" {
-	path = "secretsv2"
-	type = "kv"
-	options = {
-		version = "2"
-	}
-}
-
+	} else {
+		result += fmt.Sprintf(`
 resource "vault_generic_secret" "test" {
 	depends_on = ["vault_mount.v2"]
 	path = "%s"
@@ -137,6 +128,7 @@ resource "vault_generic_secret" "test" {
 }
 EOT
 }`, path)
+	}
 
 	return result
 }
@@ -229,7 +221,7 @@ func testResourceGenericSecret_initialCheck_V2(expectedPath string, isUpdate boo
 			// Confirm number of versions
 			err = testResourceGenericSecret_checkVersions(client, keys[0].(string))
 			if err != nil {
-				fmt.Errorf("Version error: %s", err)
+				return fmt.Errorf("Version error: %s", err)
 			}
 
 			want = "zoop"
