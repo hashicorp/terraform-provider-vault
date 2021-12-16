@@ -298,7 +298,7 @@ var (
 			PathInventory: []string{"/auth/approle/role/{role_name}"},
 		},
 		"vault_approle_auth_backend_role_secret_id": {
-			Resource: approleAuthBackendRoleSecretIDResource(),
+			Resource: approleAuthBackendRoleSecretIDResource("vault_approle_auth_backend_role_secret_id"),
 			PathInventory: []string{
 				"/auth/approle/role/{role_name}/secret-id",
 				"/auth/approle/role/{role_name}/custom-secret-id",
@@ -369,7 +369,7 @@ var (
 			PathInventory: []string{"/aws/config/root"},
 		},
 		"vault_aws_secret_backend_role": {
-			Resource:      awsSecretBackendRoleResource(),
+			Resource:      awsSecretBackendRoleResource("vault_aws_secret_backend_role"),
 			PathInventory: []string{"/aws/roles/{name}"},
 		},
 		"vault_azure_secret_backend": {
@@ -429,7 +429,7 @@ var (
 			PathInventory: []string{"/auth/gcp/role/{name}"},
 		},
 		"vault_gcp_secret_backend": {
-			Resource:      gcpSecretBackendResource(),
+			Resource:      gcpSecretBackendResource("vault_gcp_secret_backend"),
 			PathInventory: []string{"/gcp/config"},
 		},
 		"vault_gcp_secret_roleset": {
@@ -445,11 +445,11 @@ var (
 			PathInventory: []string{"/auth/cert/certs/{name}"},
 		},
 		"vault_generic_endpoint": {
-			Resource:      genericEndpointResource(),
+			Resource:      genericEndpointResource("vault_generic_endpoint"),
 			PathInventory: []string{GenericPath},
 		},
 		"vault_generic_secret": {
-			Resource:      genericSecretResource(),
+			Resource:      genericSecretResource("vault_generic_secret"),
 			PathInventory: []string{GenericPath},
 		},
 		"vault_jwt_auth_backend": {
