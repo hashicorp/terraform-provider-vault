@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -275,18 +275,14 @@ func readEntity(client *api.Client, path string, retry bool) (*api.Secret, error
 			return nil, err
 		}
 
-		maxRetries := client.MaxRetries()
-		if maxRetries == 0 {
-			maxRetries = DefaultMaxHTTPRetries
-		}
-
-		client.SetMaxRetries(getMaxGETRetries(maxRetries))
+		client.SetMaxRetries(maxHTTPRetriesCCC)
 		client.SetCheckRetry(util.StatusCheckRetry(http.StatusNotFound))
+		client.SetClientTimeout(time.Second * 120)
 	}
 
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return resp, fmt.Errorf("failed reading %q", path)
+		return resp, fmt.Errorf("failed reading %q, err=%q", path, err)
 	}
 
 	if resp == nil {
@@ -298,8 +294,4 @@ func readEntity(client *api.Client, path string, retry bool) (*api.Secret, error
 
 func isIdentityNotFoundError(err error) bool {
 	return err != nil && errors.Is(err, errEntityNotFound)
-}
-
-func getMaxGETRetries(maxRetries int) int {
-	return int(math.Ceil(float64(maxRetries) * MaxGetRetriesMultiplier))
 }
