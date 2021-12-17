@@ -11,7 +11,7 @@ import (
 
 const latestSecretVersion = -1
 
-func genericSecretResource() *schema.Resource {
+func genericSecretResource(name string) *schema.Resource {
 	return &schema.Resource{
 		SchemaVersion: 1,
 
@@ -42,8 +42,8 @@ func genericSecretResource() *schema.Resource {
 				// string. This makes terraform not want to change when an extra
 				// space is included in the JSON string. It is also necesarry
 				// when disable_read is false for comparing values.
-				StateFunc:    NormalizeDataJSON,
-				ValidateFunc: ValidateDataJSON,
+				StateFunc:    NormalizeDataJSONFunc(name),
+				ValidateFunc: ValidateDataJSONFunc(name),
 				Sensitive:    true,
 			},
 
@@ -71,35 +71,50 @@ func genericSecretResource() *schema.Resource {
 	}
 }
 
-func ValidateDataJSON(configI interface{}, k string) ([]string, []error) {
-	dataJSON := configI.(string)
+func ValidateDataJSONFunc(name string) func(c interface{}, k string) ([]string, []error) {
+	return func(c interface{}, k string) ([]string, []error) {
+		return validateDataJSON(name, c.(string), k)
+	}
+}
+
+func validateDataJSON(name string, data, k string) ([]string, []error) {
 	dataMap := map[string]interface{}{}
-	err := json.Unmarshal([]byte(dataJSON), &dataMap)
+	err := json.Unmarshal([]byte(data), &dataMap)
 	if err != nil {
+		log.Printf("[ERROR] Failed to validate JSON data %q, resource=%q, key=%q, err=%s",
+			data, name, k, err)
 		return nil, []error{err}
 	}
 	return nil, nil
 }
 
-func NormalizeDataJSON(configI interface{}) string {
-	dataJSON := configI.(string)
+// NormalizeDataJSONFunc returns a NormalizeFunc that normalizes the JSON data
+// for storage in the TF state for a given resource denoted by `name`.
+func NormalizeDataJSONFunc(name string) func(c interface{}) string {
+	return func(c interface{}) string {
+		data := c.(string)
+		result, err := normalizeDataJSON(data)
+		if err != nil {
+			// The validate function should've prevented invalid JSON ever getting here.
+			log.Printf("[WARN] Failed to normalize JSON data %q, resource=%q, err=%s", data, name, err)
+		}
+		return result
+	}
+}
 
+func normalizeDataJSON(data string) (string, error) {
 	dataMap := map[string]interface{}{}
-	err := json.Unmarshal([]byte(dataJSON), &dataMap)
+	err := json.Unmarshal([]byte(data), &dataMap)
 	if err != nil {
-		// The validate function should've taken care of this.
-		log.Printf("[ERROR] Invalid JSON data in vault_generic_secret: %s", err)
-		return ""
+		return "", err
 	}
 
 	ret, err := json.Marshal(dataMap)
 	if err != nil {
 		// Should never happen.
-		log.Printf("[ERROR] Problem normalizing JSON for vault_generic_secret: %s", err)
-		return dataJSON
+		return data, err
 	}
-
-	return string(ret)
+	return string(ret), nil
 }
 
 func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error {
@@ -177,7 +192,6 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 
 		log.Printf("[DEBUG] Reading %s from Vault", path)
 		secret, err := versionedSecret(latestSecretVersion, path, client)
-
 		if err != nil {
 			return fmt.Errorf("error reading from Vault: %s", err)
 		}

@@ -8,10 +8,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
-	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/config"
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
@@ -298,7 +300,7 @@ var (
 			PathInventory: []string{"/auth/approle/role/{role_name}"},
 		},
 		"vault_approle_auth_backend_role_secret_id": {
-			Resource: approleAuthBackendRoleSecretIDResource(),
+			Resource: approleAuthBackendRoleSecretIDResource("vault_approle_auth_backend_role_secret_id"),
 			PathInventory: []string{
 				"/auth/approle/role/{role_name}/secret-id",
 				"/auth/approle/role/{role_name}/custom-secret-id",
@@ -369,7 +371,7 @@ var (
 			PathInventory: []string{"/aws/config/root"},
 		},
 		"vault_aws_secret_backend_role": {
-			Resource:      awsSecretBackendRoleResource(),
+			Resource:      awsSecretBackendRoleResource("vault_aws_secret_backend_role"),
 			PathInventory: []string{"/aws/roles/{name}"},
 		},
 		"vault_azure_secret_backend": {
@@ -429,7 +431,7 @@ var (
 			PathInventory: []string{"/auth/gcp/role/{name}"},
 		},
 		"vault_gcp_secret_backend": {
-			Resource:      gcpSecretBackendResource(),
+			Resource:      gcpSecretBackendResource("vault_gcp_secret_backend"),
 			PathInventory: []string{"/gcp/config"},
 		},
 		"vault_gcp_secret_roleset": {
@@ -445,11 +447,11 @@ var (
 			PathInventory: []string{"/auth/cert/certs/{name}"},
 		},
 		"vault_generic_endpoint": {
-			Resource:      genericEndpointResource(),
+			Resource:      genericEndpointResource("vault_generic_endpoint"),
 			PathInventory: []string{GenericPath},
 		},
 		"vault_generic_secret": {
-			Resource:      genericSecretResource(),
+			Resource:      genericSecretResource("vault_generic_secret"),
 			PathInventory: []string{GenericPath},
 		},
 		"vault_jwt_auth_backend": {
@@ -804,7 +806,13 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 		method := authLogin["method"].(string)
 		if method == "aws" {
-			if err := signAWSLogin(authLoginParameters); err != nil {
+			logger := hclog.Default()
+			if logging.IsDebugOrHigher() {
+				logger.SetLevel(hclog.Debug)
+			} else {
+				logger.SetLevel(hclog.Error)
+			}
+			if err := signAWSLogin(authLoginParameters, logger); err != nil {
 				return nil, fmt.Errorf("error signing AWS login request: %s", err)
 			}
 		}
@@ -904,7 +912,7 @@ func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {
 	return resourceMap, errs
 }
 
-func signAWSLogin(parameters map[string]interface{}) error {
+func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error {
 	var accessKey, secretKey, securityToken string
 	if val, ok := parameters["aws_access_key_id"].(string); ok {
 		accessKey = val
@@ -918,7 +926,7 @@ func signAWSLogin(parameters map[string]interface{}) error {
 		securityToken = val
 	}
 
-	creds, err := awsauth.RetrieveCreds(accessKey, secretKey, securityToken)
+	creds, err := awsutil.RetrieveCreds(accessKey, secretKey, securityToken, logger)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve AWS credentials: %s", err)
 	}
@@ -932,7 +940,7 @@ func signAWSLogin(parameters map[string]interface{}) error {
 		stsRegion = val
 	}
 
-	loginData, err := awsauth.GenerateLoginData(creds, headerValue, stsRegion)
+	loginData, err := awsutil.GenerateLoginData(creds, headerValue, stsRegion, logger)
 	if err != nil {
 		return fmt.Errorf("failed to generate AWS login data: %s", err)
 	}

@@ -39,6 +39,14 @@ func identityEntityAliasResource() *schema.Resource {
 				Required:    true,
 				Description: "ID of the entity to which this is an alias.",
 			},
+			"custom_metadata": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "Custom metadata to be associated with this alias.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -49,13 +57,15 @@ func identityEntityAliasCreate(d *schema.ResourceData, meta interface{}) error {
 	name := d.Get("name").(string)
 	mountAccessor := d.Get("mount_accessor").(string)
 	canonicalID := d.Get("canonical_id").(string)
+	customMetadata := d.Get("custom_metadata").(map[string]interface{})
 
 	path := identityEntityAliasPath
 
 	data := map[string]interface{}{
-		"name":           name,
-		"mount_accessor": mountAccessor,
-		"canonical_id":   canonicalID,
+		"name":            name,
+		"mount_accessor":  mountAccessor,
+		"canonical_id":    canonicalID,
+		"custom_metadata": customMetadata,
 	}
 
 	resp, err := client.Logical().Write(path, data)
@@ -109,6 +119,8 @@ func identityEntityAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["canonical_id"] = canonicalID
 	}
 
+	data["custom_metadata"] = d.Get("custom_metadata").(map[string]interface{})
+
 	_, err = client.Logical().Write(path, data)
 
 	if err != nil {
@@ -138,9 +150,9 @@ func identityEntityAliasRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.SetId(resp.Data["id"].(string))
-	for _, k := range []string{"name", "mount_accessor", "canonical_id"} {
+	for _, k := range []string{"name", "mount_accessor", "canonical_id", "custom_metadata"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return fmt.Errorf("error setting state key \"%s\" on IdentityEntityAlias %q: %s", k, id, err)
+			return fmt.Errorf("error setting state key %q on IdentityEntityAlias %q:  err=%q", k, id, err)
 		}
 	}
 	return nil
