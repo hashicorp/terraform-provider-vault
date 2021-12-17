@@ -176,7 +176,7 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 	}
 }
 
-func testResourceGenericSecret_initialCheck_v2(expectedPath string, wantValue string, wantVersion int) resource.TestCheckFunc {
+func testResourceGenericSecret_initialCheck_v2(expectedPath string, wantValue string, versionCount int) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_generic_secret.test"]
 		if resourceState == nil {
@@ -217,7 +217,7 @@ func testResourceGenericSecret_initialCheck_v2(expectedPath string, wantValue st
 		data := secret.Data["data"].(map[string]interface{})
 
 		// Confirm number of versions
-		err = testResourceGenericSecret_checkVersions(client, keys[0].(string), wantVersion)
+		err = testResourceGenericSecret_checkVersions(client, keys[0].(string), versionCount)
 		if err != nil {
 			return fmt.Errorf("Version error: %s", err)
 		}
@@ -235,7 +235,7 @@ func testResourceGenericSecret_initialCheck_v2(expectedPath string, wantValue st
 	}
 }
 
-func testResourceGenericSecret_checkVersions(client *api.Client, keyName string, expectedVersions int) error {
+func testResourceGenericSecret_checkVersions(client *api.Client, keyName string, versionCount int) error {
 	resp, err := client.Logical().Read(fmt.Sprintf("secretsv2/metadata/%s", keyName))
 	if err != nil {
 		return fmt.Errorf("unable to read secrets metadata at path secretsv2/metadata/%s: %s", keyName, err)
@@ -243,8 +243,8 @@ func testResourceGenericSecret_checkVersions(client *api.Client, keyName string,
 
 	versions := resp.Data["versions"].(map[string]interface{})
 
-	if len(versions) != expectedVersions {
-		return fmt.Errorf("Expected %d versions, got %d", expectedVersions, len(versions))
+	if len(versions) != versionCount {
+		return fmt.Errorf("Expected %d versions, got %d", versionCount, len(versions))
 	}
 
 	return nil
