@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
@@ -590,7 +592,7 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 			data["project_id"] = v.(string)
 		}
 	case "mssql-database-plugin":
-		setDatabaseConnectionData(d, "mssql.0.", data)
+		setMSSQLDatabaseConnectionData(d, "mssql.0.", data)
 	case "mysql-database-plugin":
 		setMySQLDatabaseConnectionData(d, "mysql.0.", data)
 	case "mysql-rds-database-plugin":
@@ -660,6 +662,23 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 		}
 	}
 	return []map[string]interface{}{result}
+}
+
+func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) ([]map[string]interface{}, error) {
+	result := getConnectionDetailsFromResponse(d, prefix, resp)
+	if result == nil {
+		return nil, nil
+	}
+
+	details := resp.Data["connection_details"].(map[string]interface{})
+	if v, ok := details["contained_db"]; ok {
+		containedDB, err := parseutil.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf(`unsupported type for field "contained_db, err=%w"`, err)
+		}
+		result[0]["contained_db"] = containedDB
+	}
+	return result, nil
 }
 
 func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
@@ -817,6 +836,17 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	}
 	if v, ok := d.GetOkExists(prefix + "username_template"); ok {
 		data["username_template"] = v.(string)
+	}
+}
+
+func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionData(d, prefix, data)
+	if v, ok := d.GetOk(prefix + "contained_db"); ok {
+		// TODO:
+		//  we have to pass string value here due to an issue with the
+		//  way the mssql plugin handles this field. We can probably revert this once vault-1.9.3
+		//  is released.
+		data["contained_db"] = strconv.FormatBool(v.(bool))
 	}
 }
 
@@ -1048,7 +1078,11 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			d.Set("mongodbatlas", []map[string]interface{}{result})
 		}
 	case "mssql-database-plugin":
-		d.Set("mssql", getConnectionDetailsFromResponse(d, "mssql.0.", resp))
+		var values []map[string]interface{}
+		if values, err = getMSSQLConnectionDetailsFromResponse(d, "mssql.0.", resp); err == nil {
+			// err is returned outside of the switch case
+			d.Set("mssql", values)
+		}
 	case "mysql-database-plugin":
 		d.Set("mysql", getMySQLConnectionDetailsFromResponse(d, "mysql.0.", resp))
 	case "mysql-rds-database-plugin":
@@ -1068,7 +1102,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	}
 
 	if err != nil {
-		return fmt.Errorf("error reading response for %q: %s", path, err)
+		return fmt.Errorf("error reading response for %q: %w", path, err)
 	}
 
 	var roles []string

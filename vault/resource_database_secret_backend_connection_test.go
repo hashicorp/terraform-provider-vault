@@ -278,7 +278,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, connURL),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, connURL, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -293,6 +293,24 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.contained_db", "false"),
+				),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, connURL, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.#", "1"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "verify_connection", "true"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.connection_url", connURL),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.contained_db", "true"),
 				),
 			},
 		},
@@ -837,7 +855,21 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, connURL)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path, connURL string) string {
+func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path, connURL string, containedDB bool) string {
+	var config string
+	if containedDB {
+		config = `
+  mssql {
+    connection_url = "%s"
+    contained_db   = true
+  }`
+	} else {
+		config = `
+  mssql {
+    connection_url = "%s"
+  }`
+	}
+
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -849,13 +881,9 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
-
-  mssql {
-	  connection_url = "%s"
-	  contained_db   = false
-  }
+%s
 }
-`, path, name, connURL)
+`, path, name, fmt.Sprintf(config, connURL))
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_mysql(name, path, connURL, password string) string {
