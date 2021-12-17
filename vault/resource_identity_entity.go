@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -287,7 +288,9 @@ func readEntity(client *api.Client, path string, retry bool) (*api.Secret, error
 		if client.MaxRetryWait() < client.MinRetryWait() {
 			client.SetMaxRetryWait(client.MinRetryWait())
 		}
+
 		// ensure that retries are not failed due to context deadline being exceeded.
+		client.SetBackoff(retryablehttp.LinearJitterBackoff)
 		dt := time.Duration(client.MaxRetries())
 		d := ((client.MaxRetryWait() * dt) * dt) + time.Second + 30
 		client.SetClientTimeout(d)
