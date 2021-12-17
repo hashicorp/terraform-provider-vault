@@ -149,12 +149,12 @@ func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error
 	}
 
 	if v2 {
+		base := "data"
 		deleteAllVersions := d.Get("delete_all_versions").(bool)
 		if deleteAllVersions {
-			path = addPrefixToVKVPath(path, mountPath, "metadata")
-		} else {
-			path = addPrefixToVKVPath(path, mountPath, "data")
+			base = "metadata"
 		}
+		path = addPrefixToVKVPath(path, mountPath, base)
 	}
 
 	log.Printf("[DEBUG] Deleting vault_generic_secret from %q", path)

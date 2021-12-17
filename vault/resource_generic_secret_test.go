@@ -62,11 +62,11 @@ func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig_v2(path, false),
-				Check:  testResourceGenericSecret_initialCheck_V2(path, false),
+				Check:  testResourceGenericSecret_initialCheck_v2(path, "zap", 1),
 			},
 			{
 				Config: testResourceGenericSecret_initialConfig_v2(path, true),
-				Check:  testResourceGenericSecret_initialCheck_V2(path, true),
+				Check:  testResourceGenericSecret_initialCheck_v2(path, "zoop", 2),
 			},
 		},
 	})
@@ -176,7 +176,7 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 	}
 }
 
-func testResourceGenericSecret_initialCheck_V2(expectedPath string, isUpdate bool) resource.TestCheckFunc {
+func testResourceGenericSecret_initialCheck_v2(expectedPath string, wantValue string, wantVersion int) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_generic_secret.test"]
 		if resourceState == nil {
@@ -216,34 +216,26 @@ func testResourceGenericSecret_initialCheck_V2(expectedPath string, isUpdate boo
 
 		data := secret.Data["data"].(map[string]interface{})
 
-		var want string
-		if isUpdate {
-			// Confirm number of versions
-			err = testResourceGenericSecret_checkVersions(client, keys[0].(string))
-			if err != nil {
-				return fmt.Errorf("Version error: %s", err)
-			}
-
-			want = "zoop"
-
-		} else {
-			want = "zap"
+		// Confirm number of versions
+		err = testResourceGenericSecret_checkVersions(client, keys[0].(string), wantVersion)
+		if err != nil {
+			return fmt.Errorf("Version error: %s", err)
 		}
 
 		// Test the JSON
-		if got := data["zip"]; got != want {
-			return fmt.Errorf("'zip' data is %q; want %q", got, want)
+		if got := data["zip"]; got != wantValue {
+			return fmt.Errorf("'zip' data is %q; want %q", got, wantValue)
 		}
 
 		// Test the map
-		if got := instanceState.Attributes["data.zip"]; got != want {
-			return fmt.Errorf("data[\"zip\"] contains %s; want %s", got, want)
+		if got := instanceState.Attributes["data.zip"]; got != wantValue {
+			return fmt.Errorf("data[\"zip\"] contains %s; want %s", got, wantValue)
 		}
 		return nil
 	}
 }
 
-func testResourceGenericSecret_checkVersions(client *api.Client, keyName string) error {
+func testResourceGenericSecret_checkVersions(client *api.Client, keyName string, expectedVersions int) error {
 	resp, err := client.Logical().Read(fmt.Sprintf("secretsv2/metadata/%s", keyName))
 	if err != nil {
 		return fmt.Errorf("unable to read secrets metadata at path secretsv2/metadata/%s: %s", keyName, err)
@@ -251,8 +243,8 @@ func testResourceGenericSecret_checkVersions(client *api.Client, keyName string)
 
 	versions := resp.Data["versions"].(map[string]interface{})
 
-	if len(versions) != 2 {
-		return fmt.Errorf("Expected 2 versions, got %d", len(versions))
+	if len(versions) != expectedVersions {
+		return fmt.Errorf("Expected %d versions, got %d", expectedVersions, len(versions))
 	}
 
 	return nil
