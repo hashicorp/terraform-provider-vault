@@ -367,8 +367,6 @@ func TestReadEntity(t *testing.T) {
 			defer ln.Close()
 
 			config.Address = fmt.Sprintf("http://%s", ln.Addr())
-			// config.MinRetryWait = 10 * time.Millisecond
-			// config.MaxRetryWait = 10 * time.Millisecond
 			c, err := api.NewClient(config)
 			if err != nil {
 				t.Fatal(err)
