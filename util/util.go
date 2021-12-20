@@ -1,9 +1,11 @@
 package util
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"reflect"
 	"regexp"
@@ -11,9 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 )
 
 func JsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
@@ -327,4 +331,54 @@ func PathParameters(endpoint, vaultPath string) (map[string]string, error) {
 		result[fieldName] = match[i]
 	}
 	return result, nil
+}
+
+// StatusCheckRetry for any response having a status code in statusCode.
+func StatusCheckRetry(statusCodes ...int) retryablehttp.CheckRetry {
+	return func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		// ensure that the client controlled consistency policy is honoured.
+		if retry, err := api.DefaultRetryPolicy(ctx, resp, err); err != nil || retry {
+			return retry, err
+		}
+
+		if resp != nil {
+			for _, code := range statusCodes {
+				if code == resp.StatusCode {
+					return true, nil
+				}
+			}
+		}
+		return false, nil
+	}
+}
+
+// SetupCCCRetryClient for handling Client Controlled Consistency related
+// requests.
+func SetupCCCRetryClient(client *api.Client, maxRetry int) {
+	if !client.ReadYourWrites() {
+		client.SetReadYourWrites(true)
+	}
+
+	client.SetMaxRetries(maxRetry)
+	client.SetCheckRetry(StatusCheckRetry(http.StatusNotFound))
+
+	// ensure that the clone has the reasonable backoff min/max durations set.
+	if client.MinRetryWait() == 0 {
+		client.SetMinRetryWait(time.Millisecond * 1000)
+	}
+	if client.MaxRetryWait() == 0 {
+		client.SetMaxRetryWait(time.Millisecond * 1500)
+	}
+	if client.MaxRetryWait() < client.MinRetryWait() {
+		client.SetMaxRetryWait(client.MinRetryWait())
+	}
+
+	bo := retryablehttp.LinearJitterBackoff
+	client.SetBackoff(bo)
+
+	to := time.Duration(0)
+	for i := 0; i < client.MaxRetries(); i++ {
+		to += bo(client.MaxRetryWait(), client.MaxRetryWait(), i, nil)
+	}
+	client.SetClientTimeout(to + time.Second*30)
 }

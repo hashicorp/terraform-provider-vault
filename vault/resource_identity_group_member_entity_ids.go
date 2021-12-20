@@ -5,8 +5,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func identityGroupMemberEntityIdsResource() *schema.Resource {
@@ -61,7 +62,7 @@ func identityGroupMemberEntityIdsUpdate(d *schema.ResourceData, meta interface{}
 	data := make(map[string]interface{})
 	memberEntityIds := d.Get("member_entity_ids").(*schema.Set).List()
 
-	resp, err := readIdentityGroup(client, id)
+	resp, err := readIdentityGroup(client, id, d.IsNewResource())
 	if err != nil {
 		return err
 	}
@@ -71,7 +72,7 @@ func identityGroupMemberEntityIdsUpdate(d *schema.ResourceData, meta interface{}
 		if d.Get("exclusive").(bool) {
 			data["member_entity_ids"] = memberEntityIds
 		} else {
-			apiMemberEntityIds, err := readIdentityGroupMemberEntityIds(client, id)
+			apiMemberEntityIds, err := readIdentityGroupMemberEntityIds(client, id, d.IsNewResource())
 			if err != nil {
 				return err
 			}
@@ -104,15 +105,15 @@ func identityGroupMemberEntityIdsRead(d *schema.ResourceData, meta interface{}) 
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	resp, err := readIdentityGroup(client, id)
-	if err != nil {
-		return err
-	}
 	log.Printf("[DEBUG] Read IdentityGroupMemberEntityIds %s", id)
-	if resp == nil {
-		log.Printf("[WARN] IdentityGroupMemberEntityIds %q not found, removing from state", id)
-		d.SetId("")
-		return nil
+	resp, err := readIdentityGroup(client, id, d.IsNewResource())
+	if err != nil {
+		if isIdentityNotFoundError(err) {
+			log.Printf("[WARN] IdentityGroupMemberEntityIds %q not found, removing from state", id)
+			d.SetId("")
+			return nil
+		}
+		return err
 	}
 
 	d.Set("group_id", id)
@@ -152,8 +153,11 @@ func identityGroupMemberEntityIdsDelete(d *schema.ResourceData, meta interface{}
 
 	data := make(map[string]interface{})
 
-	resp, err := readIdentityGroup(client, id)
+	resp, err := readIdentityGroup(client, id, false)
 	if err != nil {
+		if isIdentityNotFoundError(err) {
+			return nil
+		}
 		return err
 	}
 
@@ -162,7 +166,7 @@ func identityGroupMemberEntityIdsDelete(d *schema.ResourceData, meta interface{}
 		if d.Get("exclusive").(bool) {
 			data["member_entity_ids"] = make([]string, 0)
 		} else {
-			apiMemberEntityIds, err := readIdentityGroupMemberEntityIds(client, id)
+			apiMemberEntityIds, err := readIdentityGroupMemberEntityIds(client, id, false)
 			if err != nil {
 				return err
 			}

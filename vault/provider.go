@@ -29,7 +29,16 @@ const (
 	// versions of Vault.
 	// We aim to deprecate items in this category.
 	UnknownPath = "unknown"
+
+	// DefaultMaxHTTPRetries is used for configuring the api.Client's MaxRetries.
+	DefaultMaxHTTPRetries = 2
+
+	// DefaultMaxHTTPRetriesCCC is used for configuring the api.Client's MaxRetries
+	// for Client Controlled Consistency related operations.
+	DefaultMaxHTTPRetriesCCC = 10
 )
+
+var maxHTTPRetriesCCC int
 
 // This is a global MutexKV for use within this provider.
 // Use this when you need to have multiple resources or even multiple instances
@@ -157,15 +166,19 @@ func Provider() *schema.Provider {
 				// significantly longer, so that any leases are revoked shortly
 				// after Terraform has finished running.
 				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_MAX_TTL", 1200),
-
 				Description: "Maximum TTL for secret leases requested by this provider.",
 			},
 			"max_retries": {
-				Type:     schema.TypeInt,
-				Optional: true,
-
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", 2),
+				Type:        schema.TypeInt,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", DefaultMaxHTTPRetries),
 				Description: "Maximum number of retries when a 5xx error code is encountered.",
+			},
+			"max_retries_ccc": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES_CCC", DefaultMaxHTTPRetriesCCC),
+				Description: "Maximum number of retries for Client Controlled Consistency related operations",
 			},
 			"namespace": {
 				Type:        schema.TypeString,
@@ -757,6 +770,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	// enable ReadYourWrites to support read-after-write on Vault Enterprise
 	clientConfig.ReadYourWrites = true
 
+	// set default MaxRetries
+	clientConfig.MaxRetries = DefaultMaxHTTPRetries
+
 	client, err := api.NewClient(clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
@@ -781,6 +797,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	client.SetHeaders(parsedHeaders)
 
 	client.SetMaxRetries(d.Get("max_retries").(int))
+
+	maxHTTPRetriesCCC = d.Get("max_retries_ccc").(int)
 
 	// Try an get the token from the config or token helper
 	token, err := providerToken(d)

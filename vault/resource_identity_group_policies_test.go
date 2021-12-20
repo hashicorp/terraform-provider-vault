@@ -74,14 +74,14 @@ func testAccCheckidentityGroupPoliciesDestroy(s *terraform.State) error {
 			continue
 		}
 
-		group, err := readIdentityGroup(client, rs.Primary.ID)
-		if err != nil {
+		if _, err := readIdentityGroup(client, rs.Primary.ID, false); err != nil {
+			if isIdentityNotFoundError(err) {
+				continue
+			}
 			return err
 		}
-		if group == nil {
-			continue
-		}
-		apiPolicies, err := readIdentityGroupPolicies(client, rs.Primary.ID)
+
+		apiPolicies, err := readIdentityGroupPolicies(client, rs.Primary.ID, false)
 		if err != nil {
 			return err
 		}
