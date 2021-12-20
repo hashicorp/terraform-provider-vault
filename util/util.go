@@ -351,3 +351,31 @@ func StatusCheckRetry(statusCodes ...int) retryablehttp.CheckRetry {
 		return false, nil
 	}
 }
+
+// SetupCCCRetryClient for handling Client Controlled Consistency related
+// requests.
+func SetupCCCRetryClient(client *api.Client, maxRetry int) {
+	client.SetReadYourWrites(true)
+	client.SetMaxRetries(maxRetry)
+	client.SetCheckRetry(StatusCheckRetry(http.StatusNotFound))
+
+	// ensure that the clone has the reasonable backoff min/max durations set.
+	if client.MinRetryWait() == 0 {
+		client.SetMinRetryWait(time.Millisecond * 1000)
+	}
+	if client.MaxRetryWait() == 0 {
+		client.SetMaxRetryWait(time.Millisecond * 1500)
+	}
+	if client.MaxRetryWait() < client.MinRetryWait() {
+		client.SetMaxRetryWait(client.MinRetryWait())
+	}
+
+	bo := retryablehttp.LinearJitterBackoff
+	client.SetBackoff(bo)
+
+	to := time.Duration(0)
+	for i := 0; i < client.MaxRetries(); i++ {
+		to += bo(client.MaxRetryWait(), client.MaxRetryWait(), i, nil)
+	}
+	client.SetClientTimeout(to + time.Second*30)
+}

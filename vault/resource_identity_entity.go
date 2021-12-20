@@ -4,10 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net/http"
-	"time"
 
-	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -275,25 +272,7 @@ func readEntity(client *api.Client, path string, retry bool) (*api.Secret, error
 		if err != nil {
 			return nil, err
 		}
-		client.SetMaxRetries(maxHTTPRetriesCCC)
-		client.SetCheckRetry(util.StatusCheckRetry(http.StatusNotFound))
-
-		// ensure that the clone has the reasonable backoff min/max durations set.
-		if client.MinRetryWait() == 0 {
-			client.SetMinRetryWait(time.Millisecond * 1000)
-		}
-		if client.MaxRetryWait() == 0 {
-			client.SetMaxRetryWait(time.Millisecond * 1500)
-		}
-		if client.MaxRetryWait() < client.MinRetryWait() {
-			client.SetMaxRetryWait(client.MinRetryWait())
-		}
-
-		// ensure that retries are not failed due to context deadline being exceeded.
-		client.SetBackoff(retryablehttp.LinearJitterBackoff)
-		dt := time.Duration(client.MaxRetries())
-		d := ((client.MaxRetryWait() * dt) * dt) + time.Second + 30
-		client.SetClientTimeout(d)
+		util.SetupCCCRetryClient(client, maxHTTPRetriesCCC)
 	}
 
 	resp, err := client.Logical().Read(path)
