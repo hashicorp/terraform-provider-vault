@@ -355,7 +355,10 @@ func StatusCheckRetry(statusCodes ...int) retryablehttp.CheckRetry {
 // SetupCCCRetryClient for handling Client Controlled Consistency related
 // requests.
 func SetupCCCRetryClient(client *api.Client, maxRetry int) {
-	client.SetReadYourWrites(true)
+	if !client.ReadYourWrites() {
+		client.SetReadYourWrites(true)
+	}
+
 	client.SetMaxRetries(maxRetry)
 	client.SetCheckRetry(StatusCheckRetry(http.StatusNotFound))
 
