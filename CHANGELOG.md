@@ -4,6 +4,9 @@ IMPROVEMENTS:
 * `data/policy_document`: Add support for `patch` capability for vault-1.9+. ([#1238](https://github.com/hashicorp/terraform-provider-vault/pull/1238))
 * `resource/database_secret_backend_connection`: Add support for InfluxDB connections ([#1121](https://github.com/hashicorp/terraform-provider-vault/pull/1121))
 * `resource/generic_secret`: Add support for deleting all version data for a KV-V2 secret ([#1254](https://github.com/hashicorp/terraform-provider-vault/pull/1254))
+* `resource/jwt_auth_backend`: Add support for `oidc_response_mode`,`oidc_response_types` and `namespace_in_state` fields ([#1244](https://github.com/hashicorp/terraform-provider-vault/pull/1244))
+* `resource/vault_identity_entity_alias`: Add `custom_metadata` support for entity aliases ([#1235]https://github.com/hashicorp/terraform-provider-vault/pull/1235)
+* `provider`: Add `create_intermediate_child_token` optional configuration setting to control the use of ephemeral child tokens ([#775]https://github.com/hashicorp/terraform-provider-vault/pull/775)
 
 ## 3.0.1 (November 23, 2021)
 
@@ -11,6 +14,9 @@ BUGS:
 * `resource/aws_secret_backend_role`: Prevent invalid `policy_arns` from being created ([#1229](https://github.com/hashicorp/terraform-provider-vault/pull/1229))
 * `resource/approle_auth_backend_secret_id`: Handle `nil` `cidr_list` introduced in [vault-1.9.0](https://github.com/hashicorp/vault/issues/13226) ([#1230](https://github.com/hashicorp/terraform-provider-vault/pull/1230))
 * `resource/kubernetes_auth_backend_config`: Ensure `disable_iss_validation` is properly set in vault-1.9+ ([#1231](https://github.com/hashicorp/terraform-provider-vault/pull/1231))
+* `resource/identity_group_policies`: Fix potential `nil` panic in type conversion for API policies ([#1245](https://github.com/hashicorp/terraform-provider-vault/pull/1245))
+* `resource/approle_auth_backend_role_secret_id`: Fix crash when Vault returns 404 ([#1242](https://github.com/hashicorp/terraform-provider-vault/pull/1242))
+* `resource/aws_secret_backend_role`: Fix for calculated values used in  policy_document not being applied without multiple terraform apply runs
 
 ## 3.0.0 (November 17, 2021)
 
