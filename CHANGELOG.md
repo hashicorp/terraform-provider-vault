@@ -8,8 +8,8 @@ IMPROVEMENTS:
 
 BUGS:
 * `resource/identity_group_policies`: Fix potential `nil` panic in type conversion for API policies ([#1245](https://github.com/hashicorp/terraform-provider-vault/pull/1245))
-* `resource/approle_auth_backend_role_secret_id`: Fix crash when Vault returns 404 ([#1242](https://github.com/hashicorp/terraform-provider-vault/pull/1242))
-* `resource/aws_secret_backend_role`: Fix for calculated values used in `policy_document` not being applied without multiple terraform apply runs ([#1014](https://github.com/hashicorp/terraform-provider-vault/pull/1014))
+* `resource/approle_auth_backend_role_secret_id`: Update Vault provider to be compatible with Vault 1.9 changes ([#1242](https://github.com/hashicorp/terraform-provider-vault/pull/1242))
+* `resource/aws_secret_backend_role`: Fix for properly detecting changes in the JSON policy document ([#1014](https://github.com/hashicorp/terraform-provider-vault/pull/1014))
 
 ## 3.0.1 (November 23, 2021)
 
