@@ -1,4 +1,4 @@
-## 3.1.0 (Unreleased)
+## 3.1.0 (December 22, 2021)
 FEATURES:
 * `provider`: Add support retrying entity reads for `Client Controlled Consistency` type operations ([#1263](https://github.com/hashicorp/terraform-provider-vault/pull/1263))
 * `provider`: Add support for optionally creating a batch child token via the `skip_child_token` option ([#775](https://github.com/hashicorp/terraform-provider-vault/pull/775))
