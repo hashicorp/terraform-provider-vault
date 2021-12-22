@@ -153,11 +153,9 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	if wrapped {
 		var err error
 
-		token := client.Token()
 		if client, err = client.Clone(); err != nil {
-			return fmt.Errorf("error cloning client: %s", err)
+			return fmt.Errorf("error cloning client: %w", err)
 		}
-		client.SetToken(token)
 		client.SetWrappingLookupFunc(func(_, _ string) string {
 			return wrappingTTL.(string)
 		})

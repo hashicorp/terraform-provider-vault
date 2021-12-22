@@ -268,13 +268,10 @@ func readEntity(client *api.Client, path string, retry bool) (*api.Secret, error
 
 	var err error
 	if retry {
-		token := client.Token()
-
 		client, err = client.Clone()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error cloning client: %w", err)
 		}
-		client.SetToken(token)
 		util.SetupCCCRetryClient(client, maxHTTPRetriesCCC)
 	}
 

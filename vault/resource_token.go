@@ -160,7 +160,7 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		policies = append(policies, iPolicy.(string))
 	}
 
-	var createRequest = &api.TokenCreateRequest{}
+	createRequest := &api.TokenCreateRequest{}
 
 	if len(policies) > 0 {
 		createRequest.Policies = policies
@@ -201,13 +201,11 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("wrapping_ttl"); ok {
 		wrappingTTL := v.(string)
-		token := client.Token()
 
 		client, err = client.Clone()
 		if err != nil {
-			return fmt.Errorf("error cloning client: %s", err)
+			return fmt.Errorf("error cloning client: %w", err)
 		}
-		client.SetToken(token)
 
 		client.SetWrappingLookupFunc(func(operation, path string) string {
 			return wrappingTTL
