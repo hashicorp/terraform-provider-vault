@@ -1,6 +1,6 @@
 ## 3.1.1 (December 22, 2021)
 BUGS:
-* Prevent new `entity` read failures when the `VAULT_TOKEN` environment variable is not set.
+* Prevent new `entity` read failures when the `VAULT_TOKEN` environment variable is not set ([#1270](https://github.com/hashicorp/terraform-provider-vault/pull/1270))
 
 ## 3.1.0 (December 22, 2021)
 FEATURES:
