@@ -1,3 +1,7 @@
+## 3.1.1 (Unreleased)
+BUGS:
+* Prevent new `entity` read failures when the `VAULT_TOKEN` environment variable is not set.
+
 ## 3.1.0 (December 22, 2021)
 FEATURES:
 * `provider`: Add support retrying entity reads for `Client Controlled Consistency` type operations ([#1263](https://github.com/hashicorp/terraform-provider-vault/pull/1263))
