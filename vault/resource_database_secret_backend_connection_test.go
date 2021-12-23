@@ -1131,6 +1131,10 @@ func deleteMySQLUser(t *testing.T, db *sql.DB, username string) {
 }
 
 func MaybeSkipDBTests(t *testing.T, engine string) {
+	if os.Getenv(resource.TestEnvVar) == "" {
+		t.Skipf("%q must be set", resource.TestEnvVar)
+	}
+
 	envVars := []string{"SKIP_DB_TESTS"}
 	for _, e := range dbBackendTypes {
 		if e == engine {
