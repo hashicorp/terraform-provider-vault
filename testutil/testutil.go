@@ -65,23 +65,13 @@ func handleTestEnv(f func(k, v string), envVars ...string) []string {
 }
 
 func GetTestAWSCreds(t *testing.T) (string, string) {
-	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-	if accessKey == "" {
-		t.Skip("AWS_ACCESS_KEY_ID not set")
-	}
-	if secretKey == "" {
-		t.Skip("AWS_SECRET_ACCESS_KEY not set")
-	}
-	return accessKey, secretKey
+	v := SkipTestEnvUnset(t, "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+	return v[0], v[1]
 }
 
 func GetTestAWSRegion(t *testing.T) string {
-	region := os.Getenv("AWS_DEFAULT_REGION")
-	if region == "" {
-		t.Skip("AWS_DEFAULT_REGION not set")
-	}
-	return region
+	v := SkipTestEnvSet(t, "AWS_DEFAULT_REGION")
+	return v[0]
 }
 
 type AzureTestConf struct {
@@ -89,43 +79,26 @@ type AzureTestConf struct {
 }
 
 func GetTestAzureConf(t *testing.T) *AzureTestConf {
-	conf := &AzureTestConf{
-		SubscriptionID: os.Getenv("AZURE_SUBSCRIPTION_ID"),
-		TenantID:       os.Getenv("AZURE_TENANT_ID"),
-		ClientID:       os.Getenv("AZURE_CLIENT_ID"),
-		ClientSecret:   os.Getenv("AZURE_CLIENT_SECRET"),
-		Scope:          os.Getenv("AZURE_ROLE_SCOPE"),
+	v := SkipTestEnvSet(t,
+		"AZURE_SUBSCRIPTION_ID",
+		"AZURE_TENANT_ID",
+		"AZURE_CLIENT_ID",
+		"AZURE_CLIENT_SECRET",
+		"AZURE_ROLE_SCOPE")
+
+	return &AzureTestConf{
+		SubscriptionID: v[0],
+		TenantID:       v[1],
+		ClientID:       v[2],
+		ClientSecret:   v[3],
+		Scope:          v[4],
 	}
-	if conf.SubscriptionID == "" {
-		t.Skip("AZURE_SUBSCRIPTION_ID not set")
-	}
-	if conf.TenantID == "" {
-		t.Skip("AZURE_TENANT_ID not set")
-	}
-	if conf.ClientID == "" {
-		t.Skip("AZURE_CLIENT_ID not set")
-	}
-	if conf.ClientSecret == "" {
-		t.Skip("AZURE_CLIENT_SECRET not set")
-	}
-	if conf.Scope == "" {
-		t.Skip("AZURE_ROLE_SCOPE not set")
-	}
-	return conf
 }
 
 func GetTestGCPCreds(t *testing.T) (string, string) {
-	maybeCreds := os.Getenv("GOOGLE_CREDENTIALS")
-	project := os.Getenv("GOOGLE_PROJECT")
+	v := SkipTestEnvSet(t, "GOOGLE_CREDENTIALS", "GOOGLE_PROJECT")
 
-	if maybeCreds == "" {
-		t.Skip("GOOGLE_CREDENTIALS not set")
-	}
-
-	if project == "" {
-		t.Skip("GOOGLE_PROJECT not set")
-	}
-
+	maybeCreds, project := v[0], v[1]
 	maybeFilename := maybeCreds
 	if maybeCreds[0] == '~' {
 		var err error
@@ -147,19 +120,8 @@ func GetTestGCPCreds(t *testing.T) (string, string) {
 }
 
 func GetTestRMQCreds(t *testing.T) (string, string, string) {
-	connectionUri := os.Getenv("RMQ_CONNECTION_URI")
-	username := os.Getenv("RMQ_USERNAME")
-	password := os.Getenv("RMQ_PASSWORD")
-	if connectionUri == "" {
-		t.Skip("RMQ_CONNECTION_URI not set")
-	}
-	if username == "" {
-		t.Skip("RMQ_USERNAME not set")
-	}
-	if password == "" {
-		t.Skip("RMQ_PASSWORD not set")
-	}
-	return connectionUri, username, password
+	v := SkipTestEnvUnset(t, "RMQ_CONNECTION_URI", "RMQ_USERNAME", "RMQ_PASSWORD")
+	return v[0], v[1], v[2]
 }
 
 func GetTestADCreds(t *testing.T) (string, string, string) {
