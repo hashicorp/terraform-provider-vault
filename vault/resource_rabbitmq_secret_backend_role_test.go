@@ -21,7 +21,7 @@ const (
 func TestAccRabbitmqSecretBackendRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	connectionUri, username, password := getTestRMQCreds(t)
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -58,7 +58,7 @@ func TestAccRabbitmqSecretBackendRole_basic(t *testing.T) {
 func TestAccRabbitmqSecretBackendRole_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	connectionUri, username, password := getTestRMQCreds(t)
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -88,7 +88,7 @@ func TestAccRabbitmqSecretBackendRole_import(t *testing.T) {
 func TestAccRabbitmqSecretBackendRole_nested(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	connectionUri, username, password := getTestRMQCreds(t)
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },

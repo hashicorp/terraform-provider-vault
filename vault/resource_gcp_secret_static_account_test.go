@@ -24,7 +24,7 @@ import (
 func TestGCPSecretStaticAccount(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	staticAccount := acctest.RandomWithPrefix("tf-test")
-	credentials, project := getTestGCPCreds(t)
+	credentials, project := testutil.GetTestGCPCreds(t)
 
 	// We will use the provided key as the static account
 	conf, err := google.JWTConfigFromJSON([]byte(credentials), "https://www.googleapis.com/auth/cloud-platform")

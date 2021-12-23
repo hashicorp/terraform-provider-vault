@@ -8,12 +8,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccDataSourceNomadAccessCredentialsClientBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
-	address, token := util.GetTestNomadCreds(t)
+	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
@@ -32,7 +31,7 @@ func TestAccDataSourceNomadAccessCredentialsClientBasic(t *testing.T) {
 
 func TestAccDataSourceNomadAccessCredentialsManagementBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
-	address, token := util.GetTestNomadCreds(t)
+	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,

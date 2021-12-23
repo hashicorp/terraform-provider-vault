@@ -23,7 +23,7 @@ import (
 func TestGCPSecretRoleset(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	roleset := acctest.RandomWithPrefix("tf-test")
-	credentials, project := getTestGCPCreds(t)
+	credentials, project := testutil.GetTestGCPCreds(t)
 
 	serviceAccountEmail := ""
 

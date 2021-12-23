@@ -15,7 +15,7 @@ import (
 
 func TestAccAWSSecretBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-aws")
-	accessKey, secretKey := getTestAWSCreds(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -69,7 +69,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 
 func TestAccAWSSecretBackend_import(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-aws")
-	accessKey, secretKey := getTestAWSCreds(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,

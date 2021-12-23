@@ -20,8 +20,8 @@ import (
 
 func TestAccDataSourceAWSAccessCredentials_basic(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
-	accessKey, secretKey := getTestAWSCreds(t)
-	region := getTestAWSRegion(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	region := testutil.GetTestAWSRegion(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
@@ -44,8 +44,8 @@ func TestAccDataSourceAWSAccessCredentials_basic(t *testing.T) {
 
 func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("aws")
-	accessKey, secretKey := getTestAWSCreds(t)
-	region := getTestAWSRegion(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	region := testutil.GetTestAWSRegion(t)
 
 	type testCase struct {
 		config string
@@ -128,8 +128,8 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 
 func TestAccDataSourceAWSAccessCredentials_sts_ttl(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
-	accessKey, secretKey := getTestAWSCreds(t)
-	region := getTestAWSRegion(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	region := testutil.GetTestAWSRegion(t)
 	ttl := "18m"
 
 	resource.Test(t, resource.TestCase{

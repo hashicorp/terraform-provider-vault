@@ -10,12 +10,11 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccADSecretBackendRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-ad")
-	bindDN, bindPass, url := util.GetTestADCreds(t)
+	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -46,7 +45,7 @@ func TestAccADSecretBackendRole_basic(t *testing.T) {
 
 func TestAccADSecretBackendRole_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-ad")
-	bindDN, bindPass, url := util.GetTestADCreds(t)
+	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 	role := "bob"
 	serviceAccountName := "Bob"
 	ttl := 60

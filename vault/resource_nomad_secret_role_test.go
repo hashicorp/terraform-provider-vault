@@ -10,12 +10,11 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccNomadSecretBackendRoleClientBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
-	address, token := util.GetTestNomadCreds(t)
+	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -38,7 +37,7 @@ func TestAccNomadSecretBackendRoleClientBasic(t *testing.T) {
 
 func TestAccNomadSecretBackendRoleManagementBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
-	address, token := util.GetTestNomadCreds(t)
+	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -60,7 +59,7 @@ func TestAccNomadSecretBackendRoleManagementBasic(t *testing.T) {
 
 func TestAccNomadSecretBackendRoleImport(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
-	address, token := util.GetTestNomadCreds(t)
+	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,

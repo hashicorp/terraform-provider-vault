@@ -19,7 +19,7 @@ func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
 		t.SkipNow()
 	}
 	mountPath := acctest.RandomWithPrefix("tf-test-azure")
-	conf := getTestAzureConf(t)
+	conf := testutil.GetTestAzureConf(t)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
@@ -40,7 +40,7 @@ func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
 	})
 }
 
-func testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath string, conf *azureTestConf, numSuccesses, maxSecs int) string {
+func testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath string, conf *testutil.AzureTestConf, numSuccesses, maxSecs int) string {
 	template := `
 resource "vault_azure_secret_backend" "test" {
 	path = "{{mountPath}}"

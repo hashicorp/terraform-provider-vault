@@ -21,7 +21,7 @@ import (
 func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
-	accessKey, secretKey := getTestAWSCreds(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	sess, err := session.NewSession(nil)
 	if err != nil {
@@ -67,7 +67,7 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
-	accessKey, secretKey := getTestAWSCreds(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	sess, err := session.NewSession(nil)
 	if err != nil {
@@ -119,7 +119,7 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
-	accessKey, secretKey := getTestAWSCreds(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	sess, err := session.NewSession(nil)
 	if err != nil {

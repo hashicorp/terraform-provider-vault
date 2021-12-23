@@ -15,7 +15,7 @@ import (
 
 func TestAccRabbitmqSecretBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	connectionUri, username, password := getTestRMQCreds(t)
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -51,7 +51,7 @@ func TestAccRabbitmqSecretBackend_basic(t *testing.T) {
 
 func TestAccRabbitmqSecretBackend_import(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	connectionUri, username, password := getTestRMQCreds(t)
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,

@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
-	"testing"
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
@@ -17,8 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
-
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func JsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
@@ -100,16 +97,6 @@ func IsExpiredTokenErr(err error) bool {
 		return true
 	}
 	return false
-}
-
-func GetTestADCreds(t *testing.T) (string, string, string) {
-	v := testutil.SkipTestEnvUnset(t, "AD_BINDDN", "AD_BINDPASS", "AD_URL")
-	return v[0], v[1], v[2]
-}
-
-func GetTestNomadCreds(t *testing.T) (string, string) {
-	v := testutil.SkipTestEnvUnset(t, "NOMAD_ADDR", "NOMAD_TOKEN")
-	return v[0], v[1]
 }
 
 func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {

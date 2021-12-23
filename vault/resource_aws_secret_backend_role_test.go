@@ -25,7 +25,7 @@ const (
 func TestAccAWSSecretBackendRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-aws")
 	name := acctest.RandomWithPrefix("tf-test-aws")
-	accessKey, secretKey := getTestAWSCreds(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -115,7 +115,7 @@ func TestAccAWSSecretBackendRole_basic(t *testing.T) {
 func TestAccAWSSecretBackendRole_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-aws")
 	name := acctest.RandomWithPrefix("tf-test-aws")
-	accessKey, secretKey := getTestAWSCreds(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -169,7 +169,7 @@ func TestAccAWSSecretBackendRole_import(t *testing.T) {
 func TestAccAWSSecretBackendRole_nested(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-aws/nested")
 	name := acctest.RandomWithPrefix("tf-test-aws")
-	accessKey, secretKey := getTestAWSCreds(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
