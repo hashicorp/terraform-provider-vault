@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestTransitSecretBackendKey_basic(t *testing.T) {
@@ -16,7 +18,7 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("key")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -72,7 +74,7 @@ func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
 	name := acctest.RandomWithPrefix("key")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -123,7 +125,7 @@ func TestTransitSecretBackendKey_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("transit")
 	name := acctest.RandomWithPrefix("key")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{

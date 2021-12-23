@@ -11,13 +11,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestLDAPAuthBackend_import(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-ldap-path")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
@@ -39,7 +41,7 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-ldap-path")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
@@ -71,7 +73,7 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-ldap-tls-path")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
@@ -265,7 +267,6 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 }
 
 func testLDAPAuthBackendConfig_basic(path, use_token_groups string, local string) string {
-
 	return fmt.Sprintf(`
 resource "vault_ldap_auth_backend" "test" {
     path                   = "%s"
@@ -284,11 +285,9 @@ resource "vault_ldap_auth_backend" "test" {
     use_token_groups = %s
 }
 `, path, local, use_token_groups)
-
 }
 
 func testLDAPAuthBackendConfig_tls(path, use_token_groups string, local string) string {
-
 	return fmt.Sprintf(`
 resource "vault_ldap_auth_backend" "test" {
     path                   = "%s"
@@ -383,5 +382,4 @@ EOT
     use_token_groups = %s
 }
 `, path, local, use_token_groups)
-
 }

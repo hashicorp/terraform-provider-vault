@@ -9,10 +9,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-const testAccRabbitmqSecretBackendRoleTags_basic = `management`
-const testAccRabbitmqSecretBackendRoleTags_updated = `management,policymaker`
+const (
+	testAccRabbitmqSecretBackendRoleTags_basic   = `management`
+	testAccRabbitmqSecretBackendRoleTags_updated = `management,policymaker`
+)
 
 func TestAccRabbitmqSecretBackendRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
@@ -20,7 +24,7 @@ func TestAccRabbitmqSecretBackendRole_basic(t *testing.T) {
 	connectionUri, username, password := getTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccRabbitmqSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -57,7 +61,7 @@ func TestAccRabbitmqSecretBackendRole_import(t *testing.T) {
 	connectionUri, username, password := getTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccRabbitmqSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -87,7 +91,7 @@ func TestAccRabbitmqSecretBackendRole_nested(t *testing.T) {
 	connectionUri, username, password := getTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccRabbitmqSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{

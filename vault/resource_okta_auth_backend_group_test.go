@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 // This is light on testing as most of the code is covered by `resource_okta_auth_backend_test.go`
@@ -18,7 +20,7 @@ func TestAccOktaAuthBackendGroup_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccOktaAuthBackendGroup_Destroyed(path, "foo"),
 		Steps: []resource.TestStep{
 			{
@@ -44,7 +46,7 @@ func TestAccOktaAuthBackendGroup_specialChar(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccOktaAuthBackendGroup_Destroyed(path, "foo/bar"),
 		Steps: []resource.TestStep{
 			{

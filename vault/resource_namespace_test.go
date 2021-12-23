@@ -10,10 +10,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestNamespace_basic(t *testing.T) {
-
 	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
 	if isEnterprise == "" {
 		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
@@ -23,7 +24,7 @@ func TestNamespace_basic(t *testing.T) {
 	childPath := acctest.RandomWithPrefix("child-namespace")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testNamespaceDestroy(namespacePath),
 		Steps: []resource.TestStep{
@@ -82,7 +83,6 @@ resource "vault_namespace" "test" {
   path                   = %q
 }
 `, path)
-
 }
 
 func testNestedNamespaceConfig(parentPath, childPath string) string {

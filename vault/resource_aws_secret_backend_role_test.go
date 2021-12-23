@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -27,7 +28,7 @@ func TestAccAWSSecretBackendRole_basic(t *testing.T) {
 	accessKey, secretKey := getTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccAWSSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -117,7 +118,7 @@ func TestAccAWSSecretBackendRole_import(t *testing.T) {
 	accessKey, secretKey := getTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccAWSSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -171,7 +172,7 @@ func TestAccAWSSecretBackendRole_nested(t *testing.T) {
 	accessKey, secretKey := getTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccAWSSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{

@@ -9,12 +9,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccJWTAuthBackend(t *testing.T) {
 	path := acctest.RandomWithPrefix("jwt")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testJWTAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
@@ -67,7 +69,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 	path := acctest.RandomWithPrefix("oidc")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testJWTAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
@@ -87,7 +89,7 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 	path := acctest.RandomWithPrefix("oidc")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testJWTAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
@@ -112,7 +114,7 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 func TestAccJWTAuthBackend_invalid(t *testing.T) {
 	path := acctest.RandomWithPrefix("jwt")
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
@@ -227,7 +229,6 @@ resource "vault_jwt_auth_backend" "oidc" {
 
 func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-
 		client := testProvider.Meta().(*api.Client)
 
 		authMounts, err := client.Sys().ListAuth()
@@ -246,7 +247,7 @@ func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
 func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 	path := acctest.RandomWithPrefix("jwt")
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
@@ -378,7 +379,7 @@ func TestAccJWTAuthBackendProviderConfigConversionInt(t *testing.T) {
 func TestAccJWTAuthBackendProviderConfig_negative(t *testing.T) {
 	t.Skip(true)
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{

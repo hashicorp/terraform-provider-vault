@@ -7,6 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccGCPAuthBackendRoleDataSource_basic(t *testing.T) {
@@ -16,7 +18,7 @@ func TestAccGCPAuthBackendRoleDataSource_basic(t *testing.T) {
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testGCPAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -60,7 +62,7 @@ func TestAccGCPAuthBackendRoleDataSource_gce(t *testing.T) {
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testGCPAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -96,7 +98,7 @@ func TestAccGCPAuthBackendRoleDataSource_none(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-gcp-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{

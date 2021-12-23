@@ -11,12 +11,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccTokenAuthBackendRoleImport(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckTokenAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -37,7 +39,7 @@ func TestAccTokenAuthBackendRole(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckTokenAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -54,7 +56,7 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 	roleUpdated := acctest.RandomWithPrefix("test-role-updated")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckTokenAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -147,7 +149,6 @@ func testAccTokenAuthBackendRoleCheck_deleted(role string) resource.TestCheckFun
 		client := testProvider.Meta().(*api.Client)
 
 		resp, err := client.Logical().List(endpoint)
-
 		if err != nil {
 			return fmt.Errorf("%q returned unexpectedly", endpoint)
 		}

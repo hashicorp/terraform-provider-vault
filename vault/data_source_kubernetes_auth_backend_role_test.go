@@ -2,12 +2,13 @@ package vault
 
 import (
 	"fmt"
-	"testing"
-
 	"strconv"
+	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccKubernetesAuthBackendRoleDataSource_basic(t *testing.T) {
@@ -16,7 +17,7 @@ func TestAccKubernetesAuthBackendRoleDataSource_basic(t *testing.T) {
 	ttl := 3600
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
@@ -92,7 +93,7 @@ func TestAccKubernetesAuthBackendRoleDataSource_full(t *testing.T) {
 	audience := "vault"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{

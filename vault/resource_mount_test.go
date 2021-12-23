@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 type mountConfig struct {
@@ -21,7 +23,7 @@ func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
 	path := acctest.RandomWithPrefix("example")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(`
@@ -53,7 +55,7 @@ func TestResourceMount(t *testing.T) {
 	}
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_initialConfig(cfg),
@@ -73,7 +75,7 @@ func TestResourceMount_Local(t *testing.T) {
 	path := "example-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_InitialConfigLocalMount(path),
@@ -93,7 +95,7 @@ func TestResourceMount_SealWrap(t *testing.T) {
 	path := "example-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_InitialConfigSealWrap(path),
@@ -120,7 +122,7 @@ func TestResourceMount_KVV2(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: kvv2Cfg,
@@ -144,7 +146,7 @@ func TestResourceMount_ExternalEntropyAccess(t *testing.T) {
 	path := acctest.RandomWithPrefix("example")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_InitialConfigExternalEntropyAccess(path),

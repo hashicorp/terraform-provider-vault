@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 const testCertificate = `
@@ -71,10 +73,11 @@ func TestCertAuthBackend(t *testing.T) {
 
 	allowedNames := []string{
 		acctest.RandomWithPrefix("tf-ident-1"),
-		acctest.RandomWithPrefix("tf-ident-2")}
+		acctest.RandomWithPrefix("tf-ident-2"),
+	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testCertAuthBackendDestroy,
 		Steps: []resource.TestStep{
@@ -289,7 +292,6 @@ __CERTIFICATE__
 }
 
 `, backend, name, certificate, strings.Join(quotedNames, ", "))
-
 }
 
 func testCertAuthBackendConfig_unset(backend, name, certificate string, allowedNames []string) string {
@@ -315,5 +317,4 @@ __CERTIFICATE__
 }
 
 `, backend, name, certificate, strings.Join(quotedNames, ", "))
-
 }

@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
@@ -20,7 +22,7 @@ func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
 	conf := getTestAzureConf(t)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, conf, 2, 20),

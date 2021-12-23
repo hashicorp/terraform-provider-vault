@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccAWSSecretBackend_basic(t *testing.T) {
@@ -16,7 +18,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 	accessKey, secretKey := getTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccAWSSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -69,7 +71,7 @@ func TestAccAWSSecretBackend_import(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-aws")
 	accessKey, secretKey := getTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccAWSSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{
