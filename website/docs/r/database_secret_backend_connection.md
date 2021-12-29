@@ -57,6 +57,8 @@ The following arguments are supported:
 
 * `cassandra` - (Optional) A nested block containing configuration options for Cassandra connections.
 
+* `couchbase` - (Optional) A nested block containing configuration options for Couchbase connections.
+
 * `mongodb` - (Optional) A nested block containing configuration options for MongoDB connections.
 
 * `mongodbatlas` - (Optional) A nested block containing configuration options for MongoDB Atlas connections.
@@ -111,6 +113,25 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `connect_timeout` - (Optional) The number of seconds to use as a connection
   timeout.
 
+### Couchbase Configuration Options
+
+* `hosts` - (Required) A list of Couchbase hosts to connect to. Must use couchbases:// scheme if `tls` is `true`.
+
+* `username` - (Required) Specifies the username for Vault to use.
+
+* `password` - (Required) Specifies the password corresponding to the given username.
+
+* `tls` - (Optional) Whether to use TLS when connecting to Couchbase.
+
+* `insecure_tls` - (Optional) Whether to skip verification of the server
+  certificate when using TLS.
+
+* `base64_pem` - (Optional) Required if `tls` is `true`. Specifies the certificate authority of the Couchbase server, as a PEM certificate that has been base64 encoded.
+
+* `bucket_name` - (Optional) Required for Couchbase versions prior to 6.5.0. This is only used to verify vault's connection to the server.
+
+* `username_template` - (Optional) Template describing how dynamic usernames are generated.
+
 ### InfluxDB Configuration Options
 
 * `host` - (Required) The host to connect to.
@@ -137,7 +158,6 @@ Exactly one of the nested blocks of configuration options must be supplied.
 * `connect_timeout` - (Optional) The number of seconds to use as a connection
   timeout.
 
-
 ### MongoDB Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -149,7 +169,6 @@ Exactly one of the nested blocks of configuration options must be supplied.
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
-
 ### MongoDB Atlas Configuration Options
 
 * `public_key` - (Required) The Public Programmatic API Key used to authenticate with the MongoDB Atlas API.
@@ -157,7 +176,6 @@ See the [Vault
 * `private_key` - (Required) The Private Programmatic API Key used to connect with MongoDB Atlas API.
 
 * `project_id` - (Required) The Project ID the Database User should be created within.
-
 
 ### SAP HanaDB Configuration Options
 
@@ -194,7 +212,7 @@ See the [Vault
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
- 
+
 * `contained_db` - (Optional bool: false) For Vault v1.9+. Set to true when the target is a
   Contained Database, e.g. AzureSQL.
   See the [Vault
