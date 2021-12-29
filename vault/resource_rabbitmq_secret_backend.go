@@ -156,6 +156,10 @@ func rabbitMQSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
 
+	// access key, secret key, and region, sadly, we can't read out
+	// the API doesn't support it
+	// So... if they drift, they drift.
+
 	return nil
 }
 
