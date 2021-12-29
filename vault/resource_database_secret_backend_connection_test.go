@@ -868,7 +868,6 @@ resource "vault_database_secret_backend_connection" "test" {
     hosts    = ["%s"]
     username = "%s"
     password = "%s"
-	bucket_name = "beer-sample"
   }
 }
 `, path, name, host, username, password)
