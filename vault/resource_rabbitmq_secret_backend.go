@@ -35,7 +35,6 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
 			"default_lease_ttl_seconds": {
@@ -54,20 +53,17 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 			"connection_uri": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
 				Description: "Specifies the RabbitMQ connection URI.",
 			},
 			"username": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
 				Sensitive:   true,
 				Description: "Specifies the RabbitMQ management administrator username",
 			},
 			"password": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
 				Sensitive:   true,
 				Description: "Specifies the RabbitMQ management administrator password",
 			},
@@ -77,6 +73,16 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 				Default:     true,
 				ForceNew:    true,
 				Description: "Specifies whether to verify connection URI, username, and password.",
+			},
+			"password_policy": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies a password policy to use when creating dynamic credentials. Defaults to generating an alphanumeric password if not set.",
+			},
+			"username_template": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Template describing how dynamic usernames are generated.",
 			},
 		},
 	}
@@ -116,6 +122,8 @@ func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error
 		"username":          username,
 		"password":          password,
 		"verify_connection": verifyConnection,
+		"username_template": d.Get("username_template").(string),
+		"password_policy":   d.Get("password_policy").(string),
 	}
 	_, err = client.Logical().Write(path+"/config/connection", data)
 	if err != nil {
@@ -148,10 +156,6 @@ func rabbitMQSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
 
-	// access key, secret key, and region, sadly, we can't read out
-	// the API doesn't support it
-	// So... if they drift, they drift.
-
 	return nil
 }
 
@@ -160,7 +164,7 @@ func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 
 	path := d.Id()
 	d.Partial(true)
-	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
+	if d.HasChanges("default_lease_ttl_seconds", "max_lease_ttl_seconds") {
 		config := api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
@@ -172,13 +176,15 @@ func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 		}
 		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
 	}
-	if d.HasChange("connection_uri") || d.HasChange("username") || d.HasChange("password") || d.HasChange("verify_connection") {
+	if d.HasChanges("connection_uri", "username", "password", "verify_connection", "username_template", "password_policy") {
 		log.Printf("[DEBUG] Updating connecion credentials at %q", path+"/config/connection")
 		data := map[string]interface{}{
 			"connection_uri":    d.Get("connection_uri").(string),
 			"username":          d.Get("username").(string),
 			"password":          d.Get("password").(string),
 			"verify_connection": d.Get("verify_connection").(bool),
+			"username_template": d.Get("username_template").(string),
+			"password_policy":   d.Get("password_policy").(string),
 		}
 		_, err := client.Logical().Write(path+"/config/connection", data)
 		if err != nil {
