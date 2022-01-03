@@ -1,3 +1,7 @@
+## 3.2.0 (Unreleased)
+IMPROVEMENTS:
+* `resource/database_secret_backend_connection`: Add support for configuring Redshift databases ([#1279](https://github.com/hashicorp/terraform-provider-vault/pull/1279))
+
 ## 3.1.1 (December 22, 2021)
 BUGS:
 * Prevent new `entity` read failures when the `VAULT_TOKEN` environment variable is not set ([#1270](https://github.com/hashicorp/terraform-provider-vault/pull/1270))
