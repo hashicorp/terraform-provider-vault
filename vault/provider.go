@@ -8,10 +8,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
-	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/config"
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
@@ -27,7 +29,16 @@ const (
 	// versions of Vault.
 	// We aim to deprecate items in this category.
 	UnknownPath = "unknown"
+
+	// DefaultMaxHTTPRetries is used for configuring the api.Client's MaxRetries.
+	DefaultMaxHTTPRetries = 2
+
+	// DefaultMaxHTTPRetriesCCC is used for configuring the api.Client's MaxRetries
+	// for Client Controlled Consistency related operations.
+	DefaultMaxHTTPRetriesCCC = 10
 )
+
+var maxHTTPRetriesCCC int
 
 // This is a global MutexKV for use within this provider.
 // Use this when you need to have multiple resources or even multiple instances
@@ -155,15 +166,19 @@ func Provider() *schema.Provider {
 				// significantly longer, so that any leases are revoked shortly
 				// after Terraform has finished running.
 				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_MAX_TTL", 1200),
-
 				Description: "Maximum TTL for secret leases requested by this provider.",
 			},
 			"max_retries": {
-				Type:     schema.TypeInt,
-				Optional: true,
-
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", 2),
+				Type:        schema.TypeInt,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", DefaultMaxHTTPRetries),
 				Description: "Maximum number of retries when a 5xx error code is encountered.",
+			},
+			"max_retries_ccc": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES_CCC", DefaultMaxHTTPRetriesCCC),
+				Description: "Maximum number of retries for Client Controlled Consistency related operations",
 			},
 			"namespace": {
 				Type:        schema.TypeString,
@@ -298,7 +313,7 @@ var (
 			PathInventory: []string{"/auth/approle/role/{role_name}"},
 		},
 		"vault_approle_auth_backend_role_secret_id": {
-			Resource: approleAuthBackendRoleSecretIDResource(),
+			Resource: approleAuthBackendRoleSecretIDResource("vault_approle_auth_backend_role_secret_id"),
 			PathInventory: []string{
 				"/auth/approle/role/{role_name}/secret-id",
 				"/auth/approle/role/{role_name}/custom-secret-id",
@@ -369,7 +384,7 @@ var (
 			PathInventory: []string{"/aws/config/root"},
 		},
 		"vault_aws_secret_backend_role": {
-			Resource:      awsSecretBackendRoleResource(),
+			Resource:      awsSecretBackendRoleResource("vault_aws_secret_backend_role"),
 			PathInventory: []string{"/aws/roles/{name}"},
 		},
 		"vault_azure_secret_backend": {
@@ -429,7 +444,7 @@ var (
 			PathInventory: []string{"/auth/gcp/role/{name}"},
 		},
 		"vault_gcp_secret_backend": {
-			Resource:      gcpSecretBackendResource(),
+			Resource:      gcpSecretBackendResource("vault_gcp_secret_backend"),
 			PathInventory: []string{"/gcp/config"},
 		},
 		"vault_gcp_secret_roleset": {
@@ -445,11 +460,11 @@ var (
 			PathInventory: []string{"/auth/cert/certs/{name}"},
 		},
 		"vault_generic_endpoint": {
-			Resource:      genericEndpointResource(),
+			Resource:      genericEndpointResource("vault_generic_endpoint"),
 			PathInventory: []string{GenericPath},
 		},
 		"vault_generic_secret": {
-			Resource:      genericSecretResource(),
+			Resource:      genericSecretResource("vault_generic_secret"),
 			PathInventory: []string{GenericPath},
 		},
 		"vault_jwt_auth_backend": {
@@ -755,12 +770,19 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	// enable ReadYourWrites to support read-after-write on Vault Enterprise
 	clientConfig.ReadYourWrites = true
 
+	// set default MaxRetries
+	clientConfig.MaxRetries = DefaultMaxHTTPRetries
+
 	client, err := api.NewClient(clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
 	}
 
+	// setting this is critical for proper namespace handling
 	client.SetCloneHeaders(true)
+
+	// setting this is critical for proper client cloning
+	client.SetCloneToken(true)
 
 	// Set headers if provided
 	headers := d.Get("headers").([]interface{})
@@ -779,6 +801,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	client.SetHeaders(parsedHeaders)
 
 	client.SetMaxRetries(d.Get("max_retries").(int))
+
+	maxHTTPRetriesCCC = d.Get("max_retries_ccc").(int)
 
 	// Try an get the token from the config or token helper
 	token, err := providerToken(d)
@@ -804,7 +828,13 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 		method := authLogin["method"].(string)
 		if method == "aws" {
-			if err := signAWSLogin(authLoginParameters); err != nil {
+			logger := hclog.Default()
+			if logging.IsDebugOrHigher() {
+				logger.SetLevel(hclog.Debug)
+			} else {
+				logger.SetLevel(hclog.Error)
+			}
+			if err := signAWSLogin(authLoginParameters, logger); err != nil {
 				return nil, fmt.Errorf("error signing AWS login request: %s", err)
 			}
 		}
@@ -904,7 +934,7 @@ func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {
 	return resourceMap, errs
 }
 
-func signAWSLogin(parameters map[string]interface{}) error {
+func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error {
 	var accessKey, secretKey, securityToken string
 	if val, ok := parameters["aws_access_key_id"].(string); ok {
 		accessKey = val
@@ -918,7 +948,7 @@ func signAWSLogin(parameters map[string]interface{}) error {
 		securityToken = val
 	}
 
-	creds, err := awsauth.RetrieveCreds(accessKey, secretKey, securityToken)
+	creds, err := awsutil.RetrieveCreds(accessKey, secretKey, securityToken, logger)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve AWS credentials: %s", err)
 	}
@@ -932,7 +962,7 @@ func signAWSLogin(parameters map[string]interface{}) error {
 		stsRegion = val
 	}
 
-	loginData, err := awsauth.GenerateLoginData(creds, headerValue, stsRegion)
+	loginData, err := awsutil.GenerateLoginData(creds, headerValue, stsRegion, logger)
 	if err != nil {
 		return fmt.Errorf("failed to generate AWS login data: %s", err)
 	}

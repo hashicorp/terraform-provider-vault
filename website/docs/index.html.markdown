@@ -160,8 +160,14 @@ variables in order to keep credential information out of the configuration.
   for the implications of this setting.
 
 * `max_retries` - (Optional) Used as the maximum number of retries when a 5xx
-  error code is encountered. Defaults to 2 retries and may be set via the
+  error code is encountered. Defaults to `2` retries and may be set via the
   `VAULT_MAX_RETRIES` environment variable.
+
+* `max_retries_ccc` - (Optional) Maximum number of retries for _Client Controlled Consistency_
+  related operations. Defaults to `10` retries and may also be set via the
+  `VAULT_MAX_RETRIES_CCC` environment variable. See
+  [Vault Eventual Consistency](https://www.vaultproject.io/docs/enterprise/consistency#vault-eventual-consistency)
+  for more information.
 
 * `namespace` - (Optional) Set the namespace to use. May be set via the
   `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.

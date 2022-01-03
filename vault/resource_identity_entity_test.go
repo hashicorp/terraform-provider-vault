@@ -3,6 +3,9 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"net"
+	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -258,4 +261,231 @@ resource "vault_identity_entity" "entity" {
   policies = ["dev", "test"]
   external_policies = true
 }`, entityName)
+}
+
+func TestReadEntity(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		path            string
+		maxRetries      int
+		expectedRetries int
+		wantError       error
+		retryHandler    *testRetryHandler
+	}{
+		{
+			name: "retry-none",
+			retryHandler: &testRetryHandler{
+				okAtCount: 1,
+				// retryStatus: http.StatusNotFound,
+				respData: []byte(`{"data": {"foo": "baz"}}`),
+			},
+			maxRetries:      4,
+			expectedRetries: 0,
+		},
+		{
+			name: "retry-ok-404",
+			retryHandler: &testRetryHandler{
+				okAtCount:   3,
+				retryStatus: http.StatusNotFound,
+				respData:    []byte(`{"data": {"foo": "baz"}}`),
+			},
+			maxRetries:      4,
+			expectedRetries: 2,
+		},
+		{
+			name: "retry-ok-412",
+			retryHandler: &testRetryHandler{
+				okAtCount:   3,
+				retryStatus: http.StatusPreconditionFailed,
+				respData:    []byte(`{"data": {"foo": "baz"}}`),
+			},
+			maxRetries:      4,
+			expectedRetries: 2,
+		},
+		{
+			name: "retry-exhausted-default-max-404",
+			path: identityEntityIDPath("retry-exhausted-default-max-404"),
+			retryHandler: &testRetryHandler{
+				okAtCount:   0,
+				retryStatus: http.StatusNotFound,
+			},
+			maxRetries:      DefaultMaxHTTPRetriesCCC,
+			expectedRetries: DefaultMaxHTTPRetriesCCC,
+			wantError: fmt.Errorf(`%w: %q`, errEntityNotFound,
+				identityEntityIDPath("retry-exhausted-default-max-404")),
+		},
+		{
+			name: "retry-exhausted-default-max-412",
+			path: identityEntityIDPath("retry-exhausted-default-max-412"),
+			retryHandler: &testRetryHandler{
+				okAtCount:   0,
+				retryStatus: http.StatusPreconditionFailed,
+			},
+			maxRetries:      DefaultMaxHTTPRetriesCCC,
+			expectedRetries: DefaultMaxHTTPRetriesCCC,
+			wantError: fmt.Errorf(`failed reading %q`,
+				identityEntityIDPath("retry-exhausted-default-max-412")),
+		},
+		{
+			name: "retry-exhausted-custom-max-404",
+			path: identityEntityIDPath("retry-exhausted-custom-max-404"),
+			retryHandler: &testRetryHandler{
+				okAtCount:   0,
+				retryStatus: http.StatusNotFound,
+			},
+			maxRetries:      5,
+			expectedRetries: 5,
+			wantError: fmt.Errorf(`%w: %q`, errEntityNotFound,
+				identityEntityIDPath("retry-exhausted-custom-max-404")),
+		},
+		{
+			name: "retry-exhausted-custom-max-412",
+			path: identityEntityIDPath("retry-exhausted-custom-max-412"),
+			retryHandler: &testRetryHandler{
+				okAtCount:   0,
+				retryStatus: http.StatusPreconditionFailed,
+			},
+			maxRetries:      5,
+			expectedRetries: 5,
+			wantError: fmt.Errorf(`failed reading %q`,
+				identityEntityIDPath("retry-exhausted-custom-max-412")),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				maxHTTPRetriesCCC = DefaultMaxHTTPRetriesCCC
+			}()
+			maxHTTPRetriesCCC = tt.maxRetries
+
+			r := tt.retryHandler
+
+			config, ln := testHTTPServer(t, r.handler())
+			defer ln.Close()
+
+			config.Address = fmt.Sprintf("http://%s", ln.Addr())
+			c, err := api.NewClient(config)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			path := tt.path
+			if path == "" {
+				path = tt.name
+			}
+
+			actualResp, err := readEntity(c, path, true)
+
+			if tt.wantError != nil {
+				if err == nil {
+					t.Fatal("expected an error")
+				}
+
+				if tt.wantError.Error() != err.Error() {
+					t.Errorf("expected err %q, actual %q", tt.wantError, err)
+				}
+
+				if tt.retryHandler.retryStatus == http.StatusNotFound {
+					if !isIdentityNotFoundError(err) {
+						t.Errorf("expected an errEntityNotFound err %q, actual %q", errEntityNotFound, err)
+					}
+				}
+			} else {
+				if err != nil {
+					t.Fatal("unexpected error", err)
+				}
+
+				var data map[string]interface{}
+				if err := json.Unmarshal(tt.retryHandler.respData, &data); err != nil {
+					t.Fatalf("invalid test data %#v, err=%s", tt.retryHandler.respData, err)
+				}
+
+				expectedResp := &api.Secret{
+					Data: data["data"].(map[string]interface{}),
+				}
+
+				if !reflect.DeepEqual(expectedResp, actualResp) {
+					t.Errorf("expected secret %#v, actual %#v", expectedResp, actualResp)
+				}
+			}
+
+			retries := r.requests - 1
+			if tt.expectedRetries != retries {
+				t.Fatalf("expected %d retries, actual %d", tt.expectedRetries, retries)
+			}
+		})
+	}
+}
+
+func TestIsEntityNotFoundError(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "default",
+			err:      errEntityNotFound,
+			expected: true,
+		},
+		{
+			name:     "wrapped",
+			err:      fmt.Errorf("%w: foo", errEntityNotFound),
+			expected: true,
+		},
+		{
+			name:     "not",
+			err:      fmt.Errorf("%s: foo", errEntityNotFound),
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := isIdentityNotFoundError(tt.err)
+			if actual != tt.expected {
+				t.Fatalf("isIdentityNotFoundError(): expected %v, actual %v", tt.expected, actual)
+			}
+		})
+	}
+}
+
+type testRetryHandler struct {
+	requests    int
+	okAtCount   int
+	respData    []byte
+	retryStatus int
+}
+
+func (t *testRetryHandler) handler() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		t.requests++
+		if t.okAtCount > 0 && (t.requests >= t.okAtCount) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(t.respData)
+			return
+		} else {
+			w.WriteHeader(t.retryStatus)
+		}
+	}
+}
+
+// testHTTPServer creates a test HTTP server that handles requests until
+// the listener returned is closed.
+// XXX: copied from github.com/hashicorp/vault/api/client_test.go
+func testHTTPServer(t *testing.T, handler http.Handler) (*api.Config, net.Listener) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	server := &http.Server{Handler: handler}
+	go server.Serve(ln)
+
+	config := api.DefaultConfig()
+	config.Address = fmt.Sprintf("http://%s", ln.Addr())
+
+	return config, ln
 }

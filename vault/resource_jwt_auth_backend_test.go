@@ -98,6 +98,9 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "bound_issuer", "api://default"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_client_id", "client"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_client_secret", "secret"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_response_mode", "query"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_response_types.#", "1"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "oidc_response_types.0", "code"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "type", "oidc"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.oidc", "default_role", "api"),
 				),
@@ -201,6 +204,8 @@ resource "vault_jwt_auth_backend" "oidc" {
   path = "%s"
   type = "oidc"
   default_role = "api"
+  oidc_response_mode  = "query"
+  oidc_response_types = ["code"]
 }
 `, path)
 }

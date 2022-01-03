@@ -194,6 +194,11 @@ See the [Vault
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
+ 
+* `contained_db` - (Optional bool: false) For Vault v1.9+. Set to true when the target is a
+  Contained Database, e.g. AzureSQL.
+  See the [Vault
+  docs](https://www.vaultproject.io/api/secret/databases/mssql#contained_db)
 
 ### MySQL Configuration Options
 
