@@ -21,7 +21,7 @@ type connectionStringConfig struct {
 var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
-	dbBackendTypes                                      = []string{"cassandra", "influxdb", "hana", "mongodb", "mssql", "mysql", "mysql_rds", "mysql_aurora", "mysql_legacy", "postgresql", "oracle", "elasticsearch", "snowflake"}
+	dbBackendTypes                                      = []string{"cassandra", "influxdb", "hana", "mongodb", "mssql", "mysql", "mysql_rds", "mysql_aurora", "mysql_legacy", "postgresql", "oracle", "elasticsearch", "snowflake", "redshift"}
 )
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
@@ -353,6 +353,15 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith("oracle", dbBackendTypes),
 			},
 
+			"redshift": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				Description:   "Connection parameters for the redshift-database-plugin plugin.",
+				Elem:          connectionStringResource(&connectionStringConfig{}),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith("redshift", dbBackendTypes),
+			},
+
 			"snowflake": {
 				Type:          schema.TypeList,
 				Optional:      true,
@@ -476,6 +485,8 @@ func getDatabasePluginName(d *schema.ResourceData) (string, error) {
 		return "elasticsearch-database-plugin", nil
 	case len(d.Get("snowflake").([]interface{})) > 0:
 		return "snowflake-database-plugin", nil
+	case len(d.Get("redshift").([]interface{})) > 0:
+		return "redshift-database-plugin", nil
 	default:
 		return "", fmt.Errorf("at least one database plugin must be configured")
 	}
@@ -564,6 +575,8 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		setElasticsearchDatabaseConnectionData(d, "elasticsearch.0.", data)
 	case "snowflake-database-plugin":
 		setSnowflakeDatabaseConnectionData(d, "snowflake.0.", data)
+	case "redshift-database-plugin":
+		setDatabaseConnectionData(d, "redshift.0.", data)
 	}
 
 	return data, nil
