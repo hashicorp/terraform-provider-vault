@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 
@@ -61,9 +60,7 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
-	if os.Getenv("TF_AWS_META") == "" {
-		t.Skip("Not running on EC2 instance, can't test EC2 auth methods")
-	}
+	testutil.SkipTestEnvUnset(t, "TF_AWS_META")
 
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
@@ -113,9 +110,7 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
-	if os.Getenv("TF_AWS_META") == "" {
-		t.Skip("Not running on EC2 instance, can't test EC2 auth methods")
-	}
+	testutil.SkipTestEnvUnset(t, "TF_AWS_META")
 
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")

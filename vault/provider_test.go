@@ -114,10 +114,7 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 }
 
 func TestAccNamespaceProviderConfigure(t *testing.T) {
-	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
-	if isEnterprise == "" {
-		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
-	}
+	testutil.SkipTestAccEnt(t)
 
 	rootProvider := Provider()
 	rootProviderResource := &schema.Resource{
@@ -321,11 +318,7 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 func TestAccProviderToken(t *testing.T) {
 	// This is an acceptance test because it requires filesystem and env var
 	// changes that could interfere with other Vault operations.
-	if os.Getenv(resource.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf(
-			"Acceptance tests skipped unless env '%s' set",
-			resource.TestEnvVar))
-	}
+	testutil.SkipTestAcc(t)
 
 	// Clear the token file if it exists and restore it after the test.
 	tokenFilePath, err := homedir.Expand("~/.vault-token")
@@ -679,11 +672,7 @@ printenv VAULT_ADDR
 func TestAccProviderVaultAddrEnv(t *testing.T) {
 	// This is an acceptance test because it requires filesystem and env var
 	// changes that could interfere with other Vault operations.
-	if os.Getenv(resource.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf(
-			"Acceptance tests skipped unless env '%s' set",
-			resource.TestEnvVar))
-	}
+	testutil.SkipTestAcc(t)
 
 	// Clear the config file env var and restore it after the test.
 	resetConfigPathEnv, err := tempUnsetenv(config.ConfigPathEnv)

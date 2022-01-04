@@ -1116,7 +1116,7 @@ func deleteMySQLUser(t *testing.T, db *sql.DB, username string) {
 
 func MaybeSkipDBTests(t *testing.T, engine string) {
 	// require TF_ACC to be set
-	testutil.SkipTestEnvUnset(t, resource.TestEnvVar)
+	testutil.SkipTestAcc(t)
 
 	envVars := []string{"SKIP_DB_TESTS"}
 	for _, e := range dbBackendTypes {

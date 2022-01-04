@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -13,8 +14,16 @@ func TestAccPreCheck(t *testing.T) {
 }
 
 func TestEntPreCheck(t *testing.T) {
-	SkipTestEnvUnset(t, "TF_ACC_ENTERPRISE")
+	SkipTestAccEnt(t)
 	TestAccPreCheck(t)
+}
+
+func SkipTestAcc(t *testing.T) {
+	SkipTestEnvUnset(t, resource.TestEnvVar)
+}
+
+func SkipTestAccEnt(t *testing.T) {
+	SkipTestEnvUnset(t, "TF_ACC_ENTERPRISE")
 }
 
 // SkipTestEnvSet skips the test if any of the provided environment variables
