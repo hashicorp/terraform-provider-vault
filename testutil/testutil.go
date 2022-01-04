@@ -79,7 +79,7 @@ func GetTestAWSCreds(t *testing.T) (string, string) {
 }
 
 func GetTestAWSRegion(t *testing.T) string {
-	v := SkipTestEnvSet(t, "AWS_DEFAULT_REGION")
+	v := SkipTestEnvUnset(t, "AWS_DEFAULT_REGION")
 	return v[0]
 }
 
@@ -88,7 +88,7 @@ type AzureTestConf struct {
 }
 
 func GetTestAzureConf(t *testing.T) *AzureTestConf {
-	v := SkipTestEnvSet(t,
+	v := SkipTestEnvUnset(t,
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID",
 		"AZURE_CLIENT_ID",
@@ -105,7 +105,7 @@ func GetTestAzureConf(t *testing.T) *AzureTestConf {
 }
 
 func GetTestGCPCreds(t *testing.T) (string, string) {
-	v := SkipTestEnvSet(t, "GOOGLE_CREDENTIALS", "GOOGLE_PROJECT")
+	v := SkipTestEnvUnset(t, "GOOGLE_CREDENTIALS", "GOOGLE_PROJECT")
 
 	maybeCreds, project := v[0], v[1]
 	maybeFilename := maybeCreds
