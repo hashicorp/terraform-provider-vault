@@ -396,7 +396,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the redshift-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("redshift", dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbBackendRedshift, dbBackendTypes),
 			},
 
 			"snowflake": {

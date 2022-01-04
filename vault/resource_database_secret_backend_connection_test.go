@@ -704,7 +704,7 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendSnowflake)
+	MaybeSkipDBTests(t, dbBackendRedshift)
 
 	url := os.Getenv("REDSHIFT_URL")
 	if url == "" {
