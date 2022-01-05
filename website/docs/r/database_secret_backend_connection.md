@@ -295,6 +295,27 @@ See the [Vault
 
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 
+### Redshift Configuration Options
+
+* `connection_url` - (Required) Specifies the Redshift DSN. See
+  the [Vault
+  docs](https://www.vaultproject.io/api-docs/secret/databases/redshift#sample-payload)
+  for an example.
+
+* `max_open_connections` - (Optional) The maximum number of open connections to
+  the database.
+
+* `max_idle_connections` - (Optional) The maximum number of idle connections to
+  the database.
+
+* `max_connection_lifetime` - (Optional) The maximum amount of time a connection may be reused.
+
+* `username` - (Optional) The root credential username used in the connection URL.
+
+* `password` - (Optional) The root credential password used in the connection URL.
+
+* `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

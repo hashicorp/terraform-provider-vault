@@ -19,6 +19,7 @@ import (
 
 type connectionStringConfig struct {
 	excludeUsernameTemplate bool
+	includeUserPass         bool
 }
 
 const (
@@ -36,6 +37,7 @@ const (
 	dbBackendPostgres      = "postgresql"
 	dbBackendOracle        = "oracle"
 	dbBackendSnowflake     = "snowflake"
+	dbBackendRedshift      = "redshift"
 )
 
 var (
@@ -56,6 +58,7 @@ var (
 		dbBackendPostgres,
 		dbBackendOracle,
 		dbBackendSnowflake,
+		dbBackendRedshift,
 	}
 )
 
@@ -388,11 +391,20 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith(dbBackendOracle, dbBackendTypes),
 			},
 
+			"redshift": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				Description:   "Connection parameters for the redshift-database-plugin plugin.",
+				Elem:          connectionStringResource(&connectionStringConfig{includeUserPass: true}),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbBackendRedshift, dbBackendTypes),
+			},
+
 			"snowflake": {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the snowflake-database-plugin plugin.",
-				Elem:          snowflakeConnectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{includeUserPass: true}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbBackendSnowflake, dbBackendTypes),
 			},
@@ -437,6 +449,19 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 			},
 		},
 	}
+	if config.includeUserPass {
+		res.Schema["username"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The root credential username used in the connection URL",
+		}
+		res.Schema["password"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The root credential password used in the connection URL",
+			Sensitive:   true,
+		}
+	}
 
 	if !config.excludeUsernameTemplate {
 		res.Schema["username_template"] = &schema.Schema{
@@ -475,22 +500,6 @@ func mssqlConnectionStringResource() *schema.Resource {
 	return r
 }
 
-func snowflakeConnectionStringResource() *schema.Resource {
-	r := connectionStringResource(&connectionStringConfig{})
-	r.Schema["username"] = &schema.Schema{
-		Type:        schema.TypeString,
-		Optional:    true,
-		Description: "The AccountAdmin level user using to connect to snowflake",
-	}
-	r.Schema["password"] = &schema.Schema{
-		Type:        schema.TypeString,
-		Optional:    true,
-		Description: "The password with the provided user",
-		Sensitive:   true,
-	}
-	return r
-}
-
 func getDatabasePluginName(d *schema.ResourceData) (string, error) {
 	switch {
 	case len(d.Get(dbBackendCassandra).([]interface{})) > 0:
@@ -521,6 +530,8 @@ func getDatabasePluginName(d *schema.ResourceData) (string, error) {
 		return "elasticsearch-database-plugin", nil
 	case len(d.Get(dbBackendSnowflake).([]interface{})) > 0:
 		return "snowflake-database-plugin", nil
+	case len(d.Get(dbBackendRedshift).([]interface{})) > 0:
+		return "redshift-database-plugin", nil
 	default:
 		return "", fmt.Errorf("at least one database plugin must be configured")
 	}
@@ -608,7 +619,9 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case "elasticsearch-database-plugin":
 		setElasticsearchDatabaseConnectionData(d, "elasticsearch.0.", data)
 	case "snowflake-database-plugin":
-		setSnowflakeDatabaseConnectionData(d, "snowflake.0.", data)
+		setDatabaseConnectionDataWithUserPass(d, "snowflake.0.", data)
+	case "redshift-database-plugin":
+		setDatabaseConnectionDataWithUserPass(d, "redshift.0.", data)
 	}
 
 	return data, nil
@@ -907,18 +920,13 @@ func setInfluxDBDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 	}
 }
 
-func setSnowflakeDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionData(d, prefix, data)
 	if v, ok := d.GetOk(prefix + "username"); ok {
 		data["username"] = v.(string)
 	}
-
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
-	}
-
-	if v, ok := d.GetOk(prefix + "username_template"); ok {
-		data["username_template"] = v.(string)
 	}
 }
 
