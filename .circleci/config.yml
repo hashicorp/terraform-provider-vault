@@ -41,6 +41,11 @@ jobs:
           name: "Run Tests"
           no_output_timeout: 30m
           command: |
+            make test TESTARGS='-v'
+      - run:
+          name: "Run Acceptance Tests"
+          no_output_timeout: 30m
+          command: |
             export VAULT_TOKEN="root"
             export VAULT_ADDR="http://127.0.0.1:8200"
             export TF_ACC_TERRAFORM_VERSION="1.0.7"
