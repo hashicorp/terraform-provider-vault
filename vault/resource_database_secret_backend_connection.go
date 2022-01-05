@@ -849,12 +849,6 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	if v, ok := d.GetOkExists(prefix + "max_connection_lifetime"); ok {
 		data["max_connection_lifetime"] = fmt.Sprintf("%ds", v)
 	}
-	if v, ok := d.GetOk(prefix + "username"); ok {
-		data["username"] = v.(string)
-	}
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
-	}
 	if v, ok := d.GetOkExists(prefix + "username_template"); ok {
 		data["username_template"] = v.(string)
 	}
@@ -930,6 +924,12 @@ func setInfluxDBDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 
 func setSnowflakeDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionData(d, prefix, data)
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		data["password"] = v.(string)
+	}
 	if v, ok := d.GetOk(prefix + "username_template"); ok {
 		data["username_template"] = v.(string)
 	}
