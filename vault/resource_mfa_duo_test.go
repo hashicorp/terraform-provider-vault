@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -12,15 +11,10 @@ import (
 )
 
 func TestMFADuoBasic(t *testing.T) {
-	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
-	if isEnterprise == "" {
-		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
-	}
-
 	mfaDuoPath := acctest.RandomWithPrefix("mfa-duo")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestEntPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{

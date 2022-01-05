@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -14,14 +13,9 @@ import (
 )
 
 func TestAccEndpointGoverningPolicy(t *testing.T) {
-	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
-	if isEnterprise == "" {
-		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
-	}
-
 	policyName := acctest.RandomWithPrefix("test-policy")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestEntPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccEndpointGoverningPolicyCheckDestroy,
 		Steps: []resource.TestStep{
