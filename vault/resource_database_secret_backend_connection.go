@@ -635,9 +635,9 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case "elasticsearch-database-plugin":
 		setElasticsearchDatabaseConnectionData(d, "elasticsearch.0.", data)
 	case "snowflake-database-plugin":
-		setSnowflakeDatabaseConnectionData(d, "snowflake.0.", data)
+		setDatabaseConnectionData_userPass(d, "snowflake.0.", data)
 	case "redshift-database-plugin":
-		setRedshiftDatabaseConnectionData(d, "redshift.0.", data)
+		setDatabaseConnectionData_userPass(d, "redshift.0.", data)
 	}
 
 	return data, nil
@@ -936,17 +936,7 @@ func setInfluxDBDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 	}
 }
 
-func setSnowflakeDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
-	setDatabaseConnectionData(d, prefix, data)
-	if v, ok := d.GetOk(prefix + "username"); ok {
-		data["username"] = v.(string)
-	}
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
-	}
-}
-
-func setRedshiftDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+func setDatabaseConnectionData_userPass(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionData(d, prefix, data)
 	if v, ok := d.GetOk(prefix + "username"); ok {
 		data["username"] = v.(string)
