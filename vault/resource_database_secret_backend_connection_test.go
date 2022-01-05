@@ -698,7 +698,7 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
