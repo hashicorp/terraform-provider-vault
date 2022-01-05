@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/generated/resources/transform/role"
 	"github.com/hashicorp/terraform-provider-vault/generated/resources/transform/transformation"
 	"github.com/hashicorp/terraform-provider-vault/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
@@ -27,7 +27,7 @@ var roleNameTestProvider = func() *schema.Provider {
 func TestDecodeBasic(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { util.TestEntPreCheck(t) },
+		PreCheck: func() { testutil.TestEntPreCheck(t) },
 		Providers: map[string]*sdk_schema.Provider{
 			"vault": roleNameTestProvider.SchemaProvider(),
 		},
@@ -72,7 +72,7 @@ data "vault_transform_decode_role_name" "test" {
 func TestDecodeBatch(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { util.TestEntPreCheck(t) },
+		PreCheck: func() { testutil.TestEntPreCheck(t) },
 		Providers: map[string]*sdk_schema.Provider{
 			"vault": roleNameTestProvider.SchemaProvider(),
 		},

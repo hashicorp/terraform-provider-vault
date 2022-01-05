@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
@@ -17,10 +19,10 @@ func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
 		t.SkipNow()
 	}
 	mountPath := acctest.RandomWithPrefix("tf-test-azure")
-	conf := getTestAzureConf(t)
+	conf := testutil.GetTestAzureConf(t)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath, conf, 2, 20),
@@ -38,7 +40,7 @@ func TestAccDataSourceAzureAccessCredentials_basic(t *testing.T) {
 	})
 }
 
-func testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath string, conf *azureTestConf, numSuccesses, maxSecs int) string {
+func testAccDataSourceAzureAccessCredentialsConfigBasic(mountPath string, conf *testutil.AzureTestConf, numSuccesses, maxSecs int) string {
 	template := `
 resource "vault_azure_secret_backend" "test" {
 	path = "{{mountPath}}"

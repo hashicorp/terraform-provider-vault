@@ -7,17 +7,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccNomadSecretBackendRoleClientBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
-	address, token := util.GetTestNomadCreds(t)
+	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { util.TestAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccNomadSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -36,11 +37,11 @@ func TestAccNomadSecretBackendRoleClientBasic(t *testing.T) {
 
 func TestAccNomadSecretBackendRoleManagementBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
-	address, token := util.GetTestNomadCreds(t)
+	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { util.TestAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccNomadSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -58,11 +59,11 @@ func TestAccNomadSecretBackendRoleManagementBasic(t *testing.T) {
 
 func TestAccNomadSecretBackendRoleImport(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
-	address, token := util.GetTestNomadCreds(t)
+	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { util.TestAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccADSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{

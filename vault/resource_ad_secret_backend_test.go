@@ -8,17 +8,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestADSecretBackend(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-ad")
-	bindDN, bindPass, url := util.GetTestADCreds(t)
+	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers:                 testProviders,
-		PreCheck:                  func() { util.TestAccPreCheck(t) },
+		PreCheck:                  func() { testutil.TestAccPreCheck(t) },
 		PreventPostDestroyRefresh: true,
 		CheckDestroy:              testAccADSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{

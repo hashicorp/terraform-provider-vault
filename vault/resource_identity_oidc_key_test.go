@@ -12,13 +12,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccIdentityOidcKey(t *testing.T) {
 	key := acctest.RandomWithPrefix("test-key")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityOidcKeyDestroy,
 		Steps: []resource.TestStep{
@@ -51,7 +53,7 @@ func TestAccIdentityOidcKeyUpdate(t *testing.T) {
 	key := acctest.RandomWithPrefix("test-key")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityOidcKeyDestroy,
 		Steps: []resource.TestStep{
@@ -98,7 +100,6 @@ func testAccCheckIdentityOidcKeyDestroy(s *terraform.State) error {
 			continue
 		}
 		resp, err := identityOidcKeyApiRead(rs.Primary.Attributes["name"], client)
-
 		if err != nil {
 			return fmt.Errorf("error checking for identity oidc key %q: %s", rs.Primary.ID, err)
 		}

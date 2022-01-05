@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -19,7 +20,7 @@ func TestAccIdentityGroupMemberEntityIdsExclusiveEmpty(t *testing.T) {
 	devEntity := acctest.RandomWithPrefix("dev-entity")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
@@ -55,7 +56,7 @@ func TestAccIdentityGroupMemberEntityIdsExclusive(t *testing.T) {
 	testEntity := acctest.RandomWithPrefix("test-entity")
 	var devEntityTester memberEntityTester
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
@@ -83,7 +84,7 @@ func TestAccIdentityGroupMemberEntityIdsNonExclusiveEmpty(t *testing.T) {
 	testEntity := acctest.RandomWithPrefix("test-entity")
 	var devEntityTester memberEntityTester
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{
@@ -128,7 +129,7 @@ func TestAccIdentityGroupMemberEntityIdsNonExclusive(t *testing.T) {
 	var testEntityTester memberEntityTester
 	var fooEntityTester memberEntityTester
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckidentityGroupMemberEntityIdsDestroy,
 		Steps: []resource.TestStep{

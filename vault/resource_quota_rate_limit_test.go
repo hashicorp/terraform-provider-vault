@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func randomQuotaRateString() string {
@@ -26,7 +28,7 @@ func TestQuotaRateLimit(t *testing.T) {
 	newRateLimit := randomQuotaRateString()
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testQuotaRateLimitCheckDestroy([]string{rateLimit, newRateLimit}),
 		Steps: []resource.TestStep{
 			{
@@ -63,7 +65,6 @@ func testQuotaRateLimitCheckDestroy(rateLimits []string) resource.TestCheckFunc 
 
 		for _, name := range rateLimits {
 			resp, err := client.Logical().Read(quotaRateLimitPath(name))
-
 			if err != nil {
 				return err
 			}

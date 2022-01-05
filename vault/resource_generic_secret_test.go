@@ -8,13 +8,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestResourceGenericSecret(t *testing.T) {
 	path := acctest.RandomWithPrefix("secretsv1/test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(path),
@@ -32,7 +34,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 	path := acctest.RandomWithPrefix("secretsv1/test")
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(path),
@@ -57,7 +59,7 @@ func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 	path := acctest.RandomWithPrefix("secretsv2/test")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAllVersionDestroy,
 		Steps: []resource.TestStep{
 			{
