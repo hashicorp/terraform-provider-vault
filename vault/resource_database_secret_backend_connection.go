@@ -19,6 +19,7 @@ import (
 
 type connectionStringConfig struct {
 	excludeUsernameTemplate bool
+	includeUserPass         bool
 }
 
 const (
@@ -394,7 +395,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the redshift-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
+				Elem:          connectionStringResource(&connectionStringConfig{includeUserPass: true}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbBackendRedshift, dbBackendTypes),
 			},
@@ -447,6 +448,19 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 				Description: "Maximum number of seconds a connection may be reused.",
 			},
 		},
+	}
+	if config.includeUserPass {
+		res.Schema["username"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The root credential username used in the connection URL",
+		}
+		res.Schema["password"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The root credential password used in the connection URL",
+			Sensitive:   true,
+		}
 	}
 
 	if !config.excludeUsernameTemplate {
@@ -623,7 +637,7 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case "snowflake-database-plugin":
 		setSnowflakeDatabaseConnectionData(d, "snowflake.0.", data)
 	case "redshift-database-plugin":
-		setDatabaseConnectionData(d, "redshift.0.", data)
+		setRedshiftDatabaseConnectionData(d, "redshift.0.", data)
 	}
 
 	return data, nil
@@ -930,8 +944,15 @@ func setSnowflakeDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
 	}
-	if v, ok := d.GetOk(prefix + "username_template"); ok {
-		data["username_template"] = v.(string)
+}
+
+func setRedshiftDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionData(d, prefix, data)
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		data["password"] = v.(string)
 	}
 }
 
