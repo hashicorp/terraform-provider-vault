@@ -22,5 +22,6 @@ require (
 	github.com/hashicorp/vault/api v1.3.2-0.20211222220726-b046cd9f80eb
 	github.com/hashicorp/vault/sdk v0.3.1-0.20211214161113-fcc5f22bea02
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/opencontainers/runc v1.0.3 // indirect
 	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
 )
