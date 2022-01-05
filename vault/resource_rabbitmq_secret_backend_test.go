@@ -1,23 +1,24 @@
 package vault
 
 import (
-	"testing"
-
 	"fmt"
 	"strings"
+	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccRabbitmqSecretBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	connectionUri, username, password := getTestRMQCreds(t)
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccRabbitmqSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -50,9 +51,9 @@ func TestAccRabbitmqSecretBackend_basic(t *testing.T) {
 
 func TestAccRabbitmqSecretBackend_import(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	connectionUri, username, password := getTestRMQCreds(t)
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccRabbitmqSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{

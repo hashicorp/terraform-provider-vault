@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestGCPAuthBackend_pathRegex(t *testing.T) {
@@ -73,7 +75,7 @@ func testGCPAuthBackendRole_basic(t *testing.T, backend string) {
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testGCPAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -116,7 +118,7 @@ func TestGCPAuthBackendRole_gce(t *testing.T) {
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testGCPAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -316,7 +318,6 @@ func testGCPAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckF
 }
 
 func testGCPAuthBackendRoleConfig_basic(backend, name, serviceAccount, projectId string) string {
-
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "gcp" {
@@ -336,11 +337,9 @@ resource "vault_gcp_auth_backend_role" "test" {
     add_group_aliases      = true
 }
 `, backend, name, serviceAccount, projectId)
-
 }
 
 func testGCPAuthBackendRoleConfig_unset(backend, name, serviceAccount, projectId string) string {
-
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "gcp" {
@@ -357,11 +356,9 @@ resource "vault_gcp_auth_backend_role" "test" {
     add_group_aliases      = true
 }
 `, backend, name, serviceAccount, projectId)
-
 }
 
 func testGCPAuthBackendRoleConfig_gce(backend, name, projectId string) string {
-
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "gcp" {
@@ -382,5 +379,4 @@ resource "vault_gcp_auth_backend_role" "test" {
     bound_labels           = ["foo:bar", "key:value"]
 }
 `, backend, name, projectId)
-
 }

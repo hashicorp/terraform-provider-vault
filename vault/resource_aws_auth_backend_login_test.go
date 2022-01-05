@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 
@@ -14,12 +13,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
-	accessKey, secretKey := getTestAWSCreds(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	sess, err := session.NewSession(nil)
 	if err != nil {
@@ -46,7 +47,7 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	reqBody := base64.StdEncoding.EncodeToString(loginDataBody)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_iamIdentity(mountPath, accessKey, secretKey, reqMethod, reqURL, reqHeaders, reqBody, roleName, *testIdentity.Arn),
@@ -59,13 +60,11 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
-	if os.Getenv("TF_AWS_META") == "" {
-		t.Skip("Not running on EC2 instance, can't test EC2 auth methods")
-	}
+	testutil.SkipTestEnvUnset(t, "TF_AWS_META")
 
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
-	accessKey, secretKey := getTestAWSCreds(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	sess, err := session.NewSession(nil)
 	if err != nil {
@@ -98,7 +97,7 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_pkcs7(mountPath, accessKey, secretKey, roleName, ami, account, arn, pkcs7),
@@ -111,13 +110,11 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
-	if os.Getenv("TF_AWS_META") == "" {
-		t.Skip("Not running on EC2 instance, can't test EC2 auth methods")
-	}
+	testutil.SkipTestEnvUnset(t, "TF_AWS_META")
 
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
-	accessKey, secretKey := getTestAWSCreds(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	sess, err := session.NewSession(nil)
 	if err != nil {
@@ -156,7 +153,7 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_ec2Identity(mountPath, accessKey, secretKey, roleName, ami, account, arn, identity, sig),

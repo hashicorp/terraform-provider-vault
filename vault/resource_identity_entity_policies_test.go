@@ -12,13 +12,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
@@ -42,7 +43,7 @@ func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
 func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{

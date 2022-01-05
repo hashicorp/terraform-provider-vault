@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccIdentityGroupAlias(t *testing.T) {
@@ -18,7 +20,7 @@ func TestAccIdentityGroupAlias(t *testing.T) {
 	nameGithubA := "vault_auth_backend.githubA"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityGroupAliasDestroy,
 		Steps: []resource.TestStep{
@@ -46,7 +48,7 @@ func TestAccIdentityGroupAliasUpdate(t *testing.T) {
 	aliasB := acctest.RandomWithPrefix("B-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityGroupAliasDestroy,
 		Steps: []resource.TestStep{

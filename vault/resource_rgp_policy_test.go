@@ -2,23 +2,20 @@ package vault
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
-	"os"
-	"testing"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccRoleGoverningPolicy(t *testing.T) {
-	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
-	if isEnterprise == "" {
-		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
-	}
-
 	policyName := acctest.RandomWithPrefix("test-policy")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestEntPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccRoleGoverningPolicyCheckDestroy,
 		Steps: []resource.TestStep{

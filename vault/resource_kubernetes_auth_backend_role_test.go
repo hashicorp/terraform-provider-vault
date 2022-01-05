@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccKubernetesAuthBackendRole_import(t *testing.T) {
@@ -19,7 +21,7 @@ func TestAccKubernetesAuthBackendRole_import(t *testing.T) {
 	audience := "vault"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckKubernetesAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -71,7 +73,7 @@ func TestAccKubernetesAuthBackendRole_basic(t *testing.T) {
 	ttl := 3600
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckKubernetesAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -113,7 +115,7 @@ func TestAccKubernetesAuthBackendRole_update(t *testing.T) {
 	newTTL := oldTTL * 2
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckKubernetesAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -183,7 +185,7 @@ func TestAccKubernetesAuthBackendRole_full(t *testing.T) {
 	audience := "vault"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckKubernetesAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -235,7 +237,7 @@ func TestAccKubernetesAuthBackendRole_fullUpdate(t *testing.T) {
 	newAudience := "new-vault"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckKubernetesAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{

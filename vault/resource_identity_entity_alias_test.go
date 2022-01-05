@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccIdentityEntityAlias(t *testing.T) {
@@ -19,7 +21,7 @@ func TestAccIdentityEntityAlias(t *testing.T) {
 	nameGithubA := "vault_auth_backend.githubA"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
@@ -49,7 +51,7 @@ func TestAccIdentityEntityAlias_Update(t *testing.T) {
 	nameGithubB := "vault_auth_backend.githubB"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{
@@ -103,7 +105,7 @@ func TestAccIdentityEntityAlias_Metadata(t *testing.T) {
 	// TODO add back empty custom_metadata update tests
 	// once bug in Vault is resolved
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityEntityAliasDestroy,
 		Steps: []resource.TestStep{

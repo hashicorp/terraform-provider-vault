@@ -11,13 +11,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccAWSAuthBackendRole_importInferred(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -33,7 +35,8 @@ func TestAccAWSAuthBackendRole_importInferred(t *testing.T) {
 					"bound_ami_id", "bound_account_id", "bound_region",
 					"bound_vpc_id", "bound_subnet_id", "bound_iam_role_arn",
 					"bound_iam_instance_profile_arn", "bound_ec2_instance_id",
-					"bound_iam_principal_arn"},
+					"bound_iam_principal_arn",
+				},
 			},
 		},
 	})
@@ -43,7 +46,7 @@ func TestAccAWSAuthBackendRole_importEC2(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -64,7 +67,7 @@ func TestAccAWSAuthBackendRole_importIAM(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -86,7 +89,7 @@ func TestAccAWSAuthBackendRole_inferred(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -103,7 +106,7 @@ func TestAccAWSAuthBackendRole_ec2(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -120,7 +123,7 @@ func TestAccAWSAuthBackendRole_iam(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -137,7 +140,7 @@ func TestAccAWSAuthBackendRole_iam_resolve_aws_unique_ids(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -154,7 +157,7 @@ func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{

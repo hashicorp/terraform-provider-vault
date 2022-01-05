@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"reflect"
 	"regexp"
 	"strings"
-	"testing"
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
@@ -99,59 +97,6 @@ func IsExpiredTokenErr(err error) bool {
 		return true
 	}
 	return false
-}
-
-func TestAccPreCheck(t *testing.T) {
-	if v := os.Getenv("VAULT_ADDR"); v == "" {
-		t.Fatal("VAULT_ADDR must be set for acceptance tests")
-	}
-	if v := os.Getenv("VAULT_TOKEN"); v == "" {
-		t.Fatal("VAULT_TOKEN must be set for acceptance tests")
-	}
-}
-
-func TestEntPreCheck(t *testing.T) {
-	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
-	if isEnterprise == "" {
-		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
-	}
-	if v := os.Getenv("VAULT_ADDR"); v == "" {
-		t.Fatal("VAULT_ADDR must be set for acceptance tests")
-	}
-	if v := os.Getenv("VAULT_TOKEN"); v == "" {
-		t.Fatal("VAULT_TOKEN must be set for acceptance tests")
-	}
-}
-
-func GetTestADCreds(t *testing.T) (string, string, string) {
-	adBindDN := os.Getenv("AD_BINDDN")
-	adBindPass := os.Getenv("AD_BINDPASS")
-	adURL := os.Getenv("AD_URL")
-
-	if adBindDN == "" {
-		t.Skip("AD_BINDDN not set")
-	}
-	if adBindPass == "" {
-		t.Skip("AD_BINDPASS not set")
-	}
-	if adURL == "" {
-		t.Skip("AD_URL not set")
-	}
-	return adBindDN, adBindPass, adURL
-}
-
-func GetTestNomadCreds(t *testing.T) (string, string) {
-	address := os.Getenv("NOMAD_ADDR")
-	token := os.Getenv("NOMAD_TOKEN")
-
-	if address == "" {
-		t.Skip("NOMAD_ADDR not set")
-	}
-	if token == "" {
-		t.Skip("NOMAD_TOKEN not set")
-	}
-
-	return address, token
 }
 
 func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {
