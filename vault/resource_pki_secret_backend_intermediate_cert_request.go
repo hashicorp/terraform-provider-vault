@@ -93,7 +93,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Description:  "The desired key type.",
 				ForceNew:     true,
 				Default:      "rsa",
-				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519"}, false),
 			},
 			"key_bits": {
 				Type:        schema.TypeInt,
