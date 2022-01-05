@@ -1,6 +1,7 @@
 ## 3.2.0 (Unreleased)
 IMPROVEMENTS:
 * `resource/database_secret_backend_connection`: Add support for configuring Redshift databases ([#1279](https://github.com/hashicorp/terraform-provider-vault/pull/1279))
+* `resource/pki_secret_backend_intermediate_cert_request`: add support for the `ed25519` key_type ([#1278](https://github.com/hashicorp/terraform-provider-vault/pull/1278))
 
 ## 3.1.1 (December 22, 2021)
 BUGS:
