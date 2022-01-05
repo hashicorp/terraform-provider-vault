@@ -404,7 +404,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the snowflake-database-plugin plugin.",
-				Elem:          snowflakeConnectionStringResource(),
+				Elem:          connectionStringResource(&connectionStringConfig{includeUserPass: true}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbBackendSnowflake, dbBackendTypes),
 			},
@@ -496,22 +496,6 @@ func mssqlConnectionStringResource() *schema.Resource {
 		Type:        schema.TypeBool,
 		Optional:    true,
 		Description: "Set to true when the target is a Contained Database, e.g. AzureSQL.",
-	}
-	return r
-}
-
-func snowflakeConnectionStringResource() *schema.Resource {
-	r := connectionStringResource(&connectionStringConfig{})
-	r.Schema["username"] = &schema.Schema{
-		Type:        schema.TypeString,
-		Optional:    true,
-		Description: "The AccountAdmin level user using to connect to snowflake",
-	}
-	r.Schema["password"] = &schema.Schema{
-		Type:        schema.TypeString,
-		Optional:    true,
-		Description: "The password with the provided user",
-		Sensitive:   true,
 	}
 	return r
 }
