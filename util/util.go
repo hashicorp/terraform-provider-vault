@@ -12,9 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -97,43 +95,6 @@ func IsExpiredTokenErr(err error) bool {
 		return true
 	}
 	return false
-}
-
-func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		resourceState, ok := s.RootModule().Resources[name]
-		if !ok {
-			return fmt.Errorf("not found: %q", name)
-		}
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("%q has no primary instance state", name)
-		}
-		v, ok := instanceState.Attributes[key]
-		if !ok {
-			return fmt.Errorf("%s: attribute not found %q", name, key)
-		}
-		if expectedValue == "" && v == expectedValue {
-			return nil
-		}
-		if v == "" {
-			return fmt.Errorf("%s: attribute %q expected %#v, got %#v", name, key, expectedValue, v)
-		}
-
-		var stateJSON, expectedJSON interface{}
-		err := json.Unmarshal([]byte(v), &stateJSON)
-		if err != nil {
-			return fmt.Errorf("%s: attribute %q not JSON: %s", name, key, err)
-		}
-		err = json.Unmarshal([]byte(expectedValue), &expectedJSON)
-		if err != nil {
-			return fmt.Errorf("expected value %q not JSON: %s", expectedValue, err)
-		}
-		if !reflect.DeepEqual(stateJSON, expectedJSON) {
-			return fmt.Errorf("%s: attribute %q expected %#v, got %#v", name, key, expectedJSON, stateJSON)
-		}
-		return nil
-	}
 }
 
 func ShortDur(d time.Duration) string {
