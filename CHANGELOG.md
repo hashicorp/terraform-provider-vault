@@ -1,4 +1,7 @@
 ## 3.2.0 (Unreleased)
+BUGS:
+* `resource/aws_secret_backend_role`: Ensure all updated fields are applied ([#1277](https://github.com/hashicorp/terraform-provider-vault/pull/1277))
+
 IMPROVEMENTS:
 * `resource/database_secret_backend_connection`: Add support for configuring Redshift databases ([#1279](https://github.com/hashicorp/terraform-provider-vault/pull/1279))
 * `resource/pki_secret_backend_intermediate_cert_request`: Add support for the `ed25519` key_type ([#1278](https://github.com/hashicorp/terraform-provider-vault/pull/1278))
