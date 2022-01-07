@@ -111,7 +111,7 @@ func TestAccRabbitmqSecretBackendRole_topic(t *testing.T) {
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testutil.testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccRabbitmqSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{

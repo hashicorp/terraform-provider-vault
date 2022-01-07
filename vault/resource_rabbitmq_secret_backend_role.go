@@ -120,11 +120,11 @@ func rabbitmqSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 
 	vhostsJSON, _, err := expandRabbitmqSecretBackendRoleVhost(d.Get("vhost").([]interface{}), "host")
 	if err != nil {
-		return err
+		return fmt.Errorf("error expanding vhost: %w", err)
 	}
 	vhostTopicsJSON, err := expandRabbitmqSecretBackendRoleVhostTopic(d.Get("vhost_topic").([]interface{}))
 	if err != nil {
-		return err
+		return fmt.Errorf("error expanding vhost_topic: %w", err)
 	}
 
 	data := map[string]interface{}{
@@ -205,7 +205,7 @@ func rabbitmqSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (
 	return secret != nil, nil
 }
 
-func expandRabbitmqSecretBackendRoleVhost(vhost []interface{}, typ string) (string, map[string]interface{}, error) {
+func expandRabbitmqSecretBackendRoleVhost(vhost []interface{}, key string) (string, map[string]interface{}, error) {
 	log.Printf("[DEBUG] Vhosts as list from ResourceData: %+v", vhost)
 
 	vhosts := make(map[string]interface{}, len(vhost))
@@ -214,11 +214,14 @@ func expandRabbitmqSecretBackendRoleVhost(vhost []interface{}, typ string) (stri
 		h := map[string]interface{}{}
 		var id string
 		for k, v := range host.(map[string]interface{}) {
-			if k == typ {
+			if k == key {
 				id = v.(string)
 				continue
 			}
 			h[k] = v
+		}
+		if id == "" {
+			return "", nil, fmt.Errorf("empty vhost")
 		}
 		vhosts[id] = h
 	}
@@ -283,9 +286,6 @@ func flattenRabbitmqSecretBackendRoleVhostTopics(vhostTopic map[string]interface
 	var vhostTopics []map[string]interface{}
 	for id, val := range vhostTopic {
 		vals := val.(map[string]interface{})
-
-		log.Printf("lol: %+v", vals)
-		log.Printf("lol2: %+v", id)
 
 		vhostTopics = append(vhostTopics, map[string]interface{}{
 			"host":  id,
