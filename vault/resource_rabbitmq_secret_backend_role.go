@@ -10,13 +10,13 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func rabbitmqSecretBackendRoleResource() *schema.Resource {
+func rabbitMQSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
-		Create: rabbitmqSecretBackendRoleWrite,
-		Read:   rabbitmqSecretBackendRoleRead,
-		Update: rabbitmqSecretBackendRoleWrite,
-		Delete: rabbitmqSecretBackendRoleDelete,
-		Exists: rabbitmqSecretBackendRoleExists,
+		Create: rabbitMQSecretBackendRoleWrite,
+		Read:   rabbitMQSecretBackendRoleRead,
+		Update: rabbitMQSecretBackendRoleWrite,
+		Delete: rabbitMQSecretBackendRoleDelete,
+		Exists: rabbitMQSecretBackendRoleExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -111,18 +111,18 @@ func rabbitmqSecretBackendRoleResource() *schema.Resource {
 	}
 }
 
-func rabbitmqSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
 	tags := d.Get("tags").(string)
 
-	vhostsJSON, _, err := expandRabbitmqSecretBackendRoleVhost(d.Get("vhost").([]interface{}), "host")
+	vhostsJSON, _, err := expandRabbitMQSecretBackendRoleVhost(d.Get("vhost").([]interface{}), "host")
 	if err != nil {
 		return fmt.Errorf("error expanding vhost: %w", err)
 	}
-	vhostTopicsJSON, err := expandRabbitmqSecretBackendRoleVhostTopic(d.Get("vhost_topic").([]interface{}))
+	vhostTopicsJSON, err := expandRabbitMQSecretBackendRoleVhostTopic(d.Get("vhost_topic").([]interface{}))
 	if err != nil {
 		return fmt.Errorf("error expanding vhost_topic: %w", err)
 	}
@@ -140,10 +140,10 @@ func rabbitmqSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 	log.Printf("[DEBUG] Created role %q on Rabbitmq backend %q", name, backend)
 
 	d.SetId(backend + "/roles/" + name)
-	return rabbitmqSecretBackendRoleRead(d, meta)
+	return rabbitMQSecretBackendRoleRead(d, meta)
 }
 
-func rabbitmqSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
@@ -168,18 +168,18 @@ func rabbitmqSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
 	d.Set("name", pathPieces[len(pathPieces)-1])
 
-	if err := d.Set("vhost", flattenRabbitmqSecretBackendRoleVhost(secret.Data["vhosts"].(map[string]interface{}))); err != nil {
+	if err := d.Set("vhost", flattenRabbitMQSecretBackendRoleVhost(secret.Data["vhosts"].(map[string]interface{}))); err != nil {
 		return fmt.Errorf("Error setting vhosts in state: %w", err)
 	}
 
-	if err := d.Set("vhost_topic", flattenRabbitmqSecretBackendRoleVhostTopics(secret.Data["vhost_topics"].(map[string]interface{}))); err != nil {
+	if err := d.Set("vhost_topic", flattenRabbitMQSecretBackendRoleVhostTopics(secret.Data["vhost_topics"].(map[string]interface{}))); err != nil {
 		return fmt.Errorf("Error setting vhosts topics in state: %w", err)
 	}
 
 	return nil
 }
 
-func rabbitmqSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
@@ -192,7 +192,7 @@ func rabbitmqSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) e
 	return nil
 }
 
-func rabbitmqSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func rabbitMQSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client := meta.(*api.Client)
 
 	path := d.Id()
@@ -205,7 +205,7 @@ func rabbitmqSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (
 	return secret != nil, nil
 }
 
-func expandRabbitmqSecretBackendRoleVhost(vhost []interface{}, key string) (string, map[string]interface{}, error) {
+func expandRabbitMQSecretBackendRoleVhost(vhost []interface{}, key string) (string, map[string]interface{}, error) {
 	log.Printf("[DEBUG] Vhosts as list from ResourceData: %+v", vhost)
 
 	vhosts := make(map[string]interface{}, len(vhost))
@@ -238,7 +238,7 @@ func expandRabbitmqSecretBackendRoleVhost(vhost []interface{}, key string) (stri
 	return string(vhostsJSON), vhosts, nil
 }
 
-func expandRabbitmqSecretBackendRoleVhostTopic(vhost []interface{}) (string, error) {
+func expandRabbitMQSecretBackendRoleVhostTopic(vhost []interface{}) (string, error) {
 	log.Printf("[DEBUG] Vhosts as list from ResourceData: %+v", vhost)
 
 	vhosts := make(map[string]interface{}, len(vhost))
@@ -247,7 +247,7 @@ func expandRabbitmqSecretBackendRoleVhostTopic(vhost []interface{}) (string, err
 		vv := host.(map[string]interface{})
 		id := vv["host"].(string)
 
-		_, topics, err := expandRabbitmqSecretBackendRoleVhost(vv["vhost"].([]interface{}), "topic")
+		_, topics, err := expandRabbitMQSecretBackendRoleVhost(vv["vhost"].([]interface{}), "topic")
 		if err != nil {
 			return "", err
 		}
@@ -267,7 +267,7 @@ func expandRabbitmqSecretBackendRoleVhostTopic(vhost []interface{}) (string, err
 	return string(vhostsJSON), nil
 }
 
-func flattenRabbitmqSecretBackendRoleVhost(vhost map[string]interface{}) []map[string]interface{} {
+func flattenRabbitMQSecretBackendRoleVhost(vhost map[string]interface{}) []map[string]interface{} {
 	var vhosts []map[string]interface{}
 	for id, val := range vhost {
 		vals := val.(map[string]interface{})
@@ -282,21 +282,21 @@ func flattenRabbitmqSecretBackendRoleVhost(vhost map[string]interface{}) []map[s
 	return vhosts
 }
 
-func flattenRabbitmqSecretBackendRoleVhostTopics(vhostTopic map[string]interface{}) []map[string]interface{} {
+func flattenRabbitMQSecretBackendRoleVhostTopics(vhostTopic map[string]interface{}) []map[string]interface{} {
 	var vhostTopics []map[string]interface{}
 	for id, val := range vhostTopic {
 		vals := val.(map[string]interface{})
 
 		vhostTopics = append(vhostTopics, map[string]interface{}{
 			"host":  id,
-			"vhost": flattenRabbitmqSecretBackendRoleVhostTopic(vals),
+			"vhost": flattenRabbitMQSecretBackendRoleVhostTopic(vals),
 		})
 	}
 
 	return vhostTopics
 }
 
-func flattenRabbitmqSecretBackendRoleVhostTopic(topic map[string]interface{}) []map[string]interface{} {
+func flattenRabbitMQSecretBackendRoleVhostTopic(topic map[string]interface{}) []map[string]interface{} {
 	var topics []map[string]interface{}
 	for id, val := range topic {
 		vals := val.(map[string]interface{})
