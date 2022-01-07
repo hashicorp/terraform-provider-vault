@@ -66,7 +66,7 @@ Must be unique within the backend.
 
 * `vhost` - (Optional) Specifies a map of virtual hosts to permissions.
 
-* `vhost topics` - (Optional) Specifies a map of virtual hosts and exchanges to topic permissions. This option requires RabbitMQ 3.7.0 or later.
+* `vhost_topic` - (Optional) Specifies a map of virtual hosts and exchanges to topic permissions. This option requires RabbitMQ 3.7.0 or later.
 
 ## Attributes Reference
 
