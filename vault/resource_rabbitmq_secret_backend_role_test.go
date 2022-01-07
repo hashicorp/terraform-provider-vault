@@ -14,11 +14,11 @@ import (
 )
 
 const (
-	testAccRabbitmqSecretBackendRoleTags_basic   = `management`
-	testAccRabbitmqSecretBackendRoleTags_updated = `management,policymaker`
+	testAccRabbitMQSecretBackendRoleTags_basic   = `management`
+	testAccRabbitMQSecretBackendRoleTags_updated = `management,policymaker`
 )
 
-func TestAccRabbitmqSecretBackendRole_basic(t *testing.T) {
+func TestAccRabbitMQSecretBackendRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	resourceName := "vault_rabbitmq_secret_backend_role.test"
@@ -26,14 +26,14 @@ func TestAccRabbitmqSecretBackendRole_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccRabbitmqSecretBackendRoleCheckDestroy,
+		CheckDestroy: testAccRabbitMQSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRabbitmqSecretBackendRoleConfig_basic(name, backend, connectionUri, username, password),
+				Config: testAccRabbitMQSecretBackendRoleConfig_basic(name, backend, connectionUri, username, password),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("%s", name)),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "tags", testAccRabbitmqSecretBackendRoleTags_basic),
+					resource.TestCheckResourceAttr(resourceName, "tags", testAccRabbitMQSecretBackendRoleTags_basic),
 					resource.TestCheckResourceAttr(resourceName, "vhost.0.host", "/"),
 					resource.TestCheckResourceAttr(resourceName, "vhost.0.configure", ""),
 					resource.TestCheckResourceAttr(resourceName, "vhost.0.read", ".*"),
@@ -46,11 +46,11 @@ func TestAccRabbitmqSecretBackendRole_basic(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccRabbitmqSecretBackendRoleConfig_updated(name, backend, connectionUri, username, password),
+				Config: testAccRabbitMQSecretBackendRoleConfig_updated(name, backend, connectionUri, username, password),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("%s", name)),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "tags", testAccRabbitmqSecretBackendRoleTags_updated),
+					resource.TestCheckResourceAttr(resourceName, "tags", testAccRabbitMQSecretBackendRoleTags_updated),
 					resource.TestCheckResourceAttr(resourceName, "vhost.0.host", "/"),
 					resource.TestCheckResourceAttr(resourceName, "vhost.0.configure", ".*"),
 					resource.TestCheckResourceAttr(resourceName, "vhost.0.read", ".*"),
@@ -61,7 +61,7 @@ func TestAccRabbitmqSecretBackendRole_basic(t *testing.T) {
 	})
 }
 
-func TestAccRabbitmqSecretBackendRole_nested(t *testing.T) {
+func TestAccRabbitMQSecretBackendRole_nested(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	resourceName := "vault_rabbitmq_secret_backend_role.test"
@@ -69,14 +69,14 @@ func TestAccRabbitmqSecretBackendRole_nested(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccRabbitmqSecretBackendRoleCheckDestroy,
+		CheckDestroy: testAccRabbitMQSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRabbitmqSecretBackendRoleConfig_basic(name, backend, connectionUri, username, password),
+				Config: testAccRabbitMQSecretBackendRoleConfig_basic(name, backend, connectionUri, username, password),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("%s", name)),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "tags", testAccRabbitmqSecretBackendRoleTags_basic),
+					resource.TestCheckResourceAttr(resourceName, "tags", testAccRabbitMQSecretBackendRoleTags_basic),
 					resource.TestCheckResourceAttr(resourceName, "vhost.0.host", "/"),
 					resource.TestCheckResourceAttr(resourceName, "vhost.0.configure", ""),
 					resource.TestCheckResourceAttr(resourceName, "vhost.0.read", ".*"),
@@ -89,11 +89,11 @@ func TestAccRabbitmqSecretBackendRole_nested(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccRabbitmqSecretBackendRoleConfig_updated(name, backend, connectionUri, username, password),
+				Config: testAccRabbitMQSecretBackendRoleConfig_updated(name, backend, connectionUri, username, password),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("%s", name)),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "tags", testAccRabbitmqSecretBackendRoleTags_updated),
+					resource.TestCheckResourceAttr(resourceName, "tags", testAccRabbitMQSecretBackendRoleTags_updated),
 					resource.TestCheckResourceAttr(resourceName, "vhost.0.host", "/"),
 					resource.TestCheckResourceAttr(resourceName, "vhost.0.configure", ".*"),
 					resource.TestCheckResourceAttr(resourceName, "vhost.0.read", ".*"),
@@ -104,7 +104,7 @@ func TestAccRabbitmqSecretBackendRole_nested(t *testing.T) {
 	})
 }
 
-func TestAccRabbitmqSecretBackendRole_topic(t *testing.T) {
+func TestAccRabbitMQSecretBackendRole_topic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	resourceName := "vault_rabbitmq_secret_backend_role.test"
@@ -112,14 +112,14 @@ func TestAccRabbitmqSecretBackendRole_topic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccRabbitmqSecretBackendRoleCheckDestroy,
+		CheckDestroy: testAccRabbitMQSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRabbitmqSecretBackendRoleConfig_topics(name, backend, connectionUri, username, password),
+				Config: testAccRabbitMQSecretBackendRoleConfig_topics(name, backend, connectionUri, username, password),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("%s", name)),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "tags", testAccRabbitmqSecretBackendRoleTags_basic),
+					resource.TestCheckResourceAttr(resourceName, "tags", testAccRabbitMQSecretBackendRoleTags_basic),
 					resource.TestCheckResourceAttr(resourceName, "vhost_topic.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "vhost_topic.0.host", "/"),
 					resource.TestCheckResourceAttr(resourceName, "vhost_topic.0.vhost.#", "1"),
@@ -134,11 +134,11 @@ func TestAccRabbitmqSecretBackendRole_topic(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccRabbitmqSecretBackendRoleConfig_topicUpdated(name, backend, connectionUri, username, password),
+				Config: testAccRabbitMQSecretBackendRoleConfig_topicUpdated(name, backend, connectionUri, username, password),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("%s", name)),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "tags", testAccRabbitmqSecretBackendRoleTags_updated),
+					resource.TestCheckResourceAttr(resourceName, "tags", testAccRabbitMQSecretBackendRoleTags_updated),
 					resource.TestCheckResourceAttr(resourceName, "vhost_topic.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "vhost_topic.0.host", "/"),
 					resource.TestCheckResourceAttr(resourceName, "vhost_topic.0.vhost.#", "1"),
@@ -151,7 +151,7 @@ func TestAccRabbitmqSecretBackendRole_topic(t *testing.T) {
 	})
 }
 
-func testAccRabbitmqSecretBackendRoleCheckDestroy(s *terraform.State) error {
+func testAccRabbitMQSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
 	for _, rs := range s.RootModule().Resources {
@@ -169,7 +169,7 @@ func testAccRabbitmqSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccRabbitmqSecretBackendRoleConfig_basic(name, path, connectionUri, username, password string) string {
+func testAccRabbitMQSecretBackendRoleConfig_basic(name, path, connectionUri, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_rabbitmq_secret_backend" "test" {
   path = "%s"
@@ -192,10 +192,10 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
     write = ""
   }
 }
-`, path, connectionUri, username, password, name, testAccRabbitmqSecretBackendRoleTags_basic)
+`, path, connectionUri, username, password, name, testAccRabbitMQSecretBackendRoleTags_basic)
 }
 
-func testAccRabbitmqSecretBackendRoleConfig_updated(name, path, connectionUri, username, password string) string {
+func testAccRabbitMQSecretBackendRoleConfig_updated(name, path, connectionUri, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_rabbitmq_secret_backend" "test" {
   path = "%s"
@@ -218,10 +218,10 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
     write = ".*"
   }
 }
-`, path, connectionUri, username, password, name, testAccRabbitmqSecretBackendRoleTags_updated)
+`, path, connectionUri, username, password, name, testAccRabbitMQSecretBackendRoleTags_updated)
 }
 
-func testAccRabbitmqSecretBackendRoleConfig_topics(name, path, connectionUri, username, password string) string {
+func testAccRabbitMQSecretBackendRoleConfig_topics(name, path, connectionUri, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_rabbitmq_secret_backend" "test" {
   path = "%s"
@@ -248,10 +248,10 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
 	host = "/"
   }
 }
-`, path, connectionUri, username, password, name, testAccRabbitmqSecretBackendRoleTags_basic)
+`, path, connectionUri, username, password, name, testAccRabbitMQSecretBackendRoleTags_basic)
 }
 
-func testAccRabbitmqSecretBackendRoleConfig_topicUpdated(name, path, connectionUri, username, password string) string {
+func testAccRabbitMQSecretBackendRoleConfig_topicUpdated(name, path, connectionUri, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_rabbitmq_secret_backend" "test" {
   path = "%s"
@@ -277,5 +277,5 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
 	host = "/"
   }
 }
-`, path, connectionUri, username, password, name, testAccRabbitmqSecretBackendRoleTags_updated)
+`, path, connectionUri, username, password, name, testAccRabbitMQSecretBackendRoleTags_updated)
 }

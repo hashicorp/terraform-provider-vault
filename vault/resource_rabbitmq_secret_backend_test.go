@@ -13,16 +13,16 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccRabbitmqSecretBackend_basic(t *testing.T) {
+func TestAccRabbitMQSecretBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccRabbitmqSecretBackendCheckDestroy,
+		CheckDestroy: testAccRabbitMQSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRabbitmqSecretBackendConfig_basic(path, connectionUri, username, password),
+				Config: testAccRabbitMQSecretBackendConfig_basic(path, connectionUri, username, password),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "path", path),
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "description", "test description"),
@@ -34,7 +34,7 @@ func TestAccRabbitmqSecretBackend_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccRabbitmqSecretBackendConfig_updated(path, connectionUri, username, password),
+				Config: testAccRabbitMQSecretBackendConfig_updated(path, connectionUri, username, password),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "path", path),
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "description", "test description"),
@@ -49,16 +49,16 @@ func TestAccRabbitmqSecretBackend_basic(t *testing.T) {
 	})
 }
 
-func TestAccRabbitmqSecretBackend_import(t *testing.T) {
+func TestAccRabbitMQSecretBackend_import(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testAccRabbitmqSecretBackendCheckDestroy,
+		CheckDestroy: testAccRabbitMQSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRabbitmqSecretBackendConfig_basic(path, connectionUri, username, password),
+				Config: testAccRabbitMQSecretBackendConfig_basic(path, connectionUri, username, password),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "path", path),
 					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "description", "test description"),
@@ -80,7 +80,7 @@ func TestAccRabbitmqSecretBackend_import(t *testing.T) {
 	})
 }
 
-func testAccRabbitmqSecretBackendCheckDestroy(s *terraform.State) error {
+func testAccRabbitMQSecretBackendCheckDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
 	mounts, err := client.Sys().ListMounts()
@@ -103,7 +103,7 @@ func testAccRabbitmqSecretBackendCheckDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccRabbitmqSecretBackendConfig_basic(path, connectionUri, username, password string) string {
+func testAccRabbitMQSecretBackendConfig_basic(path, connectionUri, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_rabbitmq_secret_backend" "test" {
   path = "%s"
@@ -116,7 +116,7 @@ resource "vault_rabbitmq_secret_backend" "test" {
 }`, path, connectionUri, username, password)
 }
 
-func testAccRabbitmqSecretBackendConfig_updated(path, connectionUri, username, password string) string {
+func testAccRabbitMQSecretBackendConfig_updated(path, connectionUri, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_rabbitmq_secret_backend" "test" {
   path = "%s"

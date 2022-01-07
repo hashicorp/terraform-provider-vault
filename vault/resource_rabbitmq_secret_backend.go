@@ -2,19 +2,20 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 )
 
-func rabbitmqSecretBackendResource() *schema.Resource {
+func rabbitMQSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
-		Create: rabbitmqSecretBackendCreate,
-		Read:   rabbitmqSecretBackendRead,
-		Update: rabbitmqSecretBackendUpdate,
-		Delete: rabbitmqSecretBackendDelete,
-		Exists: rabbitmqSecretBackendExists,
+		Create: rabbitMQSecretBackendCreate,
+		Read:   rabbitMQSecretBackendRead,
+		Update: rabbitMQSecretBackendUpdate,
+		Delete: rabbitMQSecretBackendDelete,
+		Exists: rabbitMQSecretBackendExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -81,7 +82,7 @@ func rabbitmqSecretBackendResource() *schema.Resource {
 	}
 }
 
-func rabbitmqSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Get("path").(string)
@@ -122,10 +123,10 @@ func rabbitmqSecretBackendCreate(d *schema.ResourceData, meta interface{}) error
 	}
 	log.Printf("[DEBUG] Wrote connection credentials to %q", path+"/config/connection")
 	d.Partial(false)
-	return rabbitmqSecretBackendRead(d, meta)
+	return rabbitMQSecretBackendRead(d, meta)
 }
 
-func rabbitmqSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
@@ -154,7 +155,7 @@ func rabbitmqSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func rabbitmqSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
@@ -186,10 +187,10 @@ func rabbitmqSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 		log.Printf("[DEBUG] Updated root credentials at %q", path+"/config/connection")
 	}
 	d.Partial(false)
-	return rabbitmqSecretBackendRead(d, meta)
+	return rabbitMQSecretBackendRead(d, meta)
 }
 
-func rabbitmqSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
@@ -202,7 +203,7 @@ func rabbitmqSecretBackendDelete(d *schema.ResourceData, meta interface{}) error
 	return nil
 }
 
-func rabbitmqSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func rabbitMQSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client := meta.(*api.Client)
 
 	path := d.Id()

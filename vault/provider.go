@@ -604,14 +604,14 @@ var (
 			PathInventory: []string{"/identity/oidc/role/{name}"},
 		},
 		"vault_rabbitmq_secret_backend": {
-			Resource: rabbitmqSecretBackendResource(),
+			Resource: rabbitMQSecretBackendResource(),
 			PathInventory: []string{
 				"/rabbitmq/config/connection",
 				"/rabbitmq/config/lease",
 			},
 		},
 		"vault_rabbitmq_secret_backend_role": {
-			Resource:      rabbitmqSecretBackendRoleResource(),
+			Resource:      rabbitMQSecretBackendRoleResource(),
 			PathInventory: []string{"/rabbitmq/roles/{name}"},
 		},
 		"vault_password_policy": {
