@@ -226,7 +226,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 								Type: schema.TypeString,
 							},
 							Required:    true,
-							Description: "Specifies a set of comma-delimited Couchbase hosts to connect to. Must use couchbases:// scheme if `tls` is `true`.",
+							Description: "A set of Couchbase URIs to connect to. Must use `couchbases://` scheme if `tls` is `true`.",
 						},
 						"username": {
 							Type:        schema.TypeString,
