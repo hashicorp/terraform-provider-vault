@@ -997,9 +997,6 @@ func setCouchbaseDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	if v, ok := d.GetOkExists(prefix + "hosts"); ok && v != nil {
 		var hosts []string
 		for _, host := range v.([]interface{}) {
-			if v == nil {
-				continue
-			}
 			hosts = append(hosts, host.(string))
 		}
 		data["hosts"] = strings.Join(hosts, ",")
