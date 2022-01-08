@@ -4,9 +4,9 @@ services:
   vault:
     image: vault:latest
     cap_add:
-      - "IPC_LOCK"
+    - "IPC_LOCK"
     ports:
-      - "8200:8200"
+    - "8200:8200"
     environment:
       VAULT_DEV_ROOT_TOKEN_ID: "TEST"
       VAULT_ADDR: "http://localhost:8200"
@@ -17,7 +17,7 @@ services:
     image: mysql:5.7
     command: --default-authentication-plugin=mysql_native_password
     ports:
-      - "3306:3306"
+    - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: "root"
       MYSQL_DATABASE: "main"
@@ -27,16 +27,16 @@ services:
   elastic:
     image: elasticsearch:7.6.0
     ports:
-      - "9200:9200"
+    - "9200:9200"
     environment:
       "discovery.type": "single-node"
       "xpack.security.enabled": "true"
       "ELASTIC_PASSWORD": "elastic"
 
   influxdb:
-    image: influxdb:1.8.10
+    image: influxdb:1.7.11-alpine
     ports:
-      - "8086:8086"
+    - "8086:8086"
     environment:
       "DOCKER_INFLUXDB_INIT_USERNAME": "admin"
       "DOCKER_INFLUXDB_INIT_PASSWORD": "password"
