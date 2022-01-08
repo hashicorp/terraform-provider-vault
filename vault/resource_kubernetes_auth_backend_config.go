@@ -13,6 +13,64 @@ import (
 var kubernetesAuthBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/config$")
 
 func kubernetesAuthBackendConfigResource() *schema.Resource {
+	fields := map[string]*schema.Schema{
+		"kubernetes_host": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.",
+		},
+		"kubernetes_ca_cert": {
+			Type:        schema.TypeString,
+			Description: "PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API.",
+			Optional:    true,
+			Default:     "",
+		},
+		"token_reviewer_jwt": {
+			Type:        schema.TypeString,
+			Description: "A service account JWT used to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API.",
+			Default:     "",
+			Optional:    true,
+			Sensitive:   true,
+		},
+		"pem_keys": {
+			Type:        schema.TypeList,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Description: "Optional list of PEM-formatted public keys or certificates used to verify the signatures of Kubernetes service account JWTs. If a certificate is given, its public key will be extracted. Not every installation of Kubernetes exposes these keys.",
+			Optional:    true,
+		},
+		"backend": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Unique name of the kubernetes backend to configure.",
+			ForceNew:    true,
+			Default:     "kubernetes",
+			// standardise on no beginning or trailing slashes
+			StateFunc: func(v interface{}) string {
+				return strings.Trim(v.(string), "/")
+			},
+		},
+		"issuer": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Optional JWT issuer. If no issuer is specified, kubernetes.io/serviceaccount will be used as the default issuer.",
+		},
+		"disable_iss_validation": {
+			Type:        schema.TypeBool,
+			Computed:    true,
+			Optional:    true,
+			Description: "Optional disable JWT issuer validation. Allows to skip ISS validation.",
+		},
+		"disable_local_ca_jwt": {
+			Type:        schema.TypeBool,
+			Computed:    true,
+			Optional:    true,
+			Description: "Optional disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.",
+		},
+	}
+
+	addTokenFields(fields, &addTokenFieldsConfig{})
+	fields["token_type"].Default = nil
+
 	return &schema.Resource{
 		Create: kubernetesAuthBackendConfigCreate,
 		Read:   kubernetesAuthBackendConfigRead,
@@ -23,60 +81,7 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 
-		Schema: map[string]*schema.Schema{
-			"kubernetes_host": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.",
-			},
-			"kubernetes_ca_cert": {
-				Type:        schema.TypeString,
-				Description: "PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API.",
-				Optional:    true,
-				Default:     "",
-			},
-			"token_reviewer_jwt": {
-				Type:        schema.TypeString,
-				Description: "A service account JWT used to access the TokenReview API to validate other JWTs during login. If not set the JWT used for login will be used to access the API.",
-				Default:     "",
-				Optional:    true,
-				Sensitive:   true,
-			},
-			"pem_keys": {
-				Type:        schema.TypeList,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "Optional list of PEM-formatted public keys or certificates used to verify the signatures of Kubernetes service account JWTs. If a certificate is given, its public key will be extracted. Not every installation of Kubernetes exposes these keys.",
-				Optional:    true,
-			},
-			"backend": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Unique name of the kubernetes backend to configure.",
-				ForceNew:    true,
-				Default:     "kubernetes",
-				// standardise on no beginning or trailing slashes
-				StateFunc: func(v interface{}) string {
-					return strings.Trim(v.(string), "/")
-				},
-			},
-			"issuer": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Optional JWT issuer. If no issuer is specified, kubernetes.io/serviceaccount will be used as the default issuer.",
-			},
-			"disable_iss_validation": {
-				Type:        schema.TypeBool,
-				Computed:    true,
-				Optional:    true,
-				Description: "Optional disable JWT issuer validation. Allows to skip ISS validation.",
-			},
-			"disable_local_ca_jwt": {
-				Type:        schema.TypeBool,
-				Computed:    true,
-				Optional:    true,
-				Description: "Optional disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.",
-			},
-		},
+		Schema: fields,
 	}
 }
 
@@ -93,6 +98,8 @@ func kubernetesAuthBackendConfigCreate(d *schema.ResourceData, meta interface{})
 	log.Printf("[DEBUG] Writing Kubernetes auth backend config %q", path)
 
 	data := map[string]interface{}{}
+
+	updateTokenFields(d, data, true)
 
 	if v, ok := d.GetOk("kubernetes_ca_cert"); ok {
 		data["kubernetes_ca_cert"] = v.(string)
@@ -169,6 +176,8 @@ func kubernetesAuthBackendConfigRead(d *schema.ResourceData, meta interface{}) e
 		return nil
 	}
 
+	readTokenFields(d, resp)
+
 	d.Set("backend", backend)
 	d.Set("kubernetes_host", resp.Data["kubernetes_host"])
 	d.Set("kubernetes_ca_cert", resp.Data["kubernetes_ca_cert"])
@@ -195,6 +204,7 @@ func kubernetesAuthBackendConfigUpdate(d *schema.ResourceData, meta interface{})
 	log.Printf("[DEBUG] Updating Kubernetes auth backend config %q", path)
 
 	data := map[string]interface{}{}
+	updateTokenFields(d, data, false)
 
 	if v, ok := d.GetOk("kubernetes_ca_cert"); ok {
 		data["kubernetes_ca_cert"] = v.(string)
