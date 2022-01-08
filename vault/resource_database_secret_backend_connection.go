@@ -893,17 +893,16 @@ func getInfluxDBConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 	} else if v, ok := d.GetOk(prefix + "pem_json"); ok {
 		result["pem_json"] = v.(string)
 	}
+	if v, ok := data["protocol_version"]; ok {
+		protocol, _ := v.(json.Number).Int64()
+		result["protocol_version"] = int64(protocol)
+	}
 	if v, ok := data["connect_timeout"]; ok {
 		timeout, _ := v.(json.Number).Int64()
 		result["connect_timeout"] = timeout
 	}
 	if v, ok := data["username_template"]; ok {
 		result["username_template"] = v.(string)
-	}
-
-	if v, ok := data["protocol_version"]; ok {
-		protocol, _ := v.(json.Number).Int64()
-		result["protocol_version"] = int64(protocol)
 	}
 
 	return []map[string]interface{}{result}
