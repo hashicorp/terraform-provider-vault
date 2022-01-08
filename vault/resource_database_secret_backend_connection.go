@@ -901,6 +901,11 @@ func getInfluxDBConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 		result["username_template"] = v.(string)
 	}
 
+	if v, ok := data["protocol_version"]; ok {
+		protocol, _ := v.(json.Number).Int64()
+		result["protocol_version"] = int64(protocol)
+	}
+
 	return []map[string]interface{}{result}
 }
 
@@ -1139,8 +1144,6 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		d.SetId("")
 		return nil
 	}
-
-	log.Printf("[DEBUG] Database connection response: %v", resp)
 
 	switch resp.Data["plugin_name"].(string) {
 	case "cassandra-database-plugin":
