@@ -990,7 +990,7 @@ func setElasticsearchDatabaseConnectionData(d *schema.ResourceData, prefix strin
 }
 
 func setCouchbaseDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
-	if v, ok := d.GetOkExists(prefix + "hosts"); ok {
+	if v, ok := d.GetOkExists(prefix + "hosts"); ok && v != nil {
 		var hosts []string
 		for _, host := range v.([]interface{}) {
 			if v == nil {

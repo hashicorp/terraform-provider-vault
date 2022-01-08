@@ -115,7 +115,7 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 ### Couchbase Configuration Options
 
-* `hosts` - (Required) A list of Couchbase hosts to connect to. Must use couchbases:// scheme if `tls` is `true`.
+* `hosts` - (Required) A set of Couchbase URIs to connect to. Must use `couchbases://` scheme if `tls` is `true`.
 
 * `username` - (Required) Specifies the username for Vault to use.
 

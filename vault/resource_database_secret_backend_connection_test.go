@@ -151,12 +151,10 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendInfluxDB)
+	MaybeSkipDBTests(t, dbBackendCouchbase)
 
-	host := os.Getenv("COUCHBASE_HOST")
-	if host == "" {
-		t.Skip("COUCHBASE_HOST not set")
-	}
+	values := testutil.SkipTestEnvUnset(t, "COUCHBASE_HOST")
+	host := values[0]
 	username := os.Getenv("COUCHBASE_USERNAME")
 	password := os.Getenv("COUCHBASE_PASSWORD")
 	backend := acctest.RandomWithPrefix("tf-test-db")
