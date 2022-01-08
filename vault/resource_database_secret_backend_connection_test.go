@@ -153,10 +153,11 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 	MaybeSkipDBTests(t, dbBackendCouchbase)
 
-	values := testutil.SkipTestEnvUnset(t, "COUCHBASE_HOST", "COUCHBASE_USERNAME", "COUCHBASE_PASSWORD")
-	host := values[0]
-	username := values[1]
-	password := values[2]
+	values := testutil.SkipTestEnvUnset(t, "COUCHBASE_HOST_1", "COUCHBASE_HOST_2", "COUCHBASE_USERNAME", "COUCHBASE_PASSWORD")
+	host1 := values[0]
+	host2 := values[1]
+	username := values[2]
+	password := values[3]
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
 	resourceName := "vault_database_secret_backend_connection.test"
@@ -166,7 +167,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_couchbase(name, backend, host, username, password),
+				Config: testAccDatabaseSecretBackendConnectionConfig_couchbase(name, backend, host1, host2, username, password),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
@@ -176,8 +177,9 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "root_rotation_statements.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "root_rotation_statements.0", "FOOBAR"),
 					resource.TestCheckResourceAttr(resourceName, "verify_connection", "true"),
-					resource.TestCheckResourceAttr(resourceName, "couchbase.0.hosts.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "couchbase.0.hosts.0", host),
+					resource.TestCheckResourceAttr(resourceName, "couchbase.0.hosts.#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "couchbase.0.hosts.*", host1),
+					resource.TestCheckTypeSetElemAttr(resourceName, "couchbase.0.hosts.*", host2),
 					resource.TestCheckResourceAttr(resourceName, "couchbase.0.username", username),
 					resource.TestCheckResourceAttr(resourceName, "couchbase.0.password", password),
 					resource.TestCheckResourceAttr(resourceName, "couchbase.0.tls", "false"),
@@ -855,7 +857,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, host, username, password)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_couchbase(name, path, host, username, password string) string {
+func testAccDatabaseSecretBackendConnectionConfig_couchbase(name, path, host1, host2, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -867,12 +869,12 @@ resource "vault_database_secret_backend_connection" "test" {
   allowed_roles            = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
   couchbase {
-    hosts    = ["%s"]
+    hosts    = ["%s", "%s"]
     username = "%s"
     password = "%s"
   }
 }
-`, path, name, host, username, password)
+`, path, name, host1, host2, username, password)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_elasticsearch(name, path, host, username, password string) string {
