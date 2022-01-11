@@ -20,7 +20,7 @@ import (
 const testGHOrg = "hashicorp"
 
 func TestAccGithubAuthBackend_basic(t *testing.T) {
-	testutil.TestAccPreCheck(t)
+	testutil.SkipTestAcc(t)
 	// TODO: remove once we can test against the vault-1.10 dev builds
 	testutil.SkipTestEnvSet(t, "SKIP_VAULT_NEXT_TESTS")
 
@@ -67,7 +67,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 }
 
 func TestAccGithubAuthBackend_tuning(t *testing.T) {
-	testutil.TestAccPreCheck(t)
+	testutil.SkipTestAcc(t)
 	// TODO: remove once we can test against the vault-1.10 dev builds
 	testutil.SkipTestEnvSet(t, "SKIP_VAULT_NEXT_TESTS")
 
@@ -138,7 +138,7 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 }
 
 func TestAccGithubAuthBackend_description(t *testing.T) {
-	testutil.TestAccPreCheck(t)
+	testutil.SkipTestAcc(t)
 	// TODO: remove once we can test against the vault-1.10 dev builds
 	testutil.SkipTestEnvSet(t, "SKIP_VAULT_NEXT_TESTS")
 
