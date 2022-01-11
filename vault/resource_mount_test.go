@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -115,15 +116,39 @@ func TestResourceMount_AuditNonHMACRequestKeys(t *testing.T) {
 	path := "example-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_InitialConfigAuditNonHMACRequestKeys(path),
-				Check:  testResourceMount_InitialCheckAuditNonHMACRequestKeys(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_mount.test", "path", path),
+					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.#", "2"),
+					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.0", "test1request"),
+					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.1", "test2request"),
+					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.#", "2"),
+					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.0", "test1response"),
+					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.1", "test2response"),
+					testResourceMount_CheckAuditNonHMACRequestKeys(
+						path,
+						[]string{"test1request", "test2request"},
+						[]string{"test1response", "test2response"}),
+				),
 			},
 			{
 				Config: testResourceMount_UpdateConfigAuditNonHMACRequestKeys,
-				Check:  testResourceMount_UpdateAuditNonHMACRequestKeys,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_mount.test", "path", "remountingExample"),
+					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.#", "2"),
+					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.0", "test3request"),
+					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.1", "test4request"),
+					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.#", "2"),
+					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.0", "test3response"),
+					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.1", "test4response"),
+					testResourceMount_CheckAuditNonHMACRequestKeys(
+						"remountingExample",
+						[]string{"test3request", "test4request"},
+						[]string{"test3response", "test4response"}),
+				),
 			},
 		},
 	})
@@ -518,7 +543,7 @@ resource "vault_mount" "test" {
 `, path)
 }
 
-func testResourceMount_InitialCheckAuditNonHMACRequestKeys(expectedPath string) resource.TestCheckFunc {
+func testResourceMount_CheckAuditNonHMACRequestKeys(expectedPath string, expectedReqKeys, expectedRespKeys []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_mount.test"]
 		if resourceState == nil {
@@ -545,12 +570,16 @@ func testResourceMount_InitialCheckAuditNonHMACRequestKeys(expectedPath string) 
 			return fmt.Errorf("error reading back mount %q: %s", path, err)
 		}
 
-		if len(mount.Config.AuditNonHMACRequestKeys) < 2 || mount.Config.AuditNonHMACRequestKeys[0] != "test1request" || mount.Config.AuditNonHMACRequestKeys[1] != "test2request" {
-			return fmt.Errorf("audit_non_hmac_request_keys is %v; expected [\"test1request\", \"test2request\"]", mount.Config.AuditNonHMACRequestKeys)
+		if !reflect.DeepEqual(expectedReqKeys, mount.Config.AuditNonHMACRequestKeys) {
+			return fmt.Errorf("expected audit_non_hmac_request_keys %#v, actual %#v",
+				expectedReqKeys,
+				mount.Config.AuditNonHMACRequestKeys)
 		}
 
-		if len(mount.Config.AuditNonHMACResponseKeys) < 2 || mount.Config.AuditNonHMACResponseKeys[0] != "test1response" || mount.Config.AuditNonHMACResponseKeys[1] != "test2response" {
-			return fmt.Errorf("audit_non_hmac_response_keys is %v; expected [\"test1response\", \"test2response\"]", mount.Config.AuditNonHMACRequestKeys)
+		if !reflect.DeepEqual(expectedRespKeys, mount.Config.AuditNonHMACResponseKeys) {
+			return fmt.Errorf("expected audit_non_hmac_response_keys %#v, actual %#v",
+				expectedRespKeys,
+				mount.Config.AuditNonHMACResponseKeys)
 		}
 
 		return nil
@@ -593,12 +622,24 @@ func testResourceMount_UpdateAuditNonHMACRequestKeys(s *terraform.State) error {
 		return fmt.Errorf("error reading back mount: %s", err)
 	}
 
-	if len(mount.Config.AuditNonHMACRequestKeys) < 2 || mount.Config.AuditNonHMACRequestKeys[0] != "test3request" || mount.Config.AuditNonHMACRequestKeys[1] != "test4request" {
-		return fmt.Errorf("audit_non_hmac_request_keys is %v; expected [\"test3request\", \"test4request\"]", mount.Config.AuditNonHMACRequestKeys)
+	expectedRequestKeys := []string{
+		instanceState.Attributes["audit_non_hmac_request_keys.0"],
+		instanceState.Attributes["audit_non_hmac_request_keys.1"],
+	}
+	if !reflect.DeepEqual(expectedRequestKeys, mount.Config.AuditNonHMACRequestKeys) {
+		return fmt.Errorf("expected audit_non_hmac_request_keys %#v, actual %#v",
+			expectedRequestKeys,
+			mount.Config.AuditNonHMACRequestKeys)
 	}
 
-	if len(mount.Config.AuditNonHMACResponseKeys) < 2 || mount.Config.AuditNonHMACResponseKeys[0] != "test3response" || mount.Config.AuditNonHMACResponseKeys[1] != "test4response" {
-		return fmt.Errorf("audit_non_hmac_response_keys is %v; expected [\"test3response\", \"test4response\"]", mount.Config.AuditNonHMACRequestKeys)
+	expectedResponseKeys := []string{
+		instanceState.Attributes["audit_non_hmac_response_keys.0"],
+		instanceState.Attributes["audit_non_hmac_response_keys.1"],
+	}
+	if !reflect.DeepEqual(expectedResponseKeys, mount.Config.AuditNonHMACResponseKeys) {
+		return fmt.Errorf("expected audit_non_hmac_response_keys %#v, actual %#v",
+			expectedResponseKeys,
+			mount.Config.AuditNonHMACResponseKeys)
 	}
 
 	return nil
