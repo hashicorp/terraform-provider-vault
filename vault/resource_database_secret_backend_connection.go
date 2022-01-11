@@ -24,6 +24,7 @@ type connectionStringConfig struct {
 
 const (
 	dbBackendCassandra     = "cassandra"
+	dbBackendCouchbase     = "couchbase"
 	dbBackendElasticSearch = "elasticsearch"
 	dbBackendHana          = "hana"
 	dbBackendInfluxDB      = "influxdb"
@@ -45,6 +46,7 @@ var (
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
 	dbBackendTypes                                      = []string{
 		dbBackendCassandra,
+		dbBackendCouchbase,
 		dbBackendElasticSearch,
 		dbBackendHana,
 		dbBackendInfluxDB,
@@ -210,6 +212,65 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				},
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbBackendCassandra, dbBackendTypes),
+			},
+
+			"couchbase": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the couchbase-database-plugin plugin.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"hosts": {
+							Type: schema.TypeList,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Required:    true,
+							Description: "A set of Couchbase URIs to connect to. Must use `couchbases://` scheme if `tls` is `true`.",
+						},
+						"username": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Specifies the username for Vault to use.",
+						},
+						"password": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Specifies the password corresponding to the given username.",
+							Sensitive:   true,
+						},
+						"tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: "Specifies whether to use TLS when connecting to Couchbase.",
+							Default:     false,
+						},
+						"insecure_tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: " Specifies whether to skip verification of the server certificate when using TLS.",
+							Default:     false,
+						},
+						"base64_pem": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Required if `tls` is `true`. Specifies the certificate authority of the Couchbase server, as a PEM certificate that has been base64 encoded.",
+							Sensitive:   true,
+						},
+						"bucket_name": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Required for Couchbase versions prior to 6.5.0. This is only used to verify vault's connection to the server.",
+						},
+						"username_template": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Template describing how dynamic usernames are generated.",
+						},
+					},
+				},
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbBackendCouchbase, dbBackendTypes),
 			},
 
 			"influxdb": {
@@ -504,6 +565,8 @@ func getDatabasePluginName(d *schema.ResourceData) (string, error) {
 	switch {
 	case len(d.Get(dbBackendCassandra).([]interface{})) > 0:
 		return "cassandra-database-plugin", nil
+	case len(d.Get(dbBackendCouchbase).([]interface{})) > 0:
+		return "couchbase-database-plugin", nil
 	case len(d.Get(dbBackendInfluxDB).([]interface{})) > 0:
 		return "influxdb-database-plugin", nil
 	case len(d.Get(dbBackendHana).([]interface{})) > 0:
@@ -586,6 +649,8 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		if v, ok := d.GetOkExists("cassandra.0.connect_timeout"); ok {
 			data["connect_timeout"] = v.(int)
 		}
+	case "couchbase-database-plugin":
+		setCouchbaseDatabaseConnectionData(d, "couchbase.0.", data)
 	case "influxdb-database-plugin":
 		setInfluxDBDatabaseConnectionData(d, "influxdb.0.", data)
 	case "hana-database-plugin":
@@ -747,6 +812,47 @@ func getElasticsearchConnectionDetailsFromResponse(d *schema.ResourceData, prefi
 	return []map[string]interface{}{result}
 }
 
+func getCouchbaseConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	result := map[string]interface{}{}
+
+	if v, ok := data["hosts"]; ok {
+		result["hosts"] = strings.Split(v.(string), ",")
+	}
+	if v, ok := data["username"]; ok {
+		result["username"] = v.(string)
+	}
+	if v, ok := data["password"]; ok {
+		result["password"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "password"); ok {
+		// keep the password we have in state/config if the API doesn't return one
+		result["password"] = v.(string)
+	}
+	if v, ok := data["tls"]; ok {
+		result["tls"] = v.(bool)
+	}
+	if v, ok := data["insecure_tls"]; ok {
+		result["insecure_tls"] = v.(bool)
+	}
+	if v, ok := data["base64_pem"]; ok {
+		result["base64_pem"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "base64_pem"); ok {
+		result["base64_pem"] = v.(string)
+	}
+	if v, ok := data["bucket_name"]; ok {
+		result["bucket_name"] = v.(string)
+	}
+	if v, ok := data["username_template"]; ok {
+		result["username_template"] = v.(string)
+	}
+
+	return []map[string]interface{}{result}
+}
+
 func getInfluxDBConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
@@ -884,6 +990,37 @@ func setElasticsearchDatabaseConnectionData(d *schema.ResourceData, prefix strin
 
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
+	}
+}
+
+func setCouchbaseDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	if v, ok := d.GetOkExists(prefix + "hosts"); ok && v != nil {
+		var hosts []string
+		for _, host := range v.([]interface{}) {
+			hosts = append(hosts, host.(string))
+		}
+		data["hosts"] = strings.Join(hosts, ",")
+	}
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		data["password"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "tls"); ok {
+		data["tls"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists(prefix + "insecure_tls"); ok {
+		data["insecure_tls"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists(prefix + "base64_pem"); ok {
+		data["base64_pem"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "bucket_name"); ok {
+		data["bucket_name"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "username_template"); ok {
+		data["username_template"] = v.(int)
 	}
 }
 
@@ -1062,6 +1199,8 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			}
 			d.Set("cassandra", []map[string]interface{}{result})
 		}
+	case "couchbase-database-plugin":
+		d.Set("couchbase", getCouchbaseConnectionDetailsFromResponse(d, "couchbase.0.", resp))
 	case "influxdb-database-plugin":
 		d.Set("influxdb", getInfluxDBConnectionDetailsFromResponse(d, "influxdb.0.", resp))
 	case "hana-database-plugin":
