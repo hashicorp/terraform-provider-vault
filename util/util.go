@@ -285,3 +285,14 @@ func SetupCCCRetryClient(client *api.Client, maxRetry int) {
 	}
 	client.SetClientTimeout(to + time.Second*30)
 }
+
+// SetResourceData from a data map.
+func SetResourceData(d *schema.ResourceData, data map[string]interface{}) error {
+	for k := range data {
+		if err := d.Set(k, data[k]); err != nil {
+			return fmt.Errorf("error setting resource data for key %q, err=%w", k, err)
+		}
+	}
+
+	return nil
+}

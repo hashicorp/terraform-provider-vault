@@ -7,6 +7,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.11.21
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.8
 	github.com/aws/aws-sdk-go v1.41.8
+	github.com/cli/go-gh v0.0.1
 	github.com/containerd/containerd v1.5.9 // indirect
 	github.com/denisenkom/go-mssqldb v0.11.0
 	github.com/go-sql-driver/mysql v1.6.0

@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/cli/go-gh"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/mitchellh/go-homedir"
@@ -182,4 +183,42 @@ func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestChe
 		}
 		return nil
 	}
+}
+
+// GHOrgResponse provides access to a subset of the GH API's 'orgs' response data.
+type GHOrgResponse struct {
+	// Login is the GH organization's name
+	Login string
+	// ID of the GH organization
+	ID int
+}
+
+// cache GH API responses to avoid triggering the GH request rate limiter
+var ghOrgResponseCache = map[string]*GHOrgResponse{}
+
+// GetGHOrgResponse returns the GH org's meta configuration.
+func GetGHOrgResponse(t *testing.T, org string) *GHOrgResponse {
+	t.Helper()
+
+	if v, ok := ghOrgResponseCache[org]; ok {
+		return v
+	}
+
+	client, err := gh.RESTClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result := &GHOrgResponse{}
+	if err := client.Get(fmt.Sprintf("orgs/%s", org), result); err != nil {
+		t.Fatal(err)
+	}
+
+	if org != result.Login {
+		t.Fatalf("expected org %q from GH API response, actual %q", org, result.Login)
+	}
+
+	ghOrgResponseCache[org] = result
+
+	return result
 }
