@@ -603,48 +603,6 @@ resource "vault_mount" "test" {
 
 `
 
-func testResourceMount_UpdateAuditNonHMACRequestKeys(s *terraform.State) error {
-	resourceState := s.Modules[0].Resources["vault_mount.test"]
-	instanceState := resourceState.Primary
-
-	path := instanceState.ID
-
-	if path != instanceState.Attributes["path"] {
-		return fmt.Errorf("id doesn't match path")
-	}
-
-	if path != "remountingExample" {
-		return fmt.Errorf("unexpected path value")
-	}
-
-	mount, err := findMount(path)
-	if err != nil {
-		return fmt.Errorf("error reading back mount: %s", err)
-	}
-
-	expectedRequestKeys := []string{
-		instanceState.Attributes["audit_non_hmac_request_keys.0"],
-		instanceState.Attributes["audit_non_hmac_request_keys.1"],
-	}
-	if !reflect.DeepEqual(expectedRequestKeys, mount.Config.AuditNonHMACRequestKeys) {
-		return fmt.Errorf("expected audit_non_hmac_request_keys %#v, actual %#v",
-			expectedRequestKeys,
-			mount.Config.AuditNonHMACRequestKeys)
-	}
-
-	expectedResponseKeys := []string{
-		instanceState.Attributes["audit_non_hmac_response_keys.0"],
-		instanceState.Attributes["audit_non_hmac_response_keys.1"],
-	}
-	if !reflect.DeepEqual(expectedResponseKeys, mount.Config.AuditNonHMACResponseKeys) {
-		return fmt.Errorf("expected audit_non_hmac_response_keys %#v, actual %#v",
-			expectedResponseKeys,
-			mount.Config.AuditNonHMACResponseKeys)
-	}
-
-	return nil
-}
-
 func testResourceMount_CheckExternalEntropyAccess(expectedPath string, expectedExternalEntropyAccess bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_mount.test"]
