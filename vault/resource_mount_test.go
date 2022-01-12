@@ -113,7 +113,9 @@ func TestResourceMount_SealWrap(t *testing.T) {
 
 // Test Audit non-HMAC fields
 func TestResourceMount_AuditNonHMACRequestKeys(t *testing.T) {
+	resourcePath := "vault_mount.test"
 	path := "example-" + acctest.RandString(10)
+
 	expectReqKeysNew := []string{"test1request", "test2request"}
 	expectRespKeysNew := []string{"test1response", "test2response"}
 	expectReqKeysUpdate := []string{"test3request", "test4request"}
@@ -125,26 +127,26 @@ func TestResourceMount_AuditNonHMACRequestKeys(t *testing.T) {
 			{
 				Config: testResourceMount_AuditNonHMACRequestKeysConfig(path, expectReqKeysNew, expectRespKeysNew),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_mount.test", "path", path),
-					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.#", "2"),
-					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.0", "test1request"),
-					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.1", "test2request"),
-					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.#", "2"),
-					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.0", "test1response"),
-					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.1", "test2response"),
+					resource.TestCheckResourceAttr(resourcePath, "path", path),
+					resource.TestCheckResourceAttr(resourcePath, "audit_non_hmac_request_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourcePath, "audit_non_hmac_request_keys.0", expectReqKeysNew[0]),
+					resource.TestCheckResourceAttr(resourcePath, "audit_non_hmac_request_keys.1", expectReqKeysNew[1]),
+					resource.TestCheckResourceAttr(resourcePath, "audit_non_hmac_response_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourcePath, "audit_non_hmac_response_keys.0", expectRespKeysNew[0]),
+					resource.TestCheckResourceAttr(resourcePath, "audit_non_hmac_response_keys.1", expectRespKeysNew[1]),
 					testResourceMount_CheckAuditNonHMACRequestKeys(path, expectReqKeysNew, expectRespKeysNew),
 				),
 			},
 			{
 				Config: testResourceMount_AuditNonHMACRequestKeysConfig(path, expectReqKeysUpdate, expectRespKeysUpdate),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_mount.test", "path", path),
-					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.#", "2"),
-					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.0", "test3request"),
-					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.1", "test4request"),
-					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.#", "2"),
-					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.0", "test3response"),
-					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.1", "test4response"),
+					resource.TestCheckResourceAttr(resourcePath, "path", path),
+					resource.TestCheckResourceAttr(resourcePath, "audit_non_hmac_request_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourcePath, "audit_non_hmac_request_keys.0", expectReqKeysUpdate[0]),
+					resource.TestCheckResourceAttr(resourcePath, "audit_non_hmac_request_keys.1", expectReqKeysUpdate[1]),
+					resource.TestCheckResourceAttr(resourcePath, "audit_non_hmac_response_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourcePath, "audit_non_hmac_response_keys.0", expectRespKeysUpdate[0]),
+					resource.TestCheckResourceAttr(resourcePath, "audit_non_hmac_response_keys.1", expectRespKeysUpdate[1]),
 					testResourceMount_CheckAuditNonHMACRequestKeys(path, expectReqKeysUpdate, expectRespKeysUpdate),
 				),
 			},
