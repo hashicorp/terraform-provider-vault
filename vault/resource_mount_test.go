@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -110,16 +111,19 @@ func TestResourceMount_SealWrap(t *testing.T) {
 	})
 }
 
-// Test Audit HMAC Request Keys attributes
-
+// Test Audit non-HMAC fields
 func TestResourceMount_AuditNonHMACRequestKeys(t *testing.T) {
 	path := "example-" + acctest.RandString(10)
+	expectReqKeysNew := []string{"test1request", "test2request"}
+	expectRespKeysNew := []string{"test1response", "test2response"}
+	expectReqKeysUpdate := []string{"test3request", "test4request"}
+	expectRespKeysUpdate := []string{"test3response", "test4response"}
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceMount_InitialConfigAuditNonHMACRequestKeys(path),
+				Config: testResourceMount_AuditNonHMACRequestKeysConfig(path, expectReqKeysNew, expectRespKeysNew),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_mount.test", "path", path),
 					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.#", "2"),
@@ -128,26 +132,20 @@ func TestResourceMount_AuditNonHMACRequestKeys(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.#", "2"),
 					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.0", "test1response"),
 					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.1", "test2response"),
-					testResourceMount_CheckAuditNonHMACRequestKeys(
-						path,
-						[]string{"test1request", "test2request"},
-						[]string{"test1response", "test2response"}),
+					testResourceMount_CheckAuditNonHMACRequestKeys(path, expectReqKeysNew, expectRespKeysNew),
 				),
 			},
 			{
-				Config: testResourceMount_UpdateConfigAuditNonHMACRequestKeys,
+				Config: testResourceMount_AuditNonHMACRequestKeysConfig(path, expectReqKeysUpdate, expectRespKeysUpdate),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_mount.test", "path", "remountingExample"),
+					resource.TestCheckResourceAttr("vault_mount.test", "path", path),
 					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.#", "2"),
 					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.0", "test3request"),
 					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_request_keys.1", "test4request"),
 					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.#", "2"),
 					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.0", "test3response"),
 					resource.TestCheckResourceAttr("vault_mount.test", "audit_non_hmac_response_keys.1", "test4response"),
-					testResourceMount_CheckAuditNonHMACRequestKeys(
-						"remountingExample",
-						[]string{"test3request", "test4request"},
-						[]string{"test3response", "test4response"}),
+					testResourceMount_CheckAuditNonHMACRequestKeys(path, expectReqKeysUpdate, expectRespKeysUpdate),
 				),
 			},
 		},
@@ -526,21 +524,37 @@ func testResourceMount_UpdateCheckSealWrap(s *terraform.State) error {
 	return nil
 }
 
-func testResourceMount_InitialConfigAuditNonHMACRequestKeys(path string) string {
-	return fmt.Sprintf(`
+func testResourceMount_AuditNonHMACRequestKeysConfig(path string, reqKeys, respKeys []string) string {
+	config := fmt.Sprintf(`
 resource "vault_mount" "test" {
-	path = "%s"
-	type = "kv"
-	description = "Example local mount for testing"
-	default_lease_ttl_seconds = 3600
-	max_lease_ttl_seconds = 36000
-	options = {
-		version = "1"
-	}
-	audit_non_hmac_request_keys = ["test1request", "test2request"]
-	audit_non_hmac_response_keys = ["test1response", "test2response"]
-}
+    path = "%s"
+    type = "kv"
+    description = "Example local mount for testing"
+    default_lease_ttl_seconds = 3600
+    max_lease_ttl_seconds = 36000
+    options = {
+	    version = "1"
+    }
 `, path)
+
+	qs := func(s []string) []string {
+		r := make([]string, len(s))
+		for i, v := range s {
+			r[i] = fmt.Sprintf("%q", v)
+		}
+		return r
+	}
+
+	for k, v := range map[string][]string{
+		"audit_non_hmac_request_keys":  reqKeys,
+		"audit_non_hmac_response_keys": respKeys,
+	} {
+		if len(v) > 0 {
+			config += fmt.Sprintf("%*s = [%s]\n", len(k)+4, k, strings.Join(qs(v), ","))
+		}
+	}
+
+	return config + "}"
 }
 
 func testResourceMount_CheckAuditNonHMACRequestKeys(expectedPath string, expectedReqKeys, expectedRespKeys []string) resource.TestCheckFunc {
@@ -585,23 +599,6 @@ func testResourceMount_CheckAuditNonHMACRequestKeys(expectedPath string, expecte
 		return nil
 	}
 }
-
-var testResourceMount_UpdateConfigAuditNonHMACRequestKeys = `
-
-resource "vault_mount" "test" {
-	path = "remountingExample"
-	type = "kv"
-	description = "Example mount for testing"
-	default_lease_ttl_seconds = 7200
-	max_lease_ttl_seconds = 72000
-	options = {
-		version = "1"
-	}
-	audit_non_hmac_request_keys = ["test3request", "test4request"]
-	audit_non_hmac_response_keys = ["test3response", "test4response"]
-}
-
-`
 
 func testResourceMount_CheckExternalEntropyAccess(expectedPath string, expectedExternalEntropyAccess bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
