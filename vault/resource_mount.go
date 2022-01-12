@@ -127,8 +127,8 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL:          fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 			MaxLeaseTTL:              fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
-			AuditNonHMACRequestKeys:  expandStringSliceWithEmpty(d.Get("audit_non_hmac_request_keys").([]interface{}), false),
-			AuditNonHMACResponseKeys: expandStringSliceWithEmpty(d.Get("audit_non_hmac_response_keys").([]interface{}), false),
+			AuditNonHMACRequestKeys:  expandStringSlice(d.Get("audit_non_hmac_request_keys").([]interface{})),
+			AuditNonHMACResponseKeys: expandStringSlice(d.Get("audit_non_hmac_response_keys").([]interface{})),
 		},
 		Local:                 d.Get("local").(bool),
 		Options:               opts(d),
@@ -159,11 +159,11 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if d.HasChange("audit_non_hmac_request_keys") {
-		config.AuditNonHMACRequestKeys = expandStringSliceWithEmpty(d.Get("audit_non_hmac_request_keys").([]interface{}), false)
+		config.AuditNonHMACRequestKeys = expandStringSlice(d.Get("audit_non_hmac_request_keys").([]interface{}))
 	}
 
 	if d.HasChange("audit_non_hmac_response_keys") {
-		config.AuditNonHMACResponseKeys = expandStringSliceWithEmpty(d.Get("audit_non_hmac_response_keys").([]interface{}), false)
+		config.AuditNonHMACResponseKeys = expandStringSlice(d.Get("audit_non_hmac_response_keys").([]interface{}))
 	}
 
 	if d.HasChange("description") {
