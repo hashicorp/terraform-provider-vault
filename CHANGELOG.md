@@ -6,6 +6,7 @@ IMPROVEMENTS:
 * `resource/database_secret_backend_connection`: Add support for configuring Redshift databases ([#1279](https://github.com/hashicorp/terraform-provider-vault/pull/1279))
 * `resource/pki_secret_backend_intermediate_cert_request`: Add support for the `ed25519` key_type ([#1278](https://github.com/hashicorp/terraform-provider-vault/pull/1278))
 * `resource/rabbitmq_secret_backend_role`: Add support for `vhost_topics` ([#1246](https://github.com/hashicorp/terraform-provider-vault/pull/1246))
+* `resource/vault_mount`: Add support for `audit_non_hmac_request_keys` and `audit_non_hmac_response_keys` ([#1297](https://github.com/hashicorp/terraform-provider-vault/pull/1297))
 
 ## 3.1.1 (December 22, 2021)
 BUGS:
