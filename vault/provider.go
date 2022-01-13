@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/config"
 
@@ -47,32 +48,38 @@ var maxHTTPRetriesCCC int
 // The key of the mutex should be the path in Vault.
 var vaultMutexKV = helper.NewMutexKV()
 
+// ProviderMeta provides resources with access to the Vault client and
+// other bits
 type ProviderMeta struct {
-	provider *schema.Provider
-	client   *api.Client
-	// cache client instances by NS
-	clientCache map[string]*api.Client
-	m           sync.RWMutex
+	client       *api.Client
+	resourceData *schema.ResourceData
+	clientCache  map[string]*api.Client
+	m            sync.RWMutex
 }
 
+// GetClient returns the providers default Vault client.
 func (p *ProviderMeta) GetClient() *api.Client {
-	/*
-		p.m.RLock()
-		defer p.m.RUnlock()
-
-		if p.client == nil {
-			return nil, fmt.Errorf("api.Client not set")
-		}
-	*/
 	return p.client
 }
 
+// GetNSClient returns a namespaced Vault client.
+// The provided namespace will always be set relative to the default client's
+// namespace.
 func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 	p.m.Lock()
 	defer p.m.Unlock()
 
+	if ns == "" {
+		return nil, fmt.Errorf("empty namespace not allowed")
+	}
+
 	if p.clientCache == nil {
 		p.clientCache = make(map[string]*api.Client)
+	}
+
+	ns = strings.Trim(ns, "/")
+	if rootNS := p.resourceData.Get("namespace").(string); rootNS != "" {
+		ns = fmt.Sprintf("%s/%s", rootNS, ns)
 	}
 
 	if v, ok := p.clientCache[ns]; ok {
@@ -83,6 +90,8 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	c.SetNamespace(ns)
 	p.clientCache[ns] = c
 
 	return c, nil
@@ -249,7 +258,7 @@ func Provider() *schema.Provider {
 				},
 			},
 		},
-		ConfigureFunc:  providerConfigure,
+		ConfigureFunc:  NewProviderMeta,
 		DataSourcesMap: dataSourcesMap,
 		ResourcesMap:   resourcesMap,
 	}
@@ -771,7 +780,9 @@ func providerToken(d *schema.ResourceData) (string, error) {
 	return strings.TrimSpace(token), nil
 }
 
-func providerConfigure(d *schema.ResourceData) (interface{}, error) {
+// NewProviderMeta sets up the Provider to service Vault requests.
+// It is meant to be used as a schema.ConfigureFunc.
+func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	clientConfig := api.DefaultConfig()
 	addr := d.Get("address").(string)
 	if addr != "" {
@@ -908,11 +919,10 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		client.SetNamespace(namespace)
 	}
 
-	pm := &ProviderMeta{
-		client: client,
-	}
-
-	return pm, nil
+	return &ProviderMeta{
+		resourceData: d,
+		client:       client,
+	}, nil
 }
 
 func setChildToken(d *schema.ResourceData, c *api.Client) error {
@@ -1020,4 +1030,30 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 	parameters["iam_request_body"] = loginData["iam_request_body"]
 
 	return nil
+}
+
+func GetClientForResource(d *schema.ResourceData, meta interface{}) (*api.Client, error) {
+	var ns string
+	if v, ok := d.GetOk("namespace"); ok {
+		ns = v.(string)
+	}
+
+	return getClient(ns, meta)
+}
+
+func GetClientForInstanceState(state *terraform.InstanceState, meta interface{}) (*api.Client, error) {
+	return getClient(state.Attributes["namespace"], meta)
+}
+
+func getClient(ns string, meta interface{}) (*api.Client, error) {
+	p, ok := meta.(*ProviderMeta)
+	if !ok {
+		return nil, fmt.Errorf("meta argument must be a ProviderMeta")
+	}
+
+	if ns != "" {
+		return p.GetNSClient(ns)
+	}
+
+	return p.GetClient(), nil
 }

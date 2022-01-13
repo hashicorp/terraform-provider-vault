@@ -85,7 +85,7 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 	})
 
 	rootProviderData := rootProviderResource.TestResourceData()
-	if _, err := providerConfigure(rootProviderData); err != nil {
+	if _, err := NewProviderMeta(rootProviderData); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -108,7 +108,7 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 	})
 
 	rootProviderData := rootProviderResource.TestResourceData()
-	if _, err := providerConfigure(rootProviderData); err != nil {
+	if _, err := NewProviderMeta(rootProviderData); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -121,7 +121,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 		Schema: rootProvider.Schema,
 	}
 	rootProviderData := rootProviderResource.TestResourceData()
-	if _, err := providerConfigure(rootProviderData); err != nil {
+	if _, err := NewProviderMeta(rootProviderData); err != nil {
 		t.Fatal(err)
 	}
 
@@ -148,7 +148,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	nsProviderData := nsProviderResource.TestResourceData()
 	nsProviderData.Set("namespace", namespacePath)
 	nsProviderData.Set("token", os.Getenv("VAULT_TOKEN"))
-	if _, err := providerConfigure(nsProviderData); err != nil {
+	if _, err := NewProviderMeta(nsProviderData); err != nil {
 		t.Fatal(err)
 	}
 
@@ -234,7 +234,7 @@ func testResourceApproleLoginCheckAttrs(t *testing.T) resource.TestCheckFunc {
 		}
 		approleProviderData := approleProviderResource.TestResourceData()
 		approleProviderData.Set("auth_login", authLoginData)
-		_, err := providerConfigure(approleProviderData)
+		_, err := NewProviderMeta(approleProviderData)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -291,7 +291,7 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 		ns2ProviderData := ns2ProviderResource.TestResourceData()
 		ns2ProviderData.Set("namespace", namespacePath)
 		ns2ProviderData.Set("token", vaultToken)
-		if _, err := providerConfigure(ns2ProviderData); err != nil {
+		if _, err := NewProviderMeta(ns2ProviderData); err != nil {
 			t.Fatal(err)
 		}
 

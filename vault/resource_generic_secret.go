@@ -31,6 +31,13 @@ func genericSecretResource(name string) *schema.Resource {
 				Description: "Full path where the generic secret will be written.",
 			},
 
+			"namespace": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Target namespace. (requires Enterprise)",
+			},
+
 			// Data is passed as JSON so that an arbitrary structure is
 			// possible, rather than forcing e.g. all values to be strings.
 			"data_json": {
@@ -117,11 +124,13 @@ func normalizeDataJSON(data string) (string, error) {
 }
 
 func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, err := GetClientForResource(d, meta)
+	if err != nil {
+		return err
+	}
 
 	var data map[string]interface{}
-	err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data)
-	if err != nil {
+	if err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data); err != nil {
 		return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
 	}
 
@@ -153,7 +162,10 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 }
 
 func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, err := GetClientForResource(d, meta)
+	if err != nil {
+		return err
+	}
 
 	path := d.Id()
 
@@ -187,7 +199,10 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	if shouldRead {
-		client := meta.(*ProviderMeta).GetClient()
+		client, err := GetClientForResource(d, meta)
+		if err != nil {
+			return err
+		}
 
 		log.Printf("[DEBUG] Reading %s from Vault", path)
 		secret, err := versionedSecret(latestSecretVersion, path, client)

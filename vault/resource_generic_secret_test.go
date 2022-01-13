@@ -13,13 +13,15 @@ import (
 )
 
 func TestResourceGenericSecret(t *testing.T) {
-	path := acctest.RandomWithPrefix("secretsv1/test")
+	mount := "secretsv1"
+	name := acctest.RandomWithPrefix("test")
+	path := fmt.Sprintf("%s/%s", mount, name)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceGenericSecret_initialConfig(path),
+				Config: testResourceGenericSecret_initialConfig(mount, name),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{
@@ -31,13 +33,15 @@ func TestResourceGenericSecret(t *testing.T) {
 }
 
 func TestResourceGenericSecret_deleted(t *testing.T) {
-	path := acctest.RandomWithPrefix("secretsv1/test")
+	mount := "secretsv1"
+	name := acctest.RandomWithPrefix("test")
+	path := fmt.Sprintf("%s/%s", mount, name)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceGenericSecret_initialConfig(path),
+				Config: testResourceGenericSecret_initialConfig(mount, path),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{
@@ -48,7 +52,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 						t.Fatalf("unable to manually delete the secret via the SDK: %s", err)
 					}
 				},
-				Config: testResourceGenericSecret_initialConfig(path),
+				Config: testResourceGenericSecret_initialConfig(mount, path),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 		},
@@ -74,10 +78,15 @@ func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 	})
 }
 
-func testResourceGenericSecret_initialConfig(path string) string {
+func testResourceGenericSecret_initialConfig(mount, path string) string {
 	return fmt.Sprintf(`
+resource "vault_namespace" "foo" {
+    path = "foo"
+}
+
 resource "vault_mount" "v1" {
-	path = "secretsv1"
+	path = "%s"
+    namespace = vault_namespace.foo.path
 	type = "kv"
 	options = {
 		version = "1"
@@ -85,14 +94,14 @@ resource "vault_mount" "v1" {
 }
 
 resource "vault_generic_secret" "test" {
-    depends_on = ["vault_mount.v1"]
-    path = "%s"
+    namespace = vault_mount.v1.namespace
+    path = "${vault_mount.v1.path}/%s"
     data_json = <<EOT
 {
     "zip": "zap"
 }
 EOT
-}`, path)
+}`, mount, path)
 }
 
 func testResourceGenericSecret_initialConfig_v2(path string, isUpdate bool) string {
@@ -142,21 +151,24 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 			return fmt.Errorf("resource not found in state")
 		}
 
-		instanceState := resourceState.Primary
-		if instanceState == nil {
+		state := resourceState.Primary
+		if state == nil {
 			return fmt.Errorf("resource has no primary instance")
 		}
 
-		path := instanceState.ID
+		path := state.ID
 
-		if path != instanceState.Attributes["path"] {
+		if path != state.Attributes["path"] {
 			return fmt.Errorf("id doesn't match path")
 		}
 		if path != expectedPath {
 			return fmt.Errorf("unexpected secret path")
 		}
 
-		client := testProvider.Meta().(*ProviderMeta).GetClient()
+		client, err := GetClientForInstanceState(state, testProvider.Meta())
+		if err != nil {
+			return err
+		}
 
 		secret, err := client.Logical().Read(path)
 		if err != nil {
@@ -170,7 +182,7 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 		}
 
 		// Test the map
-		if got, want := instanceState.Attributes["data.zip"], "zap"; got != want {
+		if got, want := state.Attributes["data.zip"], "zap"; got != want {
 			return fmt.Errorf("data[\"zip\"] contains %s; want %s", got, want)
 		}
 

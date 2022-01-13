@@ -125,7 +125,6 @@ func getAuthMountIfPresent(client *api.Client, path string) (*api.AuthMount, err
 	configuredPath := path + "/"
 
 	for authBackendPath, auth := range auths {
-
 		if authBackendPath == configuredPath {
 			return auth, nil
 		}

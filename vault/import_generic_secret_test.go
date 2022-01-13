@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -10,13 +11,15 @@ import (
 )
 
 func TestAccGenericSecret_importBasic(t *testing.T) {
-	path := acctest.RandomWithPrefix("secretsv1/test-")
+	mount := "secretsv1"
+	name := acctest.RandomWithPrefix("test")
+	path := fmt.Sprintf("%s/%s", mount, name)
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceGenericSecret_initialConfig(path),
+				Config: testResourceGenericSecret_initialConfig(mount, path),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{

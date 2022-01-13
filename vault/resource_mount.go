@@ -20,6 +20,12 @@ func MountResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
+			"namespace": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Target namespace. (requires Enterprise)",
+			},
 			"path": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -119,7 +125,10 @@ func MountResource() *schema.Resource {
 }
 
 func mountWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, err := GetClientForResource(d, meta)
+	if err != nil {
+		return err
+	}
 
 	info := &api.MountInput{
 		Type:        d.Get("type").(string),
@@ -150,7 +159,10 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mountUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, err := GetClientForResource(d, meta)
+	if err != nil {
+		return err
+	}
 
 	config := api.MountConfigInput{
 		DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
@@ -197,7 +209,10 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mountDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, err := GetClientForResource(d, meta)
+	if err != nil {
+		return err
+	}
 
 	path := d.Id()
 
@@ -211,7 +226,10 @@ func mountDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mountRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, err := GetClientForResource(d, meta)
+	if err != nil {
+		return err
+	}
 
 	path := d.Id()
 
