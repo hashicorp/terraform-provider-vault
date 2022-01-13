@@ -206,9 +206,7 @@ func GetGHOrgResponse(t *testing.T, org string) *GHOrgResponse {
 		return v
 	}
 
-	client := &ghRESTClient{
-		client: retryablehttp.NewClient(),
-	}
+	client := newGHRESTClient()
 
 	result := &GHOrgResponse{}
 	if err := client.get(fmt.Sprintf("orgs/%s", org), result); err != nil {
@@ -222,6 +220,14 @@ func GetGHOrgResponse(t *testing.T, org string) *GHOrgResponse {
 	ghOrgResponseCache[org] = result
 
 	return result
+}
+
+func newGHRESTClient() *ghRESTClient {
+	client := retryablehttp.NewClient()
+	client.Logger = nil
+	return &ghRESTClient{
+		client: client,
+	}
 }
 
 type ghRESTClient struct {
@@ -240,9 +246,7 @@ func (c *ghRESTClient) do(method, path string, v interface{}) error {
 	}
 
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	client := retryablehttp.NewClient()
-	client.Logger = nil
-	resp, err := client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return err
 	}
