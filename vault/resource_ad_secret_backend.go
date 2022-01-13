@@ -206,7 +206,7 @@ func adSecretBackendResource() *schema.Resource {
 }
 
 func createConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	backend := d.Get("backend").(string)
 	description := d.Get("description").(string)
 	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
@@ -323,7 +323,7 @@ func createConfigResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Reading %q", path)
@@ -487,7 +487,7 @@ func readConfigResource(d *schema.ResourceData, meta interface{}) error {
 func updateConfigResource(d *schema.ResourceData, meta interface{}) error {
 	backend := d.Id()
 
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
 	maxTTL := d.Get("max_lease_ttl_seconds").(int)
 	tune := api.MountConfigInput{}
@@ -602,7 +602,7 @@ func updateConfigResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func deleteConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Unmounting AD backend %q", vaultPath)
 

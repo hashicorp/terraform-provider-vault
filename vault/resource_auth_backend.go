@@ -67,7 +67,7 @@ func AuthBackendResource() *schema.Resource {
 }
 
 func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	mountType := d.Get("type").(string)
 	path := d.Get("path").(string)
@@ -93,7 +93,7 @@ func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func authBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 
@@ -107,7 +107,7 @@ func authBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func authBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 
@@ -141,7 +141,7 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func authBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)

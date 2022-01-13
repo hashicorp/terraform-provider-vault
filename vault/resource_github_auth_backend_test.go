@@ -163,7 +163,7 @@ func TestAccGithubAuthBackend_importTuning(t *testing.T) {
 
 func testAccCheckAuthMountExists(n string, out *api.AuthMount) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ProviderMeta).GetClient()
 		return authMountExistsHelper(n, s, client, out)
 	}
 }
@@ -173,7 +173,7 @@ func testAccCheckGithubAuthMountDestroy(s *terraform.State) error {
 }
 
 func testAccCheckAuthMountDestroy(s *terraform.State, resType string) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ProviderMeta).GetClient()
 	return authMountDestroyHelper(s, client, resType)
 }
 

@@ -6,7 +6,6 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 const latestSecretVersion = -1
@@ -118,7 +117,7 @@ func normalizeDataJSON(data string) (string, error) {
 }
 
 func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data)
@@ -154,7 +153,7 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 }
 
 func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 
@@ -188,7 +187,7 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	if shouldRead {
-		client := meta.(*api.Client)
+		client := meta.(*ProviderMeta).GetClient()
 
 		log.Printf("[DEBUG] Reading %s from Vault", path)
 		secret, err := versionedSecret(latestSecretVersion, path, client)

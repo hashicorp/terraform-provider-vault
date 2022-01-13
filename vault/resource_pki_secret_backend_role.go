@@ -1,16 +1,14 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
-	"encoding/json"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -317,7 +315,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 }
 
 func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -413,7 +411,7 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 }
 
 func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	backend, err := pkiSecretBackendRoleBackendFromPath(path)
@@ -516,7 +514,7 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Updating PKI secret backend role %q", path)
@@ -606,7 +604,7 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 }
 
 func pkiSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting role %q", path)
@@ -619,7 +617,7 @@ func pkiSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error 
 }
 
 func pkiSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if role %q exists", path)

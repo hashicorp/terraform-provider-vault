@@ -108,7 +108,7 @@ func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interfac
 }
 
 func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	name := d.Get("name").(string)
 
@@ -144,7 +144,7 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityEntity %q", id)
@@ -167,7 +167,7 @@ func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	id := d.Id()
 
 	resp, err := readIdentityEntity(client, id, d.IsNewResource())
@@ -195,7 +195,7 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	id := d.Id()
 
 	path := identityEntityIDPath(id)
@@ -214,7 +214,7 @@ func identityEntityDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	id := d.Id()
 
 	path := identityEntityIDPath(id)

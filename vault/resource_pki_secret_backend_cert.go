@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
 )
 
 func pkiSecretBackendCertResource() *schema.Resource {
@@ -156,7 +155,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 }
 
 func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)

@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -50,7 +49,7 @@ func identityEntityPoliciesResource() *schema.Resource {
 }
 
 func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	id := d.Get("entity_id").(string)
 
 	log.Printf("[DEBUG] Updating IdentityEntityPolicies %q", id)
@@ -94,7 +93,7 @@ func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	id := d.Id()
 
 	resp, err := readIdentityEntity(client, id, d.IsNewResource())
@@ -133,7 +132,7 @@ func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func identityEntityPoliciesDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	id := d.Get("entity_id").(string)
 
 	log.Printf("[DEBUG] Deleting IdentityEntityPolicies %q", id)

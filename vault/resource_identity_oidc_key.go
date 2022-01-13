@@ -11,14 +11,12 @@ import (
 
 const identityOidcKeyPathTemplate = "identity/oidc/key/%s"
 
-var (
-	identityOidcKeyFields = []string{
-		"rotation_period",
-		"verification_ttl",
-		"algorithm",
-		"allowed_client_ids",
-	}
-)
+var identityOidcKeyFields = []string{
+	"rotation_period",
+	"verification_ttl",
+	"algorithm",
+	"allowed_client_ids",
+}
 
 func identityOidcKey() *schema.Resource {
 	return &schema.Resource{
@@ -82,7 +80,7 @@ func identityOidcKeyUpdateFields(d *schema.ResourceData, data map[string]interfa
 }
 
 func identityOidcKeyCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	name := d.Get("name").(string)
 	path := identityOidcKeyPath(name)
@@ -103,7 +101,7 @@ func identityOidcKeyCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	name := d.Id()
 	path := identityOidcKeyPath(name)
 
@@ -123,7 +121,7 @@ func identityOidcKeyUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	name := d.Id()
 
 	resp, err := identityOidcKeyApiRead(name, client)
@@ -147,7 +145,7 @@ func identityOidcKeyRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	name := d.Id()
 	path := identityOidcKeyPath(name)
 
@@ -165,12 +163,11 @@ func identityOidcKeyDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcKeyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	name := d.Id()
 
 	log.Printf("[DEBUG] Checking if IdentityOidcKey %s exists", name)
 	key, err := identityOidcKeyApiRead(name, client)
-
 	if err != nil {
 		return true, fmt.Errorf("error checking if IdentityOidcKey %s exists: %q", name, err)
 	}

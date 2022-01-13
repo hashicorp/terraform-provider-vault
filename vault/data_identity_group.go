@@ -170,7 +170,6 @@ func identityGroupDataSource() *schema.Resource {
 func identityGroupLookup(client *api.Client, data map[string]interface{}) (*api.Secret, error) {
 	log.Print("[DEBUG] Looking up IdentityGroup")
 	resp, err := client.Logical().Write("identity/lookup/group", data)
-
 	if err != nil {
 		return nil, fmt.Errorf("Error reading Identity Group '%v': %s", data, err)
 	}
@@ -188,7 +187,7 @@ func identityGroupLookup(client *api.Client, data map[string]interface{}) (*api.
 }
 
 func identityGroupDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	data := map[string]interface{}{}
 
@@ -210,7 +209,6 @@ func identityGroupDataSourceRead(d *schema.ResourceData, meta interface{}) error
 
 	log.Print("[DEBUG] Reading IdentityGroup")
 	resp, err := identityGroupLookup(client, data)
-
 	if err != nil {
 		return err
 	}

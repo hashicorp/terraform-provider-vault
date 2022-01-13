@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func alicloudAuthBackendRoleResource() *schema.Resource {
@@ -54,7 +53,7 @@ func alicloudAuthBackendRolePath(backend, role string) string {
 }
 
 func alicloudAuthBackendFromPath(path string) (string, error) {
-	var parts = strings.Split(path, "/")
+	parts := strings.Split(path, "/")
 	if len(parts) != 4 {
 		return "", fmt.Errorf("expected 4 parts in path '%s'", path)
 	}
@@ -62,7 +61,7 @@ func alicloudAuthBackendFromPath(path string) (string, error) {
 }
 
 func alicloudAuthRoleFromPath(path string) (string, error) {
-	var parts = strings.Split(path, "/")
+	parts := strings.Split(path, "/")
 	if len(parts) != 4 {
 		return "", fmt.Errorf("expected 4 parts in path '%s'", path)
 	}
@@ -82,7 +81,7 @@ func alicloudAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string
 }
 
 func alicloudAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -105,7 +104,7 @@ func alicloudAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) err
 }
 
 func alicloudAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -122,7 +121,7 @@ func alicloudAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) err
 }
 
 func alicloudAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading AliCloud role %q", path)
@@ -163,7 +162,7 @@ func alicloudAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 }
 
 func alicloudAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting AliCloud role %q", path)
@@ -177,7 +176,7 @@ func alicloudAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) err
 }
 
 func alicloudAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Checking if AliCloud Auth Backend role %q exists", path)

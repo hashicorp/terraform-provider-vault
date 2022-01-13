@@ -42,7 +42,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*api.Client)
+					client := testProvider.Meta().(*ProviderMeta).GetClient()
 					_, err := client.Logical().Delete(path)
 					if err != nil {
 						t.Fatalf("unable to manually delete the secret via the SDK: %s", err)
@@ -156,7 +156,7 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 			return fmt.Errorf("unexpected secret path")
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ProviderMeta).GetClient()
 
 		secret, err := client.Logical().Read(path)
 		if err != nil {
@@ -199,7 +199,7 @@ func testResourceGenericSecret_initialCheck_v2(expectedPath string, wantValue st
 			return fmt.Errorf("unexpected secret path")
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ProviderMeta).GetClient()
 
 		// Checking KV-V2 Secrets
 		resp, err := client.Logical().List("secretsv2/metadata")
@@ -253,7 +253,7 @@ func testResourceGenericSecret_checkVersions(client *api.Client, keyName string,
 }
 
 func testAllVersionDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_generic_secret" {
@@ -298,7 +298,7 @@ func testResourceGenericSecret_updateCheck(s *terraform.State) error {
 
 	path := instanceState.ID
 
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ProviderMeta).GetClient()
 	secret, err := client.Logical().Read(path)
 	if err != nil {
 		return fmt.Errorf("error reading back secret: %s", err)

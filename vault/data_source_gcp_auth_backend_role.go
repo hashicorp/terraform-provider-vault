@@ -6,21 +6,18 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
-var (
-	gcpRoleFields = []string{
-		"role_id",
-		"type",
-		"bound_service_accounts",
-		"bound_projects",
-		"bound_zones",
-		"bound_regions",
-		"bound_instance_groups",
-		"token_policies",
-	}
-)
+var gcpRoleFields = []string{
+	"role_id",
+	"type",
+	"bound_service_accounts",
+	"bound_projects",
+	"bound_zones",
+	"bound_regions",
+	"bound_instance_groups",
+	"token_policies",
+}
 
 func gcpAuthBackendRoleDataSource() *schema.Resource {
 	fields := map[string]*schema.Schema{
@@ -110,7 +107,7 @@ func gcpAuthBackendRoleDataSource() *schema.Resource {
 }
 
 func gcpAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := gcpRoleResourcePath(d.Get("backend").(string), d.Get("role_name").(string))
 

@@ -83,7 +83,7 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 }
 
 func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Get("path").(string)
 	description := d.Get("description").(string)
@@ -127,7 +127,7 @@ func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error
 }
 
 func rabbitMQSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 
@@ -156,7 +156,7 @@ func rabbitMQSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	d.Partial(true)
@@ -191,7 +191,7 @@ func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 }
 
 func rabbitMQSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Unmounting RabbitMQ backend %q", path)
@@ -204,7 +204,7 @@ func rabbitMQSecretBackendDelete(d *schema.ResourceData, meta interface{}) error
 }
 
 func rabbitMQSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if RabbitMQ backend exists at %q", path)

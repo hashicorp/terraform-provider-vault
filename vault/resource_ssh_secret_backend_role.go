@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -132,7 +131,7 @@ func sshSecretBackendRoleResource() *schema.Resource {
 }
 
 func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -174,7 +173,6 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("allowed_users_template"); ok {
 		data["allowed_users_template"] = v.(bool)
-
 	}
 
 	if v, ok := d.GetOk("allowed_users"); ok {
@@ -217,7 +215,7 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 
@@ -273,7 +271,7 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func sshSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting role %q", path)
@@ -287,7 +285,7 @@ func sshSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error 
 }
 
 func sshSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", path)

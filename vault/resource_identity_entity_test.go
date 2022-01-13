@@ -113,7 +113,7 @@ func TestAccIdentityEntityUpdateRemovePolicies(t *testing.T) {
 }
 
 func testAccCheckIdentityEntityDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_entity" {
@@ -145,7 +145,7 @@ func testAccIdentityEntityCheckAttrs() resource.TestCheckFunc {
 		id := instanceState.ID
 
 		path := identityEntityIDPath(id)
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ProviderMeta).GetClient()
 		resp, err := client.Logical().Read(path)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", path)

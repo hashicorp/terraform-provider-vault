@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -147,7 +146,7 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 }
 
 func jwtAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role_name").(string)
@@ -177,7 +176,7 @@ func jwtAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	path := d.Id()
 
 	backend, err := jwtAuthBackendRoleBackendFromPath(path)
@@ -283,7 +282,7 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func jwtAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating JWT auth backend role %q", path)
@@ -309,11 +308,10 @@ func jwtAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return jwtAuthBackendRoleRead(d, meta)
-
 }
 
 func jwtAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting JWT auth backend role %q", path)
@@ -331,7 +329,7 @@ func jwtAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func jwtAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if JWT auth backend role %q exists", path)

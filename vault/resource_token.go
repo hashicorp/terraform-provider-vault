@@ -148,7 +148,7 @@ func tokenResource() *schema.Resource {
 }
 
 func tokenCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	var err error
 	var wrapped bool
 
@@ -259,7 +259,7 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	id := d.Get("client_token").(string)
 	accessor := d.Id()
@@ -350,7 +350,7 @@ func tokenUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	token := d.Id()
 
@@ -365,7 +365,7 @@ func tokenDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	accessor := d.Id()
 
 	log.Printf("[DEBUG] Checking if token accessor %q exists", accessor)

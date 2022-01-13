@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -70,7 +69,7 @@ func TestAzureAuthBackendRole(t *testing.T) {
 }
 
 func testAzureAuthBackendRoleDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_azure_auth_backend_role" {
@@ -104,7 +103,7 @@ func testAzureAuthBackendRoleCheck_attrs(backend, name string) resource.TestChec
 			return fmt.Errorf("expected ID to be %q, got %q instead", endpoint, instanceState.ID)
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ProviderMeta).GetClient()
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {
 			return err

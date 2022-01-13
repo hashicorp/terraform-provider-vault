@@ -9,8 +9,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
 const nameEndpoint = "/transform/alphabet/{name}"
@@ -50,8 +51,9 @@ func NameResource() *schema.Resource {
 		Schema: fields,
 	}
 }
+
 func createNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*vault.ProviderMeta).GetClient()
 	path := d.Get("path").(string)
 	vaultPath := util.ParsePath(path, nameEndpoint, d)
 	log.Printf("[DEBUG] Creating %q", vaultPath)
@@ -72,7 +74,7 @@ func createNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*vault.ProviderMeta).GetClient()
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Reading %q", vaultPath)
 
@@ -104,7 +106,7 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*vault.ProviderMeta).GetClient()
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Updating %q", vaultPath)
 
@@ -120,7 +122,7 @@ func updateNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*vault.ProviderMeta).GetClient()
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Deleting %q", vaultPath)
 
@@ -136,7 +138,7 @@ func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceNameExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*vault.ProviderMeta).GetClient()
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", vaultPath)
 

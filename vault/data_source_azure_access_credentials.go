@@ -11,7 +11,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func azureAccessCredentialsDataSource() *schema.Resource {
@@ -88,7 +87,7 @@ func azureAccessCredentialsDataSource() *schema.Resource {
 }
 
 func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)

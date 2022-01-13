@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func policyResource() *schema.Resource {
@@ -36,14 +35,13 @@ func policyResource() *schema.Resource {
 }
 
 func policyWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	name := d.Get("name").(string)
 	policy := d.Get("policy").(string)
 
 	log.Printf("[DEBUG] Writing policy %s to Vault", name)
 	err := client.Sys().PutPolicy(name, policy)
-
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -54,7 +52,7 @@ func policyWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func policyDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	name := d.Id()
 
@@ -69,12 +67,11 @@ func policyDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func policyRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	name := d.Id()
 
 	policy, err := client.Sys().GetPolicy(name)
-
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}

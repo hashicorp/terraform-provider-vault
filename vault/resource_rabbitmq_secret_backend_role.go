@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func rabbitMQSecretBackendRoleResource() *schema.Resource {
@@ -112,7 +111,7 @@ func rabbitMQSecretBackendRoleResource() *schema.Resource {
 }
 
 func rabbitMQSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -144,7 +143,7 @@ func rabbitMQSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 }
 
 func rabbitMQSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	pathPieces := strings.Split(path, "/")
@@ -180,7 +179,7 @@ func rabbitMQSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 }
 
 func rabbitMQSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting role %q", path)
@@ -193,7 +192,7 @@ func rabbitMQSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func rabbitMQSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", path)

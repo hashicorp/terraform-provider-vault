@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
@@ -45,6 +46,47 @@ var maxHTTPRetriesCCC int
 // of the same resource write to the same path in Vault.
 // The key of the mutex should be the path in Vault.
 var vaultMutexKV = helper.NewMutexKV()
+
+type ProviderMeta struct {
+	provider *schema.Provider
+	client   *api.Client
+	// cache client instances by NS
+	clientCache map[string]*api.Client
+	m           sync.RWMutex
+}
+
+func (p *ProviderMeta) GetClient() *api.Client {
+	/*
+		p.m.RLock()
+		defer p.m.RUnlock()
+
+		if p.client == nil {
+			return nil, fmt.Errorf("api.Client not set")
+		}
+	*/
+	return p.client
+}
+
+func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	if p.clientCache == nil {
+		p.clientCache = make(map[string]*api.Client)
+	}
+
+	if v, ok := p.clientCache[ns]; ok {
+		return v, nil
+	}
+
+	c, err := p.client.Clone()
+	if err != nil {
+		return nil, err
+	}
+	p.clientCache[ns] = c
+
+	return c, nil
+}
 
 func Provider() *schema.Provider {
 	dataSourcesMap, err := parse(DataSourceRegistry)
@@ -865,7 +907,12 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if namespace != "" {
 		client.SetNamespace(namespace)
 	}
-	return client, nil
+
+	pm := &ProviderMeta{
+		client: client,
+	}
+
+	return pm, nil
 }
 
 func setChildToken(d *schema.ResourceData, c *api.Client) error {

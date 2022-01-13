@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func pkiSecretBackendCrlConfigResource() *schema.Resource {
@@ -42,7 +41,7 @@ func pkiSecretBackendCrlConfigResource() *schema.Resource {
 }
 
 func pkiSecretBackendCrlConfigCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	backend := d.Get("backend").(string)
 	path := pkiSecretBackendCrlConfigPath(backend)
@@ -67,14 +66,13 @@ func pkiSecretBackendCrlConfigCreate(d *schema.ResourceData, meta interface{}) e
 }
 
 func pkiSecretBackendCrlConfigRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	backend := pkiSecretBackendCrlConfigPath(path)
 
 	log.Printf("[DEBUG] Reading CRL config from PKI secret backend %q", backend)
 	config, err := client.Logical().Read(path)
-
 	if err != nil {
 		log.Printf("[WARN] Removing path %q its ID is invalid", path)
 		d.SetId("")
@@ -93,7 +91,7 @@ func pkiSecretBackendCrlConfigRead(d *schema.ResourceData, meta interface{}) err
 }
 
 func pkiSecretBackendCrlConfigUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	backend := pkiSecretBackendCrlConfigPath(path)
@@ -114,7 +112,6 @@ func pkiSecretBackendCrlConfigUpdate(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[DEBUG] Updated CRL config on PKI secret backend %q", backend)
 
 	return pkiSecretBackendCrlConfigRead(d, meta)
-
 }
 
 func pkiSecretBackendCrlConfigDelete(d *schema.ResourceData, meta interface{}) error {

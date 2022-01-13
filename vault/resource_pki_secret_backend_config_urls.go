@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func pkiSecretBackendConfigUrlsResource() *schema.Resource {
@@ -45,7 +44,7 @@ func pkiSecretBackendConfigUrlsResource() *schema.Resource {
 }
 
 func pkiSecretBackendConfigUrlsCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	backend := d.Get("backend").(string)
 
@@ -73,14 +72,13 @@ func pkiSecretBackendConfigUrlsCreate(d *schema.ResourceData, meta interface{}) 
 }
 
 func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	backend := pkiSecretBackendConfigUrlsPath(path)
 
 	log.Printf("[DEBUG] Reading URL config from PKI secret backend %q", backend)
 	config, err := client.Logical().Read(path)
-
 	if err != nil {
 		return fmt.Errorf("error reading URL config on PKI secret backend %q: %s", path, err)
 	}
@@ -99,7 +97,7 @@ func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) er
 }
 
 func pkiSecretBackendConfigUrlsUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	backend := d.Get("backend").(string)
 
@@ -123,7 +121,6 @@ func pkiSecretBackendConfigUrlsUpdate(d *schema.ResourceData, meta interface{}) 
 	log.Printf("[DEBUG] Updated URL config on PKI secret backend %q", backend)
 
 	return pkiSecretBackendConfigUrlsRead(d, meta)
-
 }
 
 func pkiSecretBackendConfigUrlsDelete(d *schema.ResourceData, meta interface{}) error {

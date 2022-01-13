@@ -5,18 +5,19 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
-var autopilotPath = "sys/storage/raft/autopilot/configuration"
-var autopilotDefaults = map[string]interface{}{
-	"cleanup_dead_servers":               false,
-	"dead_server_last_contact_threshold": "24h0m0s",
-	"last_contact_threshold":             "10s",
-	"max_trailing_logs":                  1000,
-	"min_quorum":                         3,
-	"server_stabilization_time":          "10s",
-}
+var (
+	autopilotPath     = "sys/storage/raft/autopilot/configuration"
+	autopilotDefaults = map[string]interface{}{
+		"cleanup_dead_servers":               false,
+		"dead_server_last_contact_threshold": "24h0m0s",
+		"last_contact_threshold":             "10s",
+		"max_trailing_logs":                  1000,
+		"min_quorum":                         3,
+		"server_stabilization_time":          "10s",
+	}
+)
 
 func raftAutopilotConfigResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
@@ -67,7 +68,7 @@ func raftAutopilotConfigResource() *schema.Resource {
 }
 
 func createOrUpdateAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	c := map[string]interface{}{
 		"cleanup_dead_servers":               d.Get("cleanup_dead_servers").(bool),
@@ -89,7 +90,7 @@ func createOrUpdateAutopilotConfigResource(d *schema.ResourceData, meta interfac
 }
 
 func readAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	log.Printf("[DEBUG] Reading %q", autopilotPath)
 
@@ -138,7 +139,7 @@ func readAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error
 }
 
 func deleteAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	log.Print("[DEBUG] Resetting raft autopilot config")
 

@@ -3,9 +3,8 @@ package vault
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func transitEncryptDataSource() *schema.Resource {
@@ -49,7 +48,7 @@ func transitEncryptDataSource() *schema.Resource {
 }
 
 func transitEncryptDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	backend := d.Get("backend").(string)
 	key := d.Get("key").(string)

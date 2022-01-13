@@ -102,7 +102,7 @@ func consulSecretBackendResource() *schema.Resource {
 }
 
 func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Get("path").(string)
 	address := d.Get("address").(string)
@@ -154,7 +154,7 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	configPath := consulSecretBackendConfigPath(path)
@@ -200,7 +200,7 @@ func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 	configPath := consulSecretBackendConfigPath(path)
@@ -240,7 +240,7 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func consulSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 
@@ -254,7 +254,7 @@ func consulSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func consulSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	path := d.Id()
 

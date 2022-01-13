@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -203,7 +202,7 @@ func testAccOktaAuthBackend_InitialCheck(s *terraform.State) error {
 		return fmt.Errorf("id doesn't match path")
 	}
 
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ProviderMeta).GetClient()
 
 	authMounts, err := client.Sys().ListAuth()
 	if err != nil {
@@ -251,7 +250,7 @@ func testAccOktaAuthBackend_InitialCheck(s *terraform.State) error {
 
 func testAccOktaAuthBackend_GroupsCheck(path, groupName string, expectedPolicies []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ProviderMeta).GetClient()
 
 		groupList, err := client.Logical().List(fmt.Sprintf("/auth/%s/groups", path))
 		if err != nil {
@@ -291,7 +290,7 @@ func testAccOktaAuthBackend_GroupsCheck(path, groupName string, expectedPolicies
 
 func testAccOktaAuthBackend_UsersCheck(path, userName string, expectedGroups, expectedPolicies []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ProviderMeta).GetClient()
 
 		userList, err := client.Logical().List(fmt.Sprintf("/auth/%s/users", path))
 		if err != nil {
@@ -354,7 +353,7 @@ func testAccOktaAuthBackend_UsersCheck(path, userName string, expectedGroups, ex
 
 func testAccOktaAuthBackend_Destroyed(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ProviderMeta).GetClient()
 
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {

@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func mfaDuoResource() *schema.Resource {
@@ -63,7 +62,7 @@ func mfaDuoResource() *schema.Resource {
 }
 
 func mfaDuoWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	name := d.Get("name").(string)
 
@@ -75,7 +74,6 @@ func mfaDuoWrite(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Creating mfaDuo %s in Vault", name)
 	_, err := client.Logical().Write(mfaDuoPath(name), data)
-
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -84,14 +82,13 @@ func mfaDuoWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaDuoDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	name := d.Get("name").(string)
 
 	log.Printf("[DEBUG] Deleting mfaDuo %s from Vault", mfaDuoPath(name))
 
 	_, err := client.Logical().Delete(mfaDuoPath(name))
-
 	if err != nil {
 		return fmt.Errorf("error deleting from Vault: %s", err)
 	}
@@ -100,12 +97,11 @@ func mfaDuoDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaDuoRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 
 	name := d.Get("name").(string)
 
 	resp, err := client.Logical().Read(mfaDuoPath(name))
-
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
@@ -152,7 +148,6 @@ func mfaDuoUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
 	if v, ok := d.GetOk("push_info"); ok {
 		data["push_info"] = v.(string)
 	}
-
 }
 
 func mfaDuoPath(name string) string {

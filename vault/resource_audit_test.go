@@ -88,7 +88,7 @@ func testResourceAudit_initialCheck(expectedPath string) resource.TestCheckFunc 
 }
 
 func findAudit(path string) (*api.Audit, error) {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ProviderMeta).GetClient()
 
 	path = path + "/"
 

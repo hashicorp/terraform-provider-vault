@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -42,7 +41,7 @@ func TestAccIdentityOidc(t *testing.T) {
 }
 
 func testAccCheckIdentityOidcDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ProviderMeta).GetClient()
 	path := identityOidcPathTemplate
 
 	resp, err := client.Logical().Read(path)
@@ -73,7 +72,7 @@ func testAccIdentityOidcCheckAttrs() resource.TestCheckFunc {
 		}
 
 		path := identityOidcPathTemplate
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ProviderMeta).GetClient()
 		resp, err := client.Logical().Read(path)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", path)

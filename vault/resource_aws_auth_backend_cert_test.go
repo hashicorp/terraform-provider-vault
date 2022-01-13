@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -55,7 +54,7 @@ func TestAccAWSAuthBackendCert_basic(t *testing.T) {
 }
 
 func testAccCheckAWSAuthBackendCertDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*ProviderMeta).GetClient()
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_aws_auth_backend_cert" {
 			continue
@@ -105,7 +104,7 @@ func testAccAWSAuthBackendCertCheck_attrs(backend, name string) resource.TestChe
 			return fmt.Errorf("expected ID to be %q, got %q", "auth/"+backend+"/config/certificate/"+name, endpoint)
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*ProviderMeta).GetClient()
 		resp, err := client.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("error reading back AWS auth certificate from %q: %s", endpoint, err)

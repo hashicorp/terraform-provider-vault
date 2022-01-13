@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 func identityOidcKeyAllowedClientId() *schema.Resource {
@@ -34,7 +33,7 @@ func identityOidcKeyAllowedClientId() *schema.Resource {
 }
 
 func identityOidcKeyAllowedClientIdWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	name := d.Get("key_name").(string)
 	path := identityOidcKeyPath(name)
 	clientID := d.Get("allowed_client_id").(string)
@@ -66,7 +65,7 @@ func identityOidcKeyAllowedClientIdWrite(d *schema.ResourceData, meta interface{
 }
 
 func identityOidcKeyAllowedClientIdRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	name := d.Get("key_name").(string)
 	clientID := d.Get("allowed_client_id").(string)
 
@@ -91,7 +90,7 @@ func identityOidcKeyAllowedClientIdRead(d *schema.ResourceData, meta interface{}
 }
 
 func identityOidcKeyAllowedClientIdDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client := meta.(*ProviderMeta).GetClient()
 	name := d.Get("key_name").(string)
 	path := identityOidcKeyPath(name)
 	clientID := d.Get("allowed_client_id").(string)
