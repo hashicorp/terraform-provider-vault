@@ -3,12 +3,14 @@ package testutil
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"reflect"
 	"testing"
 
-	"github.com/cli/go-gh"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/mitchellh/go-homedir"
@@ -188,9 +190,9 @@ func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestChe
 // GHOrgResponse provides access to a subset of the GH API's 'orgs' response data.
 type GHOrgResponse struct {
 	// Login is the GH organization's name
-	Login string
+	Login string `json:"login"`
 	// ID of the GH organization
-	ID int
+	ID int `json:"id"`
 }
 
 // cache GH API responses to avoid triggering the GH request rate limiter
@@ -204,13 +206,12 @@ func GetGHOrgResponse(t *testing.T, org string) *GHOrgResponse {
 		return v
 	}
 
-	client, err := gh.RESTClient(nil)
-	if err != nil {
-		t.Fatal(err)
+	client := &ghRESTClient{
+		client: retryablehttp.NewClient(),
 	}
 
 	result := &GHOrgResponse{}
-	if err := client.Get(fmt.Sprintf("orgs/%s", org), result); err != nil {
+	if err := client.get(fmt.Sprintf("orgs/%s", org), result); err != nil {
 		t.Fatal(err)
 	}
 
@@ -221,4 +222,42 @@ func GetGHOrgResponse(t *testing.T, org string) *GHOrgResponse {
 	ghOrgResponseCache[org] = result
 
 	return result
+}
+
+type ghRESTClient struct {
+	client *retryablehttp.Client
+}
+
+func (c *ghRESTClient) get(path string, v interface{}) error {
+	return c.do(http.MethodGet, path, v)
+}
+
+func (c *ghRESTClient) do(method, path string, v interface{}) error {
+	url := fmt.Sprintf("https://api.github.com/%s", path)
+	req, err := retryablehttp.NewRequest(method, url, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	client := retryablehttp.NewClient()
+	client.Logger = nil
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("invalid response for req=%#v, resp=%#v", req, resp)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(body, v); err != nil {
+		return err
+	}
+	return nil
 }
