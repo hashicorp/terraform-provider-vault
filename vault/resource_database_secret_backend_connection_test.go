@@ -707,6 +707,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineElasticSearch.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
+	resourceName := "vault_database_secret_backend_connection.test"
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -715,13 +716,24 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_elasticsearch(name, backend, connURL, username, password),
-				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "name", name),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "backend", backend),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.password", password),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"verify_connection", "elasticsearch.0.password"},
 			},
 		},
 	})

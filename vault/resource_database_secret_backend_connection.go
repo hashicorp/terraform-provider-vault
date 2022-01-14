@@ -930,6 +930,27 @@ func getElasticsearchConnectionDetailsFromResponse(d *schema.ResourceData, prefi
 		// keep the password we have in state/config if the API doesn't return one
 		result["password"] = v.(string)
 	}
+	if v, ok := data["ca_cert"]; ok {
+		result["ca_cert"] = v.(string)
+	}
+	if v, ok := data["ca_path"]; ok {
+		result["ca_path"] = v.(string)
+	}
+	if v, ok := data["client_cert"]; ok {
+		result["client_cert"] = v.(string)
+	}
+	if v, ok := data["client_key"]; ok {
+		result["client_key"] = v.(string)
+	}
+	if v, ok := data["tls_server_name"]; ok {
+		result["tls_server_name"] = v.(string)
+	}
+	if v, ok := data["insecure"]; ok {
+		result["insecure"] = v.(bool)
+	}
+	if v, ok := data["username_template"]; ok {
+		result["username_template"] = v.(string)
+	}
 
 	return result
 }
@@ -1128,6 +1149,34 @@ func setElasticsearchDatabaseConnectionData(d *schema.ResourceData, prefix strin
 
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "ca_cert"); ok {
+		data["ca_cert"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "ca_path"); ok {
+		data["ca_path"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "client_cert"); ok {
+		data["client_cert"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "client_key"); ok {
+		data["client_key"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "tls_server_name"); ok {
+		data["tls_server_name"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "insecure"); ok {
+		data["insecure"] = v.(bool)
+	}
+
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		data["username_template"] = v.(string)
 	}
 }
 
