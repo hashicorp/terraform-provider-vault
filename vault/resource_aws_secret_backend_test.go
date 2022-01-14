@@ -168,12 +168,12 @@ resource "vault_aws_secret_backend" "test" {
 func testAccAWSSecretBackendConfig_userTemplate(path, accessKey, secretKey, templ string) string {
 	return fmt.Sprintf(`
 resource "vault_aws_secret_backend" "test" {
-  path = "%[1]s"
+  path = "%s"
   description = "test description"
   default_lease_ttl_seconds = 3600
   max_lease_ttl_seconds = 86400
-  access_key = "%[2]s"
-  secret_key = "%[3]s"
-  username_template = "%[4]s"
+  access_key = "%s"
+  secret_key = "%s"
+  username_template = "%s"
 }`, path, accessKey, secretKey, templ)
 }
