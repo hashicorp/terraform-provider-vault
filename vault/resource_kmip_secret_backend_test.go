@@ -30,31 +30,29 @@ func TestAccKMIPSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "listen_addrs.0", "127.0.0.1:5696"),
 					resource.TestCheckResourceAttr(resourceName, "listen_addrs.1", "127.0.0.1:8080"),
 					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_type", "ec"),
-					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_bits", "128"),
-					resource.TestCheckResourceAttr(resourceName, "tls_min_version", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_bits", "256"),
+					resource.TestCheckResourceAttr(resourceName, "tls_min_version", "tls12"),
 					resource.TestCheckResourceAttr(resourceName, "default_tls_client_key_type", "ec"),
 					resource.TestCheckResourceAttr(resourceName, "default_tls_client_key_bits", "256"),
-					resource.TestCheckResourceAttr(resourceName, "default_tls_client_key_bits", "256"),
-					resource.TestCheckResourceAttr(resourceName, "default_tls_client_ttl", "60s"),
+					resource.TestCheckResourceAttr(resourceName, "default_tls_client_ttl", "86400"),
 				),
 			},
-			// {
-			// 	Config: testKMIPSecretBackend_initialConfig(path),
-			// 	Check: resource.ComposeTestCheckFunc(
-			// 		resource.TestCheckResourceAttr(resourceName, "path", path),
-			// 		resource.TestCheckResourceAttr(resourceName, "description", "test description"),
-			// 		resource.TestCheckResourceAttr(resourceName, "listen_addrs.#", "2"),
-			// 		resource.TestCheckResourceAttr(resourceName, "listen_addrs.0", "127.0.0.1:5696"),
-			// 		resource.TestCheckResourceAttr(resourceName, "listen_addrs.1", "127.0.0.1:8080"),
-			// 		resource.TestCheckResourceAttr(resourceName, "tls_ca_key_type", "ec"),
-			// 		resource.TestCheckResourceAttr(resourceName, "tls_ca_key_bits", "128"),
-			// 		resource.TestCheckResourceAttr(resourceName, "tls_min_version", "2"),
-			// 		resource.TestCheckResourceAttr(resourceName, "default_tls_client_key_type", "ec"),
-			// 		resource.TestCheckResourceAttr(resourceName, "default_tls_client_key_bits", "256"),
-			// 		resource.TestCheckResourceAttr(resourceName, "default_tls_client_key_bits", "256"),
-			// 		resource.TestCheckResourceAttr(resourceName, "default_tls_client_ttl", "60s"),
-			// 	),
-			// },
+			{
+				Config: testKMIPSecretBackend_updateConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "listen_addrs.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "listen_addrs.0", "127.0.0.1:5696"),
+					resource.TestCheckResourceAttr(resourceName, "listen_addrs.1", "127.0.0.1:8080"),
+					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_type", "rsa"),
+					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_bits", "4096"),
+					resource.TestCheckResourceAttr(resourceName, "tls_min_version", "tls12"),
+					resource.TestCheckResourceAttr(resourceName, "default_tls_client_key_type", "rsa"),
+					resource.TestCheckResourceAttr(resourceName, "default_tls_client_key_bits", "4096"),
+					resource.TestCheckResourceAttr(resourceName, "default_tls_client_ttl", "86400"),
+				),
+			},
 		},
 	})
 }
@@ -88,28 +86,26 @@ resource "vault_kmip_secret_backend_config" "test" {
   path = "%s"
   description = "test description"
   listen_addrs = ["127.0.0.1:5696", "127.0.0.1:8080"]
-  server_ips = ["127.0.0.1:9696"]
+  server_ips = ["127.0.0.1", "192.168.1.1"]
   tls_ca_key_type = "ec"
-  tls_ca_key_bits = 128
-  tls_min_version = 2
+  tls_ca_key_bits = 256
   default_tls_client_key_type = "ec"
   default_tls_client_key_bits = 256
-  default_tls_client_ttl = "60s"
+  default_tls_client_ttl = 86400
 }`, path)
 }
 
 func testKMIPSecretBackend_updateConfig(path string) string {
 	return fmt.Sprintf(`
-resource "vault_gcp_secret_backend" "test" {
+resource "vault_kmip_secret_backend_config" "test" {
   path = "%s"
-  credentials = <<EOF
-{
-  "how": "goes"
-}
-EOF
   description = "test description"
-  default_lease_ttl_seconds = 1800
-  max_lease_ttl_seconds = 43200
-  local = true
+  listen_addrs = ["127.0.0.1:5696", "127.0.0.1:8080"]
+  server_ips = ["127.0.0.1", "192.168.1.1"]
+  tls_ca_key_type = "rsa"
+  tls_ca_key_bits = 4096
+  default_tls_client_key_type = "rsa"
+  default_tls_client_key_bits = 4096
+  default_tls_client_ttl = 86400
 }`, path)
 }

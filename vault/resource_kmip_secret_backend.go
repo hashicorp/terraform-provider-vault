@@ -97,10 +97,10 @@ func kmipSecretBackendResource() *schema.Resource {
 				Description: "Client certificate key bits, valid values depend on key type",
 			},
 			"default_tls_client_ttl": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeInt,
 				Optional:    true,
 				Computed:    true,
-				Description: "Client certificate TTL in an integer time unit (10s)",
+				Description: "Client certificate TTL in either an integer number of seconds (10)",
 			},
 		},
 	}
@@ -110,61 +110,22 @@ func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Get("path").(string)
 	description := d.Get("description").(string)
-	defaultTLSClientTTL := d.Get("default_tls_client_ttl").(string)
+	defaultTLSClientTTL := d.Get("default_tls_client_ttl").(int)
 
 	log.Printf("[DEBUG] Mounting KMIP backend at %q", path)
 	err := client.Sys().Mount(path, &api.MountInput{
 		Type:        "kmip",
 		Description: description,
 		Config: api.MountConfigInput{
-			DefaultLeaseTTL: defaultTLSClientTTL,
+			DefaultLeaseTTL: fmt.Sprintf("%d", defaultTLSClientTTL),
 		},
 	})
 	if err != nil {
 		return fmt.Errorf("error mounting to %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Mounted KMIP backend at %q", path)
-
-	data := map[string]interface{}{}
-	for _, field := range kmipAPIFields {
-		if v, ok := d.GetOk(field); ok {
-			data[field] = v
-		}
-	}
-
-	log.Printf("[DEBUG] Writing KMIP config to %q/config", path)
-	configPath := path + "/config"
-	_, err = client.Logical().Write(configPath, data)
-	if err != nil {
-		return fmt.Errorf("error configuring KMIP %q/config: %s", path, err)
-	}
-
 	d.SetId(path)
-	log.Printf("[DEBUG] Wrote KMIP config %q", path)
-	return kmipSecretBackendRead(d, meta)
-}
-
-func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
-	path := d.Id()
-	log.Printf("[DEBUG] Reading KMIP config at %s/config", path)
-	resp, err := client.Logical().Read(path + "/config")
-	if err != nil {
-		return fmt.Errorf("error reading KMIP config at %q/config: %s", path, err)
-	}
-	if resp == nil {
-		log.Printf("[WARN] KMIP config not found, removing from state")
-		d.SetId("")
-		return nil
-	}
-	// TODO use util.SetResourceData once merged
-	for _, k := range kmipAPIFields {
-		if err := d.Set(k, resp.Data[k]); err != nil {
-			return fmt.Errorf("error setting state key \"%s\" on KMIP config: %s", k, err)
-		}
-	}
-	return nil
+	return kmipSecretBackendUpdate(d, meta)
 }
 
 func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -191,16 +152,44 @@ func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	for _, k := range kmipAPIFields {
 		if d.HasChange(k) {
-			data[k] = d.Get(k)
+			if v, ok := d.GetOk(k); ok {
+				switch v.(type) {
+				case *schema.Set:
+					data[k] = util.TerraformSetToStringArray(v)
+				default:
+					data[k] = v
+				}
+			}
 		}
 	}
-	fmt.Printf("DATA: %+v", data)
 	if _, err := client.Logical().Write(configPath, data); err != nil {
 		return fmt.Errorf("error updating KMIP config %q: %s", configPath, err)
 	}
 	log.Printf("[DEBUG] Updated %q", configPath)
 
 	return kmipSecretBackendRead(d, meta)
+}
+
+func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+
+	path := d.Id()
+	log.Printf("[DEBUG] Reading KMIP config at %s/config", path)
+	resp, err := client.Logical().Read(path + "/config")
+	if err != nil {
+		return fmt.Errorf("error reading KMIP config at %q/config: %s", path, err)
+	}
+	if resp == nil {
+		log.Printf("[WARN] KMIP config not found, removing from state")
+		d.SetId("")
+		return nil
+	}
+	for _, k := range kmipAPIFields {
+		if err := d.Set(k, resp.Data[k]); err != nil {
+			return fmt.Errorf("error setting state key \"%s\" on KMIP config: %s", k, err)
+		}
+	}
+	return nil
 }
 
 func kmipSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
