@@ -18,7 +18,7 @@ func TestAccKMIPSecretBackend_basic(t *testing.T) {
 	resourceName := "vault_kmip_secret_backend_config.test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestEntPreCheck(t) },
 		CheckDestroy: testAccKMIPSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{
 			{
