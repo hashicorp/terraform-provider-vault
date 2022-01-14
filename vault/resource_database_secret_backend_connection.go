@@ -564,7 +564,476 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+<<<<<<< HEAD
 		Schema: s,
+=======
+
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Name of the database connection.",
+				ForceNew:    true,
+			},
+			"plugin_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Specifies the name of the plugin to use for this connection.",
+			},
+			"verify_connection": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Specifies if the connection is verified during initial configuration.",
+				Default:     true,
+			},
+			"allowed_roles": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "A list of roles that are allowed to use this connection.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"root_rotation_statements": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "A list of database statements to be executed to rotate the root user's credentials.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"data": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "A map of sensitive data to pass to the endpoint. Useful for templated connection strings.",
+				Sensitive:   true,
+			},
+
+			"elasticsearch": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the elasticsearch-database-plugin.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"url": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The URL for Elasticsearch's API",
+						},
+						"username": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The username to be used in the connection URL",
+						},
+						"password": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The password to be used in the connection URL",
+							Sensitive:   true,
+						},
+						"ca_cert": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The path to a PEM-encoded CA cert file to use to verify the Elasticsearch server's identity",
+						},
+						"ca_path": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The path to a directory of PEM-encoded CA cert files to use to verify the Elasticsearch server's identity",
+						},
+						"client_cert": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The path to the certificate for the Elasticsearch client to present for communication",
+						},
+						"client_key": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The path to the key for the Elasticsearch client to use for communication",
+						},
+						"tls_server_name": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "This, if set, is used to set the SNI host when connecting via TLS",
+						},
+						"insecure": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Whether to disable certificate verification",
+						},
+						"username_template": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Template describing how dynamic usernames are generated.",
+						},
+					},
+				},
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineElasticSearch.Name(), dbEngineTypes),
+			},
+
+			dbEngineCassandra.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the cassandra-database-plugin plugin.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"hosts": {
+							Type: schema.TypeList,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Optional:    true,
+							Description: "Cassandra hosts to connect to.",
+						},
+						"port": {
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Description:  "The transport port to use to connect to Cassandra.",
+							ValidateFunc: validation.IsPortNumber,
+							Default:      9042,
+						},
+						"username": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The username to use when authenticating with Cassandra.",
+						},
+						"password": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The password to use when authenticating with Cassandra.",
+							Sensitive:   true,
+						},
+						"tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: "Whether to use TLS when connecting to Cassandra.",
+							Default:     true,
+						},
+						"insecure_tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: "Whether to skip verification of the server certificate when using TLS.",
+							Default:     false,
+						},
+						"pem_bundle": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Concatenated PEM blocks containing a certificate and private key; a certificate, private key, and issuing CA certificate; or just a CA certificate.",
+							Sensitive:   true,
+						},
+						"pem_json": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Description:  "Specifies JSON containing a certificate and private key; a certificate, private key, and issuing CA certificate; or just a CA certificate.",
+							Sensitive:    true,
+							ValidateFunc: validation.StringIsJSON,
+						},
+						"protocol_version": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     2,
+							Description: "The CQL protocol version to use.",
+						},
+						"connect_timeout": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     5,
+							Description: "The number of seconds to use as a connection timeout.",
+						},
+					},
+				},
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineCassandra.Name(), dbEngineTypes),
+			},
+
+			dbEngineCouchbase.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the couchbase-database-plugin plugin.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"hosts": {
+							Type: schema.TypeList,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Required:    true,
+							Description: "A set of Couchbase URIs to connect to. Must use `couchbases://` scheme if `tls` is `true`.",
+						},
+						"username": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Specifies the username for Vault to use.",
+						},
+						"password": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Specifies the password corresponding to the given username.",
+							Sensitive:   true,
+						},
+						"tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: "Specifies whether to use TLS when connecting to Couchbase.",
+							Default:     false,
+						},
+						"insecure_tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: " Specifies whether to skip verification of the server certificate when using TLS.",
+							Default:     false,
+						},
+						"base64_pem": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Required if `tls` is `true`. Specifies the certificate authority of the Couchbase server, as a PEM certificate that has been base64 encoded.",
+							Sensitive:   true,
+						},
+						"bucket_name": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Required for Couchbase versions prior to 6.5.0. This is only used to verify vault's connection to the server.",
+						},
+						"username_template": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Template describing how dynamic usernames are generated.",
+						},
+					},
+				},
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineCouchbase.Name(), dbEngineTypes),
+			},
+
+			dbEngineInfluxDB.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the influxdb-database-plugin plugin.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Influxdb host to connect to.",
+						},
+						"port": {
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Description:  "The transport port to use to connect to Influxdb.",
+							Default:      8086,
+							ValidateFunc: validation.IsPortNumber,
+						},
+						"username": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Specifies the username to use for superuser access.",
+						},
+						"password": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Specifies the password corresponding to the given username.",
+							Sensitive:   true,
+						},
+						"tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: "Whether to use TLS when connecting to Influxdb.",
+							Default:     true,
+						},
+						"insecure_tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: "Whether to skip verification of the server certificate when using TLS.",
+							Default:     false,
+						},
+						"pem_bundle": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Concatenated PEM blocks containing a certificate and private key; a certificate, private key, and issuing CA certificate; or just a CA certificate.",
+							Sensitive:   true,
+						},
+						"pem_json": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Description:  "Specifies JSON containing a certificate and private key; a certificate, private key, and issuing CA certificate; or just a CA certificate.",
+							Sensitive:    true,
+							ValidateFunc: validation.StringIsJSON,
+						},
+						"connect_timeout": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     5,
+							Description: "The number of seconds to use as a connection timeout.",
+						},
+						"username_template": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Template describing how dynamic usernames are generated.",
+						},
+					},
+				},
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineInfluxDB.Name(), dbEngineTypes),
+			},
+
+			dbEngineMongoDB.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mongodb-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDB.Name(), dbEngineTypes),
+			},
+
+			dbEngineMongoDBAtlas.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mongodbatlas-database-plugin plugin.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"private_key": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The Private Programmatic API Key used to connect with MongoDB Atlas API.",
+							Sensitive:   true,
+						},
+						"public_key": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The Public Programmatic API Key used to authenticate with the MongoDB Atlas API.",
+						},
+						"project_id": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The Project ID the Database User should be created within.",
+						},
+					},
+				},
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDBAtlas.Name(), dbEngineTypes),
+			},
+
+			dbEngineHana.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the hana-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					excludeUsernameTemplate: true,
+					includeUserPass:         true,
+				}),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineHana.Name(), dbEngineTypes),
+			},
+
+			dbEngineMSSQL.name: {
+				Type:          schema.TypeList,
+				Optional:      true,
+				Description:   "Connection parameters for the mssql-database-plugin plugin.",
+				Elem:          mssqlConnectionStringResource(),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMSSQL.Name(), dbEngineTypes),
+			},
+
+			dbEngineMySQL.name: {
+				Type:          schema.TypeList,
+				Optional:      true,
+				Description:   "Connection parameters for the mysql-database-plugin plugin.",
+				Elem:          mysqlConnectionStringResource(),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQL.Name(), dbEngineTypes),
+			},
+			dbEngineMySQLRDS.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mysql-rds-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLRDS.Name(), dbEngineTypes),
+			},
+			dbEngineMySQLAurora.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mysql-aurora-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLAurora.Name(), dbEngineTypes),
+			},
+			dbEngineMySQLLegacy.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mysql-legacy-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLLegacy.Name(), dbEngineTypes),
+			},
+
+			dbEnginePostgres.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the postgresql-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.Name(), dbEngineTypes),
+			},
+
+			dbEngineOracle.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the oracle-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineOracle.Name(), dbEngineTypes),
+			},
+
+			dbEngineRedshift.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the redshift-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineRedshift.Name(), dbEngineTypes),
+			},
+
+			dbEngineSnowflake.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the snowflake-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineSnowflake.Name(), dbEngineTypes),
+			},
+
+			"backend": {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Unique name of the Vault mount to configure.",
+				ForceNew:    true,
+				// standardise on no beginning or trailing slashes
+				StateFunc: func(v interface{}) string {
+					return strings.Trim(v.(string), "/")
+				},
+			},
+		},
+>>>>>>> 307b74f1 (docs)
 	}
 }
 
