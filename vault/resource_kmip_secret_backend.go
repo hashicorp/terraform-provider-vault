@@ -19,7 +19,7 @@ var (
 	}
 )
 
-func kmipSecretBackendResource() *schema.Resource {
+func kmipSecretBackendConfigResource() *schema.Resource {
 	return &schema.Resource{
 		Create: kmipSecretBackendCreate,
 		Read:   kmipSecretBackendRead,

@@ -695,7 +695,7 @@ var (
 			PathInventory: []string{"/sys/storage/raft/autopilot/configuration"},
 		},
 		"vault_kmip_secret_backend_config": {
-			Resource:      kmipSecretBackendResource(),
+			Resource:      kmipSecretBackendConfigResource(),
 			PathInventory: []string{"/kmip/config"},
 		},
 	}
