@@ -85,7 +85,10 @@ func consulSecretBackendRoleGetBackend(d *schema.ResourceData) string {
 }
 
 func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 
@@ -126,7 +129,10 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 }
 
 func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	upgradeOldID(d)
 
@@ -173,7 +179,10 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 }
 
 func consulSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -187,7 +196,10 @@ func consulSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) err
 }
 
 func consulSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	upgradeOldID(d)
 

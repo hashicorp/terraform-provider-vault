@@ -40,7 +40,10 @@ func approleAuthBackendRoleIDDataSource() *schema.Resource {
 }
 
 func approleAuthBackendRoleIDRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := approleAuthBackendRolePath(d.Get("backend").(string), d.Get("role_name").(string))
 

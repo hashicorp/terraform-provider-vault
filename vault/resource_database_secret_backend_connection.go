@@ -1068,7 +1068,10 @@ func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string
 }
 
 func databaseSecretBackendConnectionCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -1115,7 +1118,10 @@ func databaseSecretBackendConnectionCreate(d *schema.ResourceData, meta interfac
 }
 
 func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -1269,7 +1275,10 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 }
 
 func databaseSecretBackendConnectionUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -1320,7 +1329,11 @@ func databaseSecretBackendConnectionUpdate(d *schema.ResourceData, meta interfac
 }
 
 func databaseSecretBackendConnectionDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Removing database connection config %q", path)
@@ -1334,7 +1347,10 @@ func databaseSecretBackendConnectionDelete(d *schema.ResourceData, meta interfac
 }
 
 func databaseSecretBackendConnectionExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 

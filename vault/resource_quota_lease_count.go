@@ -48,7 +48,10 @@ func quotaLeaseCountResource() *schema.Resource {
 }
 
 func quotaLeaseCountCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 	path := quotaLeaseCountPath(name)
@@ -71,7 +74,10 @@ func quotaLeaseCountCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaLeaseCountRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 	path := quotaLeaseCountPath(name)
@@ -101,7 +107,10 @@ func quotaLeaseCountRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 	path := quotaLeaseCountPath(name)
@@ -123,7 +132,10 @@ func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaLeaseCountDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 	path := quotaLeaseCountPath(name)
@@ -139,7 +151,10 @@ func quotaLeaseCountDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaLeaseCountExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	name := d.Id()
 	path := quotaLeaseCountPath(name)

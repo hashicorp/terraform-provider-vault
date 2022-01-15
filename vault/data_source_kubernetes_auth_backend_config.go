@@ -65,7 +65,10 @@ func kubernetesAuthBackendConfigDataSource() *schema.Resource {
 }
 
 func kubernetesAuthBackendConfigDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := kubernetesAuthBackendConfigPath(d.Get("backend").(string))
 

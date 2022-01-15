@@ -107,7 +107,10 @@ func gcpAuthBackendRoleDataSource() *schema.Resource {
 }
 
 func gcpAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := gcpRoleResourcePath(d.Get("backend").(string), d.Get("role_name").(string))
 

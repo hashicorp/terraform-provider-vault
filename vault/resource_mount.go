@@ -125,7 +125,7 @@ func MountResource() *schema.Resource {
 }
 
 func mountWrite(d *schema.ResourceData, meta interface{}) error {
-	client, err := GetClientForResource(d, meta)
+	client, err := GetClient(d, meta)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mountUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, err := GetClientForResource(d, meta)
+	client, err := GetClient(d, meta)
 	if err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mountDelete(d *schema.ResourceData, meta interface{}) error {
-	client, err := GetClientForResource(d, meta)
+	client, err := GetClient(d, meta)
 	if err != nil {
 		return err
 	}
@@ -226,7 +226,7 @@ func mountDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mountRead(d *schema.ResourceData, meta interface{}) error {
-	client, err := GetClientForResource(d, meta)
+	client, err := GetClient(d, meta)
 	if err != nil {
 		return err
 	}

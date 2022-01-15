@@ -68,7 +68,10 @@ func raftAutopilotConfigResource() *schema.Resource {
 }
 
 func createOrUpdateAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	c := map[string]interface{}{
 		"cleanup_dead_servers":               d.Get("cleanup_dead_servers").(bool),
@@ -90,7 +93,10 @@ func createOrUpdateAutopilotConfigResource(d *schema.ResourceData, meta interfac
 }
 
 func readAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	log.Printf("[DEBUG] Reading %q", autopilotPath)
 
@@ -139,7 +145,10 @@ func readAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error
 }
 
 func deleteAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	log.Print("[DEBUG] Resetting raft autopilot config")
 

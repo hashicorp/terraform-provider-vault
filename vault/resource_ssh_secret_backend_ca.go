@@ -56,7 +56,11 @@ func sshSecretBackendCAResource() *schema.Resource {
 }
 
 func sshSecretBackendCACreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	backend := d.Get("backend").(string)
 
 	data := make(map[string]interface{})
@@ -82,7 +86,10 @@ func sshSecretBackendCACreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func sshSecretBackendCARead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Id()
 
@@ -116,7 +123,10 @@ func sshSecretBackendCARead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func sshSecretBackendCADelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Id()
 	log.Printf("[DEBUG] Deleting CA configuration for SSH backend %q", backend)

@@ -6,6 +6,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/vault/consts"
 )
 
 const latestSecretVersion = -1
@@ -24,18 +27,11 @@ func genericSecretResource(name string) *schema.Resource {
 		MigrateState: resourceGenericSecretMigrateState,
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Full path where the generic secret will be written.",
-			},
-
-			"namespace": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				ForceNew:    true,
-				Description: "Target namespace. (requires Enterprise)",
 			},
 
 			// Data is passed as JSON so that an arbitrary structure is
@@ -124,135 +120,126 @@ func normalizeDataJSON(data string) (string, error) {
 }
 
 func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client, err := GetClientForResource(d, meta)
-	if err != nil {
-		return err
-	}
-
-	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data); err != nil {
-		return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
-	}
-
-	path := d.Get("path").(string)
-	originalPath := path // if the path belongs to a v2 endpoint, it will be modified
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		return fmt.Errorf("error determining if it's a v2 path: %s", err)
-	}
-
-	if v2 {
-		path = addPrefixToVKVPath(path, mountPath, "data")
-		data = map[string]interface{}{
-			"data":    data,
-			"options": map[string]interface{}{},
+	return CallWithClient(d, meta, func(client *api.Client) error {
+		var data map[string]interface{}
+		if err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data); err != nil {
+			return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
 		}
 
-	}
+		path := d.Get(consts.FieldPath).(string)
+		originalPath := path // if the path belongs to a v2 endpoint, it will be modified
+		mountPath, v2, err := isKVv2(path, client)
+		if err != nil {
+			return fmt.Errorf("error determining if it's a v2 path: %s", err)
+		}
 
-	log.Printf("[DEBUG] Writing generic Vault secret to %s", path)
-	_, err = client.Logical().Write(path, data)
-	if err != nil {
-		return fmt.Errorf("error writing to Vault: %s", err)
-	}
+		if v2 {
+			path = addPrefixToVKVPath(path, mountPath, "data")
+			data = map[string]interface{}{
+				"data":    data,
+				"options": map[string]interface{}{},
+			}
 
-	d.SetId(originalPath)
+		}
 
-	return genericSecretResourceRead(d, meta)
+		log.Printf("[DEBUG] Writing generic Vault secret to %s", path)
+		_, err = client.Logical().Write(path, data)
+		if err != nil {
+			return fmt.Errorf("error writing to Vault: %s", err)
+		}
+
+		d.SetId(originalPath)
+
+		return genericSecretResourceRead(d, meta)
+	})
 }
 
 func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client, err := GetClientForResource(d, meta)
-	if err != nil {
-		return err
-	}
+	return CallWithClient(d, meta, func(client *api.Client) error {
+		path := d.Id()
 
-	path := d.Id()
-
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		return fmt.Errorf("error determining if it's a v2 path: %s", err)
-	}
-
-	if v2 {
-		base := "data"
-		deleteAllVersions := d.Get("delete_all_versions").(bool)
-		if deleteAllVersions {
-			base = "metadata"
+		mountPath, v2, err := isKVv2(path, client)
+		if err != nil {
+			return fmt.Errorf("error determining if it's a v2 path: %s", err)
 		}
-		path = addPrefixToVKVPath(path, mountPath, base)
-	}
 
-	log.Printf("[DEBUG] Deleting vault_generic_secret from %q", path)
-	_, err = client.Logical().Delete(path)
-	if err != nil {
-		return fmt.Errorf("error deleting %q from Vault: %q", path, err)
-	}
+		if v2 {
+			base := "data"
+			deleteAllVersions := d.Get("delete_all_versions").(bool)
+			if deleteAllVersions {
+				base = "metadata"
+			}
+			path = addPrefixToVKVPath(path, mountPath, base)
+		}
 
-	return nil
+		log.Printf("[DEBUG] Deleting vault_generic_secret from %q", path)
+		_, err = client.Logical().Delete(path)
+		if err != nil {
+			return fmt.Errorf("error deleting %q from Vault: %q", path, err)
+		}
+
+		return nil
+	})
 }
 
 func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
-	var data map[string]interface{}
-	shouldRead := !d.Get("disable_read").(bool)
+	return CallWithClient(d, meta, func(client *api.Client) error {
+		var data map[string]interface{}
+		shouldRead := !d.Get("disable_read").(bool)
 
-	path := d.Id()
+		path := d.Id()
 
-	if shouldRead {
-		client, err := GetClientForResource(d, meta)
-		if err != nil {
-			return err
-		}
+		if shouldRead {
+			log.Printf("[DEBUG] Reading %s from Vault", path)
+			secret, err := versionedSecret(latestSecretVersion, path, client)
+			if err != nil {
+				return fmt.Errorf("error reading from Vault: %s", err)
+			}
+			if secret == nil {
+				log.Printf("[WARN] secret (%s) not found, removing from state", path)
+				d.SetId("")
+				return nil
+			}
 
-		log.Printf("[DEBUG] Reading %s from Vault", path)
-		secret, err := versionedSecret(latestSecretVersion, path, client)
-		if err != nil {
-			return fmt.Errorf("error reading from Vault: %s", err)
-		}
-		if secret == nil {
-			log.Printf("[WARN] secret (%s) not found, removing from state", path)
-			d.SetId("")
-			return nil
-		}
+			log.Printf("[DEBUG] secret: %#v", secret)
 
-		log.Printf("[DEBUG] secret: %#v", secret)
+			data = secret.Data
+			jsonData, err := json.Marshal(secret.Data)
+			if err != nil {
+				return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
+			}
 
-		data = secret.Data
-		jsonData, err := json.Marshal(secret.Data)
-		if err != nil {
-			return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
-		}
-
-		d.Set("data_json", string(jsonData))
-		d.Set("path", path)
-	} else {
-		// Populate data from data_json from state
-		err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data)
-		if err != nil {
-			return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
-		}
-		log.Printf("[WARN] vault_generic_secret does not refresh when disable_read is set to true")
-	}
-	d.Set("disable_read", !shouldRead)
-
-	// Since our "data" map can only contain string values, we
-	// will take strings from Data and write them in as-is,
-	// and write everything else in as a JSON serialization of
-	// whatever value we get so that complex types can be
-	// passed around and processed elsewhere if desired.
-	// Note: This is a different map to jsonData, as this can only
-	// contain strings
-	dataMap := map[string]string{}
-	for k, v := range data {
-		if vs, ok := v.(string); ok {
-			dataMap[k] = vs
+			d.Set("data_json", string(jsonData))
+			d.Set(consts.FieldPath, path)
 		} else {
-			// Again ignoring error because we know this value
-			// came from JSON in the first place and so must be valid.
-			vBytes, _ := json.Marshal(v)
-			dataMap[k] = string(vBytes)
+			// Populate data from data_json from state
+			err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data)
+			if err != nil {
+				return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
+			}
+			log.Printf("[WARN] vault_generic_secret does not refresh when disable_read is set to true")
 		}
-	}
-	d.Set("data", dataMap)
-	return nil
+		d.Set("disable_read", !shouldRead)
+
+		// Since our "data" map can only contain string values, we
+		// will take strings from Data and write them in as-is,
+		// and write everything else in as a JSON serialization of
+		// whatever value we get so that complex types can be
+		// passed around and processed elsewhere if desired.
+		// Note: This is a different map to jsonData, as this can only
+		// contain strings
+		dataMap := map[string]string{}
+		for k, v := range data {
+			if vs, ok := v.(string); ok {
+				dataMap[k] = vs
+			} else {
+				// Again ignoring error because we know this value
+				// came from JSON in the first place and so must be valid.
+				vBytes, _ := json.Marshal(v)
+				dataMap[k] = string(vBytes)
+			}
+		}
+		d.Set("data", dataMap)
+		return nil
+	})
 }

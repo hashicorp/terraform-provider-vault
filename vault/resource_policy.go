@@ -35,7 +35,10 @@ func policyResource() *schema.Resource {
 }
 
 func policyWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 	policy := d.Get("policy").(string)
@@ -52,7 +55,10 @@ func policyWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func policyDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 
@@ -67,7 +73,10 @@ func policyDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func policyRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 

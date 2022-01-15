@@ -98,7 +98,10 @@ func tokenAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]in
 }
 
 func tokenAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	role := d.Get("role_name").(string)
 
@@ -122,7 +125,11 @@ func tokenAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 }
 
 func tokenAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	roleName, err := tokenAuthBackendRoleNameFromPath(path)
@@ -156,7 +163,11 @@ func tokenAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating Token auth backend role %q", path)
@@ -174,7 +185,11 @@ func tokenAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 }
 
 func tokenAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting Token auth backend role %q", path)
@@ -188,7 +203,10 @@ func tokenAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error 
 }
 
 func tokenAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if Token auth backend role %q exists", path)

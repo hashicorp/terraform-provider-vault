@@ -37,7 +37,10 @@ func readPasswordPolicy(client *api.Client, name string) (map[string]interface{}
 }
 
 func passwordPolicyDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 
@@ -56,7 +59,10 @@ func passwordPolicyDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func passwordPolicyRead(attributes []string, d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 
@@ -74,7 +80,10 @@ func passwordPolicyRead(attributes []string, d *schema.ResourceData, meta interf
 }
 
 func passwordPolicyWrite(attributes []string, d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 

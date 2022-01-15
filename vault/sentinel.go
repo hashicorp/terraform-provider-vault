@@ -74,7 +74,10 @@ func ValidateSentinelEnforcementLevel(v interface{}, k string) (ws []string, err
 }
 
 func sentinelPolicyDelete(policyType string, d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 
@@ -89,7 +92,10 @@ func sentinelPolicyDelete(policyType string, d *schema.ResourceData, meta interf
 }
 
 func sentinelPolicyRead(policyType string, attributes []string, d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 
@@ -107,7 +113,10 @@ func sentinelPolicyRead(policyType string, attributes []string, d *schema.Resour
 }
 
 func sentinelPolicyWrite(policyType string, attributes []string, d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 

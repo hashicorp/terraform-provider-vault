@@ -74,7 +74,10 @@ func oktaAuthBackendUserResource() *schema.Resource {
 }
 
 func oktaAuthBackendUserWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	username := d.Get("username").(string)
 	path := d.Get("path").(string)
@@ -110,7 +113,10 @@ func oktaAuthBackendUserWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendUserRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 	username := d.Get("username").(string)
@@ -140,7 +146,10 @@ func oktaAuthBackendUserRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendUserDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 	username := d.Get("username").(string)

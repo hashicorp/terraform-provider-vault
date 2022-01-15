@@ -111,7 +111,10 @@ func certCertResourcePath(backend, name string) string {
 }
 
 func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -164,7 +167,11 @@ func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -211,7 +218,11 @@ func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading cert %q", path)
@@ -302,7 +313,11 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func certAuthResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting cert %q", path)

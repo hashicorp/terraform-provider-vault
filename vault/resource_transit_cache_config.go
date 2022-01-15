@@ -35,7 +35,11 @@ func transitSecretBackendCacheConfig() *schema.Resource {
 }
 
 func transitSecretBackendCacheConfigUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	size := d.Get("size").(int)
 
 	backend := d.Get("backend").(string) + "/cache-config"
@@ -64,7 +68,10 @@ func transitSecretBackendCacheConfigUpdate(d *schema.ResourceData, meta interfac
 }
 
 func transitSecretBackendCacheConfigRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Id()
 

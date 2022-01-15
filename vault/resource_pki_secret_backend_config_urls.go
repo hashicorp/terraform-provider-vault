@@ -44,7 +44,10 @@ func pkiSecretBackendConfigUrlsResource() *schema.Resource {
 }
 
 func pkiSecretBackendConfigUrlsCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 
@@ -72,7 +75,10 @@ func pkiSecretBackendConfigUrlsCreate(d *schema.ResourceData, meta interface{}) 
 }
 
 func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	backend := pkiSecretBackendConfigUrlsPath(path)
@@ -97,7 +103,10 @@ func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) er
 }
 
 func pkiSecretBackendConfigUrlsUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 

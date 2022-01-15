@@ -131,7 +131,10 @@ func sshSecretBackendRoleResource() *schema.Resource {
 }
 
 func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -215,7 +218,10 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -271,7 +277,10 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func sshSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting role %q", path)
@@ -285,7 +294,10 @@ func sshSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error 
 }
 
 func sshSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", path)

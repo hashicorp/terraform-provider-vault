@@ -74,7 +74,10 @@ func awsAuthBackendRoleTagResource() *schema.Resource {
 }
 
 func awsAuthBackendRoleTagResourceCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)

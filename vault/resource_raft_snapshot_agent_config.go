@@ -279,7 +279,11 @@ func buildConfigFromResourceData(d *schema.ResourceData) (map[string]interface{}
 }
 
 func createOrUpdateSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Get("name").(string)
 	path := fmt.Sprintf(snapshotAutoPath, name)
 
@@ -299,7 +303,10 @@ func createOrUpdateSnapshotAgentConfigResource(d *schema.ResourceData, meta inte
 }
 
 func readSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 	configPath := fmt.Sprintf(snapshotAutoPath, name)
@@ -479,7 +486,11 @@ func readSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) e
 }
 
 func deleteSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Id()
 	path := fmt.Sprintf(snapshotAutoPath, name)
 

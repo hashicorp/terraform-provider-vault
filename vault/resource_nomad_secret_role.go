@@ -66,7 +66,11 @@ func nomadSecretBackendRoleResource() *schema.Resource {
 }
 
 func createNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
 	roleType := d.Get("type").(string)
@@ -113,7 +117,11 @@ func createNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	rolePath := d.Id()
 	log.Printf("[DEBUG] Reading %q", rolePath)
 
@@ -163,7 +171,11 @@ func readNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	rolePath := d.Id()
 	roleType := d.Get("type").(string)
 	if roleType == "" {
@@ -201,7 +213,11 @@ func updateNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func deleteNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	rolePath := d.Id()
 	log.Printf("[DEBUG] Deleting %q", rolePath)
 

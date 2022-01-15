@@ -66,7 +66,10 @@ func identityOidcRoleUpdateFields(d *schema.ResourceData, data map[string]interf
 }
 
 func identityOidcRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 
@@ -88,7 +91,11 @@ func identityOidcRoleCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Id()
 	path := identityOidcRolePath(name)
 	log.Printf("[DEBUG] Updating IdentityOidcRole %s at %s", name, path)
@@ -107,7 +114,11 @@ func identityOidcRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Id()
 	path := identityOidcRolePath(name)
 
@@ -133,7 +144,11 @@ func identityOidcRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Id()
 	path := identityOidcRolePath(name)
 
@@ -148,7 +163,11 @@ func identityOidcRoleDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	name := d.Id()
 	path := identityOidcRolePath(name)
 

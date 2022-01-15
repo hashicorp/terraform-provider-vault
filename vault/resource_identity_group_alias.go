@@ -43,7 +43,10 @@ func identityGroupAliasResource() *schema.Resource {
 }
 
 func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 	mountAccessor := d.Get("mount_accessor").(string)
@@ -68,7 +71,11 @@ func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityGroupAlias %q", id)
@@ -106,7 +113,11 @@ func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	path := identityGroupAliasIDPath(id)
@@ -133,7 +144,11 @@ func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	path := identityGroupAliasIDPath(id)
@@ -149,7 +164,11 @@ func identityGroupAliasDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	id := d.Id()
 
 	path := identityGroupAliasIDPath(id)

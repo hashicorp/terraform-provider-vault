@@ -66,7 +66,11 @@ func adSecretBackendRoleResource() *schema.Resource {
 }
 
 func createRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
 	rolePath := fmt.Sprintf("%s/roles/%s", backend, role)
@@ -92,7 +96,11 @@ func createRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	rolePath := d.Id()
 	log.Printf("[DEBUG] Reading %q", rolePath)
 
@@ -147,7 +155,11 @@ func readRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	rolePath := d.Id()
 	log.Printf("[DEBUG] Updating %q", rolePath)
 
@@ -166,7 +178,11 @@ func updateRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func deleteRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	rolePath := d.Id()
 	log.Printf("[DEBUG] Deleting %q", rolePath)
 

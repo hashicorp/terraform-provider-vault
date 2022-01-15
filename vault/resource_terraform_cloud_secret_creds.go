@@ -58,7 +58,11 @@ func terraformCloudSecretCredsResource() *schema.Resource {
 }
 
 func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
 	path := fmt.Sprintf("%s/creds/%s", backend, role)
@@ -99,7 +103,11 @@ func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 }
 
 func deleteTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	leaseId := d.Get("lease_id").(string)
 
 	if leaseId != "" {
@@ -125,7 +133,11 @@ func updateTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 }
 
 func readTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	leaseId := d.Get("lease_id")
 
 	if leaseId != "" {

@@ -187,64 +187,64 @@ func identityGroupLookup(client *api.Client, data map[string]interface{}) (*api.
 }
 
 func identityGroupDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	return CallWithClient(d, meta, func(client *api.Client) error {
+		data := map[string]interface{}{}
 
-	data := map[string]interface{}{}
+		if v, ok := d.GetOk("group_name"); ok {
+			data["name"] = v.(string)
+		}
+		if v, ok := d.GetOk("group_id"); ok {
+			data["id"] = v.(string)
+		}
+		if v, ok := d.GetOk("alias_id"); ok {
+			data["alias_id"] = v.(string)
+		}
+		if v, ok := d.GetOk("alias_name"); ok {
+			data["alias_name"] = v.(string)
+		}
+		if v, ok := d.GetOk("alias_mount_accessor"); ok {
+			data["alias_mount_accessor"] = v.(string)
+		}
 
-	if v, ok := d.GetOk("group_name"); ok {
-		data["name"] = v.(string)
-	}
-	if v, ok := d.GetOk("group_id"); ok {
-		data["id"] = v.(string)
-	}
-	if v, ok := d.GetOk("alias_id"); ok {
-		data["alias_id"] = v.(string)
-	}
-	if v, ok := d.GetOk("alias_name"); ok {
-		data["alias_name"] = v.(string)
-	}
-	if v, ok := d.GetOk("alias_mount_accessor"); ok {
-		data["alias_mount_accessor"] = v.(string)
-	}
+		log.Print("[DEBUG] Reading IdentityGroup")
+		resp, err := identityGroupLookup(client, data)
+		if err != nil {
+			return err
+		}
+		id := resp.Data["id"]
 
-	log.Print("[DEBUG] Reading IdentityGroup")
-	resp, err := identityGroupLookup(client, data)
-	if err != nil {
-		return err
-	}
-	id := resp.Data["id"]
+		d.SetId(id.(string))
+		d.Set("group_id", id)
+		d.Set("group_name", resp.Data["name"])
 
-	d.SetId(id.(string))
-	d.Set("group_id", id)
-	d.Set("group_name", resp.Data["name"])
+		if alias, ok := resp.Data["alias"]; ok {
+			alias := alias.(map[string]interface{})
 
-	if alias, ok := resp.Data["alias"]; ok {
-		alias := alias.(map[string]interface{})
-
-		for _, k := range identityGroupAliasFields {
-			v, ok := alias[k]
-			key := fmt.Sprintf("alias_%s", k)
-			if ok {
-				if err := d.Set(key, v); err != nil {
-					return fmt.Errorf("error setting state key %s for IdentityGroup: %s", key, err)
+			for _, k := range identityGroupAliasFields {
+				v, ok := alias[k]
+				key := fmt.Sprintf("alias_%s", k)
+				if ok {
+					if err := d.Set(key, v); err != nil {
+						return fmt.Errorf("error setting state key %s for IdentityGroup: %s", key, err)
+					}
 				}
 			}
 		}
-	}
 
-	for _, k := range identityGroupFields {
-		v, ok := resp.Data[k]
-		if ok {
-			if err := d.Set(k, v); err != nil {
-				return fmt.Errorf("error setting state key %s for IdentityGroup: %s", k, err)
+		for _, k := range identityGroupFields {
+			v, ok := resp.Data[k]
+			if ok {
+				if err := d.Set(k, v); err != nil {
+					return fmt.Errorf("error setting state key %s for IdentityGroup: %s", k, err)
+				}
 			}
 		}
-	}
 
-	// Ignoring error because this value came from JSON in the
-	// first place so no reason why it should fail to re-encode.
-	jsonDataBytes, _ := json.Marshal(resp.Data)
-	d.Set("data_json", string(jsonDataBytes))
+		// Ignoring error because this value came from JSON in the
+		// first place so no reason why it should fail to re-encode.
+		jsonDataBytes, _ := json.Marshal(resp.Data)
+		d.Set("data_json", string(jsonDataBytes))
 
-	return nil
+		return nil
+	})
 }

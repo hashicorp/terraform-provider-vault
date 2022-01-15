@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/command/config"
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
+	"github.com/hashicorp/terraform-provider-vault/vault/consts"
 )
 
 const (
@@ -78,8 +79,8 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 	}
 
 	ns = strings.Trim(ns, "/")
-	if rootNS := p.resourceData.Get("namespace").(string); rootNS != "" {
-		ns = fmt.Sprintf("%s/%s", rootNS, ns)
+	if root := p.resourceData.Get(consts.FieldNamespace).(string); root != "" {
+		ns = fmt.Sprintf("%s/%s", root, ns)
 	}
 
 	if v, ok := p.clientCache[ns]; ok {
@@ -159,22 +160,22 @@ func Provider() *schema.Provider {
 				Description: "Login to vault with an existing auth method using auth/<mount>/login",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"path": {
+						consts.FieldPath: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"namespace": {
+						consts.FieldNamespace: {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						"parameters": {
+						consts.FieldParameters: {
 							Type:     schema.TypeMap,
 							Optional: true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
 						},
-						"method": {
+						consts.FieldMethod: {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
@@ -231,7 +232,7 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES_CCC", DefaultMaxHTTPRetriesCCC),
 				Description: "Maximum number of retries for Client Controlled Consistency related operations",
 			},
-			"namespace": {
+			consts.FieldNamespace: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
@@ -288,63 +289,63 @@ type Description struct {
 var (
 	DataSourceRegistry = map[string]*Description{
 		"vault_approle_auth_backend_role_id": {
-			Resource:      approleAuthBackendRoleIDDataSource(),
+			Resource:      updateSchemaResource(approleAuthBackendRoleIDDataSource()),
 			PathInventory: []string{"/auth/approle/role/{role_name}/role-id"},
 		},
 		"vault_identity_entity": {
-			Resource:      identityEntityDataSource(),
+			Resource:      updateSchemaResource(identityEntityDataSource()),
 			PathInventory: []string{"/identity/lookup/entity"},
 		},
 		"vault_identity_group": {
-			Resource:      identityGroupDataSource(),
+			Resource:      updateSchemaResource(identityGroupDataSource()),
 			PathInventory: []string{"/identity/lookup/group"},
 		},
 		"vault_kubernetes_auth_backend_config": {
-			Resource:      kubernetesAuthBackendConfigDataSource(),
+			Resource:      updateSchemaResource(kubernetesAuthBackendConfigDataSource()),
 			PathInventory: []string{"/auth/kubernetes/config"},
 		},
 		"vault_kubernetes_auth_backend_role": {
-			Resource:      kubernetesAuthBackendRoleDataSource(),
+			Resource:      updateSchemaResource(kubernetesAuthBackendRoleDataSource()),
 			PathInventory: []string{"/auth/kubernetes/role/{name}"},
 		},
 		"vault_ad_access_credentials": {
-			Resource:      adAccessCredentialsDataSource(),
+			Resource:      updateSchemaResource(adAccessCredentialsDataSource()),
 			PathInventory: []string{"/ad/creds/{role}"},
 		},
 		"vault_nomad_access_token": {
-			Resource:      nomadAccessCredentialsDataSource(),
+			Resource:      updateSchemaResource(nomadAccessCredentialsDataSource()),
 			PathInventory: []string{"/nomad/creds/{role}"},
 		},
 		"vault_aws_access_credentials": {
-			Resource:      awsAccessCredentialsDataSource(),
+			Resource:      updateSchemaResource(awsAccessCredentialsDataSource()),
 			PathInventory: []string{"/aws/creds"},
 		},
 		"vault_azure_access_credentials": {
-			Resource:      azureAccessCredentialsDataSource(),
+			Resource:      updateSchemaResource(azureAccessCredentialsDataSource()),
 			PathInventory: []string{"/azure/creds/{role}"},
 		},
 		"vault_generic_secret": {
-			Resource:      genericSecretDataSource(),
+			Resource:      updateSchemaResource(genericSecretDataSource()),
 			PathInventory: []string{"/secret/data/{path}"},
 		},
 		"vault_policy_document": {
-			Resource:      policyDocumentDataSource(),
+			Resource:      updateSchemaResource(policyDocumentDataSource()),
 			PathInventory: []string{"/sys/policy/{name}"},
 		},
 		"vault_auth_backend": {
-			Resource:      authBackendDataSource(),
+			Resource:      updateSchemaResource(authBackendDataSource()),
 			PathInventory: []string{"/sys/auth"},
 		},
 		"vault_transit_encrypt": {
-			Resource:      transitEncryptDataSource(),
+			Resource:      updateSchemaResource(transitEncryptDataSource()),
 			PathInventory: []string{"/transit/encrypt/{name}"},
 		},
 		"vault_transit_decrypt": {
-			Resource:      transitDecryptDataSource(),
+			Resource:      updateSchemaResource(transitDecryptDataSource()),
 			PathInventory: []string{"/transit/decrypt/{name}"},
 		},
 		"vault_gcp_auth_backend_role": {
-			Resource:      gcpAuthBackendRoleDataSource(),
+			Resource:      updateSchemaResource(gcpAuthBackendRoleDataSource()),
 			PathInventory: []string{"/auth/gcp/role/{role_name}"},
 		},
 	}
@@ -352,30 +353,30 @@ var (
 	ResourceRegistry = map[string]*Description{
 
 		"vault_alicloud_auth_backend_role": {
-			Resource:      alicloudAuthBackendRoleResource(),
+			Resource:      updateSchemaResource(alicloudAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/alicloud/role/{name}"},
 		},
 		"vault_approle_auth_backend_login": {
-			Resource:      approleAuthBackendLoginResource(),
+			Resource:      updateSchemaResource(approleAuthBackendLoginResource()),
 			PathInventory: []string{"/auth/approle/login"},
 		},
 		"vault_approle_auth_backend_role": {
-			Resource:      approleAuthBackendRoleResource(),
+			Resource:      updateSchemaResource(approleAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/approle/role/{role_name}"},
 		},
 		"vault_approle_auth_backend_role_secret_id": {
-			Resource: approleAuthBackendRoleSecretIDResource("vault_approle_auth_backend_role_secret_id"),
+			Resource: updateSchemaResource(approleAuthBackendRoleSecretIDResource("vault_approle_auth_backend_role_secret_id")),
 			PathInventory: []string{
 				"/auth/approle/role/{role_name}/secret-id",
 				"/auth/approle/role/{role_name}/custom-secret-id",
 			},
 		},
 		"vault_auth_backend": {
-			Resource:      AuthBackendResource(),
+			Resource:      updateSchemaResource(AuthBackendResource()),
 			PathInventory: []string{"/sys/auth/{path}"},
 		},
 		"vault_token": {
-			Resource: tokenResource(),
+			Resource: updateSchemaResource(tokenResource()),
 			PathInventory: []string{
 				"/auth/token/create",
 				"/auth/token/create-orphan",
@@ -383,183 +384,183 @@ var (
 			},
 		},
 		"vault_token_auth_backend_role": {
-			Resource:      tokenAuthBackendRoleResource(),
+			Resource:      updateSchemaResource(tokenAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/token/roles/{role_name}"},
 		},
 		"vault_ad_secret_backend": {
-			Resource:      adSecretBackendResource(),
+			Resource:      updateSchemaResource(adSecretBackendResource()),
 			PathInventory: []string{"/ad"},
 		},
 		"vault_ad_secret_library": {
-			Resource:      adSecretBackendLibraryResource(),
+			Resource:      updateSchemaResource(adSecretBackendLibraryResource()),
 			PathInventory: []string{"/ad/library/{name}"},
 		},
 		"vault_ad_secret_role": {
-			Resource:      adSecretBackendRoleResource(),
+			Resource:      updateSchemaResource(adSecretBackendRoleResource()),
 			PathInventory: []string{"/ad/roles/{role}"},
 		},
 		"vault_aws_auth_backend_cert": {
-			Resource:      awsAuthBackendCertResource(),
+			Resource:      updateSchemaResource(awsAuthBackendCertResource()),
 			PathInventory: []string{"/auth/aws/config/certificate/{cert_name}"},
 		},
 		"vault_aws_auth_backend_client": {
-			Resource:      awsAuthBackendClientResource(),
+			Resource:      updateSchemaResource(awsAuthBackendClientResource()),
 			PathInventory: []string{"/auth/aws/config/client"},
 		},
 		"vault_aws_auth_backend_identity_whitelist": {
-			Resource:      awsAuthBackendIdentityWhitelistResource(),
+			Resource:      updateSchemaResource(awsAuthBackendIdentityWhitelistResource()),
 			PathInventory: []string{"/auth/aws/config/tidy/identity-whitelist"},
 		},
 		"vault_aws_auth_backend_login": {
-			Resource:      awsAuthBackendLoginResource(),
+			Resource:      updateSchemaResource(awsAuthBackendLoginResource()),
 			PathInventory: []string{"/auth/aws/login"},
 		},
 		"vault_aws_auth_backend_role": {
-			Resource:      awsAuthBackendRoleResource(),
+			Resource:      updateSchemaResource(awsAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/aws/role/{role}"},
 		},
 		"vault_aws_auth_backend_role_tag": {
-			Resource:      awsAuthBackendRoleTagResource(),
+			Resource:      updateSchemaResource(awsAuthBackendRoleTagResource()),
 			PathInventory: []string{"/auth/aws/role/{role}/tag"},
 		},
 		"vault_aws_auth_backend_roletag_blacklist": {
-			Resource:      awsAuthBackendRoleTagBlacklistResource(),
+			Resource:      updateSchemaResource(awsAuthBackendRoleTagBlacklistResource()),
 			PathInventory: []string{"/auth/aws/config/tidy/roletag-blacklist"},
 		},
 		"vault_aws_auth_backend_sts_role": {
-			Resource:      awsAuthBackendSTSRoleResource(),
+			Resource:      updateSchemaResource(awsAuthBackendSTSRoleResource()),
 			PathInventory: []string{"/auth/aws/config/sts/{account_id}"},
 		},
 		"vault_aws_secret_backend": {
-			Resource:      awsSecretBackendResource(),
+			Resource:      updateSchemaResource(awsSecretBackendResource()),
 			PathInventory: []string{"/aws/config/root"},
 		},
 		"vault_aws_secret_backend_role": {
-			Resource:      awsSecretBackendRoleResource("vault_aws_secret_backend_role"),
+			Resource:      updateSchemaResource(awsSecretBackendRoleResource("vault_aws_secret_backend_role")),
 			PathInventory: []string{"/aws/roles/{name}"},
 		},
 		"vault_azure_secret_backend": {
-			Resource:      azureSecretBackendResource(),
+			Resource:      updateSchemaResource(azureSecretBackendResource()),
 			PathInventory: []string{"/azure/config"},
 		},
 		"vault_azure_secret_backend_role": {
-			Resource:      azureSecretBackendRoleResource(),
+			Resource:      updateSchemaResource(azureSecretBackendRoleResource()),
 			PathInventory: []string{"/azure/roles/{name}"},
 		},
 		"vault_azure_auth_backend_config": {
-			Resource:      azureAuthBackendConfigResource(),
+			Resource:      updateSchemaResource(azureAuthBackendConfigResource()),
 			PathInventory: []string{"/auth/azure/config"},
 		},
 		"vault_azure_auth_backend_role": {
-			Resource:      azureAuthBackendRoleResource(),
+			Resource:      updateSchemaResource(azureAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/azure/role/{name}"},
 		},
 		"vault_consul_secret_backend": {
-			Resource:      consulSecretBackendResource(),
+			Resource:      updateSchemaResource(consulSecretBackendResource()),
 			PathInventory: []string{"/consul/config/access"},
 		},
 		"vault_consul_secret_backend_role": {
-			Resource:      consulSecretBackendRoleResource(),
+			Resource:      updateSchemaResource(consulSecretBackendRoleResource()),
 			PathInventory: []string{"/consul/roles/{name}"},
 		},
 		"vault_database_secret_backend_connection": {
-			Resource:      databaseSecretBackendConnectionResource(),
+			Resource:      updateSchemaResource(databaseSecretBackendConnectionResource()),
 			PathInventory: []string{"/database/config/{name}"},
 		},
 		"vault_database_secret_backend_role": {
-			Resource:      databaseSecretBackendRoleResource(),
+			Resource:      updateSchemaResource(databaseSecretBackendRoleResource()),
 			PathInventory: []string{"/database/roles/{name}"},
 		},
 		"vault_database_secret_backend_static_role": {
-			Resource:      databaseSecretBackendStaticRoleResource(),
+			Resource:      updateSchemaResource(databaseSecretBackendStaticRoleResource()),
 			PathInventory: []string{"/database/static-roles/{name}"},
 		},
 		"vault_github_auth_backend": {
-			Resource:      githubAuthBackendResource(),
+			Resource:      updateSchemaResource(githubAuthBackendResource()),
 			PathInventory: []string{"/auth/github/config"},
 		},
 		"vault_github_team": {
-			Resource:      githubTeamResource(),
+			Resource:      updateSchemaResource(githubTeamResource()),
 			PathInventory: []string{"/auth/github/map/teams"},
 		},
 		"vault_github_user": {
-			Resource:      githubUserResource(),
+			Resource:      updateSchemaResource(githubUserResource()),
 			PathInventory: []string{"/auth/github/map/users"},
 		},
 		"vault_gcp_auth_backend": {
-			Resource:      gcpAuthBackendResource(),
+			Resource:      updateSchemaResource(gcpAuthBackendResource()),
 			PathInventory: []string{"/auth/gcp/config"},
 		},
 		"vault_gcp_auth_backend_role": {
-			Resource:      gcpAuthBackendRoleResource(),
+			Resource:      updateSchemaResource(gcpAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/gcp/role/{name}"},
 		},
 		"vault_gcp_secret_backend": {
-			Resource:      gcpSecretBackendResource("vault_gcp_secret_backend"),
+			Resource:      updateSchemaResource(gcpSecretBackendResource("vault_gcp_secret_backend")),
 			PathInventory: []string{"/gcp/config"},
 		},
 		"vault_gcp_secret_roleset": {
-			Resource:      gcpSecretRolesetResource(),
+			Resource:      updateSchemaResource(gcpSecretRolesetResource()),
 			PathInventory: []string{"/gcp/roleset/{name}"},
 		},
 		"vault_gcp_secret_static_account": {
-			Resource:      gcpSecretStaticAccountResource(),
+			Resource:      updateSchemaResource(gcpSecretStaticAccountResource()),
 			PathInventory: []string{"/gcp/static-account/{name}"},
 		},
 		"vault_cert_auth_backend_role": {
-			Resource:      certAuthBackendRoleResource(),
+			Resource:      updateSchemaResource(certAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/cert/certs/{name}"},
 		},
 		"vault_generic_endpoint": {
-			Resource:      genericEndpointResource("vault_generic_endpoint"),
+			Resource:      updateSchemaResource(genericEndpointResource("vault_generic_endpoint")),
 			PathInventory: []string{GenericPath},
 		},
 		"vault_generic_secret": {
-			Resource:      genericSecretResource("vault_generic_secret"),
+			Resource:      updateSchemaResource(genericSecretResource("vault_generic_secret")),
 			PathInventory: []string{GenericPath},
 		},
 		"vault_jwt_auth_backend": {
-			Resource:      jwtAuthBackendResource(),
+			Resource:      updateSchemaResource(jwtAuthBackendResource()),
 			PathInventory: []string{"/auth/jwt/config"},
 		},
 		"vault_jwt_auth_backend_role": {
-			Resource:      jwtAuthBackendRoleResource(),
+			Resource:      updateSchemaResource(jwtAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/jwt/role/{name}"},
 		},
 		"vault_kubernetes_auth_backend_config": {
-			Resource:      kubernetesAuthBackendConfigResource(),
+			Resource:      updateSchemaResource(kubernetesAuthBackendConfigResource()),
 			PathInventory: []string{"/auth/kubernetes/config"},
 		},
 		"vault_kubernetes_auth_backend_role": {
-			Resource:      kubernetesAuthBackendRoleResource(),
+			Resource:      updateSchemaResource(kubernetesAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/kubernetes/role/{name}"},
 		},
 		"vault_okta_auth_backend": {
-			Resource:      oktaAuthBackendResource(),
+			Resource:      updateSchemaResource(oktaAuthBackendResource()),
 			PathInventory: []string{"/auth/okta/config"},
 		},
 		"vault_okta_auth_backend_user": {
-			Resource:      oktaAuthBackendUserResource(),
+			Resource:      updateSchemaResource(oktaAuthBackendUserResource()),
 			PathInventory: []string{"/auth/okta/users/{name}"},
 		},
 		"vault_okta_auth_backend_group": {
-			Resource:      oktaAuthBackendGroupResource(),
+			Resource:      updateSchemaResource(oktaAuthBackendGroupResource()),
 			PathInventory: []string{"/auth/okta/groups/{name}"},
 		},
 		"vault_ldap_auth_backend": {
-			Resource:      ldapAuthBackendResource(),
+			Resource:      updateSchemaResource(ldapAuthBackendResource()),
 			PathInventory: []string{"/auth/ldap/config"},
 		},
 		"vault_ldap_auth_backend_user": {
-			Resource:      ldapAuthBackendUserResource(),
+			Resource:      updateSchemaResource(ldapAuthBackendUserResource()),
 			PathInventory: []string{"/auth/ldap/users/{name}"},
 		},
 		"vault_ldap_auth_backend_group": {
-			Resource:      ldapAuthBackendGroupResource(),
+			Resource:      updateSchemaResource(ldapAuthBackendGroupResource()),
 			PathInventory: []string{"/auth/ldap/groups/{name}"},
 		},
 		"vault_nomad_secret_backend": {
-			Resource: nomadSecretAccessBackendResource(),
+			Resource: updateSchemaResource(nomadSecretAccessBackendResource()),
 			PathInventory: []string{
 				"/nomad",
 				"/nomad/config/access",
@@ -567,182 +568,182 @@ var (
 			},
 		},
 		"vault_nomad_secret_role": {
-			Resource:      nomadSecretBackendRoleResource(),
+			Resource:      updateSchemaResource(nomadSecretBackendRoleResource()),
 			PathInventory: []string{"/nomad/role/{role}"},
 		},
 		"vault_policy": {
-			Resource:      policyResource(),
+			Resource:      updateSchemaResource(policyResource()),
 			PathInventory: []string{"/sys/policy/{name}"},
 		},
 		"vault_egp_policy": {
-			Resource:       egpPolicyResource(),
+			Resource:       updateSchemaResource(egpPolicyResource()),
 			PathInventory:  []string{"/sys/policies/egp/{name}"},
 			EnterpriseOnly: true,
 		},
 		"vault_rgp_policy": {
-			Resource:       rgpPolicyResource(),
+			Resource:       updateSchemaResource(rgpPolicyResource()),
 			PathInventory:  []string{"/sys/policies/rgp/{name}"},
 			EnterpriseOnly: true,
 		},
 		"vault_mfa_duo": {
-			Resource:       mfaDuoResource(),
+			Resource:       updateSchemaResource(mfaDuoResource()),
 			PathInventory:  []string{"/sys/mfa/method/duo/{name}"},
 			EnterpriseOnly: true,
 		},
 		"vault_mount": {
-			Resource:      MountResource(),
+			Resource:      updateSchemaResource(MountResource()),
 			PathInventory: []string{"/sys/mounts/{path}"},
 		},
 		"vault_namespace": {
-			Resource:       namespaceResource(),
+			Resource:       updateSchemaResource(namespaceResource()),
 			PathInventory:  []string{"/sys/namespaces/{path}"},
 			EnterpriseOnly: true,
 		},
 		"vault_audit": {
-			Resource:      auditResource(),
+			Resource:      updateSchemaResource(auditResource()),
 			PathInventory: []string{"/sys/audit/{path}"},
 		},
 		"vault_ssh_secret_backend_ca": {
-			Resource:      sshSecretBackendCAResource(),
+			Resource:      updateSchemaResource(sshSecretBackendCAResource()),
 			PathInventory: []string{"/ssh/config/ca"},
 		},
 		"vault_ssh_secret_backend_role": {
-			Resource:      sshSecretBackendRoleResource(),
+			Resource:      updateSchemaResource(sshSecretBackendRoleResource()),
 			PathInventory: []string{"/ssh/roles/{role}"},
 		},
 		"vault_identity_entity": {
-			Resource:      identityEntityResource(),
+			Resource:      updateSchemaResource(identityEntityResource()),
 			PathInventory: []string{"/identity/entity"},
 		},
 		"vault_identity_entity_alias": {
-			Resource:      identityEntityAliasResource(),
+			Resource:      updateSchemaResource(identityEntityAliasResource()),
 			PathInventory: []string{"/identity/entity-alias"},
 		},
 		"vault_identity_entity_policies": {
-			Resource:      identityEntityPoliciesResource(),
+			Resource:      updateSchemaResource(identityEntityPoliciesResource()),
 			PathInventory: []string{"/identity/lookup/entity"},
 		},
 		"vault_identity_group": {
-			Resource:      identityGroupResource(),
+			Resource:      updateSchemaResource(identityGroupResource()),
 			PathInventory: []string{"/identity/group"},
 		},
 		"vault_identity_group_alias": {
-			Resource:      identityGroupAliasResource(),
+			Resource:      updateSchemaResource(identityGroupAliasResource()),
 			PathInventory: []string{"/identity/group-alias"},
 		},
 		"vault_identity_group_member_entity_ids": {
-			Resource:      identityGroupMemberEntityIdsResource(),
+			Resource:      updateSchemaResource(identityGroupMemberEntityIdsResource()),
 			PathInventory: []string{"/identity/group/id/{id}"},
 		},
 		"vault_identity_group_policies": {
-			Resource:      identityGroupPoliciesResource(),
+			Resource:      updateSchemaResource(identityGroupPoliciesResource()),
 			PathInventory: []string{"/identity/lookup/group"},
 		},
 		"vault_identity_oidc": {
-			Resource:      identityOidc(),
+			Resource:      updateSchemaResource(identityOidc()),
 			PathInventory: []string{"/identity/oidc/config"},
 		},
 		"vault_identity_oidc_key": {
-			Resource:      identityOidcKey(),
+			Resource:      updateSchemaResource(identityOidcKey()),
 			PathInventory: []string{"/identity/oidc/key/{name}"},
 		},
 		"vault_identity_oidc_key_allowed_client_id": {
-			Resource:      identityOidcKeyAllowedClientId(),
+			Resource:      updateSchemaResource(identityOidcKeyAllowedClientId()),
 			PathInventory: []string{"/identity/oidc/key/{name}"},
 		},
 		"vault_identity_oidc_role": {
-			Resource:      identityOidcRole(),
+			Resource:      updateSchemaResource(identityOidcRole()),
 			PathInventory: []string{"/identity/oidc/role/{name}"},
 		},
 		"vault_rabbitmq_secret_backend": {
-			Resource: rabbitMQSecretBackendResource(),
+			Resource: updateSchemaResource(rabbitMQSecretBackendResource()),
 			PathInventory: []string{
 				"/rabbitmq/config/connection",
 				"/rabbitmq/config/lease",
 			},
 		},
 		"vault_rabbitmq_secret_backend_role": {
-			Resource:      rabbitMQSecretBackendRoleResource(),
+			Resource:      updateSchemaResource(rabbitMQSecretBackendRoleResource()),
 			PathInventory: []string{"/rabbitmq/roles/{name}"},
 		},
 		"vault_password_policy": {
-			Resource:      passwordPolicyResource(),
+			Resource:      updateSchemaResource(passwordPolicyResource()),
 			PathInventory: []string{"/sys/policy/password/{name}"},
 		},
 		"vault_pki_secret_backend_cert": {
-			Resource:      pkiSecretBackendCertResource(),
+			Resource:      updateSchemaResource(pkiSecretBackendCertResource()),
 			PathInventory: []string{"/pki/issue/{role}"},
 		},
 		"vault_pki_secret_backend_crl_config": {
-			Resource:      pkiSecretBackendCrlConfigResource(),
+			Resource:      updateSchemaResource(pkiSecretBackendCrlConfigResource()),
 			PathInventory: []string{"/pki/config/crl"},
 		},
 		"vault_pki_secret_backend_config_ca": {
-			Resource:      pkiSecretBackendConfigCAResource(),
+			Resource:      updateSchemaResource(pkiSecretBackendConfigCAResource()),
 			PathInventory: []string{"/pki/config/ca"},
 		},
 		"vault_pki_secret_backend_config_urls": {
-			Resource:      pkiSecretBackendConfigUrlsResource(),
+			Resource:      updateSchemaResource(pkiSecretBackendConfigUrlsResource()),
 			PathInventory: []string{"/pki/config/urls"},
 		},
 		"vault_pki_secret_backend_intermediate_cert_request": {
-			Resource:      pkiSecretBackendIntermediateCertRequestResource(),
+			Resource:      updateSchemaResource(pkiSecretBackendIntermediateCertRequestResource()),
 			PathInventory: []string{"/pki/intermediate/generate/{exported}"},
 		},
 		"vault_pki_secret_backend_intermediate_set_signed": {
-			Resource:      pkiSecretBackendIntermediateSetSignedResource(),
+			Resource:      updateSchemaResource(pkiSecretBackendIntermediateSetSignedResource()),
 			PathInventory: []string{"/pki/intermediate/set-signed"},
 		},
 		"vault_pki_secret_backend_role": {
-			Resource:      pkiSecretBackendRoleResource(),
+			Resource:      updateSchemaResource(pkiSecretBackendRoleResource()),
 			PathInventory: []string{"/pki/roles/{name}"},
 		},
 		"vault_pki_secret_backend_root_cert": {
-			Resource:      pkiSecretBackendRootCertResource(),
+			Resource:      updateSchemaResource(pkiSecretBackendRootCertResource()),
 			PathInventory: []string{"/pki/root/generate/{exported}"},
 		},
 		"vault_pki_secret_backend_root_sign_intermediate": {
-			Resource:      pkiSecretBackendRootSignIntermediateResource(),
+			Resource:      updateSchemaResource(pkiSecretBackendRootSignIntermediateResource()),
 			PathInventory: []string{"/pki/root/sign-intermediate"},
 		},
 		"vault_pki_secret_backend_sign": {
-			Resource:      pkiSecretBackendSignResource(),
+			Resource:      updateSchemaResource(pkiSecretBackendSignResource()),
 			PathInventory: []string{"/pki/sign/{role}"},
 		},
 		"vault_quota_lease_count": {
-			Resource:      quotaLeaseCountResource(),
+			Resource:      updateSchemaResource(quotaLeaseCountResource()),
 			PathInventory: []string{"/sys/quotas/lease-count/{name}"},
 		},
 		"vault_quota_rate_limit": {
-			Resource:      quotaRateLimitResource(),
+			Resource:      updateSchemaResource(quotaRateLimitResource()),
 			PathInventory: []string{"/sys/quotas/rate-limit/{name}"},
 		},
 		"vault_terraform_cloud_secret_backend": {
-			Resource:      terraformCloudSecretBackendResource(),
+			Resource:      updateSchemaResource(terraformCloudSecretBackendResource()),
 			PathInventory: []string{"/terraform/config"},
 		},
 		"vault_terraform_cloud_secret_creds": {
-			Resource:      terraformCloudSecretCredsResource(),
+			Resource:      updateSchemaResource(terraformCloudSecretCredsResource()),
 			PathInventory: []string{"/terraform/creds/{role}"},
 		},
 		"vault_terraform_cloud_secret_role": {
-			Resource:      terraformCloudSecretRoleResource(),
+			Resource:      updateSchemaResource(terraformCloudSecretRoleResource()),
 			PathInventory: []string{"/terraform/role/{name}"},
 		},
 		"vault_transit_secret_backend_key": {
-			Resource:      transitSecretBackendKeyResource(),
+			Resource:      updateSchemaResource(transitSecretBackendKeyResource()),
 			PathInventory: []string{"/transit/keys/{name}"},
 		},
 		"vault_transit_secret_cache_config": {
-			Resource:      transitSecretBackendCacheConfig(),
+			Resource:      updateSchemaResource(transitSecretBackendCacheConfig()),
 			PathInventory: []string{"/transit/cache-config"},
 		},
 		"vault_raft_snapshot_agent_config": {
-			Resource:      raftSnapshotAgentConfigResource(),
+			Resource:      updateSchemaResource(raftSnapshotAgentConfigResource()),
 			PathInventory: []string{"/sys/storage/raft/snapshot-auto/config/{name}"},
 		},
 		"vault_raft_autopilot": {
-			Resource:      raftAutopilotConfigResource(),
+			Resource:      updateSchemaResource(raftAutopilotConfigResource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/configuration"},
 		},
 	}
@@ -871,15 +872,15 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 
 	if len(authLoginI) == 1 {
 		authLogin := authLoginI[0].(map[string]interface{})
-		authLoginPath := authLogin["path"].(string)
+		authLoginPath := authLogin[consts.FieldPath].(string)
 		authLoginNamespace := ""
-		if authLoginNamespaceI, ok := authLogin["namespace"]; ok {
+		if authLoginNamespaceI, ok := authLogin[consts.FieldNamespace]; ok {
 			authLoginNamespace = authLoginNamespaceI.(string)
 			client.SetNamespace(authLoginNamespace)
 		}
-		authLoginParameters := authLogin["parameters"].(map[string]interface{})
+		authLoginParameters := authLogin[consts.FieldParameters].(map[string]interface{})
 
-		method := authLogin["method"].(string)
+		method := authLogin[consts.FieldMethod].(string)
 		if method == "aws" {
 			logger := hclog.Default()
 			if logging.IsDebugOrHigher() {
@@ -914,7 +915,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	// Set the namespace to the requested namespace, if provided
-	namespace := d.Get("namespace").(string)
+	namespace := d.Get(consts.FieldNamespace).(string)
 	if namespace != "" {
 		client.SetNamespace(namespace)
 	}
@@ -1032,23 +1033,22 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 	return nil
 }
 
-func GetClientForResource(d *schema.ResourceData, meta interface{}) (*api.Client, error) {
-	var ns string
-	if v, ok := d.GetOk("namespace"); ok {
-		ns = v.(string)
-	}
-
-	return getClient(ns, meta)
-}
-
-func GetClientForInstanceState(state *terraform.InstanceState, meta interface{}) (*api.Client, error) {
-	return getClient(state.Attributes["namespace"], meta)
-}
-
-func getClient(ns string, meta interface{}) (*api.Client, error) {
+func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	p, ok := meta.(*ProviderMeta)
 	if !ok {
 		return nil, fmt.Errorf("meta argument must be a ProviderMeta")
+	}
+
+	var ns string
+	switch v := i.(type) {
+	case *schema.ResourceData:
+		if v, ok := v.GetOk(consts.FieldNamespace); ok {
+			ns = v.(string)
+		}
+	case *terraform.InstanceState:
+		ns = v.Attributes[consts.FieldNamespace]
+	default:
+		return nil, fmt.Errorf("unsupported type %T", v)
 	}
 
 	if ns != "" {
@@ -1056,4 +1056,31 @@ func getClient(ns string, meta interface{}) (*api.Client, error) {
 	}
 
 	return p.GetClient(), nil
+}
+
+type ClientCall func(client *api.Client) error
+
+func CallWithClient(i interface{}, meta interface{}, f ClientCall) error {
+	client, err := GetClient(i, meta)
+	if err != nil {
+		return err
+	}
+	return f(client)
+}
+
+func addCommonSchemaFields(m map[string]*schema.Schema) map[string]*schema.Schema {
+	m[consts.FieldNamespace] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		ForceNew:    true,
+		Description: "Target namespace. (requires Enterprise)",
+	}
+
+	return m
+}
+
+// TODO: temporary solution for adding common schema fields to the current code base.
+func updateSchemaResource(r *schema.Resource) *schema.Resource {
+	addCommonSchemaFields(r.Schema)
+	return r
 }

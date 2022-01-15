@@ -50,7 +50,10 @@ func awsAuthBackendRoleTagBlacklistResource() *schema.Resource {
 }
 
 func awsAuthBackendRoleTagBlacklistWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	data := map[string]interface{}{
@@ -74,7 +77,10 @@ func awsAuthBackendRoleTagBlacklistWrite(d *schema.ResourceData, meta interface{
 }
 
 func awsAuthBackendRoleTagBlacklistRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -105,7 +111,11 @@ func awsAuthBackendRoleTagBlacklistRead(d *schema.ResourceData, meta interface{}
 }
 
 func awsAuthBackendRoleTagBlacklistDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Removing roletag blacklist %q from AWS auth backend", path)
@@ -119,7 +129,10 @@ func awsAuthBackendRoleTagBlacklistDelete(d *schema.ResourceData, meta interface
 }
 
 func awsAuthBackendRoleTagBlacklistExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 

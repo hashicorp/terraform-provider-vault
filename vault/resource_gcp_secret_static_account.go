@@ -95,7 +95,10 @@ func gcpSecretStaticAccountResource() *schema.Resource {
 }
 
 func gcpSecretStaticAccountCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	staticAccount := d.Get("static_account").(string)
@@ -118,7 +121,11 @@ func gcpSecretStaticAccountCreate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func gcpSecretStaticAccountRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	backend, err := gcpSecretStaticAccountBackendFromPath(path)
@@ -174,7 +181,11 @@ func gcpSecretStaticAccountRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func gcpSecretStaticAccountUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -192,7 +203,11 @@ func gcpSecretStaticAccountUpdate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func gcpSecretStaticAccountDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting GCP secrets backend static account %q", path)
@@ -228,7 +243,11 @@ func gcpSecretStaticAccountUpdateFields(d *schema.ResourceData, data map[string]
 }
 
 func gcpSecretStaticAccountExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", path)
 	secret, err := client.Logical().Read(path)

@@ -49,7 +49,11 @@ func identityEntityPoliciesResource() *schema.Resource {
 }
 
 func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Get("entity_id").(string)
 
 	log.Printf("[DEBUG] Updating IdentityEntityPolicies %q", id)
@@ -93,7 +97,11 @@ func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	resp, err := readIdentityEntity(client, id, d.IsNewResource())
@@ -132,7 +140,11 @@ func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func identityEntityPoliciesDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Get("entity_id").(string)
 
 	log.Printf("[DEBUG] Deleting IdentityEntityPolicies %q", id)

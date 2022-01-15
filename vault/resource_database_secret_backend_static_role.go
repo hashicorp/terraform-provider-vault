@@ -74,7 +74,10 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 }
 
 func databaseSecretBackendStaticRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -104,7 +107,10 @@ func databaseSecretBackendStaticRoleWrite(d *schema.ResourceData, meta interface
 }
 
 func databaseSecretBackendStaticRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -164,7 +170,10 @@ func databaseSecretBackendStaticRoleRead(d *schema.ResourceData, meta interface{
 }
 
 func databaseSecretBackendStaticRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting static role %q", path)
@@ -177,7 +186,10 @@ func databaseSecretBackendStaticRoleDelete(d *schema.ResourceData, meta interfac
 }
 
 func databaseSecretBackendStaticRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", path)

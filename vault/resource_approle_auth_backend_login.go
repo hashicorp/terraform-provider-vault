@@ -88,7 +88,10 @@ func approleAuthBackendLoginResource() *schema.Resource {
 }
 
 func approleAuthBackendLoginCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 
@@ -116,7 +119,10 @@ func approleAuthBackendLoginCreate(d *schema.ResourceData, meta interface{}) err
 }
 
 func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	log.Printf("[DEBUG] Reading token %q", d.Id())
 	resp, err := client.Auth().Token().LookupAccessor(d.Id())
@@ -155,7 +161,11 @@ func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error
 }
 
 func approleAuthBackendLoginDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	accessor := d.Id()
 
 	log.Printf("[DEBUG] Revoking token %q", accessor)
@@ -169,7 +179,11 @@ func approleAuthBackendLoginDelete(d *schema.ResourceData, meta interface{}) err
 }
 
 func approleAuthBackendLoginExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	accessor := d.Id()
 
 	log.Printf("[DEBUG] Checking if token %q exists", accessor)

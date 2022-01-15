@@ -99,7 +99,10 @@ func azureAuthBackendRoleResource() *schema.Resource {
 }
 
 func azureAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -176,7 +179,11 @@ func azureAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 }
 
 func azureAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	backend, err := azureAuthBackendRoleBackendFromPath(path)
@@ -234,7 +241,11 @@ func azureAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating Azure auth backend role %q", path)
@@ -301,7 +312,11 @@ func azureAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 }
 
 func azureAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting Azure auth backend role %q", path)
@@ -315,7 +330,10 @@ func azureAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error 
 }
 
 func azureAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if Azure auth backend role %q exists", path)

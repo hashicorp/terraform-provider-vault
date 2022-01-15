@@ -62,7 +62,10 @@ func mfaDuoResource() *schema.Resource {
 }
 
 func mfaDuoWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 
@@ -82,7 +85,10 @@ func mfaDuoWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaDuoDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 
@@ -97,7 +103,10 @@ func mfaDuoDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaDuoRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 

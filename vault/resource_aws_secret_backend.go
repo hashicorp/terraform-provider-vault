@@ -96,7 +96,10 @@ func awsSecretBackendResource() *schema.Resource {
 }
 
 func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 	description := d.Get("description").(string)
@@ -156,7 +159,10 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -226,7 +232,10 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	d.Partial(true)
@@ -279,7 +288,10 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -293,7 +305,11 @@ func awsSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if AWS backend exists at %q", path)
 	mounts, err := client.Sys().ListMounts()

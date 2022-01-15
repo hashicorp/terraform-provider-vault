@@ -148,7 +148,10 @@ func awsAuthBackendLoginCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := strings.Trim(d.Get("backend").(string), "/")
 	path := "auth/" + backend + "/login"
@@ -228,7 +231,10 @@ func awsAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendLoginDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	accessor := d.Get("accessor").(string)
 	token, ok := d.GetOk("client_token")

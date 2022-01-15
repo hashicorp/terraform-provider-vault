@@ -56,7 +56,11 @@ func githubUserCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubUserUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -78,7 +82,11 @@ func githubUserUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubUserRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	dt, err := client.Logical().Read(path)
@@ -106,7 +114,10 @@ func githubUserRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubUserDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	_, err := client.Logical().Delete(d.Id())
 	if err != nil {

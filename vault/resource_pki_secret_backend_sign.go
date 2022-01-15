@@ -142,7 +142,10 @@ func pkiSecretBackendSignResource() *schema.Resource {
 }
 
 func pkiSecretBackendSignCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)

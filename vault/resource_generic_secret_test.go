@@ -13,6 +13,7 @@ import (
 )
 
 func TestResourceGenericSecret(t *testing.T) {
+	ns := acctest.RandomWithPrefix("ns")
 	mount := "secretsv1"
 	name := acctest.RandomWithPrefix("test")
 	path := fmt.Sprintf("%s/%s", mount, name)
@@ -21,7 +22,7 @@ func TestResourceGenericSecret(t *testing.T) {
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceGenericSecret_initialConfig(mount, name),
+				Config: testResourceGenericSecret_initialConfig(ns, mount, name),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{
@@ -33,6 +34,7 @@ func TestResourceGenericSecret(t *testing.T) {
 }
 
 func TestResourceGenericSecret_deleted(t *testing.T) {
+	ns := acctest.RandomWithPrefix("ns")
 	mount := "secretsv1"
 	name := acctest.RandomWithPrefix("test")
 	path := fmt.Sprintf("%s/%s", mount, name)
@@ -41,7 +43,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceGenericSecret_initialConfig(mount, path),
+				Config: testResourceGenericSecret_initialConfig(ns, mount, path),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{
@@ -52,7 +54,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 						t.Fatalf("unable to manually delete the secret via the SDK: %s", err)
 					}
 				},
-				Config: testResourceGenericSecret_initialConfig(mount, path),
+				Config: testResourceGenericSecret_initialConfig(ns, mount, path),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 		},
@@ -78,10 +80,10 @@ func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 	})
 }
 
-func testResourceGenericSecret_initialConfig(mount, path string) string {
+func testResourceGenericSecret_initialConfig(ns, mount, path string) string {
 	return fmt.Sprintf(`
 resource "vault_namespace" "foo" {
-    path = "foo"
+    path = "%s"
 }
 
 resource "vault_mount" "v1" {
@@ -101,7 +103,7 @@ resource "vault_generic_secret" "test" {
     "zip": "zap"
 }
 EOT
-}`, mount, path)
+}`, ns, mount, path)
 }
 
 func testResourceGenericSecret_initialConfig_v2(path string, isUpdate bool) string {
@@ -165,7 +167,7 @@ func testResourceGenericSecret_initialCheck(expectedPath string) resource.TestCh
 			return fmt.Errorf("unexpected secret path")
 		}
 
-		client, err := GetClientForInstanceState(state, testProvider.Meta())
+		client, err := GetClient(state, testProvider.Meta())
 		if err != nil {
 			return err
 		}

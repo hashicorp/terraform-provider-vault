@@ -67,7 +67,10 @@ func ldapAuthBackendUserResourcePath(backend, username string) string {
 }
 
 func ldapAuthBackendUserResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	username := d.Get("username").(string)
@@ -98,7 +101,11 @@ func ldapAuthBackendUserResourceWrite(d *schema.ResourceData, meta interface{}) 
 }
 
 func ldapAuthBackendUserResourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	backend, err := ldapAuthBackendUserBackendFromPath(path)
@@ -146,7 +153,11 @@ func ldapAuthBackendUserResourceRead(d *schema.ResourceData, meta interface{}) e
 }
 
 func ldapAuthBackendUserResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting LDAP user %q", path)
@@ -160,7 +171,11 @@ func ldapAuthBackendUserResourceDelete(d *schema.ResourceData, meta interface{})
 }
 
 func ldapAuthBackendUserResourceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Checking if LDAP user %q exists", path)

@@ -43,7 +43,10 @@ func transitDecryptDataSource() *schema.Resource {
 }
 
 func transitDecryptDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	key := d.Get("key").(string)

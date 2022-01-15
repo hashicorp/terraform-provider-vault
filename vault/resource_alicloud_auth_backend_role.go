@@ -81,7 +81,10 @@ func alicloudAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string
 }
 
 func alicloudAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -104,7 +107,11 @@ func alicloudAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) err
 }
 
 func alicloudAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -121,7 +128,11 @@ func alicloudAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) err
 }
 
 func alicloudAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading AliCloud role %q", path)
@@ -162,7 +173,11 @@ func alicloudAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 }
 
 func alicloudAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting AliCloud role %q", path)
@@ -176,7 +191,11 @@ func alicloudAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) err
 }
 
 func alicloudAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Checking if AliCloud Auth Backend role %q exists", path)

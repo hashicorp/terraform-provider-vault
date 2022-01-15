@@ -56,7 +56,10 @@ func auditResource() *schema.Resource {
 }
 
 func auditWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	description := d.Get("description").(string)
 	local := d.Get("local").(bool)
@@ -91,7 +94,10 @@ func auditWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func auditDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -105,7 +111,10 @@ func auditDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func auditRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 

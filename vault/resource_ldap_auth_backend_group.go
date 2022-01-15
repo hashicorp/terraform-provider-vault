@@ -59,7 +59,10 @@ func ldapAuthBackendGroupResourcePath(backend, groupname string) string {
 }
 
 func ldapAuthBackendGroupResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	groupname := d.Get("groupname").(string)
@@ -86,7 +89,11 @@ func ldapAuthBackendGroupResourceWrite(d *schema.ResourceData, meta interface{})
 }
 
 func ldapAuthBackendGroupResourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	backend, err := ldapAuthBackendGroupBackendFromPath(path)
@@ -123,7 +130,11 @@ func ldapAuthBackendGroupResourceRead(d *schema.ResourceData, meta interface{}) 
 }
 
 func ldapAuthBackendGroupResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting LDAP group %q", path)
@@ -137,7 +148,11 @@ func ldapAuthBackendGroupResourceDelete(d *schema.ResourceData, meta interface{}
 }
 
 func ldapAuthBackendGroupResourceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Checking if LDAP group %q exists", path)

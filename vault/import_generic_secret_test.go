@@ -11,6 +11,7 @@ import (
 )
 
 func TestAccGenericSecret_importBasic(t *testing.T) {
+	ns := acctest.RandomWithPrefix("ns")
 	mount := "secretsv1"
 	name := acctest.RandomWithPrefix("test")
 	path := fmt.Sprintf("%s/%s", mount, name)
@@ -19,7 +20,7 @@ func TestAccGenericSecret_importBasic(t *testing.T) {
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceGenericSecret_initialConfig(mount, path),
+				Config: testResourceGenericSecret_initialConfig(ns, mount, path),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{

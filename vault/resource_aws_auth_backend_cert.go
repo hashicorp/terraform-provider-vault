@@ -63,7 +63,10 @@ func awsAuthBackendCertResource() *schema.Resource {
 }
 
 func awsAuthBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	certType := d.Get("type").(string)
@@ -90,7 +93,10 @@ func awsAuthBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendCertRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -129,7 +135,11 @@ func awsAuthBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Removing cert %q from AWS auth backend", path)
@@ -143,7 +153,10 @@ func awsAuthBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendCertExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 

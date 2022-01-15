@@ -149,7 +149,10 @@ func azureSecretBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 }
 
 func azureSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -175,7 +178,11 @@ func azureSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func azureSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading Azure Secret role %q", path)
@@ -219,7 +226,11 @@ func azureSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func azureSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting Azure Secret role %q", path)

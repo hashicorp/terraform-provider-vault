@@ -87,7 +87,10 @@ func genericEndpointResource(name string) *schema.Resource {
 }
 
 func genericEndpointResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data)
@@ -150,7 +153,10 @@ func genericEndpointResourceDelete(d *schema.ResourceData, meta interface{}) err
 	shouldDelete := !d.Get("disable_delete").(bool)
 
 	if shouldDelete {
-		client := meta.(*ProviderMeta).GetClient()
+		client, e := GetClient(d, meta)
+		if e != nil {
+			return e
+		}
 
 		path := d.Id()
 
@@ -171,7 +177,10 @@ func genericEndpointResourceRead(d *schema.ResourceData, meta interface{}) error
 	ignore_absent_fields := d.Get("ignore_absent_fields").(bool)
 
 	if shouldRead {
-		client := meta.(*ProviderMeta).GetClient()
+		client, e := GetClient(d, meta)
+		if e != nil {
+			return e
+		}
 
 		log.Printf("[DEBUG] Reading %s from Vault", path)
 		data, err := client.Logical().Read(path)

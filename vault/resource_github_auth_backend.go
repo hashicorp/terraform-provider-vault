@@ -60,86 +60,91 @@ func githubAuthBackendResource() *schema.Resource {
 }
 
 func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	var description string
+	return CallWithClient(d, meta, func(client *api.Client) error {
+		var description string
 
-	client := meta.(*ProviderMeta).GetClient()
-	path := strings.Trim(d.Get("path").(string), "/")
+		path := strings.Trim(d.Get("path").(string), "/")
 
-	if v, ok := d.GetOk("description"); ok {
-		description = v.(string)
-	}
+		if v, ok := d.GetOk("description"); ok {
+			description = v.(string)
+		}
 
-	log.Printf("[DEBUG] Enabling github auth backend at '%s'", path)
-	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
-		Type:        "github",
-		Description: description,
+		log.Printf("[DEBUG] Enabling github auth backend at '%s'", path)
+		err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
+			Type:        "github",
+			Description: description,
+		})
+		if err != nil {
+			return fmt.Errorf("error enabling github auth backend at '%s': %s", path, err)
+		}
+		log.Printf("[INFO] Enabled github auth backend at '%s'", path)
+
+		d.SetId(path)
+		d.MarkNewResource()
+		d.Partial(true)
+		return githubAuthBackendUpdate(d, meta)
 	})
-	if err != nil {
-		return fmt.Errorf("error enabling github auth backend at '%s': %s", path, err)
-	}
-	log.Printf("[INFO] Enabled github auth backend at '%s'", path)
-
-	d.SetId(path)
-	d.MarkNewResource()
-	d.Partial(true)
-	return githubAuthBackendUpdate(d, meta)
 }
 
 func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	return CallWithClient(d, meta, func(client *api.Client) error {
+		path := "auth/" + d.Id()
+		configPath := path + "/config"
 
-	path := "auth/" + d.Id()
-	configPath := path + "/config"
+		data := map[string]interface{}{}
 
-	data := map[string]interface{}{}
-
-	if v, ok := d.GetOk("organization"); ok {
-		data["organization"] = v.(string)
-	}
-	if v, ok := d.GetOk("base_url"); ok {
-		data["base_url"] = v.(string)
-	}
-
-	updateTokenFields(d, data, false)
-
-	log.Printf("[DEBUG] Writing github auth config to '%q'", configPath)
-	_, err := client.Logical().Write(configPath, data)
-	if err != nil {
-		d.SetId("")
-		return fmt.Errorf("error writing github config to '%q': %s", configPath, err)
-	}
-	log.Printf("[INFO] Github auth config successfully written to '%q'", configPath)
-
-	if d.HasChange("tune") {
-		log.Printf("[INFO] Github Auth '%q' tune configuration changed", d.Id())
-		if raw, ok := d.GetOk("tune"); ok {
-			log.Printf("[DEBUG] Writing github auth tune to '%q'", path)
-
-			err := authMountTune(client, path, raw)
-			if err != nil {
-				return nil
-			}
-
-			log.Printf("[INFO] Written github auth tune to '%q'", path)
+		if v, ok := d.GetOk("organization"); ok {
+			data["organization"] = v.(string)
 		}
-	}
+		if v, ok := d.GetOk("base_url"); ok {
+			data["base_url"] = v.(string)
+		}
 
-	if d.HasChange("description") {
-		description := d.Get("description").(string)
-		tune := api.MountConfigInput{Description: &description}
-		err := client.Sys().TuneMount(path, tune)
+		updateTokenFields(d, data, false)
+
+		log.Printf("[DEBUG] Writing github auth config to '%q'", configPath)
+		_, err := client.Logical().Write(configPath, data)
 		if err != nil {
-			log.Printf("[ERROR] Error updating github auth description to '%q'", path)
-			return err
+			d.SetId("")
+			return fmt.Errorf("error writing github config to '%q': %s", configPath, err)
 		}
-	}
+		log.Printf("[INFO] Github auth config successfully written to '%q'", configPath)
 
-	d.Partial(false)
-	return githubAuthBackendRead(d, meta)
+		if d.HasChange("tune") {
+			log.Printf("[INFO] Github Auth '%q' tune configuration changed", d.Id())
+			if raw, ok := d.GetOk("tune"); ok {
+				log.Printf("[DEBUG] Writing github auth tune to '%q'", path)
+
+				err := authMountTune(client, path, raw)
+				if err != nil {
+					return nil
+				}
+
+				log.Printf("[INFO] Written github auth tune to '%q'", path)
+			}
+		}
+
+		if d.HasChange("description") {
+			description := d.Get("description").(string)
+			tune := api.MountConfigInput{Description: &description}
+			err := client.Sys().TuneMount(path, tune)
+			if err != nil {
+				log.Printf("[ERROR] Error updating github auth description to '%q'", path)
+				return err
+			}
+		}
+
+		d.Partial(false)
+		return githubAuthBackendRead(d, meta)
+	})
 }
 
 func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
 

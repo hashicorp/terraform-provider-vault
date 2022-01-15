@@ -36,7 +36,10 @@ func namespaceResource() *schema.Resource {
 }
 
 func namespaceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 
@@ -50,7 +53,10 @@ func namespaceWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 
@@ -65,7 +71,10 @@ func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func namespaceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	upgradeNonPathdNamespaceID(d)
 

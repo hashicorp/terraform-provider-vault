@@ -57,7 +57,11 @@ func githubTeamCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubTeamUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -79,7 +83,11 @@ func githubTeamUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubTeamRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	dt, err := client.Logical().Read(path)
@@ -107,7 +115,10 @@ func githubTeamRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubTeamDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	_, err := client.Logical().Delete(d.Id())
 	if err != nil {

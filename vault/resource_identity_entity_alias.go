@@ -52,7 +52,10 @@ func identityEntityAliasResource() *schema.Resource {
 }
 
 func identityEntityAliasCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 	mountAccessor := d.Get("mount_accessor").(string)
@@ -91,7 +94,11 @@ func identityEntityAliasCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityAliasUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityEntityAlias %q", id)
@@ -131,7 +138,11 @@ func identityEntityAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityAliasRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	path := identityEntityAliasIDPath(id)
@@ -158,7 +169,11 @@ func identityEntityAliasRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityAliasDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	path := identityEntityAliasIDPath(id)
@@ -174,7 +189,11 @@ func identityEntityAliasDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityAliasExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	id := d.Id()
 
 	path := identityEntityAliasIDPath(id)

@@ -49,7 +49,11 @@ func identityGroupPoliciesResource() *schema.Resource {
 }
 
 func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Get("group_id").(string)
 
 	log.Printf("[DEBUG] Updating IdentityGroupPolicies %q", id)
@@ -93,7 +97,11 @@ func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error
 }
 
 func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	resp, err := readIdentityGroup(client, id, d.IsNewResource())
@@ -138,7 +146,11 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupPoliciesDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Get("group_id").(string)
 
 	log.Printf("[DEBUG] Deleting IdentityGroupPolicies %q", id)

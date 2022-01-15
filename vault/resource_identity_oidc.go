@@ -33,7 +33,11 @@ func identityOidcUpdateFields(d *schema.ResourceData, data map[string]interface{
 }
 
 func identityOidcCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := identityOidcPathTemplate
 
 	data := make(map[string]interface{})
@@ -53,7 +57,11 @@ func identityOidcCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := identityOidcPathTemplate
 	addr := d.Id()
 
@@ -73,7 +81,11 @@ func identityOidcUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := identityOidcPathTemplate
 	addr := d.Id()
 
@@ -98,7 +110,11 @@ func identityOidcRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	addr := d.Id()
 	path := identityOidcPathTemplate
 
@@ -118,7 +134,11 @@ func identityOidcDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	addr := d.Id()
 	path := identityOidcPathTemplate
 

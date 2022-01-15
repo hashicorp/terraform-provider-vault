@@ -193,7 +193,10 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 }
 
 func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	rootType := d.Get("type").(string)
@@ -292,7 +295,10 @@ func pkiSecretBackendRootCertUpdate(d *schema.ResourceData, m interface{}) error
 }
 
 func pkiSecretBackendRootCertDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 

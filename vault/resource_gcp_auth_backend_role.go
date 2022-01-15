@@ -166,7 +166,10 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, cr
 }
 
 func gcpAuthResourceCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -189,7 +192,11 @@ func gcpAuthResourceCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -206,7 +213,11 @@ func gcpAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading GCP role %q", path)
@@ -268,7 +279,11 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting GCP role %q", path)
@@ -282,7 +297,11 @@ func gcpAuthResourceDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthResourceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Checking if gcp auth role %q exists", path)

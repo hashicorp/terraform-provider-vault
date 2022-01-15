@@ -56,7 +56,10 @@ func authBackendDataSource() *schema.Resource {
 }
 
 func authBackendDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*ProviderMeta).GetClient()
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	targetPath := d.Get("path").(string)
 
