@@ -13,7 +13,6 @@ import (
 )
 
 func TestResourceGenericSecret(t *testing.T) {
-	ns := acctest.RandomWithPrefix("ns")
 	mount := "secretsv1"
 	name := acctest.RandomWithPrefix("test")
 	path := fmt.Sprintf("%s/%s", mount, name)
@@ -22,7 +21,7 @@ func TestResourceGenericSecret(t *testing.T) {
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceGenericSecret_initialConfig(ns, mount, name),
+				Config: testResourceGenericSecret_initialConfig(mount, name),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{
@@ -33,8 +32,35 @@ func TestResourceGenericSecret(t *testing.T) {
 	})
 }
 
-func TestResourceGenericSecret_deleted(t *testing.T) {
+func TestResourceGenericSecretNS(t *testing.T) {
 	ns := acctest.RandomWithPrefix("ns")
+	mount := "secretsv1"
+	name := acctest.RandomWithPrefix("test")
+	path := fmt.Sprintf("%s/%s", mount, name)
+	resourceName := "vault_generic_secret.test"
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceGenericSecret_initialConfigNS(ns, mount, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "namespace", ns),
+					testResourceGenericSecret_initialCheck(path),
+				),
+			},
+			{
+				Config: testResourceGenericSecret_updateConfig,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr(resourceName, "namespace"),
+					testResourceGenericSecret_updateCheck,
+				),
+			},
+		},
+	})
+}
+
+func TestResourceGenericSecret_deleted(t *testing.T) {
 	mount := "secretsv1"
 	name := acctest.RandomWithPrefix("test")
 	path := fmt.Sprintf("%s/%s", mount, name)
@@ -43,7 +69,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceGenericSecret_initialConfig(ns, mount, path),
+				Config: testResourceGenericSecret_initialConfig(mount, path),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{
@@ -54,7 +80,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 						t.Fatalf("unable to manually delete the secret via the SDK: %s", err)
 					}
 				},
-				Config: testResourceGenericSecret_initialConfig(ns, mount, path),
+				Config: testResourceGenericSecret_initialConfig(mount, path),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 		},
@@ -80,15 +106,35 @@ func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 	})
 }
 
-func testResourceGenericSecret_initialConfig(ns, mount, path string) string {
+func testResourceGenericSecret_initialConfig(mount, path string) string {
 	return fmt.Sprintf(`
-resource "vault_namespace" "foo" {
+resource "vault_mount" "v1" {
+	path = "%s"
+	type = "kv"
+	options = {
+		version = "1"
+	}
+}
+
+resource "vault_generic_secret" "test" {
+    path = "${vault_mount.v1.path}/%s"
+    data_json = <<EOT
+{
+    "zip": "zap"
+}
+EOT
+}`, mount, path)
+}
+
+func testResourceGenericSecret_initialConfigNS(ns, mount, name string) string {
+	result := fmt.Sprintf(`
+resource "vault_namespace" "ns1" {
     path = "%s"
 }
 
 resource "vault_mount" "v1" {
+    namespace = vault_namespace.ns1.path
 	path = "%s"
-    namespace = vault_namespace.foo.path
 	type = "kv"
 	options = {
 		version = "1"
@@ -103,7 +149,9 @@ resource "vault_generic_secret" "test" {
     "zip": "zap"
 }
 EOT
-}`, ns, mount, path)
+}`, ns, mount, name)
+
+	return result
 }
 
 func testResourceGenericSecret_initialConfig_v2(path string, isUpdate bool) string {
@@ -308,11 +356,15 @@ EOT
 
 func testResourceGenericSecret_updateCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["vault_generic_secret.test"]
-	instanceState := resourceState.Primary
+	state := resourceState.Primary
 
-	path := instanceState.ID
+	path := state.ID
 
-	client := testProvider.Meta().(*ProviderMeta).GetClient()
+	client, err := GetClient(state, testProvider.Meta())
+	if err != nil {
+		return err
+	}
+
 	secret, err := client.Logical().Read(path)
 	if err != nil {
 		return fmt.Errorf("error reading back secret: %s", err)
