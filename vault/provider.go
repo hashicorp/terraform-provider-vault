@@ -1058,22 +1058,13 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	return p.GetClient(), nil
 }
 
-type ClientCall func(client *api.Client) error
-
-func CallWithClient(i interface{}, meta interface{}, f ClientCall) error {
-	client, err := GetClient(i, meta)
-	if err != nil {
-		return err
-	}
-	return f(client)
-}
-
 func addCommonSchemaFields(m map[string]*schema.Schema) map[string]*schema.Schema {
 	m[consts.FieldNamespace] = &schema.Schema{
-		Type:        schema.TypeString,
-		Optional:    true,
-		ForceNew:    true,
-		Description: "Target namespace. (requires Enterprise)",
+		Type:         schema.TypeString,
+		Optional:     true,
+		ForceNew:     true,
+		Description:  "Target namespace. (requires Enterprise)",
+		ValidateFunc: validateNamespace,
 	}
 
 	return m

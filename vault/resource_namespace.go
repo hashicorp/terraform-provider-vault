@@ -23,7 +23,7 @@ func namespaceResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Path of the namespace.",
-				ValidateFunc: validateNoTrailingSlash,
+				ValidateFunc: validateNamespace,
 			},
 
 			"namespace_id": {

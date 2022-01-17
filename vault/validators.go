@@ -1,12 +1,19 @@
 package vault
 
 import (
-	"errors"
 	"fmt"
-	"strings"
+	"regexp"
 	"time"
 
 	"github.com/gosimple/slug"
+)
+
+const pathDelim = "/"
+
+var (
+	regexpPathLeading  = regexp.MustCompile(fmt.Sprintf(`^%s`, pathDelim))
+	regexpPathTrailing = regexp.MustCompile(fmt.Sprintf(`%s$`, pathDelim))
+	regexpPath         = regexp.MustCompile(fmt.Sprintf(`%s|%s`, regexpPathLeading, regexpPathTrailing))
 )
 
 func validateStringSlug(i interface{}, k string) (s []string, es []error) {
@@ -35,15 +42,37 @@ func validateDuration(i interface{}, k string) (s []string, es []error) {
 	return
 }
 
-func validateNoTrailingSlash(i interface{}, k string) (s []string, es []error) {
-	v, ok := i.(string)
-	if !ok {
-		es = append(es, fmt.Errorf("expected type of %s to be string", k))
-		return
+func validateNoTrailingSlash(i interface{}, k string) ([]string, []error) {
+	var errs []error
+	if err := checkPath(regexpPathTrailing, i, k); err != nil {
+		errs = append(errs, err)
 	}
 
-	if strings.HasSuffix(v, "/") {
-		es = append(es, errors.New("cannot write to a path ending in '/'"))
+	return nil, errs
+}
+
+func validateNamespace(i interface{}, k string) ([]string, []error) {
+	var errs []error
+	if err := checkPath(regexpPath, i, k); err != nil {
+		errs = append(errs, err)
 	}
-	return
+
+	return nil, errs
+}
+
+func checkPath(r *regexp.Regexp, i interface{}, k string) error {
+	v, ok := i.(string)
+	if !ok {
+		return fmt.Errorf("value for %q must be string, not %T", k, i)
+	}
+
+	if v == "" {
+		return fmt.Errorf("value for %q cannot be empty", k)
+	}
+
+	if r.MatchString(v) {
+		return fmt.Errorf("invalid value %q for %q, contains leading/trailing %q", v, k, pathDelim)
+	}
+
+	return nil
 }
