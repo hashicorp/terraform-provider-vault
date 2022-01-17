@@ -187,64 +187,67 @@ func identityGroupLookup(client *api.Client, data map[string]interface{}) (*api.
 }
 
 func identityGroupDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	return CallWithClient(d, meta, func(client *api.Client) error {
-		data := map[string]interface{}{}
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
-		if v, ok := d.GetOk("group_name"); ok {
-			data["name"] = v.(string)
-		}
-		if v, ok := d.GetOk("group_id"); ok {
-			data["id"] = v.(string)
-		}
-		if v, ok := d.GetOk("alias_id"); ok {
-			data["alias_id"] = v.(string)
-		}
-		if v, ok := d.GetOk("alias_name"); ok {
-			data["alias_name"] = v.(string)
-		}
-		if v, ok := d.GetOk("alias_mount_accessor"); ok {
-			data["alias_mount_accessor"] = v.(string)
-		}
+	data := map[string]interface{}{}
 
-		log.Print("[DEBUG] Reading IdentityGroup")
-		resp, err := identityGroupLookup(client, data)
-		if err != nil {
-			return err
-		}
-		id := resp.Data["id"]
+	if v, ok := d.GetOk("group_name"); ok {
+		data["name"] = v.(string)
+	}
+	if v, ok := d.GetOk("group_id"); ok {
+		data["id"] = v.(string)
+	}
+	if v, ok := d.GetOk("alias_id"); ok {
+		data["alias_id"] = v.(string)
+	}
+	if v, ok := d.GetOk("alias_name"); ok {
+		data["alias_name"] = v.(string)
+	}
+	if v, ok := d.GetOk("alias_mount_accessor"); ok {
+		data["alias_mount_accessor"] = v.(string)
+	}
 
-		d.SetId(id.(string))
-		d.Set("group_id", id)
-		d.Set("group_name", resp.Data["name"])
+	log.Print("[DEBUG] Reading IdentityGroup")
+	resp, err := identityGroupLookup(client, data)
+	if err != nil {
+		return err
+	}
+	id := resp.Data["id"]
 
-		if alias, ok := resp.Data["alias"]; ok {
-			alias := alias.(map[string]interface{})
+	d.SetId(id.(string))
+	d.Set("group_id", id)
+	d.Set("group_name", resp.Data["name"])
 
-			for _, k := range identityGroupAliasFields {
-				v, ok := alias[k]
-				key := fmt.Sprintf("alias_%s", k)
-				if ok {
-					if err := d.Set(key, v); err != nil {
-						return fmt.Errorf("error setting state key %s for IdentityGroup: %s", key, err)
-					}
-				}
-			}
-		}
+	if alias, ok := resp.Data["alias"]; ok {
+		alias := alias.(map[string]interface{})
 
-		for _, k := range identityGroupFields {
-			v, ok := resp.Data[k]
+		for _, k := range identityGroupAliasFields {
+			v, ok := alias[k]
+			key := fmt.Sprintf("alias_%s", k)
 			if ok {
-				if err := d.Set(k, v); err != nil {
-					return fmt.Errorf("error setting state key %s for IdentityGroup: %s", k, err)
+				if err := d.Set(key, v); err != nil {
+					return fmt.Errorf("error setting state key %s for IdentityGroup: %s", key, err)
 				}
 			}
 		}
+	}
 
-		// Ignoring error because this value came from JSON in the
-		// first place so no reason why it should fail to re-encode.
-		jsonDataBytes, _ := json.Marshal(resp.Data)
-		d.Set("data_json", string(jsonDataBytes))
+	for _, k := range identityGroupFields {
+		v, ok := resp.Data[k]
+		if ok {
+			if err := d.Set(k, v); err != nil {
+				return fmt.Errorf("error setting state key %s for IdentityGroup: %s", k, err)
+			}
+		}
+	}
 
-		return nil
-	})
+	// Ignoring error because this value came from JSON in the
+	// first place so no reason why it should fail to re-encode.
+	jsonDataBytes, _ := json.Marshal(resp.Data)
+	d.Set("data_json", string(jsonDataBytes))
+
+	return nil
 }
