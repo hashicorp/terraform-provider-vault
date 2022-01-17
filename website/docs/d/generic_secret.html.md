@@ -44,6 +44,11 @@ provider "rundeck" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  *Available only for Vault Enterprise*.
+
 * `path` - (Required) The full logical path from which to request data.
 To read data from the "generic" secret backend mounted in Vault by
 default, this should be prefixed with `secret/`. Reading from other backends

@@ -46,6 +46,11 @@ resource "vault_identity_group" "group" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
+
 * `name` - (Required, Forces new resource) Name of the identity group to create.
 
 * `type` - (Optional, Forces new resource) Type of the group, internal or external. Defaults to `internal`.

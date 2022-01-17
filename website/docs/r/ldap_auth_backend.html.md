@@ -29,6 +29,11 @@ resource "vault_ldap_auth_backend" "ldap" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
+
 * `url` - (Required) The URL of the LDAP server
 
 * `starttls` - (Optional) Control use of TLS when conecting to LDAP

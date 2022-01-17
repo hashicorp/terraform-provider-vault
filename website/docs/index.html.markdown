@@ -170,7 +170,9 @@ variables in order to keep credential information out of the configuration.
   for more information.
 
 * `namespace` - (Optional) Set the namespace to use. May be set via the
-  `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
+  `VAULT_NAMESPACE` environment variable.
+  See [namespaces](https://www.vaultproject.io/docs/enterprise/namespaces) for more info.
+  *Available only for Vault Enterprise*.
 
 * `headers` - (Optional) A configuration block, described below, that provides headers
 to be sent along with all requests to the Vault server.  This block can be specified
@@ -184,7 +186,7 @@ The `auth_login` configuration block accepts the following arguments:
 
 * `namespace` - (Optional) The path to the namespace that has the mounted auth method.
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
-  *Available only for Vault Enterprise*
+  *Available only for Vault Enterprise*.
 
 * `method` - (Optional) When configured, will enable auth method specific operations.
   For example, when set to `aws`, the provider will automatically sign login requests

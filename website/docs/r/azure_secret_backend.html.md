@@ -35,6 +35,11 @@ resource "vault_azure_secret_backend" "azure" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
+
 - `subscription_id` (`string: <required>`) - The subscription id for the Azure Active Directory.
 - `tenant_id` (`string: <required>`) - The tenant id for the Azure Active Directory.
 - `client_id` (`string:""`) - The OAuth2 client id to connect to Azure.
