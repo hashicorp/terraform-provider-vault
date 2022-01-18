@@ -13,7 +13,7 @@ import (
 )
 
 func TestResourceGenericSecret(t *testing.T) {
-	mount := "secretsv1"
+	mount := acctest.RandomWithPrefix("secretsv1")
 	name := acctest.RandomWithPrefix("test")
 	path := fmt.Sprintf("%s/%s", mount, name)
 	resource.Test(t, resource.TestCase{
@@ -25,7 +25,7 @@ func TestResourceGenericSecret(t *testing.T) {
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{
-				Config: testResourceGenericSecret_updateConfig,
+				Config: testResourceGenericSecret_updateConfig(mount, name),
 				Check:  testResourceGenericSecret_updateCheck,
 			},
 		},
@@ -34,7 +34,7 @@ func TestResourceGenericSecret(t *testing.T) {
 
 func TestResourceGenericSecretNS(t *testing.T) {
 	ns := acctest.RandomWithPrefix("ns")
-	mount := "secretsv1"
+	mount := acctest.RandomWithPrefix("secretsv1")
 	name := acctest.RandomWithPrefix("test")
 	path := fmt.Sprintf("%s/%s", mount, name)
 	resourceName := "vault_generic_secret.test"
@@ -50,7 +50,7 @@ func TestResourceGenericSecretNS(t *testing.T) {
 				),
 			},
 			{
-				Config: testResourceGenericSecret_updateConfig,
+				Config: testResourceGenericSecret_updateConfig(mount, name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckNoResourceAttr(resourceName, "namespace"),
 					testResourceGenericSecret_updateCheck,
@@ -61,7 +61,7 @@ func TestResourceGenericSecretNS(t *testing.T) {
 }
 
 func TestResourceGenericSecret_deleted(t *testing.T) {
-	mount := "secretsv1"
+	mount := acctest.RandomWithPrefix("secretsv1")
 	name := acctest.RandomWithPrefix("test")
 	path := fmt.Sprintf("%s/%s", mount, name)
 	resource.Test(t, resource.TestCase{
@@ -69,7 +69,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceGenericSecret_initialConfig(mount, path),
+				Config: testResourceGenericSecret_initialConfig(mount, name),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{
@@ -80,7 +80,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 						t.Fatalf("unable to manually delete the secret via the SDK: %s", err)
 					}
 				},
-				Config: testResourceGenericSecret_initialConfig(mount, path),
+				Config: testResourceGenericSecret_initialConfig(mount, name),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 		},
@@ -106,7 +106,7 @@ func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 	})
 }
 
-func testResourceGenericSecret_initialConfig(mount, path string) string {
+func testResourceGenericSecret_initialConfig(mount, name string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "v1" {
 	path = "%s"
@@ -123,7 +123,28 @@ resource "vault_generic_secret" "test" {
     "zip": "zap"
 }
 EOT
-}`, mount, path)
+}`, mount, name)
+}
+
+func testResourceGenericSecret_updateConfig(mount, name string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "v1" {
+	path = "%s"
+	type = "kv"
+	options = {
+		version = "1"
+	}
+}
+
+resource "vault_generic_secret" "test" {
+    path = "${vault_mount.v1.path}/%s"
+    data_json = <<EOT
+{
+    "zip": "zoop"
+}
+EOT
+}
+`, mount, name)
 }
 
 func testResourceGenericSecret_initialConfigNS(ns, mount, name string) string {
@@ -331,28 +352,6 @@ func testAllVersionDestroy(s *terraform.State) error {
 	}
 	return nil
 }
-
-var testResourceGenericSecret_updateConfig = `
-
-resource "vault_mount" "v1" {
-	path = "secretsv1"
-	type = "kv"
-	options = {
-		version = "1"
-	}
-}
-
-resource "vault_generic_secret" "test" {
-    path = "${vault_mount.v1.path}/foo"
-    disable_read = false
-    data_json = <<EOT
-{
-    "zip": "zoop"
-}
-EOT
-}
-
-`
 
 func testResourceGenericSecret_updateCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["vault_generic_secret.test"]
