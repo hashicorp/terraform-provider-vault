@@ -19,7 +19,7 @@ func TestAccGenericSecret_importBasic(t *testing.T) {
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceGenericSecret_initialConfig(mount, path),
+				Config: testResourceGenericSecret_initialConfig(mount, name),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{
