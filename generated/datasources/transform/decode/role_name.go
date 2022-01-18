@@ -74,7 +74,10 @@ func RoleNameDataSource() *schema.Resource {
 }
 
 func readRoleNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*vault.ProviderMeta).GetClient()
+	client, e := vault.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Get("path").(string)
 	vaultPath := util.ParsePath(path, roleNameEndpoint, d)
 	log.Printf("[DEBUG] Writing %q", vaultPath)

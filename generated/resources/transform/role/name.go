@@ -54,7 +54,10 @@ func NameResource() *schema.Resource {
 }
 
 func createNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*vault.ProviderMeta).GetClient()
+	client, e := vault.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Get("path").(string)
 	vaultPath := util.ParsePath(path, nameEndpoint, d)
 	log.Printf("[DEBUG] Creating %q", vaultPath)
@@ -75,7 +78,10 @@ func createNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*vault.ProviderMeta).GetClient()
+	client, e := vault.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Reading %q", vaultPath)
 
@@ -107,7 +113,10 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*vault.ProviderMeta).GetClient()
+	client, e := vault.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Updating %q", vaultPath)
 
@@ -123,7 +132,10 @@ func updateNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*vault.ProviderMeta).GetClient()
+	client, e := vault.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Deleting %q", vaultPath)
 
@@ -139,7 +151,10 @@ func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceNameExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*vault.ProviderMeta).GetClient()
+	client, e := vault.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", vaultPath)
 
