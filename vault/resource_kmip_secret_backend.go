@@ -11,15 +11,13 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-var (
-	kmipAPIFields = []string{
-		"listen_addrs", "server_hostnames", "server_ips", "tls_ca_key_type", "tls_ca_key_bits",
-		"tls_min_version", "default_tls_client_key_type",
-		"default_tls_client_key_bits", "default_tls_client_ttl",
-	}
-)
+var kmipAPIFields = []string{
+	"listen_addrs", "server_hostnames", "server_ips", "tls_ca_key_type", "tls_ca_key_bits",
+	"tls_min_version", "default_tls_client_key_type",
+	"default_tls_client_key_bits", "default_tls_client_ttl",
+}
 
-func kmipSecretBackendConfigResource() *schema.Resource {
+func kmipSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: kmipSecretBackendCreate,
 		Read:   kmipSecretBackendRead,

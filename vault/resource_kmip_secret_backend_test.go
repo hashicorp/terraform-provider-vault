@@ -15,7 +15,7 @@ import (
 
 func TestAccKMIPSecretBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-kmip")
-	resourceName := "vault_kmip_secret_backend_config.test"
+	resourceName := "vault_kmip_secret_backend.test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestEntPreCheck(t) },
@@ -82,7 +82,7 @@ func testAccKMIPSecretBackendCheckDestroy(s *terraform.State) error {
 
 func testKMIPSecretBackend_initialConfig(path string) string {
 	return fmt.Sprintf(`
-resource "vault_kmip_secret_backend_config" "test" {
+resource "vault_kmip_secret_backend" "test" {
   path = "%s"
   description = "test description"
   listen_addrs = ["127.0.0.1:5696", "127.0.0.1:8080"]
@@ -97,7 +97,7 @@ resource "vault_kmip_secret_backend_config" "test" {
 
 func testKMIPSecretBackend_updateConfig(path string) string {
 	return fmt.Sprintf(`
-resource "vault_kmip_secret_backend_config" "test" {
+resource "vault_kmip_secret_backend" "test" {
   path = "%s"
   description = "test description"
   listen_addrs = ["127.0.0.1:5696", "127.0.0.1:8080"]
