@@ -14,6 +14,7 @@ import (
 
 func TestNamespace_basic(t *testing.T) {
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
+	invalidNamespace := namespacePath + pathDelim
 	childPath := acctest.RandomWithPrefix("child-namespace")
 
 	resource.Test(t, resource.TestCase{
@@ -26,9 +27,11 @@ func TestNamespace_basic(t *testing.T) {
 				Check:  testNamespaceCheckAttrs(),
 			},
 			{
-				Config:      testNamespaceConfig(namespacePath + "/"),
-				Destroy:     false,
-				ExpectError: regexp.MustCompile("Error: cannot write to a path ending in '/'"),
+				Config:  testNamespaceConfig(invalidNamespace),
+				Destroy: false,
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`invalid value "%s" for "path", contains leading/trailing "%s"`,
+						invalidNamespace, pathDelim)),
 			},
 			{
 				Config: testNestedNamespaceConfig(namespacePath, childPath),

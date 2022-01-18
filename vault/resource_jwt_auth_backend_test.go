@@ -112,14 +112,17 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 
 func TestAccJWTAuthBackend_invalid(t *testing.T) {
 	path := acctest.RandomWithPrefix("jwt")
+	invalidPath := path + pathDelim
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccJWTAuthBackendConfig(path + "/"),
-				Destroy:     false,
-				ExpectError: regexp.MustCompile("Error: cannot write to a path ending in '/'"),
+				Config:  testAccJWTAuthBackendConfig(invalidPath),
+				Destroy: false,
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`invalid value "%s" for "path", contains leading/trailing "%s"`,
+						invalidPath, pathDelim)),
 			},
 			{
 				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "jwt" {
