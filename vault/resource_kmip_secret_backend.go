@@ -46,7 +46,7 @@ func kmipSecretBackendResource() *schema.Resource {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Computed:    true,
-				Description: "Address and port the KMIP server should listen on",
+				Description: "Addresses the KMIP server should listen on (host:port)",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"server_hostnames": {
@@ -98,7 +98,7 @@ func kmipSecretBackendResource() *schema.Resource {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Computed:    true,
-				Description: "Client certificate TTL in either an integer number of seconds (10)",
+				Description: "Client certificate TTL in an integer number of seconds (10)",
 			},
 		},
 	}
@@ -111,16 +111,16 @@ func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	defaultTLSClientTTL := d.Get("default_tls_client_ttl").(int)
 
 	log.Printf("[DEBUG] Mounting KMIP backend at %q", path)
-	err := client.Sys().Mount(path, &api.MountInput{
+	if err := client.Sys().Mount(path, &api.MountInput{
 		Type:        "kmip",
 		Description: description,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%d", defaultTLSClientTTL),
 		},
-	})
-	if err != nil {
+	}); err != nil {
 		return fmt.Errorf("error mounting to %q: %s", path, err)
 	}
+
 	log.Printf("[DEBUG] Mounted KMIP backend at %q", path)
 	d.SetId(path)
 	return kmipSecretBackendUpdate(d, meta)
@@ -160,9 +160,11 @@ func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			}
 		}
 	}
+
 	if _, err := client.Logical().Write(configPath, data); err != nil {
 		return fmt.Errorf("error updating KMIP config %q: %s", configPath, err)
 	}
+
 	log.Printf("[DEBUG] Updated %q", configPath)
 
 	return kmipSecretBackendRead(d, meta)
@@ -184,7 +186,7 @@ func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	for _, k := range kmipAPIFields {
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return fmt.Errorf("error setting state key \"%s\" on KMIP config: %s", k, err)
+			return fmt.Errorf("error setting state key %q on KMIP config, err=%w", k, err)
 		}
 	}
 	return nil
@@ -195,12 +197,12 @@ func kmipSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 	log.Printf("[DEBUG] Unmounting KMIP backend %q", path)
 
-	err := client.Sys().Unmount(path)
-	if err != nil && util.Is404(err) {
-		log.Printf("[WARN] %q not found, removing from state", path)
-		d.SetId("")
-		return fmt.Errorf("error unmounting KMIP backend from %q: %s", path, err)
-	} else if err != nil {
+	if err := client.Sys().Unmount(path); err != nil {
+		if util.Is404(err) {
+			log.Printf("[WARN] %q not found, removing from state", path)
+			d.SetId("")
+			return fmt.Errorf("error unmounting KMIP backend from %q: %s", path, err)
+		}
 		return fmt.Errorf("error unmounting KMIP backend from %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Unmounted KMIP backend %q", path)
