@@ -188,6 +188,7 @@ func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	if resp == nil {
 		log.Printf("[WARN] KMIP config not found, removing from state")
 		d.SetId("")
+
 		return nil
 	}
 
@@ -209,11 +210,14 @@ func kmipSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 		if util.Is404(err) {
 			log.Printf("[WARN] %q not found, removing from state", path)
 			d.SetId("")
+
 			return fmt.Errorf("error unmounting KMIP backend from %q: %s", path, err)
 		}
+
 		return fmt.Errorf("error unmounting KMIP backend from %q: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Unmounted KMIP backend %q", path)
+
 	return nil
 }

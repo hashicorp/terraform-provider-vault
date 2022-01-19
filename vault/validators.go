@@ -62,5 +62,6 @@ func validateNoTrailingLeadingSlashes(i interface{}, k string) (s []string, es [
 	if strings.HasPrefix(v, "/") {
 		es = append(es, errors.New("cannot write to a path starting in '/'"))
 	}
+
 	return
 }

@@ -81,6 +81,7 @@ func testAccKMIPSecretBackendCheckDestroy(s *terraform.State) error {
 			}
 		}
 	}
+
 	return nil
 }
 
