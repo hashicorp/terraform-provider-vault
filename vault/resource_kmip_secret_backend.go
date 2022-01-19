@@ -3,7 +3,6 @@ package vault
 import (
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/hashicorp/terraform-provider-vault/util"
 
@@ -29,13 +28,11 @@ func kmipSecretBackendResource() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"path": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "Full path where the generic secret will be written",
-				StateFunc: func(v interface{}) string {
-					return strings.Trim(v.(string), "/")
-				},
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
+				Description:  "Full path where the generic secret will be written",
+				ValidateFunc: validateNoTrailingLeadingSlashes,
 			},
 			"description": {
 				Type:        schema.TypeString,
