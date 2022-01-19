@@ -26,9 +26,10 @@ func TestAccKMIPSecretBackend_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
-					resource.TestCheckResourceAttr(resourceName, "listen_addrs.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "listen_addrs.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "listen_addrs.0", "127.0.0.1:5696"),
-					resource.TestCheckResourceAttr(resourceName, "listen_addrs.1", "127.0.0.1:8080"),
+					resource.TestCheckResourceAttr(resourceName, "server_ips.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "server_ips.0", "127.0.0.1"),
 					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_type", "ec"),
 					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_bits", "256"),
 					resource.TestCheckResourceAttr(resourceName, "tls_min_version", "tls12"),
@@ -45,6 +46,9 @@ func TestAccKMIPSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "listen_addrs.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "listen_addrs.0", "127.0.0.1:5696"),
 					resource.TestCheckResourceAttr(resourceName, "listen_addrs.1", "127.0.0.1:8080"),
+					resource.TestCheckResourceAttr(resourceName, "server_ips.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "server_ips.0", "127.0.0.1"),
+					resource.TestCheckResourceAttr(resourceName, "server_ips.1", "192.168.1.1"),
 					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_type", "rsa"),
 					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_bits", "4096"),
 					resource.TestCheckResourceAttr(resourceName, "tls_min_version", "tls12"),
@@ -85,8 +89,8 @@ func testKMIPSecretBackend_initialConfig(path string) string {
 resource "vault_kmip_secret_backend" "test" {
   path = "%s"
   description = "test description"
-  listen_addrs = ["127.0.0.1:5696", "127.0.0.1:8080"]
-  server_ips = ["127.0.0.1", "192.168.1.1"]
+  listen_addrs = ["127.0.0.1:5696"]
+  server_ips = ["127.0.0.1"]
   tls_ca_key_type = "ec"
   tls_ca_key_bits = 256
   default_tls_client_key_type = "ec"
