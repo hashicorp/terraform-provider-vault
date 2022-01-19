@@ -35,8 +35,8 @@ func kmipSecretBackendResource() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:         schema.TypeString,
-				Required:     true,
 				ForceNew:     true,
+				Optional:     true,
 				Default:      "kmip",
 				Description:  "Path where KMIP secret backend will be mounted",
 				ValidateFunc: validateNoTrailingLeadingSlashes,
