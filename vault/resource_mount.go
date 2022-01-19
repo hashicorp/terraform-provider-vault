@@ -62,6 +62,7 @@ func MountResource() *schema.Resource {
 
 			"audit_non_hmac_request_keys": {
 				Type:        schema.TypeList,
+				Computed:    true,
 				Optional:    true,
 				Description: "Specifies the list of keys that will not be HMAC'd by audit devices in the request data object.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
@@ -69,6 +70,7 @@ func MountResource() *schema.Resource {
 
 			"audit_non_hmac_response_keys": {
 				Type:        schema.TypeList,
+				Computed:    true,
 				Optional:    true,
 				Description: "Specifies the list of keys that will not be HMAC'd by audit devices in the response data object.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
