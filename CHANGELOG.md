@@ -1,4 +1,4 @@
-## 3.2.0 (Unreleased)
+## 3.2.0 (January 19, 2022)
 BUGS:
 * `resource/aws_secret_backend_role`: Ensure all updated fields are applied ([#1277](https://github.com/hashicorp/terraform-provider-vault/pull/1277))
 
