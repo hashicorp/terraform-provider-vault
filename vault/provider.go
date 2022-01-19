@@ -284,6 +284,10 @@ var (
 			Resource:      authBackendDataSource(),
 			PathInventory: []string{"/sys/auth"},
 		},
+		"vault_kv_v2_config": {
+			Resource:      kvV2ConfigDataSource(),
+			PathInventory: []string{"/secret/config"},
+		},
 		"vault_transit_encrypt": {
 			Resource:      transitEncryptDataSource(),
 			PathInventory: []string{"/transit/encrypt/{name}"},
@@ -693,6 +697,10 @@ var (
 		"vault_raft_autopilot": {
 			Resource:      raftAutopilotConfigResource(),
 			PathInventory: []string{"/sys/storage/raft/autopilot/configuration"},
+		},
+		"vault_kv_v2_config": {
+			Resource:      KvV2ConfigResource(),
+			PathInventory: []string{"/secret/config"},
 		},
 	}
 )

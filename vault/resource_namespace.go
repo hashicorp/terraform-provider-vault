@@ -30,7 +30,7 @@ func namespaceResource() *schema.Resource {
 			"namespace_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the namepsace.",
+				Description: "ID of the namespace.",
 			},
 		},
 	}

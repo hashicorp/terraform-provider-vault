@@ -43,7 +43,7 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 			Description: "Unique name of the kubernetes backend to configure.",
 			ForceNew:    true,
 			Default:     "kubernetes",
-			// standardise on no beginning or trailing slashes
+			// standardize on no beginning or trailing slashes
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
 			},
