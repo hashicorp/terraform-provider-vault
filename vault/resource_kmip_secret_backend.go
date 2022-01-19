@@ -11,9 +11,15 @@ import (
 )
 
 var kmipAPIFields = []string{
-	"listen_addrs", "server_hostnames", "server_ips", "tls_ca_key_type", "tls_ca_key_bits",
-	"tls_min_version", "default_tls_client_key_type",
-	"default_tls_client_key_bits", "default_tls_client_ttl",
+	"default_tls_client_key_bits",
+	"default_tls_client_key_type",
+	"default_tls_client_ttl",
+	"listen_addrs",
+	"server_hostnames",
+	"server_ips",
+	"tls_ca_key_bits",
+	"tls_ca_key_type",
+	"tls_min_version",
 }
 
 func kmipSecretBackendResource() *schema.Resource {
@@ -95,7 +101,7 @@ func kmipSecretBackendResource() *schema.Resource {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Computed:    true,
-				Description: "Client certificate TTL in an integer number of seconds (10)",
+				Description: "Client certificate TTL in seconds",
 			},
 		},
 	}
@@ -120,6 +126,7 @@ func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Mounted KMIP backend at %q", path)
 	d.SetId(path)
+
 	return kmipSecretBackendUpdate(d, meta)
 }
 
@@ -136,7 +143,7 @@ func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		log.Printf("[DEBUG] Updating mount for %q", path)
 		err := client.Sys().TuneMount(path, tune)
 		if err != nil {
-			return fmt.Errorf("error updating mount for %q: %s", path, err)
+			return fmt.Errorf("error updating mount for %q, err=%w", path, err)
 		}
 		log.Printf("[DEBUG] Updated mount for %q", path)
 	}
@@ -176,16 +183,19 @@ func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error reading KMIP config at %q/config: %s", path, err)
 	}
+
 	if resp == nil {
 		log.Printf("[WARN] KMIP config not found, removing from state")
 		d.SetId("")
 		return nil
 	}
+
 	for _, k := range kmipAPIFields {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return fmt.Errorf("error setting state key %q on KMIP config, err=%w", k, err)
 		}
 	}
+
 	return nil
 }
 
@@ -202,6 +212,7 @@ func kmipSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 		}
 		return fmt.Errorf("error unmounting KMIP backend from %q: %s", path, err)
 	}
+
 	log.Printf("[DEBUG] Unmounted KMIP backend %q", path)
 	return nil
 }
