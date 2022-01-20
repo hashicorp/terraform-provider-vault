@@ -1,6 +1,6 @@
 ## 3.2.1 (Unreleased)
 BUGS:
-* `resource/rabbitmq_secret_backend_role`: Add nil check to resolve panic when reading RabbitMQ role from Vault
+* `resource/rabbitmq_secret_backend_role`: Add nil check when reading RabbitMQ role from Vault ([#1312](https://github.com/hashicorp/terraform-provider-vault/pull/1312))
 
 ## 3.2.0 (January 19, 2022)
 BUGS:
