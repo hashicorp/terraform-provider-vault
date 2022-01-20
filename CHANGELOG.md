@@ -1,3 +1,7 @@
+## 3.3.0 (Unreleased)
+FEATURES:
+* `resource/vault_kmip_secret_backend`: Add support for configuring KMIP Backends ([#1298](https://github.com/hashicorp/terraform-provider-vault/pull/1298))
+
 ## 3.2.1 (January 20, 2022)
 BUGS:
 * `resource/rabbitmq_secret_backend_role`: Add nil check when reading RabbitMQ role from Vault ([#1312](https://github.com/hashicorp/terraform-provider-vault/pull/1312))
