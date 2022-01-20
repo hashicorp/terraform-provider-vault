@@ -23,7 +23,6 @@ func kmipSecretBackendScopeResource() *schema.Resource {
 			"path": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
 				Description: "Path where KMIP backend is mounted",
 				StateFunc: func(v interface{}) string {
 					return strings.Trim(v.(string), "/")
