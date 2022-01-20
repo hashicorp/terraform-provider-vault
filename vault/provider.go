@@ -698,6 +698,10 @@ var (
 			Resource:      kmipSecretBackendResource(),
 			PathInventory: []string{"/kmip/config"},
 		},
+		"vault_kmip_secret_backend_scope": {
+			Resource:      kmipSecretBackendScopeResource(),
+			PathInventory: []string{"/kmip/scope/{scope}"},
+		},
 	}
 )
 
