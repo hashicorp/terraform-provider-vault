@@ -1,4 +1,4 @@
-## 3.2.1 (Unreleased)
+## 3.2.1 (January 20, 2022)
 BUGS:
 * `resource/rabbitmq_secret_backend_role`: Add nil check when reading RabbitMQ role from Vault ([#1312](https://github.com/hashicorp/terraform-provider-vault/pull/1312))
 
