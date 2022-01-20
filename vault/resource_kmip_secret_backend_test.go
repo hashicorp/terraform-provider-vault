@@ -70,7 +70,7 @@ func testAccKMIPSecretBackendCheckDestroy(s *terraform.State) error {
 	}
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_kmip_secret_backend_config" {
+		if rs.Type != "vault_kmip_secret_backend" {
 			continue
 		}
 		for path, mount := range mounts {
