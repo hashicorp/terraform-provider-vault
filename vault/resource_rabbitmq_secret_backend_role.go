@@ -168,12 +168,16 @@ func rabbitMQSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
 	d.Set("name", pathPieces[len(pathPieces)-1])
 
-	if err := d.Set("vhost", flattenRabbitMQSecretBackendRoleVhost(secret.Data["vhosts"].(map[string]interface{}))); err != nil {
-		return fmt.Errorf("Error setting vhosts in state: %w", err)
+	if vhosts, ok := secret.Data["vhosts"]; ok && vhosts != nil {
+		if err := d.Set("vhost", flattenRabbitMQSecretBackendRoleVhost(vhosts.(map[string]interface{}))); err != nil {
+			return fmt.Errorf("error setting vhosts in state: %w", err)
+		}
 	}
 
-	if err := d.Set("vhost_topic", flattenRabbitMQSecretBackendRoleVhostTopics(secret.Data["vhost_topics"].(map[string]interface{}))); err != nil {
-		return fmt.Errorf("Error setting vhosts topics in state: %w", err)
+	if vhostTopics, ok := secret.Data["vhost_topics"]; ok && vhostTopics != nil {
+		if err := d.Set("vhost_topic", flattenRabbitMQSecretBackendRoleVhostTopics(vhostTopics.(map[string]interface{}))); err != nil {
+			return fmt.Errorf("error setting vhosts topics in state: %w", err)
+		}
 	}
 
 	return nil
