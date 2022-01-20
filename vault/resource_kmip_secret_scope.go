@@ -3,7 +3,6 @@ package vault
 import (
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -21,18 +20,22 @@ func kmipSecretScopeResource() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"path": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Path where KMIP backend is mounted",
-				StateFunc: func(v interface{}) string {
-					return strings.Trim(v.(string), "/")
-				},
+				Type:         schema.TypeString,
+				Required:     true,
+				Description:  "Path where KMIP backend is mounted",
+				ValidateFunc: validateNoTrailingLeadingSlashes,
 			},
 			"scope": {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Name of the scope",
+			},
+			"force": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Force deletion even if there are managed objects in the scope",
 			},
 		},
 	}
@@ -42,11 +45,13 @@ func kmipSecretScopeCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Get("path").(string)
 	scope := d.Get("scope").(string)
+	force := d.Get("force").(bool)
 
-	data := map[string]interface{}{}
-	if v, ok := d.GetOk("scope"); ok {
-		data["scope"] = v.(string)
+	data := map[string]interface{}{
+		"scope": scope,
+		"force": force,
 	}
+
 	scopePath := path + "/scope/" + scope
 	log.Printf("[DEBUG] Updating %q", scopePath)
 	if _, err := client.Logical().Write(scopePath, data); err != nil {
