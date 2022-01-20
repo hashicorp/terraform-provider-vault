@@ -299,7 +299,6 @@ var (
 	}
 
 	ResourceRegistry = map[string]*Description{
-
 		"vault_alicloud_auth_backend_role": {
 			Resource:      alicloudAuthBackendRoleResource(),
 			PathInventory: []string{"/auth/alicloud/role/{name}"},
@@ -698,8 +697,8 @@ var (
 			Resource:      kmipSecretBackendResource(),
 			PathInventory: []string{"/kmip/config"},
 		},
-		"vault_kmip_secret_backend_scope": {
-			Resource:      kmipSecretBackendScopeResource(),
+		"vault_kmip_secret_scope": {
+			Resource:      kmipSecretScopeResource(),
 			PathInventory: []string{"/kmip/scope/{scope}"},
 		},
 	}

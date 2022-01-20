@@ -9,12 +9,12 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func kmipSecretBackendScopeResource() *schema.Resource {
+func kmipSecretScopeResource() *schema.Resource {
 	return &schema.Resource{
-		Create: kmipSecretBackendScopeCreate,
-		Read:   kmipSecretBackendScopeRead,
-		Update: kmipSecretBackendScopeUpdate,
-		Delete: kmipSecretBackendScopeDelete,
+		Create: kmipSecretScopeCreate,
+		Read:   kmipSecretScopeRead,
+		Update: kmipSecretScopeUpdate,
+		Delete: kmipSecretScopeDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -38,7 +38,7 @@ func kmipSecretBackendScopeResource() *schema.Resource {
 	}
 }
 
-func kmipSecretBackendScopeCreate(d *schema.ResourceData, meta interface{}) error {
+func kmipSecretScopeCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Get("path").(string)
 	scope := d.Get("scope").(string)
@@ -54,10 +54,10 @@ func kmipSecretBackendScopeCreate(d *schema.ResourceData, meta interface{}) erro
 	}
 	d.SetId(path)
 	d.Set("scope", scope)
-	return kmipSecretBackendScopeRead(d, meta)
+	return kmipSecretScopeRead(d, meta)
 }
 
-func kmipSecretBackendScopeRead(d *schema.ResourceData, meta interface{}) error {
+func kmipSecretScopeRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Id()
 
@@ -87,7 +87,7 @@ func kmipSecretBackendScopeRead(d *schema.ResourceData, meta interface{}) error 
 	return nil
 }
 
-func kmipSecretBackendScopeUpdate(d *schema.ResourceData, meta interface{}) error {
+func kmipSecretScopeUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Id()
 	scope := d.Get("scope").(string)
@@ -106,10 +106,10 @@ func kmipSecretBackendScopeUpdate(d *schema.ResourceData, meta interface{}) erro
 	}
 	log.Printf("[DEBUG] Updated %q", scopePath)
 
-	return kmipSecretBackendScopeRead(d, meta)
+	return kmipSecretScopeRead(d, meta)
 }
 
-func kmipSecretBackendScopeDelete(d *schema.ResourceData, meta interface{}) error {
+func kmipSecretScopeDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Id()
 	scope := d.Get("scope").(string)

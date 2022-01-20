@@ -13,16 +13,16 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccKMIPSecretBackendScope_basic(t *testing.T) {
+func TestAccKMIPSecretScope_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-kmip")
-	resourceName := "vault_kmip_secret_backend_scope.test"
+	resourceName := "vault_kmip_secret_scope.test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy: testAccKMIPSecretBackendScopeCheckDestroy,
+		CheckDestroy: testAccKMIPSecretScopeCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testKMIPSecretBackendScope_initialConfig(path),
+				Config: testKMIPSecretScope_initialConfig(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 					resource.TestCheckResourceAttr(resourceName, "scope", "test"),
@@ -32,7 +32,7 @@ func TestAccKMIPSecretBackendScope_basic(t *testing.T) {
 	})
 }
 
-func testAccKMIPSecretBackendScopeCheckDestroy(s *terraform.State) error {
+func testAccKMIPSecretScopeCheckDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
 	mounts, err := client.Sys().ListMounts()
@@ -41,7 +41,7 @@ func testAccKMIPSecretBackendScopeCheckDestroy(s *terraform.State) error {
 	}
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_kmip_secret_backend_scope" {
+		if rs.Type != "vault_kmip_secret_scope" {
 			continue
 		}
 		for path, mount := range mounts {
@@ -56,14 +56,14 @@ func testAccKMIPSecretBackendScopeCheckDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testKMIPSecretBackendScope_initialConfig(path string) string {
+func testKMIPSecretScope_initialConfig(path string) string {
 	return fmt.Sprintf(`
 resource "vault_kmip_secret_backend" "kmip" {
   path = "%s"
   description = "test description"
 }
 
-resource "vault_kmip_secret_backend_scope" "test" {
+resource "vault_kmip_secret_scope" "test" {
     path = vault_kmip_secret_backend.kmip.path
     scope = "test"
 }`, path)
