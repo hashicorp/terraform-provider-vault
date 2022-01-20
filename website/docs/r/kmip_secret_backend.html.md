@@ -1,29 +1,29 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_kmip_secret_backend resource"
-sidebar_current: "docs-vault-kmip_secret_backend"
+sidebar_current: "docs-vault-resource-kmip-secret-backend"
 description: |-
-Manages KMIP Secret backend configs in Vault.
+  Provision KMIP Secret backends in Vault.
 ---
 
 # vault\_kmip\_secret\_backend
 
-Manages KMIP Secret backend configs in a Vault server. See the [Vault
+Manages KMIP Secret backends in a Vault server. See the [Vault
 documentation](https://www.vaultproject.io/docs/secrets/kmip) for more
 information.
 
 ## Example Usage
 
 ```hcl
-resource "vault_kmip_secret_backend" "kmip" {
-  path = "kmip"
-  description = "KMIP backend to manage configs in Vault"
-  listen_addrs = ["127.0.0.1:5696", "127.0.0.1:8080"]
-  tls_ca_key_type = "rsa"
-  tls_ca_key_bits = 4096
+resource "vault_kmip_secret_backend" "default" {
+  path                        = "kmip"
+  description                 = "Vault KMIP backend"
+  listen_addrs                = ["127.0.0.1:5696", "127.0.0.1:8080"]
+  tls_ca_key_type             = "rsa"
+  tls_ca_key_bits             = 4096
   default_tls_client_key_type = "rsa"
   default_tls_client_key_bits = 4096
-  default_tls_client_ttl = 86400
+  default_tls_client_ttl      = 86400
 }
 ```
 
