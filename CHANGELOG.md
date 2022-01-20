@@ -1,4 +1,8 @@
-## 3.2.0 (Unreleased)
+## 3.2.1 (January 20, 2022)
+BUGS:
+* `resource/rabbitmq_secret_backend_role`: Add nil check when reading RabbitMQ role from Vault ([#1312](https://github.com/hashicorp/terraform-provider-vault/pull/1312))
+
+## 3.2.0 (January 19, 2022)
 BUGS:
 * `resource/aws_secret_backend_role`: Ensure all updated fields are applied ([#1277](https://github.com/hashicorp/terraform-provider-vault/pull/1277))
 
@@ -6,6 +10,8 @@ IMPROVEMENTS:
 * `resource/database_secret_backend_connection`: Add support for configuring Redshift databases ([#1279](https://github.com/hashicorp/terraform-provider-vault/pull/1279))
 * `resource/pki_secret_backend_intermediate_cert_request`: Add support for the `ed25519` key_type ([#1278](https://github.com/hashicorp/terraform-provider-vault/pull/1278))
 * `resource/rabbitmq_secret_backend_role`: Add support for `vhost_topics` ([#1246](https://github.com/hashicorp/terraform-provider-vault/pull/1246))
+* `resource/vault_mount`: Add support for `audit_non_hmac_request_keys` and `audit_non_hmac_response_keys` ([#1297](https://github.com/hashicorp/terraform-provider-vault/pull/1297))
+* `resource/vault_aws_secret_backend`: Add support for `username_template` ([#1292](https://github.com/hashicorp/terraform-provider-vault/pull/1292))
 
 ## 3.1.1 (December 22, 2021)
 BUGS:

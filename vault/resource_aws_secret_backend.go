@@ -85,6 +85,12 @@ func awsSecretBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies a custom HTTP STS endpoint to use.",
 			},
+			"username_template": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Template describing how dynamic usernames are generated.",
+			},
 		},
 	}
 }
@@ -101,6 +107,7 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	region := d.Get("region").(string)
 	iamEndpoint := d.Get("iam_endpoint").(string)
 	stsEndpoint := d.Get("sts_endpoint").(string)
+	usernameTemplate := d.Get("username_template").(string)
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting AWS backend at %q", path)
@@ -131,6 +138,9 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 	if stsEndpoint != "" {
 		data["sts_endpoint"] = stsEndpoint
+	}
+	if usernameTemplate != "" {
+		data["username_template"] = usernameTemplate
 	}
 	_, err = client.Logical().Write(path+"/config/root", data)
 	if err != nil {
@@ -202,6 +212,9 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		if v, ok := resp.Data["sts_endpoint"].(string); ok {
 			d.Set("sts_endpoint", v)
 		}
+		if v, ok := resp.Data["username_template"].(string); ok {
+			d.Set("username_template", v)
+		}
 	}
 
 	d.Set("path", path)
@@ -238,6 +251,8 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		region := d.Get("region").(string)
 		iamEndpoint := d.Get("iam_endpoint").(string)
 		stsEndpoint := d.Get("sts_endpoint").(string)
+		usernameTemplate := d.Get("username_template").(string)
+
 		if region != "" {
 			data["region"] = region
 		}
@@ -246,6 +261,9 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 		if stsEndpoint != "" {
 			data["sts_endpoint"] = stsEndpoint
+		}
+		if usernameTemplate != "" {
+			data["username_template"] = usernameTemplate
 		}
 		_, err := client.Logical().Write(path+"/config/root", data)
 		if err != nil {

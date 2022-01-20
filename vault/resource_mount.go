@@ -60,6 +60,22 @@ func MountResource() *schema.Resource {
 				Description: "Maximum possible lease duration for tokens and secrets in seconds",
 			},
 
+			"audit_non_hmac_request_keys": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Optional:    true,
+				Description: "Specifies the list of keys that will not be HMAC'd by audit devices in the request data object.",
+				Elem:        &schema.Schema{Type: schema.TypeString},
+			},
+
+			"audit_non_hmac_response_keys": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Optional:    true,
+				Description: "Specifies the list of keys that will not be HMAC'd by audit devices in the response data object.",
+				Elem:        &schema.Schema{Type: schema.TypeString},
+			},
+
 			"accessor": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -111,8 +127,10 @@ func mountWrite(d *schema.ResourceData, meta interface{}) error {
 		Type:        d.Get("type").(string),
 		Description: d.Get("description").(string),
 		Config: api.MountConfigInput{
-			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
-			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
+			DefaultLeaseTTL:          fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
+			MaxLeaseTTL:              fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
+			AuditNonHMACRequestKeys:  expandStringSlice(d.Get("audit_non_hmac_request_keys").([]interface{})),
+			AuditNonHMACResponseKeys: expandStringSlice(d.Get("audit_non_hmac_response_keys").([]interface{})),
 		},
 		Local:                 d.Get("local").(bool),
 		Options:               opts(d),
@@ -140,6 +158,14 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 		DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 		MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
 		Options:         opts(d),
+	}
+
+	if d.HasChange("audit_non_hmac_request_keys") {
+		config.AuditNonHMACRequestKeys = expandStringSlice(d.Get("audit_non_hmac_request_keys").([]interface{}))
+	}
+
+	if d.HasChange("audit_non_hmac_response_keys") {
+		config.AuditNonHMACResponseKeys = expandStringSlice(d.Get("audit_non_hmac_response_keys").([]interface{}))
 	}
 
 	if d.HasChange("description") {
@@ -228,6 +254,8 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
+	d.Set("audit_non_hmac_request_keys", mount.Config.AuditNonHMACRequestKeys)
+	d.Set("audit_non_hmac_response_keys", mount.Config.AuditNonHMACResponseKeys)
 	d.Set("accessor", mount.Accessor)
 	d.Set("local", mount.Local)
 	d.Set("options", mount.Options)
