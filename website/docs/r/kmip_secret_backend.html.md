@@ -8,9 +8,9 @@ description: |-
 
 # vault\_kmip\_secret\_backend
 
-Manages KMIP Secret backends in a Vault server. See the [Vault
-documentation](https://www.vaultproject.io/docs/secrets/kmip) for more
-information.
+Manages KMIP Secret backends in a Vault server. This feature requires
+Vault Enterprise. See the [Vault documentation](https://www.vaultproject.io/docs/secrets/kmip)
+for more information.
 
 ## Example Usage
 
