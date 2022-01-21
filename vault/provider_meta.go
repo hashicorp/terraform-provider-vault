@@ -38,17 +38,21 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 	p.m.Lock()
 	defer p.m.Unlock()
 
+	if err := p.validate(); err != nil {
+		return nil, err
+	}
+
 	if ns == "" {
 		return nil, fmt.Errorf("empty namespace not allowed")
 	}
 
-	if p.clientCache == nil {
-		p.clientCache = make(map[string]*api.Client)
+	ns = strings.Trim(ns, "/")
+	if root, ok := p.resourceData.GetOk(consts.FieldNamespace); ok && root.(string) != "" {
+		ns = fmt.Sprintf("%s/%s", root, ns)
 	}
 
-	ns = strings.Trim(ns, "/")
-	if root := p.resourceData.Get(consts.FieldNamespace).(string); root != "" {
-		ns = fmt.Sprintf("%s/%s", root, ns)
+	if p.clientCache == nil {
+		p.clientCache = make(map[string]*api.Client)
 	}
 
 	if v, ok := p.clientCache[ns]; ok {
@@ -64,6 +68,18 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 	p.clientCache[ns] = c
 
 	return c, nil
+}
+
+func (p *ProviderMeta) validate() error {
+	if p.client == nil {
+		return fmt.Errorf("root api.Client not set, init with NewProviderMeta()")
+	}
+
+	if p.resourceData == nil {
+		return fmt.Errorf("provider ResourceData not set, init with NewProviderMeta()")
+	}
+
+	return nil
 }
 
 // NewProviderMeta sets up the Provider to service Vault requests.
@@ -211,6 +227,10 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	}, nil
 }
 
+// GetClient is meant to be called from a schema.Resource function.
+// It ensures that the returned api.Client's matches the resource's configured
+// namespace. The value for the namespace is resolved from schema.ResourceData,
+// or terraform.InstanceState.
 func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	p, ok := meta.(*ProviderMeta)
 	if !ok {
