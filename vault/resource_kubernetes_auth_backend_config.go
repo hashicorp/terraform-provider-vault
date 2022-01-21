@@ -217,7 +217,7 @@ func kubernetesAuthBackendConfigUpdate(d *schema.ResourceData, meta interface{})
 		data["issuer"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("disable_iss_validation"); ok {
+	if v, ok := d.GetOkExists("disable_iss_validation"); ok {
 		data["disable_iss_validation"] = v
 	}
 
