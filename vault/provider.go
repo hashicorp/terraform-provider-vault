@@ -2,16 +2,9 @@ package vault
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"strings"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/config"
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/vault/consts"
@@ -694,92 +687,6 @@ var (
 	}
 )
 
-func providerToken(d *schema.ResourceData) (string, error) {
-	if token := d.Get("token").(string); token != "" {
-		return token, nil
-	}
-
-	if addAddr := d.Get("add_address_to_env").(string); addAddr == "true" {
-		if addr := d.Get("address").(string); addr != "" {
-			if current, exists := os.LookupEnv("VAULT_ADDR"); exists {
-				defer func() {
-					os.Setenv("VAULT_ADDR", current)
-				}()
-			} else {
-				defer func() {
-					os.Unsetenv("VAULT_ADDR")
-				}()
-			}
-			os.Setenv("VAULT_ADDR", addr)
-		}
-	}
-
-	// Use ~/.vault-token, or the configured token helper.
-	tokenHelper, err := config.DefaultTokenHelper()
-	if err != nil {
-		return "", fmt.Errorf("error getting token helper: %s", err)
-	}
-	token, err := tokenHelper.Get()
-	if err != nil {
-		return "", fmt.Errorf("error getting token: %s", err)
-	}
-	return strings.TrimSpace(token), nil
-}
-
-func setChildToken(d *schema.ResourceData, c *api.Client) error {
-	tokenName := d.Get("token_name").(string)
-	if tokenName == "" {
-		tokenName = "terraform"
-	}
-
-	// In order to enforce our relatively-short lease TTL, we derive a
-	// temporary child token that inherits all of the policies of the
-	// token we were given but expires after max_lease_ttl_seconds.
-	//
-	// The intent here is that Terraform will need to re-fetch any
-	// secrets on each run and so we limit the exposure risk of secrets
-	// that end up stored in the Terraform state, assuming that they are
-	// credentials that Vault is able to revoke.
-	//
-	// Caution is still required with state files since not all secrets
-	// can explicitly be revoked, and this limited scope won't apply to
-	// any secrets that are *written* by Terraform to Vault.
-
-	// Set the namespace to the token's namespace only for the
-	// child token creation
-	tokenInfo, err := c.Auth().Token().LookupSelf()
-	if err != nil {
-		return err
-	}
-	if tokenNamespaceRaw, ok := tokenInfo.Data["namespace_path"]; ok {
-		tokenNamespace := tokenNamespaceRaw.(string)
-		if tokenNamespace != "" {
-			c.SetNamespace(tokenNamespace)
-		}
-	}
-
-	renewable := false
-	childTokenLease, err := c.Auth().Token().Create(&api.TokenCreateRequest{
-		DisplayName:    tokenName,
-		TTL:            fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
-		ExplicitMaxTTL: fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
-		Renewable:      &renewable,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create limited child token: %s", err)
-	}
-
-	childToken := childTokenLease.Auth.ClientToken
-	policies := childTokenLease.Auth.Policies
-
-	log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
-
-	// Set the token to the generated child token
-	c.SetToken(childToken)
-
-	return nil
-}
-
 func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {
 	var errs error
 	resourceMap := make(map[string]*schema.Resource)
@@ -790,47 +697,6 @@ func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {
 		}
 	}
 	return resourceMap, errs
-}
-
-func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error {
-	var accessKey, secretKey, securityToken string
-	if val, ok := parameters["aws_access_key_id"].(string); ok {
-		accessKey = val
-	}
-
-	if val, ok := parameters["aws_secret_access_key"].(string); ok {
-		secretKey = val
-	}
-
-	if val, ok := parameters["aws_security_token"].(string); ok {
-		securityToken = val
-	}
-
-	creds, err := awsutil.RetrieveCreds(accessKey, secretKey, securityToken, logger)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve AWS credentials: %s", err)
-	}
-
-	var headerValue, stsRegion string
-	if val, ok := parameters["header_value"].(string); ok {
-		headerValue = val
-	}
-
-	if val, ok := parameters["sts_region"].(string); ok {
-		stsRegion = val
-	}
-
-	loginData, err := awsutil.GenerateLoginData(creds, headerValue, stsRegion, logger)
-	if err != nil {
-		return fmt.Errorf("failed to generate AWS login data: %s", err)
-	}
-
-	parameters["iam_http_request_method"] = loginData["iam_http_request_method"]
-	parameters["iam_request_url"] = loginData["iam_request_url"]
-	parameters["iam_request_headers"] = loginData["iam_request_headers"]
-	parameters["iam_request_body"] = loginData["iam_request_body"]
-
-	return nil
 }
 
 func addCommonSchemaFields(m map[string]*schema.Schema) map[string]*schema.Schema {
