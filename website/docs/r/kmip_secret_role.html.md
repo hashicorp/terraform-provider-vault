@@ -3,7 +3,7 @@ layout: "vault"
 page_title: "Vault: vault_kmip_secret_role resource"
 sidebar_current: "docs-vault-resource-kmip-secret-role"
 description: |-
-Provision KMIP Secret roles in Vault.
+  Provision KMIP Secret roles in Vault.
 ---
 
 # vault\_kmip\_secret\_role
