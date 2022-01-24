@@ -72,8 +72,13 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.0", "dev"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.1", "test"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies_glob.#", "2"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies_glob.0", "dev/*"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies_glob.1", "test/*"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.#", "1"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.0", "default"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies_glob.#", "1"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies_glob.0", "def*"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "orphan", "true"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_period", "86400"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "renewable", "false"),
@@ -93,8 +98,13 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.0", "dev"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.1", "test"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies_glob.#", "2"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies_glob.0", "dev/*"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies_glob.1", "test/*"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.#", "1"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.0", "default"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies_glob.#", "1"),
+					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies_glob.0", "def*"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "orphan", "true"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_period", "86400"),
 					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "renewable", "false"),
@@ -188,16 +198,18 @@ func testAccTokenAuthBackendRoleCheck_attrs(role string) resource.TestCheckFunc 
 		}
 
 		attrs := map[string]string{
-			"role_name":              "name",
-			"allowed_policies":       "allowed_policies",
-			"disallowed_policies":    "disallowed_policies",
-			"orphan":                 "orphan",
-			"token_period":           "token_period",
-			"token_explicit_max_ttl": "token_explicit_max_ttl",
-			"path_suffix":            "path_suffix",
-			"renewable":              "renewable",
-			"token_bound_cidrs":      "token_bound_cidrs",
-			"token_type":             "token_type",
+			"role_name":                "name",
+			"allowed_policies":         "allowed_policies",
+			"allowed_policies_glob":    "allowed_policies_glob",
+			"disallowed_policies":      "disallowed_policies",
+			"disallowed_policies_glob": "disallowed_policies_glob",
+			"orphan":                   "orphan",
+			"token_period":             "token_period",
+			"token_explicit_max_ttl":   "token_explicit_max_ttl",
+			"path_suffix":              "path_suffix",
+			"renewable":                "renewable",
+			"token_bound_cidrs":        "token_bound_cidrs",
+			"token_type":               "token_type",
 		}
 
 		for stateAttr, apiAttr := range attrs {
@@ -281,7 +293,9 @@ func testAccTokenAuthBackendRoleConfigUpdate(role string) string {
 resource "vault_token_auth_backend_role" "role" {
   role_name = "%s"
   allowed_policies = ["dev", "test"]
+  allowed_policies_glob = ["dev/*", "test/*"]
   disallowed_policies = ["default"]
+  disallowed_policies_glob = ["def*"]
   orphan = true
   token_period = "86400"
   renewable = false
