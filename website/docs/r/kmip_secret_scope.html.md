@@ -16,14 +16,14 @@ for more information.
 
 ```hcl
 resource "vault_kmip_secret_backend" "default" {
-  path                        = "kmip"
-  description                 = "Vault KMIP backend"
+  path         = "kmip"
+  description  = "Vault KMIP backend"
 }
 
-resource "vault_kmip_secret_scope" "test" {
-  path                        = vault_kmip_secret_backend.default.path
-  scope                       = "test"
-  force                       = true
+resource "vault_kmip_secret_scope" "dev" {
+  path  = vault_kmip_secret_backend.default.path
+  scope = "dev"
+  force = true
 }
 ```
 
@@ -48,5 +48,5 @@ No additional attributes are exported by this resource.
 KMIP Secret scope can be imported using the `path`, e.g.
 
 ```
-$ terraform import vault_kmip_secret_scope.test test
+$ terraform import vault_kmip_secret_scope.dev kmip
 ```

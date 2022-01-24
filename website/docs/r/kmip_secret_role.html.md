@@ -16,27 +16,27 @@ for more information.
 
 ```hcl
 resource "vault_kmip_secret_backend" "default" {
-  path                        = "kmip"
-  description                 = "Vault KMIP backend"
+  path        = "kmip"
+  description = "Vault KMIP backend"
 }
 
-resource "vault_kmip_secret_scope" "scope" {
-  path                        = vault_kmip_secret_backend.default.path
-  scope                       = "scope"
-  force                       = true
+resource "vault_kmip_secret_scope" "dev" {
+  path  = vault_kmip_secret_backend.default.path
+  scope = "dev"
+  force = true
 }
 
-resource "vault_kmip_secret_role" "test" {
-  path = vault_kmip_secret_scope.scope.path
-  scope = "scope"
-  role = "test"
-  tls_client_key_type = "ec"
-  tls_client_key_bits = 256
-  operation_activate = true
-  operation_get = true
+resource "vault_kmip_secret_role" "admin" {
+  path                     = vault_kmip_secret_scope.dev.path
+  scope                    = vault_kmip_secret_scope.dev.scope
+  role                     = "admin"
+  tls_client_key_type      = "ec"
+  tls_client_key_bits      = 256
+  operation_activate       = true
+  operation_get            = true
   operation_get_attributes = true
-  operation_create = true
-  operation_destroy = true
+  operation_create         = true
+  operation_destroy        = true
 }
 ```
 
@@ -95,5 +95,5 @@ No additional attributes are exported by this resource.
 KMIP Secret role can be imported using the `path`, e.g.
 
 ```
-$ terraform import vault_kmip_secret_role.test test
+$ terraform import vault_kmip_secret_role.admin kmip
 ```

@@ -65,5 +65,5 @@ No additional attributes are exported by this resource.
 KMIP Secret backend can be imported using the `path`, e.g.
 
 ```
-$ terraform import vault_kmip_secret_backend.kmip kmip
+$ terraform import vault_kmip_secret_backend.default kmip
 ```
