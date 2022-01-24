@@ -35,7 +35,7 @@ The following arguments are supported:
 
 * `allowed_policies` (Optional) List of allowed policies for given role.
 
-* `allowed_policies_glob` (Optional) List of allowed policies with glob match for given role.
+* `allowed_policies_glob` (Optional) Set of allowed policies with glob match for given role.
 
 * `disallowed_policies` (Optional) List of disallowed policies for given role.
 
