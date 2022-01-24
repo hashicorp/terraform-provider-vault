@@ -701,6 +701,10 @@ var (
 			Resource:      kmipSecretScopeResource(),
 			PathInventory: []string{"/kmip/scope/{scope}"},
 		},
+		"vault_kmip_secret_role": {
+			Resource:      kmipSecretRoleResource(),
+			PathInventory: []string{"/kmip/scope/{scope}/role/{role}"},
+		},
 	}
 )
 
