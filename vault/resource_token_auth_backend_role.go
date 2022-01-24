@@ -69,7 +69,7 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 			DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
-			Description: "List of disallowed policies with glob match for given role.",
+			Description: "Set of disallowed policies with glob match for given role.",
 		},
 		"orphan": {
 			Type:        schema.TypeBool,
