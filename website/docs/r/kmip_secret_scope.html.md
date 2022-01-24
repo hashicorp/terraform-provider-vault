@@ -1,9 +1,9 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_kmip_secret_backend resource"
-sidebar_current: "docs-vault-resource-kmip-secret-backend"
+page_title: "Vault: vault_kmip_secret_scope resource"
+sidebar_current: "docs-vault-resource-kmip-secret-scope"
 description: |-
-Provision KMIP Secret backends in Vault.
+Provision KMIP Secret scopes in Vault.
 ---
 
 # vault\_kmip\_secret\_scope

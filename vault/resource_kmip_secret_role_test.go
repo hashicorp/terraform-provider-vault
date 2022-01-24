@@ -100,8 +100,6 @@ resource "vault_kmip_secret_role" "test" {
     operation_get = true
     operation_get_attributes = true
 }
-
-
 `, path)
 }
 
@@ -130,7 +128,5 @@ resource "vault_kmip_secret_role" "test" {
 	operation_create = true
 	operation_destroy = true
 }
-
-
 `, path)
 }
