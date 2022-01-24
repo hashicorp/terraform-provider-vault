@@ -39,7 +39,7 @@ The following arguments are supported:
 
 * `disallowed_policies` (Optional) List of disallowed policies for given role.
 
-* `disallowed_policies_glob` (Optional) List of disallowed policies with glob match for given role.
+* `disallowed_policies_glob` (Optional) Set of disallowed policies with glob match for given role.
 
 * `orphan` (Optional) If true, tokens created against this policy will be orphan tokens.
 
