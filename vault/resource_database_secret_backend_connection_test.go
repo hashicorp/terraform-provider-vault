@@ -325,7 +325,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
 
-	// should match dbEngineInfo.getPluginName()'s default return value
+	// should match dbEngine.getPluginName()'s default return value
 	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendMSSQL)
 
 	resource.Test(t, resource.TestCase{
@@ -1264,7 +1264,7 @@ func MaybeSkipDBTests(t *testing.T, engine string) {
 	testutil.SkipTestEnvSet(t, envVars...)
 }
 
-func Test_dbEngineInfo_getPluginName(t *testing.T) {
+func Test_dbEngine_getPluginName(t *testing.T) {
 	type fields struct {
 		name string
 	}
@@ -1318,7 +1318,7 @@ func Test_dbEngineInfo_getPluginName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			i := &dbEngineInfo{
+			i := &dbEngine{
 				name: tt.fields.name,
 			}
 			if got := i.getPluginName(tt.args.d); got != tt.want {
@@ -1328,14 +1328,14 @@ func Test_dbEngineInfo_getPluginName(t *testing.T) {
 	}
 }
 
-func Test_getDBEngineInfo(t *testing.T) {
+func Test_getDBEngine(t *testing.T) {
 	type args struct {
 		d *schema.ResourceData
 	}
 	tests := []struct {
 		name        string
 		args        args
-		want        *dbEngineInfo
+		want        *dbEngine
 		wantErr     bool
 		expectedErr error
 	}{
@@ -1361,7 +1361,7 @@ func Test_getDBEngineInfo(t *testing.T) {
 						},
 					}),
 			},
-			want: &dbEngineInfo{
+			want: &dbEngine{
 				name: dbBackendMSSQL,
 			},
 			wantErr: false,
@@ -1394,18 +1394,18 @@ func Test_getDBEngineInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getDBEngineInfo(tt.args.d)
+			got, err := getDBEngine(tt.args.d)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("getDBEngineInfo() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("getDBEngine() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			if tt.wantErr && tt.expectedErr != nil {
 				if !reflect.DeepEqual(err, tt.expectedErr) {
-					t.Fatalf("getDBEngineInfo() expected err %v, actual %v", tt.expectedErr, err)
+					t.Fatalf("getDBEngine() expected err %v, actual %v", tt.expectedErr, err)
 				}
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getDBEngineInfo() expected %v, actual %v", tt.want, got)
+				t.Errorf("getDBEngine() expected %v, actual %v", tt.want, got)
 			}
 		})
 	}

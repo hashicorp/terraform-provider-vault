@@ -45,9 +45,9 @@ var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
 
-	// map all dbBackends to their corresponding dbEngineInfo's
+	// map all dbBackends to their corresponding dbEngine's
 	// XXX: This map must be updated whenever a new database engine is added.
-	dbEngines = map[string]*dbEngineInfo{
+	dbEngines = map[string]*dbEngine{
 		dbBackendCassandra:     {name: dbBackendCassandra},
 		dbBackendCouchbase:     {name: dbBackendCouchbase},
 		dbBackendElasticSearch: {name: dbBackendElasticSearch},
@@ -75,11 +75,11 @@ func init() {
 	}
 }
 
-type dbEngineInfo struct {
+type dbEngine struct {
 	name string
 }
 
-func (i *dbEngineInfo) getPluginName(d *schema.ResourceData) string {
+func (i *dbEngine) getPluginName(d *schema.ResourceData) string {
 	if val, ok := d.GetOk("plugin_name"); ok {
 		return val.(string)
 	}
@@ -590,7 +590,7 @@ func mssqlConnectionStringResource() *schema.Resource {
 	return r
 }
 
-func getDBEngineInfo(d *schema.ResourceData) (*dbEngineInfo, error) {
+func getDBEngine(d *schema.ResourceData) (*dbEngine, error) {
 	for k, v := range dbEngines {
 		if i, ok := d.GetOk(k); ok && len(i.([]interface{})) > 0 {
 			return v, nil
@@ -601,16 +601,16 @@ func getDBEngineInfo(d *schema.ResourceData) (*dbEngineInfo, error) {
 }
 
 func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) {
-	dbInfo, err := getDBEngineInfo(d)
+	db, err := getDBEngine(d)
 	if err != nil {
 		return nil, err
 	}
 
 	data := map[string]interface{}{
-		"plugin_name": dbInfo.getPluginName(d),
+		"plugin_name": db.getPluginName(d),
 	}
 
-	switch dbInfo.name {
+	switch db.name {
 	case dbBackendCassandra:
 		if v, ok := d.GetOk("cassandra.0.hosts"); ok {
 			log.Printf("[DEBUG] Cassandra hosts: %v", v.([]interface{}))
@@ -1120,7 +1120,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 
 	path := d.Id()
 
-	dbInfo, err := getDBEngineInfo(d)
+	db, err := getDBEngine(d)
 	if err != nil {
 		return err
 	}
@@ -1147,7 +1147,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		return nil
 	}
 
-	switch dbInfo.name {
+	switch db.name {
 	case dbBackendCassandra:
 		details := resp.Data["connection_details"]
 		data, ok := details.(map[string]interface{})
