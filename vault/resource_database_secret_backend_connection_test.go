@@ -984,6 +984,7 @@ resource "vault_database_secret_backend_connection" "test" {
 %s
 }
 `, path, pluginName, name, fmt.Sprintf(config, connURL))
+
 	return result
 }
 
