@@ -2,15 +2,18 @@ package vault
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
@@ -18,6 +21,10 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
+
+// TODO: add support for automating tests for plugin_name
+// Currently we have to configure the Vault server with a plugin_directory,
+// copy/build a db plugin and install it with a unique name, then register it in vault.
 
 func TestAccDatabaseSecretBackendConnection_import(t *testing.T) {
 	MaybeSkipDBTests(t, dbBackendPostgres)
@@ -317,15 +324,20 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
+
+	// should match dbEngineInfo.getPluginName()'s default return value
+	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendMSSQL)
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, connURL, false),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, connURL, pluginName, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "plugin_name", pluginName),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.0", "dev"),
@@ -341,9 +353,10 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, connURL, true),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, connURL, pluginName, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "plugin_name", pluginName),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.0", "dev"),
@@ -941,7 +954,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, connURL)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path, connURL string, containedDB bool) string {
+func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path, connURL, pluginName string, containedDB bool) string {
 	var config string
 	if containedDB {
 		config = `
@@ -956,7 +969,7 @@ func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path, connURL stri
   }`
 	}
 
-	return fmt.Sprintf(`
+	result := fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
   type = "database"
@@ -964,12 +977,14 @@ resource "vault_mount" "db" {
 
 resource "vault_database_secret_backend_connection" "test" {
   backend = vault_mount.db.path
+  plugin_name = "%s"
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
 %s
 }
-`, path, name, fmt.Sprintf(config, connURL))
+`, path, pluginName, name, fmt.Sprintf(config, connURL))
+	return result
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_mysql(name, path, connURL, password string) string {
@@ -1246,4 +1261,151 @@ func MaybeSkipDBTests(t *testing.T, engine string) {
 		}
 	}
 	testutil.SkipTestEnvSet(t, envVars...)
+}
+
+func Test_dbEngineInfo_getPluginName(t *testing.T) {
+	type fields struct {
+		name string
+	}
+	type args struct {
+		d *schema.ResourceData
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   string
+	}{
+		{
+			name: "default",
+			fields: fields{
+				name: "foo",
+			},
+			args: args{
+				schema.TestResourceDataRaw(
+					t,
+					map[string]*schema.Schema{
+						"plugin_name": {
+							Type:     schema.TypeString,
+							Required: false,
+						},
+					},
+					map[string]interface{}{}),
+			},
+			want: "foo-database-plugin",
+		},
+		{
+			name: "set",
+			fields: fields{
+				name: "foo",
+			},
+			args: args{
+				schema.TestResourceDataRaw(
+					t,
+					map[string]*schema.Schema{
+						"plugin_name": {
+							Type:     schema.TypeString,
+							Required: false,
+						},
+					},
+					map[string]interface{}{
+						"plugin_name": "baz-qux",
+					}),
+			},
+			want: "baz-qux",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			i := &dbEngineInfo{
+				name: tt.fields.name,
+			}
+			if got := i.getPluginName(tt.args.d); got != tt.want {
+				t.Errorf("getPluginName() expected %v, actual %v", tt.want, got)
+			}
+		})
+	}
+}
+
+func Test_getDBEngineInfo(t *testing.T) {
+	type args struct {
+		d *schema.ResourceData
+	}
+	tests := []struct {
+		name        string
+		args        args
+		want        *dbEngineInfo
+		wantErr     bool
+		expectedErr error
+	}{
+		{
+			name: "basic",
+			args: args{
+				schema.TestResourceDataRaw(
+					t,
+					map[string]*schema.Schema{
+						"mssql": {
+							Type:        schema.TypeList,
+							Optional:    true,
+							Description: "Connection parameters for the mssql-database-plugin plugin.",
+							Elem:        mssqlConnectionStringResource(),
+							MaxItems:    1,
+						},
+					},
+					map[string]interface{}{
+						"mssql": []interface{}{
+							map[string]interface{}{
+								"connection_url": "foo",
+							},
+						},
+					}),
+			},
+			want: &dbEngineInfo{
+				name: dbBackendMSSQL,
+			},
+			wantErr: false,
+		},
+		{
+			name: "not-found",
+			args: args{
+				schema.TestResourceDataRaw(
+					t,
+					map[string]*schema.Schema{
+						"unknown": {
+							Type:        schema.TypeList,
+							Optional:    true,
+							Description: "Connection parameters for the mssql-database-plugin plugin.",
+							Elem:        mssqlConnectionStringResource(),
+							MaxItems:    1,
+						},
+					},
+					map[string]interface{}{
+						"mssql": []interface{}{
+							map[string]interface{}{
+								"connection_url": "foo",
+							},
+						},
+					}),
+			},
+			wantErr:     true,
+			expectedErr: errors.New("no supported database engines configured"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getDBEngineInfo(tt.args.d)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getDBEngineInfo() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.wantErr && tt.expectedErr != nil {
+				if !reflect.DeepEqual(err, tt.expectedErr) {
+					t.Fatalf("getDBEngineInfo() expected err %v, actual %v", tt.expectedErr, err)
+				}
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getDBEngineInfo() expected %v, actual %v", tt.want, got)
+			}
+		})
+	}
 }
