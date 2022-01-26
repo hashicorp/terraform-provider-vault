@@ -20,6 +20,7 @@ import (
 type connectionStringConfig struct {
 	excludeUsernameTemplate bool
 	includeUserPass         bool
+	includeDisableEscaping  bool
 }
 
 const (
@@ -387,6 +388,8 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description: "Connection parameters for the hana-database-plugin plugin.",
 				Elem: connectionStringResource(&connectionStringConfig{
 					excludeUsernameTemplate: true,
+					includeDisableEscaping:  true,
+					includeUserPass:         true,
 				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbBackendHana, dbBackendTypes),
@@ -435,10 +438,13 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			},
 
 			"postgresql": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the postgresql-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the postgresql-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeDisableEscaping: true,
+					includeUserPass:        true,
+				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbBackendPostgres, dbBackendTypes),
 			},
@@ -453,10 +459,13 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			},
 
 			"redshift": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the redshift-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{includeUserPass: true}),
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the redshift-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass:        true,
+					includeDisableEscaping: true,
+				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbBackendRedshift, dbBackendTypes),
 			},
@@ -532,6 +541,14 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 		}
 	}
 
+	if config.includeDisableEscaping {
+		res.Schema["disable_escaping"] = &schema.Schema{
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "If set, disables escaping special characters for username and password",
+		}
+	}
+
 	return res
 }
 
@@ -552,11 +569,19 @@ func mysqlConnectionStringResource() *schema.Resource {
 }
 
 func mssqlConnectionStringResource() *schema.Resource {
-	r := connectionStringResource(&connectionStringConfig{})
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass: true,
+	})
 	r.Schema["contained_db"] = &schema.Schema{
 		Type:        schema.TypeBool,
 		Optional:    true,
 		Description: "Set to true when the target is a Contained Database, e.g. AzureSQL.",
+	}
+
+	r.Schema["disable_escaping"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "If set, disables escaping special characters for username and password.",
 	}
 	return r
 }
@@ -654,7 +679,7 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case "influxdb-database-plugin":
 		setInfluxDBDatabaseConnectionData(d, "influxdb.0.", data)
 	case "hana-database-plugin":
-		setDatabaseConnectionData(d, "hana.0.", data)
+		setDisableEscapingConnectionData(d, "hana.0.", data)
 	case "mongodb-database-plugin":
 		setDatabaseConnectionData(d, "mongodb.0.", data)
 	case "mongodbatlas-database-plugin":
@@ -680,7 +705,7 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case "oracle-database-plugin":
 		setDatabaseConnectionData(d, "oracle.0.", data)
 	case "postgresql-database-plugin":
-		setDatabaseConnectionData(d, "postgresql.0.", data)
+		setDisableEscapingConnectionData(d, "postgresql.0.", data)
 	case "elasticsearch-database-plugin":
 		setElasticsearchDatabaseConnectionData(d, "elasticsearch.0.", data)
 	case "snowflake-database-plugin":
@@ -756,7 +781,36 @@ func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 		}
 		result[0]["contained_db"] = containedDB
 	}
+	if v, ok := details["disable_escaping"]; ok {
+		result[0]["disable_escaping"] = v.(bool)
+	}
+	if v, ok := details["username"]; ok {
+		result[0]["username"] = v.(string)
+	}
+	if v, ok := details["password"]; ok {
+		result[0]["password"] = v.(string)
+	}
 	return result, nil
+}
+
+func getDisableEscapingConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+	result := getConnectionDetailsFromResponse(d, prefix, resp)
+	if result == nil {
+		return nil
+	}
+
+	details := resp.Data["connection_details"].(map[string]interface{})
+	if v, ok := details["disable_escaping"]; ok {
+		result[0]["disable_escaping"] = v.(bool)
+	}
+	if v, ok := details["username"]; ok {
+		result[0]["username"] = v.(string)
+	}
+	if v, ok := details["password"]; ok {
+		result[0]["password"] = v.(string)
+	}
+
+	return result
 }
 
 func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
@@ -958,6 +1012,19 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	}
 }
 
+func setDisableEscapingConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionData(d, prefix, data)
+	if v, ok := d.GetOkExists(prefix + "disable_escaping"); ok {
+		data["disable_escaping"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "password"); ok {
+		data["password"] = v.(string)
+	}
+}
+
 func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionData(d, prefix, data)
 	if v, ok := d.GetOk(prefix + "contained_db"); ok {
@@ -966,6 +1033,15 @@ func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 		//  way the mssql plugin handles this field. We can probably revert this once vault-1.9.3
 		//  is released.
 		data["contained_db"] = strconv.FormatBool(v.(bool))
+	}
+	if v, ok := d.GetOkExists(prefix + "disable_escaping"); ok {
+		data["disable_escaping"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "password"); ok {
+		data["password"] = v.(string)
 	}
 }
 
@@ -1064,6 +1140,9 @@ func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string
 	}
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "disable_escaping"); ok {
+		data["disable_escaping"] = v.(bool)
 	}
 }
 
@@ -1204,7 +1283,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case "influxdb-database-plugin":
 		d.Set("influxdb", getInfluxDBConnectionDetailsFromResponse(d, "influxdb.0.", resp))
 	case "hana-database-plugin":
-		d.Set("hana", getConnectionDetailsFromResponse(d, "hana.0.", resp))
+		d.Set("hana", getDisableEscapingConnectionDetailsFromResponse(d, "hana.0.", resp))
 	case "mongodb-database-plugin":
 		d.Set("mongodb", getConnectionDetailsFromResponse(d, "mongodb.0.", resp))
 	case "mongodbatlas-database-plugin":
@@ -1241,11 +1320,13 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case "oracle-database-plugin":
 		d.Set("oracle", getConnectionDetailsFromResponse(d, "oracle.0.", resp))
 	case "postgresql-database-plugin":
-		d.Set("postgresql", getConnectionDetailsFromResponse(d, "postgresql.0.", resp))
+		d.Set("postgresql", getDisableEscapingConnectionDetailsFromResponse(d, "postgresql.0.", resp))
 	case "elasticsearch-database-plugin":
 		d.Set("elasticsearch", getElasticsearchConnectionDetailsFromResponse(d, "elasticsearch.0.", resp))
 	case "snowflake-database-plugin":
 		d.Set("snowflake", getSnowflakeConnectionDetailsFromResponse(d, "snowflake.0.", resp))
+	case "redshift-database-plugin":
+		d.Set("snowflake", getDisableEscapingConnectionDetailsFromResponse(d, "redshift.0.", resp))
 	}
 
 	if err != nil {

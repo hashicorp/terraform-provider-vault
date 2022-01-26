@@ -312,6 +312,12 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 	MaybeSkipDBTests(t, dbBackendMSSQL)
 
 	cleanupFunc, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	username := os.Getenv("MSSQL_USERNAME")
+	password := os.Getenv("MSSQL_PASSWORD")
+
+	if username == "" || password == "" {
+		t.Fatal("both MSSQL_USERNAME and MSSQL_PASSWORD must be set")
+	}
 
 	t.Cleanup(cleanupFunc)
 
@@ -323,7 +329,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, connURL, false),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, connURL, username, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -337,11 +343,13 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.disable_escaping", "true"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.username", username),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.contained_db", "false"),
 				),
 			},
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, connURL, true),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, connURL, username, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -355,6 +363,8 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.disable_escaping", "true"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.username", username),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.contained_db", "true"),
 				),
 			},
@@ -941,18 +951,22 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, connURL)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path, connURL string, containedDB bool) string {
+func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path, connURL, username string, containedDB bool) string {
 	var config string
 	if containedDB {
 		config = `
   mssql {
-    connection_url = "%s"
-    contained_db   = true
+    connection_url   = "%s"
+    username         = "%s"
+    disable_escaping = true
+    contained_db     = true
   }`
 	} else {
 		config = `
   mssql {
-    connection_url = "%s"
+	connection_url   = "%s"
+    username         = "%s"
+    disable_escaping = true
   }`
 	}
 
@@ -969,7 +983,7 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
 %s
 }
-`, path, name, fmt.Sprintf(config, connURL))
+`, path, name, fmt.Sprintf(config, connURL, username))
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_mysql(name, path, connURL, password string) string {
