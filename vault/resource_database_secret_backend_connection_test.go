@@ -1296,6 +1296,24 @@ func Test_dbEngine_getPluginName(t *testing.T) {
 			want: "foo-database-plugin",
 		},
 		{
+			name: "default-underscored",
+			fields: fields{
+				name: "foo_qux_baz",
+			},
+			args: args{
+				schema.TestResourceDataRaw(
+					t,
+					map[string]*schema.Schema{
+						"plugin_name": {
+							Type:     schema.TypeString,
+							Required: false,
+						},
+					},
+					map[string]interface{}{}),
+			},
+			want: "foo-qux-baz-database-plugin",
+		},
+		{
 			name: "set",
 			fields: fields{
 				name: "foo",
