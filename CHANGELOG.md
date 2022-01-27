@@ -1,4 +1,7 @@
 ## 3.3.0 (Unreleased)
+FEATURES:
+* **New Resource**: `resource/kv_v2_config`: Add support to configure kv-v2 secret mount ([#1311](https://github.com/hashicorp/terraform-provider-vault/pull/1311))
+
 BUGS:
 * `resource/kubernetes_auth_backend_config`: Ensure `disable_iss_validation` is honored in all cases ([#1315](https://github.com/hashicorp/terraform-provider-vault/pull/1315))
 
