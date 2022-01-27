@@ -65,15 +65,7 @@ var (
 		dbBackendSnowflake:     {name: dbBackendSnowflake},
 		dbBackendRedshift:      {name: dbBackendRedshift},
 	}
-	// dbEngines key values, initialized in init()
-	dbBackendTypes []string
 )
-
-func init() {
-	for k := range dbEngines {
-		dbBackendTypes = append(dbBackendTypes, k)
-	}
-}
 
 type dbEngine struct {
 	name string
@@ -88,6 +80,11 @@ func (i *dbEngine) getPluginName(d *schema.ResourceData) string {
 }
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
+	dbBackendTypes := []string{}
+	for k := range dbEngines {
+		dbBackendTypes = append(dbBackendTypes, k)
+	}
+
 	return &schema.Resource{
 		Create: databaseSecretBackendConnectionCreate,
 		Read:   databaseSecretBackendConnectionRead,

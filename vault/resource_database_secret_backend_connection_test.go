@@ -1255,11 +1255,8 @@ func MaybeSkipDBTests(t *testing.T, engine string) {
 	testutil.SkipTestAcc(t)
 
 	envVars := []string{"SKIP_DB_TESTS"}
-	for _, e := range dbBackendTypes {
-		if e == engine {
-			envVars = append(envVars, envVars[0]+"_"+strings.ToUpper(engine))
-			break
-		}
+	if _, ok := dbEngines[engine]; ok {
+		envVars = append(envVars, envVars[0]+"_"+strings.ToUpper(engine))
 	}
 	testutil.SkipTestEnvSet(t, envVars...)
 }
