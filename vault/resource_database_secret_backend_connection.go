@@ -787,9 +787,10 @@ func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 	if v, ok := details["username"]; ok {
 		result[0]["username"] = v.(string)
 	}
-	if v, ok := details["password"]; ok {
+	if v, ok := d.GetOk(prefix + "password"); ok {
 		result[0]["password"] = v.(string)
 	}
+
 	return result, nil
 }
 
@@ -806,7 +807,7 @@ func getDisableEscapingConnectionDetailsFromResponse(d *schema.ResourceData, pre
 	if v, ok := details["username"]; ok {
 		result[0]["username"] = v.(string)
 	}
-	if v, ok := details["password"]; ok {
+	if v, ok := d.GetOk(prefix + "password"); ok {
 		result[0]["password"] = v.(string)
 	}
 
