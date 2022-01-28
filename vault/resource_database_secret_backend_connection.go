@@ -1017,10 +1017,10 @@ func setDisableEscapingConnectionData(d *schema.ResourceData, prefix string, dat
 	if v, ok := d.GetOkExists(prefix + "disable_escaping"); ok {
 		data["disable_escaping"] = v.(bool)
 	}
-	if v, ok := d.GetOkExists(prefix + "username"); ok {
+	if v, ok := d.GetOk(prefix + "username"); ok {
 		data["username"] = v.(string)
 	}
-	if v, ok := d.GetOkExists(prefix + "password"); ok {
+	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
 	}
 }
@@ -1037,10 +1037,10 @@ func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 	if v, ok := d.GetOkExists(prefix + "disable_escaping"); ok {
 		data["disable_escaping"] = v.(bool)
 	}
-	if v, ok := d.GetOkExists(prefix + "username"); ok {
+	if v, ok := d.GetOk(prefix + "username"); ok {
 		data["username"] = v.(string)
 	}
-	if v, ok := d.GetOkExists(prefix + "password"); ok {
+	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
 	}
 }
@@ -1325,8 +1325,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		d.Set("elasticsearch", getElasticsearchConnectionDetailsFromResponse(d, "elasticsearch.0.", resp))
 	case "snowflake-database-plugin":
 		d.Set("snowflake", getSnowflakeConnectionDetailsFromResponse(d, "snowflake.0.", resp))
-	case "redshift-database-plugin":
-		d.Set("snowflake", getDisableEscapingConnectionDetailsFromResponse(d, "redshift.0.", resp))
+
 	}
 
 	if err != nil {

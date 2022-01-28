@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -18,6 +19,11 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
+
+type URLInfo struct {
+	parsedURL    *url.URL
+	templatedURL string
+}
 
 func TestAccDatabaseSecretBackendConnection_import(t *testing.T) {
 	MaybeSkipDBTests(t, dbBackendPostgres)
@@ -35,7 +41,7 @@ func TestAccDatabaseSecretBackendConnection_import(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, connURL, userTempl),
+				Config: testAccDatabaseSecretBackendConnectionConfig_import(name, backend, connURL, userTempl),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -312,11 +318,14 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 	MaybeSkipDBTests(t, dbBackendMSSQL)
 
 	cleanupFunc, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
-	username := os.Getenv("MSSQL_USERNAME")
-	password := os.Getenv("MSSQL_PASSWORD")
+	parsedURL, err := url.Parse(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if username == "" || password == "" {
-		t.Fatal("both MSSQL_USERNAME and MSSQL_PASSWORD must be set")
+	urlInfo := URLInfo{
+		parsedURL:    parsedURL,
+		templatedURL: fmt.Sprintf("%s://{{username}}:{{password}}@%s", parsedURL.Scheme, parsedURL.Host),
 	}
 
 	t.Cleanup(cleanupFunc)
@@ -329,7 +338,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, connURL, username, false),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, urlInfo, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -339,17 +348,17 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.#", "1"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.0", "FOOBAR"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "verify_connection", "true"),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.connection_url", connURL),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.connection_url", urlInfo.templatedURL),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.disable_escaping", "true"),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.username", username),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.username", parsedURL.User.Username()),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.contained_db", "false"),
 				),
 			},
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, connURL, username, true),
+				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, urlInfo, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -359,12 +368,12 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.#", "1"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.0", "FOOBAR"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "verify_connection", "true"),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.connection_url", connURL),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.connection_url", urlInfo.templatedURL),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.disable_escaping", "true"),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.username", username),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.username", parsedURL.User.Username()),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "mssql.0.contained_db", "true"),
 				),
 			},
@@ -642,6 +651,15 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
 	connURL := values[0]
+	parsedURL, err := url.Parse(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	urlInfo := URLInfo{
+		parsedURL:    parsedURL,
+		templatedURL: fmt.Sprintf("%s://{{username}}:{{password}}@%s?sslmode=disable", parsedURL.Scheme, parsedURL.Host),
+	}
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
@@ -652,7 +670,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, connURL, userTempl),
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, userTempl, urlInfo),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -662,10 +680,12 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.#", "1"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.0", "FOOBAR"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "verify_connection", "true"),
-					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "postgresql.0.connection_url", connURL),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "postgresql.0.connection_url", urlInfo.templatedURL),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "postgresql.0.max_open_connections", "2"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "postgresql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "postgresql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "postgresql.0.username", parsedURL.User.Username()),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "postgresql.0.disable_escaping", "true"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "postgresql.0.username_template", userTempl),
 				),
 			},
@@ -795,6 +815,27 @@ func testAccDatabaseSecretBackendConnectionCheckDestroy(s *terraform.State) erro
 		}
 	}
 	return nil
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_import(name, path, connURL, userTempl string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  postgresql {
+	  connection_url    = "%s"
+	  username_template = "%s"
+  }
+}
+`, path, name, connURL, userTempl)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_cassandra(name, path, host, username, password string) string {
@@ -951,13 +992,17 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, connURL)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path, connURL, username string, containedDB bool) string {
+func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path string, urlInfo URLInfo, containedDB bool) string {
 	var config string
+	username := urlInfo.parsedURL.User.Username()
+	password, _ := urlInfo.parsedURL.User.Password()
+
 	if containedDB {
 		config = `
   mssql {
     connection_url   = "%s"
     username         = "%s"
+    password		 = "%s"
     disable_escaping = true
     contained_db     = true
   }`
@@ -966,6 +1011,7 @@ func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path, connURL, use
   mssql {
 	connection_url   = "%s"
     username         = "%s"
+    password		 = "%s"
     disable_escaping = true
   }`
 	}
@@ -983,7 +1029,7 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
 %s
 }
-`, path, name, fmt.Sprintf(config, connURL, username))
+`, path, name, fmt.Sprintf(config, urlInfo.templatedURL, username, password))
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_mysql(name, path, connURL, password string) string {
@@ -1150,7 +1196,9 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, connURL)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_postgresql(name, path, connURL, userTempl string) string {
+func testAccDatabaseSecretBackendConnectionConfig_postgresql(name, path, userTempl string, urlInfo URLInfo) string {
+	username := urlInfo.parsedURL.User.Username()
+	password, _ := urlInfo.parsedURL.User.Password()
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1164,11 +1212,14 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
 
   postgresql {
-	  connection_url = "%s"
+	  connection_url    = "%s"
+      username          = "%s"
+      password          = "%s"
 	  username_template = "%s"
+      disable_escaping  = true
   }
 }
-`, path, name, connURL, userTempl)
+`, path, name, urlInfo.templatedURL, username, password, userTempl)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_snowflake(name, path, url, username, password, userTempl string) string {
