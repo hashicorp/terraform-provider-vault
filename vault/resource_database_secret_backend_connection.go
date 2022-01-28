@@ -122,7 +122,10 @@ type dbEngine struct {
 	defaultPluginName string
 }
 
-func (i *dbEngine) getPluginName(d *schema.ResourceData) (string, error) {
+// GetPluginName from the schema.ResourceData if it is configured,
+// otherwise return the default plugin name.
+// Return an error if no plugin name can be found.
+func (i *dbEngine) GetPluginName(d *schema.ResourceData) (string, error) {
 	if val, ok := d.GetOk("plugin_name"); ok {
 		return val.(string), nil
 	}
@@ -136,6 +139,16 @@ func (i *dbEngine) getPluginName(d *schema.ResourceData) (string, error) {
 
 func (i *dbEngine) String() string {
 	return i.name
+}
+
+// Name of the Vault DB secrets engine.
+func (i *dbEngine) Name() string {
+	return i.name
+}
+
+// DefaultPluginName for this dbEngine.
+func (i *dbEngine) DefaultPluginName() string {
+	return i.defaultPluginName
 }
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
@@ -221,7 +234,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineElasticSearch.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineElasticSearch.Name(), dbEngineTypes),
 			},
 
 			dbEngineCassandra.name: {
@@ -296,7 +309,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineCassandra.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineCassandra.Name(), dbEngineTypes),
 			},
 
 			dbEngineCouchbase.name: {
@@ -355,7 +368,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineCouchbase.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineCouchbase.Name(), dbEngineTypes),
 			},
 
 			dbEngineInfluxDB.name: {
@@ -426,7 +439,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineInfluxDB.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineInfluxDB.Name(), dbEngineTypes),
 			},
 
 			dbEngineMongoDB.name: {
@@ -435,7 +448,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mongodb-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDB.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDB.Name(), dbEngineTypes),
 			},
 
 			dbEngineMongoDBAtlas.name: {
@@ -463,7 +476,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDBAtlas.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDBAtlas.Name(), dbEngineTypes),
 			},
 
 			dbEngineHana.name: {
@@ -474,7 +487,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					excludeUsernameTemplate: true,
 				}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineHana.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineHana.Name(), dbEngineTypes),
 			},
 
 			dbEngineMSSQL.name: {
@@ -483,7 +496,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mssql-database-plugin plugin.",
 				Elem:          mssqlConnectionStringResource(),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineMSSQL.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMSSQL.Name(), dbEngineTypes),
 			},
 
 			dbEngineMySQL.name: {
@@ -492,7 +505,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mysql-database-plugin plugin.",
 				Elem:          mysqlConnectionStringResource(),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQL.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQL.Name(), dbEngineTypes),
 			},
 			dbEngineMySQLRDS.name: {
 				Type:          schema.TypeList,
@@ -500,7 +513,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mysql-rds-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLRDS.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLRDS.Name(), dbEngineTypes),
 			},
 			dbEngineMySQLAurora.name: {
 				Type:          schema.TypeList,
@@ -508,7 +521,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mysql-aurora-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLAurora.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLAurora.Name(), dbEngineTypes),
 			},
 			dbEngineMySQLLegacy.name: {
 				Type:          schema.TypeList,
@@ -516,7 +529,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mysql-legacy-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLLegacy.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLLegacy.Name(), dbEngineTypes),
 			},
 
 			dbEnginePostgres.name: {
@@ -525,7 +538,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the postgresql-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.Name(), dbEngineTypes),
 			},
 
 			dbEngineOracle.name: {
@@ -534,7 +547,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the oracle-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineOracle.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineOracle.Name(), dbEngineTypes),
 			},
 
 			dbEngineRedshift.name: {
@@ -543,7 +556,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the redshift-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{includeUserPass: true}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineRedshift.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineRedshift.Name(), dbEngineTypes),
 			},
 
 			dbEngineSnowflake.name: {
@@ -552,7 +565,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the snowflake-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{includeUserPass: true}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbEngineSnowflake.name, dbEngineTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineSnowflake.Name(), dbEngineTypes),
 			},
 
 			"backend": {
@@ -662,7 +675,7 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		return nil, err
 	}
 
-	pluginName, err := db.getPluginName(d)
+	pluginName, err := db.GetPluginName(d)
 	if err != nil {
 		return nil, err
 	}
