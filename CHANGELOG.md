@@ -1,6 +1,7 @@
 ## 3.3.0 (Unreleased)
 BUGS:
 * `resource/kubernetes_auth_backend_config`: Ensure `disable_iss_validation` is honored in all cases ([#1315](https://github.com/hashicorp/terraform-provider-vault/pull/1315))
+* `resource/database_secret_backend_connection`: Add error handling for unrecognized plugins on read (()[])
 
 IMPROVEMENTS:
 * `resource/token_auth_backend_role`: Add `allowed_policies_glob` and `disallowed_polices_glob` ([#1316](https://github.com/hashicorp/terraform-provider-vault/pull/1316))

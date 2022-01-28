@@ -1246,6 +1246,10 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		d.Set("elasticsearch", getElasticsearchConnectionDetailsFromResponse(d, "elasticsearch.0.", resp))
 	case "snowflake-database-plugin":
 		d.Set("snowflake", getSnowflakeConnectionDetailsFromResponse(d, "snowflake.0.", resp))
+	case "redshift-database-plugin":
+		d.Set("redshift", getConnectionDetailsFromResponse(d, "redshift.0.", resp))
+	default:
+		return fmt.Errorf("unrecognized database plugin")
 	}
 
 	if err != nil {
