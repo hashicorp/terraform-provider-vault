@@ -8,21 +8,38 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+const (
+	fieldOperationActivate         = "operation_activate"
+	fieldOperationAddAttribute     = "operation_add_attribute"
+	fieldOperationAll              = "operation_all"
+	fieldOperationCreate           = "operation_create"
+	fieldOperationDestroy          = "operation_destroy"
+	fieldOperationDiscoverVersions = "operation_discover_versions"
+	fieldOperationGet              = "operation_get"
+	fieldOperationGetAttributeList = "operation_get_attribute_list"
+	fieldOperationGetAttributes    = "operation_get_attributes"
+	fieldOperationLocate           = "operation_locate"
+	fieldOperationNone             = "operation_none"
+	fieldOperationRegister         = "operation_register"
+	fieldOperationRekey            = "operation_rekey"
+	fieldOperationRevoke           = "operation_revoke"
+)
+
 var kmipRoleAPIBooleanFields = []string{
-	"operation_activate",
-	"operation_add_attribute",
-	"operation_all",
-	"operation_create",
-	"operation_destroy",
-	"operation_discover_versions",
-	"operation_get",
-	"operation_get_attribute_list",
-	"operation_get_attributes",
-	"operation_locate",
-	"operation_none",
-	"operation_register",
-	"operation_rekey",
-	"operation_revoke",
+	fieldOperationActivate,
+	fieldOperationAddAttribute,
+	fieldOperationAll,
+	fieldOperationCreate,
+	fieldOperationDestroy,
+	fieldOperationDiscoverVersions,
+	fieldOperationGet,
+	fieldOperationGetAttributeList,
+	fieldOperationGetAttributes,
+	fieldOperationLocate,
+	fieldOperationNone,
+	fieldOperationRegister,
+	fieldOperationRekey,
+	fieldOperationRevoke,
 }
 
 func kmipSecretRoleResource() *schema.Resource {
@@ -190,8 +207,14 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.SetId(path)
-	d.Set("scope", scope)
-	d.Set("role", role)
+
+	if err := d.Set("scope", scope); err != nil {
+		return err
+	}
+
+	if err := d.Set("role", role); err != nil {
+		return err
+	}
 
 	return kmipSecretRoleRead(d, meta)
 }
@@ -212,15 +235,21 @@ func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
 	if resp == nil {
 		log.Printf("[WARN] KMIP role not found, removing from state")
 		d.SetId("")
-		// TODO Confirm this behavior
-		d.Set("scope", "")
-		d.Set("role", "")
+
 		return fmt.Errorf("expected role at %s, no role found", rolePath)
 	}
 
-	d.Set("tls_client_key_bits", resp.Data["tls_client_key_bits"])
-	d.Set("tls_client_key_type", resp.Data["tls_client_key_type"])
-	d.Set("tls_client_ttl", resp.Data["tls_client_ttl"])
+	if err := d.Set("tls_client_key_bits", resp.Data["tls_client_key_bits"]); err != nil {
+		return err
+	}
+
+	if err := d.Set("tls_client_key_type", resp.Data["tls_client_key_type"]); err != nil {
+		return err
+	}
+
+	if err := d.Set("tls_client_ttl", resp.Data["tls_client_ttl"]); err != nil {
+		return err
+	}
 
 	for _, k := range kmipRoleAPIBooleanFields {
 		if err := d.Set(k, resp.Data[k]); err != nil {

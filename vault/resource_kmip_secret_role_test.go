@@ -66,6 +66,7 @@ func testAccKMIPSecretRoleCheckDestroy(s *terraform.State) error {
 		if rs.Type != "vault_kmip_secret_role" {
 			continue
 		}
+
 		for path, mount := range mounts {
 			path = strings.Trim(path, "/")
 			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
