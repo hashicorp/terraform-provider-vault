@@ -224,7 +224,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith(dbEngineElasticSearch.name, dbEngineTypes),
 			},
 
-			"cassandra": {
+			dbEngineCassandra.name: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Connection parameters for the cassandra-database-plugin plugin.",
@@ -299,7 +299,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith(dbEngineCassandra.name, dbEngineTypes),
 			},
 
-			"couchbase": {
+			dbEngineCouchbase.name: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Connection parameters for the couchbase-database-plugin plugin.",
@@ -358,7 +358,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith(dbEngineCouchbase.name, dbEngineTypes),
 			},
 
-			"influxdb": {
+			dbEngineInfluxDB.name: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Connection parameters for the influxdb-database-plugin plugin.",
@@ -429,7 +429,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith(dbEngineInfluxDB.name, dbEngineTypes),
 			},
 
-			"mongodb": {
+			dbEngineMongoDB.name: {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mongodb-database-plugin plugin.",
@@ -438,7 +438,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDB.name, dbEngineTypes),
 			},
 
-			"mongodbatlas": {
+			dbEngineMongoDBAtlas.name: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Connection parameters for the mongodbatlas-database-plugin plugin.",
@@ -466,7 +466,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDBAtlas.name, dbEngineTypes),
 			},
 
-			"hana": {
+			dbEngineHana.name: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Connection parameters for the hana-database-plugin plugin.",
@@ -477,7 +477,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith(dbEngineHana.name, dbEngineTypes),
 			},
 
-			"mssql": {
+			dbEngineMSSQL.name: {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mssql-database-plugin plugin.",
@@ -486,7 +486,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith(dbEngineMSSQL.name, dbEngineTypes),
 			},
 
-			"mysql": {
+			dbEngineMySQL.name: {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-database-plugin plugin.",
@@ -494,7 +494,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQL.name, dbEngineTypes),
 			},
-			"mysql_rds": {
+			dbEngineMySQLRDS.name: {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-rds-database-plugin plugin.",
@@ -502,7 +502,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLRDS.name, dbEngineTypes),
 			},
-			"mysql_aurora": {
+			dbEngineMySQLAurora.name: {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-aurora-database-plugin plugin.",
@@ -510,7 +510,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLAurora.name, dbEngineTypes),
 			},
-			"mysql_legacy": {
+			dbEngineMySQLLegacy.name: {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-legacy-database-plugin plugin.",
@@ -519,7 +519,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLLegacy.name, dbEngineTypes),
 			},
 
-			"postgresql": {
+			dbEnginePostgres.name: {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the postgresql-database-plugin plugin.",
@@ -528,7 +528,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.name, dbEngineTypes),
 			},
 
-			"oracle": {
+			dbEngineOracle.name: {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the oracle-database-plugin plugin.",
@@ -537,7 +537,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith(dbEngineOracle.name, dbEngineTypes),
 			},
 
-			"redshift": {
+			dbEngineRedshift.name: {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the redshift-database-plugin plugin.",
@@ -546,7 +546,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith(dbEngineRedshift.name, dbEngineTypes),
 			},
 
-			"snowflake": {
+			dbEngineSnowflake.name: {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the snowflake-database-plugin plugin.",
