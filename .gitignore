@@ -33,3 +33,6 @@ website/vendor
 # Binaries
 terraform-provider-vault
 /cmd/coverage/coverage
+
+# Scratch directory for miscellaneous files/examples/etc.
+scratch

@@ -4,6 +4,9 @@ FEATURES:
 BUGS:
 * `resource/kubernetes_auth_backend_config`: Ensure `disable_iss_validation` is honored in all cases ([#1315](https://github.com/hashicorp/terraform-provider-vault/pull/1315))
 
+IMPROVEMENTS:
+* `resource/token_auth_backend_role`: Add `allowed_policies_glob` and `disallowed_polices_glob` ([#1316](https://github.com/hashicorp/terraform-provider-vault/pull/1316))
+
 ## 3.2.1 (January 20, 2022)
 BUGS:
 * `resource/rabbitmq_secret_backend_role`: Add nil check when reading RabbitMQ role from Vault ([#1312](https://github.com/hashicorp/terraform-provider-vault/pull/1312))
