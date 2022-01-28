@@ -749,7 +749,7 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_redshift(name, backend, url),
+				Config: testAccDatabaseSecretBackendConnectionConfig_redshift(name, backend, url, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
@@ -761,6 +761,25 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "verify_connection", "true"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "redshift.0.connection_url", url),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "redshift.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "redshift.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "redshift.0.max_connection_lifetime", "0"),
+				),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_redshift(name, backend, url, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "name", name),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "backend", backend),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.#", "3"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "allowed_roles.2", "engineering"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.#", "2"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.0", "FOOBAR"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "root_rotation_statements.1", "BAZQUX"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "verify_connection", "true"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "redshift.0.connection_url", url),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "redshift.0.max_open_connections", "3"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "redshift.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "redshift.0.max_connection_lifetime", "0"),
 				),
@@ -1180,12 +1199,16 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, url, username, password, userTempl)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_redshift(name, path, connURL string) string {
-	return fmt.Sprintf(`
+func testAccDatabaseSecretBackendConnectionConfig_redshift(name, path, connURL string, isUpdate bool) string {
+	ret := fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
   type = "database"
 }
+`, path)
+
+	if !isUpdate {
+		ret += fmt.Sprintf(`
 resource "vault_database_secret_backend_connection" "test" {
   backend = "${vault_mount.db.path}"
   name = "%s"
@@ -1194,8 +1217,22 @@ resource "vault_database_secret_backend_connection" "test" {
   redshift {
 	  connection_url = "%s"
   }
-}
-`, path, name, connURL)
+}`, name, connURL)
+	} else {
+		ret += fmt.Sprintf(`
+resource "vault_database_secret_backend_connection" "test" {
+  backend = "${vault_mount.db.path}"
+  name = "%s"
+  allowed_roles = ["dev", "prod", "engineering"]
+  root_rotation_statements = ["FOOBAR", "BAZQUX"]
+  redshift {
+	  connection_url = "%s"
+      max_open_connections = 3
+  }
+}`, name, connURL)
+	}
+
+	return ret
 }
 
 func newMySQLConnection(t *testing.T, connURL string, username string, password string) *sql.DB {
