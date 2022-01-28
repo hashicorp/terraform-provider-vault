@@ -1249,7 +1249,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case "redshift-database-plugin":
 		d.Set("redshift", getConnectionDetailsFromResponse(d, "redshift.0.", resp))
 	default:
-		return fmt.Errorf("unrecognized database plugin")
+		return fmt.Errorf("unsupported database plugin: %s", resp.Data["plugin_name"].(string))
 	}
 
 	if err != nil {

@@ -1200,7 +1200,7 @@ resource "vault_database_secret_backend_connection" "test" {
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_redshift(name, path, connURL string, isUpdate bool) string {
-	ret := fmt.Sprintf(`
+	config := fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
   type = "database"
@@ -1208,9 +1208,9 @@ resource "vault_mount" "db" {
 `, path)
 
 	if !isUpdate {
-		ret += fmt.Sprintf(`
+		config += fmt.Sprintf(`
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
@@ -1219,9 +1219,9 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }`, name, connURL)
 	} else {
-		ret += fmt.Sprintf(`
+		config += fmt.Sprintf(`
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod", "engineering"]
   root_rotation_statements = ["FOOBAR", "BAZQUX"]
@@ -1232,7 +1232,7 @@ resource "vault_database_secret_backend_connection" "test" {
 }`, name, connURL)
 	}
 
-	return ret
+	return config
 }
 
 func newMySQLConnection(t *testing.T, connURL string, username string, password string) *sql.DB {
