@@ -29,15 +29,14 @@ const testDefaultDatabaseSecretBackendResource = "vault_database_secret_backend_
 // copy/build a db plugin and install it with a unique name, then register it in vault.
 
 func TestAccDatabaseSecretBackendConnection_import(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendPostgres)
+	MaybeSkipDBTests(t, dbEnginePostgres)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
 	connURL := values[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendPostgres)
+	pluginName := dbEnginePostgres.defaultPluginName
 	name := acctest.RandomWithPrefix("db")
 
 	userTempl := "{{.DisplayName}}"
@@ -73,7 +72,7 @@ func TestAccDatabaseSecretBackendConnection_import(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendCassandra)
+	MaybeSkipDBTests(t, dbEngineCassandra)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t, "CASSANDRA_HOST")
@@ -82,7 +81,7 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 	username := os.Getenv("CASSANDRA_USERNAME")
 	password := os.Getenv("CASSANDRA_PASSWORD")
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendCassandra)
+	pluginName := dbEngineCassandra.defaultPluginName
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -116,7 +115,7 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendCassandra)
+	MaybeSkipDBTests(t, dbEngineCassandra)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t, "CASSANDRA_HOST")
@@ -125,8 +124,7 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 	username := os.Getenv("CASSANDRA_USERNAME")
 	password := os.Getenv("CASSANDRA_PASSWORD")
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendCassandra)
+	pluginName := dbEngineCassandra.defaultPluginName
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -160,7 +158,7 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendCouchbase)
+	MaybeSkipDBTests(t, dbEngineCouchbase)
 
 	values := testutil.SkipTestEnvUnset(t, "COUCHBASE_HOST_1", "COUCHBASE_HOST_2", "COUCHBASE_USERNAME", "COUCHBASE_PASSWORD")
 	host1 := values[0]
@@ -168,8 +166,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 	username := values[2]
 	password := values[3]
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendCouchbase)
+	pluginName := dbEngineCouchbase.defaultPluginName
 	name := acctest.RandomWithPrefix("db")
 	resourceName := testDefaultDatabaseSecretBackendResource
 	resource.Test(t, resource.TestCase{
@@ -207,7 +204,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_influxdb(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendInfluxDB)
+	MaybeSkipDBTests(t, dbEngineInfluxDB)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t, "INFLUXDB_HOST")
@@ -216,8 +213,7 @@ func TestAccDatabaseSecretBackendConnection_influxdb(t *testing.T) {
 	username := os.Getenv("INFLUXDB_USERNAME")
 	password := os.Getenv("INFLUXDB_PASSWORD")
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendInfluxDB)
+	pluginName := dbEngineInfluxDB.defaultPluginName
 	name := acctest.RandomWithPrefix("db")
 	resourceName := testDefaultDatabaseSecretBackendResource
 	resource.Test(t, resource.TestCase{
@@ -250,7 +246,7 @@ func TestAccDatabaseSecretBackendConnection_influxdb(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendMongoDBAtlas)
+	MaybeSkipDBTests(t, dbEngineMongoDBAtlas)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t, "MONGODB_ATLAS_PUBLIC_KEY")
@@ -259,8 +255,7 @@ func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
 	privateKey := os.Getenv("MONGODB_ATLAS_PRIVATE_KEY")
 	projectID := os.Getenv("MONGODB_ATLAS_PROJECT_ID")
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendMongoDBAtlas)
+	pluginName := dbEngineMongoDBAtlas.defaultPluginName
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -286,15 +281,14 @@ func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendMongoDB)
+	MaybeSkipDBTests(t, dbEngineMongoDB)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t, "MONGODB_URL")
 	connURL := values[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendMongoDB)
+	pluginName := dbEngineMongoDB.defaultPluginName
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -318,15 +312,14 @@ func TestAccDatabaseSecretBackendConnection_mongodb(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendMSSQL)
+	MaybeSkipDBTests(t, dbEngineMSSQL)
 
 	cleanupFunc, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 
 	t.Cleanup(cleanupFunc)
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendMSSQL)
+	pluginName := fmt.Sprintf("%s-database-plugin", dbEngineMSSQL.name)
 	name := acctest.RandomWithPrefix("db")
 
 	resource.Test(t, resource.TestCase{
@@ -372,15 +365,14 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendMySQL)
+	MaybeSkipDBTests(t, dbEngineMySQL)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t, "MYSQL_URL")
 	connURL := values[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendMySQL)
+	pluginName := fmt.Sprintf("%s-database-plugin", dbEngineMySQL.name)
 	name := acctest.RandomWithPrefix("db")
 	password := acctest.RandomWithPrefix("password")
 	resource.Test(t, resource.TestCase{
@@ -466,15 +458,14 @@ func testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName s
 }
 
 func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendMySQL)
+	MaybeSkipDBTests(t, dbEngineMySQL)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t, "MYSQL_URL")
 	connURL := values[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendMySQL)
+	pluginName := fmt.Sprintf("%s-database-plugin", dbEngineMySQL.name)
 	name := acctest.RandomWithPrefix("db")
 	password := acctest.RandomWithPrefix("password")
 	resource.Test(t, resource.TestCase{
@@ -519,7 +510,7 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendMySQL)
+	MaybeSkipDBTests(t, dbEngineMySQL)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t,
@@ -538,8 +529,7 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 	}
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendMySQL)
+	pluginName := fmt.Sprintf("%s-database-plugin", dbEngineMySQL.name)
 	name := acctest.RandomWithPrefix("db")
 	testUsername := acctest.RandomWithPrefix("username")
 	testPassword := acctest.RandomWithPrefix("password")
@@ -597,15 +587,14 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 }
 
 func TestAccDatabaseSecretBackendConnection_mysql_tls(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendMySQL)
+	MaybeSkipDBTests(t, dbEngineMySQL)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t, "MYSQL_CA", "MYSQL_URL", "MYSQL_CERTIFICATE_KEY")
 	tlsCA, connURL, tlsCertificateKey := values[0], values[1], values[2]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendMySQL)
+	pluginName := dbEngineMySQL.defaultPluginName
 	name := acctest.RandomWithPrefix("db")
 	password := acctest.RandomWithPrefix("password")
 	resource.Test(t, resource.TestCase{
@@ -637,15 +626,14 @@ func TestAccDatabaseSecretBackendConnection_mysql_tls(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendPostgres)
+	MaybeSkipDBTests(t, dbEnginePostgres)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
 	connURL := values[0]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendPostgres)
+	pluginName := dbEnginePostgres.defaultPluginName
 	name := acctest.RandomWithPrefix("db")
 	userTempl := "{{.DisplayName}}"
 	resource.Test(t, resource.TestCase{
@@ -674,7 +662,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendElasticSearch)
+	MaybeSkipDBTests(t, dbEngineElasticSearch)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t, "ELASTIC_URL")
@@ -683,8 +671,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 	username := os.Getenv("ELASTIC_USERNAME")
 	password := os.Getenv("ELASTIC_PASSWORD")
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendElasticSearch)
+	pluginName := dbEngineElasticSearch.defaultPluginName
 	name := acctest.RandomWithPrefix("db")
 
 	resource.Test(t, resource.TestCase{
@@ -707,7 +694,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendSnowflake)
+	MaybeSkipDBTests(t, dbEngineSnowflake)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
 	values := testutil.SkipTestEnvUnset(t, "SNOWFLAKE_URL")
@@ -716,8 +703,7 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 	username := os.Getenv("SNOWFLAKE_USERNAME")
 	password := os.Getenv("SNOWFLAKE_PASSWORD")
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendSnowflake)
+	pluginName := dbEngineSnowflake.defaultPluginName
 	name := acctest.RandomWithPrefix("db")
 	userTempl := "{{.DisplayName}}"
 
@@ -745,15 +731,14 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
-	MaybeSkipDBTests(t, dbBackendRedshift)
+	MaybeSkipDBTests(t, dbEngineRedshift)
 
 	url := os.Getenv("REDSHIFT_URL")
 	if url == "" {
 		t.Skip("REDSHIFT_URL not set")
 	}
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	// should match dbEngine.getPluginName()'s default return value
-	pluginName := fmt.Sprintf("%s-database-plugin", dbBackendRedshift)
+	pluginName := dbEngineRedshift.defaultPluginName
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -1247,34 +1232,40 @@ func deleteMySQLUser(t *testing.T, db *sql.DB, username string) {
 	}
 }
 
-func MaybeSkipDBTests(t *testing.T, engine string) {
+func MaybeSkipDBTests(t *testing.T, engine *dbEngine) {
 	// require TF_ACC to be set
 	testutil.SkipTestAcc(t)
 
 	envVars := []string{"SKIP_DB_TESTS"}
-	if _, ok := dbEngines[engine]; ok {
-		envVars = append(envVars, envVars[0]+"_"+strings.ToUpper(engine))
+	for _, e := range dbEngines {
+		if e == engine {
+			envVars = append(envVars, envVars[0]+"_"+strings.ToUpper(engine.name))
+			break
+		}
 	}
 	testutil.SkipTestEnvSet(t, envVars...)
 }
 
 func Test_dbEngine_getPluginName(t *testing.T) {
 	type fields struct {
-		name string
+		name              string
+		defaultPluginName string
 	}
 	type args struct {
 		d *schema.ResourceData
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
+		name    string
+		fields  fields
+		args    args
+		want    string
+		wantErr bool
 	}{
 		{
 			name: "default",
 			fields: fields{
-				name: "foo",
+				name:              "foo",
+				defaultPluginName: "foo-database-plugin",
 			},
 			args: args{
 				schema.TestResourceDataRaw(
@@ -1288,24 +1279,6 @@ func Test_dbEngine_getPluginName(t *testing.T) {
 					map[string]interface{}{}),
 			},
 			want: "foo-database-plugin",
-		},
-		{
-			name: "default-underscored",
-			fields: fields{
-				name: "foo_qux_baz",
-			},
-			args: args{
-				schema.TestResourceDataRaw(
-					t,
-					map[string]*schema.Schema{
-						"plugin_name": {
-							Type:     schema.TypeString,
-							Required: false,
-						},
-					},
-					map[string]interface{}{}),
-			},
-			want: "foo-qux-baz-database-plugin",
 		},
 		{
 			name: "set",
@@ -1327,13 +1300,41 @@ func Test_dbEngine_getPluginName(t *testing.T) {
 			},
 			want: "baz-qux",
 		},
+		{
+			name: "fail",
+			fields: fields{
+				name: "fail",
+			},
+			args: args{
+				schema.TestResourceDataRaw(
+					t,
+					map[string]*schema.Schema{
+						"plugin_name": {
+							Type:     schema.TypeString,
+							Required: false,
+						},
+					},
+					map[string]interface{}{},
+				),
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &dbEngine{
-				name: tt.fields.name,
+				name:              tt.fields.name,
+				defaultPluginName: tt.fields.defaultPluginName,
 			}
-			if got := i.getPluginName(tt.args.d); got != tt.want {
+
+			got, err := i.getPluginName(tt.args.d)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getPluginName() error = %v, wantErr %v", err, tt.wantErr)
+
+				return
+			}
+
+			if got != tt.want {
 				t.Errorf("getPluginName() expected %v, actual %v", tt.want, got)
 			}
 		})
@@ -1373,9 +1374,7 @@ func Test_getDBEngine(t *testing.T) {
 						},
 					}),
 			},
-			want: &dbEngine{
-				name: dbBackendMSSQL,
-			},
+			want:    dbEngineMSSQL,
 			wantErr: false,
 		},
 		{

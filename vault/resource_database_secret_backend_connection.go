@@ -2,6 +2,7 @@ package vault
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -23,66 +24,124 @@ type connectionStringConfig struct {
 }
 
 const (
-	dbBackendCassandra     = "cassandra"
-	dbBackendCouchbase     = "couchbase"
-	dbBackendElasticSearch = "elasticsearch"
-	dbBackendHana          = "hana"
-	dbBackendInfluxDB      = "influxdb"
-	dbBackendMSSQL         = "mssql"
-	dbBackendMongoDB       = "mongodb"
-	dbBackendMongoDBAtlas  = "mongodbatlas"
-	dbBackendMySQL         = "mysql"
-	dbBackendMySQLAurora   = "mysql_aurora"
-	dbBackendMySQLLegacy   = "mysql_legacy"
-	dbBackendMySQLRDS      = "mysql_rds"
-	dbBackendPostgres      = "postgresql"
-	dbBackendOracle        = "oracle"
-	dbBackendSnowflake     = "snowflake"
-	dbBackendRedshift      = "redshift"
+	dbPluginSuffix = "-database-plugin"
 )
 
 var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
 
-	// map all dbBackends to their corresponding dbEngine's
-	// XXX: This map must be updated whenever a new database engine is added.
-	dbEngines = map[string]*dbEngine{
-		dbBackendCassandra:     {name: dbBackendCassandra},
-		dbBackendCouchbase:     {name: dbBackendCouchbase},
-		dbBackendElasticSearch: {name: dbBackendElasticSearch},
-		dbBackendHana:          {name: dbBackendHana},
-		dbBackendInfluxDB:      {name: dbBackendInfluxDB},
-		dbBackendMSSQL:         {name: dbBackendMSSQL},
-		dbBackendMongoDB:       {name: dbBackendMongoDB},
-		dbBackendMongoDBAtlas:  {name: dbBackendMongoDBAtlas},
-		dbBackendMySQL:         {name: dbBackendMySQL},
-		dbBackendMySQLAurora:   {name: dbBackendMySQLAurora},
-		dbBackendMySQLLegacy:   {name: dbBackendMySQLLegacy},
-		dbBackendMySQLRDS:      {name: dbBackendMySQLRDS},
-		dbBackendPostgres:      {name: dbBackendPostgres},
-		dbBackendOracle:        {name: dbBackendOracle},
-		dbBackendSnowflake:     {name: dbBackendSnowflake},
-		dbBackendRedshift:      {name: dbBackendRedshift},
+	dbEngineCassandra = &dbEngine{
+		name:              "cassandra",
+		defaultPluginName: "cassandra" + dbPluginSuffix,
+	}
+	dbEngineCouchbase = &dbEngine{
+		name:              "couchbase",
+		defaultPluginName: "couchbase" + dbPluginSuffix,
+	}
+
+	dbEngineElasticSearch = &dbEngine{
+		name:              "elasticsearch",
+		defaultPluginName: "elasticsearch" + dbPluginSuffix,
+	}
+	dbEngineHana = &dbEngine{
+		name:              "hana",
+		defaultPluginName: "hana" + dbPluginSuffix,
+	}
+	dbEngineInfluxDB = &dbEngine{
+		name:              "influxdb",
+		defaultPluginName: "influxdb" + dbPluginSuffix,
+	}
+	dbEngineMSSQL = &dbEngine{
+		name:              "mssql",
+		defaultPluginName: "mssql" + dbPluginSuffix,
+	}
+	dbEngineMongoDB = &dbEngine{
+		name:              "mongodb",
+		defaultPluginName: "mongodb" + dbPluginSuffix,
+	}
+	dbEngineMongoDBAtlas = &dbEngine{
+		name:              "mongodbatlas",
+		defaultPluginName: "mongodbatlas" + dbPluginSuffix,
+	}
+	dbEngineMySQL = &dbEngine{
+		name:              "mysql",
+		defaultPluginName: "mysql" + dbPluginSuffix,
+	}
+	dbEngineMySQLAurora = &dbEngine{
+		name:              "mysql_aurora",
+		defaultPluginName: "mysql-aurora" + dbPluginSuffix,
+	}
+	dbEngineMySQLLegacy = &dbEngine{
+		name:              "mysql_legacy",
+		defaultPluginName: "mysql-legacy" + dbPluginSuffix,
+	}
+	dbEngineMySQLRDS = &dbEngine{
+		name:              "mysql_rds",
+		defaultPluginName: "mysql-rds" + dbPluginSuffix,
+	}
+	dbEnginePostgres = &dbEngine{
+		name:              "postgresql",
+		defaultPluginName: "postgresql" + dbPluginSuffix,
+	}
+	dbEngineOracle = &dbEngine{
+		name:              "oracle",
+		defaultPluginName: "oracle" + dbPluginSuffix,
+	}
+	dbEngineSnowflake = &dbEngine{
+		name:              "snowflake",
+		defaultPluginName: "snowflake" + dbPluginSuffix,
+	}
+	dbEngineRedshift = &dbEngine{
+		name:              "redshift",
+		defaultPluginName: "redshift" + dbPluginSuffix,
+	}
+
+	dbEngines = []*dbEngine{
+		dbEngineCassandra,
+		dbEngineCouchbase,
+		dbEngineElasticSearch,
+		dbEngineHana,
+		dbEngineInfluxDB,
+		dbEngineMSSQL,
+		dbEngineMongoDB,
+		dbEngineMongoDBAtlas,
+		dbEngineMySQL,
+		dbEngineMySQLAurora,
+		dbEngineMySQLLegacy,
+		dbEngineMySQLRDS,
+		dbEnginePostgres,
+		dbEngineOracle,
+		dbEngineSnowflake,
+		dbEngineRedshift,
 	}
 )
 
 type dbEngine struct {
-	name string
+	name              string
+	defaultPluginName string
 }
 
-func (i *dbEngine) getPluginName(d *schema.ResourceData) string {
+func (i *dbEngine) getPluginName(d *schema.ResourceData) (string, error) {
 	if val, ok := d.GetOk("plugin_name"); ok {
-		return val.(string)
+		return val.(string), nil
 	}
 
-	return fmt.Sprintf("%s-database-plugin", strings.Replace(i.name, "_", "-", -1))
+	if i.defaultPluginName == "" {
+		return "", errors.New("default plugin name not set")
+	}
+
+	return i.defaultPluginName, nil
+}
+
+func (i *dbEngine) String() string {
+	return i.name
 }
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
-	dbBackendTypes := []string{}
-	for k := range dbEngines {
-		dbBackendTypes = append(dbBackendTypes, k)
+	dbEngineTypes := []string{}
+	for _, e := range dbEngines {
+		dbEngineTypes = append(dbEngineTypes, e.name)
 	}
 
 	return &schema.Resource{
@@ -162,7 +221,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendElasticSearch, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineElasticSearch.name, dbEngineTypes),
 			},
 
 			"cassandra": {
@@ -237,7 +296,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendCassandra, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineCassandra.name, dbEngineTypes),
 			},
 
 			"couchbase": {
@@ -296,7 +355,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendCouchbase, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineCouchbase.name, dbEngineTypes),
 			},
 
 			"influxdb": {
@@ -367,7 +426,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendInfluxDB, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineInfluxDB.name, dbEngineTypes),
 			},
 
 			"mongodb": {
@@ -376,7 +435,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mongodb-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendMongoDB, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDB.name, dbEngineTypes),
 			},
 
 			"mongodbatlas": {
@@ -404,7 +463,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendMongoDBAtlas, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDBAtlas.name, dbEngineTypes),
 			},
 
 			"hana": {
@@ -415,7 +474,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					excludeUsernameTemplate: true,
 				}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendHana, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineHana.name, dbEngineTypes),
 			},
 
 			"mssql": {
@@ -424,7 +483,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mssql-database-plugin plugin.",
 				Elem:          mssqlConnectionStringResource(),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendMSSQL, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMSSQL.name, dbEngineTypes),
 			},
 
 			"mysql": {
@@ -433,7 +492,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mysql-database-plugin plugin.",
 				Elem:          mysqlConnectionStringResource(),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendMySQL, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQL.name, dbEngineTypes),
 			},
 			"mysql_rds": {
 				Type:          schema.TypeList,
@@ -441,7 +500,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mysql-rds-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendMySQLRDS, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLRDS.name, dbEngineTypes),
 			},
 			"mysql_aurora": {
 				Type:          schema.TypeList,
@@ -449,7 +508,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mysql-aurora-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendMySQLAurora, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLAurora.name, dbEngineTypes),
 			},
 			"mysql_legacy": {
 				Type:          schema.TypeList,
@@ -457,7 +516,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the mysql-legacy-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendMySQLLegacy, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLLegacy.name, dbEngineTypes),
 			},
 
 			"postgresql": {
@@ -466,7 +525,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the postgresql-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendPostgres, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.name, dbEngineTypes),
 			},
 
 			"oracle": {
@@ -475,7 +534,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the oracle-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendOracle, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineOracle.name, dbEngineTypes),
 			},
 
 			"redshift": {
@@ -484,7 +543,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the redshift-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{includeUserPass: true}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendRedshift, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineRedshift.name, dbEngineTypes),
 			},
 
 			"snowflake": {
@@ -493,7 +552,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description:   "Connection parameters for the snowflake-database-plugin plugin.",
 				Elem:          connectionStringResource(&connectionStringConfig{includeUserPass: true}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith(dbBackendSnowflake, dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineSnowflake.name, dbEngineTypes),
 			},
 
 			"backend": {
@@ -588,9 +647,9 @@ func mssqlConnectionStringResource() *schema.Resource {
 }
 
 func getDBEngine(d *schema.ResourceData) (*dbEngine, error) {
-	for k, v := range dbEngines {
-		if i, ok := d.GetOk(k); ok && len(i.([]interface{})) > 0 {
-			return v, nil
+	for _, e := range dbEngines {
+		if i, ok := d.GetOk(e.name); ok && len(i.([]interface{})) > 0 {
+			return e, nil
 		}
 	}
 
@@ -603,12 +662,17 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		return nil, err
 	}
 
-	data := map[string]interface{}{
-		"plugin_name": db.getPluginName(d),
+	pluginName, err := db.getPluginName(d)
+	if err != nil {
+		return nil, err
 	}
 
-	switch db.name {
-	case dbBackendCassandra:
+	data := map[string]interface{}{
+		"plugin_name": pluginName,
+	}
+
+	switch db {
+	case dbEngineCassandra:
 		if v, ok := d.GetOk("cassandra.0.hosts"); ok {
 			log.Printf("[DEBUG] Cassandra hosts: %v", v.([]interface{}))
 			var hosts []string
@@ -647,15 +711,15 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		if v, ok := d.GetOkExists("cassandra.0.connect_timeout"); ok {
 			data["connect_timeout"] = v.(int)
 		}
-	case dbBackendCouchbase:
+	case dbEngineCouchbase:
 		setCouchbaseDatabaseConnectionData(d, "couchbase.0.", data)
-	case dbBackendInfluxDB:
+	case dbEngineInfluxDB:
 		setInfluxDBDatabaseConnectionData(d, "influxdb.0.", data)
-	case dbBackendHana:
+	case dbEngineHana:
 		setDatabaseConnectionData(d, "hana.0.", data)
-	case dbBackendMongoDB:
+	case dbEngineMongoDB:
 		setDatabaseConnectionData(d, "mongodb.0.", data)
-	case dbBackendMongoDBAtlas:
+	case dbEngineMongoDBAtlas:
 		if v, ok := d.GetOk("mongodbatlas.0.public_key"); ok {
 			data["public_key"] = v.(string)
 		}
@@ -665,25 +729,25 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		if v, ok := d.GetOk("mongodbatlas.0.project_id"); ok {
 			data["project_id"] = v.(string)
 		}
-	case dbBackendMSSQL:
+	case dbEngineMSSQL:
 		setMSSQLDatabaseConnectionData(d, "mssql.0.", data)
-	case dbBackendMySQL:
+	case dbEngineMySQL:
 		setMySQLDatabaseConnectionData(d, "mysql.0.", data)
-	case dbBackendMySQLRDS:
+	case dbEngineMySQLRDS:
 		setDatabaseConnectionData(d, "mysql_rds.0.", data)
-	case dbBackendMySQLAurora:
+	case dbEngineMySQLAurora:
 		setDatabaseConnectionData(d, "mysql_aurora.0.", data)
-	case dbBackendMySQLLegacy:
+	case dbEngineMySQLLegacy:
 		setDatabaseConnectionData(d, "mysql_legacy.0.", data)
-	case dbBackendOracle:
+	case dbEngineOracle:
 		setDatabaseConnectionData(d, "oracle.0.", data)
-	case dbBackendPostgres:
+	case dbEnginePostgres:
 		setDatabaseConnectionData(d, "postgresql.0.", data)
-	case dbBackendElasticSearch:
+	case dbEngineElasticSearch:
 		setElasticsearchDatabaseConnectionData(d, "elasticsearch.0.", data)
-	case dbBackendSnowflake:
+	case dbEngineSnowflake:
 		setDatabaseConnectionDataWithUserPass(d, "snowflake.0.", data)
-	case dbBackendRedshift:
+	case dbEngineRedshift:
 		setDatabaseConnectionDataWithUserPass(d, "redshift.0.", data)
 	}
 
@@ -1144,8 +1208,8 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		return nil
 	}
 
-	switch db.name {
-	case dbBackendCassandra:
+	switch db {
+	case dbEngineCassandra:
 		details := resp.Data["connection_details"]
 		data, ok := details.(map[string]interface{})
 		if ok {
@@ -1202,15 +1266,15 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			}
 			d.Set("cassandra", []map[string]interface{}{result})
 		}
-	case dbBackendCouchbase:
+	case dbEngineCouchbase:
 		d.Set("couchbase", getCouchbaseConnectionDetailsFromResponse(d, "couchbase.0.", resp))
-	case dbBackendInfluxDB:
+	case dbEngineInfluxDB:
 		d.Set("influxdb", getInfluxDBConnectionDetailsFromResponse(d, "influxdb.0.", resp))
-	case dbBackendHana:
+	case dbEngineHana:
 		d.Set("hana", getConnectionDetailsFromResponse(d, "hana.0.", resp))
-	case dbBackendMongoDB:
+	case dbEngineMongoDB:
 		d.Set("mongodb", getConnectionDetailsFromResponse(d, "mongodb.0.", resp))
-	case dbBackendMongoDBAtlas:
+	case dbEngineMongoDBAtlas:
 		details := resp.Data["connection_details"]
 		data, ok := details.(map[string]interface{})
 		if ok {
@@ -1227,27 +1291,27 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			}
 			d.Set("mongodbatlas", []map[string]interface{}{result})
 		}
-	case dbBackendMSSQL:
+	case dbEngineMSSQL:
 		var values []map[string]interface{}
 		if values, err = getMSSQLConnectionDetailsFromResponse(d, "mssql.0.", resp); err == nil {
 			// err is returned outside of the switch case
 			d.Set("mssql", values)
 		}
-	case dbBackendMySQL:
+	case dbEngineMySQL:
 		d.Set("mysql", getMySQLConnectionDetailsFromResponse(d, "mysql.0.", resp))
-	case dbBackendMySQLRDS:
+	case dbEngineMySQLRDS:
 		d.Set("mysql_rds", getConnectionDetailsFromResponse(d, "mysql_rds.0.", resp))
-	case dbBackendMySQLAurora:
+	case dbEngineMySQLAurora:
 		d.Set("mysql_aurora", getConnectionDetailsFromResponse(d, "mysql_aurora.0.", resp))
-	case dbBackendMySQLLegacy:
+	case dbEngineMySQLLegacy:
 		d.Set("mysql_legacy", getConnectionDetailsFromResponse(d, "mysql_legacy.0.", resp))
-	case dbBackendOracle:
+	case dbEngineOracle:
 		d.Set("oracle", getConnectionDetailsFromResponse(d, "oracle.0.", resp))
-	case dbBackendPostgres:
+	case dbEnginePostgres:
 		d.Set("postgresql", getConnectionDetailsFromResponse(d, "postgresql.0.", resp))
-	case dbBackendElasticSearch:
+	case dbEngineElasticSearch:
 		d.Set("elasticsearch", getElasticsearchConnectionDetailsFromResponse(d, "elasticsearch.0.", resp))
-	case dbBackendSnowflake:
+	case dbEngineSnowflake:
 		d.Set("snowflake", getSnowflakeConnectionDetailsFromResponse(d, "snowflake.0.", resp))
 	}
 
