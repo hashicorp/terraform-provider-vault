@@ -337,7 +337,6 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, connURL, pluginName, false),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "plugin_name", pluginName),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
