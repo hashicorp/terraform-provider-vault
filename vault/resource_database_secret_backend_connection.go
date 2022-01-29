@@ -1326,7 +1326,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		d.Set("elasticsearch", getElasticsearchConnectionDetailsFromResponse(d, "elasticsearch.0.", resp))
 	case dbEngineSnowflake:
 		d.Set("snowflake", getSnowflakeConnectionDetailsFromResponse(d, "snowflake.0.", resp))
-	case "redshift-database-plugin":
+	case dbEngineRedshift:
 		d.Set("redshift", getConnectionDetailsFromResponse(d, "redshift.0.", resp))
 	default:
 		return fmt.Errorf("unsupported database plugin: %s", resp.Data["plugin_name"].(string))
