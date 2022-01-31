@@ -1329,7 +1329,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case dbEngineRedshift:
 		d.Set("redshift", getConnectionDetailsFromResponse(d, "redshift.0.", resp))
 	default:
-		return fmt.Errorf("unsupported database plugin: %s", resp.Data["plugin_name"].(string))
+		return fmt.Errorf("no response handler for dbEngine: %s", db.Name())
 	}
 
 	if err != nil {
