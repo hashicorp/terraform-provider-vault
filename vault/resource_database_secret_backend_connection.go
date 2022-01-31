@@ -1326,6 +1326,10 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		d.Set("elasticsearch", getElasticsearchConnectionDetailsFromResponse(d, "elasticsearch.0.", resp))
 	case dbEngineSnowflake:
 		d.Set("snowflake", getSnowflakeConnectionDetailsFromResponse(d, "snowflake.0.", resp))
+	case dbEngineRedshift:
+		d.Set("redshift", getConnectionDetailsFromResponse(d, "redshift.0.", resp))
+	default:
+		return fmt.Errorf("no response handler for dbEngine: %s", db)
 	}
 
 	if err != nil {
