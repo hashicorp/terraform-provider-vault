@@ -206,7 +206,7 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error updating KMIP config %q, err=%w", rolePath, err)
 	}
 
-	d.SetId(path)
+	d.SetId(rolePath)
 
 	if err := d.Set("scope", scope); err != nil {
 		return err
@@ -221,12 +221,8 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 
 func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	path := d.Id()
-	scope := d.Get("scope").(string)
-	role := d.Get("role").(string)
+	rolePath := d.Id()
 
-	scopePath := path + "/scope/" + scope
-	rolePath := scopePath + "/role/" + role
 	log.Printf("[DEBUG] Reading KMIP role at %q", rolePath)
 	resp, err := client.Logical().Read(rolePath)
 	if err != nil {
@@ -262,12 +258,27 @@ func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 func kmipSecretRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	path := d.Id()
-	scope := d.Get("scope").(string)
-	role := d.Get("role").(string)
+	rolePath := d.Id()
 
-	scopePath := path + "/scope/" + scope
-	rolePath := scopePath + "/role/" + role
+	if d.HasChange("path") {
+		newMountPath := d.Get("path").(string)
+		scope := d.Get("scope").(string)
+		role := d.Get("role").(string)
+		newRolePath := newMountPath + "/scope/" + scope + "/role/" + role
+
+		log.Printf("[DEBUG] Confirming KMIP role exists at %s", newRolePath)
+		resp, err := client.Logical().Read(newRolePath)
+		if err != nil {
+			return fmt.Errorf("error reading role at path %s, err=%w", newRolePath, err)
+		}
+
+		if resp == nil {
+			return fmt.Errorf("error remounting KMIP role to new backend path %s, err=%w", newRolePath, err)
+		}
+		d.SetId(newRolePath)
+		rolePath = newRolePath
+	}
+
 	data := map[string]interface{}{}
 	log.Printf("[DEBUG] Updating %q", rolePath)
 
@@ -299,12 +310,8 @@ func kmipSecretRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 
 func kmipSecretRoleDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	path := d.Id()
-	scope := d.Get("scope").(string)
-	role := d.Get("role").(string)
+	rolePath := d.Id()
 
-	scopePath := path + "/scope/" + scope
-	rolePath := scopePath + "/role/" + role
 	log.Printf("[DEBUG] Deleting KMIP scope %q", rolePath)
 	_, err := client.Logical().Delete(rolePath)
 	if err != nil {

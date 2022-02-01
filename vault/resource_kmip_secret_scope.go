@@ -57,29 +57,71 @@ func kmipSecretScopeCreate(d *schema.ResourceData, meta interface{}) error {
 	if _, err := client.Logical().Write(scopePath, data); err != nil {
 		return fmt.Errorf("error updating KMIP config %q: %s", scopePath, err)
 	}
-	d.SetId(path)
-	d.Set("scope", scope)
+	d.SetId(scopePath)
+	if err := d.Set("scope", scope); err != nil {
+		return err
+	}
+
 	return kmipSecretScopeRead(d, meta)
 }
 
 func kmipSecretScopeRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	path := d.Id()
+	path := d.Get("path").(string)
+	expectedScope := d.Get("scope").(string)
 
-	log.Printf("[DEBUG] Reading KMIP scope at %q", path+"/scope")
-	resp, err := client.Logical().List(path + "/scope")
+	log.Printf("[DEBUG] Reading KMIP scope at %s", path+"/scope")
+	err := readScopeFromScopeList(client, path+"/scope", expectedScope)
 	if err != nil {
-		return fmt.Errorf("error reading KMIP scopes at %s: %s", path+"/scope", err)
-	}
-	if resp == nil {
 		log.Printf("[WARN] KMIP scopes not found, removing from state")
 		d.SetId("")
-		// TODO Confirm this behavior
-		d.Set("scope", "")
-		return fmt.Errorf("expected scopes at %s, no scopes found", path+"/scope")
+		return err
 	}
+
+	return nil
+}
+
+func kmipSecretScopeUpdate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+	scope := d.Get("scope").(string)
+
+	if d.HasChange("path") {
+		newMountPath := d.Get("path").(string)
+		log.Printf("[DEBUG] Confirming KMIP scope exists at %s", newMountPath+"/scope")
+		err := readScopeFromScopeList(client, newMountPath+"/scope", scope)
+		if err != nil {
+			return fmt.Errorf("error remounting KMIP scope to new backend path %s, err=%w", newMountPath+"/scope", err)
+		}
+		d.SetId(newMountPath + "/scope/" + scope)
+	}
+
+	return kmipSecretScopeRead(d, meta)
+}
+
+func kmipSecretScopeDelete(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+	scopePath := d.Id()
+
+	log.Printf("[DEBUG] Deleting KMIP scope %q", scopePath)
+	_, err := client.Logical().Delete(scopePath)
+	if err != nil {
+		return fmt.Errorf("error deleting scope %q", scopePath)
+	}
+	log.Printf("[DEBUG] Deleted KMIP scope %q", scopePath)
+
+	return nil
+}
+
+func readScopeFromScopeList(client *api.Client, scopePath, expectedScope string) error {
+	resp, err := client.Logical().List(scopePath)
+	if err != nil {
+		return fmt.Errorf("error reading KMIP scopes at %s: %s", scopePath, err)
+	}
+	if resp == nil {
+		return fmt.Errorf("expected scopes at %s, no scopes found", scopePath)
+	}
+
 	scopes := resp.Data["keys"].([]interface{})
-	expectedScope := d.Get("scope")
 	found := false
 	for _, s := range scopes {
 		if s.(string) == expectedScope {
@@ -89,43 +131,6 @@ func kmipSecretScopeRead(d *schema.ResourceData, meta interface{}) error {
 	if !found {
 		return fmt.Errorf("expected scope %s in list of scopes %s", expectedScope, scopes)
 	}
-	return nil
-}
-
-func kmipSecretScopeUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-	path := d.Id()
-	scope := d.Get("scope").(string)
-
-	scopePath := path + "/scope/" + scope
-	data := map[string]interface{}{}
-	log.Printf("[DEBUG] Updating %q", scopePath)
-
-	for _, k := range []string{"scope, force"} {
-		if d.HasChange(k) {
-			data[k] = d.Get(k)
-		}
-	}
-	if _, err := client.Logical().Write(scopePath, data); err != nil {
-		return fmt.Errorf("error updating KMIP config %q: %s", scopePath, err)
-	}
-	log.Printf("[DEBUG] Updated %q", scopePath)
-
-	return kmipSecretScopeRead(d, meta)
-}
-
-func kmipSecretScopeDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-	path := d.Id()
-	scope := d.Get("scope").(string)
-
-	scopePath := path + "/scope/" + scope
-	log.Printf("[DEBUG] Deleting KMIP scope %q", scopePath)
-	_, err := client.Logical().Delete(scopePath)
-	if err != nil {
-		return fmt.Errorf("error deleting scope %q", scopePath)
-	}
-	log.Printf("[DEBUG] Deleted KMIP scope %q", scopePath)
 
 	return nil
 }
