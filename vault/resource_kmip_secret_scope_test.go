@@ -13,8 +13,9 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccKMIPSecretScope_basic(t *testing.T) {
+func TestAccKMIPSecretScope_remount(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-kmip")
+	remountPath := acctest.RandomWithPrefix("tf-test-kmip-updated")
 	resourceName := "vault_kmip_secret_scope.test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -25,6 +26,13 @@ func TestAccKMIPSecretScope_basic(t *testing.T) {
 				Config: testKMIPSecretScope_initialConfig(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "scope", "test"),
+				),
+			},
+			{
+				Config: testKMIPSecretScope_initialConfig(remountPath),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", remountPath),
 					resource.TestCheckResourceAttr(resourceName, "scope", "test"),
 				),
 			},

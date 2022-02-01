@@ -54,6 +54,45 @@ func TestAccKMIPSecretRole_basic(t *testing.T) {
 	})
 }
 
+func TestAccKMIPSecretRole_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-kmip")
+	remountPath := acctest.RandomWithPrefix("tf-test-kmip-remount")
+	resourceName := "vault_kmip_secret_role.test"
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestEntPreCheck(t) },
+		CheckDestroy: testAccKMIPSecretRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testKMIPSecretRole_initialConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "scope", "scope-1"),
+					resource.TestCheckResourceAttr(resourceName, "role", "test"),
+					resource.TestCheckResourceAttr(resourceName, "tls_client_key_type", "ec"),
+					resource.TestCheckResourceAttr(resourceName, "tls_client_key_bits", "256"),
+					resource.TestCheckResourceAttr(resourceName, "operation_activate", "true"),
+					resource.TestCheckResourceAttr(resourceName, "operation_get", "true"),
+					resource.TestCheckResourceAttr(resourceName, "operation_get_attributes", "true"),
+				),
+			},
+			{
+				Config: testKMIPSecretRole_initialConfig(remountPath),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", remountPath),
+					resource.TestCheckResourceAttr(resourceName, "scope", "scope-1"),
+					resource.TestCheckResourceAttr(resourceName, "role", "test"),
+					resource.TestCheckResourceAttr(resourceName, "tls_client_key_type", "ec"),
+					resource.TestCheckResourceAttr(resourceName, "tls_client_key_bits", "256"),
+					resource.TestCheckResourceAttr(resourceName, "operation_activate", "true"),
+					resource.TestCheckResourceAttr(resourceName, "operation_get", "true"),
+					resource.TestCheckResourceAttr(resourceName, "operation_get_attributes", "true"),
+				),
+			},
+		},
+	})
+}
+
 func testAccKMIPSecretRoleCheckDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 

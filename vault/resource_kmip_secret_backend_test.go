@@ -61,6 +61,53 @@ func TestAccKMIPSecretBackend_basic(t *testing.T) {
 	})
 }
 
+func TestAccKMIPSecretBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-kmip")
+	remountPath := acctest.RandomWithPrefix("tf-test-kmip-updated")
+	resourceName := "vault_kmip_secret_backend.test"
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestEntPreCheck(t) },
+		CheckDestroy: testAccKMIPSecretBackendCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testKMIPSecretBackend_initialConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "listen_addrs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "listen_addrs.0", "127.0.0.1:5696"),
+					resource.TestCheckResourceAttr(resourceName, "server_ips.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "server_ips.0", "127.0.0.1"),
+					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_type", "ec"),
+					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_bits", "256"),
+					resource.TestCheckResourceAttr(resourceName, "tls_min_version", "tls12"),
+					resource.TestCheckResourceAttr(resourceName, "default_tls_client_key_type", "ec"),
+					resource.TestCheckResourceAttr(resourceName, "default_tls_client_key_bits", "256"),
+					resource.TestCheckResourceAttr(resourceName, "default_tls_client_ttl", "86400"),
+				),
+			},
+			{
+				Config: testKMIPSecretBackend_initialConfig(remountPath),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", remountPath),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "listen_addrs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "listen_addrs.0", "127.0.0.1:5696"),
+					resource.TestCheckResourceAttr(resourceName, "server_ips.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "server_ips.0", "127.0.0.1"),
+					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_type", "ec"),
+					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_bits", "256"),
+					resource.TestCheckResourceAttr(resourceName, "tls_min_version", "tls12"),
+					resource.TestCheckResourceAttr(resourceName, "default_tls_client_key_type", "ec"),
+					resource.TestCheckResourceAttr(resourceName, "default_tls_client_key_bits", "256"),
+					resource.TestCheckResourceAttr(resourceName, "default_tls_client_ttl", "86400"),
+				),
+			},
+		},
+	})
+}
+
 func testAccKMIPSecretBackendCheckDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
