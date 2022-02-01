@@ -47,6 +47,8 @@ The following arguments are supported:
 
 * `disable_local_ca_jwt` - (Optional) Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod. Requires Vault `v1.5.4+` or Vault auth kubernetes plugin `v0.7.1+`
 
+* `enable_custom_metadata_from_annotations` - (Optional) Enable reading and parsing Kubernetes annotations from service account for policy templating, annotations must have prefix `vault.hashicorp.com/auth-metadata/` to be read.
+
 
 ## Attributes Reference
 

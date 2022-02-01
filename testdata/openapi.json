@@ -7805,6 +7805,14 @@
                       "name": "Disable use of local CA and service account JWT"
                     }
                   },
+                  "enable_custom_metadata_from_annotations": {
+                    "type": "boolean",
+                    "description": "Enable reading and parsing Kubernetes annotations from service account for policy templating",
+                    "default": false,
+                    "x-vault-displayAttrs": {
+                      "name": "Enable reading and parsing Kubernetes annotations from service account"
+                    }
+                  },
                   "issuer": {
                     "type": "string",
                     "description": "Optional JWT issuer. If no issuer is specified, then this plugin will use kubernetes.io/serviceaccount as the default issuer. (Deprecated, will be removed in a future release)",

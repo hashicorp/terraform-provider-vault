@@ -71,6 +71,7 @@ func TestAccKubernetesAuthBackendConfig_import(t *testing.T) {
 	issuer := "kubernetes/serviceaccount"
 	disableIssValidation := false
 	disableLocalCaJwt := false
+	enableCustomMetadata := true
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -78,7 +79,7 @@ func TestAccKubernetesAuthBackendConfig_import(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer, disableIssValidation, disableLocalCaJwt),
+				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer, disableIssValidation, disableLocalCaJwt, enableCustomMetadata),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -98,6 +99,8 @@ func TestAccKubernetesAuthBackendConfig_import(t *testing.T) {
 						"disable_iss_validation", strconv.FormatBool(disableIssValidation)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"disable_local_ca_jwt", strconv.FormatBool(disableLocalCaJwt)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"enable_custom_metadata_from_annotations", strconv.FormatBool(enableCustomMetadata)),
 				),
 			},
 			{
@@ -221,6 +224,7 @@ func TestAccKubernetesAuthBackendConfig_full(t *testing.T) {
 	issuer := "api"
 	disableIssValidation := true
 	disableLocalCaJwt := true
+	enableCustomMetadata := true
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -228,7 +232,7 @@ func TestAccKubernetesAuthBackendConfig_full(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer, disableIssValidation, disableLocalCaJwt),
+				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer, disableIssValidation, disableLocalCaJwt, enableCustomMetadata),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -248,6 +252,8 @@ func TestAccKubernetesAuthBackendConfig_full(t *testing.T) {
 						"disable_iss_validation", strconv.FormatBool(disableIssValidation)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"disable_local_ca_jwt", strconv.FormatBool(disableLocalCaJwt)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"enable_custom_metadata_from_annotations", strconv.FormatBool(enableCustomMetadata)),
 				),
 			},
 		},
@@ -267,7 +273,7 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, oldJWT, oldIssuer, false, false),
+				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, oldJWT, oldIssuer, false, false, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -289,10 +295,12 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 						"disable_iss_validation", strconv.FormatBool(false)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"disable_local_ca_jwt", strconv.FormatBool(false)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"enable_custom_metadata_from_annotations", strconv.FormatBool(false)),
 				),
 			},
 			{
-				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, newJWT, newIssuer, true, true),
+				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, newJWT, newIssuer, true, true, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -312,11 +320,13 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 						"disable_iss_validation", strconv.FormatBool(true)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"disable_local_ca_jwt", strconv.FormatBool(true)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"enable_custom_metadata_from_annotations", strconv.FormatBool(true)),
 				),
 			},
 			{
 				// ensure we can set disable_iss_validation to false
-				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, newJWT, newIssuer, false, true),
+				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, newJWT, newIssuer, false, true, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -336,6 +346,8 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 						"disable_iss_validation", strconv.FormatBool(false)),
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"disable_local_ca_jwt", strconv.FormatBool(true)),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						"enable_custom_metadata_from_annotations", strconv.FormatBool(true)),
 				),
 			},
 		},
@@ -357,7 +369,7 @@ resource "vault_kubernetes_auth_backend_config" "config" {
 }`, backend, kubernetesCAcert, jwt)
 }
 
-func testAccKubernetesAuthBackendConfigConfig_full(backend, jwt string, issuer string, disableIssValidation bool, disableLocalCaJwt bool) string {
+func testAccKubernetesAuthBackendConfigConfig_full(backend, jwt string, issuer string, disableIssValidation bool, disableLocalCaJwt bool, enableCustomMetadata bool) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "kubernetes" {
   type = "kubernetes"
@@ -373,5 +385,6 @@ resource "vault_kubernetes_auth_backend_config" "config" {
   issuer = %q
   disable_iss_validation = %t
   disable_local_ca_jwt = %t
-}`, backend, kubernetesCAcert, jwt, kubernetesPEMfile, issuer, disableIssValidation, disableLocalCaJwt)
+  enable_custom_metadata_from_annotations = %t
+}`, backend, kubernetesCAcert, jwt, kubernetesPEMfile, issuer, disableIssValidation, disableLocalCaJwt, enableCustomMetadata)
 }

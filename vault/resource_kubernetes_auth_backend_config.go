@@ -76,6 +76,12 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 				Optional:    true,
 				Description: "Optional disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.",
 			},
+			"enable_custom_metadata_from_annotations": {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Optional:    true,
+				Description: "Optional enable reading and parsing Kubernetes annotations from service account for policy templating",
+			},
 		},
 	}
 }
@@ -121,6 +127,10 @@ func kubernetesAuthBackendConfigCreate(d *schema.ResourceData, meta interface{})
 
 	if v, ok := d.GetOk("disable_local_ca_jwt"); ok {
 		data["disable_local_ca_jwt"] = v
+	}
+
+	if v, ok := d.GetOk("enable_custom_metadata_from_annotations"); ok {
+		data["enable_custom_metadata_from_annotations"] = v
 	}
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -175,6 +185,7 @@ func kubernetesAuthBackendConfigRead(d *schema.ResourceData, meta interface{}) e
 	d.Set("issuer", resp.Data["issuer"])
 	d.Set("disable_iss_validation", resp.Data["disable_iss_validation"])
 	d.Set("disable_local_ca_jwt", resp.Data["disable_local_ca_jwt"])
+	d.Set("enable_custom_metadata_from_annotations", resp.Data["enable_custom_metadata_from_annotations"])
 
 	iPemKeys := resp.Data["pem_keys"].([]interface{})
 	pemKeys := make([]string, 0, len(iPemKeys))
@@ -223,6 +234,10 @@ func kubernetesAuthBackendConfigUpdate(d *schema.ResourceData, meta interface{})
 
 	if v, ok := d.GetOk("disable_local_ca_jwt"); ok {
 		data["disable_local_ca_jwt"] = v
+	}
+
+	if v, ok := d.GetOk("enable_custom_metadata_from_annotations"); ok {
+		data["enable_custom_metadata_from_annotations"] = v
 	}
 
 	_, err := client.Logical().Write(path, data)
