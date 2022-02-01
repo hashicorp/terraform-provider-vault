@@ -160,17 +160,25 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 			"certificate": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The certicate.",
+				Description: "The signed intermediate CA certificate.",
 			},
 			"issuing_ca": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The issuing CA.",
+				Description: "The issuing CA certificate.",
 			},
 			"ca_chain": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Description: "The CA chain as a list of format specific certificates",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"certificate_bundle": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The CA chain.",
+				Description: "The PEM encoded CA chain. Requires the format to be one of: pem, pem_bundle",
 			},
 			"serial": {
 				Type:        schema.TypeString,
@@ -266,11 +274,59 @@ func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta int
 
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("issuing_ca", resp.Data["issuing_ca"])
-	d.Set("ca_chain", resp.Data["ca_chain"])
 	d.Set("serial", resp.Data["serial_number"])
 
+	if err := setCAChain(d, resp); err != nil {
+		return err
+	}
+
+	if err := setCertificateBundle(d, resp); err != nil {
+		return err
+	}
+
 	d.SetId(fmt.Sprintf("%s/%s", backend, commonName))
+
 	return pkiSecretBackendRootSignIntermediateRead(d, meta)
+}
+
+func setCAChain(d *schema.ResourceData, resp *api.Secret) error {
+	caChainField := "ca_chain"
+	var caChain []string
+	if v, ok := resp.Data[caChainField]; ok && v != nil {
+		caChain = v.([]string)
+	}
+
+	// provide the CAChain from the issuing_ca and the intermediate CA certificate
+	if len(caChain) == 0 {
+		for _, k := range []string{"issuing_ca", "certificate"} {
+			if v := resp.Data[k]; v.(string) != "" {
+				caChain = append(caChain, v.(string))
+			}
+		}
+	}
+
+	return d.Set(caChainField, caChain)
+}
+
+func setCertificateBundle(d *schema.ResourceData, resp *api.Secret) error {
+	format := d.Get("format").(string)
+	switch format {
+	case "pem", "pem_bundle":
+	default:
+		log.Printf("[WARN] Cannot set the ca_chain_bundle for format %q", format)
+		return nil
+	}
+
+	var bundle []string
+	for _, k := range []string{"certificate", "issuing_ca"} {
+		if v := resp.Data[k]; v.(string) != "" {
+			bundle = append(bundle, v.(string))
+		} else {
+			return fmt.Errorf("required certificate for %q is missing or empty", k)
+		}
+	}
+
+	return d.Set("certificate_bundle", strings.Join(bundle, "\n"))
 }
 
 func pkiSecretBackendRootSignIntermediateRead(d *schema.ResourceData, meta interface{}) error {

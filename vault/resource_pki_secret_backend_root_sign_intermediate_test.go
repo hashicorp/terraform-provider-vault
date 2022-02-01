@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -14,7 +15,94 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestPkiSecretBackendRootSignIntermediate_basic(t *testing.T) {
+func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
+	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
+	format := "pem"
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testPkiSecretBackendRootSignIntermediateDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "backend", rootPath),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "common_name", "test Intermediate CA"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "ou", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "organization", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "country", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "locality", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "province", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "format", format),
+					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_root_sign_intermediate.test", "serial"),
+					assertPKICertificateBundle("vault_pki_secret_backend_root_sign_intermediate.test", format),
+				),
+			},
+		},
+	})
+}
+
+func TestPkiSecretBackendRootSignIntermediate_basic_pem(t *testing.T) {
+	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
+	format := "pem"
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testPkiSecretBackendRootSignIntermediateDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "backend", rootPath),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "common_name", "test Intermediate CA"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "ou", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "organization", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "country", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "locality", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "province", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "format", format),
+					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_root_sign_intermediate.test", "serial"),
+					assertPKICertificateBundle("vault_pki_secret_backend_root_sign_intermediate.test", format),
+				),
+			},
+		},
+	})
+}
+
+func TestPkiSecretBackendRootSignIntermediate_basic_der(t *testing.T) {
+	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	path := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
+	format := "der"
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testPkiSecretBackendRootSignIntermediateDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, path, format),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "backend", rootPath),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "common_name", "test Intermediate CA"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "ou", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "organization", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "country", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "locality", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "province", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "format", "der"),
+					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_root_sign_intermediate.test", "serial"),
+					assertPKICertificateBundle("vault_pki_secret_backend_root_sign_intermediate.test", format),
+				),
+			},
+		},
+	})
+}
+
+func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 
@@ -24,7 +112,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic(t *testing.T) {
 		CheckDestroy: testPkiSecretBackendRootSignIntermediateDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, "pem_bundle"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "backend", rootPath),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "common_name", "test Intermediate CA"),
@@ -33,11 +121,69 @@ func TestPkiSecretBackendRootSignIntermediate_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "country", "test"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "locality", "test"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "province", "test"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", "format", "pem_bundle"),
 					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_root_sign_intermediate.test", "serial"),
+					assertPKICertificateBundle("vault_pki_secret_backend_root_sign_intermediate.test", "pem_bundle"),
+					assertPKICAChain("vault_pki_secret_backend_root_sign_intermediate.test"),
 				),
 			},
 		},
 	})
+}
+
+func assertPKICertificateBundle(res, expectedFormat string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[res]
+		if !ok {
+			return fmt.Errorf("resource %q not found in the state", res)
+		}
+
+		actualFormat := rs.Primary.Attributes["format"]
+		if expectedFormat != actualFormat {
+			return fmt.Errorf("expected format %q, actual %q", expectedFormat, actualFormat)
+		}
+
+		var expected string
+		switch expectedFormat {
+		case "pem", "pem_bundle":
+			expected = rs.Primary.Attributes["certificate"] + "\n" + rs.Primary.Attributes["issuing_ca"]
+		}
+
+		actual := rs.Primary.Attributes["certificate_bundle"]
+		if expected != actual {
+			return fmt.Errorf("expected certificate_bundle %q, actual %q", expected, actual)
+		}
+
+		return nil
+	}
+}
+
+func assertPKICAChain(res string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[res]
+		if !ok {
+			return fmt.Errorf("resource %q not found in the state", res)
+		}
+
+		if err := resource.TestCheckResourceAttr(res, "ca_chain.#", "2")(s); err != nil {
+			return err
+		}
+
+		expected := []string{
+			rs.Primary.Attributes["issuing_ca"],
+			rs.Primary.Attributes["certificate"],
+		}
+		actual := []string{
+			rs.Primary.Attributes["ch_chain.0"],
+			rs.Primary.Attributes["ch_chain.1"],
+		}
+
+		if reflect.DeepEqual(expected, actual) {
+			return fmt.Errorf("expected ca_chain %q, actual %q", expected, actual)
+		}
+
+		return nil
+	}
 }
 
 func testPkiSecretBackendRootSignIntermediateDestroy(s *terraform.State) error {
@@ -63,8 +209,8 @@ func testPkiSecretBackendRootSignIntermediateDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath string, intermediatePath string) string {
-	return fmt.Sprintf(`
+func testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, path, format string) string {
+	config := fmt.Sprintf(`
 resource "vault_mount" "test-root" {
   path = "%s"
   type = "pki"
@@ -118,5 +264,13 @@ resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
   country = "test"
   locality = "test"
   province = "test"
-}`, rootPath, intermediatePath)
+`, rootPath, path)
+
+	if format != "" {
+		config += fmt.Sprintf(`
+  format = %q
+`, format)
+	}
+
+	return config + "}"
 }
