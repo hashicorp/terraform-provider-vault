@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -16,7 +17,14 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 		Read:   pkiSecretBackendRootSignIntermediateRead,
 		Update: pkiSecretBackendRootSignIntermediateUpdate,
 		Delete: pkiSecretBackendRootSignIntermediateDelete,
-
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    pkiSecretRootSignIntermediateRV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: pkiSecretRootSignIntermediateRUpgradeV0,
+			},
+		},
+		SchemaVersion: 1,
 		Schema: map[string]*schema.Schema{
 			"backend": {
 				Type:        schema.TypeString,
@@ -293,27 +301,38 @@ func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta int
 
 func setCAChain(d *schema.ResourceData, resp *api.Secret) error {
 	field := "ca_chain"
-
 	var caChain []string
 	if v, ok := resp.Data[field]; ok && v != nil {
 		caChain = v.([]string)
 	}
 
 	// provide the CAChain from the issuing_ca and the intermediate CA certificate
+	var err error
 	if len(caChain) == 0 {
-		for _, k := range []string{"issuing_ca", "certificate"} {
-			if v := resp.Data[k]; v.(string) != "" {
-				caChain = append(caChain, v.(string))
-			}
+		caChain, err = getCAChain(resp.Data)
+		if err != nil {
+			return err
 		}
 	}
 
 	return d.Set(field, caChain)
 }
 
+func getCAChain(m map[string]interface{}) ([]string, error) {
+	var caChain []string
+	for _, k := range []string{"issuing_ca", "certificate"} {
+		if v, ok := m[k]; ok && v.(string) != "" {
+			caChain = append(caChain, v.(string))
+		} else {
+			return nil, fmt.Errorf("missing required field %q", k)
+		}
+	}
+
+	return caChain, nil
+}
+
 func setCertificateBundle(d *schema.ResourceData, resp *api.Secret) error {
 	field := "certificate_bundle"
-
 	format := d.Get("format").(string)
 	switch format {
 	case "pem", "pem_bundle":
@@ -348,4 +367,27 @@ func pkiSecretBackendRootSignIntermediateDelete(d *schema.ResourceData, meta int
 
 func pkiSecretBackendRootSignIntermediateCreatePath(backend string) string {
 	return strings.Trim(backend, "/") + "/root/sign-intermediate"
+}
+
+func pkiSecretRootSignIntermediateRV0() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"ca_chain": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+		},
+	}
+}
+
+func pkiSecretRootSignIntermediateRUpgradeV0(
+	_ context.Context, rawState map[string]interface{}, _ interface{}) (map[string]interface{}, error) {
+	caChain, err := getCAChain(rawState)
+	if err != nil {
+		return nil, err
+	}
+	rawState["ca_chain"] = caChain
+
+	return rawState, nil
 }

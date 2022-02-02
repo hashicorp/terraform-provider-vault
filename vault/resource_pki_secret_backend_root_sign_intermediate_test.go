@@ -243,3 +243,68 @@ resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
 
 	return config + "}"
 }
+
+func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
+	tests := []struct {
+		name        string
+		rawState    map[string]interface{}
+		want        map[string]interface{}
+		wantErr     bool
+		expectedErr error
+	}{
+		{
+			name: "basic",
+			rawState: map[string]interface{}{
+				"issuing_ca":  "issuing_ca.crt",
+				"certificate": "intermediate_.crt",
+				"ca_chain":    "",
+			},
+			want: map[string]interface{}{
+				"issuing_ca":  "issuing_ca.crt",
+				"certificate": "intermediate_.crt",
+				"ca_chain":    []string{"issuing_ca.crt", "intermediate_.crt"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid-no-issuing-ca",
+			rawState: map[string]interface{}{
+				"certificate": "intermediate_.crt",
+				"ca_chain":    "",
+			},
+			want:        nil,
+			wantErr:     true,
+			expectedErr: fmt.Errorf("missing required field %q", "issuing_ca"),
+		},
+		{
+			name: "invalid-no-certificate",
+			rawState: map[string]interface{}{
+				"issuing_ca": "issuing_ca.crt",
+				"ca_chain":   "",
+			},
+			want:        nil,
+			wantErr:     true,
+			expectedErr: fmt.Errorf("missing required field %q", "certificate"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := pkiSecretRootSignIntermediateRUpgradeV0(nil, tt.rawState, nil)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("pkiSecretRootSignIntermediateRUpgradeV0() error = %#v, wantErr %#v", err, tt.wantErr)
+				}
+
+				if !reflect.DeepEqual(tt.expectedErr, err) {
+					t.Errorf("pkiSecretRootSignIntermediateRUpgradeV0() expected %#v, actual %#v",
+						tt.expectedErr, err)
+				}
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("pkiSecretRootSignIntermediateRUpgradeV0() got = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
+}
