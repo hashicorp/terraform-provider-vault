@@ -324,7 +324,7 @@ func getCAChain(m map[string]interface{}) ([]string, error) {
 		if v, ok := m[k]; ok && v.(string) != "" {
 			caChain = append(caChain, v.(string))
 		} else {
-			return nil, fmt.Errorf("missing required field %q", k)
+			return nil, fmt.Errorf("required certificate for %q is missing or empty", k)
 		}
 	}
 
@@ -341,16 +341,17 @@ func setCertificateBundle(d *schema.ResourceData, resp *api.Secret) error {
 		return nil
 	}
 
-	var bundle []string
-	for _, k := range []string{"certificate", "issuing_ca"} {
-		if v := resp.Data[k]; v.(string) != "" {
-			bundle = append(bundle, v.(string))
-		} else {
-			return fmt.Errorf("required certificate for %q is missing or empty", k)
-		}
+	caChain, err := getCAChain(resp.Data)
+	if err != nil {
+		return err
 	}
 
-	return d.Set(field, strings.Join(bundle, "\n"))
+	// reverse the caChain to derive the certificate bundle
+	for i, j := 0, len(caChain)-1; i < j; i, j = i+1, j-1 {
+		caChain[i], caChain[j] = caChain[j], caChain[i]
+	}
+
+	return d.Set(field, strings.Join(caChain, "\n"))
 }
 
 func pkiSecretBackendRootSignIntermediateRead(d *schema.ResourceData, meta interface{}) error {

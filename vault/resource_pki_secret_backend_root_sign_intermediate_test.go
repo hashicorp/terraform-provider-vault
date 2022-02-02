@@ -274,7 +274,7 @@ func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
 			},
 			want:        nil,
 			wantErr:     true,
-			expectedErr: fmt.Errorf("missing required field %q", "issuing_ca"),
+			expectedErr: fmt.Errorf("required certificate for %q is missing or empty", "issuing_ca"),
 		},
 		{
 			name: "invalid-no-certificate",
@@ -284,7 +284,7 @@ func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
 			},
 			want:        nil,
 			wantErr:     true,
-			expectedErr: fmt.Errorf("missing required field %q", "certificate"),
+			expectedErr: fmt.Errorf("required certificate for %q is missing or empty", "certificate"),
 		},
 	}
 	for _, tt := range tests {
