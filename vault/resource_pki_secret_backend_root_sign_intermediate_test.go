@@ -34,7 +34,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootSignIntermediate_basic_pem(t *testing.T) {
-	path := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 	format := "pem"
 
@@ -44,8 +44,8 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem(t *testing.T) {
 		CheckDestroy: testPkiSecretBackendRootSignIntermediateDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(path, intermediatePath, format),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", path, format),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format),
+				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, format),
 			},
 		},
 	})
@@ -53,7 +53,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem(t *testing.T) {
 
 func TestPkiSecretBackendRootSignIntermediate_basic_der(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
-	path := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
+	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 	format := "der"
 
 	resource.Test(t, resource.TestCase{
@@ -62,7 +62,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_der(t *testing.T) {
 		CheckDestroy: testPkiSecretBackendRootSignIntermediateDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, path, format),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format),
 				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, format),
 			},
 		},
