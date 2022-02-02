@@ -485,6 +485,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description: "Connection parameters for the hana-database-plugin plugin.",
 				Elem: connectionStringResource(&connectionStringConfig{
 					excludeUsernameTemplate: true,
+					includeUserPass:         true,
 				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbEngineHana.Name(), dbEngineTypes),
@@ -533,10 +534,12 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			},
 
 			dbEnginePostgres.name: {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the postgresql-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the postgresql-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.Name(), dbEngineTypes),
 			},
@@ -650,7 +653,9 @@ func mysqlConnectionStringResource() *schema.Resource {
 }
 
 func mssqlConnectionStringResource() *schema.Resource {
-	r := connectionStringResource(&connectionStringConfig{})
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass: true,
+	})
 	r.Schema["contained_db"] = &schema.Schema{
 		Type:        schema.TypeBool,
 		Optional:    true,
@@ -729,7 +734,7 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case dbEngineInfluxDB:
 		setInfluxDBDatabaseConnectionData(d, "influxdb.0.", data)
 	case dbEngineHana:
-		setDatabaseConnectionData(d, "hana.0.", data)
+		setDatabaseConnectionDataWithUserPass(d, "hana.0.", data)
 	case dbEngineMongoDB:
 		setDatabaseConnectionData(d, "mongodb.0.", data)
 	case dbEngineMongoDBAtlas:
@@ -755,7 +760,7 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case dbEngineOracle:
 		setDatabaseConnectionData(d, "oracle.0.", data)
 	case dbEnginePostgres:
-		setDatabaseConnectionData(d, "postgresql.0.", data)
+		setDatabaseConnectionDataWithUserPass(d, "postgresql.0.", data)
 	case dbEngineElasticSearch:
 		setElasticsearchDatabaseConnectionData(d, "elasticsearch.0.", data)
 	case dbEngineSnowflake:
@@ -831,6 +836,13 @@ func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 		}
 		result[0]["contained_db"] = containedDB
 	}
+	if v, ok := details["username"]; ok {
+		result[0]["username"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		result[0]["password"] = v.(string)
+	}
+
 	return result, nil
 }
 
@@ -1015,6 +1027,23 @@ func getSnowflakeConnectionDetailsFromResponse(d *schema.ResourceData, prefix st
 	return []map[string]interface{}{result}
 }
 
+func getUserPassConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+	result := getConnectionDetailsFromResponse(d, prefix, resp)
+	if result == nil {
+		return nil
+	}
+
+	details := resp.Data["connection_details"].(map[string]interface{})
+	if v, ok := details["username"]; ok {
+		result[0]["username"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		result[0]["password"] = v.(string)
+	}
+
+	return result
+}
+
 func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	if v, ok := d.GetOk(prefix + "connection_url"); ok {
 		data["connection_url"] = v.(string)
@@ -1041,6 +1070,12 @@ func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 		//  way the mssql plugin handles this field. We can probably revert this once vault-1.9.3
 		//  is released.
 		data["contained_db"] = strconv.FormatBool(v.(bool))
+	}
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		data["password"] = v.(string)
 	}
 }
 
@@ -1284,7 +1319,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case dbEngineInfluxDB:
 		d.Set("influxdb", getInfluxDBConnectionDetailsFromResponse(d, "influxdb.0.", resp))
 	case dbEngineHana:
-		d.Set("hana", getConnectionDetailsFromResponse(d, "hana.0.", resp))
+		d.Set("hana", getUserPassConnectionDetailsFromResponse(d, "hana.0.", resp))
 	case dbEngineMongoDB:
 		d.Set("mongodb", getConnectionDetailsFromResponse(d, "mongodb.0.", resp))
 	case dbEngineMongoDBAtlas:
@@ -1321,13 +1356,13 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case dbEngineOracle:
 		d.Set("oracle", getConnectionDetailsFromResponse(d, "oracle.0.", resp))
 	case dbEnginePostgres:
-		d.Set("postgresql", getConnectionDetailsFromResponse(d, "postgresql.0.", resp))
+		d.Set("postgresql", getUserPassConnectionDetailsFromResponse(d, "postgresql.0.", resp))
 	case dbEngineElasticSearch:
 		d.Set("elasticsearch", getElasticsearchConnectionDetailsFromResponse(d, "elasticsearch.0.", resp))
 	case dbEngineSnowflake:
 		d.Set("snowflake", getSnowflakeConnectionDetailsFromResponse(d, "snowflake.0.", resp))
 	case dbEngineRedshift:
-		d.Set("redshift", getConnectionDetailsFromResponse(d, "redshift.0.", resp))
+		d.Set("redshift", getUserPassConnectionDetailsFromResponse(d, "redshift.0.", resp))
 	default:
 		return fmt.Errorf("no response handler for dbEngine: %s", db)
 	}
