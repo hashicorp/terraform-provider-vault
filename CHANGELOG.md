@@ -5,6 +5,9 @@ BUGS:
 IMPROVEMENTS:
 * `resource/token_auth_backend_role`: Add `allowed_policies_glob` and `disallowed_polices_glob` ([#1316](https://github.com/hashicorp/terraform-provider-vault/pull/1316))
 * `resource/database_secret_backend_connection`: Add support for configuring the secret engine's `plugin_name` ([#1320](https://github.com/hashicorp/terraform-provider-vault/pull/1320))
+* `resource/pki_secret_backend_root_sign_intermediate`: Update schema for `ca_chain` from string to a list of   
+  `issuing_ca` and `certificate`, add new `certificate_bundle` attribute that provides the concatenation of the   
+  intermediate and issuing CA certificates (PEM encoded) ([#1330](https://github.com/hashicorp/terraform-provider-vault/pull/1330))
 
 ## 3.2.1 (January 20, 2022)
 BUGS:
