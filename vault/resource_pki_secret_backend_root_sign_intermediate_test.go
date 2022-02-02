@@ -217,6 +217,7 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 }
 
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
+  depends_on = [vault_pki_secret_backend_root_cert.test]
   backend = vault_mount.test-intermediate.path
   type = "internal"
   common_name = "SubOrg Intermediate CA"

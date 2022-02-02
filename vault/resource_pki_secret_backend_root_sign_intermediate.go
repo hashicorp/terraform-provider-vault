@@ -290,9 +290,10 @@ func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta int
 }
 
 func setCAChain(d *schema.ResourceData, resp *api.Secret) error {
-	caChainField := "ca_chain"
+	field := "ca_chain"
+
 	var caChain []string
-	if v, ok := resp.Data[caChainField]; ok && v != nil {
+	if v, ok := resp.Data[field]; ok && v != nil {
 		caChain = v.([]string)
 	}
 
@@ -305,15 +306,17 @@ func setCAChain(d *schema.ResourceData, resp *api.Secret) error {
 		}
 	}
 
-	return d.Set(caChainField, caChain)
+	return d.Set(field, caChain)
 }
 
 func setCertificateBundle(d *schema.ResourceData, resp *api.Secret) error {
+	field := "certificate_bundle"
+
 	format := d.Get("format").(string)
 	switch format {
 	case "pem", "pem_bundle":
 	default:
-		log.Printf("[WARN] Cannot set the ca_chain_bundle for format %q", format)
+		log.Printf("[WARN] Cannot set the %q for format %q", field, format)
 		return nil
 	}
 
@@ -326,7 +329,7 @@ func setCertificateBundle(d *schema.ResourceData, resp *api.Secret) error {
 		}
 	}
 
-	return d.Set("certificate_bundle", strings.Join(bundle, "\n"))
+	return d.Set(field, strings.Join(bundle, "\n"))
 }
 
 func pkiSecretBackendRootSignIntermediateRead(d *schema.ResourceData, meta interface{}) error {
