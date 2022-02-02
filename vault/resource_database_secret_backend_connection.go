@@ -823,7 +823,7 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 }
 
 func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) ([]map[string]interface{}, error) {
-	result := getUserPassConnectionDetailsFromResponse(d, prefix, resp)
+	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	if result == nil {
 		return nil, nil
 	}
@@ -1021,7 +1021,7 @@ func getSnowflakeConnectionDetailsFromResponse(d *schema.ResourceData, prefix st
 	return []map[string]interface{}{result}
 }
 
-func getUserPassConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+func getConnectionDetailsFromResponseWithUserPass(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
 	result := getConnectionDetailsFromResponse(d, prefix, resp)
 	if result == nil {
 		return nil
@@ -1307,7 +1307,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case dbEngineInfluxDB:
 		d.Set("influxdb", getInfluxDBConnectionDetailsFromResponse(d, "influxdb.0.", resp))
 	case dbEngineHana:
-		d.Set("hana", getUserPassConnectionDetailsFromResponse(d, "hana.0.", resp))
+		d.Set("hana", getConnectionDetailsFromResponseWithUserPass(d, "hana.0.", resp))
 	case dbEngineMongoDB:
 		d.Set("mongodb", getConnectionDetailsFromResponse(d, "mongodb.0.", resp))
 	case dbEngineMongoDBAtlas:
@@ -1344,13 +1344,13 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case dbEngineOracle:
 		d.Set("oracle", getConnectionDetailsFromResponse(d, "oracle.0.", resp))
 	case dbEnginePostgres:
-		d.Set("postgresql", getUserPassConnectionDetailsFromResponse(d, "postgresql.0.", resp))
+		d.Set("postgresql", getConnectionDetailsFromResponseWithUserPass(d, "postgresql.0.", resp))
 	case dbEngineElasticSearch:
 		d.Set("elasticsearch", getElasticsearchConnectionDetailsFromResponse(d, "elasticsearch.0.", resp))
 	case dbEngineSnowflake:
 		d.Set("snowflake", getSnowflakeConnectionDetailsFromResponse(d, "snowflake.0.", resp))
 	case dbEngineRedshift:
-		d.Set("redshift", getUserPassConnectionDetailsFromResponse(d, "redshift.0.", resp))
+		d.Set("redshift", getConnectionDetailsFromResponseWithUserPass(d, "redshift.0.", resp))
 	default:
 		return fmt.Errorf("no response handler for dbEngine: %s", db)
 	}
