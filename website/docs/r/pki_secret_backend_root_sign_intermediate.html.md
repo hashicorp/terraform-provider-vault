@@ -78,10 +78,13 @@ The following arguments are supported:
 
 In addition to the fields above, the following attributes are exported:
 
-* `certificate` - The certificate
+* `certificate` - The intermediate CA certificate in the `format` specified.
 
-* `issuing_ca` - The issuing CA
+* `issuing_ca` - The issuing CA certificate in the `format` specified.
 
-* `ca_chain` - The CA chain
+* `ca_chain` - A list of the issuing and intermediate CA certificates in the `format` specified.
+
+* `certificate_bundle` - The concatenation of the intermediate CA and the issuing CA certificates (PEM encoded). 
+  Requires the `format` to be set to any of: pem, pem_bundle. The value will be empty for all other formats.
 
 * `serial` - The serial
