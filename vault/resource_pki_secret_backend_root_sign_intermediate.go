@@ -176,9 +176,11 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				},
 			},
 			"certificate_bundle": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "The PEM encoded CA chain. Requires the format to be one of: pem, pem_bundle",
+				Type:     schema.TypeString,
+				Computed: true,
+				Description: "The concatenation of the intermediate and issuing CA certificates (PEM encoded). " +
+					"Requires the format to be set to any of: pem, " +
+					"pem_bundle. The value will be empty for all other formats.",
 			},
 			"serial": {
 				Type:        schema.TypeString,
