@@ -823,7 +823,7 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 }
 
 func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) ([]map[string]interface{}, error) {
-	result := getConnectionDetailsFromResponse(d, prefix, resp)
+	result := getUserPassConnectionDetailsFromResponse(d, prefix, resp)
 	if result == nil {
 		return nil, nil
 	}
@@ -835,12 +835,6 @@ func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 			return nil, fmt.Errorf(`unsupported type for field "contained_db, err=%w"`, err)
 		}
 		result[0]["contained_db"] = containedDB
-	}
-	if v, ok := details["username"]; ok {
-		result[0]["username"] = v.(string)
-	}
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		result[0]["password"] = v.(string)
 	}
 
 	return result, nil
@@ -1063,19 +1057,13 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 }
 
 func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
-	setDatabaseConnectionData(d, prefix, data)
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	if v, ok := d.GetOk(prefix + "contained_db"); ok {
 		// TODO:
 		//  we have to pass string value here due to an issue with the
 		//  way the mssql plugin handles this field. We can probably revert this once vault-1.9.3
 		//  is released.
 		data["contained_db"] = strconv.FormatBool(v.(bool))
-	}
-	if v, ok := d.GetOk(prefix + "username"); ok {
-		data["username"] = v.(string)
-	}
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
 	}
 }
 
