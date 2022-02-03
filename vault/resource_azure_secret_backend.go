@@ -88,37 +88,24 @@ func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Get("path").(string)
 	description := d.Get("description").(string)
-	tenantID := d.Get("tenant_id").(string)
-	clientID := d.Get("client_id").(string)
-	clientSecret := d.Get("client_secret").(string)
-	environment := d.Get("environment").(string)
-	subscriptionID := d.Get("subscription_id").(string)
-
 	configPath := azureSecretBackendPath(path)
-
-	data := map[string]interface{}{
-		"tenant_id":               tenantID,
-		"client_id":               clientID,
-		"client_secret":           clientSecret,
-		"environment":             environment,
-		"subscription_id":         subscriptionID,
-		"use_microsoft_graph_api": d.Get("use_microsoft_graph_api").(bool),
-	}
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting Azure backend at %q", path)
-	err := client.Sys().Mount(path, &api.MountInput{
+	input := &api.MountInput{
 		Type:        "azure",
 		Description: description,
 		Config:      api.MountConfigInput{},
-	})
-	if err != nil {
+	}
+	if err := client.Sys().Mount(path, input); err != nil {
 		return fmt.Errorf("error mounting to %q: %s", path, err)
 	}
+
 	log.Printf("[DEBUG] Mounted Azure backend at %q", path)
 	d.SetId(path)
 
 	log.Printf("[DEBUG] Writing Azure configuration to %q", configPath)
+	data := azureSecretBackendRequestData(d)
 	if _, err := client.Logical().Write(configPath, data); err != nil {
 		return fmt.Errorf("error writing Azure configuration for %q: %s", path, err)
 	}
@@ -192,27 +179,8 @@ func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 
-	fields := []string{
-		"description",
-		"client_id",
-		"environment",
-		"tenant_id",
-		"client_secret",
-		"use_microsoft_graph_api",
-	}
-
-	data := make(map[string]interface{})
-	for _, k := range fields {
-		if d.HasChange(k) {
-			data[k] = d.Get(k)
-		}
-	}
-
+	data := azureSecretBackendRequestData(d)
 	if len(data) > 0 {
-		if environment, ok := d.GetOk("environment"); ok {
-			data["environment"] = environment
-		}
-
 		_, err := client.Logical().Write(azureSecretBackendPath(path), data)
 		if err != nil {
 			return fmt.Errorf("error writing config for %q: %s", path, err)
@@ -252,4 +220,27 @@ func azureSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, e
 
 func azureSecretBackendPath(path string) string {
 	return strings.Trim(path, "/") + "/config"
+}
+
+func azureSecretBackendRequestData(d *schema.ResourceData) map[string]interface{} {
+	fields := []string{
+		"description",
+		"client_id",
+		"environment",
+		"tenant_id",
+		"client_secret",
+		"use_microsoft_graph_api",
+		"subscription_id",
+	}
+
+	data := make(map[string]interface{})
+	for _, k := range fields {
+		if d.IsNewResource() {
+			data[k] = d.Get(k)
+		} else if d.HasChange(k) {
+			data[k] = d.Get(k)
+		}
+	}
+
+	return data
 }
