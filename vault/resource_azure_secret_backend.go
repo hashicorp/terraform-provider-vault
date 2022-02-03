@@ -19,7 +19,6 @@ func azureSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,
@@ -42,6 +41,12 @@ func azureSecretBackendResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
+			},
+			"use_microsoft_graph_api": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Use the Microsoft Graph API. Should be set to true on vault-1.10+",
 			},
 			"subscription_id": {
 				Type:        schema.TypeString,
@@ -92,11 +97,12 @@ func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	configPath := azureSecretBackendPath(path)
 
 	data := map[string]interface{}{
-		"tenant_id":       tenantID,
-		"client_id":       clientID,
-		"client_secret":   clientSecret,
-		"environment":     environment,
-		"subscription_id": subscriptionID,
+		"tenant_id":               tenantID,
+		"client_id":               clientID,
+		"client_secret":           clientSecret,
+		"environment":             environment,
+		"subscription_id":         subscriptionID,
+		"use_microsoft_graph_api": d.Get("use_microsoft_graph_api").(bool),
 	}
 
 	d.Partial(true)
@@ -164,8 +170,19 @@ func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("environment", "AzurePublicCloud")
 	}
 
-	d.Set("path", path)
-	d.Set("description", mount.Description)
+	if v, ok := resp.Data["use_microsoft_graph_api"]; ok {
+		if err := d.Set("use_microsoft_graph_api", v); err != nil {
+			return err
+		}
+	}
+
+	if err := d.Set("path", path); err != nil {
+		return err
+	}
+
+	if err := d.Set("description", mount.Description); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -175,16 +192,24 @@ func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 
-	if d.HasChange("client_id") || d.HasChange("environment") || d.HasChange("tenant_id") || d.HasChange("client_secret") {
-		log.Printf("[DEBUG] Updating Azure Backend Config at %q", azureSecretBackendPath(path))
-		data := map[string]interface{}{
-			"tenant_id":     d.Get("tenant_id").(string),
-			"client_id":     d.Get("client_id").(string),
-			"client_secret": d.Get("client_secret").(string),
-		}
+	fields := []string{
+		"description",
+		"client_id",
+		"environment",
+		"tenant_id",
+		"client_secret",
+		"use_microsoft_graph_api",
+	}
 
-		environment := d.Get("environment").(string)
-		if environment != "" {
+	data := make(map[string]interface{})
+	for _, k := range fields {
+		if d.HasChange(k) {
+			data[k] = d.Get(k)
+		}
+	}
+
+	if len(data) > 0 {
+		if environment, ok := d.GetOk("environment"); ok {
 			data["environment"] = environment
 		}
 
@@ -194,6 +219,7 @@ func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 		log.Printf("[DEBUG] Updated Azure Backend Config at %q", azureSecretBackendPath(path))
 	}
+
 	return azureSecretBackendRead(d, meta)
 }
 

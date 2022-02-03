@@ -29,6 +29,7 @@ func TestAzureSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "client_id", "11111111-2222-3333-4444-333333333333"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "client_secret", "12345678901234567890"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "environment", "AzurePublicCloud"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "use_microsoft_graph_api", "false"),
 				),
 			},
 			{
@@ -40,6 +41,7 @@ func TestAzureSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "client_id", "22222222-3333-4444-5555-444444444444"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "client_secret", "098765432109876543214"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "environment", "AzurePublicCloud"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "use_microsoft_graph_api", "true"),
 				),
 			},
 		},
@@ -90,5 +92,6 @@ func testAzureSecretBackend_updated(path string) string {
 	 client_id = "22222222-3333-4444-5555-444444444444"
 	 client_secret = "098765432109876543214"
 	 environment = "AzurePublicCloud"
+	 use_microsoft_graph_api = true
 	}`, path)
 }
