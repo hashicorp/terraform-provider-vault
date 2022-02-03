@@ -224,7 +224,6 @@ func azureSecretBackendPath(path string) string {
 
 func azureSecretBackendRequestData(d *schema.ResourceData) map[string]interface{} {
 	fields := []string{
-		"description",
 		"client_id",
 		"environment",
 		"tenant_id",
