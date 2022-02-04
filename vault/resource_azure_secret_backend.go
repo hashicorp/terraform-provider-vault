@@ -142,23 +142,20 @@ func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
-	if v, ok := resp.Data["client_id"].(string); ok {
-		d.Set("client_id", v)
-	}
-	if v, ok := resp.Data["subscription_id"].(string); ok {
-		d.Set("subscription_id", v)
-	}
-	if v, ok := resp.Data["tenant_id"].(string); ok {
-		d.Set("tenant_id", v)
-	}
-	if v, ok := resp.Data["environment"].(string); ok && v != "" {
-		d.Set("environment", v)
-	} else {
-		d.Set("environment", "AzurePublicCloud")
+	for _, k := range []string{"client_id", "subscription_id", "tenant_id", "use_microsoft_graph_api"} {
+		if v, ok := resp.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return err
+			}
+		}
 	}
 
-	if v, ok := resp.Data["use_microsoft_graph_api"]; ok {
-		if err := d.Set("use_microsoft_graph_api", v); err != nil {
+	if v, ok := resp.Data["environment"]; ok && v.(string) != "" {
+		if err := d.Set("environment", v); err != nil {
+			return err
+		}
+	} else {
+		if err := d.Set("environment", "AzurePublicCloud"); err != nil {
 			return err
 		}
 	}
