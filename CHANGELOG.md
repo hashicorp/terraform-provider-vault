@@ -12,9 +12,6 @@ IMPROVEMENTS:
 * `resource/azure_secret_backend`: Add support for setting `use_microsoft_graph_api` ([#1335](https://github.com/hashicorp/terraform-provider-vault/pull/1335))
 * `resource/database_secret_backend_connection`: Add `username` and `password` fields to all DB Engines that support them ([#1331](https://github.com/hashicorp/terraform-provider-vault/pull/1331))
 
-
-
-
 ## 3.2.1 (January 20, 2022)
 BUGS:
 * `resource/rabbitmq_secret_backend_role`: Add nil check when reading RabbitMQ role from Vault ([#1312](https://github.com/hashicorp/terraform-provider-vault/pull/1312))
