@@ -10,6 +10,7 @@ IMPROVEMENTS:
   `issuing_ca` and `certificate`, add new `certificate_bundle` attribute that provides the concatenation of the   
   intermediate and issuing CA certificates (PEM encoded) ([#1330](https://github.com/hashicorp/terraform-provider-vault/pull/1330))
 * `resource/azure_secret_backend`: Add support for setting `use_microsoft_graph_api` ([#1335](https://github.com/hashicorp/terraform-provider-vault/pull/1335))
+* `r/d/kubernetes_auth_backend_role`: Add support for setting and getting `alias_name_source` ([#1336](https://github.com/hashicorp/terraform-provider-vault/pull/1336))
 
 ## 3.2.1 (January 20, 2022)
 BUGS:
