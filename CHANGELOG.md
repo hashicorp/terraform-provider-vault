@@ -9,7 +9,7 @@ IMPROVEMENTS:
 * `resource/pki_secret_backend_root_sign_intermediate`: Update schema for `ca_chain` from string to a list of   
   `issuing_ca` and `certificate`, add new `certificate_bundle` attribute that provides the concatenation of the   
   intermediate and issuing CA certificates (PEM encoded) ([#1330](https://github.com/hashicorp/terraform-provider-vault/pull/1330))
-* `resource/database_secret_backend_connection`: Add `username` and `password` support to Redshift, Hana, Postgres and MSSQL ([#1331](https://github.com/hashicorp/terraform-provider-vault/pull/1331))
+* `resource/database_secret_backend_connection`: Add `username` and `password` fields to all DB Engines that support them ([#1331](https://github.com/hashicorp/terraform-provider-vault/pull/1331))
 
 ## 3.2.1 (January 20, 2022)
 BUGS:
