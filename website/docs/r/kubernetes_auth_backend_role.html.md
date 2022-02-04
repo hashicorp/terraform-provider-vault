@@ -49,7 +49,7 @@ before setting this to something other its default value. There are **important*
 implications to be aware of.
  
 * `alias_name_source` - (Optional, default: `serviceaccount_uid`) Configures how identity aliases are generated.
-   Valid choices are: `serviceaccount_uid`, `serviceaccount_name`.
+   Valid choices are: `serviceaccount_uid`, `serviceaccount_name`. (vault-1.9+)
 
 ### Common Token Arguments
 
