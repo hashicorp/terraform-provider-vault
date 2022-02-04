@@ -1006,8 +1006,7 @@ func getInfluxDBConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 }
 
 func getSnowflakeConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
-	// TODO Clarify Snowflake behavior
-	commonDetails := getConnectionDetailsFromResponse(d, prefix, resp)
+	commonDetails := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
 	if !ok {
