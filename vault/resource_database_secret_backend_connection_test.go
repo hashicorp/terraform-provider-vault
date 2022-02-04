@@ -549,31 +549,29 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 	createMySQSUser(t, db, testUsername, testPassword)
 	defer deleteMySQLUser(t, db, testUsername)
 
-	client := testProvider.Meta().(*api.Client)
-
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, backend, testConnURL, testUsername, testPassword, 0),
+				Config: testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, backend, testConnURL, username, password, 0),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.connection_url", testConnURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.password", password),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "0"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "data.%", "2"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "data.username", testUsername),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "data.password", testPassword),
 				),
 			},
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, backend, testConnURL, testUsername, testPassword, 10),
 				PreConfig: func() {
 					path := fmt.Sprintf("%s/rotate-root/%s", backend, name)
+					client := testProvider.Meta().(*api.Client)
 					resp, err := client.Logical().Write(path, map[string]interface{}{})
 					if err != nil {
 						t.Error(err)
@@ -588,9 +586,6 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.connection_url", testConnURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "10"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "data.%", "2"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "data.username", testUsername),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "data.password", testPassword),
 				),
 			},
 		},
@@ -1123,11 +1118,8 @@ resource "vault_database_secret_backend_connection" "test" {
   mysql {
 	  connection_url          = "%s"
 	  max_connection_lifetime = "%d"
-  }
-
-  data = {
-	  username = "%s"
-	  password = "%s"
+	  username 				  = "%s"
+	  password 				  = "%s"
   }
 }
 `, path, name, connURL, connLifetime, username, password)
