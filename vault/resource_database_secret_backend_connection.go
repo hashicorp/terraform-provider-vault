@@ -443,10 +443,12 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			},
 
 			dbEngineMongoDB.name: {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the mongodb-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mongodb-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDB.Name(), dbEngineTypes),
 			},
@@ -509,26 +511,32 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQL.Name(), dbEngineTypes),
 			},
 			dbEngineMySQLRDS.name: {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the mysql-rds-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mysql-rds-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLRDS.Name(), dbEngineTypes),
 			},
 			dbEngineMySQLAurora.name: {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the mysql-aurora-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mysql-aurora-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLAurora.Name(), dbEngineTypes),
 			},
 			dbEngineMySQLLegacy.name: {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the mysql-legacy-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mysql-legacy-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLLegacy.Name(), dbEngineTypes),
 			},
@@ -545,28 +553,34 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 			},
 
 			dbEngineOracle.name: {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the oracle-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the oracle-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbEngineOracle.Name(), dbEngineTypes),
 			},
 
 			dbEngineRedshift.name: {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the redshift-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{includeUserPass: true}),
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the redshift-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbEngineRedshift.Name(), dbEngineTypes),
 			},
 
 			dbEngineSnowflake.name: {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the snowflake-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{includeUserPass: true}),
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the snowflake-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbEngineSnowflake.Name(), dbEngineTypes),
 			},
@@ -637,7 +651,9 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 }
 
 func mysqlConnectionStringResource() *schema.Resource {
-	r := connectionStringResource(&connectionStringConfig{})
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass: true,
+	})
 	r.Schema["tls_certificate_key"] = &schema.Schema{
 		Type:        schema.TypeString,
 		Optional:    true,
@@ -736,7 +752,7 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case dbEngineHana:
 		setDatabaseConnectionDataWithUserPass(d, "hana.0.", data)
 	case dbEngineMongoDB:
-		setDatabaseConnectionData(d, "mongodb.0.", data)
+		setDatabaseConnectionDataWithUserPass(d, "mongodb.0.", data)
 	case dbEngineMongoDBAtlas:
 		if v, ok := d.GetOk("mongodbatlas.0.public_key"); ok {
 			data["public_key"] = v.(string)
@@ -752,13 +768,13 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case dbEngineMySQL:
 		setMySQLDatabaseConnectionData(d, "mysql.0.", data)
 	case dbEngineMySQLRDS:
-		setDatabaseConnectionData(d, "mysql_rds.0.", data)
+		setDatabaseConnectionDataWithUserPass(d, "mysql_rds.0.", data)
 	case dbEngineMySQLAurora:
-		setDatabaseConnectionData(d, "mysql_aurora.0.", data)
+		setDatabaseConnectionDataWithUserPass(d, "mysql_aurora.0.", data)
 	case dbEngineMySQLLegacy:
-		setDatabaseConnectionData(d, "mysql_legacy.0.", data)
+		setDatabaseConnectionDataWithUserPass(d, "mysql_legacy.0.", data)
 	case dbEngineOracle:
-		setDatabaseConnectionData(d, "oracle.0.", data)
+		setDatabaseConnectionDataWithUserPass(d, "oracle.0.", data)
 	case dbEnginePostgres:
 		setDatabaseConnectionDataWithUserPass(d, "postgresql.0.", data)
 	case dbEngineElasticSearch:
@@ -841,7 +857,7 @@ func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 }
 
 func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
-	commonDetails := getConnectionDetailsFromResponse(d, prefix, resp)
+	commonDetails := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
 	if !ok {
@@ -990,6 +1006,7 @@ func getInfluxDBConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 }
 
 func getSnowflakeConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+	// TODO Clarify Snowflake behavior
 	commonDetails := getConnectionDetailsFromResponse(d, prefix, resp)
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
@@ -1068,7 +1085,7 @@ func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 }
 
 func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
-	setDatabaseConnectionData(d, prefix, data)
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
 		data["tls_certificate_key"] = v.(string)
 	}
@@ -1309,7 +1326,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case dbEngineHana:
 		d.Set("hana", getConnectionDetailsFromResponseWithUserPass(d, "hana.0.", resp))
 	case dbEngineMongoDB:
-		d.Set("mongodb", getConnectionDetailsFromResponse(d, "mongodb.0.", resp))
+		d.Set("mongodb", getConnectionDetailsFromResponseWithUserPass(d, "mongodb.0.", resp))
 	case dbEngineMongoDBAtlas:
 		details := resp.Data["connection_details"]
 		data, ok := details.(map[string]interface{})
@@ -1336,13 +1353,13 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case dbEngineMySQL:
 		d.Set("mysql", getMySQLConnectionDetailsFromResponse(d, "mysql.0.", resp))
 	case dbEngineMySQLRDS:
-		d.Set("mysql_rds", getConnectionDetailsFromResponse(d, "mysql_rds.0.", resp))
+		d.Set("mysql_rds", getConnectionDetailsFromResponseWithUserPass(d, "mysql_rds.0.", resp))
 	case dbEngineMySQLAurora:
-		d.Set("mysql_aurora", getConnectionDetailsFromResponse(d, "mysql_aurora.0.", resp))
+		d.Set("mysql_aurora", getConnectionDetailsFromResponseWithUserPass(d, "mysql_aurora.0.", resp))
 	case dbEngineMySQLLegacy:
-		d.Set("mysql_legacy", getConnectionDetailsFromResponse(d, "mysql_legacy.0.", resp))
+		d.Set("mysql_legacy", getConnectionDetailsFromResponseWithUserPass(d, "mysql_legacy.0.", resp))
 	case dbEngineOracle:
-		d.Set("oracle", getConnectionDetailsFromResponse(d, "oracle.0.", resp))
+		d.Set("oracle", getConnectionDetailsFromResponseWithUserPass(d, "oracle.0.", resp))
 	case dbEnginePostgres:
 		d.Set("postgresql", getConnectionDetailsFromResponseWithUserPass(d, "postgresql.0.", resp))
 	case dbEngineElasticSearch:
