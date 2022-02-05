@@ -84,7 +84,7 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 			DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
-			Description: "List of allowed entity aliases for given role.",
+			Description: "Set of allowed entity aliases for this role.",
 		},
 
 		"renewable": {
