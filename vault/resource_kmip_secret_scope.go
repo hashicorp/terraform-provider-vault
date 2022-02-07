@@ -55,7 +55,7 @@ func kmipSecretScopeCreate(d *schema.ResourceData, meta interface{}) error {
 	scopePath := path + "/scope/" + scope
 	log.Printf("[DEBUG] Updating %q", scopePath)
 	if _, err := client.Logical().Write(scopePath, data); err != nil {
-		return fmt.Errorf("error updating KMIP config %q: %s", scopePath, err)
+		return fmt.Errorf("error updating KMIP scope %s: %s", scopePath, err)
 	}
 	d.SetId(scopePath)
 	if err := d.Set("scope", scope); err != nil {

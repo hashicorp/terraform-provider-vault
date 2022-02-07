@@ -203,7 +203,7 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	rolePath := scopePath + "/role/" + role
 	log.Printf("[DEBUG] Updating %q", rolePath)
 	if _, err := client.Logical().Write(rolePath, data); err != nil {
-		return fmt.Errorf("error updating KMIP config %q, err=%w", rolePath, err)
+		return fmt.Errorf("error updating KMIP role %q, err=%w", rolePath, err)
 	}
 
 	d.SetId(rolePath)
@@ -249,7 +249,7 @@ func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	for _, k := range kmipRoleAPIBooleanFields {
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return fmt.Errorf("error setting state key %q on KMIP config, err=%w", k, err)
+			return fmt.Errorf("error setting state key %q on KMIP role, err=%w", k, err)
 		}
 	}
 
@@ -301,7 +301,7 @@ func kmipSecretRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if _, err := client.Logical().Write(rolePath, data); err != nil {
-		return fmt.Errorf("error updating KMIP config %q,  err=%w", rolePath, err)
+		return fmt.Errorf("error updating KMIP role %q,  err=%w", rolePath, err)
 	}
 	log.Printf("[DEBUG] Updated %q", rolePath)
 
@@ -312,10 +312,10 @@ func kmipSecretRoleDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	rolePath := d.Id()
 
-	log.Printf("[DEBUG] Deleting KMIP scope %q", rolePath)
+	log.Printf("[DEBUG] Deleting KMIP role %s", rolePath)
 	_, err := client.Logical().Delete(rolePath)
 	if err != nil {
-		return fmt.Errorf("error deleting scope %q", rolePath)
+		return fmt.Errorf("error deleting role %s", rolePath)
 	}
 	log.Printf("[DEBUG] Deleted KMIP role %q", rolePath)
 
