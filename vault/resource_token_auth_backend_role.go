@@ -77,6 +77,15 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 			Default:     false,
 			Description: "If true, tokens created against this policy will be orphan tokens.",
 		},
+		"allowed_entity_aliases": {
+			Type:     schema.TypeSet,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
+			Description: "Set of allowed entity aliases for this role.",
+		},
 
 		"renewable": {
 			Type:        schema.TypeBool,
@@ -115,6 +124,7 @@ func tokenAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]in
 	data["disallowed_policies"] = d.Get("disallowed_policies").(*schema.Set).List()
 	data["disallowed_policies_glob"] = d.Get("disallowed_policies_glob").(*schema.Set).List()
 	data["orphan"] = d.Get("orphan").(bool)
+	data["allowed_entity_aliases"] = d.Get("allowed_entity_aliases").(*schema.Set).List()
 	data["renewable"] = d.Get("renewable").(bool)
 	data["path_suffix"] = d.Get("path_suffix").(string)
 	data["token_type"] = d.Get("token_type").(string)
@@ -171,7 +181,8 @@ func tokenAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	params := []string{
 		"allowed_policies", "allowed_policies_glob", "disallowed_policies",
-		"disallowed_policies_glob", "orphan", "path_suffix", "renewable",
+		"disallowed_policies_glob", "allowed_entity_aliases", "orphan",
+		"path_suffix", "renewable",
 	}
 	for _, k := range params {
 		if err := d.Set(k, resp.Data[k]); err != nil {
