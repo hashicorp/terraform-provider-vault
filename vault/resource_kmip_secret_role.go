@@ -180,25 +180,7 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	scope := d.Get("scope").(string)
 	role := d.Get("role").(string)
 
-	data := map[string]interface{}{}
-	if v, ok := d.GetOk("tls_client_key_bits"); ok {
-		data["tls_client_key_bits"] = v.(int)
-	}
-
-	if v, ok := d.GetOk("tls_client_key_type"); ok {
-		data["tls_client_key_type"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("tls_client_ttl"); ok {
-		data["tls_client_ttl"] = v.(int)
-	}
-
-	for _, k := range kmipRoleAPIBooleanFields {
-		if v, ok := d.GetOkExists(k); ok {
-			data[k] = v.(bool)
-		}
-	}
-
+	data := kmipSecretRoleRequestData(d)
 	rolePath := path + "/scope/" + scope + "/role/" + role
 	log.Printf("[DEBUG] Updating %q", rolePath)
 	if _, err := client.Logical().Write(rolePath, data); err != nil {
@@ -275,26 +257,8 @@ func kmipSecretRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 		rolePath = newRolePath
 	}
 
-	data := map[string]interface{}{}
+	data := kmipSecretRoleRequestData(d)
 	log.Printf("[DEBUG] Updating %q", rolePath)
-
-	if d.HasChange("tls_client_key_bits") {
-		data["tls_client_key_bits"] = d.Get("tls_client_key_bits").(int)
-	}
-
-	if d.HasChange("tls_client_key_type") {
-		data["tls_client_key_type"] = d.Get("tls_client_key_type").(string)
-	}
-
-	if d.HasChange("tls_client_ttl") {
-		data["tls_client_ttl"] = d.Get("tls_client_ttl").(int)
-	}
-
-	for _, k := range kmipRoleAPIBooleanFields {
-		if d.HasChange(k) {
-			data[k] = d.Get(k).(bool)
-		}
-	}
 
 	if _, err := client.Logical().Write(rolePath, data); err != nil {
 		return fmt.Errorf("error updating KMIP role %q,  err=%w", rolePath, err)
@@ -316,4 +280,33 @@ func kmipSecretRoleDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleted KMIP role %q", rolePath)
 
 	return nil
+}
+
+func kmipSecretRoleRequestData(d *schema.ResourceData) map[string]interface{} {
+	nonBooleanfields := []string{"tls_client_key_bits", "tls_client_key_type", "tls_client_ttl"}
+
+	data := make(map[string]interface{})
+	for _, k := range nonBooleanfields {
+		if d.IsNewResource() {
+			data[k] = d.Get(k)
+		} else if d.HasChange(k) {
+			data[k] = d.Get(k)
+		}
+	}
+
+	// Boolean fields must not be evaluated
+	// otherwise all result in true
+	for _, k := range kmipRoleAPIBooleanFields {
+		if d.IsNewResource() {
+			if v, ok := d.GetOkExists(k); ok {
+				data[k] = v.(bool)
+			}
+		} else if d.HasChange(k) {
+			if v, ok := d.GetOkExists(k); ok {
+				data[k] = v.(bool)
+			}
+		}
+	}
+
+	return data
 }
