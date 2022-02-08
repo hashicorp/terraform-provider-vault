@@ -61,7 +61,7 @@ The following arguments are supported:
 
 * `operation_add_attribute` - (Optional) Grant permission to use the KMIP Add Attribute operation.
 
-* `operation_all` - (Optional) Grant all permissions to this role. May not be specified with any other `operation_` params.
+* `operation_all` - (Optional) Grant all permissions to this role. May not be specified with any other `operation_*` params.
 
 * `operation_create` - (Optional) Grant permission to use the KMIP Create operation.
 
@@ -77,7 +77,7 @@ The following arguments are supported:
 
 * `operation_locate` - (Optional) Grant permission to use the KMIP Get Locate operation.
 
-* `operation_none` - (Optional) Remove all permissions from this role. May not be specified with any other `operation_` params.
+* `operation_none` - (Optional) Remove all permissions from this role. May not be specified with any other `operation_*` params.
 
 * `operation_register` - (Optional) Grant permission to use the KMIP Register operation.
 

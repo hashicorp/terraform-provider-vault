@@ -90,13 +90,13 @@ func kmipSecretRoleResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
-				Description: "Remove all permissions from this role. May not be specified with any other operation_ params",
+				Description: "Remove all permissions from this role. May not be specified with any other operation_* params",
 			},
 			"operation_all": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
-				Description: "Grant all permissions to this role. May not be specified with any other operation_ params",
+				Description: "Grant all permissions to this role. May not be specified with any other operation_* params",
 			},
 			"operation_activate": {
 				Type:        schema.TypeBool,
@@ -199,8 +199,7 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	scopePath := path + "/scope/" + scope
-	rolePath := scopePath + "/role/" + role
+	rolePath := path + "/scope/" + scope + "/role/" + role
 	log.Printf("[DEBUG] Updating %q", rolePath)
 	if _, err := client.Logical().Write(rolePath, data); err != nil {
 		return fmt.Errorf("error updating KMIP role %q, err=%w", rolePath, err)
@@ -222,6 +221,9 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	rolePath := d.Id()
+	if rolePath == "" {
+		return fmt.Errorf("expected a path as ID, got empty string")
+	}
 
 	log.Printf("[DEBUG] Reading KMIP role at %q", rolePath)
 	resp, err := client.Logical().Read(rolePath)
@@ -235,16 +237,10 @@ func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("expected role at %s, no role found", rolePath)
 	}
 
-	if err := d.Set("tls_client_key_bits", resp.Data["tls_client_key_bits"]); err != nil {
-		return err
-	}
-
-	if err := d.Set("tls_client_key_type", resp.Data["tls_client_key_type"]); err != nil {
-		return err
-	}
-
-	if err := d.Set("tls_client_ttl", resp.Data["tls_client_ttl"]); err != nil {
-		return err
+	for _, k := range []string{"tls_client_key_bits", "tls_client_key_type", "tls_client_ttl"} {
+		if err := d.Set(k, resp.Data[k]); err != nil {
+			return err
+		}
 	}
 
 	for _, k := range kmipRoleAPIBooleanFields {

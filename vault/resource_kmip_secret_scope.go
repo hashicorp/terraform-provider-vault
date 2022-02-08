@@ -71,7 +71,7 @@ func kmipSecretScopeRead(d *schema.ResourceData, meta interface{}) error {
 	expectedScope := d.Get("scope").(string)
 
 	log.Printf("[DEBUG] Reading KMIP scope at %s", path+"/scope")
-	err := readScopeFromScopeList(client, path+"/scope", expectedScope)
+	err := isScopeConfigured(client, path+"/scope", expectedScope)
 	if err != nil {
 		log.Printf("[WARN] KMIP scopes not found, removing from state")
 		d.SetId("")
@@ -88,7 +88,7 @@ func kmipSecretScopeUpdate(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("path") {
 		newMountPath := d.Get("path").(string)
 		log.Printf("[DEBUG] Confirming KMIP scope exists at %s", newMountPath+"/scope")
-		err := readScopeFromScopeList(client, newMountPath+"/scope", scope)
+		err := isScopeConfigured(client, newMountPath+"/scope", scope)
 		if err != nil {
 			return fmt.Errorf("error remounting KMIP scope to new backend path %s, err=%w", newMountPath+"/scope", err)
 		}
@@ -112,24 +112,28 @@ func kmipSecretScopeDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func readScopeFromScopeList(client *api.Client, scopePath, expectedScope string) error {
-	resp, err := client.Logical().List(scopePath)
+func isScopeConfigured(client *api.Client, path, name string) error {
+	resp, err := client.Logical().List(path)
 	if err != nil {
-		return fmt.Errorf("error reading KMIP scopes at %s: %s", scopePath, err)
+		return fmt.Errorf("error reading KMIP scopes at %s: %s", path, err)
 	}
 	if resp == nil {
-		return fmt.Errorf("expected scopes at %s, no scopes found", scopePath)
+		return fmt.Errorf("expected scopes at %s, no scopes found", path)
 	}
 
-	scopes := resp.Data["keys"].([]interface{})
+	var scopes []interface{}
+	if v, ok := resp.Data["keys"].([]interface{}); ok && v != nil {
+		scopes = v
+	}
 	found := false
 	for _, s := range scopes {
-		if s.(string) == expectedScope {
+		if s.(string) == name {
 			found = true
+			break
 		}
 	}
 	if !found {
-		return fmt.Errorf("expected scope %s in list of scopes %s", expectedScope, scopes)
+		return fmt.Errorf("expected scope %s in list of scopes %s", name, scopes)
 	}
 
 	return nil
