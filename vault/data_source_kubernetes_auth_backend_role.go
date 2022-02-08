@@ -31,20 +31,26 @@ func kubernetesAuthBackendRoleDataSource() *schema.Resource {
 		"bound_service_account_names": {
 			Type:        schema.TypeSet,
 			Elem:        &schema.Schema{Type: schema.TypeString},
-			Description: "List of service account names able to access this role. If set to \"*\" all names are allowed, both this and bound_service_account_namespaces can not be \"*\".",
 			Computed:    true,
+			Description: "List of service account names able to access this role. If set to \"*\" all names are allowed, both this and bound_service_account_namespaces can not be \"*\".",
 		},
 		"bound_service_account_namespaces": {
 			Type:        schema.TypeSet,
 			Elem:        &schema.Schema{Type: schema.TypeString},
-			Description: "List of namespaces allowed to access this role. If set to \"*\" all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
 			Computed:    true,
+			Description: "List of namespaces allowed to access this role. If set to \"*\" all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
 		},
 		"audience": {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Default:     "",
 			Description: "Optional Audience claim to verify in the JWT.",
+		},
+		"alias_name_source": {
+			Type:        schema.TypeString,
+			Required:    false,
+			Computed:    true,
+			Description: "Method used for generating identity aliases.",
 		},
 	}
 
@@ -80,7 +86,8 @@ func kubernetesAuthBackendRoleDataSourceRead(d *schema.ResourceData, meta interf
 		return err
 	}
 
-	for _, k := range []string{"bound_service_account_names", "bound_service_account_namespaces", "audience"} {
+	params := []string{"bound_service_account_names", "bound_service_account_namespaces", "audience", "alias_name_source"}
+	for _, k := range params {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return err
 		}
