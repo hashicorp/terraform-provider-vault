@@ -86,85 +86,85 @@ func kmipSecretRoleResource() *schema.Resource {
 				Optional:    true,
 				Description: "Client certificate TTL in seconds",
 			},
-			"operation_none": {
+			fieldOperationNone: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Remove all permissions from this role. May not be specified with any other operation_* params",
 			},
-			"operation_all": {
+			fieldOperationAll: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant all permissions to this role. May not be specified with any other operation_* params",
 			},
-			"operation_activate": {
+			fieldOperationActivate: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Activate operation",
 			},
-			"operation_add_attribute": {
+			fieldOperationAddAttribute: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Add Attribute operation",
 			},
-			"operation_create": {
+			fieldOperationCreate: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Create operation",
 			},
-			"operation_destroy": {
+			fieldOperationDestroy: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Destroy operation",
 			},
-			"operation_discover_versions": {
+			fieldOperationDiscoverVersions: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Discover Version operation",
 			},
-			"operation_get": {
+			fieldOperationGet: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Get operation",
 			},
-			"operation_get_attribute_list": {
+			fieldOperationGetAttributeList: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Get Attribute List operation",
 			},
-			"operation_get_attributes": {
+			fieldOperationGetAttributes: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Get Attributes operation",
 			},
-			"operation_locate": {
+			fieldOperationLocate: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Locate operation",
 			},
-			"operation_register": {
+			fieldOperationRegister: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Register operation",
 			},
-			"operation_rekey": {
+			fieldOperationRekey: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
 				Description: "Grant permission to use the KMIP Rekey operation",
 			},
-			"operation_revoke": {
+			fieldOperationRevoke: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
