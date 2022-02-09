@@ -288,7 +288,9 @@ func kmipSecretRoleRequestData(d *schema.ResourceData) map[string]interface{} {
 	data := make(map[string]interface{})
 	for _, k := range nonBooleanfields {
 		if d.IsNewResource() {
-			data[k] = d.Get(k)
+			if v, ok := d.GetOk(k); ok {
+				data[k] = v
+			}
 		} else if d.HasChange(k) {
 			data[k] = d.Get(k)
 		}
@@ -302,9 +304,7 @@ func kmipSecretRoleRequestData(d *schema.ResourceData) map[string]interface{} {
 				data[k] = v.(bool)
 			}
 		} else if d.HasChange(k) {
-			if v, ok := d.GetOkExists(k); ok {
-				data[k] = v.(bool)
-			}
+			data[k] = d.Get(k)
 		}
 	}
 

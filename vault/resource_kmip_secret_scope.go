@@ -1,12 +1,15 @@
 package vault
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
+
+var errKMIPScopeNotFound = errors.New("KMIP scope not found")
 
 func kmipSecretScopeResource() *schema.Resource {
 	return &schema.Resource{
@@ -67,15 +70,19 @@ func kmipSecretScopeCreate(d *schema.ResourceData, meta interface{}) error {
 
 func kmipSecretScopeRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	path := d.Get("path").(string)
-	expectedScope := d.Get("scope").(string)
+	path := d.Get("path").(string) + "/scope"
+	scope := d.Get("scope").(string)
 
-	log.Printf("[DEBUG] Reading KMIP scope at %s", path+"/scope")
-	configured, err := isScopeConfigured(client, path+"/scope", expectedScope)
+	log.Printf("[DEBUG] Reading KMIP scope at %s", path)
+	configured, err := isScopeConfigured(client, path, scope)
+	if err != nil {
+		// TODO Fix error messaging
+		return err
+	}
 	if !configured {
 		log.Printf("[WARN] KMIP scopes not found, removing from state")
 		d.SetId("")
-		return err
+		return fmt.Errorf("%w: scope=%q, path=%q", errKMIPScopeNotFound, scope, path)
 	}
 
 	return nil
@@ -86,13 +93,19 @@ func kmipSecretScopeUpdate(d *schema.ResourceData, meta interface{}) error {
 	scope := d.Get("scope").(string)
 
 	if d.HasChange("path") {
-		newMountPath := d.Get("path").(string)
-		log.Printf("[DEBUG] Confirming KMIP scope exists at %s", newMountPath+"/scope")
-		configured, err := isScopeConfigured(client, newMountPath+"/scope", scope)
-		if !configured {
-			return fmt.Errorf("error remounting KMIP scope to new backend path %s, err=%w", newMountPath+"/scope", err)
+		path := d.Get("path").(string) + "/scope"
+		log.Printf("[DEBUG] Confirming KMIP scope exists at %s", path)
+		configured, err := isScopeConfigured(client, path, scope)
+		if err != nil {
+			// TODO Fix error messaging
+			return err
 		}
-		d.SetId(newMountPath + "/scope/" + scope)
+		if !configured {
+			log.Printf("[WARN] KMIP scope not found")
+			return fmt.Errorf("%w: scope=%q, path=%q", errKMIPScopeNotFound, scope, path)
+		}
+
+		d.SetId(fmt.Sprintf("%s/%s", path, scope))
 	}
 
 	return kmipSecretScopeRead(d, meta)
@@ -115,26 +128,23 @@ func kmipSecretScopeDelete(d *schema.ResourceData, meta interface{}) error {
 func isScopeConfigured(client *api.Client, path, name string) (bool, error) {
 	resp, err := client.Logical().List(path)
 	if err != nil {
-		return false, fmt.Errorf("error reading KMIP scopes at %s: %s", path, err)
-	}
-	if resp == nil {
-		return false, fmt.Errorf("expected scopes at %s, no scopes found", path)
+		return false, fmt.Errorf("error reading KMIP scopes at %s: err=%w", path, err)
 	}
 
-	var scopes []interface{}
-	if v, ok := resp.Data["keys"].([]interface{}); ok && v != nil {
-		scopes = v
-	}
-	found := false
-	for _, s := range scopes {
-		if s.(string) == name {
-			found = true
-			break
+	if resp != nil {
+		var scopes []interface{}
+		if v, ok := resp.Data["keys"].([]interface{}); ok && v != nil {
+			scopes = v
+		}
+
+		for _, s := range scopes {
+			if s.(string) == name {
+				return true, nil
+			}
 		}
 	}
-	if !found {
-		return false, fmt.Errorf("expected scope %s in list of scopes %s", name, scopes)
-	}
 
-	return true, nil
+	log.Printf("[WARN] KMIP scopes not found, removing from state")
+
+	return false, err
 }
