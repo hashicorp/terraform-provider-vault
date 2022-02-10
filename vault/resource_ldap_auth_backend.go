@@ -212,7 +212,6 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := d.GetOkExists("case_sensitive_names"); ok {
 		data["case_sensitive_names"] = v.(bool)
 	}
-	
 	if v, ok := d.GetOk("userdn"); ok {
 		data["userdn"] = v.(string)
 	}
