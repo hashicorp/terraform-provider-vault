@@ -46,7 +46,6 @@ func kmipSecretScopeResource() *schema.Resource {
 
 func kmipSecretScopeCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	path := d.Get("path").(string)
 	scope := d.Get("scope").(string)
 	force := d.Get("force").(bool)
 
@@ -55,7 +54,7 @@ func kmipSecretScopeCreate(d *schema.ResourceData, meta interface{}) error {
 		"force": force,
 	}
 
-	scopePath := path + "/scope/" + scope
+	scopePath := getScopePath(d)
 	log.Printf("[DEBUG] Updating %q", scopePath)
 	if _, err := client.Logical().Write(scopePath, data); err != nil {
 		return fmt.Errorf("error updating KMIP scope %s: %s", scopePath, err)
@@ -70,11 +69,11 @@ func kmipSecretScopeCreate(d *schema.ResourceData, meta interface{}) error {
 
 func kmipSecretScopeRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	path := d.Get("path").(string) + "/scope"
+	scopeListPath := d.Get("path").(string) + "/scope"
 	scope := d.Get("scope").(string)
 
-	log.Printf("[DEBUG] Reading KMIP scope at %s", path)
-	configured, err := isScopeConfigured(client, path, scope)
+	log.Printf("[DEBUG] Reading KMIP scope at %s", scopeListPath)
+	configured, err := isScopeConfigured(client, scopeListPath, scope)
 	if err != nil {
 		// TODO Fix error messaging
 		return err
@@ -82,7 +81,7 @@ func kmipSecretScopeRead(d *schema.ResourceData, meta interface{}) error {
 	if !configured {
 		log.Printf("[WARN] KMIP scopes not found, removing from state")
 		d.SetId("")
-		return fmt.Errorf("%w: scope=%q, path=%q", errKMIPScopeNotFound, scope, path)
+		return fmt.Errorf("%w: scope=%q, path=%q", errKMIPScopeNotFound, scope, scopeListPath)
 	}
 
 	return nil
@@ -93,19 +92,19 @@ func kmipSecretScopeUpdate(d *schema.ResourceData, meta interface{}) error {
 	scope := d.Get("scope").(string)
 
 	if d.HasChange("path") {
-		path := d.Get("path").(string) + "/scope"
-		log.Printf("[DEBUG] Confirming KMIP scope exists at %s", path)
-		configured, err := isScopeConfigured(client, path, scope)
+		scopeListPath := d.Get("path").(string) + "/scope"
+		log.Printf("[DEBUG] Confirming KMIP scope exists at %s", scopeListPath)
+		configured, err := isScopeConfigured(client, scopeListPath, scope)
 		if err != nil {
 			// TODO Fix error messaging
 			return err
 		}
 		if !configured {
 			log.Printf("[WARN] KMIP scope not found")
-			return fmt.Errorf("%w: scope=%q, path=%q", errKMIPScopeNotFound, scope, path)
+			return fmt.Errorf("%w: scope=%q, path=%q", errKMIPScopeNotFound, scope, scopeListPath)
 		}
 
-		d.SetId(fmt.Sprintf("%s/%s", path, scope))
+		d.SetId(fmt.Sprintf("%s/%s", scopeListPath, scope))
 	}
 
 	return kmipSecretScopeRead(d, meta)
@@ -144,4 +143,11 @@ func isScopeConfigured(client *api.Client, path, name string) (bool, error) {
 	log.Printf("[WARN] KMIP scopes not found, removing from state")
 
 	return false, nil
+}
+
+func getScopePath(d *schema.ResourceData) string {
+	path := d.Get("path").(string)
+	scope := d.Get("scope").(string)
+
+	return path + "/scope/" + scope
 }
