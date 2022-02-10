@@ -377,10 +377,9 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineMySQL)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
-	values := testutil.SkipTestEnvUnset(t, "MYSQL_URL", "MYSQL_USER", "MYSQL_PASSWORD")
-	connURL := values[0]
-	username := values[1]
-	password := values[2]
+	values := testutil.SkipTestEnvUnset(t,
+		"MYSQL_CONNECTION_URL", "MYSQL_CONNECTION_USERNAME", "MYSQL_CONNECTION_PASSWORD")
+	connURL, username, password := values[0], values[1], values[2]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineMySQL.DefaultPluginName()
@@ -473,10 +472,9 @@ func TestAccDatabaseSecretBackendConnectionUpdate_mysql(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineMySQL)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
-	values := testutil.SkipTestEnvUnset(t, "MYSQL_URL", "MYSQL_USER", "MYSQL_PASSWORD")
-	connURL := values[0]
-	username := values[1]
-	password := values[2]
+	values := testutil.SkipTestEnvUnset(t,
+		"MYSQL_CONNECTION_URL", "MYSQL_CONNECTION_USERNAME", "MYSQL_CONNECTION_PASSWORD")
+	connURL, username, password := values[0], values[1], values[2]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineMySQL.DefaultPluginName()
@@ -542,12 +540,15 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineMySQL.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
-	testUsername := acctest.RandomWithPrefix("username")
-	testPassword := acctest.RandomWithPrefix("password")
 
+	// setup a secondary root user which is required for the rotate-root test portion below.
+	secondaryRootUsername := acctest.RandomWithPrefix("username")
+	secondaryRootPassword := acctest.RandomWithPrefix("password")
 	db := newMySQLConnection(t, connURL, username, password)
-	createMySQSUser(t, db, testUsername, testPassword)
-	defer deleteMySQLUser(t, db, testUsername)
+	createMySQSUser(t, db, secondaryRootUsername, secondaryRootPassword)
+	t.Cleanup(func() {
+		deleteMySQLUser(t, db, secondaryRootUsername)
+	})
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -568,7 +569,20 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 				),
 			},
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, backend, testConnURL, testUsername, testPassword, 10),
+				Config: testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, backend, testConnURL, secondaryRootUsername, secondaryRootPassword, 10),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.connection_url", testConnURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.username", secondaryRootUsername),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.password", secondaryRootPassword),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "10"),
+				),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, backend, testConnURL, secondaryRootUsername, secondaryRootPassword, 10),
 				PreConfig: func() {
 					path := fmt.Sprintf("%s/rotate-root/%s", backend, name)
 					client := testProvider.Meta().(*api.Client)
@@ -1051,7 +1065,7 @@ resource "vault_database_secret_backend_connection" "test" {
 }
 
 func testAccDatabaseSecretBackendConnectionConfigUpdate_mysql(name, path, connURL, username, password string, connLifetime int) string {
-	return fmt.Sprintf(`
+	config := fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
   type = "database"
@@ -1071,6 +1085,8 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, connURL, username, password, connLifetime)
+
+	return config
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_mysql_tls(name, path, connURL, password, tls_ca, tls_certificate_key string) string {
@@ -1104,7 +1120,7 @@ EOT
 }
 
 func testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, path, connURL, username, password string, connLifetime int) string {
-	return fmt.Sprintf(`
+	config := fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
   type = "database"
@@ -1123,6 +1139,8 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, connURL, connLifetime, username, password)
+
+	return config
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_mysql_rds(name, path, connURL, username, password string) string {
