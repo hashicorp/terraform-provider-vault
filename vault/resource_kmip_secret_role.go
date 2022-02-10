@@ -183,7 +183,7 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	role := d.Get("role").(string)
 
 	data := kmipSecretRoleRequestData(d)
-	rolePath := getRolePath(d)
+	rolePath := getKMIPRolePath(d)
 
 	log.Printf("[DEBUG] Updating %q", rolePath)
 	if _, err := client.Logical().Write(rolePath, data); err != nil {
@@ -242,7 +242,7 @@ func kmipSecretRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	rolePath := d.Id()
 
 	if d.HasChange("path") {
-		newRolePath := getRolePath(d)
+		newRolePath := getKMIPRolePath(d)
 
 		log.Printf("[DEBUG] Confirming KMIP role exists at %s", newRolePath)
 		resp, err := client.Logical().Read(newRolePath)
@@ -311,8 +311,8 @@ func kmipSecretRoleRequestData(d *schema.ResourceData) map[string]interface{} {
 	return data
 }
 
-func getRolePath(d *schema.ResourceData) string {
+func getKMIPRolePath(d *schema.ResourceData) string {
 	role := d.Get("role").(string)
 
-	return getScopePath(d) + "/role/" + role
+	return getKMIPScopePath(d) + "/role/" + role
 }

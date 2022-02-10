@@ -54,7 +54,7 @@ func kmipSecretScopeCreate(d *schema.ResourceData, meta interface{}) error {
 		"force": force,
 	}
 
-	scopePath := getScopePath(d)
+	scopePath := getKMIPScopePath(d)
 	log.Printf("[DEBUG] Updating %q", scopePath)
 	if _, err := client.Logical().Write(scopePath, data); err != nil {
 		return fmt.Errorf("error updating KMIP scope %s: %s", scopePath, err)
@@ -145,7 +145,7 @@ func isScopeConfigured(client *api.Client, path, name string) (bool, error) {
 	return false, nil
 }
 
-func getScopePath(d *schema.ResourceData) string {
+func getKMIPScopePath(d *schema.ResourceData) string {
 	path := d.Get("path").(string)
 	scope := d.Get("scope").(string)
 
