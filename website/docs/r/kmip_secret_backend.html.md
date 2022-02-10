@@ -31,7 +31,7 @@ resource "vault_kmip_secret_backend" "default" {
 
 The following arguments are supported:
 
-* `path` - (Optional) The unique path this backend should be mounted at. Must
+* `path` - (Required) The unique path this backend should be mounted at. Must
   not begin or end with a `/`. Defaults to `kmip`.
 
 * `description` - (Optional) A human-friendly description for this backend.
@@ -65,5 +65,5 @@ No additional attributes are exported by this resource.
 KMIP Secret backend can be imported using the `path`, e.g.
 
 ```
-$ terraform import vault_kmip_secret_backend.kmip kmip
+$ terraform import vault_kmip_secret_backend.default kmip
 ```

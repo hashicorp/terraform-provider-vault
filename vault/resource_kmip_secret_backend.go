@@ -35,7 +35,6 @@ func kmipSecretBackendResource() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:         schema.TypeString,
-				ForceNew:     true,
 				Required:     true,
 				Description:  "Path where KMIP secret backend will be mounted",
 				ValidateFunc: validateNoTrailingLeadingSlashes,
@@ -132,6 +131,22 @@ func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Id()
+
+	if !d.IsNewResource() && d.HasChange("path") {
+		newPath := d.Get("path").(string)
+
+		log.Printf("[DEBUG] Remount %s to %s in Vault", path, newPath)
+
+		err := client.Sys().Remount(path, newPath)
+		if err != nil {
+			return fmt.Errorf("error remounting in Vault: %s", err)
+		}
+
+		d.SetId(newPath)
+		path = newPath
+	}
+
+	log.Printf("[DEBUG] Updating mount %s in Vault", path)
 
 	if d.HasChange("default_tls_client_ttl") || d.HasChange("description") {
 		tune := api.MountConfigInput{}
