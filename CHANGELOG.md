@@ -1,8 +1,6 @@
 ## 3.3.0 (Unreleased)
 FEATURES:
-* **New Resource**: `vault_kmip_secret_backend` resource ([#1339](https://github.com/hashicorp/terraform-provider-vault/pull/1339))
-* **New Resource**: `vault_kmip_secret_scope` resource ([#1339](https://github.com/hashicorp/terraform-provider-vault/pull/1339))
-* **New Resource**: `vault_kmip_secret_role` resource ([#1339](https://github.com/hashicorp/terraform-provider-vault/pull/1339))
+* Add KMIP support: new resources `vault_kmip_secret_backend`, `vault_kmip_secret_scope` and `vault_kmip_secret_role` ([#1339](https://github.com/hashicorp/terraform-provider-vault/pull/1339))
 
 BUGS:
 * `resource/kubernetes_auth_backend_config`: Ensure `disable_iss_validation` is honored in all cases ([#1315](https://github.com/hashicorp/terraform-provider-vault/pull/1315))
