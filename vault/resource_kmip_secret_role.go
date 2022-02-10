@@ -23,6 +23,9 @@ const (
 	fieldOperationRegister         = "operation_register"
 	fieldOperationRekey            = "operation_rekey"
 	fieldOperationRevoke           = "operation_revoke"
+	fieldTLSClientKeyType          = "tls_client_key_type"
+	fieldTLSClientKeyBits          = "tls_client_key_bits"
+	fieldTLSClientTTL              = "tls_client_ttl"
 )
 
 var kmipRoleAPIBooleanFields = []string{
@@ -71,17 +74,17 @@ func kmipSecretRoleResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Name of the role",
 			},
-			"tls_client_key_type": {
+			fieldTLSClientKeyType: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Client certificate key type, rsa or ec",
 			},
-			"tls_client_key_bits": {
+			fieldTLSClientKeyBits: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Client certificate key bits, valid values depend on key type",
 			},
-			"tls_client_ttl": {
+			fieldTLSClientTTL: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Client certificate TTL in seconds",
@@ -219,7 +222,7 @@ func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("expected role at %s, no role found", rolePath)
 	}
 
-	for _, k := range []string{"tls_client_key_bits", "tls_client_key_type", "tls_client_ttl"} {
+	for _, k := range []string{fieldTLSClientKeyType, fieldTLSClientKeyBits, fieldTLSClientTTL} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return err
 		}
@@ -283,7 +286,7 @@ func kmipSecretRoleDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretRoleRequestData(d *schema.ResourceData) map[string]interface{} {
-	nonBooleanfields := []string{"tls_client_key_bits", "tls_client_key_type", "tls_client_ttl"}
+	nonBooleanfields := []string{fieldTLSClientKeyType, fieldTLSClientKeyBits, fieldTLSClientTTL}
 
 	data := make(map[string]interface{})
 	for _, k := range nonBooleanfields {

@@ -132,19 +132,16 @@ func isScopeConfigured(client *api.Client, path, name string) (bool, error) {
 	}
 
 	if resp != nil {
-		var scopes []interface{}
 		if v, ok := resp.Data["keys"].([]interface{}); ok && v != nil {
-			scopes = v
-		}
-
-		for _, s := range scopes {
-			if s.(string) == name {
-				return true, nil
+			for _, s := range v {
+				if s.(string) == name {
+					return true, nil
+				}
 			}
 		}
 	}
 
 	log.Printf("[WARN] KMIP scopes not found, removing from state")
 
-	return false, err
+	return false, nil
 }
