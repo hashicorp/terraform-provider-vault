@@ -72,7 +72,6 @@ state changes in the meantime.
 
 - [Data Source: `vault_kubernetes_auth_backend_role`](#data-source-vault_kubernetes_auth_backend_role)
 
-- [Resource: `vault_ad_secret_backend`](#resource-vault_ad_secret_backend)
 - [Resource: `vault_approle_auth_backend_role`](#resource-vault_approle_auth_backend_role)
 - [Resource: `vault_auth_backend`](#resource-vault_auth_backend)
 - [Resource: `vault_aws_auth_backend_role`](#resource-vault_aws_auth_backend_role)
@@ -142,17 +141,6 @@ The following deprecated fields have been removed:
 * `period` - use `token_period` instead.
 
 * `num_uses` - use `token_num_uses` instead.
-
-_Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
-
-## Resource: `vault_ad_secret_backend`
-
-### Deprecated fields have been removed
-The following deprecated fields have been removed:
-
-* `formatter` - use `password_policy` instead.
-
-* `length` - use `password_policy` instead.
 
 _Specifying any of the fields above in your config or trying to interpolate them in your config will raise an error._
 

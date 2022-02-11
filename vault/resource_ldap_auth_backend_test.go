@@ -183,22 +183,23 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 		}
 
 		attrs := map[string]string{
-			"url":              "url",
-			"starttls":         "starttls",
-			"tls_min_version":  "tls_min_version",
-			"tls_max_version":  "tls_max_version",
-			"insecure_tls":     "insecure_tls",
-			"certificate":      "certificate",
-			"binddn":           "binddn",
-			"userdn":           "userdn",
-			"userattr":         "userattr",
-			"discoverdn":       "discoverdn",
-			"deny_null_bind":   "deny_null_bind",
-			"upndomain":        "upndomain",
-			"groupfilter":      "groupfilter",
-			"groupdn":          "groupdn",
-			"groupattr":        "groupattr",
-			"use_token_groups": "use_token_groups",
+			"url":                  "url",
+			"starttls":             "starttls",
+			"case_sensitive_names": "case_sensitive_names",
+			"tls_min_version":      "tls_min_version",
+			"tls_max_version":      "tls_max_version",
+			"insecure_tls":         "insecure_tls",
+			"certificate":          "certificate",
+			"binddn":               "binddn",
+			"userdn":               "userdn",
+			"userattr":             "userattr",
+			"discoverdn":           "discoverdn",
+			"deny_null_bind":       "deny_null_bind",
+			"upndomain":            "upndomain",
+			"groupfilter":          "groupfilter",
+			"groupdn":              "groupdn",
+			"groupattr":            "groupattr",
+			"use_token_groups":     "use_token_groups",
 		}
 
 		for stateAttr, apiAttr := range attrs {
@@ -273,6 +274,7 @@ resource "vault_ldap_auth_backend" "test" {
     local                  = %s
     url                    = "ldaps://example.org"
     starttls               = true
+    case_sensitive_names   = false
     tls_min_version        = "tls11"
     tls_max_version        = "tls12"
     insecure_tls           = false

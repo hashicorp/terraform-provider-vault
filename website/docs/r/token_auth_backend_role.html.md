@@ -16,14 +16,15 @@ information.
 
 ```hcl
 resource "vault_token_auth_backend_role" "example" {
-  role_name           = "my-role"
-  allowed_policies    = ["dev", "test"]
-  disallowed_policies = ["default"]
-  orphan              = true
-  token_period        = "86400"
-  renewable           = true
-  explicit_max_ttl    = "115200"
-  path_suffix         = "path-suffix"
+  role_name              = "my-role"
+  allowed_policies       = ["dev", "test"]
+  disallowed_policies    = ["default"]
+  allowed_entity_aliases = ["test_entity"]
+  orphan                 = true
+  token_period           = "86400"
+  renewable              = true
+  explicit_max_ttl       = "115200"
+  path_suffix            = "path-suffix"
 }
 ```
 
@@ -40,6 +41,8 @@ The following arguments are supported:
 * `disallowed_policies` (Optional) List of disallowed policies for given role.
 
 * `disallowed_policies_glob` (Optional) Set of disallowed policies with glob match for given role.
+
+* `allowed_entity_aliases` (Optional) List of allowed entity aliases.
 
 * `orphan` (Optional) If true, tokens created against this policy will be orphan tokens.
 

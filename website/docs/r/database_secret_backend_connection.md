@@ -45,6 +45,8 @@ The following arguments are supported:
 
 * `backend` - (Required) The unique name of the Vault mount to configure.
 
+* `plugin_name` - (Optional) Specifies the name of the plugin to use.
+
 * `verify_connection` - (Optional) Whether the connection should be verified on
   initial configuration or not.
 
