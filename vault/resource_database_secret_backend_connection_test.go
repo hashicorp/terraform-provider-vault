@@ -23,11 +23,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-type URLInfo struct {
-	parsedURL    *url.URL
-	templatedURL string
-}
-
 const testDefaultDatabaseSecretBackendResource = "vault_database_secret_backend_connection.test"
 
 // TODO: add support for automating tests for plugin_name

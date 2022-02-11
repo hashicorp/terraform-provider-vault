@@ -655,7 +655,7 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 		res.Schema["disable_escaping"] = &schema.Schema{
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Description: "If set, disables escaping special characters for username and password",
+			Description: "Disable special character escaping in username and password",
 		}
 	}
 
@@ -1109,7 +1109,6 @@ func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 		//  is released.
 		data["contained_db"] = strconv.FormatBool(v.(bool))
 	}
-
 }
 
 func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
