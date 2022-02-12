@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccSSHSecretBackendRole_basic(t *testing.T) {
@@ -15,7 +17,7 @@ func TestAccSSHSecretBackendRole_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-role")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -79,7 +81,7 @@ func TestAccSSHSecretBackendRoleOTP_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-role")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -100,7 +102,7 @@ func TestAccSSHSecretBackendRole_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test/ssh")
 	name := acctest.RandomWithPrefix("tf-test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{

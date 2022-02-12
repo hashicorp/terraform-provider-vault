@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func gcpSecretBackendResource() *schema.Resource {
+func gcpSecretBackendResource(name string) *schema.Resource {
 	return &schema.Resource{
 		Create: gcpSecretBackendCreate,
 		Read:   gcpSecretBackendRead,
@@ -47,8 +47,8 @@ func gcpSecretBackendResource() *schema.Resource {
 				// string. This makes terraform not want to change when an extra
 				// space is included in the JSON string. It is also necesarry
 				// when disable_read is false for comparing values.
-				StateFunc:    NormalizeDataJSON,
-				ValidateFunc: ValidateDataJSON,
+				StateFunc:    NormalizeDataJSONFunc(name),
+				ValidateFunc: ValidateDataJSONFunc(name),
 			},
 			"description": {
 				Type:        schema.TypeString,

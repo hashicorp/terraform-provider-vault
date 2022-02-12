@@ -5,12 +5,14 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccGenericSecret_importBasic(t *testing.T) {
 	path := acctest.RandomWithPrefix("secretsv1/test-")
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
@@ -18,9 +20,10 @@ func TestAccGenericSecret_importBasic(t *testing.T) {
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
 			{
-				ResourceName:      "vault_generic_secret.test",
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            "vault_generic_secret.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"delete_all_versions"},
 			},
 		},
 	})

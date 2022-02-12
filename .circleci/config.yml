@@ -10,7 +10,7 @@ workflows:
 jobs:
   build:
     docker:
-      - image: docker.mirror.hashicorp.services/circleci/golang:1.17.2
+      - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
       - image: circleci/mongo:latest
         environment:
           - MONGO_INITDB_ROOT_USERNAME: root
@@ -22,12 +22,16 @@ jobs:
       - image: hashicorp/vault:latest
         environment:
           - VAULT_DEV_ROOT_TOKEN_ID=root
-    working_directory: /go/src/github.com/hashicorp/terraform-provider-vault
+      - image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
+        environment:
+          - ACCEPT_EULA=Y
+          - SA_PASSWORD=yourStrong1000Password
+    working_directory: /tmp/go/src/github.com/hashicorp/terraform-provider-vault
     steps:
       - checkout
       - run:
           name: Wait for containers to starts
-          command: dockerize -wait http://127.0.0.1:8200 -wait tcp://127.0.0.1:3306 -timeout 30s
+          command: dockerize -wait http://127.0.0.1:8200 -wait tcp://127.0.0.1:3306  -wait tcp://127.0.0.1:1433 -timeout 30s
       - run:
           name: "Set Environment Variables"
           command: |
@@ -37,6 +41,11 @@ jobs:
           name: "Run Tests"
           no_output_timeout: 30m
           command: |
+            make test TESTARGS='-v'
+      - run:
+          name: "Run Acceptance Tests"
+          no_output_timeout: 35m
+          command: |
             export VAULT_TOKEN="root"
             export VAULT_ADDR="http://127.0.0.1:8200"
             export TF_ACC_TERRAFORM_VERSION="1.0.7"
@@ -44,7 +53,8 @@ jobs:
             export MYSQL_CONNECTION_URL="{{username}}:{{password}}@tcp(127.0.0.1:3306)/"
             export MYSQL_CONNECTION_USERNAME="root"
             export MYSQL_CONNECTION_PASSWORD="mysql"
-            export MONGODB_URL="mongodb://root:mongodb@localhost:27017/admin?ssl=false"
+            export MONGODB_URL="mongodb://root:mongodb@127.0.0.1:27017/admin?ssl=false"
+            export MSSQL_URL="sqlserver://sa:yourStrong1000Password@127.0.0.1:1433"
             # This will be removed after VAULT-4324 is fixed
             export SKIP_RAFT_TESTS='true'
             make testacc TESTARGS='-v'
@@ -57,4 +67,4 @@ jobs:
           command: |
             cd cmd/coverage/
             go build
-            ./coverage -openapi-doc=/go/src/github.com/hashicorp/terraform-provider-vault/testdata/openapi.json
+            ./coverage -openapi-doc=/tmp/go/src/github.com/hashicorp/terraform-provider-vault/testdata/openapi.json

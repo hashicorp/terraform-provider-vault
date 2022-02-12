@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 	"golang.org/x/oauth2/google"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 // This test requires that you pass credentials for a user or service account having the IAM rights
@@ -22,7 +24,7 @@ import (
 func TestGCPSecretStaticAccount(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	staticAccount := acctest.RandomWithPrefix("tf-test")
-	credentials, project := getTestGCPCreds(t)
+	credentials, project := testutil.GetTestGCPCreds(t)
 
 	// We will use the provided key as the static account
 	conf, err := google.JWTConfigFromJSON([]byte(credentials), "https://www.googleapis.com/auth/cloud-platform")
@@ -43,7 +45,7 @@ func TestGCPSecretStaticAccount(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testGCPSecretStaticAccountDestroy,
 		Steps: []resource.TestStep{
 			{

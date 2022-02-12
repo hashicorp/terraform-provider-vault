@@ -15,7 +15,7 @@ import (
 
 var approleAuthBackendRoleSecretIDIDRegex = regexp.MustCompile("^backend=(.+)::role=(.+)::accessor=(.+)$")
 
-func approleAuthBackendRoleSecretIDResource() *schema.Resource {
+func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 	return &schema.Resource{
 		Create: approleAuthBackendRoleSecretIDCreate,
 		Read:   approleAuthBackendRoleSecretIDRead,
@@ -53,8 +53,8 @@ func approleAuthBackendRoleSecretIDResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "JSON-encoded secret data to write.",
-				StateFunc:    NormalizeDataJSON,
-				ValidateFunc: ValidateDataJSON,
+				StateFunc:    NormalizeDataJSONFunc(name),
+				ValidateFunc: ValidateDataJSONFunc(name),
 				ForceNew:     true,
 				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 					if old == "{}" && new == "" {
@@ -136,7 +136,14 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 		data["cidr_list"] = strings.Join(cidrs, ",")
 	}
 	if v, ok := d.GetOk("metadata"); ok {
-		data["metadata"] = NormalizeDataJSON(v)
+		name := "vault_approle_auth_backend_role_secret_id"
+		result, err := normalizeDataJSON(v.(string))
+		if err != nil {
+			log.Printf("[ERROR] Failed to normalize JSON data %q, resource=%q, key=%q, err=%s",
+				v, name, "metadata", err)
+			return err
+		}
+		data["metadata"] = result
 	} else {
 		data["metadata"] = ""
 	}
@@ -146,11 +153,9 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	if wrapped {
 		var err error
 
-		token := client.Token()
 		if client, err = client.Clone(); err != nil {
-			return fmt.Errorf("error cloning client: %s", err)
+			return fmt.Errorf("error cloning client: %w", err)
 		}
-		client.SetToken(token)
 		client.SetWrappingLookupFunc(func(_, _ string) string {
 			return wrappingTTL.(string)
 		})
@@ -314,8 +319,8 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 		"secret_id_accessor": accessor,
 	})
 	if err != nil {
-		// We need to check if the secret_id has expired
-		if util.IsExpiredTokenErr(err) {
+		// We need to check if the secret_id has expired or if 404 was returned
+		if util.IsExpiredTokenErr(err) || util.Is404(err) {
 			return false, nil
 		}
 		return true, fmt.Errorf("error checking if AppRole auth backend role SecretID %q exists: %s", id, err)

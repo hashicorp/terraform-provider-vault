@@ -81,6 +81,11 @@ func pkiSecretBackendCrlConfigRead(d *schema.ResourceData, meta interface{}) err
 		return fmt.Errorf("invalid path ID %q: %s", path, err)
 	}
 
+	if config == nil {
+		d.SetId("")
+		return nil
+	}
+
 	d.Set("expiry", config.Data["expiry"])
 	d.Set("disable", config.Data["disable"])
 

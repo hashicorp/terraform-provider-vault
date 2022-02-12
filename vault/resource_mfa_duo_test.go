@@ -4,23 +4,17 @@ import (
 	"fmt"
 	"testing"
 
-	"os"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestMFADuoBasic(t *testing.T) {
-
-	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
-	if isEnterprise == "" {
-		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
-	}
-
 	mfaDuoPath := acctest.RandomWithPrefix("mfa-duo")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestEntPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
@@ -39,7 +33,6 @@ func TestMFADuoBasic(t *testing.T) {
 }
 
 func testMFADuoConfig(path string) string {
-
 	userPassPath := acctest.RandomWithPrefix("userpass")
 
 	return fmt.Sprintf(`
@@ -58,5 +51,4 @@ resource "vault_mfa_duo" "test" {
   push_info             = "from=loginortal&domain=example.com"
 }
 `, userPassPath, path)
-
 }

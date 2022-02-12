@@ -1,23 +1,23 @@
 package vault
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"testing"
 
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccRaftAutopilotConfig_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck: func() {
-			util.TestAccPreCheck(t)
+			testutil.TestAccPreCheck(t)
 			if _, ok := os.LookupEnv("SKIP_RAFT_TESTS"); ok {
 				t.Skip("Warning: SKIP_RAFT_TESTS set, skipping test")
 			}

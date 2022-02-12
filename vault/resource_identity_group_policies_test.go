@@ -11,12 +11,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccIdentityGroupPoliciesExclusive(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
@@ -39,7 +40,7 @@ func TestAccIdentityGroupPoliciesExclusive(t *testing.T) {
 
 func TestAccIdentityGroupPoliciesNonExclusive(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckidentityGroupPoliciesDestroy,
 		Steps: []resource.TestStep{
@@ -74,14 +75,14 @@ func testAccCheckidentityGroupPoliciesDestroy(s *terraform.State) error {
 			continue
 		}
 
-		group, err := readIdentityGroup(client, rs.Primary.ID)
-		if err != nil {
+		if _, err := readIdentityGroup(client, rs.Primary.ID, false); err != nil {
+			if isIdentityNotFoundError(err) {
+				continue
+			}
 			return err
 		}
-		if group == nil {
-			continue
-		}
-		apiPolicies, err := readIdentityGroupPolicies(client, rs.Primary.ID)
+
+		apiPolicies, err := readIdentityGroupPolicies(client, rs.Primary.ID, false)
 		if err != nil {
 			return err
 		}

@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccSSHSecretBackendCA_basic(t *testing.T) {
@@ -15,7 +17,7 @@ func TestAccSSHSecretBackendCA_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{
 			{
@@ -31,7 +33,7 @@ func TestAccSSHSecretBackendCA_provided(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{
 			{
@@ -46,7 +48,7 @@ func TestAccSSHSecretBackend_import(t *testing.T) {
 	backend := "ssh-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendCAConfigGenerated(backend),

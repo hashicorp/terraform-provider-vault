@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-func awsSecretBackendRoleResource() *schema.Resource {
+func awsSecretBackendRoleResource(name string) *schema.Resource {
 	return &schema.Resource{
 		Create: awsSecretBackendRoleWrite,
 		Read:   awsSecretBackendRoleRead,
@@ -48,7 +48,7 @@ func awsSecretBackendRoleResource() *schema.Resource {
 				Type:             schema.TypeString,
 				Optional:         true,
 				Description:      "IAM policy the role should use in JSON format.",
-				ValidateFunc:     ValidateDataJSON,
+				ValidateFunc:     ValidateDataJSONFunc(name),
 				DiffSuppressFunc: util.JsonDiffSuppress,
 			},
 			"credential_type": {
@@ -116,16 +116,16 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{
 		"credential_type": credentialType,
 	}
-	if policyDocument != "" {
+	if d.HasChange("policy_document") {
 		data["policy_document"] = policyDocument
 	}
-	if len(policyARNs) != 0 {
+	if d.HasChange("policy_arns") {
 		data["policy_arns"] = policyARNs
 	}
-	if len(roleARNs) != 0 {
+	if d.HasChange("role_arns") {
 		data["role_arns"] = roleARNs
 	}
-	if len(iamGroups) != 0 || !d.IsNewResource() {
+	if d.HasChange("iam_groups") {
 		data["iam_groups"] = iamGroups
 	}
 

@@ -5,13 +5,15 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccConsulSecretBackend_import(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-consul")
 	token := "aea34d3f-17e4-4387-801c-5e41be678e46"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccConsulSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{

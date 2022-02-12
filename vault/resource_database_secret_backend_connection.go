@@ -2,29 +2,161 @@ package vault
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 type connectionStringConfig struct {
 	excludeUsernameTemplate bool
+	includeUserPass         bool
 }
+
+const (
+	dbPluginSuffix = "-database-plugin"
+)
 
 var (
 	databaseSecretBackendConnectionBackendFromPathRegex = regexp.MustCompile("^(.+)/config/.+$")
 	databaseSecretBackendConnectionNameFromPathRegex    = regexp.MustCompile("^.+/config/(.+$)")
-	dbBackendTypes                                      = []string{"cassandra", "influxdb", "hana", "mongodb", "mssql", "mysql", "mysql_rds", "mysql_aurora", "mysql_legacy", "postgresql", "oracle", "elasticsearch", "snowflake"}
+
+	dbEngineCassandra = &dbEngine{
+		name:              "cassandra",
+		defaultPluginName: "cassandra" + dbPluginSuffix,
+	}
+	dbEngineCouchbase = &dbEngine{
+		name:              "couchbase",
+		defaultPluginName: "couchbase" + dbPluginSuffix,
+	}
+
+	dbEngineElasticSearch = &dbEngine{
+		name:              "elasticsearch",
+		defaultPluginName: "elasticsearch" + dbPluginSuffix,
+	}
+	dbEngineHana = &dbEngine{
+		name:              "hana",
+		defaultPluginName: "hana" + dbPluginSuffix,
+	}
+	dbEngineInfluxDB = &dbEngine{
+		name:              "influxdb",
+		defaultPluginName: "influxdb" + dbPluginSuffix,
+	}
+	dbEngineMSSQL = &dbEngine{
+		name:              "mssql",
+		defaultPluginName: "mssql" + dbPluginSuffix,
+	}
+	dbEngineMongoDB = &dbEngine{
+		name:              "mongodb",
+		defaultPluginName: "mongodb" + dbPluginSuffix,
+	}
+	dbEngineMongoDBAtlas = &dbEngine{
+		name:              "mongodbatlas",
+		defaultPluginName: "mongodbatlas" + dbPluginSuffix,
+	}
+	dbEngineMySQL = &dbEngine{
+		name:              "mysql",
+		defaultPluginName: "mysql" + dbPluginSuffix,
+	}
+	dbEngineMySQLAurora = &dbEngine{
+		name:              "mysql_aurora",
+		defaultPluginName: "mysql-aurora" + dbPluginSuffix,
+	}
+	dbEngineMySQLLegacy = &dbEngine{
+		name:              "mysql_legacy",
+		defaultPluginName: "mysql-legacy" + dbPluginSuffix,
+	}
+	dbEngineMySQLRDS = &dbEngine{
+		name:              "mysql_rds",
+		defaultPluginName: "mysql-rds" + dbPluginSuffix,
+	}
+	dbEnginePostgres = &dbEngine{
+		name:              "postgresql",
+		defaultPluginName: "postgresql" + dbPluginSuffix,
+	}
+	dbEngineOracle = &dbEngine{
+		name:              "oracle",
+		defaultPluginName: "oracle" + dbPluginSuffix,
+	}
+	dbEngineSnowflake = &dbEngine{
+		name:              "snowflake",
+		defaultPluginName: "snowflake" + dbPluginSuffix,
+	}
+	dbEngineRedshift = &dbEngine{
+		name:              "redshift",
+		defaultPluginName: "redshift" + dbPluginSuffix,
+	}
+
+	dbEngines = []*dbEngine{
+		dbEngineCassandra,
+		dbEngineCouchbase,
+		dbEngineElasticSearch,
+		dbEngineHana,
+		dbEngineInfluxDB,
+		dbEngineMSSQL,
+		dbEngineMongoDB,
+		dbEngineMongoDBAtlas,
+		dbEngineMySQL,
+		dbEngineMySQLAurora,
+		dbEngineMySQLLegacy,
+		dbEngineMySQLRDS,
+		dbEnginePostgres,
+		dbEngineOracle,
+		dbEngineSnowflake,
+		dbEngineRedshift,
+	}
 )
 
+type dbEngine struct {
+	name              string
+	defaultPluginName string
+}
+
+// GetPluginName from the schema.ResourceData if it is configured,
+// otherwise return the default plugin name.
+// Return an error if no plugin name can be found.
+func (i *dbEngine) GetPluginName(d *schema.ResourceData) (string, error) {
+	if val, ok := d.GetOk("plugin_name"); ok {
+		return val.(string), nil
+	}
+
+	if i.defaultPluginName == "" {
+		return "", errors.New("default plugin name not set")
+	}
+
+	return i.defaultPluginName, nil
+}
+
+func (i *dbEngine) String() string {
+	return i.name
+}
+
+// Name of the Vault DB secrets engine.
+func (i *dbEngine) Name() string {
+	return i.name
+}
+
+// DefaultPluginName for this dbEngine.
+func (i *dbEngine) DefaultPluginName() string {
+	return i.defaultPluginName
+}
+
 func databaseSecretBackendConnectionResource() *schema.Resource {
+	dbEngineTypes := []string{}
+	for _, e := range dbEngines {
+		dbEngineTypes = append(dbEngineTypes, e.name)
+	}
+
 	return &schema.Resource{
 		Create: databaseSecretBackendConnectionCreate,
 		Read:   databaseSecretBackendConnectionRead,
@@ -41,6 +173,12 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Required:    true,
 				Description: "Name of the database connection.",
 				ForceNew:    true,
+			},
+			"plugin_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Specifies the name of the plugin to use for this connection.",
 			},
 			"verify_connection": {
 				Type:        schema.TypeBool,
@@ -96,10 +234,10 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("elasticsearch", dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineElasticSearch.Name(), dbEngineTypes),
 			},
 
-			"cassandra": {
+			dbEngineCassandra.name: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Connection parameters for the cassandra-database-plugin plugin.",
@@ -171,10 +309,69 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("cassandra", dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineCassandra.Name(), dbEngineTypes),
 			},
 
-			"influxdb": {
+			dbEngineCouchbase.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the couchbase-database-plugin plugin.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"hosts": {
+							Type: schema.TypeList,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Required:    true,
+							Description: "A set of Couchbase URIs to connect to. Must use `couchbases://` scheme if `tls` is `true`.",
+						},
+						"username": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Specifies the username for Vault to use.",
+						},
+						"password": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Specifies the password corresponding to the given username.",
+							Sensitive:   true,
+						},
+						"tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: "Specifies whether to use TLS when connecting to Couchbase.",
+							Default:     false,
+						},
+						"insecure_tls": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: " Specifies whether to skip verification of the server certificate when using TLS.",
+							Default:     false,
+						},
+						"base64_pem": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Required if `tls` is `true`. Specifies the certificate authority of the Couchbase server, as a PEM certificate that has been base64 encoded.",
+							Sensitive:   true,
+						},
+						"bucket_name": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Required for Couchbase versions prior to 6.5.0. This is only used to verify vault's connection to the server.",
+						},
+						"username_template": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Template describing how dynamic usernames are generated.",
+						},
+					},
+				},
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineCouchbase.Name(), dbEngineTypes),
+			},
+
+			dbEngineInfluxDB.name: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Connection parameters for the influxdb-database-plugin plugin.",
@@ -242,19 +439,21 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("influxdb", dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineInfluxDB.Name(), dbEngineTypes),
 			},
 
-			"mongodb": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the mongodb-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
+			dbEngineMongoDB.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mongodb-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("mongodb", dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDB.Name(), dbEngineTypes),
 			},
 
-			"mongodbatlas": {
+			dbEngineMongoDBAtlas.name: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Connection parameters for the mongodbatlas-database-plugin plugin.",
@@ -284,87 +483,111 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 					},
 				},
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("mongodbatlas", dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDBAtlas.Name(), dbEngineTypes),
 			},
 
-			"hana": {
+			dbEngineHana.name: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Connection parameters for the hana-database-plugin plugin.",
 				Elem: connectionStringResource(&connectionStringConfig{
 					excludeUsernameTemplate: true,
+					includeUserPass:         true,
 				}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("hana", dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineHana.Name(), dbEngineTypes),
 			},
 
-			"mssql": {
+			dbEngineMSSQL.name: {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mssql-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
+				Elem:          mssqlConnectionStringResource(),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("mssql", dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMSSQL.Name(), dbEngineTypes),
 			},
 
-			"mysql": {
+			dbEngineMySQL.name: {
 				Type:          schema.TypeList,
 				Optional:      true,
 				Description:   "Connection parameters for the mysql-database-plugin plugin.",
 				Elem:          mysqlConnectionStringResource(),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("mysql", dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQL.Name(), dbEngineTypes),
 			},
-			"mysql_rds": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the mysql-rds-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
+			dbEngineMySQLRDS.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mysql-rds-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("mysql_rds", dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLRDS.Name(), dbEngineTypes),
 			},
-			"mysql_aurora": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the mysql-aurora-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
+			dbEngineMySQLAurora.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mysql-aurora-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("mysql_aurora", dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLAurora.Name(), dbEngineTypes),
 			},
-			"mysql_legacy": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the mysql-legacy-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
+			dbEngineMySQLLegacy.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the mysql-legacy-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("mysql_legacy", dbBackendTypes),
-			},
-
-			"postgresql": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the postgresql-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
-				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("postgresql", dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineMySQLLegacy.Name(), dbEngineTypes),
 			},
 
-			"oracle": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the oracle-database-plugin plugin.",
-				Elem:          connectionStringResource(&connectionStringConfig{}),
+			dbEnginePostgres.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the postgresql-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("oracle", dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.Name(), dbEngineTypes),
 			},
 
-			"snowflake": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				Description:   "Connection parameters for the snowflake-database-plugin plugin.",
-				Elem:          snowflakeConnectionStringResource(),
+			dbEngineOracle.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the oracle-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
 				MaxItems:      1,
-				ConflictsWith: util.CalculateConflictsWith("snowflake", dbBackendTypes),
+				ConflictsWith: util.CalculateConflictsWith(dbEngineOracle.Name(), dbEngineTypes),
+			},
+
+			dbEngineRedshift.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the redshift-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineRedshift.Name(), dbEngineTypes),
+			},
+
+			dbEngineSnowflake.name: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Connection parameters for the snowflake-database-plugin plugin.",
+				Elem: connectionStringResource(&connectionStringConfig{
+					includeUserPass: true,
+				}),
+				MaxItems:      1,
+				ConflictsWith: util.CalculateConflictsWith(dbEngineSnowflake.Name(), dbEngineTypes),
 			},
 
 			"backend": {
@@ -407,6 +630,19 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 			},
 		},
 	}
+	if config.includeUserPass {
+		res.Schema["username"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The root credential username used in the connection URL",
+		}
+		res.Schema["password"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The root credential password used in the connection URL",
+			Sensitive:   true,
+		}
+	}
 
 	if !config.excludeUsernameTemplate {
 		res.Schema["username_template"] = &schema.Schema{
@@ -420,7 +656,9 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 }
 
 func mysqlConnectionStringResource() *schema.Resource {
-	r := connectionStringResource(&connectionStringConfig{})
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass: true,
+	})
 	r.Schema["tls_certificate_key"] = &schema.Schema{
 		Type:        schema.TypeString,
 		Optional:    true,
@@ -435,68 +673,45 @@ func mysqlConnectionStringResource() *schema.Resource {
 	return r
 }
 
-func snowflakeConnectionStringResource() *schema.Resource {
-	r := connectionStringResource(&connectionStringConfig{})
-	r.Schema["username"] = &schema.Schema{
-		Type:        schema.TypeString,
+func mssqlConnectionStringResource() *schema.Resource {
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass: true,
+	})
+	r.Schema["contained_db"] = &schema.Schema{
+		Type:        schema.TypeBool,
 		Optional:    true,
-		Description: "The AccountAdmin level user using to connect to snowflake",
-	}
-	r.Schema["password"] = &schema.Schema{
-		Type:        schema.TypeString,
-		Optional:    true,
-		Description: "The password with the provided user",
-		Sensitive:   true,
+		Description: "Set to true when the target is a Contained Database, e.g. AzureSQL.",
 	}
 	return r
 }
 
-func getDatabasePluginName(d *schema.ResourceData) (string, error) {
-	switch {
-	case len(d.Get("cassandra").([]interface{})) > 0:
-		return "cassandra-database-plugin", nil
-	case len(d.Get("influxdb").([]interface{})) > 0:
-		return "influxdb-database-plugin", nil
-	case len(d.Get("hana").([]interface{})) > 0:
-		return "hana-database-plugin", nil
-	case len(d.Get("mongodbatlas").([]interface{})) > 0:
-		return "mongodbatlas-database-plugin", nil
-	case len(d.Get("mongodb").([]interface{})) > 0:
-		return "mongodb-database-plugin", nil
-	case len(d.Get("mssql").([]interface{})) > 0:
-		return "mssql-database-plugin", nil
-	case len(d.Get("mysql").([]interface{})) > 0:
-		return "mysql-database-plugin", nil
-	case len(d.Get("mysql_rds").([]interface{})) > 0:
-		return "mysql-rds-database-plugin", nil
-	case len(d.Get("mysql_aurora").([]interface{})) > 0:
-		return "mysql-aurora-database-plugin", nil
-	case len(d.Get("mysql_legacy").([]interface{})) > 0:
-		return "mysql-legacy-database-plugin", nil
-	case len(d.Get("oracle").([]interface{})) > 0:
-		return "oracle-database-plugin", nil
-	case len(d.Get("postgresql").([]interface{})) > 0:
-		return "postgresql-database-plugin", nil
-	case len(d.Get("elasticsearch").([]interface{})) > 0:
-		return "elasticsearch-database-plugin", nil
-	case len(d.Get("snowflake").([]interface{})) > 0:
-		return "snowflake-database-plugin", nil
-	default:
-		return "", fmt.Errorf("at least one database plugin must be configured")
+func getDBEngine(d *schema.ResourceData) (*dbEngine, error) {
+	for _, e := range dbEngines {
+		if i, ok := d.GetOk(e.name); ok && len(i.([]interface{})) > 0 {
+			return e, nil
+		}
 	}
+
+	return nil, fmt.Errorf("no supported database engines configured")
 }
 
 func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) {
-	plugin, err := getDatabasePluginName(d)
+	db, err := getDBEngine(d)
 	if err != nil {
 		return nil, err
 	}
-	data := map[string]interface{}{
-		"plugin_name": plugin,
+
+	pluginName, err := db.GetPluginName(d)
+	if err != nil {
+		return nil, err
 	}
 
-	switch plugin {
-	case "cassandra-database-plugin":
+	data := map[string]interface{}{
+		"plugin_name": pluginName,
+	}
+
+	switch db {
+	case dbEngineCassandra:
 		if v, ok := d.GetOk("cassandra.0.hosts"); ok {
 			log.Printf("[DEBUG] Cassandra hosts: %v", v.([]interface{}))
 			var hosts []string
@@ -535,13 +750,15 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		if v, ok := d.GetOkExists("cassandra.0.connect_timeout"); ok {
 			data["connect_timeout"] = v.(int)
 		}
-	case "influxdb-database-plugin":
+	case dbEngineCouchbase:
+		setCouchbaseDatabaseConnectionData(d, "couchbase.0.", data)
+	case dbEngineInfluxDB:
 		setInfluxDBDatabaseConnectionData(d, "influxdb.0.", data)
-	case "hana-database-plugin":
-		setDatabaseConnectionData(d, "hana.0.", data)
-	case "mongodb-database-plugin":
-		setDatabaseConnectionData(d, "mongodb.0.", data)
-	case "mongodbatlas-database-plugin":
+	case dbEngineHana:
+		setDatabaseConnectionDataWithUserPass(d, "hana.0.", data)
+	case dbEngineMongoDB:
+		setDatabaseConnectionDataWithUserPass(d, "mongodb.0.", data)
+	case dbEngineMongoDBAtlas:
 		if v, ok := d.GetOk("mongodbatlas.0.public_key"); ok {
 			data["public_key"] = v.(string)
 		}
@@ -554,24 +771,26 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 		if v, ok := d.GetOkExists("mongodbatlas.0.username_template"); ok {
 			data["username_template"] = v.(string)
 		}
-	case "mssql-database-plugin":
-		setDatabaseConnectionData(d, "mssql.0.", data)
-	case "mysql-database-plugin":
+	case dbEngineMSSQL:
+		setMSSQLDatabaseConnectionData(d, "mssql.0.", data)
+	case dbEngineMySQL:
 		setMySQLDatabaseConnectionData(d, "mysql.0.", data)
-	case "mysql-rds-database-plugin":
-		setDatabaseConnectionData(d, "mysql_rds.0.", data)
-	case "mysql-aurora-database-plugin":
-		setDatabaseConnectionData(d, "mysql_aurora.0.", data)
-	case "mysql-legacy-database-plugin":
-		setDatabaseConnectionData(d, "mysql_legacy.0.", data)
-	case "oracle-database-plugin":
-		setDatabaseConnectionData(d, "oracle.0.", data)
-	case "postgresql-database-plugin":
-		setDatabaseConnectionData(d, "postgresql.0.", data)
-	case "elasticsearch-database-plugin":
+	case dbEngineMySQLRDS:
+		setDatabaseConnectionDataWithUserPass(d, "mysql_rds.0.", data)
+	case dbEngineMySQLAurora:
+		setDatabaseConnectionDataWithUserPass(d, "mysql_aurora.0.", data)
+	case dbEngineMySQLLegacy:
+		setDatabaseConnectionDataWithUserPass(d, "mysql_legacy.0.", data)
+	case dbEngineOracle:
+		setDatabaseConnectionDataWithUserPass(d, "oracle.0.", data)
+	case dbEnginePostgres:
+		setDatabaseConnectionDataWithUserPass(d, "postgresql.0.", data)
+	case dbEngineElasticSearch:
 		setElasticsearchDatabaseConnectionData(d, "elasticsearch.0.", data)
-	case "snowflake-database-plugin":
-		setSnowflakeDatabaseConnectionData(d, "snowflake.0.", data)
+	case dbEngineSnowflake:
+		setDatabaseConnectionDataWithUserPass(d, "snowflake.0.", data)
+	case dbEngineRedshift:
+		setDatabaseConnectionDataWithUserPass(d, "redshift.0.", data)
 	}
 
 	return data, nil
@@ -627,8 +846,26 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 	return []map[string]interface{}{result}
 }
 
+func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) ([]map[string]interface{}, error) {
+	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+	if result == nil {
+		return nil, nil
+	}
+
+	details := resp.Data["connection_details"].(map[string]interface{})
+	if v, ok := details["contained_db"]; ok {
+		containedDB, err := parseutil.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf(`unsupported type for field "contained_db, err=%w"`, err)
+		}
+		result[0]["contained_db"] = containedDB
+	}
+
+	return result, nil
+}
+
 func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
-	commonDetails := getConnectionDetailsFromResponse(d, prefix, resp)
+	commonDetails := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
 	if !ok {
@@ -675,6 +912,47 @@ func getElasticsearchConnectionDetailsFromResponse(d *schema.ResourceData, prefi
 	} else if v, ok := d.GetOk(prefix + "password"); ok {
 		// keep the password we have in state/config if the API doesn't return one
 		result["password"] = v.(string)
+	}
+
+	return []map[string]interface{}{result}
+}
+
+func getCouchbaseConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	result := map[string]interface{}{}
+
+	if v, ok := data["hosts"]; ok {
+		result["hosts"] = strings.Split(v.(string), ",")
+	}
+	if v, ok := data["username"]; ok {
+		result["username"] = v.(string)
+	}
+	if v, ok := data["password"]; ok {
+		result["password"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "password"); ok {
+		// keep the password we have in state/config if the API doesn't return one
+		result["password"] = v.(string)
+	}
+	if v, ok := data["tls"]; ok {
+		result["tls"] = v.(bool)
+	}
+	if v, ok := data["insecure_tls"]; ok {
+		result["insecure_tls"] = v.(bool)
+	}
+	if v, ok := data["base64_pem"]; ok {
+		result["base64_pem"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "base64_pem"); ok {
+		result["base64_pem"] = v.(string)
+	}
+	if v, ok := data["bucket_name"]; ok {
+		result["bucket_name"] = v.(string)
+	}
+	if v, ok := data["username_template"]; ok {
+		result["username_template"] = v.(string)
 	}
 
 	return []map[string]interface{}{result}
@@ -736,7 +1014,7 @@ func getInfluxDBConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 }
 
 func getSnowflakeConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
-	commonDetails := getConnectionDetailsFromResponse(d, prefix, resp)
+	commonDetails := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
 	if !ok {
@@ -767,6 +1045,23 @@ func getSnowflakeConnectionDetailsFromResponse(d *schema.ResourceData, prefix st
 	return []map[string]interface{}{result}
 }
 
+func getConnectionDetailsFromResponseWithUserPass(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+	result := getConnectionDetailsFromResponse(d, prefix, resp)
+	if result == nil {
+		return nil
+	}
+
+	details := resp.Data["connection_details"].(map[string]interface{})
+	if v, ok := details["username"]; ok {
+		result[0]["username"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		result[0]["password"] = v.(string)
+	}
+
+	return result
+}
+
 func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	if v, ok := d.GetOk(prefix + "connection_url"); ok {
 		data["connection_url"] = v.(string)
@@ -785,8 +1080,19 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	}
 }
 
+func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+	if v, ok := d.GetOk(prefix + "contained_db"); ok {
+		// TODO:
+		//  we have to pass string value here due to an issue with the
+		//  way the mssql plugin handles this field. We can probably revert this once vault-1.9.3
+		//  is released.
+		data["contained_db"] = strconv.FormatBool(v.(bool))
+	}
+}
+
 func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
-	setDatabaseConnectionData(d, prefix, data)
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
 		data["tls_certificate_key"] = v.(string)
 	}
@@ -806,6 +1112,37 @@ func setElasticsearchDatabaseConnectionData(d *schema.ResourceData, prefix strin
 
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
+	}
+}
+
+func setCouchbaseDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	if v, ok := d.GetOkExists(prefix + "hosts"); ok && v != nil {
+		var hosts []string
+		for _, host := range v.([]interface{}) {
+			hosts = append(hosts, host.(string))
+		}
+		data["hosts"] = strings.Join(hosts, ",")
+	}
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		data["password"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "tls"); ok {
+		data["tls"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists(prefix + "insecure_tls"); ok {
+		data["insecure_tls"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists(prefix + "base64_pem"); ok {
+		data["base64_pem"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "bucket_name"); ok {
+		data["bucket_name"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "username_template"); ok {
+		data["username_template"] = v.(int)
 	}
 }
 
@@ -842,18 +1179,13 @@ func setInfluxDBDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 	}
 }
 
-func setSnowflakeDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionData(d, prefix, data)
 	if v, ok := d.GetOk(prefix + "username"); ok {
 		data["username"] = v.(string)
 	}
-
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
-	}
-
-	if v, ok := d.GetOk(prefix + "username_template"); ok {
-		data["username_template"] = v.(string)
 	}
 }
 
@@ -909,6 +1241,11 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 
 	path := d.Id()
 
+	db, err := getDBEngine(d)
+	if err != nil {
+		return err
+	}
+
 	backend, err := databaseSecretBackendConnectionBackendFromPath(path)
 	if err != nil {
 		return fmt.Errorf("invalid path %q for database connection: %s", path, err)
@@ -931,8 +1268,8 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		return nil
 	}
 
-	switch resp.Data["plugin_name"].(string) {
-	case "cassandra-database-plugin":
+	switch db {
+	case dbEngineCassandra:
 		details := resp.Data["connection_details"]
 		data, ok := details.(map[string]interface{})
 		if ok {
@@ -989,13 +1326,15 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			}
 			d.Set("cassandra", []map[string]interface{}{result})
 		}
-	case "influxdb-database-plugin":
+	case dbEngineCouchbase:
+		d.Set("couchbase", getCouchbaseConnectionDetailsFromResponse(d, "couchbase.0.", resp))
+	case dbEngineInfluxDB:
 		d.Set("influxdb", getInfluxDBConnectionDetailsFromResponse(d, "influxdb.0.", resp))
-	case "hana-database-plugin":
-		d.Set("hana", getConnectionDetailsFromResponse(d, "hana.0.", resp))
-	case "mongodb-database-plugin":
-		d.Set("mongodb", getConnectionDetailsFromResponse(d, "mongodb.0.", resp))
-	case "mongodbatlas-database-plugin":
+	case dbEngineHana:
+		d.Set("hana", getConnectionDetailsFromResponseWithUserPass(d, "hana.0.", resp))
+	case dbEngineMongoDB:
+		d.Set("mongodb", getConnectionDetailsFromResponseWithUserPass(d, "mongodb.0.", resp))
+	case dbEngineMongoDBAtlas:
 		details := resp.Data["connection_details"]
 		data, ok := details.(map[string]interface{})
 		if ok {
@@ -1015,28 +1354,36 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 			}
 			d.Set("mongodbatlas", []map[string]interface{}{result})
 		}
-	case "mssql-database-plugin":
-		d.Set("mssql", getConnectionDetailsFromResponse(d, "mssql.0.", resp))
-	case "mysql-database-plugin":
+	case dbEngineMSSQL:
+		var values []map[string]interface{}
+		if values, err = getMSSQLConnectionDetailsFromResponse(d, "mssql.0.", resp); err == nil {
+			// err is returned outside of the switch case
+			d.Set("mssql", values)
+		}
+	case dbEngineMySQL:
 		d.Set("mysql", getMySQLConnectionDetailsFromResponse(d, "mysql.0.", resp))
-	case "mysql-rds-database-plugin":
-		d.Set("mysql_rds", getConnectionDetailsFromResponse(d, "mysql_rds.0.", resp))
-	case "mysql-aurora-database-plugin":
-		d.Set("mysql_aurora", getConnectionDetailsFromResponse(d, "mysql_aurora.0.", resp))
-	case "mysql-legacy-database-plugin":
-		d.Set("mysql_legacy", getConnectionDetailsFromResponse(d, "mysql_legacy.0.", resp))
-	case "oracle-database-plugin":
-		d.Set("oracle", getConnectionDetailsFromResponse(d, "oracle.0.", resp))
-	case "postgresql-database-plugin":
-		d.Set("postgresql", getConnectionDetailsFromResponse(d, "postgresql.0.", resp))
-	case "elasticsearch-database-plugin":
+	case dbEngineMySQLRDS:
+		d.Set("mysql_rds", getConnectionDetailsFromResponseWithUserPass(d, "mysql_rds.0.", resp))
+	case dbEngineMySQLAurora:
+		d.Set("mysql_aurora", getConnectionDetailsFromResponseWithUserPass(d, "mysql_aurora.0.", resp))
+	case dbEngineMySQLLegacy:
+		d.Set("mysql_legacy", getConnectionDetailsFromResponseWithUserPass(d, "mysql_legacy.0.", resp))
+	case dbEngineOracle:
+		d.Set("oracle", getConnectionDetailsFromResponseWithUserPass(d, "oracle.0.", resp))
+	case dbEnginePostgres:
+		d.Set("postgresql", getConnectionDetailsFromResponseWithUserPass(d, "postgresql.0.", resp))
+	case dbEngineElasticSearch:
 		d.Set("elasticsearch", getElasticsearchConnectionDetailsFromResponse(d, "elasticsearch.0.", resp))
-	case "snowflake-database-plugin":
+	case dbEngineSnowflake:
 		d.Set("snowflake", getSnowflakeConnectionDetailsFromResponse(d, "snowflake.0.", resp))
+	case dbEngineRedshift:
+		d.Set("redshift", getConnectionDetailsFromResponseWithUserPass(d, "redshift.0.", resp))
+	default:
+		return fmt.Errorf("no response handler for dbEngine: %s", db)
 	}
 
 	if err != nil {
-		return fmt.Errorf("error reading response for %q: %s", path, err)
+		return fmt.Errorf("error reading response for %q: %w", path, err)
 	}
 
 	var roles []string
@@ -1044,12 +1391,30 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		roles = append(roles, role.(string))
 	}
 
-	d.Set("allowed_roles", roles)
-	d.Set("backend", backend)
-	d.Set("name", name)
-	d.Set("root_rotation_statements", resp.Data["root_credentials_rotate_statements"])
+	if err := d.Set("allowed_roles", roles); err != nil {
+		return err
+	}
+
+	if err := d.Set("backend", backend); err != nil {
+		return err
+	}
+
+	if err := d.Set("name", name); err != nil {
+		return err
+	}
+
+	if err := d.Set("root_rotation_statements", resp.Data["root_credentials_rotate_statements"]); err != nil {
+		return err
+	}
+
 	if v, ok := resp.Data["verify_connection"]; ok {
-		d.Set("verify_connection", v.(bool))
+		if err := d.Set("verify_connection", v.(bool)); err != nil {
+			return err
+		}
+	}
+
+	if err := d.Set("plugin_name", resp.Data["plugin_name"]); err != nil {
+		return err
 	}
 
 	return nil

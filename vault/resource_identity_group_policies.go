@@ -5,8 +5,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func identityGroupPoliciesResource() *schema.Resource {
@@ -64,7 +65,7 @@ func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error
 	if d.Get("exclusive").(bool) {
 		data["policies"] = policies
 	} else {
-		apiPolicies, err := readIdentityGroupPolicies(client, id)
+		apiPolicies, err := readIdentityGroupPolicies(client, id, d.IsNewResource())
 		if err != nil {
 			return err
 		}
@@ -96,7 +97,7 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	resp, err := readIdentityGroup(client, id)
+	resp, err := readIdentityGroup(client, id, d.IsNewResource())
 	if err != nil {
 		return err
 	}
@@ -117,7 +118,13 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 	} else {
 		userPolicies := d.Get("policies").(*schema.Set).List()
 		newPolicies := make([]string, 0)
-		apiPolicies := resp.Data["policies"].([]interface{})
+
+		var apiPolicies []interface{}
+		if val, ok := resp.Data["policies"]; ok && val != nil {
+			apiPolicies = val.([]interface{})
+		} else {
+			apiPolicies = make([]interface{}, 0)
+		}
 
 		for _, policy := range userPolicies {
 			if found, _ := util.SliceHasElement(apiPolicies, policy); found {
@@ -146,7 +153,7 @@ func identityGroupPoliciesDelete(d *schema.ResourceData, meta interface{}) error
 	if d.Get("exclusive").(bool) {
 		data["policies"] = make([]string, 0)
 	} else {
-		apiPolicies, err := readIdentityGroupPolicies(client, id)
+		apiPolicies, err := readIdentityGroupPolicies(client, id, false)
 		if err != nil {
 			return err
 		}

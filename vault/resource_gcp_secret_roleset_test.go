@@ -13,6 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 // This test requires that you pass credentials for a user or service account having the IAM rights
@@ -21,7 +23,7 @@ import (
 func TestGCPSecretRoleset(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	roleset := acctest.RandomWithPrefix("tf-test")
-	credentials, project := getTestGCPCreds(t)
+	credentials, project := testutil.GetTestGCPCreds(t)
 
 	serviceAccountEmail := ""
 
@@ -35,7 +37,7 @@ func TestGCPSecretRoleset(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testGCPSecretRolesetDestroy,
 		Steps: []resource.TestStep{
 			{

@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
@@ -27,7 +27,7 @@ func TestRoleName(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { util.TestEntPreCheck(t) },
+		PreCheck: func() { testutil.TestEntPreCheck(t) },
 		Providers: map[string]*sdk_schema.Provider{
 			"vault": nameTestProvider.SchemaProvider(),
 		},

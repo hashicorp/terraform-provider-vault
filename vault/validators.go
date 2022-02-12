@@ -47,3 +47,21 @@ func validateNoTrailingSlash(i interface{}, k string) (s []string, es []error) {
 	}
 	return
 }
+
+func validateNoTrailingLeadingSlashes(i interface{}, k string) (s []string, es []error) {
+	v, ok := i.(string)
+	if !ok {
+		es = append(es, fmt.Errorf("expected type of %s to be string", k))
+		return
+	}
+
+	if strings.HasSuffix(v, "/") {
+		es = append(es, errors.New("cannot write to a path ending in '/'"))
+	}
+
+	if strings.HasPrefix(v, "/") {
+		es = append(es, errors.New("cannot write to a path starting in '/'"))
+	}
+
+	return
+}
