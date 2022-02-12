@@ -610,7 +610,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Sensitive:   true,
 			},
 
-			"elasticsearch": {
+			dbEngineElasticSearch.name: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Connection parameters for the elasticsearch-database-plugin.",

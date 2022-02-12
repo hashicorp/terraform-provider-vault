@@ -707,7 +707,6 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineElasticSearch.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
-	resourceName := "vault_database_secret_backend_connection.test"
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -716,9 +715,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_elasticsearch(name, backend, connURL, username, password),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "name", name),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "backend", backend),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
@@ -728,12 +725,6 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.password", password),
 				),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"verify_connection", "elasticsearch.0.password"},
 			},
 		},
 	})
