@@ -316,7 +316,6 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineMSSQL)
 
 	cleanupFunc, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
-
 	t.Cleanup(cleanupFunc)
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
@@ -348,6 +347,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.disable_escaping", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.contained_db", "false"),
 				),
 			},
@@ -366,6 +366,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.disable_escaping", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.contained_db", "true"),
 				),
 			},
@@ -680,6 +681,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.disable_escaping", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", userTempl),
 				),
 			},
@@ -1009,17 +1011,19 @@ func testAccDatabaseSecretBackendConnectionConfig_mssql(name, path, pluginName s
 	if containedDB {
 		config = `
   mssql {
-    connection_url = "%s"
-	username       = "%s"
-	password       = "%s"
-    contained_db   = true
+    connection_url   = "%s"
+    username         = "%s"
+    password		 = "%s"
+    disable_escaping = true
+    contained_db     = true
   }`
 	} else {
 		config = `
   mssql {
-    connection_url = "%s"
-	username       = "%s"
-	password       = "%s"
+	connection_url   = "%s"
+    username         = "%s"
+    password		 = "%s"
+    disable_escaping = true
   }`
 	}
 
@@ -1225,10 +1229,11 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
 
   postgresql {
-	  connection_url = "%s"
-      username = "%s"
-      password = "%s"
+	  connection_url    = "%s"
+      username          = "%s"
+      password          = "%s"
 	  username_template = "%s"
+      disable_escaping  = true
   }
 }
 `, path, name, parsedURL.String(), parsedURL.User.Username(), password, userTempl)
