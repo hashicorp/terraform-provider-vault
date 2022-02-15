@@ -308,22 +308,25 @@ func setValueWithHandlers(d *schema.ResourceData, fieldMap map[string]interface{
 }
 
 func handleCIDRField(d *schema.ResourceData, k string, resp *api.Secret) (interface{}, error) {
+	var s *schema.Set
 	v, ok := d.GetOk(k)
-	if !ok {
-		return nil, nil
-	}
-
-	s, ok := v.(*schema.Set)
-	if !ok {
-		return nil, fmt.Errorf("unsupported type %T", v)
-	}
+	if ok {
+		s, ok = v.(*schema.Set)
+		if !ok {
+			return nil, fmt.Errorf("unsupported type %T", v)
+		}
+	} // on import not all field attributes are available.
 
 	var addrs []string
 	for _, addr := range resp.Data[k].([]interface{}) {
 		// Vault strips the CIDR prefix from IPv4 /32, IPv6 /128 host addresses
 		// we want to normalize these addresses unless they are otherwise explicitly
 		// configured in the Terraform config.
-		if _, _, err := net.ParseCIDR(addr.(string)); err != nil && !s.Contains(addr) {
+		if _, _, err := net.ParseCIDR(addr.(string)); err != nil {
+			if s != nil && s.Contains(addr) {
+				continue
+			}
+
 			ip := net.ParseIP(addr.(string))
 			if ip == nil {
 				// should never happen
