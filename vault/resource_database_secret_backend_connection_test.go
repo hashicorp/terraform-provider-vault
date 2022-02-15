@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -810,6 +811,36 @@ func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "redshift.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_connection.test", "redshift.0.max_connection_lifetime", "0"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_invalid_plugin(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := name + "-plugin"
+	config := fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  plugin_name = "%s"
+  redshift {
+      max_open_connections = 3
+  }
+}`, name, name, pluginName)
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf("unsupported database plugin name %q, must begin with one of:", pluginName)),
 			},
 		},
 	})

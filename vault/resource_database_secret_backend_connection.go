@@ -1284,7 +1284,7 @@ func validateDBPluginName(s string) error {
 	}
 
 	return fmt.Errorf("unsupported database plugin name %q, must begin with one of: %s", s,
-		strings.Join(pluginPrefixes, ","))
+		strings.Join(pluginPrefixes, ", "))
 }
 
 func getSortedPluginPrefixes() []string {
