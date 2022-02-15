@@ -27,6 +27,7 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "name", name),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "deletion_allowed", "true"),
+					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "auto_rotate_interval", "1h0m0s"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "convergent_encryption", "false"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "derived", "false"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "exportable", "false"),
@@ -45,6 +46,7 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "name", name),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "deletion_allowed", "true"),
+					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "auto_rotate_interval", "24h0m0s"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "convergent_encryption", "false"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "derived", "false"),
 					resource.TestCheckResourceAttrSet("vault_transit_secret_backend_key.test", "keys.#"),
@@ -157,6 +159,7 @@ resource "vault_transit_secret_backend_key" "test" {
   backend = vault_mount.transit.path
   name = "%s"
   deletion_allowed = true
+  auto_rotate_interval = "1h0m0s"
 }
 `, path, name)
 }
@@ -210,6 +213,7 @@ resource "vault_transit_secret_backend_key" "test" {
   min_decryption_version = 1
   min_encryption_version = 1
   deletion_allowed       = true
+  auto_rotate_interval   = "24h0m0s"
   exportable             = true
   allow_plaintext_backup = true
 }

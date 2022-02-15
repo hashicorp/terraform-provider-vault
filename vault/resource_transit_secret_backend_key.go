@@ -74,6 +74,11 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Description: "If set, enables taking backup of named key in the plaintext format. Once set, this cannot be disabled.",
 				Default:     false,
 			},
+			"auto_rotate_interval": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Amount of time the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
+			},
 			"type": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -190,12 +195,14 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 		"deletion_allowed":       d.Get("deletion_allowed").(bool),
 		"exportable":             d.Get("exportable").(bool),
 		"allow_plaintext_backup": d.Get("allow_plaintext_backup").(bool),
+		"auto_rotate_interval":   d.Get("auto_rotate_interval").(string),
 	}
 
 	data := map[string]interface{}{
 		"convergent_encryption": d.Get("convergent_encryption").(bool),
 		"derived":               d.Get("derived").(bool),
 		"type":                  d.Get("type").(string),
+		"auto_rotate_interval":  d.Get("auto_rotate_interval").(string),
 	}
 
 	log.Printf("[DEBUG] Creating encryption key %s on transit secret backend %q", name, backend)
@@ -292,6 +299,7 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 	d.Set("backend", backend)
 	d.Set("name", name)
 	d.Set("allow_plaintext_backup", secret.Data["allow_plaintext_backup"].(bool))
+	d.Set("auto_rotate_interval", secret.Data["auto_rotate_interval"].(string))
 	d.Set("convergent_encryption", convergentEncryption)
 	d.Set("deletion_allowed", secret.Data["deletion_allowed"].(bool))
 	d.Set("derived", secret.Data["derived"].(bool))
@@ -321,6 +329,7 @@ func transitSecretBackendKeyUpdate(d *schema.ResourceData, meta interface{}) err
 		"deletion_allowed":       d.Get("deletion_allowed"),
 		"exportable":             d.Get("exportable"),
 		"allow_plaintext_backup": d.Get("allow_plaintext_backup"),
+		"auto_rotate_interval":   d.Get("auto_rotate_interval"),
 	}
 
 	_, err := client.Logical().Write(path+"/config", data)
