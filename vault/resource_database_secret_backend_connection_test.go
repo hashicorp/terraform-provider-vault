@@ -369,6 +369,12 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mssql.0.contained_db", "true"),
 				),
 			},
+			{
+				ResourceName:            testDefaultDatabaseSecretBackendResource,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"verify_connection", "mssql.0.password"},
+			},
 		},
 	})
 }
@@ -1514,6 +1520,98 @@ func Test_getDBEngine(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getDBEngine() expected %v, actual %v", tt.want, got)
+			}
+		})
+	}
+}
+
+func Test_getDBEngineFromResp(t *testing.T) {
+	tests := []struct {
+		name      string
+		engines   []*dbEngine
+		r         *api.Secret
+		want      *dbEngine
+		expectErr error
+	}{
+		{
+			name: "basic",
+			engines: []*dbEngine{
+				{
+					name:              "foo",
+					defaultPluginName: "foo" + dbPluginSuffix,
+				},
+			},
+			r: &api.Secret{
+				Data: map[string]interface{}{
+					"plugin_name": "foo-custom",
+				},
+			},
+			want: &dbEngine{
+				name:              "foo",
+				defaultPluginName: "foo" + dbPluginSuffix,
+			},
+		},
+		{
+			name: "variant",
+			engines: []*dbEngine{
+				{
+					name:              "foo",
+					defaultPluginName: "foo" + dbPluginSuffix,
+				},
+				{
+					name:              "foo-variant",
+					defaultPluginName: "foo-variant" + dbPluginSuffix,
+				},
+				{
+					name:              "foo-variant-1",
+					defaultPluginName: "foo-variant-1" + dbPluginSuffix,
+				},
+			},
+			r: &api.Secret{
+				Data: map[string]interface{}{
+					"plugin_name": "foo-variant-custom",
+				},
+			},
+			want: &dbEngine{
+				name:              "foo-variant",
+				defaultPluginName: "foo-variant" + dbPluginSuffix,
+			},
+		},
+		{
+			name: "variant",
+			engines: []*dbEngine{
+				{
+					name:              "foo",
+					defaultPluginName: "foo" + dbPluginSuffix,
+				},
+			},
+			r: &api.Secret{
+				Data: map[string]interface{}{
+					"plugin_name": "bar-custom",
+				},
+			},
+			want:      nil,
+			expectErr: fmt.Errorf("no supported database engines found for plugin %q", "bar-custom"),
+		},
+		{
+			name: "invalid-data",
+			r: &api.Secret{
+				Data: map[string]interface{}{},
+			},
+			want:      nil,
+			expectErr: fmt.Errorf(`invalid response data, missing "plugin_name"`),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getDBEngineFromResp(tt.engines, tt.r)
+			if tt.expectErr != nil {
+				if !reflect.DeepEqual(tt.expectErr, err) {
+					t.Errorf("getDBEngineFromResp() expected error = %v, actual %v", tt.expectErr, err)
+				}
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getDBEngineFromResp() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
