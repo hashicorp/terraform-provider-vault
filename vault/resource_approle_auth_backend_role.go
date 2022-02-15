@@ -181,12 +181,22 @@ func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 		return nil
 	}
 
-	d.Set("backend", backend)
-	d.Set("role_name", role)
-	readTokenFields(d, resp)
+	if err := d.Set("backend", backend); err != nil {
+		return err
+	}
+
+	if err := d.Set("role_name", role); err != nil {
+		return err
+	}
+
+	if err := readTokenFields(d, resp); err != nil {
+		return err
+	}
 
 	if v, ok := resp.Data["secret_id_bound_cidrs"]; ok {
-		d.Set("secret_id_bound_cidrs", v)
+		if err := d.Set("secret_id_bound_cidrs", v); err != nil {
+			return err
+		}
 	}
 
 	for _, k := range []string{"bind_secret_id", "secret_id_num_uses", "secret_id_ttl"} {
@@ -238,7 +248,6 @@ func approleAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	return approleAuthBackendRoleRead(d, meta)
-
 }
 
 func approleAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {

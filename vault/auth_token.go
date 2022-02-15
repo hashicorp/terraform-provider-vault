@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -117,7 +118,7 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 	}
 }
 
-func setTokenFields(d *schema.ResourceData, data map[string]interface{}, config *addTokenFieldsConfig) {
+func addRequestTokenFields(d *schema.ResourceData, data map[string]interface{}, config *addTokenFieldsConfig) {
 	data[TokenFieldNoDefaultPolicy] = d.Get(TokenFieldNoDefaultPolicy).(bool)
 	data[TokenFieldType] = d.Get(TokenFieldType).(string)
 
@@ -276,12 +277,74 @@ func updateTokenFields(d *schema.ResourceData, data map[string]interface{}, crea
 }
 
 func readTokenFields(d *schema.ResourceData, resp *api.Secret) error {
-	for k, v := range getCommonTokenFieldMap(resp) {
+	handlers := map[string]fieldHandlerFunc{
+		TokenFieldBoundCIDRs: handleCIDRField,
+	}
+
+	return readTokenFieldsWithHandlers(d, resp, handlers)
+}
+
+type fieldHandlerFunc func(d *schema.ResourceData, k string, resp *api.Secret) (interface{}, error)
+
+func readTokenFieldsWithHandlers(d *schema.ResourceData, resp *api.Secret, handlers map[string]fieldHandlerFunc) error {
+	return setValueWithHandlers(d, getCommonTokenFieldMap(resp), resp, handlers)
+}
+
+func setValueWithHandlers(d *schema.ResourceData, fieldMap map[string]interface{}, resp *api.Secret,
+	handlers map[string]fieldHandlerFunc) error {
+	for k, v := range fieldMap {
+		var err error
+		if f, ok := handlers[k]; ok {
+			v, err = f(d, k, resp)
+			if err != nil {
+				return err
+			}
+		}
 		if err := d.Set(k, v); err != nil {
 			return fmt.Errorf("error setting state key %q: %w", k, err)
 		}
 	}
 	return nil
+}
+
+func handleCIDRField(d *schema.ResourceData, k string, resp *api.Secret) (interface{}, error) {
+	v, ok := d.GetOk(k)
+	if !ok {
+		return nil, nil
+	}
+
+	s, ok := v.(*schema.Set)
+	if !ok {
+		return nil, fmt.Errorf("unsupported type %T", v)
+	}
+
+	var addrs []string
+	for _, addr := range resp.Data[k].([]interface{}) {
+		// Vault strips the CIDR prefix from IPv4 /32, IPv6 /128 host addresses
+		// we want to normalize these addresses unless they are otherwise explicitly
+		// configured in the Terraform config.
+		if _, _, err := net.ParseCIDR(addr.(string)); err != nil && !s.Contains(addr) {
+			ip := net.ParseIP(addr.(string))
+			if ip == nil {
+				// should never happen
+				return nil, fmt.Errorf("invalid address %q in response", addr)
+			}
+
+			var bits int
+			if m := ip.DefaultMask(); m != nil {
+				// IPv4
+				_, bits = m.Size()
+			} else {
+				// IPv6
+				bits = 128
+			}
+			// addrs = append(addrs, fmt.Sprintf("%s/%d", addr, bits))
+			addr = fmt.Sprintf("%s/%d", addr, bits)
+		}
+		addrs = append(addrs, addr.(string))
+	}
+
+	return addrs, nil
 }
 
 func getCommonTokenFieldMap(resp *api.Secret) map[string]interface{} {
