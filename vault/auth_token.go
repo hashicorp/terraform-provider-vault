@@ -338,7 +338,6 @@ func handleCIDRField(d *schema.ResourceData, k string, resp *api.Secret) (interf
 				// IPv6
 				bits = 128
 			}
-			// addrs = append(addrs, fmt.Sprintf("%s/%d", addr, bits))
 			addr = fmt.Sprintf("%s/%d", addr, bits)
 		}
 		addrs = append(addrs, addr.(string))
