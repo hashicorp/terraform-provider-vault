@@ -75,7 +75,7 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Default:     false,
 			},
 			"auto_rotate_interval": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Amount of time the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
 			},
@@ -195,14 +195,14 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 		"deletion_allowed":       d.Get("deletion_allowed").(bool),
 		"exportable":             d.Get("exportable").(bool),
 		"allow_plaintext_backup": d.Get("allow_plaintext_backup").(bool),
-		"auto_rotate_interval":   d.Get("auto_rotate_interval").(string),
+		"auto_rotate_interval":   d.Get("auto_rotate_interval").(int),
 	}
 
 	data := map[string]interface{}{
 		"convergent_encryption": d.Get("convergent_encryption").(bool),
 		"derived":               d.Get("derived").(bool),
 		"type":                  d.Get("type").(string),
-		"auto_rotate_interval":  d.Get("auto_rotate_interval").(string),
+		"auto_rotate_interval":  d.Get("auto_rotate_interval").(int),
 	}
 
 	log.Printf("[DEBUG] Creating encryption key %s on transit secret backend %q", name, backend)
@@ -295,24 +295,43 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 		}
 	}
 
-	d.Set("keys", keys)
-	d.Set("backend", backend)
-	d.Set("name", name)
-	d.Set("allow_plaintext_backup", secret.Data["allow_plaintext_backup"].(bool))
-	d.Set("auto_rotate_interval", secret.Data["auto_rotate_interval"].(string))
-	d.Set("convergent_encryption", convergentEncryption)
-	d.Set("deletion_allowed", secret.Data["deletion_allowed"].(bool))
-	d.Set("derived", secret.Data["derived"].(bool))
-	d.Set("exportable", secret.Data["exportable"].(bool))
-	d.Set("latest_version", latestVersion)
-	d.Set("min_available_version", minAvailableVersion)
-	d.Set("min_decryption_version", minDecryptionVersion)
-	d.Set("min_encryption_version", minEncryptionVersion)
-	d.Set("supports_decryption", secret.Data["supports_decryption"].(bool))
-	d.Set("supports_derivation", secret.Data["supports_derivation"].(bool))
-	d.Set("supports_encryption", secret.Data["supports_encryption"].(bool))
-	d.Set("supports_signing", secret.Data["supports_signing"].(bool))
-	d.Set("type", secret.Data["type"].(string))
+	if err := d.Set("keys", keys); err != nil {
+		return err
+	}
+	if err := d.Set("backend", backend); err != nil {
+		return err
+	}
+	if err := d.Set("name", name); err != nil {
+		return err
+	}
+	if err := d.Set("latest_version", latestVersion); err != nil {
+		return err
+	}
+	if err := d.Set("min_available_version", minAvailableVersion); err != nil {
+		return err
+	}
+	if err := d.Set("min_decryption_version", minDecryptionVersion); err != nil {
+		return err
+	}
+	if err := d.Set("min_encryption_version", minEncryptionVersion); err != nil {
+		return err
+	}
+	if err := d.Set("convergent_encryption", convergentEncryption); err != nil {
+		return err
+	}
+
+	fields := []string{
+		"allow_plaintext_backup", "auto_rotate_interval",
+		"deletion_allowed", "derived", "exportable",
+		"supports_decryption", "supports_derivation",
+		"supports_encryption", "supports_signing", "type",
+	}
+
+	for _, k := range fields {
+		if err := d.Set(k, secret.Data[k]); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

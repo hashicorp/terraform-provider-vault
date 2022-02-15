@@ -27,7 +27,7 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "name", name),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "deletion_allowed", "true"),
-					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "auto_rotate_interval", "1h0m0s"),
+					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "auto_rotate_interval", "3600"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "convergent_encryption", "false"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "derived", "false"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "exportable", "false"),
@@ -46,7 +46,7 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "backend", backend),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "name", name),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "deletion_allowed", "true"),
-					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "auto_rotate_interval", "24h0m0s"),
+					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "auto_rotate_interval", "7200"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "convergent_encryption", "false"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "derived", "false"),
 					resource.TestCheckResourceAttrSet("vault_transit_secret_backend_key.test", "keys.#"),
@@ -95,6 +95,7 @@ func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "supports_derivation", "false"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "supports_encryption", "true"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "supports_signing", "true"),
+					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "auto_rotate_interval", "0"),
 				),
 			},
 			{
@@ -112,6 +113,7 @@ func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "supports_derivation", "false"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "supports_encryption", "true"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "supports_signing", "true"),
+					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "auto_rotate_interval", "0"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "min_decryption_version", "1"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "min_encryption_version", "1"),
 					resource.TestCheckResourceAttr("vault_transit_secret_backend_key.test", "deletion_allowed", "true"),
@@ -159,7 +161,7 @@ resource "vault_transit_secret_backend_key" "test" {
   backend = vault_mount.transit.path
   name = "%s"
   deletion_allowed = true
-  auto_rotate_interval = "1h0m0s"
+  auto_rotate_interval = 3600
 }
 `, path, name)
 }
@@ -213,7 +215,7 @@ resource "vault_transit_secret_backend_key" "test" {
   min_decryption_version = 1
   min_encryption_version = 1
   deletion_allowed       = true
-  auto_rotate_interval   = "24h0m0s"
+  auto_rotate_interval   = 7200
   exportable             = true
   allow_plaintext_backup = true
 }
