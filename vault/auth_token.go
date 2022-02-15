@@ -118,7 +118,7 @@ func addTokenFields(fields map[string]*schema.Schema, config *addTokenFieldsConf
 	}
 }
 
-func addRequestTokenFields(d *schema.ResourceData, data map[string]interface{}, config *addTokenFieldsConfig) {
+func setTokenFields(d *schema.ResourceData, data map[string]interface{}, config *addTokenFieldsConfig) {
 	data[TokenFieldNoDefaultPolicy] = d.Get(TokenFieldNoDefaultPolicy).(bool)
 	data[TokenFieldType] = d.Get(TokenFieldType).(string)
 
