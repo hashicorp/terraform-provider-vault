@@ -152,9 +152,14 @@ func (i *dbEngine) DefaultPluginName() string {
 	return i.defaultPluginName
 }
 
-// PluginPrefix for this dbEngine.
-func (i *dbEngine) PluginPrefix() string {
-	return strings.TrimSuffix(i.DefaultPluginName(), dbPluginSuffix)
+// PluginPrefix for this dbEngine. Return an error if the prefix is empty.
+func (i *dbEngine) PluginPrefix() (string, error) {
+	prefix := strings.TrimSuffix(i.DefaultPluginName(), dbPluginSuffix)
+	if prefix == "" {
+		return "", fmt.Errorf("empty plugin prefix, no default plugin name set for dbEngine %q", i.name)
+	}
+
+	return prefix, nil
 }
 
 func databaseSecretBackendConnectionResource() *schema.Resource {
@@ -713,11 +718,18 @@ func getDBEngineFromResp(engines []*dbEngine, r *api.Secret) (*dbEngine, error) 
 		return nil, fmt.Errorf(`invalid response data, missing "plugin_name"`)
 	}
 
+	if pluginName == "" {
+		return nil, fmt.Errorf(`invalid response data, "plugin_name" is empty`)
+	}
+
 	var last int
 	var engine *dbEngine
 	for _, e := range engines {
-		prefix := e.PluginPrefix()
-		if strings.HasPrefix(pluginName.(string), prefix) {
+		prefix, err := e.PluginPrefix()
+		if err != nil {
+			return nil, err
+		}
+		if prefix != "" && strings.HasPrefix(pluginName.(string), prefix) {
 			l := len(prefix)
 			if last == 0 {
 				last = l
@@ -1276,7 +1288,11 @@ func databaseSecretBackendConnectionCreate(d *schema.ResourceData, meta interfac
 }
 
 func validateDBPluginName(s string) error {
-	pluginPrefixes := getSortedPluginPrefixes()
+	pluginPrefixes, err := getSortedPluginPrefixes()
+	if err != nil {
+		return err
+	}
+
 	for _, v := range pluginPrefixes {
 		if strings.HasPrefix(s, v) {
 			return nil
@@ -1287,19 +1303,21 @@ func validateDBPluginName(s string) error {
 		strings.Join(pluginPrefixes, ", "))
 }
 
-func getSortedPluginPrefixes() []string {
-	pluginPrefixes := make([]string, len(dbEngines))
-	var i int
+func getSortedPluginPrefixes() ([]string, error) {
+	var pluginPrefixes []string
 	for _, d := range dbEngines {
-		pluginPrefixes[i] = d.PluginPrefix()
-		i++
+		prefix, err := d.PluginPrefix()
+		if err != nil {
+			return nil, err
+		}
+		pluginPrefixes = append(pluginPrefixes, prefix)
 	}
 	// sorted by max length
 	sort.Slice(pluginPrefixes, func(i, j int) bool {
 		return len(pluginPrefixes[i]) > len(pluginPrefixes[j])
 	})
 
-	return pluginPrefixes
+	return pluginPrefixes, nil
 }
 
 func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{}) error {

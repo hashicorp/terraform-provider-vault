@@ -1625,6 +1625,38 @@ func Test_getDBEngineFromResp(t *testing.T) {
 			expectErr: fmt.Errorf("no supported database engines found for plugin %q", "bar-custom"),
 		},
 		{
+			name: "invalid-empty-prefix",
+			engines: []*dbEngine{
+				{
+					name: "foo",
+				},
+			},
+			r: &api.Secret{
+				Data: map[string]interface{}{
+					"plugin_name": "bar-custom",
+				},
+			},
+			want: nil,
+			expectErr: fmt.Errorf(
+				"empty plugin prefix, no default plugin name set for dbEngine %q", "foo"),
+		},
+		{
+			name: "invalid-empty-plugin-name",
+			engines: []*dbEngine{
+				{
+					name:              "foo",
+					defaultPluginName: "foo" + dbPluginSuffix,
+				},
+			},
+			r: &api.Secret{
+				Data: map[string]interface{}{
+					"plugin_name": "",
+				},
+			},
+			want:      nil,
+			expectErr: fmt.Errorf(`invalid response data, "plugin_name" is empty`),
+		},
+		{
 			name: "invalid-data",
 			r: &api.Secret{
 				Data: map[string]interface{}{},
