@@ -45,7 +45,9 @@ The following arguments are supported:
 
 * `backend` - (Required) The unique name of the Vault mount to configure.
 
-* `plugin_name` - (Optional) Specifies the name of the plugin to use.
+* `plugin_name` - (Optional) Specifies the name of the plugin to use. All values must be prefixed
+ to match the corresponding database engine directive.
+ For example the `plugin_name` for the `mysql_aurora` engine must begin with `mysql-aurora`. Note the hyphenation.
 
 * `verify_connection` - (Optional) Whether the connection should be verified on
   initial configuration or not.
