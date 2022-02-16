@@ -374,7 +374,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 				ResourceName:            testDefaultDatabaseSecretBackendResource,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"verify_connection", "mssql.0.password"},
+				ImportStateVerifyIgnore: []string{"verify_connection", "mssql.0.password", "mssql.0.connection_url"},
 			},
 		},
 	})
@@ -1609,7 +1609,7 @@ func Test_getDBEngineFromResp(t *testing.T) {
 			},
 		},
 		{
-			name: "variant",
+			name: "unsupported",
 			engines: []*dbEngine{
 				{
 					name:              "foo",
