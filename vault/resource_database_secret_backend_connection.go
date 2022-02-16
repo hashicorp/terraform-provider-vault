@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -152,6 +153,16 @@ func (i *dbEngine) DefaultPluginName() string {
 	return i.defaultPluginName
 }
 
+// PluginPrefix for this dbEngine. Return an error if the prefix is empty.
+func (i *dbEngine) PluginPrefix() (string, error) {
+	prefix := strings.TrimSuffix(i.DefaultPluginName(), dbPluginSuffix)
+	if prefix == "" {
+		return "", fmt.Errorf("empty plugin prefix, no default plugin name set for dbEngine %q", i.name)
+	}
+
+	return prefix, nil
+}
+
 func databaseSecretBackendConnectionResource() *schema.Resource {
 	dbEngineTypes := []string{}
 	for _, e := range dbEngines {
@@ -176,10 +187,21 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				ForceNew:    true,
 			},
 			"plugin_name": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Computed:    true,
-				Description: "Specifies the name of the plugin to use for this connection.",
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				Description: "Specifies the name of the plugin to use for this connection. " +
+					"Must be prefixed with the name of one of the supported database engine types.",
+				ValidateFunc: func(i interface{}, s string) ([]string, []error) {
+					var errs []error
+					v, ok := i.(string)
+					if !ok {
+						errs = append(errs, fmt.Errorf("expected type of %q to be string", s))
+					} else if err := validateDBPluginName(v); err != nil {
+						errs = append(errs, err)
+					}
+					return nil, errs
+				},
 			},
 			"verify_connection": {
 				Type:        schema.TypeBool,
@@ -702,6 +724,43 @@ func getDBEngine(d *schema.ResourceData) (*dbEngine, error) {
 	}
 
 	return nil, fmt.Errorf("no supported database engines configured")
+}
+
+func getDBEngineFromResp(engines []*dbEngine, r *api.Secret) (*dbEngine, error) {
+	pluginName, ok := r.Data["plugin_name"]
+	if !ok {
+		return nil, fmt.Errorf(`invalid response data, missing "plugin_name"`)
+	}
+
+	if pluginName == "" {
+		return nil, fmt.Errorf(`invalid response data, "plugin_name" is empty`)
+	}
+
+	var last int
+	var engine *dbEngine
+	for _, e := range engines {
+		prefix, err := e.PluginPrefix()
+		if err != nil {
+			return nil, err
+		}
+		if prefix != "" && strings.HasPrefix(pluginName.(string), prefix) {
+			l := len(prefix)
+			if last == 0 {
+				last = l
+			}
+
+			if l >= last {
+				engine = e
+			}
+			last = l
+		}
+	}
+
+	if engine != nil {
+		return engine, nil
+	}
+
+	return nil, fmt.Errorf("no supported database engines found for plugin %q", pluginName)
 }
 
 func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) {
@@ -1264,15 +1323,43 @@ func databaseSecretBackendConnectionCreate(d *schema.ResourceData, meta interfac
 	return databaseSecretBackendConnectionRead(d, meta)
 }
 
+func validateDBPluginName(s string) error {
+	pluginPrefixes, err := getSortedPluginPrefixes()
+	if err != nil {
+		return err
+	}
+
+	for _, v := range pluginPrefixes {
+		if strings.HasPrefix(s, v) {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("unsupported database plugin name %q, must begin with one of: %s", s,
+		strings.Join(pluginPrefixes, ", "))
+}
+
+func getSortedPluginPrefixes() ([]string, error) {
+	var pluginPrefixes []string
+	for _, d := range dbEngines {
+		prefix, err := d.PluginPrefix()
+		if err != nil {
+			return nil, err
+		}
+		pluginPrefixes = append(pluginPrefixes, prefix)
+	}
+	// sorted by max length
+	sort.Slice(pluginPrefixes, func(i, j int) bool {
+		return len(pluginPrefixes[i]) > len(pluginPrefixes[j])
+	})
+
+	return pluginPrefixes, nil
+}
+
 func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
-
-	db, err := getDBEngine(d)
-	if err != nil {
-		return err
-	}
 
 	backend, err := databaseSecretBackendConnectionBackendFromPath(path)
 	if err != nil {
@@ -1294,6 +1381,16 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		log.Printf("[WARN] Database connection %q not found, removing it from state", path)
 		d.SetId("")
 		return nil
+	}
+
+	db, err := getDBEngine(d)
+	if err != nil {
+		// on resource import we must rely on the `plugin_name` configured in
+		// Vault to get the corresponding dbEngine.
+		db, err = getDBEngineFromResp(dbEngines, resp)
+	}
+	if err != nil {
+		return err
 	}
 
 	switch db {
