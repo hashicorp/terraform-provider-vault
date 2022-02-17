@@ -1,4 +1,4 @@
-## 3.3.0 (Unreleased)
+## 3.3.0 (February 17, 2022)
 FEATURES:
 * Add KMIP support: new resources `vault_kmip_secret_backend`, `vault_kmip_secret_scope` and `vault_kmip_secret_role` ([#1339](https://github.com/hashicorp/terraform-provider-vault/pull/1339))
 
