@@ -1,3 +1,7 @@
+## 3.4.0 (Unreleased)
+BUGS:
+* `resource/identity_group`: Report an error upon duplicate resource creation failure. Document group name caveats. ([#1352](https://github.com/hashicorp/terraform-provider-vault/pull/1352))
+
 ## 3.3.0 (February 17, 2022)
 FEATURES:
 * Add KMIP support: new resources `vault_kmip_secret_backend`, `vault_kmip_secret_scope` and `vault_kmip_secret_role` ([#1339](https://github.com/hashicorp/terraform-provider-vault/pull/1339))
