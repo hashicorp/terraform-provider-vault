@@ -98,7 +98,7 @@ variables in order to keep credential information out of the configuration.
   `VAULT_ADDR` in the Terraform process environment will be set to the
   value of the `address` argument from this provider. By default, this is false.
 
-* `token` - (Required) Vault token that will be used by Terraform to
+* `token` - (Optional) Vault token that will be used by Terraform to
   authenticate. May be set via the `VAULT_TOKEN` environment variable.
   If none is otherwise supplied, Terraform will attempt to read it from
   `~/.vault-token` (where the vault command stores its current token).
@@ -106,7 +106,9 @@ variables in order to keep credential information out of the configuration.
   with a short TTL to limit the exposure of any requested secrets, unless
   `skip_child_token` is set to `true` (see below). Note that
   the given token must have the update capability on the auth/token/create
-  path in Vault in order to create child tokens.
+  path in Vault in order to create child tokens.  A token is required for
+  the provider.  A token can explicitly set via token argument, alternatively 
+  a token can be implicitly set via an auth_login block.
 
 * `token_name` - (Optional) Token name, that will be used by Terraform when
   creating the child token (`display_name`). This is useful to provide a reference of the

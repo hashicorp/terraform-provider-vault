@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -183,17 +184,18 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if resp == nil {
 		path := identityGroupNamePath(name)
-		groupMsg := "Unable to determine group id."
-
-		if group, err := client.Logical().Read(path); err == nil {
-			groupMsg = fmt.Sprintf("Group resource ID %q may be imported.", group.Data["id"])
+		resp, err := client.Logical().Read(path)
+		if err == nil {
+			err = errors.New("unknown")
+			if resp != nil {
+				err = fmt.Errorf(
+					"group already exists with path=%q, id=%q", path, resp.Data["id"])
+			}
 		}
-
-		return fmt.Errorf("Identity Group %q already exists. %s", name, groupMsg)
-	} else {
-		log.Printf("[DEBUG] Wrote IdentityGroup %q", resp.Data["name"])
+		return fmt.Errorf("failed to create identity group %q, reason=%w", name, err)
 	}
 
+	log.Printf("[DEBUG] Created IdentityGroup %q", resp.Data["name"])
 	d.SetId(resp.Data["id"].(string))
 
 	return identityGroupRead(d, meta)
