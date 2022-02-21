@@ -239,8 +239,8 @@ resource "vault_approle_auth_backend_role" "role" {
 }
 
 resource "vault_approle_auth_backend_role_secret_id" "secret_id" {
-  role_name = "${vault_approle_auth_backend_role.role.role_name}"
-  backend = "${vault_auth_backend.approle.path}"
+  role_name = vault_approle_auth_backend_role.role.role_name
+  backend = vault_auth_backend.approle.path
   wrapping_ttl = "60s"
   reuse_wrapping_token = true
 }`, backend, role)
