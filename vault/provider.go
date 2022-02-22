@@ -705,6 +705,10 @@ var (
 			Resource:      kmipSecretRoleResource(),
 			PathInventory: []string{"/kmip/scope/{scope}/role/{role}"},
 		},
+		"vault_identity_oidc_scope": {
+			Resource:      identityOidcScopeResource(),
+			PathInventory: []string{"/identity/oidc/scope/{scope}"},
+		},
 	}
 )
 
