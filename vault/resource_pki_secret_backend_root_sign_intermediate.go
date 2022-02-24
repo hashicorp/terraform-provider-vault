@@ -303,7 +303,14 @@ func setCAChain(d *schema.ResourceData, resp *api.Secret) error {
 	field := "ca_chain"
 	var caChain []string
 	if v, ok := resp.Data[field]; ok && v != nil {
-		caChain = v.([]string)
+		switch v := v.(type) {
+		case []interface{}:
+			for _, v := range v {
+				caChain = append(caChain, v.(string))
+			}
+		default:
+			return fmt.Errorf("response contains an unexpected type %T for %q", v, field)
+		}
 	}
 
 	// provide the CAChain from the issuing_ca and the intermediate CA certificate
