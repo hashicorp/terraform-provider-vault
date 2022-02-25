@@ -1,4 +1,4 @@
-## 3.3.1 (Unreleased)
+## 3.3.1 (February 25, 2022)
 BUGS:
 * `resource/identity_group`: Report an error upon duplicate resource creation failure. Document group name caveats. ([#1352](https://github.com/hashicorp/terraform-provider-vault/pull/1352))
 * `resource/pki_secret_backend_root_sign_intermediate`: Fix panic when reading `ca_chain` from Vault ([#1357](https://github.com/hashicorp/terraform-provider-vault/issues/1357))
