@@ -4,6 +4,7 @@ BUGS:
 * `resource/pki_secret_backend_root_sign_intermediate`: Fix panic when reading `ca_chain` from Vault ([#1357](https://github.com/hashicorp/terraform-provider-vault/issues/1357))
 * `resource/raft_snapshot_agent_config`: Properly handle nil response on read ([#1360](https://github.com/hashicorp/terraform-provider-vault/pull/1360))
 * `resource/identity_*`: Ensure non-existent entities are handled properly ([#1361](https://github.com/hashicorp/terraform-provider-vault/pull/1361))
+* `resource/dentity_group_member_entity_ids`: Properly handle nil `member_identity_ids` on read ([#1356](https://github.com/hashicorp/terraform-provider-vault/pull/1356))
 
 ## 3.3.0 (February 17, 2022)
 FEATURES:
