@@ -706,8 +706,12 @@ var (
 			PathInventory: []string{"/kmip/scope/{scope}/role/{role}"},
 		},
 		"vault_identity_oidc_scope": {
-			Resource:      identityOidcScopeResource(),
+			Resource:      identityOIDCScopeResource(),
 			PathInventory: []string{"/identity/oidc/scope/{scope}"},
+		},
+		"vault_identity_oidc_assignment": {
+			Resource:      identityOIDCAssignmentResource(),
+			PathInventory: []string{"/identity/oidc/assignment/{name}"},
 		},
 	}
 )

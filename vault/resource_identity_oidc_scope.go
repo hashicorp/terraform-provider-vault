@@ -8,20 +8,20 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-const identityOidcScopePathTemplate = "identity/oidc/scope"
+const identityOIDCScopePathTemplate = "identity/oidc/scope"
 
-func identityOidcScopeResource() *schema.Resource {
+func identityOIDCScopeResource() *schema.Resource {
 	return &schema.Resource{
-		Create: identityOidcScopeCreateUpdate,
-		Update: identityOidcScopeCreateUpdate,
-		Read:   identityOidcScopeRead,
-		Delete: identityOidcScopeDelete,
+		Create: identityOIDCScopeCreateUpdate,
+		Update: identityOIDCScopeCreateUpdate,
+		Read:   identityOIDCScopeRead,
+		Delete: identityOIDCScopeDelete,
 
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
 				ForceNew:    true,
-				Description: "The name of the scope. This parameter is specified as part of the URL. The openid scope name is reserved.",
+				Description: "The name of the scope. The openid scope name is reserved.",
 				Required:    true,
 			},
 			"template": {
@@ -38,8 +38,8 @@ func identityOidcScopeResource() *schema.Resource {
 	}
 }
 
-func identityOidcScopeRequestData(d *schema.ResourceData) map[string]interface{} {
-	fields := []string{"name", "template", "description"}
+func identityOIDCScopeRequestData(d *schema.ResourceData) map[string]interface{} {
+	fields := []string{"template", "description"}
 	data := map[string]interface{}{}
 
 	for _, k := range fields {
@@ -55,17 +55,16 @@ func identityOidcScopeRequestData(d *schema.ResourceData) map[string]interface{}
 	return data
 }
 
-func getOidcScopePath(name string) string {
-	return fmt.Sprintf("%s/%s", identityOidcScopePathTemplate, name)
+func getOIDCScopePath(name string) string {
+	return fmt.Sprintf("%s/%s", identityOIDCScopePathTemplate, name)
 }
 
-func identityOidcScopeCreateUpdate(d *schema.ResourceData, meta interface{}) error {
+func identityOIDCScopeCreateUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	data := identityOidcScopeRequestData(d)
 	name := d.Get("name").(string)
+	path := getOIDCScopePath(name)
 
-	path := getOidcScopePath(name)
-
+	data := identityOIDCScopeRequestData(d)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		return fmt.Errorf("error writing OIDC Scope %s, err=%w", path, err)
@@ -74,15 +73,10 @@ func identityOidcScopeCreateUpdate(d *schema.ResourceData, meta interface{}) err
 
 	d.SetId(path)
 
-	// TODO confirm if this is correct; Vault does not return 'name' in response
-	if d.IsNewResource() {
-		d.Set("name", name)
-	}
-
-	return identityOidcScopeRead(d, meta)
+	return identityOIDCScopeRead(d, meta)
 }
 
-func identityOidcScopeRead(d *schema.ResourceData, meta interface{}) error {
+func identityOIDCScopeRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Id()
 
@@ -98,7 +92,6 @@ func identityOidcScopeRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	// TODO Vault doesn't return 'name'; confirm behavior
 	for _, k := range []string{"template", "description"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return fmt.Errorf("error setting state key \"%s\" on OIDC Scope %s, err=%w", k, path, err)
@@ -107,7 +100,7 @@ func identityOidcScopeRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func identityOidcScopeDelete(d *schema.ResourceData, meta interface{}) error {
+func identityOIDCScopeDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Id()
 

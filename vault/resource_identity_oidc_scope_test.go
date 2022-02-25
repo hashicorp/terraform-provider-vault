@@ -22,14 +22,14 @@ func TestAccIdentityOIDCScope(t *testing.T) {
 		CheckDestroy: testAccCheckIdentityEntityDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityOIDCSCopeConfig_basic(name),
+				Config: testAccIdentityOIDCScopeConfig_basic(name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "description", "test scope"),
 					resource.TestCheckResourceAttr(resourceName, "template", testVar),
 				),
 			},
 			{
-				Config: testAccIdentityOIDCSCopeConfig_update(name),
+				Config: testAccIdentityOIDCScopeConfig_update(name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "description", "test scope updated description"),
 					resource.TestCheckResourceAttr(resourceName, "template", testVar),
@@ -39,7 +39,7 @@ func TestAccIdentityOIDCScope(t *testing.T) {
 	})
 }
 
-func testAccIdentityOIDCSCopeConfig_basic(scope string) string {
+func testAccIdentityOIDCScopeConfig_basic(scope string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_oidc_scope" "test" {
   name        = "%s"
@@ -48,7 +48,7 @@ resource "vault_identity_oidc_scope" "test" {
 }`, scope)
 }
 
-func testAccIdentityOIDCSCopeConfig_update(scope string) string {
+func testAccIdentityOIDCScopeConfig_update(scope string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_oidc_scope" "test" {
   name        = "%s"
