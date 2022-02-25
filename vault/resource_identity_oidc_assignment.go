@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -25,12 +26,13 @@ func identityOIDCAssignmentResource() *schema.Resource {
 				Required:    true,
 			},
 			"entity_ids": {
-				Type: schema.TypeList,
+				Type:        schema.TypeList,
+				Description: "A list of Vault entity IDs.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "A list of Vault entity IDs.",
-				Optional:    true,
+				Optional:  true,
+				StateFunc: lowercaseIDs,
 			},
 			"group_ids": {
 				Type:        schema.TypeList,
@@ -42,6 +44,19 @@ func identityOIDCAssignmentResource() *schema.Resource {
 			},
 		},
 	}
+}
+
+func lowercaseIDs(v interface{}) string {
+	ids := v.([]string)
+	var ret string
+
+	for i, id := range ids {
+		ret += strings.ToLower(id)
+		if i != len(ids)-1 {
+			ret += " "
+		}
+	}
+	return ret
 }
 
 func identityOIDCAssignmentRequestData(d *schema.ResourceData) map[string]interface{} {
