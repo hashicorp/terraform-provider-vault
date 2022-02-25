@@ -230,19 +230,20 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
 
+	log.Printf("[DEBUG] Read IdentityGroup %s", id)
 	resp, err := readIdentityGroup(client, id, d.IsNewResource())
 	if err != nil {
 		// We need to check if the secret_id has expired
 		if util.IsExpiredTokenErr(err) {
 			return nil
 		}
+
+		if isIdentityNotFoundError(err) {
+			log.Printf("[WARN] IdentityGroup %q not found, removing from state", id)
+			d.SetId("")
+			return nil
+		}
 		return fmt.Errorf("error reading IdentityGroup %q: %s", id, err)
-	}
-	log.Printf("[DEBUG] Read IdentityGroup %s", id)
-	if resp == nil {
-		log.Printf("[WARN] IdentityGroup %q not found, removing from state", id)
-		d.SetId("")
-		return nil
 	}
 
 	readFields := []string{"name", "type", "metadata", "member_entity_ids", "member_group_ids", "policies"}
@@ -318,9 +319,6 @@ func readIdentityGroupMemberEntityIds(client *api.Client, groupID string, retry 
 	resp, err := readIdentityGroup(client, groupID, retry)
 	if err != nil {
 		return nil, err
-	}
-	if resp == nil {
-		return nil, fmt.Errorf("error IdentityGroup %s does not exist", groupID)
 	}
 
 	if v, ok := resp.Data["member_entity_ids"]; ok && v != nil {
