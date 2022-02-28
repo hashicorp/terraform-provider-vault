@@ -77,6 +77,7 @@ func transitSecretBackendKeyResource() *schema.Resource {
 			"auto_rotate_interval": {
 				Type:        schema.TypeInt,
 				Optional:    true,
+				Computed:    true,
 				Description: "Amount of time the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
 			},
 			"type": {
