@@ -132,6 +132,8 @@ func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
 }
 
 func TestTransitSecretBackendKey_import(t *testing.T) {
+	testutil.SkipTestEnvSet(t, "SKIP_VAULT_NEXT_TESTS")
+
 	backend := acctest.RandomWithPrefix("transit")
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
