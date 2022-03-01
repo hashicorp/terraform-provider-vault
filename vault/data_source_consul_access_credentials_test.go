@@ -43,13 +43,13 @@ resource "vault_consul_secret_backend_role" "this" {
 	# FIXME: Docs say policies is optional when token_type == management
 	# https://www.vaultproject.io/api/secret/consul#parameters-for-consul-versions-1-4-and-above
 	policies = ["foo", "bar"]
-	token_type = "management"
+	token_type = "client"
 	ttl = 120
 	max_ttl = 240
 	local = true
 }
 data "vault_consul_access_credentials" "test" {
   backend = vault_consul_secret_backend.test.path
-  role = "test"
+  role = vault_consul_secret_backend_role.this.name
 }`, path, token)
 }
