@@ -72,6 +72,7 @@ resource "vault_pki_secret_backend_role" "test" {
 }
 
 data "vault_pki_access_credentials" "test" {
+  depends_on = ["vault_pki_secret_backend_root_cert.test"]
   backend = vault_mount.test-root.path
   name = vault_pki_secret_backend_role.test.name
   common_name = "cert.test.my.domain"
