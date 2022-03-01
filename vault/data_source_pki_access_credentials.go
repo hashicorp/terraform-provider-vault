@@ -15,6 +15,8 @@ func pkiAccessCredentialsDataSource() *schema.Resource {
 				Required:    true,
 				Description: "PKI backend to read credentials from.",
 			},
+			// FIXME: Should this be name or role? The data sources seem to be inconsistent regarding preference
+			// Using name does make it easy to invoke the pkiSecretBackednCertCreate function...
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -127,6 +129,7 @@ func pkiAccessCredentialsDataSource() *schema.Resource {
 				Computed:    true,
 				Description: "The certificate expiration.",
 			},
+			// FIXME: AWS access credential has lease information, do we need to do the same?
 		},
 	}
 }

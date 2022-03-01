@@ -13,6 +13,7 @@ func consulAccessCredentialsDataSource() *schema.Resource {
 		// FIXME: Is it a faux pas to simply reuse an existing resource's Create?
 		Read: consulAccessCredentialsDataSourceRead,
 		Schema: map[string]*schema.Schema{
+			// FIXME: Should this be name or role? The data sources seem to be inconsistent regarding preference
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -35,6 +36,7 @@ func consulAccessCredentialsDataSource() *schema.Resource {
 				Computed:    true,
 				Description: "The consul accessor token.",
 			},
+			// FIXME: AWS access credential has lease information, do we need to do the same?
 		},
 	}
 }
