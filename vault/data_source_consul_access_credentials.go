@@ -10,7 +10,6 @@ import (
 
 func consulAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
-		// FIXME: Is it a faux pas to simply reuse an existing resource's Create?
 		Read: consulAccessCredentialsDataSourceRead,
 		Schema: map[string]*schema.Schema{
 			// FIXME: Should this be name or role? The data sources seem to be inconsistent regarding preference
