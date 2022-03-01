@@ -14,7 +14,7 @@ func consulAccessCredentialsDataSource() *schema.Resource {
 		Read: consulAccessCredentialsDataSourceRead,
 		Schema: map[string]*schema.Schema{
 			// FIXME: Should this be name or role? The data sources seem to be inconsistent regarding preference
-			"name": {
+			"role": {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
@@ -45,18 +45,18 @@ func consulAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interfac
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
-	name := d.Get("name").(string)
+	role := d.Get("role").(string)
 
-	path := fmt.Sprintf("%s/creds/%s", backend, name)
+	path := fmt.Sprintf("%s/creds/%s", backend, role)
 
-	data := map[string]interface{}{}
+	payload := map[string]interface{}{}
 
-	log.Printf("[DEBUG] Requesting token from %s on Consul secret backend %q", name, backend)
-	secret, err := client.Logical().Write(path, data)
+	log.Printf("[DEBUG] Requesting token from %s on Consul secret backend %q", role, backend)
+	secret, err := client.Logical().Write(path, payload)
 	if err != nil {
-		return fmt.Errorf("error creating token from %s on Consul secret backend %q: %s", name, backend, err)
+		return fmt.Errorf("error creating token from %s on Consul secret backend %q: %s", role, backend, err)
 	}
-	log.Printf("[DEBUG] Created token from %s on Consul secret backend %q: %s", name, backend, secret.LeaseID)
+	log.Printf("[DEBUG] Created token from %s on Consul secret backend %q: %s", role, backend, secret.LeaseID)
 	secretToken := secret.Data["token"].(string)
 	accessorToken := secret.Data["accessor"].(string)
 
