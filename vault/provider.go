@@ -282,7 +282,7 @@ var (
 		},
 		"vault_consul_access_credentials": {
 			Resource:      consulAccessCredentialsDataSource(),
-			PathInventory: []string{"/consul/creds/{name}"},
+			PathInventory: []string{"/consul/creds/{role}"},
 		},
 		"vault_policy_document": {
 			Resource:      policyDocumentDataSource(),
