@@ -276,6 +276,14 @@ var (
 			Resource:      genericSecretDataSource(),
 			PathInventory: []string{"/secret/data/{path}"},
 		},
+		"vault_pki_access_credentials": {
+			Resource:      pkiAccessCredentialsDataSource(),
+			PathInventory: []string{"/pki/issue/{name}"},
+		},
+		"vault_consul_access_credentials": {
+			Resource:      consulAccessCredentialsDataSource(),
+			PathInventory: []string{"/consul/creds/{name}"},
+		},
 		"vault_policy_document": {
 			Resource:      policyDocumentDataSource(),
 			PathInventory: []string{"/sys/policy/{name}"},
