@@ -48,10 +48,10 @@ func consulAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interfac
 
 	path := fmt.Sprintf("%s/creds/%s", backend, role)
 
-	payload := map[string]interface{}{}
+	payload := map[string][]string{}
 
 	log.Printf("[DEBUG] Requesting token from %s on Consul secret backend %q", role, backend)
-	secret, err := client.Logical().Write(path, payload)
+	secret, err := client.Logical().ReadWithData(path, payload)
 	if err != nil {
 		return fmt.Errorf("error creating token from %s on Consul secret backend %q: %s", role, backend, err)
 	}
