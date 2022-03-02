@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
@@ -304,6 +305,129 @@ func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
 
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("pkiSecretRootSignIntermediateRUpgradeV0() got = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_setCAChain(t *testing.T) {
+	tests := []struct {
+		resp      *api.Secret
+		name      string
+		want      []interface{}
+		wantErr   bool
+		expectErr error
+	}{
+		{
+			name: "empty-ca-chain",
+			resp: &api.Secret{
+				Data: map[string]interface{}{
+					"certificate": "intermediate-ca.crt",
+					"issuing_ca":  "root-ca.crt",
+					"ca_chain":    []interface{}{},
+				},
+			},
+			want: []interface{}{
+				"root-ca.crt",
+				"intermediate-ca.crt",
+			},
+			wantErr: false,
+		},
+		{
+			name: "absent-ca-chain",
+			resp: &api.Secret{
+				Data: map[string]interface{}{
+					"certificate": "intermediate-ca.crt",
+					"issuing_ca":  "root-ca.crt",
+				},
+			},
+			want: []interface{}{
+				"root-ca.crt",
+				"intermediate-ca.crt",
+			},
+			wantErr: false,
+		},
+		{
+			name: "populated-ca-chain",
+			resp: &api.Secret{
+				Data: map[string]interface{}{
+					"certificate": "intermediate-ca.crt",
+					"issuing_ca":  "root-ca.crt",
+					"ca_chain": []interface{}{
+						"resp-root-ca.crt",
+						"resp-intermediate-ca.crt",
+					},
+				},
+			},
+			want: []interface{}{
+				"resp-root-ca.crt",
+				"resp-intermediate-ca.crt",
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid-ca-chain-type",
+			resp: &api.Secret{
+				Data: map[string]interface{}{
+					"certificate": "intermediate-ca.crt",
+					"issuing_ca":  "root-ca.crt",
+					"ca_chain":    "invalid-type",
+				},
+			},
+			wantErr:   true,
+			expectErr: fmt.Errorf("response contains an unexpected type string for %q", "ca_chain"),
+			want:      []interface{}{},
+		},
+		{
+			name: "missing-intermediate-cert",
+			resp: &api.Secret{
+				Data: map[string]interface{}{
+					"issuing_ca": "root-ca.crt",
+				},
+			},
+			want:      []interface{}{},
+			wantErr:   true,
+			expectErr: fmt.Errorf("required certificate for %q is missing or empty", "certificate"),
+		},
+		{
+			name: "missing-issuing-ca",
+			resp: &api.Secret{
+				Data: map[string]interface{}{
+					"certificate": "intermediate-ca.crt",
+				},
+			},
+			want:      []interface{}{},
+			wantErr:   true,
+			expectErr: fmt.Errorf("required certificate for %q is missing or empty", "issuing_ca"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := schema.TestResourceDataRaw(
+				t,
+				map[string]*schema.Schema{
+					"ca_chain": {
+						Type:     schema.TypeList,
+						Required: false,
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+				},
+				map[string]interface{}{})
+			err := setCAChain(d, tt.resp)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("setCAChain() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if tt.expectErr != nil && !reflect.DeepEqual(tt.expectErr, err) {
+					t.Errorf("setCAChain() expected error = %#v, actual %#v", err, tt.expectErr)
+				}
+			}
+
+			actual := d.Get("ca_chain")
+			if !reflect.DeepEqual(tt.want, actual) {
+				t.Errorf("setCAChain() expected %#v, actual %#v", tt.want, actual)
 			}
 		})
 	}
