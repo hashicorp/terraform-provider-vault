@@ -1391,7 +1391,8 @@ func Test_dbEngine_GetPluginName(t *testing.T) {
 		defaultPluginName string
 	}
 	type args struct {
-		d *schema.ResourceData
+		d      *schema.ResourceData
+		prefix string
 	}
 	tests := []struct {
 		name    string
@@ -1407,7 +1408,7 @@ func Test_dbEngine_GetPluginName(t *testing.T) {
 				defaultPluginName: "foo-database-plugin",
 			},
 			args: args{
-				schema.TestResourceDataRaw(
+				d: schema.TestResourceDataRaw(
 					t,
 					map[string]*schema.Schema{
 						"plugin_name": {
@@ -1415,7 +1416,8 @@ func Test_dbEngine_GetPluginName(t *testing.T) {
 							Required: false,
 						},
 					},
-					map[string]interface{}{}),
+					map[string]interface{}{},
+				),
 			},
 			want: "foo-database-plugin",
 		},
@@ -1425,7 +1427,7 @@ func Test_dbEngine_GetPluginName(t *testing.T) {
 				name: "foo",
 			},
 			args: args{
-				schema.TestResourceDataRaw(
+				d: schema.TestResourceDataRaw(
 					t,
 					map[string]*schema.Schema{
 						"plugin_name": {
@@ -1435,7 +1437,73 @@ func Test_dbEngine_GetPluginName(t *testing.T) {
 					},
 					map[string]interface{}{
 						"plugin_name": "baz-qux",
-					}),
+					},
+				),
+			},
+			want: "baz-qux",
+		},
+		{
+			name: "default-prefixed",
+			fields: fields{
+				name:              "foo",
+				defaultPluginName: "foo" + dbPluginSuffix,
+			},
+			args: args{
+				prefix: "foo.0.",
+				d: schema.TestResourceDataRaw(
+					t,
+					map[string]*schema.Schema{
+						"foo": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"plugin_name": {
+										Type:     schema.TypeString,
+										Optional: true,
+										Computed: true,
+									},
+								},
+							},
+						},
+					},
+					map[string]interface{}{},
+				),
+			},
+			want: "foo" + dbPluginSuffix,
+		},
+		{
+			name: "set-prefixed",
+			fields: fields{
+				name: "foo",
+			},
+			args: args{
+				prefix: "foo.0.",
+				d: schema.TestResourceDataRaw(
+					t,
+					map[string]*schema.Schema{
+						"foo": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"plugin_name": {
+										Type:     schema.TypeString,
+										Optional: true,
+										Computed: true,
+									},
+								},
+							},
+						},
+					},
+					map[string]interface{}{
+						"foo": []interface{}{
+							map[string]interface{}{
+								"plugin_name": "baz-qux",
+							},
+						},
+					},
+				),
 			},
 			want: "baz-qux",
 		},
@@ -1445,7 +1513,7 @@ func Test_dbEngine_GetPluginName(t *testing.T) {
 				name: "fail",
 			},
 			args: args{
-				schema.TestResourceDataRaw(
+				d: schema.TestResourceDataRaw(
 					t,
 					map[string]*schema.Schema{
 						"plugin_name": {
@@ -1466,7 +1534,7 @@ func Test_dbEngine_GetPluginName(t *testing.T) {
 				defaultPluginName: tt.fields.defaultPluginName,
 			}
 
-			got, err := i.GetPluginName(tt.args.d)
+			got, err := i.GetPluginName(tt.args.d, tt.args.prefix)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetPluginName() error = %v, wantErr %v", err, tt.wantErr)
 
