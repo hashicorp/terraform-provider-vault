@@ -47,7 +47,7 @@ func consulSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"roles": {
+			"consul_roles": {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: `Set of Consul roles to attach to the token. Applicable for Vault 1.10+ with Consul 1.5+`,
@@ -123,8 +123,7 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 	if v, ok := d.GetOkExists("local"); ok {
 		data["local"] = v
 	}
-	// to be consistent with the `policies` field name, we map `roles` to `consul_roles`
-	if v, ok := d.GetOkExists("roles"); ok {
+	if v, ok := d.GetOkExists("consul_roles"); ok {
 		data["consul_roles"] = v.(*schema.Set).List()
 	}
 
@@ -190,7 +189,7 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 		"ttl":          "ttl",
 		"token_type":   "token_type",
 		"local":        "local",
-		"consul_roles": "roles",
+		"consul_roles": "consul_roles",
 	}
 
 	for k, v := range params {

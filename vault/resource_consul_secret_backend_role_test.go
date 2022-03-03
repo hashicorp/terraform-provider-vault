@@ -41,14 +41,14 @@ func TestConsulSecretBackendRole(t *testing.T) {
 
 	if v := os.Getenv(testutil.EnvVarSkipVaultNext); v == "" {
 		createTestCheckFuncs = append(createTestCheckFuncs,
-			resource.TestCheckResourceAttr(resourcePath, "roles.#", "1"),
-			resource.TestCheckResourceAttr(resourcePath, "roles.0", "role-0"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "1"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
 		)
 		updateTestCheckFuncs = append(updateTestCheckFuncs,
-			resource.TestCheckResourceAttr(resourcePath, "roles.#", "3"),
-			resource.TestCheckResourceAttr(resourcePath, "roles.0", "role-0"),
-			resource.TestCheckResourceAttr(resourcePath, "roles.1", "role-1"),
-			resource.TestCheckResourceAttr(resourcePath, "roles.2", "role-2"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "3"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_roles.1", "role-1"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_roles.2", "role-2"),
 		)
 	}
 	resource.Test(t, resource.TestCase{
@@ -105,7 +105,7 @@ resource "vault_consul_secret_backend_role" "test" {
     "foo"
   ]
 
-  roles = [
+  consul_roles = [
     "role-0",
     # canary to ensure roles is a Set
     "role-0",
@@ -137,7 +137,7 @@ resource "vault_consul_secret_backend_role" "test" {
     "foo",
     "bar",
   ]
-  roles = [
+  consul_roles = [
     "role-0",
     "role-1",
     "role-2",
