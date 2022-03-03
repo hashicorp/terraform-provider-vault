@@ -55,6 +55,20 @@ func consulSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"consul_namespace": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				Description: "Then Consul namespace that the token will be " +
+					"created in. Applicable for Vault 1.10+ and Consul 1.7+",
+			},
+			"partition": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				Description: "The Consul admin partition that the token will be " +
+					"created in. Applicable for Vault 1.10+ and Consul 1.11+",
+			},
 			"max_ttl": {
 				Type:        schema.TypeInt,
 				Optional:    true,
@@ -117,17 +131,18 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 		"consul_roles": roles,
 	}
 
-	if v, ok := d.GetOkExists("max_ttl"); ok {
-		data["max_ttl"] = v
+	params := []string{
+		"max_ttl",
+		"ttl",
+		"token_type",
+		"local",
+		"consul_namespace",
+		"partition",
 	}
-	if v, ok := d.GetOkExists("ttl"); ok {
-		data["ttl"] = v
-	}
-	if v, ok := d.GetOkExists("token_type"); ok {
-		data["token_type"] = v
-	}
-	if v, ok := d.GetOkExists("local"); ok {
-		data["local"] = v
+	for _, k := range params {
+		if v, ok := d.GetOkExists(k); ok {
+			data[k] = v
+		}
 	}
 
 	log.Printf("[DEBUG] Configuring Consul secrets backend role at %q", path)
@@ -187,18 +202,24 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 
 	// map request params to schema fields
 	params := map[string]string{
-		"policies":     "policies",
-		"max_ttl":      "max_ttl",
-		"ttl":          "ttl",
-		"token_type":   "token_type",
-		"local":        "local",
-		"consul_roles": "consul_roles",
+		"policies":         "policies",
+		"max_ttl":          "max_ttl",
+		"ttl":              "ttl",
+		"token_type":       "token_type",
+		"local":            "local",
+		"consul_roles":     "consul_roles",
+		"consul_namespace": "consul_namespace",
+		"partition":        "partition",
 	}
 
 	for k, v := range params {
 		val, ok := data[k]
-		if k == "consul_roles" && !ok {
-			continue
+		if !ok {
+			switch k {
+			// TODO case this by Vault version (vault-1.10+ request params)
+			case "consul_roles", "consul_namespace", "partition":
+				continue
+			}
 		}
 		if err := d.Set(v, val); err != nil {
 			return err
