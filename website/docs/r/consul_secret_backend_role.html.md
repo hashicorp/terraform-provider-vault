@@ -39,7 +39,7 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the Consul secrets engine role to create.
  
-* `consul_namespace` - (Optional) Then Consul namespace that the token will be created in.
+* `consul_namespace` - (Optional) The Consul namespace that the token will be created in.
    Applicable for Vault 1.10+ and Consul 1.7+",
 
 * `partition` - (Optional) The admin partition that the token will be created in.

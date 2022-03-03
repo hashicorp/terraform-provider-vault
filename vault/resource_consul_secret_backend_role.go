@@ -59,7 +59,7 @@ func consulSecretBackendRoleResource() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
-				Description: "Then Consul namespace that the token will be " +
+				Description: "The Consul namespace that the token will be " +
 					"created in. Applicable for Vault 1.10+ and Consul 1.7+",
 			},
 			"partition": {
