@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -39,7 +40,9 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourcePath, "policies.1", "bar"),
 	}
 
+	var withRoles bool
 	if v := os.Getenv(testutil.EnvVarSkipVaultNext); v == "" {
+		withRoles = true
 		createTestCheckFuncs = append(createTestCheckFuncs,
 			resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "1"),
 			resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
@@ -57,11 +60,19 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testConsulSecretBackendRole_initialConfig(backend, name, token),
+				Config:      testConsulSecretBackendRole_initialConfig(backend, name, token, false, false),
+				ExpectError: regexp.MustCompile(`policies or consul_roles must be set`),
+			},
+			{
+				Config: testConsulSecretBackendRole_initialConfig(backend, name, token, true, withRoles),
 				Check:  resource.ComposeTestCheckFunc(createTestCheckFuncs...),
 			},
 			{
-				Config: testConsulSecretBackendRole_updateConfig(backend, name, token),
+				Config:      testConsulSecretBackendRole_updateConfig(backend, name, token, false, false),
+				ExpectError: regexp.MustCompile(`policies or consul_roles must be set`),
+			},
+			{
+				Config: testConsulSecretBackendRole_updateConfig(backend, name, token, true, withRoles),
 				Check:  resource.ComposeTestCheckFunc(updateTestCheckFuncs...),
 			},
 		},
@@ -86,8 +97,8 @@ func testAccConsulSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testConsulSecretBackendRole_initialConfig(backend, name, token string) string {
-	return fmt.Sprintf(`
+func testConsulSecretBackendRole_initialConfig(backend, name, token string, withPolicies, withRoles bool) string {
+	config := fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
   description = "test description"
@@ -100,21 +111,30 @@ resource "vault_consul_secret_backend" "test" {
 resource "vault_consul_secret_backend_role" "test" {
   backend = vault_consul_secret_backend.test.path
   name = "%s"
+`, backend, token, name)
 
+	if withPolicies {
+		config += `
   policies = [
     "foo"
   ]
+`
+	}
 
+	if withRoles {
+		config += `
   consul_roles = [
     "role-0",
     # canary to ensure roles is a Set
     "role-0",
   ]
-}
-`, backend, token, name)
+`
+	}
+
+	return config + "}"
 }
 
-func testConsulSecretBackendRole_updateConfig(backend, name, token string) string {
+func testConsulSecretBackendRole_updateConfig(backend, name, token string, withPolicies, withRoles bool) string {
 	config := fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -132,11 +152,18 @@ resource "vault_consul_secret_backend_role" "test" {
   max_ttl = 240
   local = true
   token_type = "client"
+`, backend, token, name)
 
+	if withPolicies {
+		config += `
   policies = [
     "foo",
     "bar",
   ]
+`
+	}
+	if withRoles {
+		config += `
   consul_roles = [
     "role-0",
     "role-1",
@@ -144,10 +171,10 @@ resource "vault_consul_secret_backend_role" "test" {
     # canary to ensure roles is a Set
     "role-2",
   ]
-}
-`, backend, token, name)
+`
+	}
 
-	return config
+	return config + "}"
 }
 
 func TestConsulSecretBackendRoleNameFromPath(t *testing.T) {

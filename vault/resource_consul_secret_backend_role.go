@@ -41,7 +41,7 @@ func consulSecretBackendRoleResource() *schema.Resource {
 			},
 			"policies": {
 				Type:        schema.TypeList,
-				Required:    true,
+				Optional:    true,
 				Description: "List of Consul policies to associate with this role",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -106,9 +106,15 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 	path := consulSecretBackendRolePath(backend, name)
 
 	policies := d.Get("policies").([]interface{})
+	roles := d.Get("consul_roles").(*schema.Set).List()
+
+	if len(policies) == 0 && len(roles) == 0 {
+		return fmt.Errorf("policies or consul_roles must be set")
+	}
 
 	data := map[string]interface{}{
-		"policies": policies,
+		"policies":     policies,
+		"consul_roles": roles,
 	}
 
 	if v, ok := d.GetOkExists("max_ttl"); ok {
@@ -122,9 +128,6 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 	}
 	if v, ok := d.GetOkExists("local"); ok {
 		data["local"] = v
-	}
-	if v, ok := d.GetOkExists("consul_roles"); ok {
-		data["consul_roles"] = v.(*schema.Set).List()
 	}
 
 	log.Printf("[DEBUG] Configuring Consul secrets backend role at %q", path)

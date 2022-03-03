@@ -39,9 +39,9 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the Consul secrets engine role to create.
 
-* `policies` - (Required) The list of Consul ACL policies to associate with these roles.
+* `policies` - (Required when `consul_roles` is unset) The list of Consul ACL policies to associate with these roles.
  
-* `consul_roles` - (Optional) Set of Consul roles to attach to the token. Applicable for Vault 1.10+ with Consul 1.5+.
+* `consul_roles` - (Required when `policies` is unset) Set of Consul roles to attach to the token. Applicable for Vault 1.10+ with Consul 1.5+.
 
 * `max_ttl` - (Optional) Maximum TTL for leases associated with this role, in seconds.
 
