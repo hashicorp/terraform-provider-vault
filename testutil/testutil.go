@@ -16,6 +16,10 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
+const (
+	EnvVarSkipVaultNext = "SKIP_VAULT_NEXT_TESTS"
+)
+
 func TestAccPreCheck(t *testing.T) {
 	FatalTestEnvUnset(t, "VAULT_ADDR", "VAULT_TOKEN")
 }

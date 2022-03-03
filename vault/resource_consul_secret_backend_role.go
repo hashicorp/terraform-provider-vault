@@ -41,8 +41,16 @@ func consulSecretBackendRoleResource() *schema.Resource {
 			},
 			"policies": {
 				Type:        schema.TypeList,
-				Required:    true,
+				Optional:    true,
 				Description: "List of Consul policies to associate with this role",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"consul_roles": {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Description: `Set of Consul roles to attach to the token. Applicable for Vault 1.10+ with Consul 1.5+`,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -98,27 +106,33 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 	path := consulSecretBackendRolePath(backend, name)
 
 	policies := d.Get("policies").([]interface{})
+	roles := d.Get("consul_roles").(*schema.Set).List()
 
-	payload := map[string]interface{}{
-		"policies": policies,
+	if len(policies) == 0 && len(roles) == 0 {
+		return fmt.Errorf("policies or consul_roles must be set")
+	}
+
+	data := map[string]interface{}{
+		"policies":     policies,
+		"consul_roles": roles,
 	}
 
 	if v, ok := d.GetOkExists("max_ttl"); ok {
-		payload["max_ttl"] = v
+		data["max_ttl"] = v
 	}
 	if v, ok := d.GetOkExists("ttl"); ok {
-		payload["ttl"] = v
+		data["ttl"] = v
 	}
 	if v, ok := d.GetOkExists("token_type"); ok {
-		payload["token_type"] = v
+		data["token_type"] = v
 	}
 	if v, ok := d.GetOkExists("local"); ok {
-		payload["local"] = v
+		data["local"] = v
 	}
 
 	log.Printf("[DEBUG] Configuring Consul secrets backend role at %q", path)
 
-	if _, err := client.Logical().Write(path, payload); err != nil {
+	if _, err := client.Logical().Write(path, data); err != nil {
 		return fmt.Errorf("error writing role configuration for %q: %s", path, err)
 	}
 
@@ -158,17 +172,38 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 	}
 
 	data := secret.Data
-	d.Set("name", name)
-	if _, ok := d.GetOk("path"); ok {
-		d.Set("path", backend)
-	} else {
-		d.Set("backend", backend)
+	if err := d.Set("name", name); err != nil {
+		return err
 	}
-	d.Set("policies", data["policies"])
-	d.Set("max_ttl", data["max_ttl"])
-	d.Set("ttl", data["ttl"])
-	d.Set("token_type", data["token_type"])
-	d.Set("local", data["local"])
+	var pathKey string
+	if _, ok := d.GetOk("path"); ok {
+		pathKey = "path"
+	} else {
+		pathKey = "backend"
+	}
+	if err := d.Set(pathKey, backend); err != nil {
+		return err
+	}
+
+	// map request params to schema fields
+	params := map[string]string{
+		"policies":     "policies",
+		"max_ttl":      "max_ttl",
+		"ttl":          "ttl",
+		"token_type":   "token_type",
+		"local":        "local",
+		"consul_roles": "consul_roles",
+	}
+
+	for k, v := range params {
+		val, ok := data[k]
+		if k == "consul_roles" && !ok {
+			continue
+		}
+		if err := d.Set(v, val); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
