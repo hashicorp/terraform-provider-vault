@@ -46,12 +46,16 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		createTestCheckFuncs = append(createTestCheckFuncs,
 			resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "1"),
 			resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_namespace", "consul-ns-0"),
+			resource.TestCheckResourceAttr(resourcePath, "partition", "partition-0"),
 		)
 		updateTestCheckFuncs = append(updateTestCheckFuncs,
 			resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "3"),
 			resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
 			resource.TestCheckResourceAttr(resourcePath, "consul_roles.1", "role-1"),
 			resource.TestCheckResourceAttr(resourcePath, "consul_roles.2", "role-2"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_namespace", "consul-ns-1"),
+			resource.TestCheckResourceAttr(resourcePath, "partition", "partition-1"),
 		)
 	}
 	resource.Test(t, resource.TestCase{
@@ -111,6 +115,8 @@ resource "vault_consul_secret_backend" "test" {
 resource "vault_consul_secret_backend_role" "test" {
   backend = vault_consul_secret_backend.test.path
   name = "%s"
+  consul_namespace = "consul-ns-0"
+  partition = "partition-0"
 `, backend, token, name)
 
 	if withPolicies {
@@ -148,6 +154,8 @@ resource "vault_consul_secret_backend" "test" {
 resource "vault_consul_secret_backend_role" "test" {
   backend = vault_consul_secret_backend.test.path
   name = "%s"
+  consul_namespace = "consul-ns-1"
+  partition = "partition-1"
   ttl = 120
   max_ttl = 240
   local = true
