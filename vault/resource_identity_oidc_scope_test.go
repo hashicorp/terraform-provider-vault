@@ -6,6 +6,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -19,7 +21,7 @@ func TestAccIdentityOIDCScope(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		CheckDestroy: testAccCheckOIDCScopeDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOIDCScopeConfig_basic(name),
@@ -55,4 +57,22 @@ resource "vault_identity_oidc_scope" "test" {
   template    = "{\"groups\": {{identity.entity.groups.names}} }"
   description = "test scope updated description"
 }`, scope)
+}
+
+func testAccCheckOIDCScopeDestroy(s *terraform.State) error {
+	client := testProvider.Meta().(*api.Client)
+
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "vault_identity_oidc_scope" {
+			continue
+		}
+		resp, err := client.Logical().Read(rs.Primary.ID)
+		if err != nil {
+			return fmt.Errorf("error checking for OIDC scope at %s, err=%w", rs.Primary.ID, err)
+		}
+		if resp != nil {
+			return fmt.Errorf("OIDC scope still exists at %s", rs.Primary.ID)
+		}
+	}
+	return nil
 }

@@ -6,6 +6,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -17,7 +19,7 @@ func TestAccIdentityOIDCAssignment(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		CheckDestroy: testAccCheckOIDCAssignmentDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOIDCAssignmentConfig_basic(name),
@@ -64,4 +66,22 @@ resource "vault_identity_oidc_assignment" "test" {
   group_ids  = ["gid-1", "gid-2", "gid-3"]
   entity_ids = ["eid-1", "eid-2", "eid-3", "eid-4"]
 }`, name)
+}
+
+func testAccCheckOIDCAssignmentDestroy(s *terraform.State) error {
+	client := testProvider.Meta().(*api.Client)
+
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "vault_identity_oidc_assignment" {
+			continue
+		}
+		resp, err := client.Logical().Read(rs.Primary.ID)
+		if err != nil {
+			return fmt.Errorf("error checking for OIDC assignment at %s, err=%w", rs.Primary.ID, err)
+		}
+		if resp != nil {
+			return fmt.Errorf("OIDC assignment still exists at %s", rs.Primary.ID)
+		}
+	}
+	return nil
 }
