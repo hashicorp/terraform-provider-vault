@@ -296,6 +296,10 @@ var (
 			Resource:      gcpAuthBackendRoleDataSource(),
 			PathInventory: []string{"/auth/gcp/role/{role_name}"},
 		},
+		"vault_identity_oidc_client_creds": {
+			Resource:      identityOIDCClientCredsDataSource(),
+			PathInventory: []string{"/identity/oidc/client/{name}"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
@@ -712,6 +716,14 @@ var (
 		"vault_identity_oidc_assignment": {
 			Resource:      identityOIDCAssignmentResource(),
 			PathInventory: []string{"/identity/oidc/assignment/{name}"},
+		},
+		"vault_identity_oidc_client": {
+			Resource:      identityOIDCClientResource(),
+			PathInventory: []string{"/identity/oidc/client/{name}"},
+		},
+		"vault_identity_oidc_provider": {
+			Resource:      identityOIDCProviderResource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}"},
 		},
 	}
 )
