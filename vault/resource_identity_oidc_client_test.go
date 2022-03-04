@@ -6,6 +6,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -17,7 +19,7 @@ func TestAccIdentityOIDCClient(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityEntityDestroy,
+		CheckDestroy: testAccCheckOIDCClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOIDCClientConfig_basic(name),
@@ -113,4 +115,22 @@ resource "vault_identity_oidc_client" "client" {
   id_token_ttl     = 2400
   access_token_ttl = 7200
 }`, name)
+}
+
+func testAccCheckOIDCClientDestroy(s *terraform.State) error {
+	client := testProvider.Meta().(*api.Client)
+
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "vault_identity_oidc_client" {
+			continue
+		}
+		resp, err := client.Logical().Read(rs.Primary.ID)
+		if err != nil {
+			return fmt.Errorf("error checking for OIDC client at %s, err=%w", rs.Primary.ID, err)
+		}
+		if resp != nil {
+			return fmt.Errorf("OIDC client still exists at %s", rs.Primary.ID)
+		}
+	}
+	return nil
 }
