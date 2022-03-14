@@ -85,8 +85,6 @@ resource "vault_identity_oidc_client" "client" {
 }`, name)
 }
 
-// ,
-
 func testAccIdentityOIDCClientConfig_update(name string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_oidc_key" "default" {

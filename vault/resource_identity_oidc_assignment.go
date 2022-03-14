@@ -75,6 +75,7 @@ func identityOIDCAssignmentCreateUpdate(d *schema.ResourceData, meta interface{}
 	if err != nil {
 		return fmt.Errorf("error writing OIDC Assignment %s, err=%w", path, err)
 	}
+
 	log.Printf("[DEBUG] Wrote OIDC Assignment to %s", path)
 
 	d.SetId(path)
@@ -91,6 +92,7 @@ func identityOIDCAssignmentRead(d *schema.ResourceData, meta interface{}) error 
 	if err != nil {
 		return fmt.Errorf("error reading OIDC Assignment for %s: %s", path, err)
 	}
+
 	log.Printf("[DEBUG] Read OIDC Assignment for %s", path)
 	if resp == nil {
 		log.Printf("[WARN] OIDC Assignment %s not found, removing from state", path)
@@ -103,6 +105,7 @@ func identityOIDCAssignmentRead(d *schema.ResourceData, meta interface{}) error 
 			return fmt.Errorf("error setting state key %q on OIDC Assignment %q, err=%w", k, path, err)
 		}
 	}
+
 	return nil
 }
 
@@ -116,6 +119,7 @@ func identityOIDCAssignmentDelete(d *schema.ResourceData, meta interface{}) erro
 	if err != nil {
 		return fmt.Errorf("error deleting OIDC Assignment %q", path)
 	}
+
 	log.Printf("[DEBUG] Deleted OIDC Assignment %q", path)
 
 	return nil

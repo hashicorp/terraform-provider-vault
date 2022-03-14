@@ -77,11 +77,11 @@ func identityOIDCProviderCreateUpdate(d *schema.ResourceData, meta interface{}) 
 	name := d.Get("name").(string)
 	path := getOIDCProviderPath(name)
 
-	data := identityOIDCProviderRequestData(d)
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().Write(path, identityOIDCProviderRequestData(d))
 	if err != nil {
 		return fmt.Errorf("error writing OIDC Provider %s, err=%w", path, err)
 	}
+
 	log.Printf("[DEBUG] Wrote OIDC Provider to %s", path)
 
 	d.SetId(path)
@@ -98,18 +98,21 @@ func identityOIDCProviderRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error reading OIDC Provider for %s: %s", path, err)
 	}
+
 	log.Printf("[DEBUG] Read OIDC Provider for %s", path)
 	if resp == nil {
 		log.Printf("[WARN] OIDC Provider %s not found, removing from state", path)
 		d.SetId("")
+
 		return nil
 	}
 
 	for _, k := range []string{"issuer", "allowed_client_ids", "scopes_supported"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return fmt.Errorf("error setting state key \"%s\" on OIDC Provider %s, err=%w", k, path, err)
+			return fmt.Errorf("error setting state key %q on OIDC Provider %q, err=%w", k, path, err)
 		}
 	}
+
 	return nil
 }
 
@@ -123,6 +126,7 @@ func identityOIDCProviderDelete(d *schema.ResourceData, meta interface{}) error 
 	if err != nil {
 		return fmt.Errorf("error deleting OIDC Provider %q", path)
 	}
+
 	log.Printf("[DEBUG] Deleted OIDC Provider %q", path)
 
 	return nil

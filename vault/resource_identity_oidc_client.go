@@ -58,6 +58,16 @@ func identityOIDCClientResource() *schema.Resource {
 				Description: "The time-to-live for access tokens obtained by the client.",
 				Optional:    true,
 			},
+			"client_id": {
+				Type:        schema.TypeString,
+				Description: "The Client ID computed by and returned from Vault.",
+				Computed:    true,
+			},
+			"client_secret": {
+				Type:        schema.TypeString,
+				Description: "The Client Secret computed by and returned from Vault.",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -88,11 +98,11 @@ func identityOIDCClientCreateUpdate(d *schema.ResourceData, meta interface{}) er
 	name := d.Get("name").(string)
 	path := getOIDCClientPath(name)
 
-	data := identityOIDCClientRequestData(d)
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().Write(path, identityOIDCClientRequestData(d))
 	if err != nil {
 		return fmt.Errorf("error writing OIDC Client %s, err=%w", path, err)
 	}
+
 	log.Printf("[DEBUG] Wrote OIDC Client to %s", path)
 
 	d.SetId(path)
@@ -109,18 +119,23 @@ func identityOIDCClientRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error reading OIDC Client for %s: %s", path, err)
 	}
+
 	log.Printf("[DEBUG] Read OIDC Client for %s", path)
 	if resp == nil {
 		log.Printf("[WARN] OIDC Client %s not found, removing from state", path)
 		d.SetId("")
+
 		return nil
 	}
 
-	for _, k := range []string{"key", "redirect_uris", "assignments", "id_token_ttl", "access_token_ttl"} {
+	for _, k := range []string{"key", "redirect_uris", "assignments", "id_token_ttl", "access_token_ttl", "client_id", "client_secret"} {
+		// v := resp.Data[k]
+		// fmt.Print(v)
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return fmt.Errorf("error setting state key \"%s\" on OIDC Client %s, err=%w", k, path, err)
+			return fmt.Errorf("error setting state key %q on OIDC Client %q, err=%w", k, path, err)
 		}
 	}
+
 	return nil
 }
 
@@ -134,6 +149,7 @@ func identityOIDCClientDelete(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error deleting OIDC Client %q", path)
 	}
+
 	log.Printf("[DEBUG] Deleted OIDC Client %q", path)
 
 	return nil

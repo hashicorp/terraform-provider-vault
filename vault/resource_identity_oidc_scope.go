@@ -64,11 +64,11 @@ func identityOIDCScopeCreateUpdate(d *schema.ResourceData, meta interface{}) err
 	name := d.Get("name").(string)
 	path := getOIDCScopePath(name)
 
-	data := identityOIDCScopeRequestData(d)
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().Write(path, identityOIDCScopeRequestData(d))
 	if err != nil {
 		return fmt.Errorf("error writing OIDC Scope %s, err=%w", path, err)
 	}
+
 	log.Printf("[DEBUG] Wrote OIDC Scope to %s", path)
 
 	d.SetId(path)
@@ -85,6 +85,7 @@ func identityOIDCScopeRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error reading OIDC Scope for %s: %s", path, err)
 	}
+
 	log.Printf("[DEBUG] Read OIDC Scope for %s", path)
 	if resp == nil {
 		log.Printf("[WARN] OIDC Scope %s not found, removing from state", path)
@@ -97,6 +98,7 @@ func identityOIDCScopeRead(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error setting state key %q on OIDC Scope %q, err=%w", k, path, err)
 		}
 	}
+
 	return nil
 }
 
@@ -110,6 +112,7 @@ func identityOIDCScopeDelete(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error deleting OIDC Scope %q", path)
 	}
+
 	log.Printf("[DEBUG] Deleted OIDC Scope %q", path)
 
 	return nil
