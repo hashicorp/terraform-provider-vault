@@ -21,7 +21,7 @@ func identityOIDCProviderResource() *schema.Resource {
 			"name": {
 				Type:        schema.TypeString,
 				ForceNew:    true,
-				Description: "The name of the client.",
+				Description: "The name of the provider.",
 				Required:    true,
 			},
 			"issuer": {
