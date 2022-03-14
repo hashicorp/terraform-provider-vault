@@ -26,6 +26,7 @@ func TestAccIdentityOIDCScope(t *testing.T) {
 			{
 				Config: testAccIdentityOIDCScopeConfig_basic(name),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "description", "test scope"),
 					resource.TestCheckResourceAttr(resourceName, "template", testVar),
 				),
@@ -33,6 +34,7 @@ func TestAccIdentityOIDCScope(t *testing.T) {
 			{
 				Config: testAccIdentityOIDCScopeConfig_update(name),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "description", "test scope updated description"),
 					resource.TestCheckResourceAttr(resourceName, "template", testVar),
 				),

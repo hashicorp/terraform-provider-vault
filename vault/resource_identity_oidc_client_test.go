@@ -24,6 +24,7 @@ func TestAccIdentityOIDCClient(t *testing.T) {
 			{
 				Config: testAccIdentityOIDCClientConfig_basic(name),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "key", "default"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.0", "http://127.0.0.1:8251/callback"),
@@ -37,6 +38,7 @@ func TestAccIdentityOIDCClient(t *testing.T) {
 			{
 				Config: testAccIdentityOIDCClientConfig_update(name),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "key", "default"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.#", "3"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.0", "http://127.0.0.1:8080/callback"),

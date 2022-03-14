@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-const identityOIDCProviderPathTemplate = "identity/oidc/provider"
+const identityOIDCProviderPathPrefix = "identity/oidc/provider"
 
 func identityOIDCProviderResource() *schema.Resource {
 	return &schema.Resource{
@@ -69,7 +69,7 @@ func identityOIDCProviderRequestData(d *schema.ResourceData) map[string]interfac
 }
 
 func getOIDCProviderPath(name string) string {
-	return fmt.Sprintf("%s/%s", identityOIDCProviderPathTemplate, name)
+	return fmt.Sprintf("%s/%s", identityOIDCProviderPathPrefix, name)
 }
 
 func identityOIDCProviderCreateUpdate(d *schema.ResourceData, meta interface{}) error {

@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-const identityOIDCAssignmentPathTemplate = "identity/oidc/assignment"
+const identityOIDCAssignmentPathPrefix = "identity/oidc/assignment"
 
 func identityOIDCAssignmentResource() *schema.Resource {
 	return &schema.Resource{
@@ -25,7 +25,7 @@ func identityOIDCAssignmentResource() *schema.Resource {
 				Required:    true,
 			},
 			"entity_ids": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Description: "A list of Vault entity IDs.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -33,7 +33,7 @@ func identityOIDCAssignmentResource() *schema.Resource {
 				Optional: true,
 			},
 			"group_ids": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Description: "A list of Vault group IDs.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -51,10 +51,11 @@ func identityOIDCAssignmentRequestData(d *schema.ResourceData) map[string]interf
 	for _, k := range fields {
 		if d.IsNewResource() {
 			if v, ok := d.GetOk(k); ok {
-				data[k] = v
+				data[k] = v.(*schema.Set).List()
 			}
 		} else if d.HasChange(k) {
-			data[k] = d.Get(k)
+			v := d.Get(k)
+			data[k] = v.(*schema.Set).List()
 		}
 	}
 
@@ -62,7 +63,7 @@ func identityOIDCAssignmentRequestData(d *schema.ResourceData) map[string]interf
 }
 
 func getOIDCAssignmentPath(name string) string {
-	return fmt.Sprintf("%s/%s", identityOIDCAssignmentPathTemplate, name)
+	return fmt.Sprintf("%s/%s", identityOIDCAssignmentPathPrefix, name)
 }
 
 func identityOIDCAssignmentCreateUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -70,8 +71,7 @@ func identityOIDCAssignmentCreateUpdate(d *schema.ResourceData, meta interface{}
 	name := d.Get("name").(string)
 	path := getOIDCAssignmentPath(name)
 
-	data := identityOIDCAssignmentRequestData(d)
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().Write(path, identityOIDCAssignmentRequestData(d))
 	if err != nil {
 		return fmt.Errorf("error writing OIDC Assignment %s, err=%w", path, err)
 	}
@@ -100,7 +100,7 @@ func identityOIDCAssignmentRead(d *schema.ResourceData, meta interface{}) error 
 
 	for _, k := range []string{"entity_ids", "group_ids"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return fmt.Errorf("error setting state key \"%s\" on OIDC Assignment %s, err=%w", k, path, err)
+			return fmt.Errorf("error setting state key %q on OIDC Assignment %q, err=%w", k, path, err)
 		}
 	}
 	return nil

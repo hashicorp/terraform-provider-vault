@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-const identityOIDCScopePathTemplate = "identity/oidc/scope"
+const identityOIDCScopePathPrefix = "identity/oidc/scope"
 
 func identityOIDCScopeResource() *schema.Resource {
 	return &schema.Resource{
@@ -31,7 +31,7 @@ func identityOIDCScopeResource() *schema.Resource {
 			},
 			"description": {
 				Type:        schema.TypeString,
-				Description: "A description of the scope.",
+				Description: "The scope's description.",
 				Optional:    true,
 			},
 		},
@@ -56,7 +56,7 @@ func identityOIDCScopeRequestData(d *schema.ResourceData) map[string]interface{}
 }
 
 func getOIDCScopePath(name string) string {
-	return fmt.Sprintf("%s/%s", identityOIDCScopePathTemplate, name)
+	return fmt.Sprintf("%s/%s", identityOIDCScopePathPrefix, name)
 }
 
 func identityOIDCScopeCreateUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -94,7 +94,7 @@ func identityOIDCScopeRead(d *schema.ResourceData, meta interface{}) error {
 
 	for _, k := range []string{"template", "description"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return fmt.Errorf("error setting state key \"%s\" on OIDC Scope %s, err=%w", k, path, err)
+			return fmt.Errorf("error setting state key %q on OIDC Scope %q, err=%w", k, path, err)
 		}
 	}
 	return nil

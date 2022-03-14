@@ -22,8 +22,17 @@ func TestAccIdentityOIDCAssignment(t *testing.T) {
 		CheckDestroy: testAccCheckOIDCAssignmentDestroy,
 		Steps: []resource.TestStep{
 			{
+				Config: testAccIdentityOIDCAssignmentConfig_empty(name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "group_ids.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "entity_ids.#", "0"),
+				),
+			},
+			{
 				Config: testAccIdentityOIDCAssignmentConfig_basic(name),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "group_ids.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "group_ids.0", "gid-1"),
 					resource.TestCheckResourceAttr(resourceName, "group_ids.1", "gid-2"),
@@ -35,6 +44,7 @@ func TestAccIdentityOIDCAssignment(t *testing.T) {
 			{
 				Config: testAccIdentityOIDCAssignmentConfig_update(name),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "group_ids.#", "3"),
 					resource.TestCheckResourceAttr(resourceName, "group_ids.0", "gid-1"),
 					resource.TestCheckResourceAttr(resourceName, "group_ids.1", "gid-2"),
@@ -48,6 +58,15 @@ func TestAccIdentityOIDCAssignment(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testAccIdentityOIDCAssignmentConfig_empty(name string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_oidc_assignment" "test" {
+  name       = "%s"
+  group_ids  = []
+  entity_ids = []
+}`, name)
 }
 
 func testAccIdentityOIDCAssignmentConfig_basic(name string) string {

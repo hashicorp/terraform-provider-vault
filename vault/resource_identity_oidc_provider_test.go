@@ -24,6 +24,7 @@ func TestAccIdentityOIDCProvider(t *testing.T) {
 			{
 				Config: testAccIdentityOIDCProviderConfig(name),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "allowed_client_ids.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "scopes_supported.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "scopes_supported.0", "groups"),

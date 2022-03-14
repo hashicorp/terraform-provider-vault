@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-const identityOIDCClientPathTemplate = "identity/oidc/client"
+const identityOIDCClientPathPrefix = "identity/oidc/client"
 
 func identityOIDCClientResource() *schema.Resource {
 	return &schema.Resource{
@@ -80,7 +80,7 @@ func identityOIDCClientRequestData(d *schema.ResourceData) map[string]interface{
 }
 
 func getOIDCClientPath(name string) string {
-	return fmt.Sprintf("%s/%s", identityOIDCClientPathTemplate, name)
+	return fmt.Sprintf("%s/%s", identityOIDCClientPathPrefix, name)
 }
 
 func identityOIDCClientCreateUpdate(d *schema.ResourceData, meta interface{}) error {
