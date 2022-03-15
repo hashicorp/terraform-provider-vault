@@ -70,14 +70,10 @@ resource "vault_identity_oidc_scope" "test" {
   description = "Groups scope."
 }
 
-data "vault_identity_oidc_client_creds" "test" {
-  name = vault_identity_oidc_client.test.name
-}
-
 resource "vault_identity_oidc_provider" "test" {
   name = "%s"
   allowed_client_ids = [
-     data.vault_identity_oidc_client_creds.test.client_id
+     vault_identity_oidc_client.test.client_id
   ]
   scopes_supported = [
     vault_identity_oidc_scope.test.name
