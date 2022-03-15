@@ -67,8 +67,19 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-			Optional: true,
-			Computed: true,
+			Optional:      true,
+			Computed:      true,
+			ConflictsWith: []string{"allowed_organizational_units"},
+			Deprecated:    "use allowed_organizational_units instead",
+		},
+		"allowed_organizational_units": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Optional:      true,
+			Computed:      true,
+			ConflictsWith: []string{"allowed_organization_units"},
 		},
 		"required_extensions": {
 			Type: schema.TypeSet,
@@ -143,6 +154,8 @@ func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("allowed_organization_units"); ok {
 		data["allowed_organization_units"] = v.(*schema.Set).List()
+	} else if v, ok := d.GetOk("allowed_organizational_units"); ok {
+		data["allowed_organizational_units"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("required_extensions"); ok {
@@ -192,6 +205,8 @@ func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("allowed_organization_units"); ok {
 		data["allowed_organization_units"] = v.(*schema.Set).List()
+	} else if v, ok := d.GetOk("allowed_organizational_units"); ok {
+		data["allowed_organizational_units"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("required_extensions"); ok {
@@ -285,6 +300,17 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 				schema.HashString, resp.Data["allowed_organization_units"].([]interface{})))
 	} else {
 		d.Set("allowed_organization_units",
+			schema.NewSet(
+				schema.HashString, []interface{}{}))
+	}
+
+	// Vault sometimes returns these as null instead of an empty list.
+	if resp.Data["allowed_organizational_units"] != nil {
+		d.Set("allowed_organizational_units",
+			schema.NewSet(
+				schema.HashString, resp.Data["allowed_organizational_units"].([]interface{})))
+	} else {
+		d.Set("allowed_organizational_units",
 			schema.NewSet(
 				schema.HashString, []interface{}{}))
 	}
