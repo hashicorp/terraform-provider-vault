@@ -304,6 +304,10 @@ var (
 			Resource:      identityOIDCPublicKeysDataSource(),
 			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/keys"},
 		},
+		"vault_identity_oidc_openid_config": {
+			Resource:      identityOIDCOpenIDConfigDataSource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/openid-configuration"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
