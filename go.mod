@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go v1.41.8
 	github.com/containerd/containerd v1.5.9 // indirect
 	github.com/denisenkom/go-mssqldb v0.11.0
-	github.com/docker/distribution v2.8.0+incompatible // indirect
+	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gosimple/slug v1.11.0
 	github.com/hashicorp/errwrap v1.1.0
