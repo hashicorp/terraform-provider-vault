@@ -66,7 +66,11 @@ resource "vault_identity_oidc_client" "test" {
 
 resource "vault_identity_oidc_scope" "test" {
   name        = "groups"
-  template    = "{\"groups\": {{identity.entity.groups.names}} }"
+  template    = jsonencode(
+  {
+    groups   = "{{identity.entity.groups.names}}",
+  }
+  )
   description = "Groups scope."
 }
 
