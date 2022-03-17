@@ -19,13 +19,14 @@ func identityOIDCClientCredsDataSource() *schema.Resource {
 			},
 			"client_id": {
 				Type:        schema.TypeString,
-				Description: "A reference to a named key resource in Vault. This cannot be modified after creation.",
+				Description: "The Client ID computed by and returned from Vault.",
 				Computed:    true,
 			},
 			"client_secret": {
 				Type:        schema.TypeString,
-				Description: "A reference to a named key resource in Vault. This cannot be modified after creation.",
+				Description: "The Client Secret computed by and returned from Vault.",
 				Computed:    true,
+				Sensitive:   true,
 			},
 		},
 	}

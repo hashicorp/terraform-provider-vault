@@ -67,6 +67,7 @@ func identityOIDCClientResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "The Client Secret computed by and returned from Vault.",
 				Computed:    true,
+				Sensitive:   true,
 			},
 		},
 	}
@@ -129,8 +130,6 @@ func identityOIDCClientRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	for _, k := range []string{"key", "redirect_uris", "assignments", "id_token_ttl", "access_token_ttl", "client_id", "client_secret"} {
-		// v := resp.Data[k]
-		// fmt.Print(v)
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return fmt.Errorf("error setting state key %q on OIDC Client %q, err=%w", k, path, err)
 		}
