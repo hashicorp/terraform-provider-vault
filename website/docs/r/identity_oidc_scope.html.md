@@ -16,7 +16,11 @@ for more information.
 ```hcl
 resource "vault_identity_oidc_scope" "groups" {
   name        = "groups"
-  template    = "{\"groups\": {{identity.entity.groups.names}} }"
+  template    = jsonencode(
+  {
+    groups   = "{{identity.entity.groups.names}}",
+  }
+  )
   description = "Vault OIDC Groups Scope"
 }
 ```

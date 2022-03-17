@@ -12,7 +12,10 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-var testVar = "{\"groups\": {{identity.entity.groups.names}} }"
+const (
+	basicScope   = `{"groups":"{{identity.entity.groups.names}}"}`
+	updatedScope = `{"groups":"{{identity.entity.groups.names}}","username":"{{identity.entity.groups.names}}"}`
+)
 
 func TestAccIdentityOIDCScope(t *testing.T) {
 	name := acctest.RandomWithPrefix("test-scope")
@@ -28,7 +31,7 @@ func TestAccIdentityOIDCScope(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "description", "test scope"),
-					resource.TestCheckResourceAttr(resourceName, "template", testVar),
+					resource.TestCheckResourceAttr(resourceName, "template", basicScope),
 				),
 			},
 			{
@@ -36,7 +39,7 @@ func TestAccIdentityOIDCScope(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "description", "test scope updated description"),
-					resource.TestCheckResourceAttr(resourceName, "template", testVar),
+					resource.TestCheckResourceAttr(resourceName, "template", updatedScope),
 				),
 			},
 		},
@@ -47,7 +50,11 @@ func testAccIdentityOIDCScopeConfig_basic(scope string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_oidc_scope" "test" {
   name        = "%s"
-  template    = "{\"groups\": {{identity.entity.groups.names}} }"
+  template    = jsonencode(
+    {
+      groups   = "{{identity.entity.groups.names}}"
+    }
+  )
   description = "test scope"
 }`, scope)
 }
@@ -56,7 +63,12 @@ func testAccIdentityOIDCScopeConfig_update(scope string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_oidc_scope" "test" {
   name        = "%s"
-  template    = "{\"groups\": {{identity.entity.groups.names}} }"
+  template    = jsonencode(
+    {
+      groups   = "{{identity.entity.groups.names}}",
+      username = "{{identity.entity.groups.names}}"
+    }
+  )
   description = "test scope updated description"
 }`, scope)
 }

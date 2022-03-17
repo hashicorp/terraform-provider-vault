@@ -300,6 +300,10 @@ var (
 			Resource:      identityOIDCClientCredsDataSource(),
 			PathInventory: []string{"/identity/oidc/client/{name}"},
 		},
+		"vault_identity_oidc_public_keys": {
+			Resource:      identityOIDCPublicKeysDataSource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/keys"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
