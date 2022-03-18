@@ -1,7 +1,9 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -46,16 +48,21 @@ func readOIDCPublicKeysResource(d *schema.ResourceData, meta interface{}) error 
 		defer resp.Body.Close()
 	}
 
-	secret, err := api.ParseSecret(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("error parsing JSON data from response body, err=%w", err)
+		return err
+	}
+
+	var data map[string]interface{}
+	if err := json.Unmarshal(body, &data); err != nil {
+		return err
 	}
 
 	log.Printf("[DEBUG] Read %q from Vault", path)
 
 	d.SetId(path)
 
-	if err := d.Set("keys", secret.Data["keys"]); err != nil {
+	if err := d.Set("keys", data["keys"]); err != nil {
 		return err
 	}
 

@@ -20,7 +20,7 @@ func TestDataSourceIdentityOIDCPublicKeys(t *testing.T) {
 			{
 				Config: testDataSourceIdentityOIDCPublicKeys_config(name),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vault_identity_oidc_public_keys", "name", name),
+					resource.TestCheckResourceAttr("data.vault_identity_oidc_public_keys.public", "name", name),
 				),
 			},
 		},
