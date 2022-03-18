@@ -100,6 +100,11 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			Optional:    true,
 			Description: "The key of the tag on EC2 instance to use for role tags.",
 		},
+		"role_id": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "The role id for this role.",
+		},
 		"bound_iam_principal_arns": {
 			Type:        schema.TypeSet,
 			Optional:    true,
@@ -381,6 +386,7 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Set("role_tag", resp.Data["role_tag"])
+	d.Set("role_id", resp.Data["role_id"])
 	d.Set("inferred_entity_type", resp.Data["inferred_entity_type"])
 	d.Set("inferred_aws_region", resp.Data["inferred_aws_region"])
 	d.Set("resolve_aws_unique_ids", resp.Data["resolve_aws_unique_ids"])
