@@ -168,7 +168,7 @@ These arguments are common across several Authentication Token resources since V
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+* `role_id` - The generated role id.
 
 ## Import
 
