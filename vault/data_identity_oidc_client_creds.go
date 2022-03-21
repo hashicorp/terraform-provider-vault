@@ -19,12 +19,12 @@ func identityOIDCClientCredsDataSource() *schema.Resource {
 			},
 			"client_id": {
 				Type:        schema.TypeString,
-				Description: "The Client ID computed by and returned from Vault.",
+				Description: "The Client ID from Vault.",
 				Computed:    true,
 			},
 			"client_secret": {
 				Type:        schema.TypeString,
-				Description: "The Client Secret computed by and returned from Vault.",
+				Description: "The Client Secret from Vault.",
 				Computed:    true,
 				Sensitive:   true,
 			},

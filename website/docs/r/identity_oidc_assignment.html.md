@@ -42,9 +42,9 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the assignment.
 
-* `entity_ids` - (Optional) A list of Vault entity IDs.
+* `entity_ids` - (Optional) A set of Vault entity IDs.
 
-* `group_ids` - (Optional) A list of Vault group IDs.
+* `group_ids` - (Optional) A set of Vault group IDs.
 
 ## Attributes Reference
 

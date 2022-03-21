@@ -26,7 +26,7 @@ func identityOIDCProviderResource() *schema.Resource {
 			},
 			"issuer": {
 				Type: schema.TypeString,
-				Description: "Specifies what will be used as the `scheme://host:port` component for the `iss` claim of ID tokens." +
+				Description: "Specifies what will be used as the 'scheme://host:port' component for the 'iss' claim of ID tokens." +
 					"If provided explicitly, it must point to a Vault instance that is network reachable by clients for ID token validation.",
 				Computed: true,
 			},
@@ -54,7 +54,6 @@ func identityOIDCProviderResource() *schema.Resource {
 func identityOIDCProviderRequestData(d *schema.ResourceData) map[string]interface{} {
 	fields := []string{"issuer", "allowed_client_ids", "scopes_supported"}
 	data := map[string]interface{}{}
-
 	for _, k := range fields {
 		if v, ok := d.GetOk(k); ok {
 			if k == "allowed_client_ids" || k == "scopes_supported" {

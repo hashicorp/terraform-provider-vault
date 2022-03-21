@@ -64,6 +64,9 @@ The following arguments are supported:
 
 * `access_token_ttl` - (Optional) The time-to-live for access tokens obtained by the client.
 
+* `client_type` - (Optional) The client type based on its ability to maintain confidentiality of credentials.
+  The following client types are supported: `confidential`, `public`. Defaults to `confidential`.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

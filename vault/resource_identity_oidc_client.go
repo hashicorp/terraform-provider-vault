@@ -28,7 +28,8 @@ func identityOIDCClientResource() *schema.Resource {
 				Type:        schema.TypeString,
 				ForceNew:    true,
 				Description: "A reference to a named key resource in Vault. This cannot be modified after creation.",
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 			},
 			"redirect_uris": {
 				Type: schema.TypeSet,
@@ -52,29 +53,41 @@ func identityOIDCClientResource() *schema.Resource {
 				Description: "The time-to-live for ID tokens obtained by the client. The value should be less than the " +
 					"verification_ttl on the key.",
 				Optional: true,
+				Computed: true,
 			},
 			"access_token_ttl": {
 				Type:        schema.TypeInt,
 				Description: "The time-to-live for access tokens obtained by the client.",
 				Optional:    true,
+				Computed:    true,
 			},
 			"client_id": {
 				Type:        schema.TypeString,
-				Description: "The Client ID computed by and returned from Vault.",
+				Description: "The Client ID from Vault.",
 				Computed:    true,
 			},
 			"client_secret": {
 				Type:        schema.TypeString,
-				Description: "The Client Secret computed by and returned from Vault.",
+				Description: "The Client Secret from Vault.",
 				Computed:    true,
 				Sensitive:   true,
+			},
+			"client_type": {
+				Type: schema.TypeString,
+				Description: "The client type based on its ability to maintain confidentiality of credentials." +
+					"Defaults to 'confidential'.",
+				Optional: true,
+				Computed: true,
 			},
 		},
 	}
 }
 
 func identityOIDCClientRequestData(d *schema.ResourceData) map[string]interface{} {
-	fields := []string{"key", "redirect_uris", "assignments", "id_token_ttl", "access_token_ttl"}
+	fields := []string{
+		"key", "redirect_uris", "assignments",
+		"id_token_ttl", "access_token_ttl", "client_type",
+	}
 	data := map[string]interface{}{}
 
 	for _, k := range fields {
@@ -129,7 +142,12 @@ func identityOIDCClientRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"key", "redirect_uris", "assignments", "id_token_ttl", "access_token_ttl", "client_id", "client_secret"} {
+	fields := []string{
+		"key", "redirect_uris", "assignments", "id_token_ttl",
+		"access_token_ttl", "client_id", "client_secret", "client_type",
+	}
+
+	for _, k := range fields {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return fmt.Errorf("error setting state key %q on OIDC Client %q, err=%w", k, path, err)
 		}

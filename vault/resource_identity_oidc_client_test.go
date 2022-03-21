@@ -25,7 +25,7 @@ func TestAccIdentityOIDCClient(t *testing.T) {
 				Config: testAccIdentityOIDCClientConfig_basic(name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "key", "default"),
+					resource.TestCheckResourceAttr(resourceName, "key", "key"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.0", "http://127.0.0.1:8251/callback"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.1", "http://127.0.0.1:9200/v1/auth-methods/oidc:authenticate:callback"),
@@ -33,13 +33,14 @@ func TestAccIdentityOIDCClient(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "assignments.0", "my-assignment"),
 					resource.TestCheckResourceAttr(resourceName, "id_token_ttl", "1800"),
 					resource.TestCheckResourceAttr(resourceName, "access_token_ttl", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "client_type", "confidential"),
 				),
 			},
 			{
 				Config: testAccIdentityOIDCClientConfig_update(name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "key", "default"),
+					resource.TestCheckResourceAttr(resourceName, "key", "key"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.#", "3"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.0", "http://127.0.0.1:8080/callback"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.1", "http://127.0.0.1:8251/callback"),
@@ -48,6 +49,7 @@ func TestAccIdentityOIDCClient(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "assignments.0", "my-assignment"),
 					resource.TestCheckResourceAttr(resourceName, "id_token_ttl", "2400"),
 					resource.TestCheckResourceAttr(resourceName, "access_token_ttl", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "client_type", "confidential"),
 				),
 			},
 		},
@@ -56,8 +58,8 @@ func TestAccIdentityOIDCClient(t *testing.T) {
 
 func testAccIdentityOIDCClientConfig_basic(name string) string {
 	return fmt.Sprintf(`
-resource "vault_identity_oidc_key" "default" {
-  name               = "default"
+resource "vault_identity_oidc_key" "key" {
+  name               = "key"
   allowed_client_ids = ["*"]
   rotation_period    = 3600
   verification_ttl   = 3600
@@ -72,7 +74,7 @@ resource "vault_identity_oidc_assignment" "test" {
 
 resource "vault_identity_oidc_client" "client" {
   name          = "%s"
-  key           = vault_identity_oidc_key.default.name
+  key           = vault_identity_oidc_key.key.name
   redirect_uris = [
 	"http://127.0.0.1:9200/v1/auth-methods/oidc:authenticate:callback",
 	"http://127.0.0.1:8251/callback"
@@ -82,13 +84,14 @@ resource "vault_identity_oidc_client" "client" {
   ]
   id_token_ttl     = 1800
   access_token_ttl = 3600
+  client_type      = "confidential"
 }`, name)
 }
 
 func testAccIdentityOIDCClientConfig_update(name string) string {
 	return fmt.Sprintf(`
-resource "vault_identity_oidc_key" "default" {
-  name               = "default"
+resource "vault_identity_oidc_key" "key" {
+  name               = "key"
   allowed_client_ids = ["*"]
   rotation_period    = 3600
   verification_ttl   = 3600
@@ -103,7 +106,7 @@ resource "vault_identity_oidc_assignment" "test" {
 
 resource "vault_identity_oidc_client" "client" {
   name          = "%s"
-  key           = vault_identity_oidc_key.default.name
+  key           = vault_identity_oidc_key.key.name
   redirect_uris = [
 	"http://127.0.0.1:9200/v1/auth-methods/oidc:authenticate:callback", 
 	"http://127.0.0.1:8251/callback",
@@ -114,6 +117,7 @@ resource "vault_identity_oidc_client" "client" {
   ]
   id_token_ttl     = 2400
   access_token_ttl = 7200
+  client_type      = "confidential"
 }`, name)
 }
 

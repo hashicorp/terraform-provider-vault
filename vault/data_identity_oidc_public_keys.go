@@ -44,6 +44,11 @@ func readOIDCPublicKeysResource(d *schema.ResourceData, meta interface{}) error 
 	if err != nil {
 		return fmt.Errorf("error performing GET at %s, err=%w", path, err)
 	}
+
+	if resp == nil {
+		return fmt.Errorf("expected a response body, got nil response")
+	}
+
 	if resp != nil {
 		defer resp.Body.Close()
 	}

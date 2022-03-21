@@ -21,16 +21,16 @@ for more details.
 ## Example Usage
 
 ```hcl
-resource "vault_identity_oidc_key" "test" {
+resource "vault_identity_oidc_key" "key" {
   name               = "default"
   allowed_client_ids = ["*"]
   rotation_period    = 3600
   verification_ttl   = 3600
 }
 
-resource "vault_identity_oidc_client" "test" {
+resource "vault_identity_oidc_client" "app" {
   name          = "application"
-  key           = vault_identity_oidc_key.test.name
+  key           = vault_identity_oidc_key.key.name
   redirect_uris = [
     "http://127.0.0.1:9200/v1/auth-methods/oidc:authenticate:callback",
     "http://127.0.0.1:8251/callback",
@@ -40,15 +40,8 @@ resource "vault_identity_oidc_client" "test" {
   access_token_ttl = 7200
 }
 
-data "vault_identity_oidc_client_creds" "test" {
-  name = vault_identity_oidc_client.test.name
-}
-
-resource "vault_identity_oidc_provider" "test" {
-  name = "test-provider"
-  allowed_client_ids = [
-    data.vault_identity_oidc_client_creds.test.client_id
-  ]
+data "vault_identity_oidc_client_creds" "creds" {
+  name = vault_identity_oidc_client.app.name
 }
 ```
 
