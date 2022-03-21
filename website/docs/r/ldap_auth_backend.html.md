@@ -51,6 +51,8 @@ The following arguments are supported:
 
 * `userattr` - (Optional) Attribute on user object matching username passed in
 
+* `userfilter` - (Optional) LDAP user search filter
+
 * `upndomain` - (Optional) The userPrincipalDomain used to construct UPN string
 
 * `discoverdn`: (Optional) Use anonymous bind to discover the bind DN of a user.
