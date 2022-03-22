@@ -118,9 +118,7 @@ func readOIDCOpenIDConfigResource(d *schema.ResourceData, meta interface{}) erro
 		return fmt.Errorf("expected a response body, got nil response")
 	}
 
-	if resp != nil {
-		defer resp.Body.Close()
-	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

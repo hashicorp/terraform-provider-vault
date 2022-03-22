@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -10,17 +11,20 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-const (
-	issuer                = "http://127.0.0.1:8200/v1/identity/oidc/provider/%s"
-	jwksURI               = "http://127.0.0.1:8200/v1/identity/oidc/provider/%s/.well-known/keys"
-	authorizationEndpoint = "http://127.0.0.1:8200/ui/vault/identity/oidc/provider/%s/authorize"
-	tokenEndpoint         = "http://127.0.0.1:8200/v1/identity/oidc/provider/%s/token"
-	userInfoEndpoint      = "http://127.0.0.1:8200/v1/identity/oidc/provider/%s/userinfo"
-)
-
 func TestDataSourceIdentityOIDCOpenIDConfig(t *testing.T) {
 	name := acctest.RandomWithPrefix("test-provider")
 	resourceName := "data.vault_identity_oidc_openid_config.config"
+	vaultAddrEnv := os.Getenv("VAULT_ADDR")
+	host := vaultAddrEnv
+	if vaultAddrEnv == "http://localhost:8200" {
+		host = "http://127.0.0.1:8200"
+	}
+
+	issuer := "%s/v1/identity/oidc/provider/%s"
+	jwksURI := "%s/v1/identity/oidc/provider/%s/.well-known/keys"
+	authorizationEndpoint := "%s/ui/vault/identity/oidc/provider/%s/authorize"
+	tokenEndpoint := "%s/v1/identity/oidc/provider/%s/token"
+	userInfoEndpoint := "%s/v1/identity/oidc/provider/%s/userinfo"
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
@@ -30,11 +34,11 @@ func TestDataSourceIdentityOIDCOpenIDConfig(t *testing.T) {
 				Config: testDataSourceIdentityOIDCOpenIDConfig_config(name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "issuer", fmt.Sprintf(issuer, name)),
-					resource.TestCheckResourceAttr(resourceName, "jwks_uri", fmt.Sprintf(jwksURI, name)),
-					resource.TestCheckResourceAttr(resourceName, "authorization_endpoint", fmt.Sprintf(authorizationEndpoint, name)),
-					resource.TestCheckResourceAttr(resourceName, "token_endpoint", fmt.Sprintf(tokenEndpoint, name)),
-					resource.TestCheckResourceAttr(resourceName, "userinfo_endpoint", fmt.Sprintf(userInfoEndpoint, name)),
+					resource.TestCheckResourceAttr(resourceName, "issuer", fmt.Sprintf(issuer, host, name)),
+					resource.TestCheckResourceAttr(resourceName, "jwks_uri", fmt.Sprintf(jwksURI, host, name)),
+					resource.TestCheckResourceAttr(resourceName, "authorization_endpoint", fmt.Sprintf(authorizationEndpoint, host, name)),
+					resource.TestCheckResourceAttr(resourceName, "token_endpoint", fmt.Sprintf(tokenEndpoint, host, name)),
+					resource.TestCheckResourceAttr(resourceName, "userinfo_endpoint", fmt.Sprintf(userInfoEndpoint, host, name)),
 					resource.TestCheckResourceAttr(resourceName, "request_uri_parameter_supported", "false"),
 					resource.TestCheckResourceAttr(resourceName, "id_token_signing_alg_values_supported.#", "7"),
 					resource.TestCheckResourceAttr(resourceName, "scopes_supported.#", "1"),

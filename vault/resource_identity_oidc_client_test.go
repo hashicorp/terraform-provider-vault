@@ -13,6 +13,10 @@ import (
 )
 
 func TestAccIdentityOIDCClient(t *testing.T) {
+	testutil.SkipTestAcc(t)
+	// TODO: remove once we can test against the vault-1.10 dev builds
+	testutil.SkipTestEnvSet(t, "SKIP_VAULT_NEXT_TESTS")
+
 	name := acctest.RandomWithPrefix("test-scope")
 	resourceName := "vault_identity_oidc_client.client"
 
