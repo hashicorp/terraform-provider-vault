@@ -17,7 +17,9 @@ func TestAccIdentityOIDCClient(t *testing.T) {
 	// TODO: remove once we can test against the vault-1.10 dev builds
 	testutil.SkipTestEnvSet(t, "SKIP_VAULT_NEXT_TESTS")
 
-	name := acctest.RandomWithPrefix("test-scope")
+	keyName := acctest.RandomWithPrefix("test-key")
+	assignmentName := acctest.RandomWithPrefix("test-assignment")
+	clientName := acctest.RandomWithPrefix("test-client")
 	resourceName := "vault_identity_oidc_client.client"
 
 	resource.Test(t, resource.TestCase{
@@ -26,31 +28,31 @@ func TestAccIdentityOIDCClient(t *testing.T) {
 		CheckDestroy: testAccCheckOIDCClientDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityOIDCClientConfig_basic(name),
+				Config: testAccIdentityOIDCClientConfig_basic(keyName, assignmentName, clientName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "key", "key"),
+					resource.TestCheckResourceAttr(resourceName, "name", clientName),
+					resource.TestCheckResourceAttr(resourceName, "key", keyName),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.0", "http://127.0.0.1:8251/callback"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.1", "http://127.0.0.1:9200/v1/auth-methods/oidc:authenticate:callback"),
 					resource.TestCheckResourceAttr(resourceName, "assignments.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "assignments.0", "my-assignment"),
+					resource.TestCheckResourceAttr(resourceName, "assignments.0", assignmentName),
 					resource.TestCheckResourceAttr(resourceName, "id_token_ttl", "1800"),
 					resource.TestCheckResourceAttr(resourceName, "access_token_ttl", "3600"),
 					resource.TestCheckResourceAttr(resourceName, "client_type", "confidential"),
 				),
 			},
 			{
-				Config: testAccIdentityOIDCClientConfig_update(name),
+				Config: testAccIdentityOIDCClientConfig_update(keyName, assignmentName, clientName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "key", "key"),
+					resource.TestCheckResourceAttr(resourceName, "name", clientName),
+					resource.TestCheckResourceAttr(resourceName, "key", keyName),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.#", "3"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.0", "http://127.0.0.1:8080/callback"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.1", "http://127.0.0.1:8251/callback"),
 					resource.TestCheckResourceAttr(resourceName, "redirect_uris.2", "http://127.0.0.1:9200/v1/auth-methods/oidc:authenticate:callback"),
 					resource.TestCheckResourceAttr(resourceName, "assignments.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "assignments.0", "my-assignment"),
+					resource.TestCheckResourceAttr(resourceName, "assignments.0", assignmentName),
 					resource.TestCheckResourceAttr(resourceName, "id_token_ttl", "2400"),
 					resource.TestCheckResourceAttr(resourceName, "access_token_ttl", "7200"),
 					resource.TestCheckResourceAttr(resourceName, "client_type", "confidential"),
@@ -60,17 +62,17 @@ func TestAccIdentityOIDCClient(t *testing.T) {
 	})
 }
 
-func testAccIdentityOIDCClientConfig_basic(name string) string {
+func testAccIdentityOIDCClientConfig_basic(keyName, assignmentName, clientName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_oidc_key" "key" {
-  name               = "key"
+  name               = "%s"
   allowed_client_ids = ["*"]
   rotation_period    = 3600
   verification_ttl   = 3600
 }
 
 resource "vault_identity_oidc_assignment" "test" {
-  name       = "my-assignment"
+  name       = "%s"
   entity_ids = ["ascbascas-2231a-sdfaa"]
   group_ids  = ["sajkdsad-32414-sfsada"]
 }
@@ -89,20 +91,20 @@ resource "vault_identity_oidc_client" "client" {
   id_token_ttl     = 1800
   access_token_ttl = 3600
   client_type      = "confidential"
-}`, name)
+}`, keyName, assignmentName, clientName)
 }
 
-func testAccIdentityOIDCClientConfig_update(name string) string {
+func testAccIdentityOIDCClientConfig_update(keyName, assignmentName, clientName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_oidc_key" "key" {
-  name               = "key"
+  name               = "%s"
   allowed_client_ids = ["*"]
   rotation_period    = 3600
   verification_ttl   = 3600
 }
 
 resource "vault_identity_oidc_assignment" "test" {
-  name       = "my-assignment"
+  name       = "%s"
   entity_ids = ["ascbascas-2231a-sdfaa"]
   group_ids  = ["sajkdsad-32414-sfsada"]
 }
@@ -122,7 +124,7 @@ resource "vault_identity_oidc_client" "client" {
   id_token_ttl     = 2400
   access_token_ttl = 7200
   client_type      = "confidential"
-}`, name)
+}`, keyName, assignmentName, clientName)
 }
 
 func testAccCheckOIDCClientDestroy(s *terraform.State) error {
