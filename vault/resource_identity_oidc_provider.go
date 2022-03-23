@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"net/url"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -27,8 +28,60 @@ func identityOIDCProviderResource() *schema.Resource {
 			"issuer": {
 				Type: schema.TypeString,
 				Description: "Specifies what will be used as the 'scheme://host:port' component for the 'iss' claim of ID tokens." +
-					"If provided explicitly, it must point to a Vault instance that is network reachable by clients for ID token validation.",
+					"This value is computed using the issuer_host and https_enabled schema fields.",
 				Computed: true,
+				// TODO confirm if this is needed
+				Optional: true,
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					oldURLParsed, err := url.Parse(old)
+					if err != nil {
+						return false
+					}
+
+					newURLParsed, err := url.Parse(new)
+					if err != nil {
+						return false
+					}
+
+					if oldURLParsed.Host == newURLParsed.Host &&
+						oldURLParsed.Scheme == newURLParsed.Scheme {
+						return true
+					}
+
+					return false
+				},
+			},
+			"https_enabled": {
+				Type:        schema.TypeBool,
+				Description: "Specifies whether the issuer host is on a https server.",
+				Default:     true,
+				Optional:    true,
+			},
+			"issuer_host": {
+				Type:        schema.TypeString,
+				Description: "The host for the issuer. Can be either host or host:port.",
+				Optional:    true,
+				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
+					value := v.(string)
+					if value != "" {
+						// prefix value with either 'https' or 'http' for URL parsing
+						// can use either since parsedUrl.Scheme is irrelevant here
+						parsedUrl, err := url.Parse(fmt.Sprintf("https://%s", value))
+						if err != nil {
+							errs = append(errs, err)
+						}
+
+						if parsedUrl.Path != "" {
+							errs = append(errs, fmt.Errorf("issuer_host cannot contain URL path"))
+						}
+
+						if parsedUrl.Host == "" {
+							errs = append(errs, fmt.Errorf("issuer_host must either be a host or host:port string"))
+						}
+					}
+
+					return nil, errs
+				},
 			},
 			"allowed_client_ids": {
 				Type: schema.TypeSet,
@@ -51,20 +104,35 @@ func identityOIDCProviderResource() *schema.Resource {
 	}
 }
 
-func identityOIDCProviderRequestData(d *schema.ResourceData) map[string]interface{} {
-	fields := []string{"issuer", "allowed_client_ids", "scopes_supported"}
-	data := map[string]interface{}{}
-	for _, k := range fields {
+func identityOIDCProviderConfigData(d *schema.ResourceData) map[string]interface{} {
+	nonBooleanFields := []string{"issuer_host", "allowed_client_ids", "scopes_supported"}
+	configData := map[string]interface{}{}
+
+	if v, ok := d.GetOkExists("https_enabled"); ok {
+		configData["https_enabled"] = v.(bool)
+	}
+
+	for _, k := range nonBooleanFields {
 		if v, ok := d.GetOk(k); ok {
 			if k == "allowed_client_ids" || k == "scopes_supported" {
-				data[k] = v.(*schema.Set).List()
+				configData[k] = v.(*schema.Set).List()
 				continue
 			}
-			data[k] = v
+			configData[k] = v
 		}
 	}
 
-	return data
+	// Construct issuer URL if issuer_host provided
+	if configData["issuer_host"] != "" {
+		scheme := "https"
+		if !configData["https_enabled"].(bool) {
+			scheme = "http"
+		}
+
+		configData["issuer"] = fmt.Sprintf("%s://%s", scheme, configData["issuer_host"])
+	}
+
+	return configData
 }
 
 func getOIDCProviderPath(name string) string {
@@ -76,7 +144,15 @@ func identityOIDCProviderCreateUpdate(d *schema.ResourceData, meta interface{}) 
 	name := d.Get("name").(string)
 	path := getOIDCProviderPath(name)
 
-	_, err := client.Logical().Write(path, identityOIDCProviderRequestData(d))
+	configData := identityOIDCProviderConfigData(d)
+	providerRequestData := map[string]interface{}{}
+
+	providerAPIFields := []string{"issuer", "allowed_client_ids", "scopes_supported"}
+	for _, k := range providerAPIFields {
+		providerRequestData[k] = configData[k]
+	}
+
+	_, err := client.Logical().Write(path, providerRequestData)
 	if err != nil {
 		return fmt.Errorf("error writing OIDC Provider %s, err=%w", path, err)
 	}

@@ -109,6 +109,7 @@ func readOIDCOpenIDConfigResource(d *schema.ResourceData, meta interface{}) erro
 	path := "/v1/" + getOIDCProviderPath(name) + identityOIDCOpenIDConfigPathSuffix
 	r := client.NewRequest("GET", path)
 
+	log.Printf("[DEBUG] Reading %q from Vault", path)
 	resp, err := client.RawRequest(r)
 	if err != nil {
 		return fmt.Errorf("error performing GET at %s, err=%w", path, err)
@@ -129,8 +130,6 @@ func readOIDCOpenIDConfigResource(d *schema.ResourceData, meta interface{}) erro
 	if err := json.Unmarshal(body, &data); err != nil {
 		return err
 	}
-
-	log.Printf("[DEBUG] Read %q from Vault", path)
 
 	d.SetId(path)
 

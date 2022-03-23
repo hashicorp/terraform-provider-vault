@@ -13,7 +13,12 @@ import (
 )
 
 func TestAccIdentityOIDCProvider(t *testing.T) {
-	name := acctest.RandomWithPrefix("test-scope")
+	providerName := acctest.RandomWithPrefix("test-provider")
+	keyName := acctest.RandomWithPrefix("test-key")
+	assignmentName := acctest.RandomWithPrefix("test-assignment")
+	clientName := acctest.RandomWithPrefix("test-client")
+	scopeName := acctest.RandomWithPrefix("test-scope")
+
 	resourceName := "vault_identity_oidc_provider.test"
 
 	resource.Test(t, resource.TestCase{
@@ -22,35 +27,35 @@ func TestAccIdentityOIDCProvider(t *testing.T) {
 		CheckDestroy: testAccCheckOIDCProviderDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityOIDCProviderConfig(name),
+				Config: testAccIdentityOIDCProviderConfig(keyName, assignmentName, clientName, scopeName, providerName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "name", providerName),
 					resource.TestCheckResourceAttr(resourceName, "allowed_client_ids.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "scopes_supported.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "scopes_supported.0", "groups"),
+					resource.TestCheckResourceAttr(resourceName, "scopes_supported.0", scopeName),
 				),
 			},
 		},
 	})
 }
 
-func testAccIdentityOIDCProviderConfig(name string) string {
+func testAccIdentityOIDCProviderConfig(keyName, assignmentName, clientName, scopeName, providerName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_oidc_key" "test" {
-  name               = "default"
+  name               = "%s"
   allowed_client_ids = ["*"]
   rotation_period    = 3600
   verification_ttl   = 3600
 }
 
 resource "vault_identity_oidc_assignment" "test" {
-  name       = "my-assignment"
+  name       = "%s"
   entity_ids = ["fake-ascbascas-2231a-sdfaa"]
   group_ids  = ["fake-sajkdsad-32414-sfsada"]
 }
 
 resource "vault_identity_oidc_client" "test" {
-  name          = "application"
+  name          = "%s"
   key           = vault_identity_oidc_key.test.name
   redirect_uris = [
 	"http://127.0.0.1:9200/v1/auth-methods/oidc:authenticate:callback", 
@@ -65,7 +70,7 @@ resource "vault_identity_oidc_client" "test" {
 }
 
 resource "vault_identity_oidc_scope" "test" {
-  name        = "groups"
+  name        = "%s"
   template    = jsonencode(
   {
     groups   = "{{identity.entity.groups.names}}",
@@ -76,13 +81,15 @@ resource "vault_identity_oidc_scope" "test" {
 
 resource "vault_identity_oidc_provider" "test" {
   name = "%s"
+  https_enabled = false
+  issuer_host = "127.0.0.1:8200"
   allowed_client_ids = [
      vault_identity_oidc_client.test.client_id
   ]
   scopes_supported = [
     vault_identity_oidc_scope.test.name
   ]
-}`, name)
+}`, keyName, assignmentName, clientName, scopeName, providerName)
 }
 
 func testAccCheckOIDCProviderDestroy(s *terraform.State) error {
