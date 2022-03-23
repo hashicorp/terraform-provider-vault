@@ -26,7 +26,8 @@ func identityOIDCProviderResource() *schema.Resource {
 				Required:    true,
 			},
 			"issuer": {
-				Type: schema.TypeString,
+				Type:     schema.TypeString,
+				ForceNew: true,
 				Description: "Specifies what will be used as the 'scheme://host:port' component for the 'iss' claim of ID tokens." +
 					"This value is computed using the issuer_host and https_enabled schema fields.",
 				Computed: true,
@@ -123,13 +124,13 @@ func identityOIDCProviderConfigData(d *schema.ResourceData) map[string]interface
 	}
 
 	// Construct issuer URL if issuer_host provided
-	if configData["issuer_host"] != "" {
+	if v, ok := configData["issuer_host"]; ok {
 		scheme := "https"
 		if !configData["https_enabled"].(bool) {
 			scheme = "http"
 		}
 
-		configData["issuer"] = fmt.Sprintf("%s://%s", scheme, configData["issuer_host"])
+		configData["issuer"] = fmt.Sprintf("%s://%s", scheme, v.(string))
 	}
 
 	return configData
@@ -149,7 +150,9 @@ func identityOIDCProviderCreateUpdate(d *schema.ResourceData, meta interface{}) 
 
 	providerAPIFields := []string{"issuer", "allowed_client_ids", "scopes_supported"}
 	for _, k := range providerAPIFields {
-		providerRequestData[k] = configData[k]
+		if v, ok := configData[k]; ok {
+			providerRequestData[k] = v
+		}
 	}
 
 	_, err := client.Logical().Write(path, providerRequestData)

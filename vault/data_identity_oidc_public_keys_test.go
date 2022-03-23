@@ -11,16 +11,18 @@ import (
 )
 
 func TestDataSourceIdentityOIDCPublicKeys(t *testing.T) {
-	name := acctest.RandomWithPrefix("test-provider")
+	keyName := acctest.RandomWithPrefix("test-key")
+	clientName := acctest.RandomWithPrefix("test-client")
+	providerName := acctest.RandomWithPrefix("test-provider")
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testDataSourceIdentityOIDCPublicKeys_config(name),
+				Config: testDataSourceIdentityOIDCPublicKeys_config(keyName, clientName, providerName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vault_identity_oidc_public_keys.public", "name", name),
+					resource.TestCheckResourceAttr("data.vault_identity_oidc_public_keys.public", "name", providerName),
 					resource.TestCheckResourceAttr("data.vault_identity_oidc_public_keys.public", "keys.#", "2"),
 				),
 			},
@@ -28,17 +30,17 @@ func TestDataSourceIdentityOIDCPublicKeys(t *testing.T) {
 	})
 }
 
-func testDataSourceIdentityOIDCPublicKeys_config(name string) string {
+func testDataSourceIdentityOIDCPublicKeys_config(keyName, clientName, providerName string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_oidc_key" "test" {
-  name               = "default"
+  name               = "%s"
   allowed_client_ids = ["*"]
   rotation_period    = 3600
   verification_ttl   = 3600
 }
 
 resource "vault_identity_oidc_client" "test" {
-  name          = "application"
+  name          = "%s"
   key           = vault_identity_oidc_key.test.name
   redirect_uris = [
 	"http://127.0.0.1:9200/v1/auth-methods/oidc:authenticate:callback", 
@@ -58,5 +60,5 @@ resource "vault_identity_oidc_provider" "test" {
 
 data "vault_identity_oidc_public_keys" "public" {
   name = vault_identity_oidc_provider.test.name
-}`, name)
+}`, keyName, clientName, providerName)
 }
