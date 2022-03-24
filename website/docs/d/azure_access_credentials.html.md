@@ -43,6 +43,9 @@ Credentials are tested by attempting to refresh a client token with them.
 data "vault_azure_access_credentials" "creds" {
   role                        = "my-role"
   validate_creds              = true
+  num_sequential_successes    = 8
+  num_seconds_between_tests   = 1
+  max_cred_validation_seconds = 300 
 }
 
 provider "azure" {
@@ -66,11 +69,13 @@ validated before being returned. Defaults to `false`, which returns
 credentials without checking whether they have fully propagated throughout
 Azure Active Directory. Designating `true` activates testing.
 
-* `num_sequential_successes` - (Optional) **Deprecated**: Ignored
+* `num_sequential_successes` - (Optional) If 'validate_creds' is true, 
+the number of sequential successes required to validate generated 
+credentials. Defaults to 8.
 
 * `num_seconds_between_tests` - (Optional) If 'validate_creds' is true, 
 the number of seconds to wait between each test of generated credentials.
-Defaults to 7.
+Defaults to 1.
 
 * `max_cred_validation_seconds` - (Optional) If 'validate_creds' is true, 
 the number of seconds after which to give up validating credentials. Defaults
