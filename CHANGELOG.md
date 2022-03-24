@@ -1,4 +1,4 @@
-## 3.4.0 (Unreleased)
+## 3.4.0 (March 24, 2022)
 FEATURES:
 * `data/azure_access_credentials` Add `subscription_id` and `tenant_id` fields to used during credential validation ([#1384](https://github.com/terraform-providers/terraform-provider-vault/pull/1384)).
 * Add OIDC Provider support: new resources `vault_identity_oidc_scope`, `vault_identity_oidc_assignment`, `vault_identity_oidc_client` 
