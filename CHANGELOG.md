@@ -1,3 +1,10 @@
+## 3.4.0 (Unreleased)
+FEATURES:
+* `data/azure_access_credentials` Add `subscription_id` and `tenant_id` fields to used during credential validation ([#1384](https://github.com/terraform-providers/terraform-provider-vault/pull/1384)).
+
+BUGS:
+* `data/azure_access_credentials`: Fix credential validation ([#1381](https://github.com/terraform-providers/terraform-provider-vault/pull/1381)).
+
 ## 3.3.1 (February 25, 2022)
 BUGS:
 * `resource/identity_group`: Report an error upon duplicate resource creation failure. Document group name caveats. ([#1352](https://github.com/hashicorp/terraform-provider-vault/pull/1352))
