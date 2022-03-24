@@ -79,7 +79,13 @@ Defaults to 1.
 
 * `max_cred_validation_seconds` - (Optional) If 'validate_creds' is true, 
 the number of seconds after which to give up validating credentials. Defaults
-to 1,200 (20 minutes).
+to 300.
+
+* `subscription_id` - (Optional) The subscription ID to use during credential
+  validation. Defaults to the subscription ID configured in the Vault `backend`.
+
+* `tenant_id` - (Optional) The tenant ID to use during credential validation.
+   Defaults to the tenant ID configured in the Vault `backend`.
 
 ## Attributes Reference
 
