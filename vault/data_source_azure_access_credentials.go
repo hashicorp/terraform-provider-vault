@@ -85,6 +85,18 @@ func azureAccessCredentialsDataSource() *schema.Resource {
 				Computed:    true,
 				Description: "True if the duration of this lease can be extended through renewal.",
 			},
+			"subscription_id": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "The subscription ID to use during credential validation. " +
+					"Defaults to the subscription ID configured in the Vault backend",
+			},
+			"tenant_id": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "The tenant ID to use during credential validation. " +
+					"Defaults to the tenant ID configured in the Vault backend",
+			},
 		},
 	}
 }
@@ -134,19 +146,25 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	log.Printf("[DEBUG] Successfully read %q from Vault", configPath)
 
 	subscriptionID := ""
-	if subscriptionIDIfc, ok := config.Data["subscription_id"]; ok {
+	if v, ok := d.GetOk("subscription_id"); ok {
+		subscriptionID = v.(string)
+	} else if subscriptionIDIfc, ok := config.Data["subscription_id"]; ok {
 		subscriptionID = subscriptionIDIfc.(string)
 	}
+
 	if subscriptionID == "" {
-		return fmt.Errorf(`unable to parse 'subscription_id' from %s`, configPath)
+		return fmt.Errorf("subscription_id cannot be empty when validate_creds is true")
 	}
 
 	tenantID := ""
-	if tenantIDIfc, ok := config.Data["tenant_id"]; ok {
+	if v, ok := d.GetOk("tenant_id"); ok {
+		tenantID = v.(string)
+	} else if tenantIDIfc, ok := config.Data["tenant_id"]; ok {
 		tenantID = tenantIDIfc.(string)
 	}
+
 	if tenantID == "" {
-		return fmt.Errorf(`unable to parse 'tenant_id' from %s`, configPath)
+		return fmt.Errorf("tenant_id cannot be empty when validate_creds is true")
 	}
 
 	creds, err := azidentity.NewClientSecretCredential(
