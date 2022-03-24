@@ -182,28 +182,28 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	endTime := time.Now().Add(
 		time.Duration(d.Get("max_cred_validation_seconds").(int)) * time.Second)
 	for {
-		lister := providerClient.List(&armresources.ProvidersClientListOptions{
+		pager := providerClient.List(&armresources.ProvidersClientListOptions{
 			Expand: pointerutil.StringPtr("metadata"),
 		})
 
-		for lister.NextPage(ctx) {
-			pr := lister.PageResponse()
+		for pager.NextPage(ctx) {
+			pr := pager.PageResponse()
 			if pr.RawResponse.StatusCode == http.StatusUnauthorized {
-				return fmt.Errorf("validation failed, unauthorized credentials from Vault, err=%w", lister.Err())
+				return fmt.Errorf("validation failed, unauthorized credentials from Vault, err=%w", pager.Err())
 			}
 			log.Printf("[DEBUG] Provider Client List response %+v", pr)
 		}
 
-		if lister.Err() == nil {
+		if pager.Err() == nil {
 			log.Printf("[DEBUG] Credential validation succeeded")
 			break
 		}
 
 		if time.Now().After(endTime) {
-			return fmt.Errorf("validation failed, giving up err=%w", lister.Err())
+			return fmt.Errorf("validation failed, giving up err=%w", pager.Err())
 		}
 
-		log.Printf("[ERROR] Credential validation failed with %v, retrying in %s", lister.Err(), delay)
+		log.Printf("[ERROR] Credential validation failed with %v, retrying in %s", pager.Err(), delay)
 		time.Sleep(delay)
 	}
 
