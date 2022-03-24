@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -191,8 +192,18 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Updating mount %s in Vault", path)
 
-	if err := client.Sys().TuneMount(path, config); err != nil {
-		return fmt.Errorf("error updating Vault: %s", err)
+	// TODO: remove this work-around once VAULT-5521 is fixed
+	var tries int
+	for {
+		if err := client.Sys().TuneMount(path, config); err != nil {
+			if tries > 10 {
+				return fmt.Errorf("error updating Vault: %s", err)
+			}
+			tries++
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		break
 	}
 
 	return mountRead(d, meta)
