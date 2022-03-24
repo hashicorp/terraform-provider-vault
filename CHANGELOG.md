@@ -1,4 +1,12 @@
-## 3.3.0 (Unreleased)
+## 3.3.1 (February 25, 2022)
+BUGS:
+* `resource/identity_group`: Report an error upon duplicate resource creation failure. Document group name caveats. ([#1352](https://github.com/hashicorp/terraform-provider-vault/pull/1352))
+* `resource/pki_secret_backend_root_sign_intermediate`: Fix panic when reading `ca_chain` from Vault ([#1357](https://github.com/hashicorp/terraform-provider-vault/issues/1357))
+* `resource/raft_snapshot_agent_config`: Properly handle nil response on read ([#1360](https://github.com/hashicorp/terraform-provider-vault/pull/1360))
+* `resource/identity_*`: Ensure non-existent entities are handled properly ([#1361](https://github.com/hashicorp/terraform-provider-vault/pull/1361))
+* `resource/dentity_group_member_entity_ids`: Properly handle nil `member_identity_ids` on read ([#1356](https://github.com/hashicorp/terraform-provider-vault/pull/1356))
+
+## 3.3.0 (February 17, 2022)
 FEATURES:
 * Add KMIP support: new resources `vault_kmip_secret_backend`, `vault_kmip_secret_scope` and `vault_kmip_secret_role` ([#1339](https://github.com/hashicorp/terraform-provider-vault/pull/1339))
 
@@ -16,6 +24,9 @@ IMPROVEMENTS:
 * `resource/azure_secret_backend`: Add support for setting `use_microsoft_graph_api` ([#1335](https://github.com/hashicorp/terraform-provider-vault/pull/1335))
 * `r/d/kubernetes_auth_backend_role`: Add support for setting and getting `alias_name_source` ([#1336](https://github.com/hashicorp/terraform-provider-vault/pull/1336))
 * `resource/database_secret_backend_connection`: Add `username` and `password` fields to all DB Engines that support them ([#1331](https://github.com/hashicorp/terraform-provider-vault/pull/1331))
+* `resource/token_auth_backend_role`: Add support for setting `allowed_entity_aliases` ([#1126](https://github.com/hashicorp/terraform-provider-vault/pull/1126))
+* `resource/ad_secret_backend`:  Restore deprecated `formatter`, and `length` fields. ([#1341](https://github.com/hashicorp/terraform-provider-vault/pull/1341))
+* `resource/ldap_auth_backend`: Add support for setting `case_sensitive_names` ([#1176](https://github.com/hashicorp/terraform-provider-vault/pull/1176))
 
 ## 3.2.1 (January 20, 2022)
 BUGS:

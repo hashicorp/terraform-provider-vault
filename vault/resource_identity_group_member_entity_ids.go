@@ -116,8 +116,12 @@ func identityGroupMemberEntityIdsRead(d *schema.ResourceData, meta interface{}) 
 		return err
 	}
 
-	d.Set("group_id", id)
-	d.Set("group_name", resp.Data["name"])
+	if err := d.Set("group_id", id); err != nil {
+		return err
+	}
+	if err := d.Set("group_name", resp.Data["name"]); err != nil {
+		return err
+	}
 
 	if d.Get("exclusive").(bool) {
 		respdata := resp.Data["member_entity_ids"]
@@ -127,13 +131,14 @@ func identityGroupMemberEntityIdsRead(d *schema.ResourceData, meta interface{}) 
 	} else {
 		userMemberEntityIds := d.Get("member_entity_ids").(*schema.Set).List()
 		newMemberEntityIds := make([]string, 0)
-		apiMemberEntityIds := resp.Data["member_entity_ids"].([]interface{})
-
-		for _, memberEntityId := range userMemberEntityIds {
-			if found, _ := util.SliceHasElement(apiMemberEntityIds, memberEntityId); found {
-				newMemberEntityIds = append(newMemberEntityIds, memberEntityId.(string))
+		if ids, ok := resp.Data["member_entity_ids"].([]interface{}); ok && len(ids) > 0 {
+			for _, memberEntityId := range userMemberEntityIds {
+				if found, _ := util.SliceHasElement(ids, memberEntityId); found {
+					newMemberEntityIds = append(newMemberEntityIds, memberEntityId.(string))
+				}
 			}
 		}
+
 		if err = d.Set("member_entity_ids", newMemberEntityIds); err != nil {
 			return fmt.Errorf("error setting member entity ids for IdentityGroupMemberEntityIds %q: %s", id, err)
 		}
