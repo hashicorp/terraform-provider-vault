@@ -296,6 +296,18 @@ var (
 			Resource:      gcpAuthBackendRoleDataSource(),
 			PathInventory: []string{"/auth/gcp/role/{role_name}"},
 		},
+		"vault_identity_oidc_client_creds": {
+			Resource:      identityOIDCClientCredsDataSource(),
+			PathInventory: []string{"/identity/oidc/client/{name}"},
+		},
+		"vault_identity_oidc_public_keys": {
+			Resource:      identityOIDCPublicKeysDataSource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/keys"},
+		},
+		"vault_identity_oidc_openid_config": {
+			Resource:      identityOIDCOpenIDConfigDataSource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/openid-configuration"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
@@ -704,6 +716,22 @@ var (
 		"vault_kmip_secret_role": {
 			Resource:      kmipSecretRoleResource(),
 			PathInventory: []string{"/kmip/scope/{scope}/role/{role}"},
+		},
+		"vault_identity_oidc_scope": {
+			Resource:      identityOIDCScopeResource(),
+			PathInventory: []string{"/identity/oidc/scope/{scope}"},
+		},
+		"vault_identity_oidc_assignment": {
+			Resource:      identityOIDCAssignmentResource(),
+			PathInventory: []string{"/identity/oidc/assignment/{name}"},
+		},
+		"vault_identity_oidc_client": {
+			Resource:      identityOIDCClientResource(),
+			PathInventory: []string{"/identity/oidc/client/{name}"},
+		},
+		"vault_identity_oidc_provider": {
+			Resource:      identityOIDCProviderResource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}"},
 		},
 	}
 )

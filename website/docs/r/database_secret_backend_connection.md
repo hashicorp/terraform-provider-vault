@@ -45,9 +45,7 @@ The following arguments are supported:
 
 * `backend` - (Required) The unique name of the Vault mount to configure.
 
-* `plugin_name` - (Optional) Specifies the name of the plugin to use. All values must be prefixed
- to match the corresponding database engine directive.
- For example the `plugin_name` for the `mysql_aurora` engine must begin with `mysql-aurora`. Note the hyphenation.
+* `plugin_name` - (Optional) Specifies the name of the plugin to use.
 
 * `verify_connection` - (Optional) Whether the connection should be verified on
   initial configuration or not.
@@ -205,6 +203,8 @@ See the [Vault
 
 * `password` - (Optional) The root credential password used in the connection URL.
 
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
+
 ### MSSQL Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -228,6 +228,8 @@ See the [Vault
 * `username` - (Optional) The root credential username used in the connection URL.
 
 * `password` - (Optional) The root credential password used in the connection URL.
+
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
 * `contained_db` - (Optional bool: false) For Vault v1.9+. Set to true when the target is a
   Contained Database, e.g. AzureSQL.
@@ -281,6 +283,8 @@ See the [Vault
 * `username` - (Optional) The root credential username used in the connection URL.
 
 * `password` - (Optional) The root credential password used in the connection URL.
+
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
 See the [Vault
@@ -359,6 +363,8 @@ See the [Vault
 * `username` - (Optional) The root credential username used in the connection URL.
 
 * `password` - (Optional) The root credential password used in the connection URL.
+
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 

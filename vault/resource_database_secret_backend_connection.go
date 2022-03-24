@@ -22,6 +22,7 @@ import (
 type connectionStringConfig struct {
 	excludeUsernameTemplate bool
 	includeUserPass         bool
+	includeDisableEscaping  bool
 }
 
 const (
@@ -509,6 +510,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Description: "Connection parameters for the hana-database-plugin plugin.",
 				Elem: connectionStringResource(&connectionStringConfig{
 					excludeUsernameTemplate: true,
+					includeDisableEscaping:  true,
 					includeUserPass:         true,
 				}),
 				MaxItems:      1,
@@ -568,7 +570,8 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Optional:    true,
 				Description: "Connection parameters for the postgresql-database-plugin plugin.",
 				Elem: connectionStringResource(&connectionStringConfig{
-					includeUserPass: true,
+					includeDisableEscaping: true,
+					includeUserPass:        true,
 				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.Name(), dbEngineTypes),
@@ -590,7 +593,8 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 				Optional:    true,
 				Description: "Connection parameters for the redshift-database-plugin plugin.",
 				Elem: connectionStringResource(&connectionStringConfig{
-					includeUserPass: true,
+					includeUserPass:        true,
+					includeDisableEscaping: true,
 				}),
 				MaxItems:      1,
 				ConflictsWith: util.CalculateConflictsWith(dbEngineRedshift.Name(), dbEngineTypes),
@@ -669,6 +673,14 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 		}
 	}
 
+	if config.includeDisableEscaping {
+		res.Schema["disable_escaping"] = &schema.Schema{
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "Disable special character escaping in username and password",
+		}
+	}
+
 	return res
 }
 
@@ -692,13 +704,15 @@ func mysqlConnectionStringResource() *schema.Resource {
 
 func mssqlConnectionStringResource() *schema.Resource {
 	r := connectionStringResource(&connectionStringConfig{
-		includeUserPass: true,
+		includeUserPass:        true,
+		includeDisableEscaping: true,
 	})
 	r.Schema["contained_db"] = &schema.Schema{
 		Type:        schema.TypeBool,
 		Optional:    true,
 		Description: "Set to true when the target is a Contained Database, e.g. AzureSQL.",
 	}
+
 	return r
 }
 
@@ -809,7 +823,7 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case dbEngineInfluxDB:
 		setInfluxDBDatabaseConnectionData(d, "influxdb.0.", data)
 	case dbEngineHana:
-		setDatabaseConnectionDataWithUserPass(d, "hana.0.", data)
+		setDatabaseConnectionDataWithDisableEscaping(d, "hana.0.", data)
 	case dbEngineMongoDB:
 		setDatabaseConnectionDataWithUserPass(d, "mongodb.0.", data)
 	case dbEngineMongoDBAtlas:
@@ -835,13 +849,13 @@ func getDatabaseAPIData(d *schema.ResourceData) (map[string]interface{}, error) 
 	case dbEngineOracle:
 		setDatabaseConnectionDataWithUserPass(d, "oracle.0.", data)
 	case dbEnginePostgres:
-		setDatabaseConnectionDataWithUserPass(d, "postgresql.0.", data)
+		setDatabaseConnectionDataWithDisableEscaping(d, "postgresql.0.", data)
 	case dbEngineElasticSearch:
 		setElasticsearchDatabaseConnectionData(d, "elasticsearch.0.", data)
 	case dbEngineSnowflake:
 		setDatabaseConnectionDataWithUserPass(d, "snowflake.0.", data)
 	case dbEngineRedshift:
-		setDatabaseConnectionDataWithUserPass(d, "redshift.0.", data)
+		setDatabaseConnectionDataWithDisableEscaping(d, "redshift.0.", data)
 	}
 
 	return data, nil
@@ -898,7 +912,7 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 }
 
 func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) ([]map[string]interface{}, error) {
-	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+	result := getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
 	if result == nil {
 		return nil, nil
 	}
@@ -913,6 +927,20 @@ func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 	}
 
 	return result, nil
+}
+
+func getConnectionDetailsFromResponseWithDisableEscaping(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
+	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+	if result == nil {
+		return nil
+	}
+
+	details := resp.Data["connection_details"].(map[string]interface{})
+	if v, ok := details["disable_escaping"]; ok {
+		result[0]["disable_escaping"] = v.(bool)
+	}
+
+	return result
 }
 
 func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) []map[string]interface{} {
@@ -1132,7 +1160,7 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 }
 
 func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
-	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+	setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	if v, ok := d.GetOk(prefix + "contained_db"); ok {
 		// TODO:
 		//  we have to pass string value here due to an issue with the
@@ -1237,6 +1265,14 @@ func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string
 	}
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
+	}
+}
+
+func setDatabaseConnectionDataWithDisableEscaping(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+
+	if v, ok := d.GetOk(prefix + "disable_escaping"); ok {
+		data["disable_escaping"] = v.(bool)
 	}
 }
 
@@ -1420,7 +1456,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case dbEngineInfluxDB:
 		d.Set("influxdb", getInfluxDBConnectionDetailsFromResponse(d, "influxdb.0.", resp))
 	case dbEngineHana:
-		d.Set("hana", getConnectionDetailsFromResponseWithUserPass(d, "hana.0.", resp))
+		d.Set("hana", getConnectionDetailsFromResponseWithDisableEscaping(d, "hana.0.", resp))
 	case dbEngineMongoDB:
 		d.Set("mongodb", getConnectionDetailsFromResponseWithUserPass(d, "mongodb.0.", resp))
 	case dbEngineMongoDBAtlas:
@@ -1457,13 +1493,13 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 	case dbEngineOracle:
 		d.Set("oracle", getConnectionDetailsFromResponseWithUserPass(d, "oracle.0.", resp))
 	case dbEnginePostgres:
-		d.Set("postgresql", getConnectionDetailsFromResponseWithUserPass(d, "postgresql.0.", resp))
+		d.Set("postgresql", getConnectionDetailsFromResponseWithDisableEscaping(d, "postgresql.0.", resp))
 	case dbEngineElasticSearch:
 		d.Set("elasticsearch", getElasticsearchConnectionDetailsFromResponse(d, "elasticsearch.0.", resp))
 	case dbEngineSnowflake:
 		d.Set("snowflake", getSnowflakeConnectionDetailsFromResponse(d, "snowflake.0.", resp))
 	case dbEngineRedshift:
-		d.Set("redshift", getConnectionDetailsFromResponseWithUserPass(d, "redshift.0.", resp))
+		d.Set("redshift", getConnectionDetailsFromResponseWithDisableEscaping(d, "redshift.0.", resp))
 	default:
 		return fmt.Errorf("no response handler for dbEngine: %s", db)
 	}
