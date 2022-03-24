@@ -25,8 +25,7 @@ func identityOIDCProviderResource() *schema.Resource {
 				Required:    true,
 			},
 			"issuer": {
-				Type:     schema.TypeString,
-				ForceNew: true,
+				Type: schema.TypeString,
 				Description: "Specifies what will be used as the 'scheme://host:port' component for the 'iss' claim of ID tokens." +
 					"This value is computed using the issuer_host and https_enabled fields.",
 				Computed: true,
