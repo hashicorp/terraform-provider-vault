@@ -1,17 +1,19 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2017-09-01/network"
-	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
 func azureAccessCredentialsDataSource() *schema.Resource {
@@ -44,13 +46,13 @@ func azureAccessCredentialsDataSource() *schema.Resource {
 			"num_seconds_between_tests": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Default:     7,
+				Default:     1,
 				Description: `If 'validate_creds' is true, the number of seconds to wait between each test of generated credentials.`,
 			},
 			"max_cred_validation_seconds": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Default:     20 * 60, // 20 minutes
+				Default:     300,
 				Description: `If 'validate_creds' is true, the number of seconds after which to give up validating credentials.`,
 			},
 			"client_id": {
@@ -125,14 +127,14 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 		return nil
 	}
 
-	secret, err = client.Logical().Read(configPath)
+	config, err := client.Logical().Read(configPath)
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
-	log.Printf("[DEBUG] Read %q from Vault", configPath)
+	log.Printf("[DEBUG] Successfully read %q from Vault", configPath)
 
 	subscriptionID := ""
-	if subscriptionIDIfc, ok := secret.Data["subscription_id"]; ok {
+	if subscriptionIDIfc, ok := config.Data["subscription_id"]; ok {
 		subscriptionID = subscriptionIDIfc.(string)
 	}
 	if subscriptionID == "" {
@@ -140,72 +142,75 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	}
 
 	tenantID := ""
-	if tenantIDIfc, ok := secret.Data["tenant_id"]; ok {
+	if tenantIDIfc, ok := config.Data["tenant_id"]; ok {
 		tenantID = tenantIDIfc.(string)
 	}
 	if tenantID == "" {
 		return fmt.Errorf(`unable to parse 'tenant_id' from %s`, configPath)
 	}
 
-	environment := ""
-	if environmentIfc, ok := secret.Data["environment"]; ok {
-		environment = environmentIfc.(string)
+	creds, err := azidentity.NewClientSecretCredential(
+		tenantID, clientID, clientSecret, &azidentity.ClientSecretCredentialOptions{})
+	if err != nil {
+		return err
 	}
 
-	// Let's, test the credentials before returning them.
-	vnetClient := network.NewVirtualNetworksClient(subscriptionID)
-	config := auth.NewClientCredentialsConfig(clientID, clientSecret, tenantID)
-	if environment != "" {
-		env, err := azure.EnvironmentFromName(environment)
+	clientOptions := &arm.ClientOptions{}
+	if e, ok := config.Data["environment"]; ok && e.(string) != "" {
+		env, err := azure.EnvironmentFromName(e.(string))
 		if err != nil {
 			return err
 		}
-		config.AADEndpoint = env.ActiveDirectoryEndpoint
+
+		switch env.Name {
+		case "AzureChinaCloud":
+			clientOptions.Endpoint = arm.AzureChina
+		case "AzureGovernmentCloud":
+			clientOptions.Endpoint = arm.AzureGovernment
+		case "AzureGermanCloud":
+			// AzureGermanCloud appears to have been removed,
+			// keeping this here to handle the case where the secret engine has
+			// been configured with this environment.
+			clientOptions.Endpoint = arm.Endpoint(env.ResourceManagerEndpoint)
+		}
 	}
-	authorizer, err := config.Authorizer()
-	if err != nil {
-		return nil
-	}
-	vnetClient.Authorizer = authorizer
 
-	credValidationTimeoutSecs := d.Get("max_cred_validation_seconds").(int)
-	sequentialSuccessesRequired := d.Get("num_sequential_successes").(int)
-	secBetweenTests := d.Get("num_seconds_between_tests").(int)
-
-	startTime := time.Now()
-	endTime := startTime.Add(time.Duration(credValidationTimeoutSecs) * time.Second)
-
-	// Please see this data source's documentation for an explanation of the
-	// default parameters used here and why they were selected.
-	sequentialSuccesses := 0
-	overallSuccess := false
+	providerClient := armresources.NewProvidersClient(subscriptionID, creds, clientOptions)
+	ctx := context.Background()
+	delay := time.Duration(d.Get("num_seconds_between_tests").(int)) * time.Second
+	endTime := time.Now().Add(
+		time.Duration(d.Get("max_cred_validation_seconds").(int)) * time.Second)
+	wantSuccessCount := d.Get("num_sequential_successes").(int)
+	var successCount int
 	for {
-		if time.Now().After(endTime) {
-			log.Printf("[DEBUG] giving up due to only having %d sequential successes and running out of time", sequentialSuccesses)
-			break
-		}
-		log.Printf("[DEBUG] %d sequential successes obtained, waiting %d seconds to next test client ID and secret", sequentialSuccesses, secBetweenTests)
-		time.Sleep(time.Duration(secBetweenTests) * time.Second)
+		pager := providerClient.List(&armresources.ProvidersClientListOptions{
+			Expand: pointerutil.StringPtr("metadata"),
+		})
 
-		// The request we provide here is immaterial because the client is only going to refresh the
-		// token it's using for calls.
-		if _, err := autorest.Prepare(&http.Request{}, vnetClient.WithAuthorization(), vnetClient.WithInspection()); err != nil {
-			// If the creds haven't propagated, we receive an error showing we failed to refresh token.
-			sequentialSuccesses = 0
-			continue
+		for pager.NextPage(ctx) {
+			pr := pager.PageResponse()
+			if pr.RawResponse.StatusCode == http.StatusUnauthorized {
+				return fmt.Errorf("validation failed, unauthorized credentials from Vault, err=%w", pager.Err())
+			}
+			log.Printf("[DEBUG] Provider Client List response %+v", pr)
 		}
-		// If the creds have propagated to the server where we're checking, we receive no error from the above Prepare call.
-		sequentialSuccesses++
-		if sequentialSuccesses == sequentialSuccessesRequired {
-			overallSuccess = true
-			break
+
+		if pager.Err() == nil {
+			successCount++
+			log.Printf("[DEBUG] Credential validation succeeded try %d/%d", successCount, wantSuccessCount)
+			if successCount >= wantSuccessCount {
+				break
+			}
+		} else {
+			if time.Now().After(endTime) {
+				return fmt.Errorf("validation failed, giving up err=%w", pager.Err())
+			}
+
+			log.Printf("[ERROR] Credential validation failed with %v, retrying in %s", pager.Err(), delay)
+			successCount = 0
 		}
+		time.Sleep(delay)
 	}
-	if !overallSuccess {
-		// We hit the maximum number of retries without ever getting the
-		// number of sequential successes we needed.
-		return fmt.Errorf("despite trying for %d seconds, %d seconds apart, we were never able to get %d successes in a row",
-			credValidationTimeoutSecs, secBetweenTests, sequentialSuccessesRequired)
-	}
+
 	return nil
 }

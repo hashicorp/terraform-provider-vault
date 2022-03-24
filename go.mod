@@ -3,9 +3,11 @@ module github.com/hashicorp/terraform-provider-vault
 go 1.16
 
 require (
-	github.com/Azure/azure-sdk-for-go v58.3.0+incompatible
-	github.com/Azure/go-autorest/autorest v0.11.21
-	github.com/Azure/go-autorest/autorest/azure/auth v0.5.8
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.22.0
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.13.2
+	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v0.3.1
+	github.com/Azure/go-autorest/autorest v0.11.24
+	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11 // indirect
 	github.com/aws/aws-sdk-go v1.41.8
 	github.com/containerd/containerd v1.5.9 // indirect
 	github.com/denisenkom/go-mssqldb v0.11.0

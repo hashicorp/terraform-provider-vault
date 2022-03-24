@@ -44,8 +44,8 @@ data "vault_azure_access_credentials" "creds" {
   role                        = "my-role"
   validate_creds              = true
   num_sequential_successes    = 8
-  num_seconds_between_tests   = 7
-  max_cred_validation_seconds = 1200 // 20 minutes
+  num_seconds_between_tests   = 1
+  max_cred_validation_seconds = 300 
 }
 
 provider "azure" {
@@ -75,7 +75,7 @@ credentials. Defaults to 8.
 
 * `num_seconds_between_tests` - (Optional) If 'validate_creds' is true, 
 the number of seconds to wait between each test of generated credentials.
-Defaults to 7.
+Defaults to 1.
 
 * `max_cred_validation_seconds` - (Optional) If 'validate_creds' is true, 
 the number of seconds after which to give up validating credentials. Defaults

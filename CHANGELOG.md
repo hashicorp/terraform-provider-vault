@@ -1,3 +1,7 @@
+## 3.4.0 (Unreleased)
+BUGS:
+* Add `data/azure_access_credentials` Fix credential validation ([#1381](https://github.com/terraform-providers/terraform-provider-vault/pull/1381)).
+
 ## 3.3.1 (February 25, 2022)
 BUGS:
 * `resource/identity_group`: Report an error upon duplicate resource creation failure. Document group name caveats. ([#1352](https://github.com/hashicorp/terraform-provider-vault/pull/1352))
