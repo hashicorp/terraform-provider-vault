@@ -104,6 +104,7 @@ func testAccGithubUserConfig_basic(backend string, user string, policies []strin
 resource "vault_github_auth_backend" "gh" {
 	path = "%s"
   	organization = "vault"
+	organization_id = 2999
 }
 
 resource "vault_github_user" "user" {
