@@ -14,13 +14,6 @@ for more information.
 ## Example Usage
 
 ```hcl
-resource "vault_identity_oidc_key" "test" {
-  name               = "default"
-  allowed_client_ids = ["*"]
-  rotation_period    = 3600
-  verification_ttl   = 3600
-}
-
 resource "vault_identity_oidc_assignment" "test" {
   name       = "my-assignment"
   entity_ids = ["ascbascas-2231a-sdfaa"]
@@ -30,7 +23,6 @@ resource "vault_identity_oidc_assignment" "test" {
 
 resource "vault_identity_oidc_client" "test" {
   name          = "my-app"
-  key           = vault_identity_oidc_key.default.name
   redirect_uris = [
     "http://127.0.0.1:9200/v1/auth-methods/oidc:authenticate:callback",
     "http://127.0.0.1:8251/callback",
@@ -50,8 +42,9 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the client.
 
-* `key` - (Required) A reference to a named key resource in Vault.
-  This cannot be modified after creation.
+* `key` - (Optional) A reference to a named key resource in Vault.
+  This cannot be modified after creation. If not provided, the `default`
+  key is used.
 
 * `redirect_uris` - (Optional) Redirection URI values used by the client. 
   One of these values must exactly match the `redirect_uri` parameter value

@@ -21,16 +21,8 @@ for more details.
 ## Example Usage
 
 ```hcl
-resource "vault_identity_oidc_key" "key" {
-  name               = "default"
-  allowed_client_ids = ["*"]
-  rotation_period    = 3600
-  verification_ttl   = 3600
-}
-
 resource "vault_identity_oidc_client" "app" {
   name          = "application"
-  key           = vault_identity_oidc_key.key.name
   redirect_uris = [
     "http://127.0.0.1:9200/v1/auth-methods/oidc:authenticate:callback",
     "http://127.0.0.1:8251/callback",
