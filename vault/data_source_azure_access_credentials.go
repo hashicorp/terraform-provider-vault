@@ -107,7 +107,6 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
 
-	configPath := backend + "/config"
 	credsPath := backend + "/creds/" + role
 
 	secret, err := client.Logical().Read(credsPath)
@@ -139,17 +138,35 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 		return nil
 	}
 
-	config, err := client.Logical().Read(configPath)
-	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+	configPath := backend + "/config"
+	// cache the config
+	var config *api.Secret
+	getConfigData := func() (map[string]interface{}, error) {
+		if config == nil {
+			c, err := client.Logical().Read(configPath)
+			if err != nil {
+				return nil, fmt.Errorf("error reading from Vault: %w", err)
+			}
+			if c == nil {
+				return nil, fmt.Errorf("config not found at %q", configPath)
+			}
+			config = c
+		}
+
+		return config.Data, nil
 	}
-	log.Printf("[DEBUG] Successfully read %q from Vault", configPath)
 
 	subscriptionID := ""
 	if v, ok := d.GetOk("subscription_id"); ok {
 		subscriptionID = v.(string)
-	} else if subscriptionIDIfc, ok := config.Data["subscription_id"]; ok {
-		subscriptionID = subscriptionIDIfc.(string)
+	} else {
+		data, err := getConfigData()
+		if err != nil {
+			return err
+		}
+		if v, ok := data["subscription_id"]; ok {
+			subscriptionID = v.(string)
+		}
 	}
 
 	if subscriptionID == "" {
@@ -159,8 +176,14 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	tenantID := ""
 	if v, ok := d.GetOk("tenant_id"); ok {
 		tenantID = v.(string)
-	} else if tenantIDIfc, ok := config.Data["tenant_id"]; ok {
-		tenantID = tenantIDIfc.(string)
+	} else {
+		data, err := getConfigData()
+		if err != nil {
+			return err
+		}
+		if v, ok := data["tenant_id"]; ok {
+			tenantID = v.(string)
+		}
 	}
 
 	if tenantID == "" {
