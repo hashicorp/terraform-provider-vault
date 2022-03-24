@@ -3,7 +3,6 @@ package vault
 import (
 	"fmt"
 	"log"
-	"net/url"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -29,32 +28,12 @@ func identityOIDCProviderResource() *schema.Resource {
 				Type:     schema.TypeString,
 				ForceNew: true,
 				Description: "Specifies what will be used as the 'scheme://host:port' component for the 'iss' claim of ID tokens." +
-					"This value is computed using the issuer_host and https_enabled schema fields.",
+					"This value is computed using the issuer_host and https_enabled fields.",
 				Computed: true,
-				// TODO confirm if this is needed
-				Optional: true,
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					oldURLParsed, err := url.Parse(old)
-					if err != nil {
-						return false
-					}
-
-					newURLParsed, err := url.Parse(new)
-					if err != nil {
-						return false
-					}
-
-					if oldURLParsed.Host == newURLParsed.Host &&
-						oldURLParsed.Scheme == newURLParsed.Scheme {
-						return true
-					}
-
-					return false
-				},
 			},
 			"https_enabled": {
 				Type:        schema.TypeBool,
-				Description: "Specifies whether the issuer host is on a https server.",
+				Description: "Set to true if the issuer endpoint uses HTTPS.",
 				Default:     true,
 				Optional:    true,
 			},
@@ -62,27 +41,6 @@ func identityOIDCProviderResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "The host for the issuer. Can be either host or host:port.",
 				Optional:    true,
-				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
-					value := v.(string)
-					if value != "" {
-						// prefix value with either 'https' or 'http' for URL parsing
-						// can use either since parsedUrl.Scheme is irrelevant here
-						parsedUrl, err := url.Parse(fmt.Sprintf("https://%s", value))
-						if err != nil {
-							errs = append(errs, err)
-						}
-
-						if parsedUrl.Path != "" {
-							errs = append(errs, fmt.Errorf("issuer_host cannot contain URL path"))
-						}
-
-						if parsedUrl.Host == "" {
-							errs = append(errs, fmt.Errorf("issuer_host must either be a host or host:port string"))
-						}
-					}
-
-					return nil, errs
-				},
 			},
 			"allowed_client_ids": {
 				Type: schema.TypeSet,
