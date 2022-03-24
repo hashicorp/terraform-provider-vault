@@ -44,12 +44,18 @@ resource "vault_identity_oidc_client" "test" {
 
 resource "vault_identity_oidc_scope" "test" {
   name        = "groups"
-  template    = "{\"groups\": {{identity.entity.groups.names}} }"
+  template    = jsonencode(
+  {
+    groups = "{{identity.entity.groups.names}}",
+  }
+  )
   description = "Groups scope."
 }
 
 resource "vault_identity_oidc_provider" "test" {
   name = "my-provider"
+  https_enabled = false
+  issuer_host = "127.0.0.1:8200"
   allowed_client_ids = [
     vault_identity_oidc_client.test.client_id
   ]
@@ -65,9 +71,9 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the provider.
 
-* `issuer` - (Required) Specifies what will be used as the `scheme://host:port`
-  component for the `iss` claim of ID tokens. If provided explicitly, it must 
-  point to a Vault instance that is network reachable by clients for ID token validation.
+* `https_enabled` - (Optional) Set to true if the issuer endpoint uses HTTPS.
+
+* `issuer_host` - (Optional) The host for the issuer. Can be either host or host:port.
 
 * `allowed_client_ids` - (Optional) The client IDs that are permitted to use the provider. 
   If empty, no clients are allowed. If `*`, all clients are allowed.
@@ -76,7 +82,11 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+In addition to the arguments above, the following attributes are exported:
+
+* `issuer` - (Required) Specifies what will be used as the `scheme://host:port`
+  component for the `iss` claim of ID tokens. This value is computed using the 
+  `issuer_host` and `https_enabled` fields.
 
 ## Import
 
