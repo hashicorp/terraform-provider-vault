@@ -120,8 +120,7 @@ func testAccGithubTeamConfig_basic(backend string, team string, policies []strin
 	return fmt.Sprintf(`
 resource "vault_github_auth_backend" "gh" {
 	path = "%s"
-  	organization = "vault"
-	organization_id = 2999
+	organization = "hashicorp"
 }
 
 resource "vault_github_team" "team" {
