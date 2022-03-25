@@ -206,9 +206,8 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 
 	data, err := getConfigData()
 
-	//Will attempt to read the environment from the Azure Secrets config in Vault, unless it doesn't have permission of it has been explicitly overridden.
 	if err != nil || data["environment"] != "public" {
-		log.Printf("[DEBUG] Unable to query Azure Environment from Vault Configuration, using local definition.")
+		log.Printf("[DEBUG] Unable to query Azure Environment from Vault backend.")
 		if v, ok := data["environment"]; ok {
 			environment = v.(string)
 			switch environment {
