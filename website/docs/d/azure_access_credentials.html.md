@@ -86,6 +86,8 @@ to 300.
 
 * `tenant_id` - (Optional) The tenant ID to use during credential validation.
    Defaults to the tenant ID configured in the Vault `backend`.
+   
+* `environment` - (Optional) The Cloud Environment which should be used. Possible values are public, usgovernment, and china. Defaults to the environment configured in the Vault `backend`, otherwise public.
 
 ## Attributes Reference
 
