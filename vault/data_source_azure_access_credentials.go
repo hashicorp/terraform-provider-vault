@@ -97,6 +97,12 @@ func azureAccessCredentialsDataSource() *schema.Resource {
 				Description: "The tenant ID to use during credential validation. " +
 					"Defaults to the tenant ID configured in the Vault backend",
 			},
+			"environment": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "public",
+				Description: "The Cloud Environment which should be used. Possible values are public, usgovernment, and china. Defaults to public. ",
+			},
 		},
 	}
 }
@@ -195,9 +201,24 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	if err != nil {
 		return err
 	}
-
 	clientOptions := &arm.ClientOptions{}
-	if e, ok := config.Data["environment"]; ok && e.(string) != "" {
+	environment := ""
+
+	data, err := getConfigData()
+
+	//Will attempt to read the environment from the Azure Secrets config in Vault, unless it doesn't have permission of it has been explicitly overridden.
+	if err != nil || data["environment"] != "public" {
+		log.Printf("[DEBUG] Unable to query Azure Environment from Vault Configuration, using local definition.")
+		if v, ok := data["environment"]; ok {
+			environment = v.(string)
+			switch environment {
+			case "china":
+				clientOptions.Endpoint = arm.AzureChina
+			case "usgovernment":
+				clientOptions.Endpoint = arm.AzureGovernment
+			}
+		}
+	} else if e, ok := config.Data["environment"]; ok && e.(string) != "" {
 		env, err := azure.EnvironmentFromName(e.(string))
 		if err != nil {
 			return err
