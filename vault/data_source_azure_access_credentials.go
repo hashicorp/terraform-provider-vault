@@ -101,7 +101,7 @@ func azureAccessCredentialsDataSource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "public",
-				Description: "The Cloud Environment which should be used. Possible values are public, usgovernment, and china. Defaults to public. ",
+				Description: "The Cloud Environment which should be used. Possible values are public, usgovernment, and china. Defaults to the environment configured in the Vault `backend`, otherwise public.",
 			},
 		},
 	}
