@@ -1,3 +1,8 @@
+## 3.4.1 (Unreleased)
+BUGS:
+* `data/azure_access_credentials`: Fix panic when `tenant_id` and `subscription_id` are specified together; add new `environment` override field
+  ([#1391](https://github.com/terraform-providers/terraform-provider-vault/pull/1391)).
+
 ## 3.4.0 (March 24, 2022)
 FEATURES:
 * `data/azure_access_credentials` Add `subscription_id` and `tenant_id` fields to used during credential validation ([#1384](https://github.com/terraform-providers/terraform-provider-vault/pull/1384)).

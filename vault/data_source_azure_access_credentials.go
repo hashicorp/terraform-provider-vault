@@ -97,6 +97,13 @@ func azureAccessCredentialsDataSource() *schema.Resource {
 				Description: "The tenant ID to use during credential validation. " +
 					"Defaults to the tenant ID configured in the Vault backend",
 			},
+			"environment": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: `The Azure environment to use during credential validation.
+Defaults to the environment configured in the Vault backend.
+Some possible values: AzurePublicCloud, AzureGovernmentCloud`,
+			},
 		},
 	}
 }
@@ -197,13 +204,28 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	}
 
 	clientOptions := &arm.ClientOptions{}
-	if e, ok := config.Data["environment"]; ok && e.(string) != "" {
-		env, err := azure.EnvironmentFromName(e.(string))
+	var e string
+	if v, ok := d.GetOk("environment"); ok {
+		e = v.(string)
+	} else {
+		data, err := getConfigData()
+		if err != nil {
+			return err
+		}
+		if v, ok := data["environment"]; ok && v.(string) != "" {
+			e = v.(string)
+		}
+	}
+
+	if e != "" {
+		env, err := azure.EnvironmentFromName(e)
 		if err != nil {
 			return err
 		}
 
 		switch env.Name {
+		case "AzurePublicCloud":
+			clientOptions.Endpoint = arm.AzurePublicCloud
 		case "AzureChinaCloud":
 			clientOptions.Endpoint = arm.AzureChina
 		case "AzureGovernmentCloud":
@@ -233,7 +255,7 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 			if pr.RawResponse.StatusCode == http.StatusUnauthorized {
 				return fmt.Errorf("validation failed, unauthorized credentials from Vault, err=%w", pager.Err())
 			}
-			log.Printf("[DEBUG] Provider Client List response %+v", pr)
+			log.Printf("[DEBUG] Provider Client List response %+v", pr.RawResponse)
 		}
 
 		if pager.Err() == nil {
@@ -247,7 +269,7 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 				return fmt.Errorf("validation failed, giving up err=%w", pager.Err())
 			}
 
-			log.Printf("[ERROR] Credential validation failed with %v, retrying in %s", pager.Err(), delay)
+			log.Printf("[WARN] Credential validation failed with %v, retrying in %s", pager.Err(), delay)
 			successCount = 0
 		}
 		time.Sleep(delay)

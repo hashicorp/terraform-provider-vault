@@ -87,6 +87,10 @@ to 300.
 * `tenant_id` - (Optional) The tenant ID to use during credential validation.
    Defaults to the tenant ID configured in the Vault `backend`.
 
+* `environment` - (Optional) The Azure environment to use during credential validation.
+  Defaults to the environment configured in the Vault backend.
+  Some possible values: `AzurePublicCloud`, `AzureGovernmentCloud`
+
 ## Attributes Reference
 
 In addition to the arguments above, the following attributes are exported:
