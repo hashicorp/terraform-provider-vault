@@ -169,7 +169,10 @@ variables in order to keep credential information out of the configuration.
   related operations. Defaults to `10` retries and may also be set via the
   `VAULT_MAX_RETRIES_CCC` environment variable. See
   [Vault Eventual Consistency](https://www.vaultproject.io/docs/enterprise/consistency#vault-eventual-consistency)
-  for more information.
+  for more information.   
+  *As of Vault Enterprise 1.10 changing this parameter should no longer be required
+  See [Vault Eventual Consistency - Vault 1.10 Mitigations](https://www.vaultproject.io/docs/enterprise/consistency#vault-1-10-mitigations)
+  for more information.*
 
 * `namespace` - (Optional) Set the namespace to use. May be set via the
   `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
