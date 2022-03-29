@@ -69,4 +69,4 @@ jobs:
       uses: atlassian/gajira-transition@v2.0.1
       with:
         issue: ${{ steps.search.outputs.issue }}
-        transition: "Pending Triage"
+        transition: "Re-Triage"
