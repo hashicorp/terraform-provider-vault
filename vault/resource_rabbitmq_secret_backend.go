@@ -35,6 +35,7 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				ForceNew:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
 			"default_lease_ttl_seconds": {
@@ -53,17 +54,20 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 			"connection_uri": {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Description: "Specifies the RabbitMQ connection URI.",
 			},
 			"username": {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Sensitive:   true,
 				Description: "Specifies the RabbitMQ management administrator username",
 			},
 			"password": {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Sensitive:   true,
 				Description: "Specifies the RabbitMQ management administrator password",
 			},
