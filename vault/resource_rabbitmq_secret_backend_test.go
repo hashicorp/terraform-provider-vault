@@ -57,6 +57,37 @@ func TestAccRabbitMQSecretBackend_basic(t *testing.T) {
 	})
 }
 
+func TestAccRabbitMQSecretBackend_template(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
+	resourceName := "vault_rabbitmq_secret_backend.test"
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testAccRabbitMQSecretBackendCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRabbitMQSecretBackendTemplateConfig(path, connectionUri, username, password, path, path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "connection_uri", connectionUri),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "password", password),
+					resource.TestCheckResourceAttr(resourceName, "password_policy", path),
+					resource.TestCheckResourceAttr(resourceName, "username_template", path),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				// the API can't serve these fields, so ignore them
+				ImportStateVerifyIgnore: []string{"connection_uri", "username", "password", "verify_connection"},
+			},
+		},
+	})
+}
+
 func testAccRabbitMQSecretBackendCheckDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 
@@ -104,4 +135,16 @@ resource "vault_rabbitmq_secret_backend" "test" {
   username = "%s"
   password = "%s"
 }`, path, connectionUri, username, password)
+}
+
+func testAccRabbitMQSecretBackendTemplateConfig(path, connectionUri, username, password, uTemplate, passPolicy string) string {
+	return fmt.Sprintf(`
+resource "vault_rabbitmq_secret_backend" "test" {
+  path              = "%s"
+  connection_uri    = "%s"
+  username          = "%s"
+  password          = "%s"
+  username_template = "%s"
+  password_policy   = "%s"
+}`, path, connectionUri, username, password, uTemplate, passPolicy)
 }
