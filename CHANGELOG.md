@@ -17,7 +17,8 @@ IMPROVEMENTS:
 * `resource/transit_secret_backend_key`: Add `auto_rotate_interval` parameter support to Transit Key Backend ([#1345](https://github.com/hashicorp/terraform-provider-vault/pull/1345))
 * `resource/consul_secret_backend_role`: Add support for Consul role ([#1366](https://github.com/hashicorp/terraform-provider-vault/pull/1366))
 * `resource/consul_secret_backend_role`: Add support for Consul namespaces and partitions ([#1367](https://github.com/hashicorp/terraform-provider-vault/pull/1367))
-* `resource/github_auth_backend`: Add support for `organization_id field` ([#1296](https://github.com/hashicorp/terraform-provider-vault/pull/1296))
+* `resource/github_auth_backend`: Add support for `organization_id` field ([#1296](https://github.com/hashicorp/terraform-provider-vault/pull/1296))
+* `resource/approle_auth_backend_role_secret_id`: Add `with_wrapped_accessor` to control how the resource ID is set ([#1166](https://github.com/hashicorp/terraform-provider-vault/pull/1166))
 
 ## 3.3.1 (February 25, 2022)
 BUGS:
