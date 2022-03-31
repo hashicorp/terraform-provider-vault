@@ -42,6 +42,46 @@ func mfaPingIDResource() *schema.Resource {
 				Required:    true,
 				Description: "A base64-encoded third-party settings file retrieved from PingID's configuration page.",
 			},
+			"idp_url": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "IDP URL computed by Vault.",
+			},
+			"admin_url": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Admin URL computed by Vault.",
+			},
+			"authenticator_url": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Authenticator URL computed by Vault.",
+			},
+			"org_alias": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Org Alias computed by Vault.",
+			},
+			"id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID computed by Vault.",
+			},
+			"namespace_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Namespace ID computed by Vault.",
+			},
+			"type": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Type of configuration computed by Vault.",
+			},
+			"use_signature": {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Description: "If set, enables use of PingID signature. Computed by Vault",
+			},
 		},
 	}
 }
@@ -95,8 +135,10 @@ func mfaPingIDRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	fields := []string{
-		"name", "mount_accessor", "username_format",
-		"settings_file_base64",
+		"name", "idp_url", "admin_url",
+		"authenticator_url", "org_alias", "type",
+		"use_signature", "id", "namespace_id",
+		// "mount_accessor", "username_format", "settings_file_base64",
 	}
 
 	for _, k := range fields {
