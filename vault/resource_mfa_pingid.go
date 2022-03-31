@@ -97,6 +97,7 @@ func mfaPingIDRequestData(d *schema.ResourceData) map[string]interface{} {
 	// TODO confirm expected behavior
 	fields := []string{
 		"name", "mount_accessor", "settings_file_base64",
+		"username_format",
 	}
 
 	for _, k := range fields {

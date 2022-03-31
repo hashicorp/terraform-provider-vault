@@ -24,6 +24,7 @@ func TestMFAPingIDBasic(t *testing.T) {
 				Config: testMFAPingIDConfig(mfaPingIDPath, settingsFile),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", mfaPingIDPath),
+					resource.TestCheckResourceAttr(resourceName, "username_format", "user@example.com"),
 					resource.TestCheckResourceAttr(resourceName, "type", "pingid"),
 					resource.TestCheckResourceAttr(resourceName, "use_signature", "true"),
 					resource.TestCheckResourceAttr(resourceName, "namespace_id", ""),
