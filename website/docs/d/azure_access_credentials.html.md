@@ -54,6 +54,12 @@ provider "azure" {
 }
 ```
 
+## Caveats
+
+The `validate_creds` option requires read-access to the `backend` config endpoint.
+If the effective Vault role does not have the required permissions then valid values 
+are required to be set for: `subscription_id`, `tenant_id`, `environment`.
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -82,14 +88,17 @@ the number of seconds after which to give up validating credentials. Defaults
 to 300.
 
 * `subscription_id` - (Optional) The subscription ID to use during credential
-  validation. Defaults to the subscription ID configured in the Vault `backend`.
+  validation. Defaults to the subscription ID configured in the Vault `backend`.  
+  *See the [caveats](#caveats) section for more information on this field.*
 
 * `tenant_id` - (Optional) The tenant ID to use during credential validation.
-   Defaults to the tenant ID configured in the Vault `backend`.
+  Defaults to the tenant ID configured in the Vault `backend`.  
+  *See the [caveats](#caveats) section for more information on this field.*
 
 * `environment` - (Optional) The Azure environment to use during credential validation.
   Defaults to the environment configured in the Vault backend.
-  Some possible values: `AzurePublicCloud`, `AzureGovernmentCloud`
+  Some possible values: `AzurePublicCloud`, `AzureGovernmentCloud`  
+  *See the [caveats](#caveats) section for more information on this field.*
 
 ## Attributes Reference
 
