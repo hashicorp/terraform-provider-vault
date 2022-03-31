@@ -3,9 +3,13 @@ BUGS:
 * `data/azure_access_credentials`: Fix panic when `tenant_id` and `subscription_id` are specified together; add new `environment` override field
   ([#1391](https://github.com/terraform-providers/terraform-provider-vault/pull/1391)).
 
+IMPROVEMENTS:
+* `resource/rabbitmq_secret_backend`: Add support for the `password_policy` and `username_template` fields
+  ([#1276](https://github.com/terraform-providers/terraform-provider-vault/pull/1276))
+
 ## 3.4.0 (March 24, 2022)
 FEATURES:
-* `data/azure_access_credentials` Add `subscription_id` and `tenant_id` fields to used during credential validation ([#1384](https://github.com/terraform-providers/terraform-provider-vault/pull/1384)).
+* `data/azure_access_credentials` Add `subscription_id` and `tenant_id` fields to used during credential validation ([#1384](https://github.com/terraform-providers/terraform-provider-vault/pull/1384))
 * Add OIDC Provider support: new resources `vault_identity_oidc_scope`, `vault_identity_oidc_assignment`, `vault_identity_oidc_client` 
  , `vault_identity_oidc_provider`, `vault_identity_oidc_public_keys`, `vault_identity_oidc_openid_config` ([#1363](https://github.com/hashicorp/terraform-provider-vault/pull/1363))
 
