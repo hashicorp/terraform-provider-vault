@@ -135,11 +135,22 @@ func mfaPingIDRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading from Vault at %s, err=%w", path, err)
 	}
 
+	if err := d.Set("mount_accessor", d.Get("mount_accessor")); err != nil {
+		return err
+	}
+
+	if err := d.Set("username_format", d.Get("username_format")); err != nil {
+		return err
+	}
+
+	if err := d.Set("settings_file_base64", d.Get("settings_file_base64")); err != nil {
+		return err
+	}
+
 	fields := []string{
 		"name", "idp_url", "admin_url",
 		"authenticator_url", "org_alias", "type",
 		"use_signature", "id", "namespace_id",
-		// "mount_accessor", "username_format", "settings_file_base64",
 	}
 
 	for _, k := range fields {
