@@ -11,7 +11,7 @@ import (
 )
 
 func TestMFAPingIDBasic(t *testing.T) {
-	mfaPingIDPath := acctest.RandomWithPrefix("mfa-pingid")
+	path := acctest.RandomWithPrefix("mfa-pingid")
 	// Base64 Encoded string taken from Vault repo example
 	settingsFile := "I0F1dG8tR2VuZXJhdGVkIGZyb20gUGluZ09uZSwgZG93bmxvYWRlZCBieSBpZD1bU1NPXSBlbWFpbD1baGFtaWRAaGFzaGljb3JwLmNvbV0KI1dlZCBEZWMgMTUgMTM6MDg6NDQgTVNUIDIwMjEKdXNlX2Jhc2U2NF9rZXk9YlhrdGMyVmpjbVYwTFd0bGVRPT0KdXNlX3NpZ25hdHVyZT10cnVlCnRva2VuPWxvbC10b2tlbgppZHBfdXJsPWh0dHBzOi8vaWRweG55bDNtLnBpbmdpZGVudGl0eS5jb20vcGluZ2lkCm9yZ19hbGlhcz1sb2wtb3JnLWFsaWFzCmFkbWluX3VybD1odHRwczovL2lkcHhueWwzbS5waW5naWRlbnRpdHkuY29tL3BpbmdpZAphdXRoZW50aWNhdG9yX3VybD1odHRwczovL2F1dGhlbnRpY2F0b3IucGluZ29uZS5jb20vcGluZ2lkL3BwbQ=="
 	resourceName := "vault_mfa_pingid.test"
@@ -21,22 +21,26 @@ func TestMFAPingIDBasic(t *testing.T) {
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testMFAPingIDConfig(mfaPingIDPath, settingsFile),
+				Config: testMFAPingIDConfig(path, settingsFile),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", mfaPingIDPath),
+					resource.TestCheckResourceAttr(resourceName, "name", path),
 					resource.TestCheckResourceAttr(resourceName, "username_format", "user@example.com"),
 					resource.TestCheckResourceAttr(resourceName, "type", "pingid"),
 					resource.TestCheckResourceAttr(resourceName, "use_signature", "true"),
 					resource.TestCheckResourceAttr(resourceName, "namespace_id", ""),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"mount_accessor", "username_format", "settings_file_base64"},
+			},
 		},
 	})
 }
 
 func testMFAPingIDConfig(path, file string) string {
-	userPassPath := acctest.RandomWithPrefix("userpass")
-
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "userpass" {
   type = "userpass"
@@ -49,5 +53,5 @@ resource "vault_mfa_pingid" "test" {
   username_format       = "user@example.com"
   settings_file_base64	= %q
 }
-`, userPassPath, path, file)
+`, acctest.RandomWithPrefix("userpass"), path, file)
 }

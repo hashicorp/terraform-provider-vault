@@ -11,7 +11,7 @@ import (
 )
 
 func TestMFAOktaBasic(t *testing.T) {
-	mfaOktaPath := acctest.RandomWithPrefix("mfa-okta")
+	path := acctest.RandomWithPrefix("mfa-okta")
 	resourceName := "vault_mfa_okta.test"
 
 	resource.Test(t, resource.TestCase{
@@ -19,20 +19,24 @@ func TestMFAOktaBasic(t *testing.T) {
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testMFAOktaConfig(mfaOktaPath),
+				Config: testMFAOktaConfig(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", mfaOktaPath),
+					resource.TestCheckResourceAttr(resourceName, "name", path),
 					resource.TestCheckResourceAttr(resourceName, "username_format", "user@example.com"),
 					resource.TestCheckResourceAttr(resourceName, "org_name", "hashicorp"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"api_token"},
 			},
 		},
 	})
 }
 
 func testMFAOktaConfig(path string) string {
-	userPassPath := acctest.RandomWithPrefix("userpass")
-
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "userpass" {
   type = "userpass"
@@ -46,5 +50,5 @@ resource "vault_mfa_okta" "test" {
   org_name				= "hashicorp"
   api_token				= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
 }
-`, userPassPath, path)
+`, acctest.RandomWithPrefix("userpass"), path)
 }

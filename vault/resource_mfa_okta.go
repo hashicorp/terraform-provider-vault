@@ -27,9 +27,10 @@ func mfaOktaResource() *schema.Resource {
 				ValidateFunc: validateNoTrailingSlash,
 			},
 			"mount_accessor": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The mount to tie this method to for use in automatic mappings. The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.",
+				Type:     schema.TypeString,
+				Required: true,
+				Description: "The mount to tie this method to for use in automatic mappings. " +
+					"The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.",
 			},
 			"username_format": {
 				Type:        schema.TypeString,
@@ -70,16 +71,16 @@ func mfaOktaPath(name string) string {
 func mfaOktaRequestData(d *schema.ResourceData) map[string]interface{} {
 	data := map[string]interface{}{}
 
-	nonBooleanAPIFields := []string{
-		"name", "mount_accessor", "username_format",
-		"org_name", "api_token", "base_url",
-	}
-
 	if v, ok := d.GetOkExists("primary_email"); ok {
-		data["primary_email"] = v.(string)
+		data["primary_email"] = v.(bool)
 	}
 
-	for _, k := range nonBooleanAPIFields {
+	fields := []string{
+		"name", "api_token", "mount_accessor",
+		"username_format", "org_name", "base_url",
+	}
+
+	for _, k := range fields {
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v
 		}
