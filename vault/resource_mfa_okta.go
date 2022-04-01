@@ -58,7 +58,7 @@ func mfaOktaResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
-				Description: "If set, the username will only match the primary email for the account.",
+				Description: "If set to true, the username will only match the primary email for the account.",
 			},
 		},
 	}
