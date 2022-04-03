@@ -82,7 +82,6 @@ $ terraform import vault_auth_backend.example github
 
 Refer to the following tutorials for additional usage examples:
 
-- [Codify Management of Vault Enterprise Using
-Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-enterprise)
+- [Codify Management of Vault Enterprise Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-enterprise)
 
 - [Codify Management of Vault Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-oss)

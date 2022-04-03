@@ -497,9 +497,7 @@ vault_team_policy
 
 ## Tutorials 
 
-Refer to the [Codify Management of Vault Enterprise Using
-Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-enterprise)
-tutorial for additional examples using Vault namespaces.
+Refer to the [Codify Management of Vault Enterprise Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-enterprise) tutorial for additional examples using Vault namespaces.
 
 
 [namespaces]: https://www.vaultproject.io/docs/enterprise/namespaces#vault-enterprise-namespaces
