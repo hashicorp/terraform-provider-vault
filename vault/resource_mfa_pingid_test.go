@@ -29,6 +29,7 @@ func TestMFAPingIDBasic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "use_signature", "true"),
 					resource.TestCheckResourceAttr(resourceName, "namespace_id", ""),
 					resource.TestCheckResourceAttr(resourceName, "settings_file_base64", settingsFile),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
 			{

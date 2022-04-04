@@ -12,7 +12,7 @@ import (
 func mfaTOTPResource() *schema.Resource {
 	return &schema.Resource{
 		Create: mfaTOTPWrite,
-		Update: mfaTOTPWrite,
+		Update: mfaTOTPUpdate,
 		Delete: mfaTOTPDelete,
 		Read:   mfaTOTPRead,
 		Importer: &schema.ResourceImporter{
@@ -23,52 +23,66 @@ func mfaTOTPResource() *schema.Resource {
 			"name": {
 				Type:         schema.TypeString,
 				Required:     true,
+				ForceNew:     true,
 				Description:  "Name of the MFA method.",
 				ValidateFunc: validateNoTrailingSlash,
 			},
 			"issuer": {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Description: "The name of the key's issuing organization.",
 			},
 			"period": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Computed:    true,
+				Default:     30,
+				ForceNew:    true,
 				Description: "The length of time used to generate a counter for the TOTP token calculation.",
 			},
 			"key_size": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Computed:    true,
+				Default:     20,
+				ForceNew:    true,
 				Description: "Specifies the size in bytes of the generated key.",
 			},
 			"qr_size": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Computed:    true,
+				Default:     200,
+				ForceNew:    true,
 				Description: "The pixel size of the generated square QR code.",
 			},
 			"algorithm": {
 				Type:     schema.TypeString,
 				Optional: true,
-				Computed: true,
+				Default:  "SHA1",
+				ForceNew: true,
 				Description: "Specifies the hashing algorithm used to generate the TOTP code. " +
 					"Options include 'SHA1', 'SHA256' and 'SHA512'.",
 			},
 			"digits": {
 				Type:     schema.TypeInt,
 				Optional: true,
-				Computed: true,
+				Default:  6,
+				ForceNew: true,
 				Description: "The number of digits in the generated TOTP token. " +
 					"This value can either be 6 or 8.",
 			},
 			"skew": {
 				Type:     schema.TypeInt,
 				Optional: true,
-				Computed: true,
+				Default:  1,
+				ForceNew: true,
 				Description: "The number of delay periods that are allowed when validating a TOTP token. " +
 					"This value can either be 0 or 1.",
+			},
+			"id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Optional:    true,
+				Description: "ID computed by Vault.",
 			},
 		},
 	}
@@ -107,14 +121,15 @@ func mfaTOTPWrite(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error writing to Vault at %s, err=%w", path, err)
 	}
 
-	d.SetId(path)
+	d.SetId(name)
 
 	return mfaTOTPRead(d, meta)
 }
 
 func mfaTOTPRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	path := d.Id()
+	name := d.Id()
+	path := mfaTOTPPath(name)
 
 	log.Printf("[DEBUG] Reading MFA TOTP config %q", path)
 	resp, err := client.Logical().Read(path)
@@ -125,7 +140,7 @@ func mfaTOTPRead(d *schema.ResourceData, meta interface{}) error {
 	fields := []string{
 		"name", "issuer", "period",
 		"key_size", "qr_size", "algorithm",
-		"digits", "skew",
+		"digits", "skew", "id",
 	}
 
 	for _, k := range fields {
@@ -137,9 +152,13 @@ func mfaTOTPRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
+func mfaTOTPUpdate(d *schema.ResourceData, meta interface{}) error {
+	return nil
+}
+
 func mfaTOTPDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	path := d.Id()
+	path := mfaTOTPPath(d.Id())
 
 	log.Printf("[DEBUG] Deleting mfaTOTP %s from Vault", path)
 

@@ -12,7 +12,7 @@ import (
 func mfaPingIDResource() *schema.Resource {
 	return &schema.Resource{
 		Create: mfaPingIDWrite,
-		Update: mfaPingIDWrite,
+		Update: mfaPingIDUpdate,
 		Delete: mfaPingIDDelete,
 		Read:   mfaPingIDRead,
 		Importer: &schema.ResourceImporter{
@@ -24,22 +24,26 @@ func mfaPingIDResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Name of the MFA method.",
+				ForceNew:     true,
 				ValidateFunc: validateNoTrailingSlash,
 			},
 			"mount_accessor": {
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 				Description: "The mount to tie this method to for use in automatic mappings. " +
 					"The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.",
 			},
 			"username_format": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				ForceNew:    true,
 				Description: "A format string for mapping Identity names to MFA method names. Values to substitute should be placed in `{{}}`.",
 			},
 			"settings_file_base64": {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Description: "A base64-encoded third-party settings file retrieved from PingID's configuration page.",
 			},
 			"idp_url": {
@@ -65,6 +69,7 @@ func mfaPingIDResource() *schema.Resource {
 			"id": {
 				Type:        schema.TypeString,
 				Computed:    true,
+				Optional:    true,
 				Description: "ID computed by Vault.",
 			},
 			"namespace_id": {
@@ -93,8 +98,6 @@ func mfaPingIDPath(name string) string {
 func mfaPingIDRequestData(d *schema.ResourceData) map[string]interface{} {
 	data := map[string]interface{}{}
 
-	// Read does not return any API Fields listed in docs
-	// TODO confirm expected behavior
 	fields := []string{
 		"name", "mount_accessor", "settings_file_base64",
 		"username_format",
@@ -120,14 +123,14 @@ func mfaPingIDWrite(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error writing to Vault at %s, err=%w", path, err)
 	}
 
-	d.SetId(path)
+	d.SetId(name)
 
 	return mfaPingIDRead(d, meta)
 }
 
 func mfaPingIDRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	path := d.Id()
+	path := mfaPingIDPath(d.Id())
 
 	log.Printf("[DEBUG] Reading MFA PingID config %q", path)
 	resp, err := client.Logical().Read(path)
@@ -162,9 +165,13 @@ func mfaPingIDRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
+func mfaPingIDUpdate(d *schema.ResourceData, meta interface{}) error {
+	return nil
+}
+
 func mfaPingIDDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	path := d.Id()
+	path := mfaPingIDPath(d.Id())
 
 	log.Printf("[DEBUG] Deleting mfaPingID %s from Vault", path)
 

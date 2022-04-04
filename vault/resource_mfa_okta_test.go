@@ -24,6 +24,7 @@ func TestMFAOktaBasic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", path),
 					resource.TestCheckResourceAttr(resourceName, "username_format", "user@example.com"),
 					resource.TestCheckResourceAttr(resourceName, "org_name", "hashicorp"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
 			{

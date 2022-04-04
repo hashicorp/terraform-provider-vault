@@ -12,7 +12,7 @@ import (
 func mfaOktaResource() *schema.Resource {
 	return &schema.Resource{
 		Create: mfaOktaWrite,
-		Update: mfaOktaWrite,
+		Update: mfaOktaUpdate,
 		Delete: mfaOktaDelete,
 		Read:   mfaOktaRead,
 		Importer: &schema.ResourceImporter{
@@ -23,42 +23,55 @@ func mfaOktaResource() *schema.Resource {
 			"name": {
 				Type:         schema.TypeString,
 				Required:     true,
+				ForceNew:     true,
 				Description:  "Name of the MFA method.",
 				ValidateFunc: validateNoTrailingSlash,
 			},
 			"mount_accessor": {
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 				Description: "The mount to tie this method to for use in automatic mappings. " +
 					"The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.",
 			},
 			"username_format": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				ForceNew:    true,
 				Description: "A format string for mapping Identity names to MFA method names. Values to substitute should be placed in `{{}}`.",
 			},
 			"org_name": {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Description: "Name of the organization to be used in the Okta API.",
 			},
 			"api_token": {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Sensitive:   true,
 				Description: "Okta API key.",
 			},
 			"base_url": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Computed:    true,
+				Default:     "okta.com",
+				ForceNew:    true,
 				Description: "If set, will be used as the base domain for API requests.",
 			},
 			"primary_email": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Computed:    true,
+				Default:     false,
+				ForceNew:    true,
 				Description: "If set to true, the username will only match the primary email for the account.",
+			},
+			"id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Optional:    true,
+				Description: "ID computed by Vault.",
 			},
 		},
 	}
@@ -100,14 +113,14 @@ func mfaOktaWrite(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error writing to Vault at %s, err=%w", path, err)
 	}
 
-	d.SetId(path)
+	d.SetId(name)
 
 	return mfaOktaRead(d, meta)
 }
 
 func mfaOktaRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	path := d.Id()
+	path := mfaOktaPath(d.Id())
 
 	log.Printf("[DEBUG] Reading MFA Okta config %q", path)
 	resp, err := client.Logical().Read(path)
@@ -118,6 +131,7 @@ func mfaOktaRead(d *schema.ResourceData, meta interface{}) error {
 	fields := []string{
 		"name", "mount_accessor", "username_format",
 		"org_name", "base_url", "primary_email",
+		"id",
 	}
 
 	for _, k := range fields {
@@ -129,9 +143,13 @@ func mfaOktaRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
+func mfaOktaUpdate(d *schema.ResourceData, meta interface{}) error {
+	return nil
+}
+
 func mfaOktaDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-	path := d.Id()
+	path := mfaOktaPath(d.Id())
 
 	log.Printf("[DEBUG] Deleting mfaOkta %s from Vault", path)
 
