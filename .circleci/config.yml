@@ -56,9 +56,7 @@ jobs:
             export MONGODB_URL="mongodb://root:mongodb@127.0.0.1:27017/admin?ssl=false"
             export MSSQL_URL="sqlserver://sa:yourStrong1000Password@127.0.0.1:1433"
             # This will be removed after VAULT-4324 is fixed
-            export SKIP_RAFT_TESTS='true'
-            export SKIP_VAULT_NEXT_TESTS='true'
-            make testacc TESTARGS='-v'
+            make testacc TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
       - run:
           name: "Run Build"
           command: |

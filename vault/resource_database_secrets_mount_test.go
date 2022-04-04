@@ -46,7 +46,7 @@ func TestAccDatabaseSecretsMount_mssql(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretsMountCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretsMount_mssql(name, backend, pluginName, parsedURL, false),
+				Config: testAccDatabaseSecretsMount_mssql(name, backend, pluginName, parsedURL),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourcePath, "mssql.#", "1"),
 					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.#", "2"),
@@ -78,7 +78,7 @@ func TestAccDatabaseSecretsMount_mssql(t *testing.T) {
 						t.Fatal("empty response")
 					}
 				},
-				Config: testAccDatabaseSecretsMount_mssql(name2, backend, pluginName, parsedURL, false),
+				Config: testAccDatabaseSecretsMount_mssql(name2, backend, pluginName, parsedURL),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourcePath, "mssql.#", "1"),
 					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.#", "2"),
@@ -104,6 +104,7 @@ func TestAccDatabaseSecretsMount_mssql(t *testing.T) {
 }
 
 func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
+	testutil.SkipTestEnvSet(t, "SKIP_MSSQL_MULTI_CI")
 	MaybeSkipDBTests(t, dbEngineMSSQL)
 
 	cleanupFunc, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
@@ -145,7 +146,7 @@ func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretsMountCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretsMount_mssql_dual(name, name2, backend, pluginName, parsedURL, parsedURL2, false),
+				Config: testAccDatabaseSecretsMount_mssql_dual(name, name2, backend, pluginName, parsedURL, parsedURL2),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourcePath, "mssql.#", "2"),
 					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.#", "1"),
@@ -180,7 +181,7 @@ func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
 						}
 					}
 				},
-				Config: testAccDatabaseSecretsMount_mssql_dual(name, name2, backend, pluginName, parsedURL, parsedURL2, false),
+				Config: testAccDatabaseSecretsMount_mssql_dual(name, name2, backend, pluginName, parsedURL, parsedURL2),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourcePath, "mssql.#", "2"),
 					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.#", "1"),
@@ -208,7 +209,7 @@ func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
 				ImportStateVerifyIgnore: importIgnoreKeys,
 			},
 			{
-				Config: testAccDatabaseSecretsMount_mssql(name, backend, pluginName, parsedURL, false),
+				Config: testAccDatabaseSecretsMount_mssql(name, backend, pluginName, parsedURL),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourcePath, "mssql.#", "1"),
 					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.#", "2"),
@@ -226,25 +227,10 @@ func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
 	})
 }
 
-func testAccDatabaseSecretsMount_mssql(name, path, pluginName string, parsedURL *url.URL,
-	containedDB bool) string {
-	var config string
+func testAccDatabaseSecretsMount_mssql(name, path, pluginName string, parsedURL *url.URL) string {
 	password, _ := parsedURL.User.Password()
 
-	if containedDB {
-		config = `
-  mssql {
-    allowed_roles = ["dev", "prod"]
-    root_rotation_statements = ["FOOBAR"]
-    plugin_name = "%s"
-    name = "%s"
-    connection_url = "%s"
-	username       = "%s"
-	password       = "%s"
-    contained_db   = true
-  }`
-	} else {
-		config = `
+	config := `
   mssql {
     allowed_roles     = ["dev", "prod"]
     plugin_name       = "%s"
@@ -254,7 +240,6 @@ func testAccDatabaseSecretsMount_mssql(name, path, pluginName string, parsedURL 
 	password          = "%s"
     verify_connection = true
   }`
-	}
 
 	result := fmt.Sprintf(`
 resource "vault_database_secrets_mount" "db" {
@@ -277,38 +262,11 @@ resource "vault_database_secret_backend_role" "test" {
 	return result
 }
 
-func testAccDatabaseSecretsMount_mssql_dual(name, name2, path, pluginName string, parsedURL *url.URL, parsedURL2 *url.URL,
-	containedDB bool) string {
-	var config string
+func testAccDatabaseSecretsMount_mssql_dual(name, name2, path, pluginName string, parsedURL *url.URL, parsedURL2 *url.URL) string {
 	password, _ := parsedURL.User.Password()
 	password2, _ := parsedURL2.User.Password()
 
-	if containedDB {
-		config = `
-  mssql {
-    allowed_roles = ["dev", "prod"]
-    root_rotation_statements = ["FOOBAR"]
-    plugin_name = "%s"
-    name = "%s"
-    connection_url = "%s"
-	username       = "%s"
-	password       = "%s"
-    contained_db   = true
-  }
-
-  mssql {
-    allowed_roles = ["dev", "prod"]
-    root_rotation_statements = ["FOOBAR"]
-    plugin_name = "%s"
-    name = "%s"
-    connection_url = "%s"
-	username       = "%s"
-	password       = "%s"
-    contained_db   = true
-  }
-`
-	} else {
-		config = `
+	config := `
   mssql {
     allowed_roles     = ["dev1"]
     plugin_name       = "%s"
@@ -329,8 +287,6 @@ func testAccDatabaseSecretsMount_mssql_dual(name, name2, path, pluginName string
     verify_connection = true
   }
 `
-	}
-
 	result := fmt.Sprintf(`
 resource "vault_database_secrets_mount" "db" {
   path = "%s"
