@@ -549,6 +549,21 @@ var (
 			PathInventory:  []string{"/sys/mfa/method/duo/{name}"},
 			EnterpriseOnly: true,
 		},
+		"vault_mfa_okta": {
+			Resource:       mfaOktaResource(),
+			PathInventory:  []string{"/sys/mfa/method/okta/{name}"},
+			EnterpriseOnly: true,
+		},
+		"vault_mfa_totp": {
+			Resource:       mfaTOTPResource(),
+			PathInventory:  []string{"/sys/mfa/method/totp/{name}"},
+			EnterpriseOnly: true,
+		},
+		"vault_mfa_pingid": {
+			Resource:       mfaPingIDResource(),
+			PathInventory:  []string{"/sys/mfa/method/totp/{name}"},
+			EnterpriseOnly: true,
+		},
 		"vault_mount": {
 			Resource:      MountResource(),
 			PathInventory: []string{"/sys/mounts/{path}"},
