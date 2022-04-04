@@ -258,7 +258,7 @@ func databaseSecretsMountCreateOrUpdate(d *schema.ResourceData, meta interface{}
 func databaseSecretsMountRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	if err := mountRead(d, meta); err != nil {
+	if err := readMount(d, meta, true); err != nil {
 		return err
 	}
 

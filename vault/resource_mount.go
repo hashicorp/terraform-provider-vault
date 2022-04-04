@@ -243,6 +243,10 @@ func mountDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mountRead(d *schema.ResourceData, meta interface{}) error {
+	return readMount(d, meta, false)
+}
+
+func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
@@ -264,24 +268,26 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	if cfgType, ok := d.GetOk("type"); ok {
-		// kv-v2 is an alias for kv, version 2. Vault will report it back as "kv"
-		// and requires special handling to avoid perpetual drift.
-		if cfgType == "kv-v2" && mount.Type == "kv" && mount.Options["version"] == "2" {
-			mount.Type = "kv-v2"
+	if !excludeType {
+		if cfgType, ok := d.GetOk("type"); ok {
+			// kv-v2 is an alias for kv, version 2. Vault will report it back as "kv"
+			// and requires special handling to avoid perpetual drift.
+			if cfgType == "kv-v2" && mount.Type == "kv" && mount.Options["version"] == "2" {
+				mount.Type = "kv-v2"
 
-			// The options block may be omitted when specifying kv-v2, but will always
-			// be present in Vault's response if version 2. Omit the version setting
-			// if it wasn't explicitly set in config.
-			if mountOptions(d)["version"] == "" {
-				delete(mount.Options, "version")
+				// The options block may be omitted when specifying kv-v2, but will always
+				// be present in Vault's response if version 2. Omit the version setting
+				// if it wasn't explicitly set in config.
+				if mountOptions(d)["version"] == "" {
+					delete(mount.Options, "version")
+				}
 			}
 		}
+
+		d.Set("type", mount.Type)
 	}
 
 	d.Set("path", path)
-	// TODO: fix this...
-	// d.Set("type", mount.Type)
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
