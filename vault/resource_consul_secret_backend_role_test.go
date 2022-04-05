@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"testing"
 
@@ -26,6 +25,10 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourcePath, "ttl", "0"),
 		resource.TestCheckResourceAttr(resourcePath, "policies.#", "1"),
 		resource.TestCheckResourceAttr(resourcePath, "policies.0", "foo"),
+		resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "1"),
+		resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
+		resource.TestCheckResourceAttr(resourcePath, "consul_namespace", "consul-ns-0"),
+		resource.TestCheckResourceAttr(resourcePath, "partition", "partition-0"),
 	}
 
 	updateTestCheckFuncs := []resource.TestCheckFunc{
@@ -38,26 +41,14 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourcePath, "policies.#", "2"),
 		resource.TestCheckResourceAttr(resourcePath, "policies.0", "foo"),
 		resource.TestCheckResourceAttr(resourcePath, "policies.1", "bar"),
+		resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "3"),
+		resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
+		resource.TestCheckResourceAttr(resourcePath, "consul_roles.1", "role-1"),
+		resource.TestCheckResourceAttr(resourcePath, "consul_roles.2", "role-2"),
+		resource.TestCheckResourceAttr(resourcePath, "consul_namespace", "consul-ns-1"),
+		resource.TestCheckResourceAttr(resourcePath, "partition", "partition-1"),
 	}
 
-	var withRoles bool
-	if v := os.Getenv(testutil.EnvVarSkipVaultNext); v == "" {
-		withRoles = true
-		createTestCheckFuncs = append(createTestCheckFuncs,
-			resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "1"),
-			resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
-			resource.TestCheckResourceAttr(resourcePath, "consul_namespace", "consul-ns-0"),
-			resource.TestCheckResourceAttr(resourcePath, "partition", "partition-0"),
-		)
-		updateTestCheckFuncs = append(updateTestCheckFuncs,
-			resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "3"),
-			resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
-			resource.TestCheckResourceAttr(resourcePath, "consul_roles.1", "role-1"),
-			resource.TestCheckResourceAttr(resourcePath, "consul_roles.2", "role-2"),
-			resource.TestCheckResourceAttr(resourcePath, "consul_namespace", "consul-ns-1"),
-			resource.TestCheckResourceAttr(resourcePath, "partition", "partition-1"),
-		)
-	}
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -68,7 +59,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 				ExpectError: regexp.MustCompile(`policies or consul_roles must be set`),
 			},
 			{
-				Config: testConsulSecretBackendRole_initialConfig(backend, name, token, true, withRoles),
+				Config: testConsulSecretBackendRole_initialConfig(backend, name, token, true, true),
 				Check:  resource.ComposeTestCheckFunc(createTestCheckFuncs...),
 			},
 			{
@@ -76,7 +67,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 				ExpectError: regexp.MustCompile(`policies or consul_roles must be set`),
 			},
 			{
-				Config: testConsulSecretBackendRole_updateConfig(backend, name, token, true, withRoles),
+				Config: testConsulSecretBackendRole_updateConfig(backend, name, token, true, true),
 				Check:  resource.ComposeTestCheckFunc(updateTestCheckFuncs...),
 			},
 		},
