@@ -9,7 +9,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.11.24
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11 // indirect
 	github.com/aws/aws-sdk-go v1.41.8
-	github.com/containerd/containerd v1.5.9 // indirect
+	github.com/containerd/containerd v1.6.2 // indirect
 	github.com/denisenkom/go-mssqldb v0.11.0
 	github.com/docker/distribution v2.8.0+incompatible // indirect
 	github.com/go-sql-driver/mysql v1.6.0
@@ -26,6 +26,6 @@ require (
 	github.com/hashicorp/vault/api v1.3.2-0.20211222220726-b046cd9f80eb
 	github.com/hashicorp/vault/sdk v0.3.1-0.20211214161113-fcc5f22bea02
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/opencontainers/runc v1.0.3 // indirect
+	github.com/opencontainers/image-spec v1.0.2 // indirect
 	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
 )
