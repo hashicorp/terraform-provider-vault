@@ -30,6 +30,8 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
+					// auto_rotate_interval is deprecated,
+					// it will be updated to auto_rotate_period in the next step below
 					resource.TestCheckResourceAttr(resourceName, "auto_rotate_interval", "3600"),
 					resource.TestCheckResourceAttr(resourceName, "convergent_encryption", "false"),
 					resource.TestCheckResourceAttr(resourceName, "derived", "false"),
@@ -49,7 +51,7 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
-					resource.TestCheckResourceAttr(resourceName, "auto_rotate_interval", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "auto_rotate_period", "7200"),
 					resource.TestCheckResourceAttr(resourceName, "convergent_encryption", "false"),
 					resource.TestCheckResourceAttr(resourceName, "derived", "false"),
 					resource.TestCheckResourceAttrSet(resourceName, "keys.#"),
@@ -67,8 +69,23 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"auto_rotate_interval"},
+			},
+			{
 				Config:      testTransitSecretBackendKeyConfig_invalidUpdates(name, backend),
 				ExpectError: regexp.MustCompile("cannot be disabled on a key that already has it enabled"),
+			},
+			{
+				Config:      testTransitSecretBackendKeyConfig_conflicts(name, backend),
+				Destroy:     false,
+				ExpectError: regexp.MustCompile("Error: Conflicting configuration arguments"),
+			},
+			{
+				Config:  testTransitSecretBackendKeyConfig_updated(name, backend),
+				Destroy: true,
 			},
 		},
 	})
@@ -101,7 +118,7 @@ func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "supports_derivation", "false"),
 					resource.TestCheckResourceAttr(resourceName, "supports_encryption", "true"),
 					resource.TestCheckResourceAttr(resourceName, "supports_signing", "true"),
-					resource.TestCheckResourceAttr(resourceName, "auto_rotate_interval", "0"),
+					resource.TestCheckResourceAttr(resourceName, "auto_rotate_period", "0"),
 				),
 			},
 			{
@@ -119,35 +136,12 @@ func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "supports_derivation", "false"),
 					resource.TestCheckResourceAttr(resourceName, "supports_encryption", "true"),
 					resource.TestCheckResourceAttr(resourceName, "supports_signing", "true"),
-					resource.TestCheckResourceAttr(resourceName, "auto_rotate_interval", "0"),
 					resource.TestCheckResourceAttr(resourceName, "min_decryption_version", "1"),
 					resource.TestCheckResourceAttr(resourceName, "min_encryption_version", "1"),
 					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
 					resource.TestCheckResourceAttr(resourceName, "exportable", "true"),
 					resource.TestCheckResourceAttr(resourceName, "allow_plaintext_backup", "true"),
-				),
-			},
-		},
-	})
-}
-
-func TestTransitSecretBackendKey_import(t *testing.T) {
-	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
-
-	backend := acctest.RandomWithPrefix("transit")
-	name := acctest.RandomWithPrefix("key")
-	resourceName := "vault_transit_secret_backend_key.test"
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testTransitSecretBackendKeyConfig_basic(name, backend),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttrSet(resourceName, "keys.#"),
+					resource.TestCheckResourceAttr(resourceName, "auto_rotate_period", "0"),
 				),
 			},
 			{
@@ -224,7 +218,7 @@ resource "vault_transit_secret_backend_key" "test" {
   min_decryption_version = 1
   min_encryption_version = 1
   deletion_allowed       = true
-  auto_rotate_interval   = 7200
+  auto_rotate_period     = 7200
   exportable             = true
   allow_plaintext_backup = true
 }
@@ -246,6 +240,28 @@ resource "vault_transit_secret_backend_key" "test" {
   deletion_allowed       = true
   exportable             = false
   allow_plaintext_backup = false
+}
+`, path, name)
+}
+
+func testTransitSecretBackendKeyConfig_conflicts(name, path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "transit" {
+  path = "%s"
+  type = "transit"
+}
+
+resource "vault_transit_secret_backend_key" "test" {
+  backend = vault_mount.transit.path
+  name = "%s"
+  min_decryption_version = 1
+  min_encryption_version = 1
+  deletion_allowed       = true
+  exportable             = false
+  allow_plaintext_backup = false
+  # conflicts: auto_rotate_interval, auto_rotate_period
+  auto_rotate_interval   = 3600
+  auto_rotate_period     = 3600
 }
 `, path, name)
 }

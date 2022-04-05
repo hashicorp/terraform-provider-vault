@@ -53,7 +53,7 @@ The following arguments are supported:
 
 * `min_encryption_version` - (Optional) Minimum key version to use for encryption
 
-* `auto_rotate_interval` - (Optional) Amount of time the key should live before being automatically rotated.
+* `auto_rotate_period` - (Optional) Amount of time the key should live before being automatically rotated.
   A value of 0 disables automatic rotation for the key.
 
 ## Attributes Reference
@@ -78,6 +78,9 @@ The following arguments are supported:
 * `supports_signing` - Whether or not the key supports signing, based on key type.
 
 
+## Deprecations
+
+* `auto_rotate_interval` - Replaced by `auto_rotate_period`.
 
 ## Import
 
