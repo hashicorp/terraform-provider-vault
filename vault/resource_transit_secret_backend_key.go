@@ -75,10 +75,19 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Default:     false,
 			},
 			"auto_rotate_interval": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Computed:    true,
-				Description: "Amount of time the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
+				Type:          schema.TypeInt,
+				Optional:      true,
+				Computed:      true,
+				Deprecated:    "Use auto_rotate_period instead",
+				Description:   "Amount of time the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
+				ConflictsWith: []string{"auto_rotate_period"},
+			},
+			"auto_rotate_period": {
+				Type:          schema.TypeInt,
+				Optional:      true,
+				Computed:      true,
+				Description:   "Amount of time the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
+				ConflictsWith: []string{"auto_rotate_interval"},
 			},
 			"type": {
 				Type:         schema.TypeString,
@@ -190,20 +199,21 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 
 	path := transitSecretBackendKeyPath(backend, name)
 
+	autoRotatePeriod := getTransitAutoRotatePeriod(d)
 	configData := map[string]interface{}{
 		"min_decryption_version": d.Get("min_decryption_version").(int),
 		"min_encryption_versoin": d.Get("min_encryption_version").(int),
 		"deletion_allowed":       d.Get("deletion_allowed").(bool),
 		"exportable":             d.Get("exportable").(bool),
 		"allow_plaintext_backup": d.Get("allow_plaintext_backup").(bool),
-		"auto_rotate_interval":   d.Get("auto_rotate_interval").(int),
+		"auto_rotate_period":     autoRotatePeriod,
 	}
 
 	data := map[string]interface{}{
 		"convergent_encryption": d.Get("convergent_encryption").(bool),
 		"derived":               d.Get("derived").(bool),
 		"type":                  d.Get("type").(string),
-		"auto_rotate_interval":  d.Get("auto_rotate_interval").(int),
+		"auto_rotate_period":    autoRotatePeriod,
 	}
 
 	log.Printf("[DEBUG] Creating encryption key %s on transit secret backend %q", name, backend)
@@ -220,6 +230,22 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 	log.Printf("[DEBUG] Created encryption key %s on transit secret backend %q", name, backend)
 	d.SetId(path)
 	return transitSecretBackendKeyRead(d, meta)
+}
+
+func getTransitAutoRotatePeriod(d *schema.ResourceData) int {
+	var autoRotatePeriod int
+	v, ok := d.GetOkExists("auto_rotate_period")
+	if !ok {
+		if v, ok := d.GetOkExists("auto_rotate_interval"); ok {
+			log.Printf("[WARN] Using auto_rotate_internal to set auto_rotate_period, " +
+				"please use auto_rotate_period instead")
+			autoRotatePeriod = v.(int)
+		}
+	} else {
+		autoRotatePeriod = v.(int)
+	}
+
+	return autoRotatePeriod
 }
 
 func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error {
@@ -322,16 +348,36 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 	}
 
 	fields := []string{
-		"allow_plaintext_backup", "auto_rotate_interval",
+		"allow_plaintext_backup",
 		"deletion_allowed", "derived", "exportable",
 		"supports_decryption", "supports_derivation",
 		"supports_encryption", "supports_signing", "type",
 	}
 
-	for _, k := range fields {
-		if err := d.Set(k, secret.Data[k]); err != nil {
+	set := func(f, k string) error {
+		v, ok := secret.Data[k]
+		if !ok {
+			log.Printf("[WARN] Expected key %q not found in response, path=%q", k, path)
+		}
+		if err := d.Set(f, v); err != nil {
 			return err
 		}
+		return nil
+	}
+
+	for _, f := range fields {
+		if err := set(f, f); err != nil {
+			return err
+		}
+	}
+
+	autoRotatePeriodField := "auto_rotate_period"
+	if _, ok := d.GetOkExists("auto_rotate_interval"); ok {
+		autoRotatePeriodField = "auto_rotate_interval"
+	}
+
+	if err := set(autoRotatePeriodField, "auto_rotate_period"); err != nil {
+		return nil
 	}
 
 	return nil
@@ -349,7 +395,7 @@ func transitSecretBackendKeyUpdate(d *schema.ResourceData, meta interface{}) err
 		"deletion_allowed":       d.Get("deletion_allowed"),
 		"exportable":             d.Get("exportable"),
 		"allow_plaintext_backup": d.Get("allow_plaintext_backup"),
-		"auto_rotate_interval":   d.Get("auto_rotate_interval"),
+		"auto_rotate_period":     getTransitAutoRotatePeriod(d),
 	}
 
 	_, err := client.Logical().Write(path+"/config", data)
