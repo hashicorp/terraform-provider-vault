@@ -390,7 +390,6 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 	connURL, username, password := values[0], values[1], values[2]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	pluginName := dbEngineMySQL.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -399,7 +398,7 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mysql(name, backend, connURL, username, password),
-				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQL.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
@@ -415,7 +414,7 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 			},
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_rds(name, backend, connURL, username, password),
-				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQLRDS.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
@@ -431,7 +430,7 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 			},
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_aurora(name, backend, connURL, username, password),
-				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQLAurora.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
@@ -447,7 +446,7 @@ func TestAccDatabaseSecretBackendConnection_mysql(t *testing.T) {
 			},
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_legacy(name, backend, connURL, username, password),
-				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQLLegacy.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
