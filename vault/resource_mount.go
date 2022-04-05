@@ -10,6 +10,110 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+type schemaMap map[string]*schema.Schema
+
+func getMountSchema(excludes ...string) schemaMap {
+	s := schemaMap{
+		"path": {
+			Type:        schema.TypeString,
+			Required:    true,
+			ForceNew:    false,
+			Description: "Where the secret backend will be mounted",
+		},
+		"type": {
+			Type:        schema.TypeString,
+			Required:    true,
+			ForceNew:    true,
+			Description: "Type of the backend, such as 'aws'",
+		},
+		"description": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Required:    false,
+			ForceNew:    false,
+			Description: "Human-friendly description of the mount",
+		},
+		"default_lease_ttl_seconds": {
+			Type:        schema.TypeInt,
+			Required:    false,
+			Optional:    true,
+			Computed:    true,
+			ForceNew:    false,
+			Description: "Default lease duration for tokens and secrets in seconds",
+		},
+
+		"max_lease_ttl_seconds": {
+			Type:        schema.TypeInt,
+			Required:    false,
+			Optional:    true,
+			Computed:    true,
+			ForceNew:    false,
+			Description: "Maximum possible lease duration for tokens and secrets in seconds",
+		},
+
+		"audit_non_hmac_request_keys": {
+			Type:        schema.TypeList,
+			Computed:    true,
+			Optional:    true,
+			Description: "Specifies the list of keys that will not be HMAC'd by audit devices in the request data object.",
+			Elem:        &schema.Schema{Type: schema.TypeString},
+		},
+
+		"audit_non_hmac_response_keys": {
+			Type:        schema.TypeList,
+			Computed:    true,
+			Optional:    true,
+			Description: "Specifies the list of keys that will not be HMAC'd by audit devices in the response data object.",
+			Elem:        &schema.Schema{Type: schema.TypeString},
+		},
+
+		"accessor": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "Accessor of the mount",
+		},
+
+		"local": {
+			Type:        schema.TypeBool,
+			Required:    false,
+			Optional:    true,
+			Computed:    false,
+			ForceNew:    true,
+			Description: "Local mount flag that can be explicitly set to true to enforce local mount in HA environment",
+		},
+
+		"options": {
+			Type:        schema.TypeMap,
+			Required:    false,
+			Optional:    true,
+			Computed:    false,
+			ForceNew:    false,
+			Description: "Specifies mount type specific options that are passed to the backend",
+		},
+
+		"seal_wrap": {
+			Type:        schema.TypeBool,
+			Required:    false,
+			Optional:    true,
+			ForceNew:    true,
+			Computed:    true,
+			Description: "Enable seal wrapping for the mount, causing values stored by the mount to be wrapped by the seal's encryption capability",
+		},
+
+		"external_entropy_access": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			ForceNew:    true,
+			Description: "Enable the secrets engine to access Vault's external entropy source",
+		},
+	}
+	for _, v := range excludes {
+		delete(s, v)
+	}
+	return s
+}
+
 func MountResource() *schema.Resource {
 	return &schema.Resource{
 		Create: mountWrite,
@@ -19,137 +123,51 @@ func MountResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-
-		Schema: map[string]*schema.Schema{
-			"path": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    false,
-				Description: "Where the secret backend will be mounted",
-			},
-
-			"type": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "Type of the backend, such as 'aws'",
-			},
-
-			"description": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Required:    false,
-				ForceNew:    false,
-				Description: "Human-friendly description of the mount",
-			},
-
-			"default_lease_ttl_seconds": {
-				Type:        schema.TypeInt,
-				Required:    false,
-				Optional:    true,
-				Computed:    true,
-				ForceNew:    false,
-				Description: "Default lease duration for tokens and secrets in seconds",
-			},
-
-			"max_lease_ttl_seconds": {
-				Type:        schema.TypeInt,
-				Required:    false,
-				Optional:    true,
-				Computed:    true,
-				ForceNew:    false,
-				Description: "Maximum possible lease duration for tokens and secrets in seconds",
-			},
-
-			"audit_non_hmac_request_keys": {
-				Type:        schema.TypeList,
-				Computed:    true,
-				Optional:    true,
-				Description: "Specifies the list of keys that will not be HMAC'd by audit devices in the request data object.",
-				Elem:        &schema.Schema{Type: schema.TypeString},
-			},
-
-			"audit_non_hmac_response_keys": {
-				Type:        schema.TypeList,
-				Computed:    true,
-				Optional:    true,
-				Description: "Specifies the list of keys that will not be HMAC'd by audit devices in the response data object.",
-				Elem:        &schema.Schema{Type: schema.TypeString},
-			},
-
-			"accessor": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Accessor of the mount",
-			},
-
-			"local": {
-				Type:        schema.TypeBool,
-				Required:    false,
-				Optional:    true,
-				Computed:    false,
-				ForceNew:    true,
-				Description: "Local mount flag that can be explicitly set to true to enforce local mount in HA environment",
-			},
-
-			"options": {
-				Type:        schema.TypeMap,
-				Required:    false,
-				Optional:    true,
-				Computed:    false,
-				ForceNew:    false,
-				Description: "Specifies mount type specific options that are passed to the backend",
-			},
-
-			"seal_wrap": {
-				Type:        schema.TypeBool,
-				Required:    false,
-				Optional:    true,
-				ForceNew:    true,
-				Computed:    true,
-				Description: "Enable seal wrapping for the mount, causing values stored by the mount to be wrapped by the seal's encryption capability",
-			},
-
-			"external_entropy_access": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				ForceNew:    true,
-				Description: "Enable the secrets engine to access Vault's external entropy source",
-			},
-		},
+		Schema: getMountSchema(),
 	}
 }
 
 func mountWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	info := &api.MountInput{
-		Type:        d.Get("type").(string),
-		Description: d.Get("description").(string),
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL:          fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
-			MaxLeaseTTL:              fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
-			AuditNonHMACRequestKeys:  expandStringSlice(d.Get("audit_non_hmac_request_keys").([]interface{})),
-			AuditNonHMACResponseKeys: expandStringSlice(d.Get("audit_non_hmac_response_keys").([]interface{})),
-		},
-		Local:                 d.Get("local").(bool),
-		Options:               opts(d),
-		SealWrap:              d.Get("seal_wrap").(bool),
-		ExternalEntropyAccess: d.Get("external_entropy_access").(bool),
-	}
-
 	path := d.Get("path").(string)
-
-	log.Printf("[DEBUG] Creating mount %s in Vault", path)
-
-	if err := client.Sys().Mount(path, info); err != nil {
-		return fmt.Errorf("error writing to Vault: %s", err)
+	if err := createMount(d, client, path, d.Get("type").(string)); err != nil {
+		return err
 	}
 
 	d.SetId(path)
 
 	return mountRead(d, meta)
+}
+
+func createMount(d *schema.ResourceData, client *api.Client, path string, mountType string) error {
+	input := &api.MountInput{
+		Type:        mountType,
+		Description: d.Get("description").(string),
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
+			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
+		},
+		Local:                 d.Get("local").(bool),
+		Options:               mountOptions(d),
+		SealWrap:              d.Get("seal_wrap").(bool),
+		ExternalEntropyAccess: d.Get("external_entropy_access").(bool),
+	}
+
+	if v, ok := d.GetOk("audit_non_hmac_request_keys"); ok {
+		input.Config.AuditNonHMACRequestKeys = expandStringSlice(v.([]interface{}))
+	}
+	if v, ok := d.GetOk("audit_non_hmac_response_keys"); ok {
+		input.Config.AuditNonHMACResponseKeys = expandStringSlice(v.([]interface{}))
+	}
+
+	log.Printf("[DEBUG] Creating mount %s in Vault", path)
+
+	if err := client.Sys().Mount(path, input); err != nil {
+		return fmt.Errorf("error writing to Vault: %s", err)
+	}
+
+	return nil
 }
 
 func mountUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -158,7 +176,7 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 	config := api.MountConfigInput{
 		DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 		MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
-		Options:         opts(d),
+		Options:         mountOptions(d),
 	}
 
 	if d.HasChange("audit_non_hmac_request_keys") {
@@ -224,6 +242,10 @@ func mountDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mountRead(d *schema.ResourceData, meta interface{}) error {
+	return readMount(d, meta, false)
+}
+
+func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
@@ -245,23 +267,26 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	cfgType := d.Get("type").(string)
+	if !excludeType {
+		if cfgType, ok := d.GetOk("type"); ok {
+			// kv-v2 is an alias for kv, version 2. Vault will report it back as "kv"
+			// and requires special handling to avoid perpetual drift.
+			if cfgType == "kv-v2" && mount.Type == "kv" && mount.Options["version"] == "2" {
+				mount.Type = "kv-v2"
 
-	// kv-v2 is an alias for kv, version 2. Vault will report it back as "kv"
-	// and requires special handling to avoid perpetual drift.
-	if cfgType == "kv-v2" && mount.Type == "kv" && mount.Options["version"] == "2" {
-		mount.Type = "kv-v2"
-
-		// The options block may be omitted when specifying kv-v2, but will always
-		// be present in Vault's response if version 2. Omit the version setting
-		// if it wasn't explicitly set in config.
-		if opts(d)["version"] == "" {
-			delete(mount.Options, "version")
+				// The options block may be omitted when specifying kv-v2, but will always
+				// be present in Vault's response if version 2. Omit the version setting
+				// if it wasn't explicitly set in config.
+				if mountOptions(d)["version"] == "" {
+					delete(mount.Options, "version")
+				}
+			}
 		}
+
+		d.Set("type", mount.Type)
 	}
 
 	d.Set("path", path)
-	d.Set("type", mount.Type)
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
@@ -276,7 +301,7 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func opts(d *schema.ResourceData) map[string]string {
+func mountOptions(d *schema.ResourceData) map[string]string {
 	options := map[string]string{}
 	if opts, ok := d.GetOk("options"); ok {
 		for k, v := range opts.(map[string]interface{}) {

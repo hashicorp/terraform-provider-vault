@@ -422,6 +422,10 @@ var (
 			Resource:      consulSecretBackendRoleResource(),
 			PathInventory: []string{"/consul/roles/{name}"},
 		},
+		"vault_database_secrets_mount": {
+			Resource:      databaseSecretsMountResource(),
+			PathInventory: []string{"/database/config/{name}"},
+		},
 		"vault_database_secret_backend_connection": {
 			Resource:      databaseSecretBackendConnectionResource(),
 			PathInventory: []string{"/database/config/{name}"},
