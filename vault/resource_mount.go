@@ -115,7 +115,6 @@ func getMountSchema(excludes ...string) schemaMap {
 }
 
 func MountResource() *schema.Resource {
-	// TODO: refactor to shared schema shared with resource_database_mount
 	return &schema.Resource{
 		Create: mountWrite,
 		Update: mountUpdate,

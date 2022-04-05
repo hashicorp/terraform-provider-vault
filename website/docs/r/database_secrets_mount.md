@@ -17,6 +17,12 @@ artifacts accordingly. See
 [the main provider documentation](../index.html)
 for more details.
 
+## Caveats:
+This resource will be replaced for any of the following conditions:
+
+- A database engine block is removed
+- The `name` for any configured database engine is changed
+
 ## Example Usage
 
 ```hcl
@@ -437,7 +443,6 @@ See the [Vault
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
 * `engine_count` - The total number of database secrets engines configured.
 
 ## Import

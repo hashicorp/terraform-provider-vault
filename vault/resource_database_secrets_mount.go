@@ -41,13 +41,16 @@ func (s *dbConfigStore) Get(db *dbEngine) []map[string]interface{} {
 }
 
 func (s *dbConfigStore) Result() map[string][]map[string]interface{} {
-	s.m.RLock()
-	defer s.m.RUnlock()
-	if s.result == nil {
-		return make(map[string][]map[string]interface{})
+	s.m.Lock()
+	defer s.m.Unlock()
+	s.d.Do(s.init)
+
+	result := map[string][]map[string]interface{}{}
+	for k, v := range s.result {
+		result[k] = v
 	}
 
-	return s.result
+	return result
 }
 
 func (s *dbConfigStore) init() {
@@ -263,6 +266,8 @@ func databaseSecretsMountRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	root := d.Id()
+	// the call to readMount() may have unset the ID, in which case we can return
+	// early.
 	if root == "" {
 		return nil
 	}
@@ -307,7 +312,7 @@ func readDBEngineConfig(d *schema.ResourceData, client *api.Client, store *dbCon
 	if err != nil {
 		return fmt.Errorf("error reading database connection config %q: %s", path, err)
 	}
-	log.Printf("[DEBUG] Read database connection config %q", path)
+	log.Printf("[DEBUG] Successfully read database connection config %q", path)
 	if resp == nil {
 		log.Printf("[WARN] Database connection %q not found", path)
 		return nil
