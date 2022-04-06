@@ -14,8 +14,6 @@ import (
 )
 
 func TestTransitSecretBackendKey_basic(t *testing.T) {
-	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
-
 	backend := acctest.RandomWithPrefix("transit")
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
@@ -92,8 +90,6 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 }
 
 func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
-	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
-
 	backend := acctest.RandomWithPrefix("transit")
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
