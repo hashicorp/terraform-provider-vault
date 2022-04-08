@@ -241,6 +241,11 @@ func TestAccIdentityGroupMemberEntityIdsDynamic(t *testing.T) {
 				Config: testAccIdentityGMEIDynamic(groupName, true, tests[:len(tests)-1]...),
 				Check:  testIdentityGMEIMembers(groupName, tests[:len(tests)-1]...),
 			},
+			{
+				// alternate group_name to ensure that `vault_identity_group` doesn't wipe out our identities
+				Config: testAccIdentityGMEIDynamic(groupName+"-new", true, tests...),
+				Check:  testIdentityGMEIMembers(groupName+"-new", tests...),
+			},
 		},
 	})
 }
