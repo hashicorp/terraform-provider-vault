@@ -111,6 +111,21 @@ func sshSecretBackendRoleResource() *schema.Resource {
 			"allowed_user_key_lengths": {
 				Type:     schema.TypeMap,
 				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeInt,
+				},
+				ConflictsWith: []string{"allowed_user_key_lengths_list"},
+			},
+			"allowed_user_key_lengths_list": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeList,
+					Elem: &schema.Schema{
+						Type: schema.TypeInt,
+					},
+				},
+				ConflictsWith: []string{"allowed_user_key_lengths"},
 			},
 			"algorithm_signer": {
 				Type:     schema.TypeString,
@@ -148,6 +163,12 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		"allow_user_key_ids":      d.Get("allow_user_key_ids").(bool),
 	}
 
+	if v, ok := d.GetOk("allowed_user_key_lengths_list"); ok {
+		data["allowed_user_key_lengths"] = v
+	} else if v, ok := d.GetOk("allowed_user_key_lengths"); ok {
+		data["allowed_user_key_lengths"] = v
+	}
+
 	if v, ok := d.GetOk("allowed_critical_options"); ok {
 		data["allowed_critical_options"] = v.(string)
 	}
@@ -174,7 +195,6 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("allowed_users_template"); ok {
 		data["allowed_users_template"] = v.(bool)
-
 	}
 
 	if v, ok := d.GetOk("allowed_users"); ok {
@@ -187,10 +207,6 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("key_id_format"); ok {
 		data["key_id_format"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("allowed_user_key_lengths"); ok {
-		data["allowed_user_key_lengths"] = v
 	}
 
 	if v, ok := d.GetOk("algorithm_signer"); ok {
@@ -246,30 +262,60 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-	d.Set("name", name)
-	d.Set("backend", backend)
-	d.Set("key_type", role.Data["key_type"])
-	d.Set("allow_bare_domains", role.Data["allow_bare_domains"])
-	d.Set("allow_host_certificates", role.Data["allow_host_certificates"])
-	d.Set("allow_subdomains", role.Data["allow_subdomains"])
-	d.Set("allow_user_certificates", role.Data["allow_user_certificates"])
-	d.Set("allow_user_key_ids", role.Data["allow_user_key_ids"])
-	d.Set("allowed_critical_options", role.Data["allowed_critical_options"])
-	d.Set("allowed_domains", role.Data["allowed_domains"])
-	d.Set("cidr_list", role.Data["cidr_list"])
-	d.Set("allowed_extensions", role.Data["allowed_extensions"])
-	d.Set("default_extensions", role.Data["default_extensions"])
-	d.Set("default_critical_options", role.Data["default_critical_options"])
-	d.Set("allowed_users_template", role.Data["allowed_users_template"])
-	d.Set("allowed_users", role.Data["allowed_users"])
-	d.Set("default_user", role.Data["default_user"])
-	d.Set("key_id_format", role.Data["key_id_format"])
-	d.Set("allowed_user_key_lengths", role.Data["allowed_user_key_lengths"])
-	d.Set("max_ttl", role.Data["max_ttl"])
-	d.Set("ttl", role.Data["ttl"])
-	d.Set("algorithm_signer", role.Data["algorithm_signer"])
+
+	if err := d.Set("name", name); err != nil {
+		return err
+	}
+
+	if err := d.Set("backend", backend); err != nil {
+		return err
+	}
+
+	fields := []string{
+		"key_type", "allow_bare_domains", "allow_host_certificates",
+		"allow_subdomains", "allow_user_certificates", "allow_user_key_ids",
+		"allowed_critical_options", "allowed_domains",
+		"cidr_list", "allowed_extensions", "default_extensions",
+		"default_critical_options", "allowed_users_template",
+		"allowed_users", "default_user", "key_id_format",
+		"max_ttl", "ttl", "algorithm_signer",
+	}
+
+	for _, k := range fields {
+		if err := d.Set(k, role.Data[k]); err != nil {
+			return err
+		}
+	}
+
+	allowedKeyLengthsData := role.Data["allowed_user_key_lengths"].(map[string]interface{})
+	isKeyList := false
+
+	for _, v := range allowedKeyLengthsData {
+		if len(v.([]interface{})) > 1 {
+			isKeyList = true
+		}
+	}
+
+	if isKeyList {
+		if err := d.Set("allowed_user_key_lengths_list", allowedKeyLengthsData); err != nil {
+			return err
+		}
+	} else {
+		if err := d.Set("allowed_user_key_lengths", flattenAllowedKeyLengths(allowedKeyLengthsData)); err != nil {
+			return err
+		}
+	}
 
 	return nil
+}
+
+func flattenAllowedKeyLengths(keyLengths map[string]interface{}) map[string]interface{} {
+	result := map[string]interface{}{}
+
+	for k, v := range keyLengths {
+		result[k] = v.([]interface{})[0].(interface{})
+	}
+	return result
 }
 
 func sshSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {

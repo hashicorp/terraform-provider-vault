@@ -13,7 +13,6 @@ import (
 )
 
 func TestAccSSHSecretBackendRole_basic(t *testing.T) {
-	t.Skipf("Skip until VAULT-5535 is fixed")
 	backend := acctest.RandomWithPrefix("tf-test/ssh")
 	name := acctest.RandomWithPrefix("tf-test-role")
 	resource.Test(t, resource.TestCase{
@@ -77,8 +76,45 @@ func TestAccSSHSecretBackendRole_basic(t *testing.T) {
 	})
 }
 
+func TestAccSSHSecretBackendRole_list(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test/ssh")
+	name := acctest.RandomWithPrefix("tf-test-role")
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccSSHSecretBackendRoleConfig_list(name, backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "name", name),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "backend", backend),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_bare_domains", "false"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_host_certificates", "false"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_subdomains", "false"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_user_certificates", "true"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allow_user_key_ids", "false"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_critical_options", ""),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_domains", ""),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_extensions", ""),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_extensions.%", "0"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_critical_options.%", "0"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_users_template", "false"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_users", ""),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user", ""),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_id_format", ""),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "key_type", "ca"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_user_key_lengths.rsa", "1"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "algorithm_signer", "default"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "max_ttl", "0"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "ttl", "0"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccSSHSecretBackendRoleOTP_basic(t *testing.T) {
-	t.Skipf("Skip until VAULT-5535 is fixed")
 	backend := acctest.RandomWithPrefix("tf-test/ssh")
 	name := acctest.RandomWithPrefix("tf-test-role")
 	resource.Test(t, resource.TestCase{
@@ -101,7 +137,6 @@ func TestAccSSHSecretBackendRoleOTP_basic(t *testing.T) {
 }
 
 func TestAccSSHSecretBackendRole_import(t *testing.T) {
-	t.Skipf("Skip until VAULT-5535 is fixed")
 	backend := acctest.RandomWithPrefix("tf-test/ssh")
 	name := acctest.RandomWithPrefix("tf-test-role")
 	resource.Test(t, resource.TestCase{
@@ -209,6 +244,24 @@ resource "vault_ssh_secret_backend_role" "test_role" {
 	max_ttl                  = "86400"
 	ttl                      = "43200"
 }
+`, path, name)
+}
+
+func testAccSSHSecretBackendRoleConfig_list(name, path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "example" {
+  path = "%s"
+  type = "ssh"
+}
+
+resource "vault_ssh_secret_backend_role" "test_role" {
+	name                    = "%s"
+	backend                 = vault_mount.example.path
+	key_type                = "ca"
+	allow_user_certificates = true
+	allowed_user_key_lengths_list = { "rsa" = [1, 2, 3] }
+}
+
 `, path, name)
 }
 
