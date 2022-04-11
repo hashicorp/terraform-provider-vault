@@ -8,15 +8,14 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-var (
-	approleAuthBackendRoleSecretIDIDRegex = regexp.MustCompile("^backend=(.+)::role=(.+)::accessor=(.+)$")
-)
+var approleAuthBackendRoleSecretIDIDRegex = regexp.MustCompile("^backend=(.+)::role=(.+)::accessor=(.+)$")
 
-func approleAuthBackendRoleSecretIDResource() *schema.Resource {
+func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 	return &schema.Resource{
 		Create: approleAuthBackendRoleSecretIDCreate,
 		Read:   approleAuthBackendRoleSecretIDRead,
@@ -54,8 +53,8 @@ func approleAuthBackendRoleSecretIDResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "JSON-encoded secret data to write.",
-				StateFunc:    NormalizeDataJSON,
-				ValidateFunc: ValidateDataJSON,
+				StateFunc:    NormalizeDataJSONFunc(name),
+				ValidateFunc: ValidateDataJSONFunc(name),
 				ForceNew:     true,
 				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 					if old == "{}" && new == "" {
@@ -78,6 +77,13 @@ func approleAuthBackendRoleSecretIDResource() *schema.Resource {
 				StateFunc: func(v interface{}) string {
 					return strings.Trim(v.(string), "/")
 				},
+			},
+
+			"with_wrapped_accessor": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Use the wrapped secret-id accessor as the id of this resource. If false, a fresh secret-id will be regenerated whenever the wrapping token is expired or invalidated through unwrapping.",
+				ForceNew:    true,
 			},
 
 			"accessor": {
@@ -137,28 +143,33 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 		data["cidr_list"] = strings.Join(cidrs, ",")
 	}
 	if v, ok := d.GetOk("metadata"); ok {
-		data["metadata"] = NormalizeDataJSON(v)
+		name := "vault_approle_auth_backend_role_secret_id"
+		result, err := normalizeDataJSON(v.(string))
+		if err != nil {
+			log.Printf("[ERROR] Failed to normalize JSON data %q, resource=%q, key=%q, err=%s",
+				v, name, "metadata", err)
+			return err
+		}
+		data["metadata"] = result
 	} else {
 		data["metadata"] = ""
 	}
+	withWrappedAccessor := d.Get("with_wrapped_accessor").(bool)
 
 	wrappingTTL, wrapped := d.GetOk("wrapping_ttl")
 
 	if wrapped {
 		var err error
 
-		token := client.Token()
 		if client, err = client.Clone(); err != nil {
-			return fmt.Errorf("error cloning client: %s", err)
+			return fmt.Errorf("error cloning client: %w", err)
 		}
-		client.SetToken(token)
 		client.SetWrappingLookupFunc(func(_, _ string) string {
 			return wrappingTTL.(string)
 		})
 	}
 
 	resp, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error writing AppRole auth backend role SecretID %q: %s", path, err)
 	}
@@ -167,7 +178,11 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	var accessor string
 
 	if wrapped {
-		accessor = resp.WrapInfo.Accessor
+		if withWrappedAccessor {
+			accessor = resp.WrapInfo.WrappedAccessor
+		} else {
+			accessor = resp.WrapInfo.Accessor
+		}
 		d.Set("wrapping_token", resp.WrapInfo.Token)
 		d.Set("wrapping_accessor", accessor)
 	} else {
@@ -176,7 +191,7 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 		d.Set("accessor", accessor)
 	}
 
-	d.SetId(approleAuthBackendRoleSecretIDID(backend, role, accessor, wrapped))
+	d.SetId(approleAuthBackendRoleSecretIDID(backend, role, accessor, wrapped, withWrappedAccessor))
 
 	return approleAuthBackendRoleSecretIDRead(d, meta)
 }
@@ -191,8 +206,10 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 	}
 
 	// If the ID is wrapped, there is no information available other than whether
-	// the wrapping token is still valid.
-	if wrapped {
+	// the wrapping token is still valid, unless we are planning to re-use it.
+	withWrappedAccessor := d.Get("with_wrapped_accessor").(bool)
+
+	if wrapped && !withWrappedAccessor {
 		valid, err := approleAuthBackendRoleSecretIDExists(d, meta)
 		if err != nil {
 			return err
@@ -225,19 +242,20 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 	}
 
 	var cidrs []string
-	switch resp.Data["cidr_list"].(type) {
+	switch data := resp.Data["cidr_list"].(type) {
 	case string:
-		if resp.Data["cidr_list"].(string) != "" {
-			cidrs = strings.Split(resp.Data["cidr_list"].(string), ",")
+		if data != "" {
+			cidrs = strings.Split(data, ",")
 		}
 	case []interface{}:
-		v := resp.Data["cidr_list"].([]interface{})
-		cidrs = make([]string, 0, len(v))
-		for _, i := range v {
+		cidrs = make([]string, 0, len(data))
+		for _, i := range data {
 			cidrs = append(cidrs, i.(string))
 		}
+	case nil:
+		cidrs = make([]string, 0)
 	default:
-		return fmt.Errorf("unknown type %T for cidr_list in response for SecretID %q", resp.Data["cidr_list"], accessor)
+		return fmt.Errorf("unknown type %T for cidr_list in response for SecretID %q", data, accessor)
 	}
 
 	metadata, err := json.Marshal(resp.Data["metadata"])
@@ -315,8 +333,8 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 		"secret_id_accessor": accessor,
 	})
 	if err != nil {
-		// We need to check if the secret_id has expired
-		if util.IsExpiredTokenErr(err) {
+		// We need to check if the secret_id has expired or if 404 was returned
+		if util.IsExpiredTokenErr(err) || util.Is404(err) {
 			return false, nil
 		}
 		return true, fmt.Errorf("error checking if AppRole auth backend role SecretID %q exists: %s", id, err)
@@ -326,8 +344,8 @@ func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface
 	return resp != nil, nil
 }
 
-func approleAuthBackendRoleSecretIDID(backend, role, accessor string, wrapped bool) string {
-	if wrapped {
+func approleAuthBackendRoleSecretIDID(backend, role, accessor string, wrapped bool, withWrappedAccessor bool) string {
+	if wrapped && !withWrappedAccessor {
 		accessor = "wrapped-" + accessor
 	}
 	return fmt.Sprintf("backend=%s::role=%s::accessor=%s", strings.Trim(backend, "/"), strings.Trim(role, "/"), accessor)

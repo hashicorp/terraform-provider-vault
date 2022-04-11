@@ -8,13 +8,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestResourceAuth(t *testing.T) {
 	path := "github-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAuth_initialConfig(path),
@@ -97,7 +99,6 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 
 		client := testProvider.Meta().(*api.Client)
 		auths, err := client.Sys().ListAuth()
-
 		if err != nil {
 			return fmt.Errorf("error reading back auth: %s", err)
 		}
@@ -158,7 +159,6 @@ func testResourceAuth_updateCheck(s *terraform.State) error {
 
 	client := testProvider.Meta().(*api.Client)
 	auths, err := client.Sys().ListAuth()
-
 	if err != nil {
 		return fmt.Errorf("error reading back auth: %s", err)
 	}
@@ -187,7 +187,7 @@ func TestResourceAuthTune(t *testing.T) {
 	var resAuthFirst api.AuthMount
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAuthTune_initialConfig(backend),
@@ -253,7 +253,6 @@ func checkAuthMount(backend string, checker func(*api.AuthMount) error) resource
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*api.Client)
 		auths, err := client.Sys().ListAuth()
-
 		if err != nil {
 			return fmt.Errorf("error reading back auth: %s", err)
 		}

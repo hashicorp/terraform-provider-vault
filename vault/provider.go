@@ -8,11 +8,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
-	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/config"
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
@@ -28,7 +29,16 @@ const (
 	// versions of Vault.
 	// We aim to deprecate items in this category.
 	UnknownPath = "unknown"
+
+	// DefaultMaxHTTPRetries is used for configuring the api.Client's MaxRetries.
+	DefaultMaxHTTPRetries = 2
+
+	// DefaultMaxHTTPRetriesCCC is used for configuring the api.Client's MaxRetries
+	// for Client Controlled Consistency related operations.
+	DefaultMaxHTTPRetriesCCC = 10
 )
+
+var maxHTTPRetriesCCC int
 
 // This is a global MutexKV for use within this provider.
 // Use this when you need to have multiple resources or even multiple instances
@@ -70,6 +80,15 @@ func Provider() *schema.Provider {
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN_NAME", ""),
 				Description: "Token name to use for creating the Vault child token.",
+			},
+			"skip_child_token": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_SKIP_CHILD_TOKEN", false),
+
+				// Setting to true will cause max_lease_ttl_seconds and token_name to be ignored (not used).
+				// Note that this is strongly discouraged due to the potential of exposing sensitive secret data.
+				Description: "Set this to true to prevent the creation of ephemeral child token used by this provider.",
 			},
 			"ca_cert_file": {
 				Type:        schema.TypeString,
@@ -147,21 +166,25 @@ func Provider() *schema.Provider {
 				// significantly longer, so that any leases are revoked shortly
 				// after Terraform has finished running.
 				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_MAX_TTL", 1200),
-
-				Description: "Maximum TTL for secret leases requested by this provider",
+				Description: "Maximum TTL for secret leases requested by this provider.",
 			},
 			"max_retries": {
-				Type:     schema.TypeInt,
-				Optional: true,
-
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", 2),
+				Type:        schema.TypeInt,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", DefaultMaxHTTPRetries),
 				Description: "Maximum number of retries when a 5xx error code is encountered.",
+			},
+			"max_retries_ccc": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES_CCC", DefaultMaxHTTPRetriesCCC),
+				Description: "Maximum number of retries for Client Controlled Consistency related operations",
 			},
 			"namespace": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_NAMESPACE", ""),
-				Description: "The namespace to use. Available only for Vault Enterprise",
+				Description: "The namespace to use. Available only for Vault Enterprise.",
 			},
 			"headers": {
 				Type:        schema.TypeList,
@@ -273,10 +296,21 @@ var (
 			Resource:      gcpAuthBackendRoleDataSource(),
 			PathInventory: []string{"/auth/gcp/role/{role_name}"},
 		},
+		"vault_identity_oidc_client_creds": {
+			Resource:      identityOIDCClientCredsDataSource(),
+			PathInventory: []string{"/identity/oidc/client/{name}"},
+		},
+		"vault_identity_oidc_public_keys": {
+			Resource:      identityOIDCPublicKeysDataSource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/keys"},
+		},
+		"vault_identity_oidc_openid_config": {
+			Resource:      identityOIDCOpenIDConfigDataSource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/openid-configuration"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
-
 		"vault_alicloud_auth_backend_role": {
 			Resource:      alicloudAuthBackendRoleResource(),
 			PathInventory: []string{"/auth/alicloud/role/{name}"},
@@ -290,7 +324,7 @@ var (
 			PathInventory: []string{"/auth/approle/role/{role_name}"},
 		},
 		"vault_approle_auth_backend_role_secret_id": {
-			Resource: approleAuthBackendRoleSecretIDResource(),
+			Resource: approleAuthBackendRoleSecretIDResource("vault_approle_auth_backend_role_secret_id"),
 			PathInventory: []string{
 				"/auth/approle/role/{role_name}/secret-id",
 				"/auth/approle/role/{role_name}/custom-secret-id",
@@ -361,7 +395,7 @@ var (
 			PathInventory: []string{"/aws/config/root"},
 		},
 		"vault_aws_secret_backend_role": {
-			Resource:      awsSecretBackendRoleResource(),
+			Resource:      awsSecretBackendRoleResource("vault_aws_secret_backend_role"),
 			PathInventory: []string{"/aws/roles/{name}"},
 		},
 		"vault_azure_secret_backend": {
@@ -387,6 +421,10 @@ var (
 		"vault_consul_secret_backend_role": {
 			Resource:      consulSecretBackendRoleResource(),
 			PathInventory: []string{"/consul/roles/{name}"},
+		},
+		"vault_database_secrets_mount": {
+			Resource:      databaseSecretsMountResource(),
+			PathInventory: []string{"/database/config/{name}"},
 		},
 		"vault_database_secret_backend_connection": {
 			Resource:      databaseSecretBackendConnectionResource(),
@@ -421,7 +459,7 @@ var (
 			PathInventory: []string{"/auth/gcp/role/{name}"},
 		},
 		"vault_gcp_secret_backend": {
-			Resource:      gcpSecretBackendResource(),
+			Resource:      gcpSecretBackendResource("vault_gcp_secret_backend"),
 			PathInventory: []string{"/gcp/config"},
 		},
 		"vault_gcp_secret_roleset": {
@@ -437,11 +475,11 @@ var (
 			PathInventory: []string{"/auth/cert/certs/{name}"},
 		},
 		"vault_generic_endpoint": {
-			Resource:      genericEndpointResource(),
+			Resource:      genericEndpointResource("vault_generic_endpoint"),
 			PathInventory: []string{GenericPath},
 		},
 		"vault_generic_secret": {
-			Resource:      genericSecretResource(),
+			Resource:      genericSecretResource("vault_generic_secret"),
 			PathInventory: []string{GenericPath},
 		},
 		"vault_jwt_auth_backend": {
@@ -515,6 +553,21 @@ var (
 			PathInventory:  []string{"/sys/mfa/method/duo/{name}"},
 			EnterpriseOnly: true,
 		},
+		"vault_mfa_okta": {
+			Resource:       mfaOktaResource(),
+			PathInventory:  []string{"/sys/mfa/method/okta/{name}"},
+			EnterpriseOnly: true,
+		},
+		"vault_mfa_totp": {
+			Resource:       mfaTOTPResource(),
+			PathInventory:  []string{"/sys/mfa/method/totp/{name}"},
+			EnterpriseOnly: true,
+		},
+		"vault_mfa_pingid": {
+			Resource:       mfaPingIDResource(),
+			PathInventory:  []string{"/sys/mfa/method/totp/{name}"},
+			EnterpriseOnly: true,
+		},
 		"vault_mount": {
 			Resource:      MountResource(),
 			PathInventory: []string{"/sys/mounts/{path}"},
@@ -581,14 +634,14 @@ var (
 			PathInventory: []string{"/identity/oidc/role/{name}"},
 		},
 		"vault_rabbitmq_secret_backend": {
-			Resource: rabbitmqSecretBackendResource(),
+			Resource: rabbitMQSecretBackendResource(),
 			PathInventory: []string{
 				"/rabbitmq/config/connection",
 				"/rabbitmq/config/lease",
 			},
 		},
 		"vault_rabbitmq_secret_backend_role": {
-			Resource:      rabbitmqSecretBackendRoleResource(),
+			Resource:      rabbitMQSecretBackendRoleResource(),
 			PathInventory: []string{"/rabbitmq/roles/{name}"},
 		},
 		"vault_password_policy": {
@@ -667,6 +720,38 @@ var (
 			Resource:      raftSnapshotAgentConfigResource(),
 			PathInventory: []string{"/sys/storage/raft/snapshot-auto/config/{name}"},
 		},
+		"vault_raft_autopilot": {
+			Resource:      raftAutopilotConfigResource(),
+			PathInventory: []string{"/sys/storage/raft/autopilot/configuration"},
+		},
+		"vault_kmip_secret_backend": {
+			Resource:      kmipSecretBackendResource(),
+			PathInventory: []string{"/kmip/config"},
+		},
+		"vault_kmip_secret_scope": {
+			Resource:      kmipSecretScopeResource(),
+			PathInventory: []string{"/kmip/scope/{scope}"},
+		},
+		"vault_kmip_secret_role": {
+			Resource:      kmipSecretRoleResource(),
+			PathInventory: []string{"/kmip/scope/{scope}/role/{role}"},
+		},
+		"vault_identity_oidc_scope": {
+			Resource:      identityOIDCScopeResource(),
+			PathInventory: []string{"/identity/oidc/scope/{scope}"},
+		},
+		"vault_identity_oidc_assignment": {
+			Resource:      identityOIDCAssignmentResource(),
+			PathInventory: []string{"/identity/oidc/assignment/{name}"},
+		},
+		"vault_identity_oidc_client": {
+			Resource:      identityOIDCClientResource(),
+			PathInventory: []string{"/identity/oidc/client/{name}"},
+		},
+		"vault_identity_oidc_provider": {
+			Resource:      identityOIDCProviderResource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}"},
+		},
 	}
 )
 
@@ -734,17 +819,28 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, fmt.Errorf("failed to configure TLS for Vault API: %s", err)
 	}
 
-	clientConfig.HttpClient.Transport = logging.NewTransport("Vault", clientConfig.HttpClient.Transport)
+	clientConfig.HttpClient.Transport = helper.NewTransport(
+		"Vault",
+		clientConfig.HttpClient.Transport,
+		helper.DefaultTransportOptions(),
+	)
 
 	// enable ReadYourWrites to support read-after-write on Vault Enterprise
 	clientConfig.ReadYourWrites = true
+
+	// set default MaxRetries
+	clientConfig.MaxRetries = DefaultMaxHTTPRetries
 
 	client, err := api.NewClient(clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
 	}
 
+	// setting this is critical for proper namespace handling
 	client.SetCloneHeaders(true)
+
+	// setting this is critical for proper client cloning
+	client.SetCloneToken(true)
 
 	// Set headers if provided
 	headers := d.Get("headers").([]interface{})
@@ -763,6 +859,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	client.SetHeaders(parsedHeaders)
 
 	client.SetMaxRetries(d.Get("max_retries").(int))
+
+	maxHTTPRetriesCCC = d.Get("max_retries_ccc").(int)
 
 	// Try an get the token from the config or token helper
 	token, err := providerToken(d)
@@ -788,7 +886,13 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 		method := authLogin["method"].(string)
 		if method == "aws" {
-			if err := signAWSLogin(authLoginParameters); err != nil {
+			logger := hclog.Default()
+			if logging.IsDebugOrHigher() {
+				logger.SetLevel(hclog.Debug)
+			} else {
+				logger.SetLevel(hclog.Error)
+			}
+			if err := signAWSLogin(authLoginParameters, logger); err != nil {
 				return nil, fmt.Errorf("error signing AWS login request: %s", err)
 			}
 		}
@@ -806,6 +910,23 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, errors.New("no vault token found")
 	}
 
+	skipChildToken := d.Get("skip_child_token").(bool)
+	if !skipChildToken {
+		err := setChildToken(d, client)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Set the namespace to the requested namespace, if provided
+	namespace := d.Get("namespace").(string)
+	if namespace != "" {
+		client.SetNamespace(namespace)
+	}
+	return client, nil
+}
+
+func setChildToken(d *schema.ResourceData, c *api.Client) error {
 	tokenName := d.Get("token_name").(string)
 	if tokenName == "" {
 		tokenName = "terraform"
@@ -826,26 +947,26 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	// Set the namespace to the token's namespace only for the
 	// child token creation
-	tokenInfo, err := client.Auth().Token().LookupSelf()
+	tokenInfo, err := c.Auth().Token().LookupSelf()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if tokenNamespaceRaw, ok := tokenInfo.Data["namespace_path"]; ok {
 		tokenNamespace := tokenNamespaceRaw.(string)
 		if tokenNamespace != "" {
-			client.SetNamespace(tokenNamespace)
+			c.SetNamespace(tokenNamespace)
 		}
 	}
 
 	renewable := false
-	childTokenLease, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+	childTokenLease, err := c.Auth().Token().Create(&api.TokenCreateRequest{
 		DisplayName:    tokenName,
 		TTL:            fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
 		ExplicitMaxTTL: fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
 		Renewable:      &renewable,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create limited child token: %s", err)
+		return fmt.Errorf("failed to create limited child token: %s", err)
 	}
 
 	childToken := childTokenLease.Auth.ClientToken
@@ -854,14 +975,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
 
 	// Set the token to the generated child token
-	client.SetToken(childToken)
+	c.SetToken(childToken)
 
-	// Set the namespace to the requested namespace, if provided
-	namespace := d.Get("namespace").(string)
-	if namespace != "" {
-		client.SetNamespace(namespace)
-	}
-	return client, nil
+	return nil
 }
 
 func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {
@@ -876,7 +992,7 @@ func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {
 	return resourceMap, errs
 }
 
-func signAWSLogin(parameters map[string]interface{}) error {
+func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error {
 	var accessKey, secretKey, securityToken string
 	if val, ok := parameters["aws_access_key_id"].(string); ok {
 		accessKey = val
@@ -890,7 +1006,7 @@ func signAWSLogin(parameters map[string]interface{}) error {
 		securityToken = val
 	}
 
-	creds, err := awsauth.RetrieveCreds(accessKey, secretKey, securityToken)
+	creds, err := awsutil.RetrieveCreds(accessKey, secretKey, securityToken, logger)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve AWS credentials: %s", err)
 	}
@@ -904,7 +1020,7 @@ func signAWSLogin(parameters map[string]interface{}) error {
 		stsRegion = val
 	}
 
-	loginData, err := awsauth.GenerateLoginData(creds, headerValue, stsRegion)
+	loginData, err := awsutil.GenerateLoginData(creds, headerValue, stsRegion, logger)
 	if err != nil {
 		return fmt.Errorf("failed to generate AWS login data: %s", err)
 	}

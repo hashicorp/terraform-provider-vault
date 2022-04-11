@@ -61,6 +61,18 @@
                             <a href="/docs/providers/vault/d/identity_entity.html">vault_identity_entity</a>
                         </li>
 
+                        <li<%= sidebar_current("docs-vault-datasource-identity-oidc-client-creds") %>>
+                            <a href="/docs/providers/vault/d/identity_oidc_client_creds.html">vault_identity_oidc_client_creds</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-datasource-identity-oidc-openid-config") %>>
+                            <a href="/docs/providers/vault/d/identity_oidc_openid_config.html">vault_identity_oidc_openid_config</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-datasource-identity-oidc-public-keys") %>>
+                            <a href="/docs/providers/vault/d/identity_oidc_public_keys.html">vault_identity_oidc_public_keys</a>
+                        </li>
+
                         <li<%= sidebar_current("docs-vault-datasource-kubernetes-auth-backend-config") %>>
                             <a href="/docs/providers/vault/d/kubernetes_auth_backend_config.html">vault_kubernetes_auth_backend_config</a>
                         </li>
@@ -141,8 +153,8 @@
                             <a href="/docs/providers/vault/r/ad_secret_backend_library.html">vault_ad_secret_backend_library</a>
                         </li>
 
-                        <li<%= sidebar_current("docs-vault-resource-ad-secret-backend-role") %>>
-                            <a href="/docs/providers/vault/r/ad_secret_backend_role.html">vault_ad_secret_backend_role</a>
+                        <li<%= sidebar_current("docs-vault-resource-ad-secret-role") %>>
+                            <a href="/docs/providers/vault/r/ad_secret_role.html">vault_ad_secret_role</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-aws-secret-backend") %>>
@@ -191,6 +203,10 @@
 
                         <li<%= sidebar_current("docs-vault-resource-database-secret-backend-static-role") %>>
                             <a href="/docs/providers/vault/r/database_secret_backend_static_role.html">vault_database_secret_backend_static_role</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-database-secrets-mount") %>>
+                            <a href="/docs/providers/vault/r/database_secrets_mount.html">vault_database_secrets_mount</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-gcp-auth-backend") %>>
@@ -277,12 +293,40 @@
                             <a href="/docs/providers/vault/r/identity_oidc_role.html">vault_identity_oidc_role</a>
                         </li>
 
+                        <li<%= sidebar_current("docs-vault-identity-oidc-scope") %>>
+                            <a href="/docs/providers/vault/r/identity_oidc_scope.html">vault_identity_oidc_scope</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-identity-oidc-assignment") %>>
+                            <a href="/docs/providers/vault/r/identity_oidc_assignment.html">vault_identity_oidc_assignment</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-identity-oidc-client") %>>
+                            <a href="/docs/providers/vault/r/identity_oidc_client.html">vault_identity_oidc_client</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-identity-oidc-provider") %>>
+                            <a href="/docs/providers/vault/r/identity_oidc_provider.html">vault_identity_oidc_provider</a>
+                        </li>
+
                         <li<%= sidebar_current("docs-vault-resource-jwt-auth-backend") %>>
                             <a href="/docs/providers/vault/r/jwt_auth_backend.html">vault_jwt_auth_backend</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-jwt-auth-backend-role") %>>
                             <a href="/docs/providers/vault/r/jwt_auth_backend_role.html">vault_jwt_auth_backend_role</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-kmip-secret-backend") %>>
+                            <a href="/docs/providers/vault/r/kmip_secret_backend.html">vault_kmip_secret_backend</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-kmip-secret-scope") %>>
+                            <a href="/docs/providers/vault/r/kmip_secret_scope.html">vault_kmip_secret_scope</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-kmip-secret-role") %>>
+                            <a href="/docs/providers/vault/r/kmip_secret_role.html">vault_kmip_secret_role</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-kubernetes-auth-backend-config") %>>
@@ -307,6 +351,18 @@
 
                         <li<%= sidebar_current("docs-vault-resource-mfa-duo") %>>
                             <a href="/docs/providers/vault/r/mfa_duo.html">vault_mfa_duo</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-mfa-okta") %>>
+                            <a href="/docs/providers/vault/r/mfa_okta.html">vault_mfa_okta</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-mfa-totp") %>>
+                            <a href="/docs/providers/vault/r/mfa_totp.html">vault_mfa_totp</a>
+                        </li>
+
+                        <li<%= sidebar_current("docs-vault-resource-mfa-pingid") %>>
+                            <a href="/docs/providers/vault/r/mfa_pingid.html">vault_mfa_pingid</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-mount") %>>
@@ -422,7 +478,7 @@
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-transform-template") %>>
-                            <a href="/docs/providers/vault/generated/resources/transform/template/name.html">vault_transform_template</a>
+                            <a href="/docs/providers/vault/r/transform_template.html">vault_transform_template</a>
                         </li>
 
                         <li<%= sidebar_current("docs-vault-resource-transform-transformation") %>>

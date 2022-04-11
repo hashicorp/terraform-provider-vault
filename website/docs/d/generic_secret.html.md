@@ -76,11 +76,12 @@ serialized as JSON.
 to the time the data was requested. Once this time has passed any plan
 generated with this data may fail to apply.
 
-* `lease_start_time` - As a convenience, this records the current time
-on the computer where Terraform is running when the data is requested.
+* `lease_start_time` - The date and time of Terraform execution.
+It is derived from the local machine's clock, and is
+recorded in RFC3339 format UTC.
 This can be used to approximate the absolute time represented by
 `lease_duration`, though users must allow for any clock drift and response
-latency relative to to the Vault server.
+latency relative to the Vault server. _Provided only as a convenience_.
 
 * `lease_renewable` - `true` if the lease can be renewed using Vault's
 `sys/renew/{lease-id}` endpoint. Terraform does not currently support lease

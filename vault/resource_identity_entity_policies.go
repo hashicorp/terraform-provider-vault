@@ -5,8 +5,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func identityEntityPoliciesResource() *schema.Resource {
@@ -96,15 +97,15 @@ func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error 
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	resp, err := readIdentityEntity(client, id)
-	if err != nil {
-		return err
-	}
 	log.Printf("[DEBUG] Read IdentityEntityPolicies %s", id)
-	if resp == nil {
-		log.Printf("[WARN] IdentityEntityPolicies %q not found, removing from state", id)
-		d.SetId("")
-		return nil
+	resp, err := readIdentityEntity(client, id, d.IsNewResource())
+	if err != nil {
+		if isIdentityNotFoundError(err) {
+			log.Printf("[WARN] IdentityEntityPolicies %q not found, removing from state", id)
+			d.SetId("")
+			return nil
+		}
+		return err
 	}
 
 	d.Set("entity_id", id)
@@ -148,6 +149,9 @@ func identityEntityPoliciesDelete(d *schema.ResourceData, meta interface{}) erro
 	} else {
 		apiPolicies, err := readIdentityEntityPolicies(client, id)
 		if err != nil {
+			if isIdentityNotFoundError(err) {
+				return nil
+			}
 			return err
 		}
 		for _, policy := range d.Get("policies").(*schema.Set).List() {

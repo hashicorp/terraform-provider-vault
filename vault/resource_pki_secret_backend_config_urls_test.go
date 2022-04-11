@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
@@ -22,7 +24,7 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testPkiSecretBackendConfigUrlsDestroy,
 		Steps: []resource.TestStep{
 			{

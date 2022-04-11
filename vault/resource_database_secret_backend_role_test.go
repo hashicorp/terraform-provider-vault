@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccDatabaseSecretBackendRole_import(t *testing.T) {
@@ -21,7 +23,7 @@ func TestAccDatabaseSecretBackendRole_import(t *testing.T) {
 	name := acctest.RandomWithPrefix("role")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccDatabaseSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -55,7 +57,7 @@ func TestAccDatabaseSecretBackendRole_basic(t *testing.T) {
 	testConf := testAccDatabaseSecretBackendRoleConfig_basic(name, dbName, backend, connURL)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccDatabaseSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{

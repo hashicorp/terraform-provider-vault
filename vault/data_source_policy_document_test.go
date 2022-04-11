@@ -6,12 +6,14 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestDataSourcePolicyDocument(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourcePolicyDocument_config,
@@ -19,14 +21,13 @@ func TestDataSourcePolicyDocument(t *testing.T) {
 			},
 		},
 	})
-
 }
 
 var testDataSourcePolicyDocument_config = `
 data "vault_policy_document" "test" {
   rule {
     path                = "secret/test1/*"
-    capabilities        = ["create", "read", "update", "delete", "list"]
+    capabilities        = ["create", "read", "update", "delete", "list", "patch"]
     description         = "test rule 1"
     required_parameters = ["test_param1"]
 
@@ -86,7 +87,7 @@ data "vault_policy_document" "test" {
 
 var testResultPolicyHCLDocument = `# test rule 1
 path "secret/test1/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
+  capabilities = ["create", "read", "update", "delete", "list", "patch"]
   required_parameters = ["test_param1"]
   allowed_parameters = {
     "eggs" = ["foo", "bar"]

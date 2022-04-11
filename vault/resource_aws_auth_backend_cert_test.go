@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 // expires 05 Jan 2038
@@ -19,7 +21,7 @@ func TestAccAWSAuthBackendCert_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	name := acctest.RandomWithPrefix("test-cert")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendCertDestroy,
 		Steps: []resource.TestStep{
@@ -40,7 +42,7 @@ func TestAccAWSAuthBackendCert_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	name := acctest.RandomWithPrefix("test-cert")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendCertDestroy,
 		Steps: []resource.TestStep{

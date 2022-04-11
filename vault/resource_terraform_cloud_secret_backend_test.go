@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestTerraformCloudSecretBackend(t *testing.T) {
@@ -17,7 +19,7 @@ func TestTerraformCloudSecretBackend(t *testing.T) {
 	token := os.Getenv("TEST_TF_TOKEN")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccTerraformCloudSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{
 			{

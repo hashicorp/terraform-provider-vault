@@ -78,6 +78,19 @@ func jwtAuthBackendResource() *schema.Resource {
 				Description: "Client Secret used for OIDC",
 			},
 
+			"oidc_response_mode": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The response mode to be used in the OAuth2 request. Allowed values are 'query' and 'form_post'. Defaults to 'query'. If using Vault namespaces, and oidc_response_mode is 'form_post', then 'namespace_in_state' should be set to false.",
+			},
+
+			"oidc_response_types": {
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+				Description: "The response types to request. Allowed values are 'code' and 'id_token'. Defaults to 'code'. Note: 'id_token' may only be used if 'oidc_response_mode' is set to 'form_post'.",
+			},
+
 			"jwks_url": {
 				Type:          schema.TypeString,
 				Optional:      true,
@@ -123,6 +136,7 @@ func jwtAuthBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The accessor of the JWT auth backend",
 			},
+
 			"local": {
 				Type:        schema.TypeBool,
 				ForceNew:    true,
@@ -130,6 +144,7 @@ func jwtAuthBackendResource() *schema.Resource {
 				Default:     false,
 				Description: "Specifies if the auth method is local only",
 			},
+
 			"provider_config": {
 				Type:        schema.TypeMap,
 				Optional:    true,
@@ -138,6 +153,14 @@ func jwtAuthBackendResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+
+			"namespace_in_state": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Pass namespace in the OIDC state parameter instead of as a separate query parameter. With this setting, the allowed redirect URL(s) in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the OIDC provider side for all vault namespaces that will be authenticating against it. Defaults to true for new configs.",
+			},
+
 			"tune": authMountTuneSchema(),
 		},
 	}
@@ -171,6 +194,8 @@ var (
 		"oidc_discovery_ca_pem",
 		"oidc_client_id",
 		"oidc_client_secret",
+		"oidc_response_mode",
+		"oidc_response_types",
 		"jwks_url",
 		"jwks_ca_pem",
 		"jwt_validation_pubkeys",
@@ -178,6 +203,7 @@ var (
 		"jwt_supported_algs",
 		"default_role",
 		"provider_config",
+		"namespace_in_state",
 	}
 )
 

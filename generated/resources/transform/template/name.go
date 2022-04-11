@@ -1,7 +1,7 @@
 package template
 
-// DO NOT EDIT
-// This code is generated.
+// Code generation has been disabled for now.
+// It is okay to edit this file.
 
 import (
 	"fmt"
@@ -9,15 +9,37 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-const nameEndpoint = "/transform/template/{name}"
+const (
+	nameEndpoint = "/transform/template/{name}"
+
+	// schema field names
+	pathField          = "path"
+	alphabetField      = "alphabet"
+	nameField          = "name"
+	patternField       = "pattern"
+	typeField          = "type"
+	encodeFormatField  = "encode_format"
+	decodeFormatsField = "decode_formats"
+)
+
+var requestFields = []string{
+	pathField,
+	alphabetField,
+	nameField,
+	patternField,
+	typeField,
+	encodeFormatField,
+	decodeFormatsField,
+}
 
 func NameResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		"path": {
+		pathField: {
 			Type:        schema.TypeString,
 			Required:    true,
 			ForceNew:    true,
@@ -26,26 +48,38 @@ func NameResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-		"alphabet": {
+		alphabetField: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: `The alphabet to use for this template. This is only used during FPE transformations.`,
 		},
-		"name": {
+		nameField: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: `The name of the template.`,
 			ForceNew:    true,
 		},
-		"pattern": {
+		patternField: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: `The pattern used for matching. Currently, only regular expression pattern is supported.`,
 		},
-		"type": {
+		typeField: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: `The pattern type to use for match detection. Currently, only regex is supported.`,
+		},
+		encodeFormatField: {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: `The regular expression template used for encoding values.
+Only applicable to FPE transformations.`,
+		},
+		decodeFormatsField: {
+			Type:     schema.TypeMap,
+			Optional: true,
+			Description: `The map of regular expression templates used to customize decoded outputs.
+Only applicable to FPE transformations.`,
 		},
 	}
 	return &schema.Resource{
@@ -60,26 +94,15 @@ func NameResource() *schema.Resource {
 		Schema: fields,
 	}
 }
+
 func createNameResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Get("path").(string)
 	vaultPath := util.ParsePath(path, nameEndpoint, d)
 	log.Printf("[DEBUG] Creating %q", vaultPath)
 
-	data := map[string]interface{}{}
-	if v, ok := d.GetOkExists("alphabet"); ok {
-		data["alphabet"] = v
-	}
-	data["name"] = d.Get("name")
-	if v, ok := d.GetOkExists("pattern"); ok {
-		data["pattern"] = v
-	}
-	if v, ok := d.GetOkExists("type"); ok {
-		data["type"] = v
-	}
-
 	log.Printf("[DEBUG] Writing %q", vaultPath)
-	if _, err := client.Logical().Write(vaultPath, data); err != nil {
+	if _, err := client.Logical().Write(vaultPath, requestData(d, requestFields)); err != nil {
 		return fmt.Errorf("error writing %q: %s", vaultPath, err)
 	}
 	d.SetId(vaultPath)
@@ -111,21 +134,15 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error setting state %q, %q: %s", paramName, paramVal, err)
 		}
 	}
-	if val, ok := resp.Data["alphabet"]; ok {
-		if err := d.Set("alphabet", val); err != nil {
-			return fmt.Errorf("error setting state key 'alphabet': %s", err)
+
+	for _, field := range requestFields {
+		if val, ok := resp.Data[field]; ok {
+			if err := d.Set(field, val); err != nil {
+				return fmt.Errorf("error setting state key %q: %s", field, err)
+			}
 		}
 	}
-	if val, ok := resp.Data["pattern"]; ok {
-		if err := d.Set("pattern", val); err != nil {
-			return fmt.Errorf("error setting state key 'pattern': %s", err)
-		}
-	}
-	if val, ok := resp.Data["type"]; ok {
-		if err := d.Set("type", val); err != nil {
-			return fmt.Errorf("error setting state key 'type': %s", err)
-		}
-	}
+
 	return nil
 }
 
@@ -134,21 +151,22 @@ func updateNameResource(d *schema.ResourceData, meta interface{}) error {
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Updating %q", vaultPath)
 
-	data := map[string]interface{}{}
-	if raw, ok := d.GetOk("alphabet"); ok {
-		data["alphabet"] = raw
-	}
-	if raw, ok := d.GetOk("pattern"); ok {
-		data["pattern"] = raw
-	}
-	if raw, ok := d.GetOk("type"); ok {
-		data["type"] = raw
-	}
-	if _, err := client.Logical().Write(vaultPath, data); err != nil {
+	if _, err := client.Logical().Write(vaultPath, requestData(d, requestFields)); err != nil {
 		return fmt.Errorf("error updating template auth backend role %q: %s", vaultPath, err)
 	}
+
 	log.Printf("[DEBUG] Updated %q", vaultPath)
 	return readNameResource(d, meta)
+}
+
+func requestData(d *schema.ResourceData, fields []string) map[string]interface{} {
+	data := make(map[string]interface{})
+	for _, field := range fields {
+		if raw, ok := d.GetOk(field); ok {
+			data[field] = raw
+		}
+	}
+	return data
 }
 
 func deleteNameResource(d *schema.ResourceData, meta interface{}) error {

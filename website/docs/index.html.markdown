@@ -98,14 +98,17 @@ variables in order to keep credential information out of the configuration.
   `VAULT_ADDR` in the Terraform process environment will be set to the
   value of the `address` argument from this provider. By default, this is false.
 
-* `token` - (Required) Vault token that will be used by Terraform to
+* `token` - (Optional) Vault token that will be used by Terraform to
   authenticate. May be set via the `VAULT_TOKEN` environment variable.
   If none is otherwise supplied, Terraform will attempt to read it from
   `~/.vault-token` (where the vault command stores its current token).
   Terraform will issue itself a new token that is a child of the one given,
-  with a short TTL to limit the exposure of any requested secrets. Note that
+  with a short TTL to limit the exposure of any requested secrets, unless
+  `skip_child_token` is set to `true` (see below). Note that
   the given token must have the update capability on the auth/token/create
-  path in Vault in order to create child tokens.
+  path in Vault in order to create child tokens.  A token is required for
+  the provider.  A token can explicitly set via token argument, alternatively 
+  a token can be implicitly set via an auth_login block.
 
 * `token_name` - (Optional) Token name, that will be used by Terraform when
   creating the child token (`display_name`). This is useful to provide a reference of the
@@ -139,6 +142,18 @@ variables in order to keep credential information out of the configuration.
   that Terraform can be tricked into writing secrets to a server controlled
   by an intruder. May be set via the `VAULT_SKIP_VERIFY` environment variable.
 
+* `skip_child_token` - (Optional) Set this to `true` to disable
+  creation of an intermediate ephemeral Vault token for Terraform to
+  use. Enabling this is strongly discouraged since it increases
+  the potential for a renewable Vault token being exposed in clear text.
+  Only change this setting when the provided token cannot be permitted to
+  create child tokens and there is no risk of exposure from the output of
+  Terraform. May be set via the `TERRAFORM_VAULT_SKIP_CHILD_TOKEN` environment
+  variable. **Note**: Setting to `true` will cause `token_name`
+  and `max_lease_ttl_seconds` to be ignored.
+  Please see [Using Vault credentials in Terraform configuration](#using-vault-credentials-in-terraform-configuration)
+  before enabling this setting.
+
 * `max_lease_ttl_seconds` - (Optional) Used as the duration for the
   intermediate Vault token Terraform issues itself, which in turn limits
   the duration of secret leases issued by Vault. Defaults to 20 minutes
@@ -147,8 +162,17 @@ variables in order to keep credential information out of the configuration.
   for the implications of this setting.
 
 * `max_retries` - (Optional) Used as the maximum number of retries when a 5xx
-  error code is encountered. Defaults to 2 retries and may be set via the
+  error code is encountered. Defaults to `2` retries and may be set via the
   `VAULT_MAX_RETRIES` environment variable.
+
+* `max_retries_ccc` - (Optional) Maximum number of retries for _Client Controlled Consistency_
+  related operations. Defaults to `10` retries and may also be set via the
+  `VAULT_MAX_RETRIES_CCC` environment variable. See
+  [Vault Eventual Consistency](https://www.vaultproject.io/docs/enterprise/consistency#vault-eventual-consistency)
+  for more information.   
+  *As of Vault Enterprise 1.10 changing this parameter should no longer be required
+  See [Vault Eventual Consistency - Vault 1.10 Mitigations](https://www.vaultproject.io/docs/enterprise/consistency#vault-1-10-mitigations)
+  for more information.*
 
 * `namespace` - (Optional) Set the namespace to use. May be set via the
   `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
@@ -188,6 +212,21 @@ The `headers` configuration block accepts the following arguments:
 * `name` - (Required) The name of the header.
 
 * `value` - (Required) The value of the header.
+
+## Provider Debugging
+
+Terraform supports various logging options by default.
+These are documented [here](https://www.terraform.io/docs/internals/debugging.html).
+
+~> The environment variables below can be configured to provide extended log output and require log level `DEBUG`
+or higher. It's important to note that any extended log output may **reveal secrets**, so please exercise caution
+when enabling any of the following:
+
+* `TERRAFORM_VAULT_LOG_BODY` - when set to `true` both the request and response body will be logged.
+
+* `TERRAFORM_VAULT_LOG_REQUEST_BODY` - when set to `true` the request body will be logged.
+
+* `TERRAFORM_VAULT_LOG_RESPONSE_BODY` - when set to `true` the response body will be logged.
 
 ## Example Usage
 
@@ -455,6 +494,10 @@ $ vault policy list -namespace=everyone/engineering/vault-team
 default
 vault_team_policy
 ```
+
+## Tutorials 
+
+Refer to the [Codify Management of Vault Enterprise Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-enterprise) tutorial for additional examples using Vault namespaces.
 
 
 [namespaces]: https://www.vaultproject.io/docs/enterprise/namespaces#vault-enterprise-namespaces
