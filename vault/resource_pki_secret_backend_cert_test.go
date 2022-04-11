@@ -69,7 +69,7 @@ func TestPkiSecretBackendCert_revoke(t *testing.T) {
 	resourceName := "vault_pki_secret_backend_cert.test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testPkiSecretBackendCertDestroy,
 		Steps: []resource.TestStep{
 			{
