@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func mfaPingIDResource() *schema.Resource {
@@ -113,7 +112,10 @@ func mfaPingIDRequestData(d *schema.ResourceData) map[string]interface{} {
 }
 
 func mfaPingIDWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Get("name").(string)
 	path := mfaPingIDPath(name)
 
@@ -129,7 +131,10 @@ func mfaPingIDWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaPingIDRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := mfaPingIDPath(d.Id())
 
 	log.Printf("[DEBUG] Reading MFA PingID config %q", path)
@@ -170,7 +175,10 @@ func mfaPingIDUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaPingIDDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := mfaPingIDPath(d.Id())
 
 	log.Printf("[DEBUG] Deleting mfaPingID %s from Vault", path)

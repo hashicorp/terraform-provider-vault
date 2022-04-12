@@ -7,7 +7,6 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 const identityOIDCOpenIDConfigPathSuffix = "/.well-known/openid-configuration"
@@ -104,7 +103,10 @@ func identityOIDCOpenIDConfigDataSource() *schema.Resource {
 }
 
 func readOIDCOpenIDConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Get("name").(string)
 	path := "/v1/" + getOIDCProviderPath(name) + identityOIDCOpenIDConfigPathSuffix
 	r := client.NewRequest("GET", path)

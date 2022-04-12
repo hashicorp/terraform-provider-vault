@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 func mfaTOTPResource() *schema.Resource {
@@ -111,7 +110,10 @@ func mfaTOTPRequestData(d *schema.ResourceData) map[string]interface{} {
 }
 
 func mfaTOTPWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Get("name").(string)
 	path := mfaTOTPPath(name)
 
@@ -127,7 +129,10 @@ func mfaTOTPWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaTOTPRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Id()
 	path := mfaTOTPPath(name)
 
@@ -157,7 +162,10 @@ func mfaTOTPUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaTOTPDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := mfaTOTPPath(d.Id())
 
 	log.Printf("[DEBUG] Deleting mfaTOTP %s from Vault", path)

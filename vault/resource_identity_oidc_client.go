@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 const identityOIDCClientPathPrefix = "identity/oidc/client"
@@ -108,7 +107,10 @@ func getOIDCClientPath(name string) string {
 }
 
 func identityOIDCClientCreateUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Get("name").(string)
 	path := getOIDCClientPath(name)
 
@@ -125,7 +127,10 @@ func identityOIDCClientCreateUpdate(d *schema.ResourceData, meta interface{}) er
 }
 
 func identityOIDCClientRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading OIDC Client for %s", path)
@@ -157,7 +162,10 @@ func identityOIDCClientRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOIDCClientDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting OIDC Client %s", path)

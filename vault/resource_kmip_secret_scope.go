@@ -45,7 +45,10 @@ func kmipSecretScopeResource() *schema.Resource {
 }
 
 func kmipSecretScopeCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	scope := d.Get("scope").(string)
 	force := d.Get("force").(bool)
 
@@ -68,7 +71,10 @@ func kmipSecretScopeCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretScopeRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	scopeListPath := d.Get("path").(string) + "/scope"
 	scope := d.Get("scope").(string)
 
@@ -88,7 +94,10 @@ func kmipSecretScopeRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretScopeUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	scope := d.Get("scope").(string)
 
 	if d.HasChange("path") {
@@ -111,7 +120,10 @@ func kmipSecretScopeUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretScopeDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	scopePath := d.Id()
 
 	log.Printf("[DEBUG] Deleting KMIP scope %q", scopePath)

@@ -107,7 +107,10 @@ func kmipSecretBackendResource() *schema.Resource {
 }
 
 func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Get("path").(string)
 	defaultTLSClientTTL := fmt.Sprintf("%ds", d.Get("default_tls_client_ttl").(int))
 
@@ -129,7 +132,10 @@ func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 
 	if !d.IsNewResource() && d.HasChange("path") {
@@ -189,7 +195,10 @@ func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Reading KMIP config at %s/config", path)
@@ -215,7 +224,10 @@ func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 	log.Printf("[DEBUG] Unmounting KMIP backend %q", path)
 

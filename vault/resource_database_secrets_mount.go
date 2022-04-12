@@ -209,7 +209,10 @@ func setCommonDatabaseSchema(s schemaMap) schemaMap {
 }
 
 func databaseSecretsMountCreateOrUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	var root string
 	if d.IsNewResource() {
@@ -259,7 +262,10 @@ func databaseSecretsMountCreateOrUpdate(d *schema.ResourceData, meta interface{}
 }
 
 func databaseSecretsMountRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	if err := readMount(d, meta, true); err != nil {
 		return err
