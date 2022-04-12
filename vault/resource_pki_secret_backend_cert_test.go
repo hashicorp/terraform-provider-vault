@@ -365,7 +365,7 @@ func testPKICertRevocation(path string, store *testPKICertStore) resource.TestCh
 			return fmt.Errorf("certificate in %#v is empty", store)
 		}
 
-		addr := testProvider.Meta().(*api.Client).Address()
+		addr := testProvider.Meta().(*ProviderMeta).GetClient().Address()
 		url := fmt.Sprintf("%s/v1/%s/crl", addr, path)
 		c := cleanhttp.DefaultClient()
 		resp, err := c.Get(url)
