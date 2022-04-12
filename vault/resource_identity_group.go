@@ -31,7 +31,6 @@ func identityGroupResource() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 			},
-
 			"type": {
 				Type:        schema.TypeString,
 				Description: "Type of the group, internal or external. Defaults to internal.",
@@ -39,7 +38,6 @@ func identityGroupResource() *schema.Resource {
 				Optional:    true,
 				Default:     "internal",
 			},
-
 			"metadata": {
 				Type:        schema.TypeMap,
 				Optional:    true,
@@ -48,7 +46,6 @@ func identityGroupResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-
 			"policies": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -60,14 +57,12 @@ func identityGroupResource() *schema.Resource {
 					return d.Get("external_policies").(bool)
 				},
 			},
-
 			"external_policies": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
 				Description: "Manage policies externally through `vault_identity_group_policies`, allows using group ID in assigned policies.",
 			},
-
 			"member_group_ids": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -84,7 +79,6 @@ func identityGroupResource() *schema.Resource {
 					return false
 				},
 			},
-
 			"member_entity_ids": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -112,8 +106,8 @@ func identityGroupResource() *schema.Resource {
 	}
 }
 
-func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface{}, create bool) error {
-	if create {
+func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface{}) error {
+	if d.IsNewResource() {
 		if name, ok := d.GetOk("name"); ok {
 			data["name"] = name
 		}
@@ -141,19 +135,17 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 			data["policies"] = d.Get("policies").(*schema.Set).List()
 			// Member groups and entities can't be set for external groups
 			if d.Get("type").(string) == "internal" {
-				data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
 				data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
+				if !d.Get("external_member_entity_ids").(bool) {
+					data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
+				}
 			}
+
 			// Edge case where if external_policies is true, no policies
 			// should be configured on the entity.
 			data["external_policies"] = d.Get("external_policies").(bool)
 			if data["external_policies"].(bool) {
 				data["policies"] = nil
-			}
-			// if external_member_entity_ids is true, member_entity_ids will be nil
-			data["external_member_entity_ids"] = d.Get("external_member_entity_ids").(bool)
-			if data["external_member_entity_ids"].(bool) {
-				data["member_entity_ids"] = nil
 			}
 		}
 	}
@@ -173,7 +165,7 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 		"type": typeValue,
 	}
 
-	if err := identityGroupUpdateFields(d, data, true); err != nil {
+	if err := identityGroupUpdateFields(d, data); err != nil {
 		return fmt.Errorf("error writing IdentityGroup to %q: %s", name, err)
 	}
 
@@ -213,7 +205,7 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	data := map[string]interface{}{}
 
-	if err := identityGroupUpdateFields(d, data, false); err != nil {
+	if err := identityGroupUpdateFields(d, data); err != nil {
 		return fmt.Errorf("error updating IdentityGroup %q: %s", id, err)
 	}
 
