@@ -764,7 +764,7 @@ func addCommonSchemaFields(m map[string]*schema.Schema) map[string]*schema.Schem
 		Optional:     true,
 		ForceNew:     true,
 		Description:  "Target namespace. (requires Enterprise)",
-		ValidateFunc: validateNamespace,
+		ValidateFunc: validateNoLeadingTrailingSlashes,
 	}
 
 	return m

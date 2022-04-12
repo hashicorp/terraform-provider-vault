@@ -1,10 +1,8 @@
 package vault
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/gosimple/slug"
@@ -46,26 +44,26 @@ func validateDuration(i interface{}, k string) (s []string, es []error) {
 
 func validateNoTrailingSlash(i interface{}, k string) ([]string, []error) {
 	var errs []error
-	if err := checkPath(regexpPathTrailing, i, k); err != nil {
+	if err := validatePath(regexpPathTrailing, i, k); err != nil {
 		errs = append(errs, err)
 	}
 
 	return nil, errs
 }
 
-func validateNamespace(i interface{}, k string) ([]string, []error) {
+func validateNoLeadingTrailingSlashes(i interface{}, k string) ([]string, []error) {
 	var errs []error
-	if err := checkPath(regexpPath, i, k); err != nil {
+	if err := validatePath(regexpPath, i, k); err != nil {
 		errs = append(errs, err)
 	}
 
 	return nil, errs
 }
 
-func checkPath(r *regexp.Regexp, i interface{}, k string) error {
+func validatePath(r *regexp.Regexp, i interface{}, k string) error {
 	v, ok := i.(string)
 	if !ok {
-		return fmt.Errorf("value for %q must be string, not %T", k, i)
+		return fmt.Errorf("value for %q must be a string, not %T", k, i)
 	}
 
 	if v == "" {
@@ -77,22 +75,4 @@ func checkPath(r *regexp.Regexp, i interface{}, k string) error {
 	}
 
 	return nil
-}
-
-func validateNoTrailingLeadingSlashes(i interface{}, k string) (s []string, es []error) {
-	v, ok := i.(string)
-	if !ok {
-		es = append(es, fmt.Errorf("expected type of %s to be string", k))
-		return
-	}
-
-	if strings.HasSuffix(v, "/") {
-		es = append(es, errors.New("cannot write to a path ending in '/'"))
-	}
-
-	if strings.HasPrefix(v, "/") {
-		es = append(es, errors.New("cannot write to a path starting in '/'"))
-	}
-
-	return
 }

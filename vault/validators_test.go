@@ -48,7 +48,7 @@ func Test_validateNoTrailingSlash(t *testing.T) {
 	}
 }
 
-func Test_validateNamespace(t *testing.T) {
+func Test_validateNoLeadingTrailingSlashes(t *testing.T) {
 	type args struct {
 		i interface{}
 		k string
@@ -94,9 +94,9 @@ func Test_validateNamespace(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, actualErrs := validateNamespace(tt.args.i, tt.args.k)
+			got, actualErrs := validateNoLeadingTrailingSlashes(tt.args.i, tt.args.k)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("validateNamespace() got = %v, want %v", got, tt.want)
+				t.Errorf("validateNoLeadingTrailingSlashes() got = %v, want %v", got, tt.want)
 			}
 
 			var expectedErrs []error
@@ -112,7 +112,7 @@ func Test_validateNamespace(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(actualErrs, expectedErrs) {
-				t.Errorf("validateNamespace() actualErrs = %v, want %v", actualErrs, expectedErrs)
+				t.Errorf("validateNoLeadingTrailingSlashes() actualErrs = %v, want %v", actualErrs, expectedErrs)
 			}
 		})
 	}
