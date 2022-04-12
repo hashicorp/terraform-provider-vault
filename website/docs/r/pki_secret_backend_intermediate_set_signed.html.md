@@ -37,7 +37,9 @@ The following arguments are supported:
 
 * `backend` - (Required) The PKI secret backend the resource belongs to.
 
-* `certificate` - (Required) The certificate
+* `certificate` - (Required) Specifies the PEM encoded certificate. May optionally append additional
+  CA certificates to populate the whole chain, which will then enable returning the full chain from
+  issue and sign operations.
 
 ## Attributes Reference
 

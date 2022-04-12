@@ -1,10 +1,10 @@
 package vault
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const (
@@ -276,12 +276,7 @@ func updateTokenFields(d *schema.ResourceData, data map[string]interface{}, crea
 }
 
 func readTokenFields(d *schema.ResourceData, resp *api.Secret) error {
-	for k, v := range getCommonTokenFieldMap(resp) {
-		if err := d.Set(k, v); err != nil {
-			return fmt.Errorf("error setting state key %q: %w", k, err)
-		}
-	}
-	return nil
+	return util.SetResourceData(d, getCommonTokenFieldMap(resp))
 }
 
 func getCommonTokenFieldMap(resp *api.Secret) map[string]interface{} {

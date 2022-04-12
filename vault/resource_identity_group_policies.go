@@ -104,19 +104,23 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 
 	id := d.Id()
 
+	log.Printf("[DEBUG] Read IdentityGroupPolicies %s", id)
 	resp, err := readIdentityGroup(client, id, d.IsNewResource())
 	if err != nil {
+		if isIdentityNotFoundError(err) {
+			log.Printf("[WARN] IdentityGroupPolicies %q not found, removing from state", id)
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
-	log.Printf("[DEBUG] Read IdentityGroupPolicies %s", id)
-	if resp == nil {
-		log.Printf("[WARN] IdentityGroupPolicies %q not found, removing from state", id)
-		d.SetId("")
-		return nil
-	}
 
-	d.Set("group_id", id)
-	d.Set("group_name", resp.Data["name"])
+	if err := d.Set("group_id", id); err != nil {
+		return err
+	}
+	if err := d.Set("group_name", resp.Data["name"]); err != nil {
+		return err
+	}
 
 	if d.Get("exclusive").(bool) {
 		if err = d.Set("policies", resp.Data["policies"]); err != nil {

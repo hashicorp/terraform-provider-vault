@@ -27,31 +27,37 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 		"bound_service_account_names": {
 			Type:        schema.TypeSet,
 			Elem:        &schema.Schema{Type: schema.TypeString},
-			Description: "List of service account names able to access this role. If set to `[\"*\"]` all names are allowed, both this and bound_service_account_namespaces can not be \"*\".",
 			Required:    true,
+			Description: "List of service account names able to access this role. If set to `[\"*\"]` all names are allowed, both this and bound_service_account_namespaces can not be \"*\".",
 		},
 		"bound_service_account_namespaces": {
 			Type:        schema.TypeSet,
 			Elem:        &schema.Schema{Type: schema.TypeString},
-			Description: "List of namespaces allowed to access this role. If set to `[\"*\"]` all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
 			Required:    true,
+			Description: "List of namespaces allowed to access this role. If set to `[\"*\"]` all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
 		},
 		"backend": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Unique name of the kubernetes backend to configure.",
-			ForceNew:    true,
-			Default:     "kubernetes",
+			Type:     schema.TypeString,
+			Optional: true,
+			ForceNew: true,
+			Default:  "kubernetes",
 			// standardise on no beginning or trailing slashes
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
 			},
+			Description: "Unique name of the kubernetes backend to configure.",
 		},
 		"audience": {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Default:     "",
 			Description: "Optional Audience claim to verify in the JWT.",
+		},
+		"alias_name_source": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			Description: "Configures how identity aliases are generated. Valid choices are: serviceaccount_uid, serviceaccount_name",
 		},
 	}
 
@@ -86,13 +92,16 @@ func kubernetesAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[stri
 		data["bound_service_account_namespaces"] = boundServiceAccountNamespaces.(*schema.Set).List()
 	}
 
-	if create {
-		if v, ok := d.GetOk("audience"); ok {
-			data["audience"] = v.(string)
-		}
-	} else {
-		if d.HasChange("audience") {
-			data["audience"] = d.Get("audience").(string)
+	params := []string{"audience", "alias_name_source"}
+	for _, k := range params {
+		if create {
+			if v, ok := d.GetOk(k); ok {
+				data[k] = v
+			}
+		} else {
+			if d.HasChange(k) {
+				data[k] = d.Get(k)
+			}
 		}
 	}
 }
@@ -177,14 +186,15 @@ func kubernetesAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 
 	readTokenFields(d, resp)
 
-	d.Set("backend", backend)
-	d.Set("role_name", role)
-
-	if v, ok := resp.Data["audience"]; ok {
-		d.Set("audience", v)
+	if err := d.Set("backend", backend); err != nil {
+		return err
+	}
+	if err := d.Set("role_name", role); err != nil {
+		return err
 	}
 
-	for _, k := range []string{"bound_service_account_names", "bound_service_account_namespaces"} {
+	params := []string{"bound_service_account_names", "bound_service_account_namespaces", "audience", "alias_name_source"}
+	for _, k := range params {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
 				return fmt.Errorf("error reading %s for Kubernetes Auth Backend Role %q: %q", k, path, err)

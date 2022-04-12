@@ -104,15 +104,15 @@ func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error 
 
 	id := d.Id()
 
+	log.Printf("[DEBUG] Read IdentityEntityPolicies %s", id)
 	resp, err := readIdentityEntity(client, id, d.IsNewResource())
 	if err != nil {
+		if isIdentityNotFoundError(err) {
+			log.Printf("[WARN] IdentityEntityPolicies %q not found, removing from state", id)
+			d.SetId("")
+			return nil
+		}
 		return err
-	}
-	log.Printf("[DEBUG] Read IdentityEntityPolicies %s", id)
-	if resp == nil {
-		log.Printf("[WARN] IdentityEntityPolicies %q not found, removing from state", id)
-		d.SetId("")
-		return nil
 	}
 
 	d.Set("entity_id", id)
@@ -160,6 +160,9 @@ func identityEntityPoliciesDelete(d *schema.ResourceData, meta interface{}) erro
 	} else {
 		apiPolicies, err := readIdentityEntityPolicies(client, id)
 		if err != nil {
+			if isIdentityNotFoundError(err) {
+				return nil
+			}
 			return err
 		}
 		for _, policy := range d.Get("policies").(*schema.Set).List() {

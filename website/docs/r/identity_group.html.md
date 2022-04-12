@@ -42,6 +42,37 @@ resource "vault_identity_group" "group" {
 }
 ```
 
+## Caveats
+
+It's important to note that Vault identity groups names are *case-insensitive*. For example the following resources would be equivalent.
+Applying this configuration would result in the provider failing to create one of the identity groups, since the resources share the same `name`.
+
+This sort of pattern should be avoided:
+```hcl
+resource "vault_identity_group" "internal" {
+  # this duplicates the resource below
+  name     = "internal"
+  type     = "internal"
+  policies = ["dev", "test"]
+
+  metadata = {
+    version = "2"
+  }
+}
+
+resource "vault_identity_group" "Internal" {
+  # this duplicates the resource above
+  name     = "Internal"
+  type     = "internal"
+  policies = ["dev", "test"]
+
+  metadata = {
+    version = "2"
+  }
+}
+```
+
+
 ## Argument Reference
 
 The following arguments are supported:

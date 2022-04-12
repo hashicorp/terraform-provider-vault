@@ -102,7 +102,7 @@ func testAccGithubUserConfig_basic(backend string, user string, policies []strin
 	return fmt.Sprintf(`
 resource "vault_github_auth_backend" "gh" {
 	path = "%s"
-  	organization = "vault"
+	organization = "hashicorp"
 }
 
 resource "vault_github_user" "user" {

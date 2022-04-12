@@ -3,6 +3,7 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -108,6 +109,39 @@ func TestAccIdentityGroupExternal(t *testing.T) {
 			{
 				Config: testAccIdentityGroupConfig(group),
 				Check:  testAccIdentityGroupCheckAttrs(),
+			},
+		},
+	})
+}
+
+func TestAccIdentityGroup_DuplicateCreate(t *testing.T) {
+	// group identity names are stored in lower case,
+	// this test attempts to create two resources with different casing for the
+	// same lower case group name.
+	group := fmt.Sprintf("test_group_%d", acctest.RandInt())
+	config := fmt.Sprintf(`
+resource "vault_identity_group" "test_lower" {
+  name     = %q
+  type     = "external"
+  policies = ["default"]
+}
+
+resource "vault_identity_group" "test_upper" {
+  name     = %q
+  type     = "external"
+  policies = ["default"]
+}
+`, group, strings.ToUpper(group[0:1])+group[1:])
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckIdentityGroupDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`(?i)failed to create identity group %q, reason=group already exists .+`, group)),
 			},
 		},
 	})

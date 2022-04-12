@@ -159,7 +159,7 @@ func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing %q to cert auth backendq: %s", path, err)
+		return fmt.Errorf("Error writing %q to cert auth backend: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote %q to cert auth backend", path)
 

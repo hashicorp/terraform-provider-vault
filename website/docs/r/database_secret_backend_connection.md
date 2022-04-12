@@ -50,6 +50,8 @@ The following arguments are supported:
 
 * `backend` - (Required) The unique name of the Vault mount to configure.
 
+* `plugin_name` - (Optional) Specifies the name of the plugin to use.
+
 * `verify_connection` - (Optional) Whether the connection should be verified on
   initial configuration or not.
 
@@ -170,6 +172,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
   docs](https://www.vaultproject.io/api-docs/secret/databases/mongodb.html#sample-payload)
   for an example.
 
+* `username` - (Optional) The root credential username used in the connection URL.
+
+* `password` - (Optional) The root credential password used in the connection URL.
+
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
@@ -198,6 +204,12 @@ See the [Vault
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
+* `username` - (Optional) The root credential username used in the connection URL.
+
+* `password` - (Optional) The root credential password used in the connection URL.
+
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
+
 ### MSSQL Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -217,6 +229,12 @@ See the [Vault
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
+* `username` - (Optional) The root credential username used in the connection URL.
+
+* `password` - (Optional) The root credential password used in the connection URL.
+
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
 * `contained_db` - (Optional bool: false) For Vault v1.9+. Set to true when the target is a
   Contained Database, e.g. AzureSQL.
@@ -238,6 +256,10 @@ See the [Vault
 
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
+
+* `username` - (Optional) The root credential username used in the connection URL.
+
+* `password` - (Optional) The root credential password used in the connection URL.
 
 * `tls_certificate_key` - (Optional) x509 certificate for connecting to the database. This must be a PEM encoded version of the private key and the certificate combined.
 
@@ -263,6 +285,12 @@ See the [Vault
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
+* `username` - (Optional) The root credential username used in the connection URL.
+
+* `password` - (Optional) The root credential password used in the connection URL.
+
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
+
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
@@ -279,6 +307,10 @@ See the [Vault
 
 * `max_idle_connections` - (Optional) The maximum number of idle connections to
   maintain.
+
+* `username` - (Optional) The root credential username used in the connection URL.
+
+* `password` - (Optional) The root credential password used in the connection URL.
 
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
@@ -336,6 +368,8 @@ See the [Vault
 * `username` - (Optional) The root credential username used in the connection URL.
 
 * `password` - (Optional) The root credential password used in the connection URL.
+
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 

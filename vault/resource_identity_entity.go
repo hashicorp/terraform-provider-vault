@@ -181,20 +181,20 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 
 	id := d.Id()
 
+	log.Printf("[DEBUG] Read IdentityEntity %s", id)
 	resp, err := readIdentityEntity(client, id, d.IsNewResource())
 	if err != nil {
 		// We need to check if the secret_id has expired
-		if resp == nil && util.IsExpiredTokenErr(err) {
+		if util.IsExpiredTokenErr(err) {
 			return nil
 		}
-		return fmt.Errorf("error reading IdentityEntity %q: %s", id, err)
-	}
 
-	log.Printf("[DEBUG] Read IdentityEntity %s", id)
-	if resp == nil {
-		log.Printf("[WARN] IdentityEntity %q not found, removing from state", id)
-		d.SetId("")
-		return nil
+		if isIdentityNotFoundError(err) {
+			log.Printf("[WARN] IdentityEntity %q not found, removing from state", id)
+			d.SetId("")
+			return nil
+		}
+		return fmt.Errorf("error reading IdentityEntity %q: %w", id, err)
 	}
 
 	for _, k := range []string{"name", "metadata", "disabled", "policies"} {

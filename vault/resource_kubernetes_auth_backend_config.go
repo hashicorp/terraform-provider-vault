@@ -32,7 +32,7 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API.",
 				Optional:    true,
-				Default:     "",
+				Computed:    true,
 			},
 			"token_reviewer_jwt": {
 				Type:        schema.TypeString,
@@ -133,7 +133,10 @@ func kubernetesAuthBackendConfigCreate(d *schema.ResourceData, meta interface{})
 	// NOTE: Since reading the auth/<backend>/config does
 	// not return the `token_reviewer_jwt`,
 	// set it from data after successfully storing it in Vault.
-	d.Set("token_reviewer_jwt", data["token_reviewer_jwt"])
+	if err := d.Set("token_reviewer_jwt", data["token_reviewer_jwt"]); err != nil {
+		return err
+	}
+
 	log.Printf("[DEBUG] Wrote Kubernetes auth backend config %q", path)
 
 	return kubernetesAuthBackendConfigRead(d, meta)
@@ -168,6 +171,7 @@ func kubernetesAuthBackendConfigRead(d *schema.ResourceData, meta interface{}) e
 	if err != nil {
 		return fmt.Errorf("error reading Kubernetes auth backend config %q: %s", path, err)
 	}
+
 	log.Printf("[DEBUG] Read Kubernetes auth backend config %q", path)
 	if resp == nil {
 		log.Printf("[WARN] Kubernetes auth backend config %q not found, removing from state", path)
@@ -175,21 +179,25 @@ func kubernetesAuthBackendConfigRead(d *schema.ResourceData, meta interface{}) e
 		return nil
 	}
 
-	d.Set("backend", backend)
-	d.Set("kubernetes_host", resp.Data["kubernetes_host"])
-	d.Set("kubernetes_ca_cert", resp.Data["kubernetes_ca_cert"])
-	d.Set("issuer", resp.Data["issuer"])
-	d.Set("disable_iss_validation", resp.Data["disable_iss_validation"])
-	d.Set("disable_local_ca_jwt", resp.Data["disable_local_ca_jwt"])
-
-	iPemKeys := resp.Data["pem_keys"].([]interface{})
-	pemKeys := make([]string, 0, len(iPemKeys))
-
-	for _, iPemKey := range iPemKeys {
-		pemKeys = append(pemKeys, iPemKey.(string))
+	if err := d.Set("backend", backend); err != nil {
+		return err
 	}
 
-	d.Set("pem_keys", pemKeys)
+	params := []string{
+		"kubernetes_host",
+		"kubernetes_ca_cert",
+		"issuer",
+		"disable_iss_validation",
+		"disable_local_ca_jwt",
+		"pem_keys",
+	}
+
+	for _, k := range params {
+		v := resp.Data[k]
+		if err := d.Set(k, v); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -227,7 +235,7 @@ func kubernetesAuthBackendConfigUpdate(d *schema.ResourceData, meta interface{})
 		data["issuer"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("disable_iss_validation"); ok {
+	if v, ok := d.GetOkExists("disable_iss_validation"); ok {
 		data["disable_iss_validation"] = v
 	}
 

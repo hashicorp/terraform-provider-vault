@@ -287,6 +287,18 @@ var (
 			Resource:      updateSchemaResource(gcpAuthBackendRoleDataSource()),
 			PathInventory: []string{"/auth/gcp/role/{role_name}"},
 		},
+		"vault_identity_oidc_client_creds": {
+			Resource:      identityOIDCClientCredsDataSource(),
+			PathInventory: []string{"/identity/oidc/client/{name}"},
+		},
+		"vault_identity_oidc_public_keys": {
+			Resource:      identityOIDCPublicKeysDataSource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/keys"},
+		},
+		"vault_identity_oidc_openid_config": {
+			Resource:      identityOIDCOpenIDConfigDataSource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/openid-configuration"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
@@ -400,6 +412,10 @@ var (
 		"vault_consul_secret_backend_role": {
 			Resource:      updateSchemaResource(consulSecretBackendRoleResource()),
 			PathInventory: []string{"/consul/roles/{name}"},
+		},
+		"vault_database_secrets_mount": {
+			Resource:      databaseSecretsMountResource(),
+			PathInventory: []string{"/database/config/{name}"},
 		},
 		"vault_database_secret_backend_connection": {
 			Resource:      updateSchemaResource(databaseSecretBackendConnectionResource()),
@@ -526,6 +542,21 @@ var (
 		"vault_mfa_duo": {
 			Resource:       updateSchemaResource(mfaDuoResource()),
 			PathInventory:  []string{"/sys/mfa/method/duo/{name}"},
+			EnterpriseOnly: true,
+		},
+		"vault_mfa_okta": {
+			Resource:       mfaOktaResource(),
+			PathInventory:  []string{"/sys/mfa/method/okta/{name}"},
+			EnterpriseOnly: true,
+		},
+		"vault_mfa_totp": {
+			Resource:       mfaTOTPResource(),
+			PathInventory:  []string{"/sys/mfa/method/totp/{name}"},
+			EnterpriseOnly: true,
+		},
+		"vault_mfa_pingid": {
+			Resource:       mfaPingIDResource(),
+			PathInventory:  []string{"/sys/mfa/method/totp/{name}"},
 			EnterpriseOnly: true,
 		},
 		"vault_mount": {
@@ -683,6 +714,34 @@ var (
 		"vault_raft_autopilot": {
 			Resource:      updateSchemaResource(raftAutopilotConfigResource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/configuration"},
+		},
+		"vault_kmip_secret_backend": {
+			Resource:      kmipSecretBackendResource(),
+			PathInventory: []string{"/kmip/config"},
+		},
+		"vault_kmip_secret_scope": {
+			Resource:      kmipSecretScopeResource(),
+			PathInventory: []string{"/kmip/scope/{scope}"},
+		},
+		"vault_kmip_secret_role": {
+			Resource:      kmipSecretRoleResource(),
+			PathInventory: []string{"/kmip/scope/{scope}/role/{role}"},
+		},
+		"vault_identity_oidc_scope": {
+			Resource:      identityOIDCScopeResource(),
+			PathInventory: []string{"/identity/oidc/scope/{scope}"},
+		},
+		"vault_identity_oidc_assignment": {
+			Resource:      identityOIDCAssignmentResource(),
+			PathInventory: []string{"/identity/oidc/assignment/{name}"},
+		},
+		"vault_identity_oidc_client": {
+			Resource:      identityOIDCClientResource(),
+			PathInventory: []string{"/identity/oidc/client/{name}"},
+		},
+		"vault_identity_oidc_provider": {
+			Resource:      identityOIDCProviderResource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}"},
 		},
 	}
 )

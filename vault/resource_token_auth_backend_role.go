@@ -41,6 +41,15 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 			DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
 			Description: "List of allowed policies for given role.",
 		},
+		"allowed_policies_glob": {
+			Type:     schema.TypeSet,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
+			Description: "Set of allowed policies with glob match for given role.",
+		},
 		"disallowed_policies": {
 			Type:     schema.TypeSet,
 			Optional: true,
@@ -50,11 +59,29 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 			DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
 			Description: "List of disallowed policies for given role.",
 		},
+		"disallowed_policies_glob": {
+			Type:     schema.TypeSet,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
+			Description: "Set of disallowed policies with glob match for given role.",
+		},
 		"orphan": {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Default:     false,
 			Description: "If true, tokens created against this policy will be orphan tokens.",
+		},
+		"allowed_entity_aliases": {
+			Type:     schema.TypeSet,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
+			Description: "Set of allowed entity aliases for this role.",
 		},
 
 		"renewable": {
@@ -90,8 +117,11 @@ func tokenAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]in
 	setTokenFields(d, data, tokenAuthBackendRoleTokenConfig())
 
 	data["allowed_policies"] = d.Get("allowed_policies").(*schema.Set).List()
+	data["allowed_policies_glob"] = d.Get("allowed_policies_glob").(*schema.Set).List()
 	data["disallowed_policies"] = d.Get("disallowed_policies").(*schema.Set).List()
+	data["disallowed_policies_glob"] = d.Get("disallowed_policies_glob").(*schema.Set).List()
 	data["orphan"] = d.Get("orphan").(bool)
+	data["allowed_entity_aliases"] = d.Get("allowed_entity_aliases").(*schema.Set).List()
 	data["renewable"] = d.Get("renewable").(bool)
 	data["path_suffix"] = d.Get("path_suffix").(string)
 	data["token_type"] = d.Get("token_type").(string)
@@ -153,7 +183,12 @@ func tokenAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("role_name", roleName)
 
-	for _, k := range []string{"allowed_policies", "disallowed_policies", "orphan", "path_suffix", "renewable"} {
+	params := []string{
+		"allowed_policies", "allowed_policies_glob", "disallowed_policies",
+		"disallowed_policies_glob", "allowed_entity_aliases", "orphan",
+		"path_suffix", "renewable",
+	}
+	for _, k := range params {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return fmt.Errorf("error reading %s for Token auth backend role %q: %q", k, path, err)
 		}

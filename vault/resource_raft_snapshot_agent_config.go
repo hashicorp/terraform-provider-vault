@@ -313,11 +313,12 @@ func readSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[DEBUG] Reading %q", configPath)
 
 	resp, err := client.Logical().Read(configPath)
-	if err != nil && util.Is404(err) {
+	if resp == nil || (err != nil && util.Is404(err)) {
 		log.Printf("[WARN] %q not found, removing from state", name)
 		d.SetId("")
 		return nil
-	} else if err != nil {
+	}
+	if err != nil {
 		return fmt.Errorf("error reading %q: %s", configPath, err)
 	}
 
