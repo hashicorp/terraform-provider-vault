@@ -3,11 +3,14 @@ package vault
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
+
+var authBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/config$")
 
 func azureAuthBackendConfigResource() *schema.Resource {
 	return &schema.Resource{
@@ -67,16 +70,14 @@ func azureAuthBackendConfigResource() *schema.Resource {
 func azureAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*api.Client)
 
-	// if backend comes from the config, it won't have the StateFunc
-	// applied yet, so we need to apply it again.
 	backend := d.Get("backend").(string)
+	path := azureAuthBackendConfigPath(backend)
+
 	tenantId := d.Get("tenant_id").(string)
 	clientId := d.Get("client_id").(string)
 	clientSecret := d.Get("client_secret").(string)
 	resource := d.Get("resource").(string)
 	environment := d.Get("environment").(string)
-
-	path := azureAuthBackendConfigPath(backend)
 
 	data := map[string]interface{}{
 		"tenant_id":     tenantId,
@@ -100,11 +101,17 @@ func azureAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 
 func azureAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*api.Client)
+	path := d.Id()
+
+	backend, err := azureAuthBackendConfigBackendFromPath(path)
+	if err != nil {
+		return fmt.Errorf("invalid path %q for Azure auth backend config: %s", path, err)
+	}
 
 	log.Printf("[DEBUG] Reading Azure auth backend config")
-	secret, err := config.Logical().Read(d.Id())
+	secret, err := config.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading Azure auth backend config from %q: %s", d.Id(), err)
+		return fmt.Errorf("error reading Azure auth backend config from %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read Azure auth backend config")
 
@@ -113,11 +120,11 @@ func azureAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-	idPieces := strings.Split(d.Id(), "/")
-	if len(idPieces) != 3 {
-		return fmt.Errorf("expected %q to have 4 pieces, has %d", d.Id(), len(idPieces))
+
+	if err := d.Set("backend", backend); err != nil {
+		return err
 	}
-	d.Set("backend", idPieces[1])
+
 	d.Set("tenant_id", secret.Data["tenant_id"])
 	d.Set("client_id", secret.Data["client_id"])
 	if v, ok := secret.Data["client_secret"]; ok {
@@ -155,4 +162,15 @@ func azureAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, err
 
 func azureAuthBackendConfigPath(path string) string {
 	return "auth/" + strings.Trim(path, "/") + "/config"
+}
+
+func azureAuthBackendConfigBackendFromPath(path string) (string, error) {
+	if !authBackendConfigFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no backend found")
+	}
+	res := authBackendConfigFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
+	}
+	return res[1], nil
 }
