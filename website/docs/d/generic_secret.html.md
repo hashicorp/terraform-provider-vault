@@ -54,6 +54,10 @@ to see which endpoints support the `GET` method.
 Vault KV secrets engine - version 2 to indicate which version of the secret
 to read.
 
+* `with_lease_start_time` - If set to true, stores `lease_start_time` in the TF state.
+ Note that storing the `lease_start_time` in the TF state will cause a persistent drift
+ on every `terraform plan` and will require a `terraform apply`.
+
 ## Required Vault Capabilities
 
 Use of this resource requires the `read` capability on the given path.
