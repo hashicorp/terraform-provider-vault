@@ -402,7 +402,7 @@ func setSSHRoleKeyConfig(d *schema.ResourceData, role *api.Secret) error {
 			v[keyType] = l
 		}
 
-		return d.Set(newField, v)
+		return d.Set(legacyField, v)
 	} else {
 		// set the key configuration
 		return d.Set(newField, keyConfigs)
