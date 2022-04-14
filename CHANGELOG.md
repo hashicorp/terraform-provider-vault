@@ -1,3 +1,8 @@
+## 3.5.0 (Unreleased)
+FEATURES:
+* `resource/vault_ssh_secret_backend_role`: support configuring multiple public SSH key lengths in vault-1.10+
+  ([#1413](https://github.com/terraform-providers/terraform-provider-vault/pull/1413))
+
 ## 3.4.1 (March 31, 2022)
 BUGS:
 * `data/azure_access_credentials`: Fix panic when `tenant_id` and `subscription_id` are specified together; add new `environment` override field
