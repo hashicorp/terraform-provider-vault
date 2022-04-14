@@ -149,7 +149,7 @@ func sshSecretBackendRoleResource() *schema.Resource {
 					},
 					"lengths": {
 						Description: "List of allowed key lengths, vault-1.10 and above",
-						Optional:    true,
+						Required:    true,
 						Type:        schema.TypeList,
 						Elem: &schema.Schema{
 							Type: schema.TypeInt,
