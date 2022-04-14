@@ -54,6 +54,8 @@ to see which endpoints support the `GET` method.
 Vault KV secrets engine - version 2 to indicate which version of the secret
 to read.
 
+* `with_lease_start_time` - If set to true, exports `lease_start_time` to the TF state.
+
 ## Required Vault Capabilities
 
 Use of this resource requires the `read` capability on the given path.
