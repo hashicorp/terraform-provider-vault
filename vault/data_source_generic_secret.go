@@ -33,8 +33,8 @@ func genericSecretDataSource() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  true,
-				Description: "If set to true, exports 'lease_start_time' " +
-					"to the TF state.",
+				Description: "If set to true, stores 'lease_start_time' " +
+					"in the TF state.",
 			},
 
 			"data_json": {
