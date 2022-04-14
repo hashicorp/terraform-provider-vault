@@ -288,15 +288,15 @@ var (
 			PathInventory: []string{"/auth/gcp/role/{role_name}"},
 		},
 		"vault_identity_oidc_client_creds": {
-			Resource:      identityOIDCClientCredsDataSource(),
+			Resource:      updateSchemaResource(identityOIDCClientCredsDataSource()),
 			PathInventory: []string{"/identity/oidc/client/{name}"},
 		},
 		"vault_identity_oidc_public_keys": {
-			Resource:      identityOIDCPublicKeysDataSource(),
+			Resource:      updateSchemaResource(identityOIDCPublicKeysDataSource()),
 			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/keys"},
 		},
 		"vault_identity_oidc_openid_config": {
-			Resource:      identityOIDCOpenIDConfigDataSource(),
+			Resource:      updateSchemaResource(identityOIDCOpenIDConfigDataSource()),
 			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/openid-configuration"},
 		},
 	}
@@ -414,7 +414,7 @@ var (
 			PathInventory: []string{"/consul/roles/{name}"},
 		},
 		"vault_database_secrets_mount": {
-			Resource:      databaseSecretsMountResource(),
+			Resource:      updateSchemaResource(databaseSecretsMountResource()),
 			PathInventory: []string{"/database/config/{name}"},
 		},
 		"vault_database_secret_backend_connection": {
@@ -545,17 +545,17 @@ var (
 			EnterpriseOnly: true,
 		},
 		"vault_mfa_okta": {
-			Resource:       mfaOktaResource(),
+			Resource:       updateSchemaResource(mfaOktaResource()),
 			PathInventory:  []string{"/sys/mfa/method/okta/{name}"},
 			EnterpriseOnly: true,
 		},
 		"vault_mfa_totp": {
-			Resource:       mfaTOTPResource(),
+			Resource:       updateSchemaResource(mfaTOTPResource()),
 			PathInventory:  []string{"/sys/mfa/method/totp/{name}"},
 			EnterpriseOnly: true,
 		},
 		"vault_mfa_pingid": {
-			Resource:       mfaPingIDResource(),
+			Resource:       updateSchemaResource(mfaPingIDResource()),
 			PathInventory:  []string{"/sys/mfa/method/totp/{name}"},
 			EnterpriseOnly: true,
 		},
@@ -716,31 +716,31 @@ var (
 			PathInventory: []string{"/sys/storage/raft/autopilot/configuration"},
 		},
 		"vault_kmip_secret_backend": {
-			Resource:      kmipSecretBackendResource(),
+			Resource:      updateSchemaResource(kmipSecretBackendResource()),
 			PathInventory: []string{"/kmip/config"},
 		},
 		"vault_kmip_secret_scope": {
-			Resource:      kmipSecretScopeResource(),
+			Resource:      updateSchemaResource(kmipSecretScopeResource()),
 			PathInventory: []string{"/kmip/scope/{scope}"},
 		},
 		"vault_kmip_secret_role": {
-			Resource:      kmipSecretRoleResource(),
+			Resource:      updateSchemaResource(kmipSecretRoleResource()),
 			PathInventory: []string{"/kmip/scope/{scope}/role/{role}"},
 		},
 		"vault_identity_oidc_scope": {
-			Resource:      identityOIDCScopeResource(),
+			Resource:      updateSchemaResource(identityOIDCScopeResource()),
 			PathInventory: []string{"/identity/oidc/scope/{scope}"},
 		},
 		"vault_identity_oidc_assignment": {
-			Resource:      identityOIDCAssignmentResource(),
+			Resource:      updateSchemaResource(identityOIDCAssignmentResource()),
 			PathInventory: []string{"/identity/oidc/assignment/{name}"},
 		},
 		"vault_identity_oidc_client": {
-			Resource:      identityOIDCClientResource(),
+			Resource:      updateSchemaResource(identityOIDCClientResource()),
 			PathInventory: []string{"/identity/oidc/client/{name}"},
 		},
 		"vault_identity_oidc_provider": {
-			Resource:      identityOIDCProviderResource(),
+			Resource:      updateSchemaResource(identityOIDCProviderResource()),
 			PathInventory: []string{"/identity/oidc/provider/{name}"},
 		},
 	}
