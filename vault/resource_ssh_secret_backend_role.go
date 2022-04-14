@@ -378,7 +378,7 @@ func setSSHRoleKeyConfig(d *schema.ResourceData, role *api.Secret) error {
 		return err
 	}
 
-	newField := "allowed_user_key_lengths"
+	newField := "allowed_user_key_config"
 	legacyField := "allowed_user_key_lengths"
 	// work around to support the allowed_user_key_lengths with Vault 1.10+
 	if _, ok := d.GetOk(legacyField); ok {
@@ -405,7 +405,7 @@ func setSSHRoleKeyConfig(d *schema.ResourceData, role *api.Secret) error {
 		return d.Set(newField, v)
 	} else {
 		// set the key configuration
-		return d.Set("allowed_user_key_config", keyConfigs)
+		return d.Set(newField, keyConfigs)
 	}
 }
 
