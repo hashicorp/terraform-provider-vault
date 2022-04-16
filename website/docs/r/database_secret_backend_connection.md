@@ -335,9 +335,7 @@ See the [Vault
 
 * `insecure` - (Optional) Whether to disable certificate verification.
 
-* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
-See the [Vault
-  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation. See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating) for more details.
 
 ### Snowflake Configuration Options
 
