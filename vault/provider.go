@@ -160,7 +160,7 @@ func Provider() *schema.Provider {
 			"tls_server_name": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_TLS_SERVER_NAME", false),
+				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultTLSServerName, ""),
 				Description: "Name to use as the SNI host when connecting via TLS.",
 			},
 			"max_lease_ttl_seconds": {
