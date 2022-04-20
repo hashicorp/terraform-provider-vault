@@ -1,5 +1,6 @@
 ## 3.5.0 (Unreleased)
 FEATURES:
+* Add MFA support: new resources `vault_mfa_okta`, `vault_mfa_totp`, `vault_mfa_pingid` ([#1395](https://github.com/hashicorp/terraform-provider-vault/pull/1395))
 * `resource/vault_ssh_secret_backend_role`: support configuring multiple public SSH key lengths in vault-1.10+
   ([#1413](https://github.com/terraform-providers/terraform-provider-vault/pull/1413))
 
