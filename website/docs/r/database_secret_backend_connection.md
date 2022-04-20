@@ -323,6 +323,20 @@ See the [Vault
 
 * `password` - (Required) The password to be used in the connection.
 
+* `ca_cert` - (Optional) The path to a PEM-encoded CA cert file to use to verify the Elasticsearch server's identity.
+
+* `ca_path` - (Optional) The path to a directory of PEM-encoded CA cert files to use to verify the Elasticsearch server's identity.
+
+* `client_cert` - (Optional) The path to the certificate for the Elasticsearch client to present for communication.
+
+* `client_key` - (Optional) The path to the key for the Elasticsearch client to use for communication.
+
+* `tls_server_name` - (Optional) This, if set, is used to set the SNI host when connecting via TLS.
+
+* `insecure` - (Optional) Whether to disable certificate verification.
+
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation. See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating) for more details.
+
 ### Snowflake Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
