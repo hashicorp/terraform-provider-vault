@@ -1,11 +1,28 @@
 ## 3.5.0 (Unreleased)
 FEATURES:
 * Add MFA support: new resources `vault_mfa_okta`, `vault_mfa_totp`, `vault_mfa_pingid` ([#1395](https://github.com/hashicorp/terraform-provider-vault/pull/1395))
-* `resource/vault_ssh_secret_backend_role`: support configuring multiple public SSH key lengths in vault-1.10+
-  ([#1413](https://github.com/terraform-providers/terraform-provider-vault/pull/1413))
+* *New* `resource/database_secrets_mount`: Configures any number of database secrets engines under 
+ a single, dedicated mount resource
+ ([#1400](https://github.com/terraform-providers/terraform-provider-vault/pull/1400))
 
 IMPROVEMENTS:
-* `data/vault_generic_secret`: Add new field `with_lease_start_time` to `vault_generic_secret` datasource ([#1414](https://github.com/hashicorp/terraform-provider-vault/pull/1414))
+* `data/vault_generic_secret`: Add new field `with_lease_start_time` to `vault_generic_secret` datasource 
+  ([#1414](https://github.com/hashicorp/terraform-provider-vault/pull/1414))
+* `resource/vault_ssh_secret_backend_role`: support configuring multiple public SSH key lengths in vault-1.10+
+  ([#1413](https://github.com/terraform-providers/terraform-provider-vault/pull/1413))
+* `resource/database_secret*`: Add support for configuring TLS, and the `username_template` field for the ElasticSearch.  
+* `resource/pki_secret_backend_cert`: Add support for optionally revoking the certificate upon resource destruction.
+  ([#1411](https://github.com/terraform-providers/terraform-provider-vault/pull/1411))
+* `provider`: Add support for setting the `tls_server_name` to use as the SNI host when connecting via TLS.
+  ([#1145](https://github.com/terraform-providers/terraform-provider-vault/pull/1145)
+* `docs`: Add links to Learn Tutorials.
+  ([#1399](https://github.com/terraform-providers/terraform-provider-vault/pull/1399))
+ 
+BUGS:
+* `resource/identity_group`: Fix issue where the group's `member_entity_ids` were being unset in error on update.
+  ([#1409](https://github.com/terraform-providers/terraform-provider-vault/pull/1409))
+* `resource/transit_secret_backend_key`: Add `auto_rotate_period` field which deprecates `auto_rotate_interval`.
+  ([#1402](https://github.com/hashicorp/terraform-provider-vault/pull/1402))
 
 ## 3.4.1 (March 31, 2022)
 BUGS:
