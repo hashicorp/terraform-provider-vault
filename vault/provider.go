@@ -157,6 +157,12 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", false),
 				Description: "Set this to true only if the target Vault server is an insecure development instance.",
 			},
+			"tls_server_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultTLSServerName, ""),
+				Description: "Name to use as the SNI host when connecting via TLS.",
+			},
 			"max_lease_ttl_seconds": {
 				Type:     schema.TypeInt,
 				Optional: true,
@@ -808,9 +814,10 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	err := clientConfig.ConfigureTLS(&api.TLSConfig{
-		CACert:   d.Get("ca_cert_file").(string),
-		CAPath:   d.Get("ca_cert_dir").(string),
-		Insecure: d.Get("skip_tls_verify").(bool),
+		CACert:        d.Get("ca_cert_file").(string),
+		CAPath:        d.Get("ca_cert_dir").(string),
+		Insecure:      d.Get("skip_tls_verify").(bool),
+		TLSServerName: d.Get("tls_server_name").(string),
 
 		ClientCert: clientAuthCert,
 		ClientKey:  clientAuthKey,
