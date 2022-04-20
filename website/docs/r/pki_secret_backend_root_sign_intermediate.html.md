@@ -46,12 +46,6 @@ The following arguments are supported:
 
 * `format` - (Optional) The format of data
 
-* `private_key_format` - (Optional) The private key format
-
-* `key_type` - (Optional) The desired key type
-
-* `key_bits` - (Optional) The number of bits to use
-
 * `max_path_length` - (Optional) The maximum path length to encode in the generated certificate
 
 * `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs
