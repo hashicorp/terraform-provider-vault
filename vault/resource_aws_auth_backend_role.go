@@ -324,6 +324,7 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("backend", backend)
 	d.Set("role", role)
+	d.Set("role_id", resp.Data["role_id"])
 	d.Set("auth_type", resp.Data["auth_type"])
 
 	if v, ok := resp.Data["bound_account_id"].(string); ok {
