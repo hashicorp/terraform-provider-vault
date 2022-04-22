@@ -327,9 +327,14 @@ func setCAChain(d *schema.ResourceData, resp *api.Secret) error {
 
 func getCAChain(m map[string]interface{}) ([]string, error) {
 	var caChain []string
-	for _, k := range []string{"issuing_ca", "certificate"} {
+
+	for _, k := range []string{"certificate", "issuing_ca"} {
 		if v, ok := m[k]; ok && v.(string) != "" {
-			caChain = append(caChain, v.(string))
+			value := v.(string)
+			if k == "issuing_ca" && strings.Contains(caChain[0], value) {
+				continue
+			}
+			caChain = append(caChain, value)
 		} else {
 			return nil, fmt.Errorf("required certificate for %q is missing or empty", k)
 		}
@@ -351,11 +356,6 @@ func setCertificateBundle(d *schema.ResourceData, resp *api.Secret) error {
 	caChain, err := getCAChain(resp.Data)
 	if err != nil {
 		return err
-	}
-
-	// reverse the caChain to derive the certificate bundle
-	for i, j := 0, len(caChain)-1; i < j; i, j = i+1, j-1 {
-		caChain[i], caChain[j] = caChain[j], caChain[i]
 	}
 
 	return d.Set(field, strings.Join(caChain, "\n"))
