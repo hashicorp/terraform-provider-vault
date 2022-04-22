@@ -103,6 +103,39 @@ func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
 	})
 }
 
+func TestAccAWSSecretBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+	updatedPath := acctest.RandomWithPrefix("tf-test-aws-updated")
+
+	resourceName := "vault_aws_secret_backend.test"
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testAccAWSSecretBackendCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSSecretBackendConfig_basic(path, accessKey, secretKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+				),
+			},
+			{
+				Config: testAccAWSSecretBackendConfig_basic(updatedPath, accessKey, secretKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+				),
+			},
+		},
+	})
+}
+
 func testAccAWSSecretBackendCheckDestroy(s *terraform.State) error {
 	client := testProvider.Meta().(*api.Client)
 

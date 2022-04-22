@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -19,12 +20,12 @@ func awsSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		CustomizeDiff: adaptiveMigrationCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Default:     "aws",
 				Description: "Path to mount the backend at.",
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
@@ -93,6 +94,29 @@ func awsSecretBackendResource() *schema.Resource {
 			},
 		},
 	}
+}
+
+func adaptiveMigrationCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+	if diff.HasChange("path") {
+		o, _ := diff.GetChange("path")
+		// Mount Migration is only available for versions >= 1.10
+		if o != "" {
+			client := meta.(*api.Client)
+			remountEnabled, err := semVerComparison("1.10.0", client)
+			if err != nil {
+				return err
+			}
+
+			if !remountEnabled {
+				// Mount migration not available
+				// Destroy and recreate resource
+				if err := diff.ForceNew("path"); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
@@ -230,6 +254,20 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 	d.Partial(true)
+
+	if d.HasChange("path") {
+		// semantic version check completed in CustomizeDiff
+		newPath := d.Get("path").(string)
+
+		err := client.Sys().Remount(path, newPath)
+		if err != nil {
+			return fmt.Errorf("error remounting to %q: %s", newPath, err)
+		}
+
+		path = newPath
+		d.SetId(path)
+	}
+
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		config := api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
