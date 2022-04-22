@@ -168,7 +168,7 @@ These arguments are common across several Authentication Token resources since V
 
 ## Attributes Reference
 
-* `role_id` - The generated role id.
+* `role_id` - The Vault generated role ID.
 
 ## Import
 
