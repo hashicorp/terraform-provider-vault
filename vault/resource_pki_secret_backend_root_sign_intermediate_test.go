@@ -373,6 +373,7 @@ resource "vault_pki_secret_backend_intermediate_set_signed" "two" {
 }
 
 func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
+	t.Skip("Skip until VAULT-5425 is resolved")
 	tests := []struct {
 		name        string
 		rawState    map[string]interface{}
@@ -438,6 +439,7 @@ func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
 }
 
 func Test_setCAChain(t *testing.T) {
+	t.Skip("Skip until VAULT-5425 is resolved")
 	tests := []struct {
 		resp      *api.Secret
 		name      string
