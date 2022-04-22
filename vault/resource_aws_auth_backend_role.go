@@ -103,7 +103,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 		"role_id": {
 			Type:        schema.TypeString,
 			Computed:    true,
-			Description: "The role id for this role.",
+			Description: "The Vault generated role ID.",
 		},
 		"bound_iam_principal_arns": {
 			Type:        schema.TypeSet,
