@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/pem"
 	"fmt"
 	"log"
 	"strings"
@@ -316,7 +317,7 @@ func setCAChain(d *schema.ResourceData, resp *api.Secret) error {
 	// provide the CAChain from the issuing_ca and the intermediate CA certificate
 	var err error
 	if len(caChain) == 0 {
-		caChain, err = getCAChain(resp.Data)
+		caChain, err = getCAChain(resp.Data, !isPEMFormat(d))
 		if err != nil {
 			return err
 		}
@@ -325,40 +326,76 @@ func setCAChain(d *schema.ResourceData, resp *api.Secret) error {
 	return d.Set(field, caChain)
 }
 
-func getCAChain(m map[string]interface{}) ([]string, error) {
-	var caChain []string
+func getCAChain(m map[string]interface{}, literal bool) ([]string, error) {
+	return parseCertChain(m, true, literal)
+}
 
-	for _, k := range []string{"certificate", "issuing_ca"} {
+func isPEMFormat(d *schema.ResourceData) bool {
+	format := d.Get("format").(string)
+	switch format {
+	case "pem", "pem_bundle":
+		return true
+	default:
+		return false
+	}
+}
+
+func setCertificateBundle(d *schema.ResourceData, resp *api.Secret) error {
+	field := "certificate_bundle"
+	if !isPEMFormat(d) {
+		log.Printf("[WARN] Cannot set the %q, not in PEM format", field)
+		return nil
+	}
+
+	chain, err := parseCertChain(resp.Data, false, false)
+	if err != nil {
+		return err
+	}
+
+	return d.Set(field, strings.Join(chain, "\n"))
+}
+
+func parseCertChain(m map[string]interface{}, asCA, literal bool) ([]string, error) {
+	var chain []string
+	seen := make(map[string]bool)
+	parseCert := func(data string) error {
+		var b *pem.Block
+		rest := []byte(data)
+		for {
+			b, rest = pem.Decode(rest)
+			if b == nil {
+				break
+			}
+
+			cert := strings.Trim(string(pem.EncodeToMemory(b)), "\n")
+			if _, ok := seen[cert]; !ok {
+				chain = append(chain, cert)
+				seen[cert] = true
+			}
+		}
+
+		return nil
+	}
+
+	fields := []string{"issuing_ca", "certificate"}
+	if !asCA {
+		fields = []string{fields[1], fields[0]}
+	}
+
+	for _, k := range fields {
 		if v, ok := m[k]; ok && v.(string) != "" {
 			value := v.(string)
-			if k == "issuing_ca" && strings.Contains(caChain[0], value) {
-				continue
+			if literal {
+				chain = append(chain, value)
+			} else if err := parseCert(value); err != nil {
+				return nil, err
 			}
-			caChain = append(caChain, value)
 		} else {
 			return nil, fmt.Errorf("required certificate for %q is missing or empty", k)
 		}
 	}
 
-	return caChain, nil
-}
-
-func setCertificateBundle(d *schema.ResourceData, resp *api.Secret) error {
-	field := "certificate_bundle"
-	format := d.Get("format").(string)
-	switch format {
-	case "pem", "pem_bundle":
-	default:
-		log.Printf("[WARN] Cannot set the %q for format %q", field, format)
-		return nil
-	}
-
-	caChain, err := getCAChain(resp.Data)
-	if err != nil {
-		return err
-	}
-
-	return d.Set(field, strings.Join(caChain, "\n"))
+	return chain, nil
 }
 
 func pkiSecretBackendRootSignIntermediateRead(d *schema.ResourceData, meta interface{}) error {
@@ -390,8 +427,9 @@ func pkiSecretRootSignIntermediateRV0() *schema.Resource {
 }
 
 func pkiSecretRootSignIntermediateRUpgradeV0(
-	_ context.Context, rawState map[string]interface{}, _ interface{}) (map[string]interface{}, error) {
-	caChain, err := getCAChain(rawState)
+	_ context.Context, rawState map[string]interface{}, _ interface{},
+) (map[string]interface{}, error) {
+	caChain, err := getCAChain(rawState, false)
 	if err != nil {
 		return nil, err
 	}

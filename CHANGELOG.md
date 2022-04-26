@@ -1,4 +1,10 @@
-## 3.5.0 (Unreleased)
+## 3.6.0 (Unreleased)
+BUGS:
+* `resource/pki_secret_backend_root_sign_intermediate`: Ensure that the `certificate_bundle`, and `ca_chain` 
+  do not contain duplicate certificates.  
+  ([#1428](https://github.com/hashicorp/terraform-provider-vault/pull/1428))
+
+## 3.5.0 (April 20, 2022)
 FEATURES:
 * Add MFA support: new resources `vault_mfa_okta`, `vault_mfa_totp`, `vault_mfa_pingid` ([#1395](https://github.com/hashicorp/terraform-provider-vault/pull/1395))
 * *New* `resource/database_secrets_mount`: Configures any number of database secrets engines under 

@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -14,6 +16,97 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
+)
+
+const (
+	testPKICARoot = `-----BEGIN CERTIFICATE-----
+MIIF6TCCA9GgAwIBAgIUG/fx8oIjdqu0uSCc+x/3AkpOZPgwDQYJKoZIhvcNAQEL
+BQAwfDELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAkNBMRYwFAYDVQQHEw1TYW4gRnJh
+bmNpc2NvMRAwDgYDVQQKEwdSb290T3JnMRwwGgYDVQQLExNPcmdhbml6YXRpb25h
+bCBVbml0MRgwFgYDVQQDEw9Sb290T3JnIFJvb3QgQ0EwHhcNMjIwNDIyMjIxODAw
+WhcNMjIwNDIzMjIxODI4WjB8MQswCQYDVQQGEwJVUzELMAkGA1UECBMCQ0ExFjAU
+BgNVBAcTDVNhbiBGcmFuY2lzY28xEDAOBgNVBAoTB1Jvb3RPcmcxHDAaBgNVBAsT
+E09yZ2FuaXphdGlvbmFsIFVuaXQxGDAWBgNVBAMTD1Jvb3RPcmcgUm9vdCBDQTCC
+AiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBALZeQyyKDUnWRnyi+8rfpvx/
+0Cz/4LVp0B52m3ilxc0vIz3hdWTJsYE9vqwsNgPsYGJaFKUuXZCedZAug9I5X6rf
+PDusNaamn+cAOzMySo5xwWrXaW0U3aBkm3vQprnVGHnsqOzCJGG4Ez/v7b8qknsw
+yCE5C5S7qMNkZZgNHRYbC/oBwz11+I3bCIWw7DIsL0T/unuyux+gGWmIwd5hypBY
+YmeGcgXcNPmZBtNX9s6c3J63P7V1PZmdhg6saG0/bUiiG1niYx8xwQWkgE0B2S39
+X5tuZdEI1VvRHPAcQAtZoq0bU0zi8RKp6Z09iCwuoWwZ5wuzfP70XdWqYmZbNPI2
+OWIUVd4Aa4cNE+4FrRrmSIqYEbmtlBx3YFD3ZGIxD21zfLydJTqNswWd6m2v05ur
+M+0PUaXor/CG/6sTFtpsa5i+wMcjhpLCOOx1XX6rlQkErwR8+xY+7aojAwkreQYn
+t4/iI4vfkeKlreSTbN+EzwlYUhZF40GnPuVTGH7rf4/8z0uWmUh8ulhqLEKjUeLd
+NA/t5yYo8sTpv3A+ngYZlOakVIOwNmweLgTFPFYiG4TeguU+Kb0aFvKLcJ105v8g
+boExnsUApJ9Er+LSNuVl6uldYA2u8067ekWYEuVI8CVsk3wb5Eawu2SDGt2ZDtcp
+6TB09QH0AzQzSVlPvAlhAgMBAAGjYzBhMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMB
+Af8EBTADAQH/MB0GA1UdDgQWBBRSG+J2QK+KoNunXfW3cER9QuwpjzAfBgNVHSME
+GDAWgBRSG+J2QK+KoNunXfW3cER9QuwpjzANBgkqhkiG9w0BAQsFAAOCAgEALeLv
+pVvBtIB4IVdQ6cfJQYZbPpkeszRDrlOlgDMWuD8CzHssbnUjclfDdRjdLIQbif+e
+5u2/yeRRCBTYjwf1yGCyrWcs9vsHkjqeafyq0grS3zoPBf0JCAH/bI6NO1CUM39I
+qyRTotdwLBemKmGd3ZUHCUpq9FQgPT/Yy6XIxfkAfGi/FbudxHOQGFJDXxDMPmV1
+55HSBILwSEf1Z/aSW8+yzgtEzipPZIDGoLyYw8Ggew2Z535NdPSSF96f8F4QsXVs
+mJJiidga36+z+7e99tEcw+V4GkGuSHG0SGJFqh8apDwNOOPfGBQmp3xkNhuM8xKi
+u/gCAcoj1aDuFQzflq3zo2cSAPBoUFyma0iL22fHGvLX8Es+C3uYKucuaToBxN8t
+j/IHV06aH+nXuAvNtvneL6TW3zsbYXA+GF//9PigFXutC/Fa3l00RNkIfApXsl5H
+Xk+u708W1+h+hy+KWvZGyXmylRoHsMC2kCwi3/wzgS6xloHuNoai6OGE9EbZKV3D
+Efyw5RK4c4betgp1tlKnWrr68xFoxJaX8F79bHGwMhuhA3qMfqZZgGmJu6W4qurd
+TBI3smImFBUe0JQP7Gjkv77xBO3+WBIiL/o8tAxzMG83WwIkxgZiHd41RMEaYq03
+90biK9JhpmCai5cVk0B8dPL+NS0nJC1XYzZMg/0=
+-----END CERTIFICATE-----`
+
+	testPKICAInter1 = `-----BEGIN CERTIFICATE-----
+MIIE5TCCAs2gAwIBAgIUBchlYVQE28rilenVgghsNINDOmswDQYJKoZIhvcNAQEL
+BQAwfDELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAkNBMRYwFAYDVQQHEw1TYW4gRnJh
+bmNpc2NvMRAwDgYDVQQKEwdSb290T3JnMRwwGgYDVQQLExNPcmdhbml6YXRpb25h
+bCBVbml0MRgwFgYDVQQDEw9Sb290T3JnIFJvb3QgQ0EwHhcNMjIwNDIyMjIxODAw
+WhcNMjIwNzMxMjIxODMwWjB4MQswCQYDVQQGEwJVUzELMAkGA1UECBMCQ0ExFjAU
+BgNVBAcTDVNhbiBGcmFuY2lzY28xDzANBgNVBAoTBlN1Yk9yZzEQMA4GA1UECxMH
+U3ViVW5pdDEhMB8GA1UEAxMYU3ViT3JnIEludGVybWVkaWF0ZSAxIENBMIIBIjAN
+BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2AUomcioJ0dxl8sNI9quhf67nE6d
+OisoYQFTIsPCrCMHUc0usJK89sz6vl2YcjZNB+9UDwl4YDolZuwSm/haPOl/DPKs
+Q2k+ULAyQm5Lgo5VeY9F995KanK3LpOsvNhhPrtOd8WpAzDYyRCh9lpEVm5bRNRP
+BLO4vXXIpnV6vF/Tl62SBkUSg1omfxo4wKVxbr9qsKV38s72YDYRyoO7kvpDLANr
+dTONBFb1+bbCsTXza4sdf1hT0kVOqQ2cuXkx2F1ZYoxFy+PiD3o88zPSemAMKDLx
+WXysTviEWPROzGjhjp/IklAg9QUK/xFV5eOoY1u/U1S3nENa/WH9DTxczwIDAQAB
+o2MwYTAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQU
+gOExNQVzrey7daGBbYstrRvnjHgwHwYDVR0jBBgwFoAUUhvidkCviqDbp131t3BE
+fULsKY8wDQYJKoZIhvcNAQELBQADggIBALF+Op35RzkV4MVog4G0SZXewS2PRl8R
+55DPy+HHU8NM2xJCce1Hy3fcUP06KbYb9vUT2AEwCNLhg0X9iMbPqLLDWRSN2DyI
+RIpVF73sFpg5zndpOVNe22manJM6rYp6deA/p6g0Oq0qM9flRZzUv7F1KZpz3Nqp
+TQ4I8YeIRXkcqIBaZ0m9QLpKIoz3nT23M4Dexu/ZiB0wb2cpzyV9puEAE8vuAqvX
+hCLRfXypMWwnotb2qRW8avNiEutzNTGaUP5kACUjZrPfvIEtFgHUwJo+PI1E3XC0
+zUauudQjqju7JrIiCGfdKCCaIeiayNLppDLXhDfHJphyfbH/r4orz5zVXpBZSnvc
+O0Ch4gv9PnJGGJiWrvKUhJ/XbConPKGqGVaC30rQPxG7UYTDDXjOppzJXZTvXuC/
+DCwVCYbWURB4+S2n86fXCyyQQp+vmbAZ3skpATmS9WugUYgTjJKVPiOpvHSAIpID
+u8rSVwdurDjlMknnWYi9v8kUoF00yLHGlE7Qwbmy4dIQVf5ODvCSl338hXKz4UR8
+GkeB+wXrYZuQVAiMYwLnL8IWWaezpdzb/9US3SuSlNWmJodv503OzXbR3ZLJSpmG
+RywQn6l10JjFHgu19AF0d8FxePSNjF7EBxMTnVRNnDUlMaQ4mBBmbuLpFSdC0tT+
+8J7F3SAJemsj
+-----END CERTIFICATE-----`
+
+	testPKICAInter2 = `-----BEGIN CERTIFICATE-----
+MIID4TCCAsmgAwIBAgIUd+Kg3J4m1JQV4jfQqTDpoBflzkswDQYJKoZIhvcNAQEL
+BQAweDELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAkNBMRYwFAYDVQQHEw1TYW4gRnJh
+bmNpc2NvMQ8wDQYDVQQKEwZTdWJPcmcxEDAOBgNVBAsTB1N1YlVuaXQxITAfBgNV
+BAMTGFN1Yk9yZyBJbnRlcm1lZGlhdGUgMSBDQTAeFw0yMjA0MjIyMjE4MDFaFw0y
+MjA0MjMyMjE4MzFaMHgxCzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEWMBQGA1UE
+BxMNU2FuIEZyYW5jaXNjbzEPMA0GA1UEChMGU3ViT3JnMRAwDgYDVQQLEwdTdWJV
+bml0MSEwHwYDVQQDExhTdWJPcmcgSW50ZXJtZWRpYXRlIDIgQ0EwggEiMA0GCSqG
+SIb3DQEBAQUAA4IBDwAwggEKAoIBAQDJS0eOipFCJyCBhICPiz/AReEpN+xCzaU3
+qS48S6wneRi4XOmIRmwCIBidif0KiKA/FNnW1Zn46KLAmUFLJ62R8xkybcMTnXyS
+5BP2RjSeuzsiroikc8G+47jsbaPHQ31LZsbnXT/qhyn4z4ZrinogZ2oTylWbej4d
+hbaDSM6s09I+/8hO1e3ozO7bbeSuGh96ZJxybqhn2OqGM2n9TpOFl0/tNLgLmWAK
+wTQPA1o6y9aEwo3rhcrr+RYVRSkZcYTCV8IWl+0Fc5wPmU76zRQjBjQAnyTtM5FQ
+w37Gqxfqcfco9ft164o/UGpNfH9a5lTgGEYLfbLyXeCoB2H+BNjrAgMBAAGjYzBh
+MA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBRqcjXs
+II8inLX35oP8L5gVI3UvwDAfBgNVHSMEGDAWgBSA4TE1BXOt7Lt1oYFtiy2tG+eM
+eDANBgkqhkiG9w0BAQsFAAOCAQEAW53sApGzlLklvsbFjtu97efGcK2GgSVgnleg
+AYw6VtVP/O+DlxoJozsPBIAxtAW9VHow4zMl7IYFtGVOIQXJaG2h93KajeKq58Sv
+BZhUKotj0sFUXe59xdoNeejNppULyC57QtgjZvswiY12gVqHPf6kil7laDBPHmoy
+8ZLK1vTceoSP+/2NlXibG4h1RkTYTWmPHLJRC7BAJ8Nki9wDY4GQDytzPOMBEqa1
+KOKcpw4F09qh705aVZnJj0kZwIJugIhq9K2Q+auUnwaUkVtpyF8vlkDBSQMJPhln
+DjZxoKDOAPYwWRsTAgup5jWWwVoCG/GA8cWMDwO1Ul5UYWHalg==
+-----END CERTIFICATE-----`
 )
 
 func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
@@ -144,11 +237,15 @@ func assertPKICertificateBundle(res, expectedFormat string) resource.TestCheckFu
 		var expected string
 		switch expectedFormat {
 		case "pem", "pem_bundle":
-			if strings.Count(rs.Primary.Attributes["certificate"], "-----BEGIN CERTIFICATE-----") >= 3 {
-				expected = rs.Primary.Attributes["certificate"]
-			} else {
-				expected = rs.Primary.Attributes["certificate"] + "\n" + rs.Primary.Attributes["issuing_ca"]
+			m := map[string]interface{}{
+				"certificate": rs.Primary.Attributes["certificate"],
+				"issuing_ca":  rs.Primary.Attributes["issuing_ca"],
 			}
+			chain, err := parseCertChain(m, false, false)
+			if err != nil {
+				return err
+			}
+			expected = strings.Join(chain, "\n")
 		}
 
 		actual := rs.Primary.Attributes["certificate_bundle"]
@@ -373,7 +470,6 @@ resource "vault_pki_secret_backend_intermediate_set_signed" "two" {
 }
 
 func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
-	t.Skip("Skip until VAULT-5425 is resolved")
 	tests := []struct {
 		name        string
 		rawState    map[string]interface{}
@@ -384,21 +480,27 @@ func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
 		{
 			name: "basic",
 			rawState: map[string]interface{}{
-				"issuing_ca":  "issuing_ca.crt",
-				"certificate": "intermediate_.crt",
+				"format":      "pem",
+				"issuing_ca":  testPKICARoot,
+				"certificate": testPKICAInter1,
 				"ca_chain":    "",
 			},
 			want: map[string]interface{}{
-				"issuing_ca":  "issuing_ca.crt",
-				"certificate": "intermediate_.crt",
-				"ca_chain":    []string{"issuing_ca.crt", "intermediate_.crt"},
+				"format":      "pem",
+				"issuing_ca":  testPKICARoot,
+				"certificate": testPKICAInter1,
+				"ca_chain": []string{
+					testPKICARoot,
+					testPKICAInter1,
+				},
 			},
 			wantErr: false,
 		},
 		{
 			name: "invalid-no-issuing-ca",
 			rawState: map[string]interface{}{
-				"certificate": "intermediate_.crt",
+				"format":      "pem",
+				"certificate": testPKICAInter1,
 				"ca_chain":    "",
 			},
 			want:        nil,
@@ -408,7 +510,8 @@ func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
 		{
 			name: "invalid-no-certificate",
 			rawState: map[string]interface{}{
-				"issuing_ca": "issuing_ca.crt",
+				"format":     "pem",
+				"issuing_ca": testPKICARoot,
 				"ca_chain":   "",
 			},
 			want:        nil,
@@ -439,63 +542,197 @@ func Test_pkiSecretRootSignIntermediateRUpgradeV0(t *testing.T) {
 }
 
 func Test_setCAChain(t *testing.T) {
-	t.Skip("Skip until VAULT-5425 is resolved")
+	pem2derb64 := func(data string) string {
+		b, _ := pem.Decode([]byte(data))
+		return base64.StdEncoding.EncodeToString(b.Bytes)
+	}
+
+	derRootCert := pem2derb64(testPKICARoot)
+	derInt1Cert := pem2derb64(testPKICAInter1)
+
 	tests := []struct {
 		resp      *api.Secret
 		name      string
+		format    string
 		want      []interface{}
 		wantErr   bool
 		expectErr error
 	}{
 		{
-			name: "empty-ca-chain",
+			name:   "empty-ca-chain-pem",
+			format: "pem",
 			resp: &api.Secret{
 				Data: map[string]interface{}{
-					"certificate": "intermediate-ca.crt",
-					"issuing_ca":  "root-ca.crt",
+					"certificate": testPKICAInter1,
+					"issuing_ca":  testPKICARoot,
 					"ca_chain":    []interface{}{},
 				},
 			},
 			want: []interface{}{
-				"root-ca.crt",
-				"intermediate-ca.crt",
+				testPKICARoot,
+				testPKICAInter1,
 			},
 			wantErr: false,
 		},
 		{
-			name: "absent-ca-chain",
+			name:   "empty-ca-chain-pem-bundle",
+			format: "pem_bundle",
 			resp: &api.Secret{
 				Data: map[string]interface{}{
-					"certificate": "intermediate-ca.crt",
-					"issuing_ca":  "root-ca.crt",
+					"certificate": testPKICAInter1,
+					"issuing_ca":  testPKICARoot,
+					"ca_chain":    []interface{}{},
 				},
 			},
 			want: []interface{}{
-				"root-ca.crt",
-				"intermediate-ca.crt",
+				testPKICARoot,
+				testPKICAInter1,
 			},
 			wantErr: false,
 		},
 		{
-			name: "populated-ca-chain",
+			name:   "empty-ca-chain-2-pem",
+			format: "pem",
+			resp: &api.Secret{
+				Data: map[string]interface{}{
+					"certificate": strings.Join(
+						[]string{
+							testPKICAInter2,
+							testPKICAInter1,
+							testPKICARoot,
+						}, "\n"),
+					"issuing_ca": testPKICAInter1,
+					"ca_chain":   []interface{}{},
+				},
+			},
+			want: []interface{}{
+				testPKICAInter1,
+				testPKICAInter2,
+				testPKICARoot,
+			},
+			wantErr: false,
+		},
+		{
+			name:   "empty-ca-chain-2-duplicate-pem",
+			format: "pem",
+			resp: &api.Secret{
+				Data: map[string]interface{}{
+					"certificate": strings.Join(
+						[]string{
+							testPKICAInter2,
+							testPKICAInter1,
+							testPKICAInter2,
+							testPKICARoot,
+						}, "\n"),
+					"issuing_ca": testPKICAInter1,
+					"ca_chain":   []interface{}{},
+				},
+			},
+			want: []interface{}{
+				testPKICAInter1,
+				testPKICAInter2,
+				testPKICARoot,
+			},
+			wantErr: false,
+		},
+		{
+			name:   "empty-ca-chain-2-pem-bundle",
+			format: "pem_bundle",
+			resp: &api.Secret{
+				Data: map[string]interface{}{
+					"certificate": strings.Join(
+						[]string{
+							testPKICAInter2,
+							testPKICAInter1,
+							testPKICARoot,
+						}, "\n"),
+					"issuing_ca": testPKICAInter1,
+					"ca_chain":   []interface{}{},
+				},
+			},
+			want: []interface{}{
+				testPKICAInter1,
+				testPKICAInter2,
+				testPKICARoot,
+			},
+			wantErr: false,
+		},
+		{
+			name:   "empty-ca-chain-2-duplicate-pem-bundle",
+			format: "pem_bundle",
+			resp: &api.Secret{
+				Data: map[string]interface{}{
+					"certificate": strings.Join(
+						[]string{
+							testPKICAInter2,
+							testPKICAInter1,
+							testPKICAInter2,
+							testPKICARoot,
+						}, "\n"),
+					"issuing_ca": testPKICAInter1,
+					"ca_chain":   []interface{}{},
+				},
+			},
+			want: []interface{}{
+				testPKICAInter1,
+				testPKICAInter2,
+				testPKICARoot,
+			},
+			wantErr: false,
+		},
+		{
+			name:   "empty-ca-chain-der",
+			format: "der",
+			resp: &api.Secret{
+				Data: map[string]interface{}{
+					"certificate": derInt1Cert,
+					"issuing_ca":  derRootCert,
+					"ca_chain":    []interface{}{},
+				},
+			},
+			want: []interface{}{
+				derRootCert,
+				derInt1Cert,
+			},
+			wantErr: false,
+		},
+		{
+			name:   "absent-ca-chain-der",
+			format: "der",
+			resp: &api.Secret{
+				Data: map[string]interface{}{
+					"certificate": derInt1Cert,
+					"issuing_ca":  derRootCert,
+				},
+			},
+			want: []interface{}{
+				derRootCert,
+				derInt1Cert,
+			},
+			wantErr: false,
+		},
+		{
+			name:   "populated-ca-chain",
+			format: "pem",
 			resp: &api.Secret{
 				Data: map[string]interface{}{
 					"certificate": "intermediate-ca.crt",
 					"issuing_ca":  "root-ca.crt",
 					"ca_chain": []interface{}{
-						"resp-root-ca.crt",
-						"resp-intermediate-ca.crt",
+						testPKICARoot,
+						testPKICAInter1,
 					},
 				},
 			},
 			want: []interface{}{
-				"resp-root-ca.crt",
-				"resp-intermediate-ca.crt",
+				testPKICARoot,
+				testPKICAInter1,
 			},
 			wantErr: false,
 		},
 		{
-			name: "invalid-ca-chain-type",
+			name:   "invalid-ca-chain-type",
+			format: "pem",
 			resp: &api.Secret{
 				Data: map[string]interface{}{
 					"certificate": "intermediate-ca.crt",
@@ -508,7 +745,8 @@ func Test_setCAChain(t *testing.T) {
 			want:      []interface{}{},
 		},
 		{
-			name: "missing-intermediate-cert",
+			name:   "missing-intermediate-cert",
+			format: "pem",
 			resp: &api.Secret{
 				Data: map[string]interface{}{
 					"issuing_ca": "root-ca.crt",
@@ -519,7 +757,8 @@ func Test_setCAChain(t *testing.T) {
 			expectErr: fmt.Errorf("required certificate for %q is missing or empty", "certificate"),
 		},
 		{
-			name: "missing-issuing-ca",
+			name:   "missing-issuing-ca",
+			format: "pem",
 			resp: &api.Secret{
 				Data: map[string]interface{}{
 					"certificate": "intermediate-ca.crt",
@@ -535,6 +774,10 @@ func Test_setCAChain(t *testing.T) {
 			d := schema.TestResourceDataRaw(
 				t,
 				map[string]*schema.Schema{
+					"format": {
+						Type:     schema.TypeString,
+						Required: true,
+					},
 					"ca_chain": {
 						Type:     schema.TypeList,
 						Required: false,
@@ -543,7 +786,9 @@ func Test_setCAChain(t *testing.T) {
 						},
 					},
 				},
-				map[string]interface{}{})
+				map[string]interface{}{
+					"format": tt.format,
+				})
 			err := setCAChain(d, tt.resp)
 			if tt.wantErr {
 				if err == nil {
