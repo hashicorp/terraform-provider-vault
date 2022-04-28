@@ -74,24 +74,11 @@ func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta
 	diags := diag.Diagnostics{}
 
 	var duplicates []string
-	/*
-		aliases, err := getEntityAliasesByName(client, name)
-		if err != nil {
-			diags = append(diags, diag.Diagnostic{
-				Severity: diag.Error,
-				Summary:  fmt.Sprintf("Failed to get entity aliases, err=%s", err),
-			})
 
-			return diags
-		}
-
-		for _, config := range aliases {
-			if config.Data["mount_accessor"].(string) == mountAccessor {
-				duplicates = append(duplicates, config.Data["id"].(string))
-			}
-		}
-	*/
-	a, err := entity.GetAliasesByMountAccessor(client, mountAccessor)
+	aliases, err := entity.FindAliases(client, &entity.FindAliasParams{
+		Name:          name,
+		MountAccessor: mountAccessor,
+	})
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
@@ -101,13 +88,11 @@ func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta
 		return diags
 	}
 
-	for _, alias := range a {
-		if v, ok := alias["name"]; ok && v.(string) == name {
-			duplicates = append(duplicates, alias["id"].(string))
+	if len(aliases) > 0 {
+		for _, alias := range aliases {
+			duplicates = append(duplicates, alias.ID)
 		}
-	}
 
-	if len(duplicates) > 0 {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary: fmt.Sprintf(
