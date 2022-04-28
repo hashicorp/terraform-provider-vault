@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -233,7 +234,7 @@ func testAccCheckIdentityEntityAliasDestroy(s *terraform.State) error {
 		if rs.Type != "vault_identity_entity_alias" {
 			continue
 		}
-		secret, err := client.Logical().Read(identityEntityAliasIDPath(rs.Primary.ID))
+		secret, err := client.Logical().Read(entity.AliasIDPath(rs.Primary.ID))
 		if err != nil {
 			return fmt.Errorf("error checking for identity entity %q: %s", rs.Primary.ID, err)
 		}

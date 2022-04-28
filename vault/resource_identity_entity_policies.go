@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -54,7 +55,7 @@ func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) erro
 	id := d.Get("entity_id").(string)
 
 	log.Printf("[DEBUG] Updating IdentityEntityPolicies %q", id)
-	path := identityEntityIDPath(id)
+	path := entity.IDPath(id)
 
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
@@ -137,7 +138,7 @@ func identityEntityPoliciesDelete(d *schema.ResourceData, meta interface{}) erro
 	id := d.Get("entity_id").(string)
 
 	log.Printf("[DEBUG] Deleting IdentityEntityPolicies %q", id)
-	path := identityEntityIDPath(id)
+	path := entity.IDPath(id)
 
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)

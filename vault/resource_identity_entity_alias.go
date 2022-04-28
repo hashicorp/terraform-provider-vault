@@ -9,9 +9,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
-)
 
-const identityEntityAliasPath = "/identity/entity-alias"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+)
 
 func identityEntityAliasResource() *schema.Resource {
 	return &schema.Resource{
@@ -54,7 +54,7 @@ func identityEntityAliasResource() *schema.Resource {
 }
 
 func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	path := identityEntityAliasPath
+	path := entity.IdentityEntityAliasPath
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
 	client := meta.(*api.Client)
@@ -91,7 +91,7 @@ func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta
 			}
 		}
 	*/
-	a, err := getEntityAliasesByMountAccessor(client, mountAccessor)
+	a, err := entity.GetAliasesByMountAccessor(client, mountAccessor)
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
@@ -152,14 +152,14 @@ func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta
 }
 
 func identityEntityAliasUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	vaultMutexKV.Lock(identityEntityAliasPath)
-	defer vaultMutexKV.Unlock(identityEntityAliasPath)
+	vaultMutexKV.Lock(entity.IdentityEntityAliasPath)
+	defer vaultMutexKV.Unlock(entity.IdentityEntityAliasPath)
 
 	client := meta.(*api.Client)
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityEntityAlias %q", id)
-	path := identityEntityAliasIDPath(id)
+	path := entity.AliasIDPath(id)
 
 	diags := diag.Diagnostics{}
 
@@ -210,7 +210,7 @@ func identityEntityAliasRead(ctx context.Context, d *schema.ResourceData, meta i
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	path := identityEntityAliasIDPath(id)
+	path := entity.AliasIDPath(id)
 
 	diags := diag.Diagnostics{}
 
@@ -248,12 +248,12 @@ func identityEntityAliasRead(ctx context.Context, d *schema.ResourceData, meta i
 }
 
 func identityEntityAliasDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	vaultMutexKV.Lock(identityEntityAliasPath)
-	defer vaultMutexKV.Unlock(identityEntityAliasPath)
+	vaultMutexKV.Lock(entity.IdentityEntityAliasPath)
+	defer vaultMutexKV.Unlock(entity.IdentityEntityAliasPath)
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	path := identityEntityAliasIDPath(id)
+	path := entity.AliasIDPath(id)
 
 	diags := diag.Diagnostics{}
 
@@ -269,55 +269,4 @@ func identityEntityAliasDelete(ctx context.Context, d *schema.ResourceData, meta
 	log.Printf("[DEBUG] Deleted IdentityEntityAlias %q", id)
 
 	return diags
-}
-
-func getEntityAliasesByName(client *api.Client, name string) ([]*api.Secret, error) {
-	resp, err := client.Logical().List(identityEntityAliasPath + "/id")
-	if resp == nil || err != nil {
-		return nil, err
-	}
-
-	var result []*api.Secret
-	for _, id := range resp.Data["keys"].([]interface{}) {
-		config, err := client.Logical().Read(identityEntityAliasIDPath(id.(string)))
-		if err != nil || config == nil {
-			continue
-		}
-
-		if config.Data["name"].(string) == name {
-			result = append(result, config)
-		}
-	}
-
-	return result, err
-}
-
-func getEntityAliasesByMountAccessor(client *api.Client, accessor string) ([]map[string]interface{}, error) {
-	resp, err := client.Logical().List(identityEntityPath + "/id")
-	if resp == nil || err != nil {
-		return nil, err
-	}
-
-	result := make([]map[string]interface{}, 0)
-	for _, id := range resp.Data["keys"].([]interface{}) {
-		config, err := client.Logical().Read(identityEntityIDPath(id.(string)))
-		if err != nil || config == nil {
-			continue
-		}
-
-		if aliases, ok := config.Data["aliases"]; ok {
-			for _, v := range aliases.([]interface{}) {
-				alias := v.(map[string]interface{})
-				if alias["mount_accessor"].(string) == accessor {
-					result = append(result, alias)
-				}
-			}
-		}
-	}
-
-	return result, err
-}
-
-func identityEntityAliasIDPath(id string) string {
-	return fmt.Sprintf("%s/id/%s", identityEntityAliasPath, id)
 }

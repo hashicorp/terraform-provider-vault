@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -119,7 +120,7 @@ func testAccCheckIdentityEntityDestroy(s *terraform.State) error {
 		if rs.Type != "vault_identity_entity" {
 			continue
 		}
-		secret, err := client.Logical().Read(identityEntityIDPath(rs.Primary.ID))
+		secret, err := client.Logical().Read(entity.IDPath(rs.Primary.ID))
 		if err != nil {
 			return fmt.Errorf("error checking for identity entity %q: %s", rs.Primary.ID, err)
 		}
@@ -144,7 +145,7 @@ func testAccIdentityEntityCheckAttrs() resource.TestCheckFunc {
 
 		id := instanceState.ID
 
-		path := identityEntityIDPath(id)
+		path := entity.IDPath(id)
 		client := testProvider.Meta().(*api.Client)
 		resp, err := client.Logical().Read(path)
 		if err != nil {
@@ -308,7 +309,7 @@ func TestReadEntity(t *testing.T) {
 		},
 		{
 			name: "retry-exhausted-default-max-404",
-			path: identityEntityIDPath("retry-exhausted-default-max-404"),
+			path: entity.IDPath("retry-exhausted-default-max-404"),
 			retryHandler: &testRetryHandler{
 				okAtCount:   0,
 				retryStatus: http.StatusNotFound,
@@ -316,11 +317,11 @@ func TestReadEntity(t *testing.T) {
 			maxRetries:      DefaultMaxHTTPRetriesCCC,
 			expectedRetries: DefaultMaxHTTPRetriesCCC,
 			wantError: fmt.Errorf(`%w: %q`, errEntityNotFound,
-				identityEntityIDPath("retry-exhausted-default-max-404")),
+				entity.IDPath("retry-exhausted-default-max-404")),
 		},
 		{
 			name: "retry-exhausted-default-max-412",
-			path: identityEntityIDPath("retry-exhausted-default-max-412"),
+			path: entity.IDPath("retry-exhausted-default-max-412"),
 			retryHandler: &testRetryHandler{
 				okAtCount:   0,
 				retryStatus: http.StatusPreconditionFailed,
@@ -328,11 +329,11 @@ func TestReadEntity(t *testing.T) {
 			maxRetries:      DefaultMaxHTTPRetriesCCC,
 			expectedRetries: DefaultMaxHTTPRetriesCCC,
 			wantError: fmt.Errorf(`failed reading %q`,
-				identityEntityIDPath("retry-exhausted-default-max-412")),
+				entity.IDPath("retry-exhausted-default-max-412")),
 		},
 		{
 			name: "retry-exhausted-custom-max-404",
-			path: identityEntityIDPath("retry-exhausted-custom-max-404"),
+			path: entity.IDPath("retry-exhausted-custom-max-404"),
 			retryHandler: &testRetryHandler{
 				okAtCount:   0,
 				retryStatus: http.StatusNotFound,
@@ -340,11 +341,11 @@ func TestReadEntity(t *testing.T) {
 			maxRetries:      5,
 			expectedRetries: 5,
 			wantError: fmt.Errorf(`%w: %q`, errEntityNotFound,
-				identityEntityIDPath("retry-exhausted-custom-max-404")),
+				entity.IDPath("retry-exhausted-custom-max-404")),
 		},
 		{
 			name: "retry-exhausted-custom-max-412",
-			path: identityEntityIDPath("retry-exhausted-custom-max-412"),
+			path: entity.IDPath("retry-exhausted-custom-max-412"),
 			retryHandler: &testRetryHandler{
 				okAtCount:   0,
 				retryStatus: http.StatusPreconditionFailed,
@@ -352,7 +353,7 @@ func TestReadEntity(t *testing.T) {
 			maxRetries:      5,
 			expectedRetries: 5,
 			wantError: fmt.Errorf(`failed reading %q`,
-				identityEntityIDPath("retry-exhausted-custom-max-412")),
+				entity.IDPath("retry-exhausted-custom-max-412")),
 		},
 	}
 
