@@ -91,6 +91,8 @@ func (t *testFindAliasHandler) handler() http.HandlerFunc {
 }
 
 func TestFindAliases(t *testing.T) {
+	t.Parallel()
+
 	aliasBob := &Alias{
 		Name:          "bob",
 		MountAccessor: "CC417368-0C63-407A-93AD-2D76A72F58E2",
@@ -179,10 +181,14 @@ func TestFindAliases(t *testing.T) {
 						ID: "C6D3410E-86AF-4A10-9282-4B1E9773932A",
 						Aliases: []*Alias{
 							aliasAlice,
+							{
+								Name:          aliasBob.Name,
+								MountAccessor: aliasAlice.MountAccessor,
+							},
 						},
 					},
 					{
-						ID: "C6D3410E-86AF-4A10-9282-4B1E9773932A",
+						ID: "C6D3410E-86AF-4A10-9282-4B1E9773932B",
 						Aliases: []*Alias{
 							aliasBob,
 						},
@@ -209,7 +215,7 @@ func TestFindAliases(t *testing.T) {
 						},
 					},
 					{
-						ID: "C6D3410E-86AF-4A10-9282-4B1E9773932A",
+						ID: "C6D3410E-86AF-4A10-9282-4B1E9773932B",
 						Aliases: []*Alias{
 							aliasBob,
 						},
