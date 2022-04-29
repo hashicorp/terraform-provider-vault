@@ -42,7 +42,11 @@ func FindAliases(client *api.Client, params *FindAliasParams) ([]*Alias, error) 
 	var result []*Alias
 	for _, id := range resp.Data["keys"].([]interface{}) {
 		config, err := client.Logical().Read(IDPath(id.(string)))
-		if err != nil || config == nil {
+		if err != nil {
+			return nil, err
+		}
+
+		if config == nil {
 			continue
 		}
 
