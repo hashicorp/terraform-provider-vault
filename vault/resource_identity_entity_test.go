@@ -3,7 +3,6 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -120,7 +119,7 @@ func testAccCheckIdentityEntityDestroy(s *terraform.State) error {
 		if rs.Type != "vault_identity_entity" {
 			continue
 		}
-		secret, err := client.Logical().Read(entity.IDPath(rs.Primary.ID))
+		secret, err := client.Logical().Read(entity.JoinEntityID(rs.Primary.ID))
 		if err != nil {
 			return fmt.Errorf("error checking for identity entity %q: %s", rs.Primary.ID, err)
 		}
@@ -145,7 +144,7 @@ func testAccIdentityEntityCheckAttrs() resource.TestCheckFunc {
 
 		id := instanceState.ID
 
-		path := entity.IDPath(id)
+		path := entity.JoinEntityID(id)
 		client := testProvider.Meta().(*api.Client)
 		resp, err := client.Logical().Read(path)
 		if err != nil {
@@ -309,7 +308,7 @@ func TestReadEntity(t *testing.T) {
 		},
 		{
 			name: "retry-exhausted-default-max-404",
-			path: entity.IDPath("retry-exhausted-default-max-404"),
+			path: entity.JoinEntityID("retry-exhausted-default-max-404"),
 			retryHandler: &testRetryHandler{
 				okAtCount:   0,
 				retryStatus: http.StatusNotFound,
@@ -317,11 +316,11 @@ func TestReadEntity(t *testing.T) {
 			maxRetries:      DefaultMaxHTTPRetriesCCC,
 			expectedRetries: DefaultMaxHTTPRetriesCCC,
 			wantError: fmt.Errorf(`%w: %q`, errEntityNotFound,
-				entity.IDPath("retry-exhausted-default-max-404")),
+				entity.JoinEntityID("retry-exhausted-default-max-404")),
 		},
 		{
 			name: "retry-exhausted-default-max-412",
-			path: entity.IDPath("retry-exhausted-default-max-412"),
+			path: entity.JoinEntityID("retry-exhausted-default-max-412"),
 			retryHandler: &testRetryHandler{
 				okAtCount:   0,
 				retryStatus: http.StatusPreconditionFailed,
@@ -329,11 +328,11 @@ func TestReadEntity(t *testing.T) {
 			maxRetries:      DefaultMaxHTTPRetriesCCC,
 			expectedRetries: DefaultMaxHTTPRetriesCCC,
 			wantError: fmt.Errorf(`failed reading %q`,
-				entity.IDPath("retry-exhausted-default-max-412")),
+				entity.JoinEntityID("retry-exhausted-default-max-412")),
 		},
 		{
 			name: "retry-exhausted-custom-max-404",
-			path: entity.IDPath("retry-exhausted-custom-max-404"),
+			path: entity.JoinEntityID("retry-exhausted-custom-max-404"),
 			retryHandler: &testRetryHandler{
 				okAtCount:   0,
 				retryStatus: http.StatusNotFound,
@@ -341,11 +340,11 @@ func TestReadEntity(t *testing.T) {
 			maxRetries:      5,
 			expectedRetries: 5,
 			wantError: fmt.Errorf(`%w: %q`, errEntityNotFound,
-				entity.IDPath("retry-exhausted-custom-max-404")),
+				entity.JoinEntityID("retry-exhausted-custom-max-404")),
 		},
 		{
 			name: "retry-exhausted-custom-max-412",
-			path: entity.IDPath("retry-exhausted-custom-max-412"),
+			path: entity.JoinEntityID("retry-exhausted-custom-max-412"),
 			retryHandler: &testRetryHandler{
 				okAtCount:   0,
 				retryStatus: http.StatusPreconditionFailed,
@@ -353,7 +352,7 @@ func TestReadEntity(t *testing.T) {
 			maxRetries:      5,
 			expectedRetries: 5,
 			wantError: fmt.Errorf(`failed reading %q`,
-				entity.IDPath("retry-exhausted-custom-max-412")),
+				entity.JoinEntityID("retry-exhausted-custom-max-412")),
 		},
 	}
 
@@ -366,7 +365,7 @@ func TestReadEntity(t *testing.T) {
 
 			r := tt.retryHandler
 
-			config, ln := testHTTPServer(t, r.handler())
+			config, ln := testutil.TestHTTPServer(t, r.handler())
 			defer ln.Close()
 
 			config.Address = fmt.Sprintf("http://%s", ln.Addr())
@@ -473,22 +472,4 @@ func (t *testRetryHandler) handler() http.HandlerFunc {
 			w.WriteHeader(t.retryStatus)
 		}
 	}
-}
-
-// testHTTPServer creates a test HTTP server that handles requests until
-// the listener returned is closed.
-// XXX: copied from github.com/hashicorp/vault/api/client_test.go
-func testHTTPServer(t *testing.T, handler http.Handler) (*api.Config, net.Listener) {
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	server := &http.Server{Handler: handler}
-	go server.Serve(ln)
-
-	config := api.DefaultConfig()
-	config.Address = fmt.Sprintf("http://%s", ln.Addr())
-
-	return config, ln
 }

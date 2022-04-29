@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"reflect"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -268,4 +270,22 @@ func (c *ghRESTClient) do(method, path string, v interface{}) error {
 		return err
 	}
 	return nil
+}
+
+// testHTTPServer creates a test HTTP server that handles requests until
+// the listener returned is closed.
+// XXX: copied from github.com/hashicorp/vault/api/client_test.go
+func TestHTTPServer(t *testing.T, handler http.Handler) (*api.Config, net.Listener) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	server := &http.Server{Handler: handler}
+	go server.Serve(ln)
+
+	config := api.DefaultConfig()
+	config.Address = fmt.Sprintf("http://%s", ln.Addr())
+
+	return config, ln
 }

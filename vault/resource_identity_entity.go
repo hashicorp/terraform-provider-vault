@@ -111,7 +111,7 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 
 	name := d.Get("name").(string)
 
-	path := entity.IdentityEntityPath
+	path := entity.RootEntityPath
 
 	data := map[string]interface{}{
 		"name": name,
@@ -147,7 +147,7 @@ func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityEntity %q", id)
-	path := entity.IDPath(id)
+	path := entity.JoinEntityID(id)
 
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
@@ -197,7 +197,7 @@ func identityEntityDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	path := entity.IDPath(id)
+	path := entity.JoinEntityID(id)
 
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
@@ -216,7 +216,7 @@ func identityEntityExists(d *schema.ResourceData, meta interface{}) (bool, error
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	path := entity.IDPath(id)
+	path := entity.JoinEntityID(id)
 	key := id
 
 	// use the name if no ID is set
@@ -236,7 +236,7 @@ func identityEntityExists(d *schema.ResourceData, meta interface{}) (bool, error
 }
 
 func identityEntityNamePath(name string) string {
-	return fmt.Sprintf("%s/name/%s", entity.IdentityEntityPath, name)
+	return fmt.Sprintf("%s/name/%s", entity.RootEntityPath, name)
 }
 
 func readIdentityEntityPolicies(client *api.Client, entityID string) ([]interface{}, error) {
@@ -252,7 +252,7 @@ func readIdentityEntityPolicies(client *api.Client, entityID string) ([]interfac
 }
 
 func readIdentityEntity(client *api.Client, entityID string, retry bool) (*api.Secret, error) {
-	path := entity.IDPath(entityID)
+	path := entity.JoinEntityID(entityID)
 	log.Printf("[DEBUG] Reading Entity %q from %q", entityID, path)
 
 	return readEntity(client, path, retry)

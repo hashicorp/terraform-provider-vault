@@ -234,7 +234,7 @@ func testAccCheckIdentityEntityAliasDestroy(s *terraform.State) error {
 		if rs.Type != "vault_identity_entity_alias" {
 			continue
 		}
-		secret, err := client.Logical().Read(entity.AliasIDPath(rs.Primary.ID))
+		secret, err := client.Logical().Read(entity.JoinAliasID(rs.Primary.ID))
 		if err != nil {
 			return fmt.Errorf("error checking for identity entity %q: %s", rs.Primary.ID, err)
 		}

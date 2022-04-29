@@ -123,7 +123,7 @@ func testAccIdentityEntityPoliciesCheckAttrs(resource string) resource.TestCheck
 
 		id := instanceState.ID
 
-		path := entity.IDPath(id)
+		path := entity.JoinEntityID(id)
 		client := testProvider.Meta().(*api.Client)
 		resp, err := client.Logical().Read(path)
 		if err != nil {
@@ -218,7 +218,7 @@ func testAccIdentityEntityPoliciesCheckLogical(resource string, policies []strin
 
 		id := instanceState.ID
 
-		path := entity.IDPath(id)
+		path := entity.JoinEntityID(id)
 		client := testProvider.Meta().(*api.Client)
 		resp, err := client.Logical().Read(path)
 		if err != nil {

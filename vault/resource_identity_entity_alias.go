@@ -54,7 +54,7 @@ func identityEntityAliasResource() *schema.Resource {
 }
 
 func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	path := entity.IdentityEntityAliasPath
+	path := entity.RootAliasPath
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
 	client := meta.(*api.Client)
@@ -137,14 +137,14 @@ func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta
 }
 
 func identityEntityAliasUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	vaultMutexKV.Lock(entity.IdentityEntityAliasPath)
-	defer vaultMutexKV.Unlock(entity.IdentityEntityAliasPath)
+	vaultMutexKV.Lock(entity.RootAliasPath)
+	defer vaultMutexKV.Unlock(entity.RootAliasPath)
 
 	client := meta.(*api.Client)
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityEntityAlias %q", id)
-	path := entity.AliasIDPath(id)
+	path := entity.JoinAliasID(id)
 
 	diags := diag.Diagnostics{}
 
@@ -195,7 +195,7 @@ func identityEntityAliasRead(ctx context.Context, d *schema.ResourceData, meta i
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	path := entity.AliasIDPath(id)
+	path := entity.JoinAliasID(id)
 
 	diags := diag.Diagnostics{}
 
@@ -233,12 +233,12 @@ func identityEntityAliasRead(ctx context.Context, d *schema.ResourceData, meta i
 }
 
 func identityEntityAliasDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	vaultMutexKV.Lock(entity.IdentityEntityAliasPath)
-	defer vaultMutexKV.Unlock(entity.IdentityEntityAliasPath)
+	vaultMutexKV.Lock(entity.RootAliasPath)
+	defer vaultMutexKV.Unlock(entity.RootAliasPath)
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	path := entity.AliasIDPath(id)
+	path := entity.JoinAliasID(id)
 
 	diags := diag.Diagnostics{}
 
