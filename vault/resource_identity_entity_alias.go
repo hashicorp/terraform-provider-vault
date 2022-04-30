@@ -54,11 +54,13 @@ func identityEntityAliasResource() *schema.Resource {
 }
 
 func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	path := entity.RootAliasPath
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	lock, unlock := getEntityAliasLockFuncs(d)
+	lock()
+	defer unlock()
+
 	client := meta.(*api.Client)
 
+	path := entity.RootAliasPath
 	name := d.Get("name").(string)
 	mountAccessor := d.Get("mount_accessor").(string)
 	canonicalID := d.Get("canonical_id").(string)
@@ -137,8 +139,9 @@ func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta
 }
 
 func identityEntityAliasUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	vaultMutexKV.Lock(entity.RootAliasPath)
-	defer vaultMutexKV.Unlock(entity.RootAliasPath)
+	lock, unlock := getEntityAliasLockFuncs(d)
+	lock()
+	defer unlock()
 
 	client := meta.(*api.Client)
 	id := d.Id()
@@ -233,8 +236,10 @@ func identityEntityAliasRead(ctx context.Context, d *schema.ResourceData, meta i
 }
 
 func identityEntityAliasDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	vaultMutexKV.Lock(entity.RootAliasPath)
-	defer vaultMutexKV.Unlock(entity.RootAliasPath)
+	lock, unlock := getEntityAliasLockFuncs(d)
+	lock()
+	defer unlock()
+
 	client := meta.(*api.Client)
 	id := d.Id()
 
@@ -254,4 +259,17 @@ func identityEntityAliasDelete(ctx context.Context, d *schema.ResourceData, meta
 	log.Printf("[DEBUG] Deleted IdentityEntityAlias %q", id)
 
 	return diags
+}
+
+func getEntityAliasLockFuncs(d *schema.ResourceData) (func(), func()) {
+	mountAccessor := d.Get("mount_accessor").(string)
+	lockKey := strings.Join([]string{entity.RootAliasIDPath, mountAccessor}, "/")
+	lock := func() {
+		vaultMutexKV.Lock(lockKey)
+	}
+
+	unlock := func() {
+		vaultMutexKV.Unlock(lockKey)
+	}
+	return lock, unlock
 }
