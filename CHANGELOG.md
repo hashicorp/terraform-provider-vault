@@ -3,6 +3,9 @@ BUGS:
 * `resource/pki_secret_backend_root_sign_intermediate`: Ensure that the `certificate_bundle`, and `ca_chain` 
   do not contain duplicate certificates.  
   ([#1428](https://github.com/hashicorp/terraform-provider-vault/pull/1428))
+* `resource/identity_entity_alias`: Serialize create, update, and delete operations in order to prevent alias 
+  mismatches.
+  ([#1429](https://github.com/hashicorp/terraform-provider-vault/pull/1429))
 
 ## 3.5.0 (April 20, 2022)
 FEATURES:

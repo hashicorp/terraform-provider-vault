@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -122,7 +123,7 @@ func testAccIdentityEntityPoliciesCheckAttrs(resource string) resource.TestCheck
 
 		id := instanceState.ID
 
-		path := identityEntityIDPath(id)
+		path := entity.JoinEntityID(id)
 		client := testProvider.Meta().(*api.Client)
 		resp, err := client.Logical().Read(path)
 		if err != nil {
@@ -217,7 +218,7 @@ func testAccIdentityEntityPoliciesCheckLogical(resource string, policies []strin
 
 		id := instanceState.ID
 
-		path := identityEntityIDPath(id)
+		path := entity.JoinEntityID(id)
 		client := testProvider.Meta().(*api.Client)
 		resp, err := client.Logical().Read(path)
 		if err != nil {
