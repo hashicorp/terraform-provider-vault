@@ -114,7 +114,7 @@ func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary: fmt.Sprintf(
-				"error writing IdentityEntityAlias to %q: %s", name, err),
+				"error writing entity alias to %q: %s", name, err),
 		})
 
 		return diags
@@ -131,7 +131,7 @@ func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta
 
 	}
 
-	log.Printf("[DEBUG] Wrote IdentityEntityAlias %q", name)
+	log.Printf("[DEBUG] Wrote entity alias %q", name)
 
 	d.SetId(resp.Data["id"].(string))
 
@@ -146,7 +146,7 @@ func identityEntityAliasUpdate(ctx context.Context, d *schema.ResourceData, meta
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	log.Printf("[DEBUG] Updating IdentityEntityAlias %q", id)
+	log.Printf("[DEBUG] Updating entity alias %q", id)
 	path := entity.JoinAliasID(id)
 
 	diags := diag.Diagnostics{}
@@ -155,7 +155,7 @@ func identityEntityAliasUpdate(ctx context.Context, d *schema.ResourceData, meta
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
-			Summary:  fmt.Sprintf("error updating IdentityEntityAlias %q: %s", id, err),
+			Summary:  fmt.Sprintf("error reading entity alias %q: %s", id, err),
 		})
 
 		return diags
@@ -184,12 +184,12 @@ func identityEntityAliasUpdate(ctx context.Context, d *schema.ResourceData, meta
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
-			Summary:  fmt.Sprintf("error updating IdentityEntityAlias %q: %s", id, err),
+			Summary:  fmt.Sprintf("error updating entity alias %q: %s", id, err),
 		})
 
 		return diags
 	}
-	log.Printf("[DEBUG] Updated IdentityEntityAlias %q", id)
+	log.Printf("[DEBUG] Updated entity alias %q", id)
 
 	return identityEntityAliasRead(ctx, d, meta)
 }
@@ -202,19 +202,19 @@ func identityEntityAliasRead(ctx context.Context, d *schema.ResourceData, meta i
 
 	diags := diag.Diagnostics{}
 
-	log.Printf("[DEBUG] Reading IdentityEntityAlias %q from %q", id, path)
+	log.Printf("[DEBUG] Reading entity alias %q from %q", id, path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
-			Summary:  fmt.Sprintf("error reading IdentityEntityAlias %q: %s", id, err),
+			Summary:  fmt.Sprintf("error reading entity alias %q: %s", id, err),
 		})
 
 		return diags
 	}
-	log.Printf("[DEBUG] Read IdentityEntityAlias %s", id)
+	log.Printf("[DEBUG] Read entity alias %s", id)
 	if resp == nil {
-		log.Printf("[WARN] IdentityEntityAlias %q not found, removing from state", id)
+		log.Printf("[WARN] entity alias %q not found, removing from state", id)
 		d.SetId("")
 
 		return diags
@@ -225,7 +225,7 @@ func identityEntityAliasRead(ctx context.Context, d *schema.ResourceData, meta i
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,
-				Summary:  fmt.Sprintf("error setting state key %q on IdentityEntityAlias %q:  err=%q", k, id, err),
+				Summary:  fmt.Sprintf("error setting state key %q on entity alias %q: err=%q", k, id, err),
 			})
 
 			return diags
@@ -247,16 +247,17 @@ func identityEntityAliasDelete(ctx context.Context, d *schema.ResourceData, meta
 
 	diags := diag.Diagnostics{}
 
-	log.Printf("[DEBUG] Deleting IdentityEntityAlias %q", id)
+	baseMsg := fmt.Sprintf("entity alias ID %q on mount_accessor %q", id, d.Get("mount_accessor"))
+	log.Printf("[INFO] Deleting %s", baseMsg)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
-			Summary:  fmt.Sprintf("error IdentityEntityAlias %q", id),
+			Summary:  fmt.Sprintf("failed deleting %s, err=%s", baseMsg, err),
 		})
 		return diags
 	}
-	log.Printf("[DEBUG] Deleted IdentityEntityAlias %q", id)
+	log.Printf("[INFO] Successfully deleted %s", baseMsg)
 
 	return diags
 }
