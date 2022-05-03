@@ -42,7 +42,11 @@ func ToStringArray(input []interface{}) []string {
 }
 
 func Is404(err error) bool {
-	return strings.Contains(err.Error(), "Code: 404")
+	return IsHTTPErrorCode(err, http.StatusNotFound)
+}
+
+func IsHTTPErrorCode(err error, code int) bool {
+	return strings.Contains(err.Error(), fmt.Sprintf("Code: %d", code))
 }
 
 func CalculateConflictsWith(self string, group []string) []string {

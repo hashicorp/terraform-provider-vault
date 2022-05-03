@@ -1,21 +1,59 @@
 package vault
 
 import (
+	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func pkiSecretBackendRootCertResource() *schema.Resource {
 	return &schema.Resource{
 		Create: pkiSecretBackendRootCertCreate,
-		Read:   pkiSecretBackendRootCertRead,
-		Update: pkiSecretBackendRootCertUpdate,
 		Delete: pkiSecretBackendRootCertDelete,
+		Update: func(data *schema.ResourceData, i interface{}) error {
+			return nil
+		},
+		Read: func(data *schema.ResourceData, i interface{}) error {
+			return nil
+		},
+		CustomizeDiff: func(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			client := meta.(*api.Client)
+			cert, err := getCACertificate(client, d.Get("backend").(string))
+			if err != nil {
+				return err
+			}
+
+			if cert != nil {
+				key := "serial"
+				cur := d.Get(key).(string)
+				n := certutil.GetHexFormatted(cert.SerialNumber.Bytes(), ":")
+				if err := d.SetNew(key, n); err != nil {
+					return err
+				}
+
+				o, _ := d.GetChange(key)
+				// don't force new on new resources
+				if o.(string) != "" && cur != n {
+					if err := d.ForceNew(key); err != nil {
+						return err
+					}
+				}
+
+			}
+			return nil
+		},
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -177,7 +215,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			"certificate": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The certicate.",
+				Description: "The certificate.",
 			},
 			"issuing_ca": {
 				Type:        schema.TypeString,
@@ -281,15 +319,43 @@ func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) er
 	d.Set("serial", resp.Data["serial_number"])
 
 	d.SetId(path)
-	return pkiSecretBackendRootCertRead(d, meta)
-}
 
-func pkiSecretBackendRootCertRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func pkiSecretBackendRootCertUpdate(d *schema.ResourceData, m interface{}) error {
-	return nil
+func getCACertificate(client *api.Client, mount string) (*x509.Certificate, error) {
+	path := fmt.Sprintf("/v1/%s/ca/pem", mount)
+	req := client.NewRequest(http.MethodGet, path)
+	req.ClientToken = ""
+	resp, err := client.RawRequest(req)
+	if err != nil {
+		if util.IsHTTPErrorCode(err, http.StatusNotFound) || util.IsHTTPErrorCode(err, http.StatusForbidden) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if resp == nil {
+		return nil, fmt.Errorf("expected a response body, got nil response")
+	}
+
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("[INFO] Reading current CA")
+	b, _ := pem.Decode(data)
+	if b != nil {
+		cert, err := x509.ParseCertificate(b.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		return cert, nil
+	}
+
+	return nil, nil
 }
 
 func pkiSecretBackendRootCertDelete(d *schema.ResourceData, meta interface{}) error {
