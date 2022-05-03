@@ -25,9 +25,6 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 		Update: func(data *schema.ResourceData, i interface{}) error {
 			return nil
 		},
-		//Read: func(data *schema.ResourceData, i interface{}) error {
-		//	return nil
-		//},
 		Read: pkiSecretBackendRootCertRead,
 		CustomizeDiff: func(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
 			key := "serial"
