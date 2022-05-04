@@ -184,6 +184,37 @@ resource "vault_identity_entity_alias" "test2" {
 				ImportStateVerify: true,
 			},
 			{
+				// delete one of the alias's to ensure an update operation re-creates it.
+				PreConfig: func() {
+					client := testProvider.Meta().(*api.Client)
+					aliases, err := entity.FindAliases(client, &entity.FindAliasParams{
+						Name: alias,
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					if len(aliases) != 1 {
+						t.Fatalf("expected Alias %q not found in Vault", alias)
+					}
+
+					_, err = client.Logical().Delete(entity.JoinAliasID(aliases[0].ID))
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: fmt.Sprintf(configTmpl, alias, alias+"-2"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						aliasResource1, "mount_accessor",
+						aliasResource2, "mount_accessor"),
+					resource.TestCheckResourceAttr(
+						aliasResource1, "name", alias),
+					resource.TestCheckResourceAttr(
+						aliasResource2, "name", alias+"-2"),
+				),
+			},
+			{
 				// duplicate during an update operation
 				// this should result Vault catching the duplicate and returning an error.
 				Config:      fmt.Sprintf(configTmpl, alias, alias),
