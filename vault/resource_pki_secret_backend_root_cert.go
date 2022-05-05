@@ -338,7 +338,7 @@ func pkiSecretBackendRootCertRead(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	// trigger a resource re-creation whenever the engine's mount has disappeared
-	if enabled {
+	if !enabled {
 		log.Printf("[WARN] Mount %q does not exist, setting resource for re-creation", path)
 		d.SetId("")
 	}

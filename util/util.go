@@ -318,9 +318,7 @@ func CheckMountEnabled(client *api.Client, path string) (bool, error) {
 		return false, err
 	}
 
-	if _, ok := mounts[NormalizeMountPath(path)]; !ok {
-		return true, nil
-	}
+	_, ok := mounts[NormalizeMountPath(path)]
 
-	return false, nil
+	return ok, nil
 }
