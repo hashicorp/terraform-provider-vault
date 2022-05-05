@@ -97,6 +97,10 @@ In addition to the fields above, the following attributes are exported:
 
 * `ca_chain` - The CA chain
 
-* `serial` - The serial
+* `serial_number` - The certificate's serial number, hex formatted.
 
 * `expiration` - The expiration date of the certificate in unix epoch format
+
+## Deprecations
+
+* `serial` - Use `serial_number` instead.
