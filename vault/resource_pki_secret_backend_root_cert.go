@@ -26,6 +26,14 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			return nil
 		},
 		Read: pkiSecretBackendRootCertRead,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    pkiSecretBackendRootCertV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: pkiSecretBackendRootCertUpgradeV0,
+			},
+		},
+		SchemaVersion: 1,
 		CustomizeDiff: func(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
 			key := "serial"
 			o, _ := d.GetChange(key)
@@ -226,7 +234,13 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			"serial": {
 				Type:        schema.TypeString,
 				Computed:    true,
+				Deprecated:  "Use serial_number instead",
 				Description: "The serial number.",
+			},
+			"serial_number": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The certificate's serial number, hex formatted.",
 			},
 		},
 	}
@@ -318,6 +332,7 @@ func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) er
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("issuing_ca", resp.Data["issuing_ca"])
 	d.Set("serial", resp.Data["serial_number"])
+	d.Set("serial_number", resp.Data["serial_number"])
 
 	d.SetId(path)
 
@@ -401,4 +416,24 @@ func pkiSecretBackendIntermediateSetSignedReadPath(backend string, rootType stri
 
 func pkiSecretBackendIntermediateSetSignedDeletePath(backend string) string {
 	return strings.Trim(backend, "/") + "/root"
+}
+
+func pkiSecretBackendRootCertV0() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"serial_number": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+		},
+	}
+}
+
+func pkiSecretBackendRootCertUpgradeV0(
+	_ context.Context, rawState map[string]interface{}, _ interface{},
+) (map[string]interface{}, error) {
+	rawState["serial_number"] = rawState["serial"]
+
+	return rawState, nil
 }

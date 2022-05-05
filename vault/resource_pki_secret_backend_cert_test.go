@@ -22,6 +22,7 @@ import (
 
 type testPKICertStore struct {
 	cert          string
+	serialNumber  string
 	expectRevoked bool
 }
 
@@ -341,22 +342,34 @@ func testPkiSecretBackendCertWaitUntilRenewal(n string) resource.TestCheckFunc {
 	}
 }
 
-func testCapturePKICert(resourcePath string, store *testPKICertStore) resource.TestCheckFunc {
+func testCapturePKICert(resourceName string, store *testPKICertStore) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		for _, rs := range s.RootModule().Resources {
-			if rs.Type != "vault_pki_secret_backend_cert" {
-				continue
-			}
+		rs, err := testGetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
 
-			store.cert = rs.Primary.Attributes["certificate"]
-			v, err := strconv.ParseBool(rs.Primary.Attributes["revoke"])
+		cert, ok := rs.Primary.Attributes["certificate"]
+		if !ok {
+			return fmt.Errorf("certificate not found in state")
+		}
+		store.cert = cert
+
+		sn, ok := rs.Primary.Attributes["serial_number"]
+		if !ok {
+			return fmt.Errorf("serial_number not found in state")
+		}
+		store.serialNumber = sn
+
+		if val, ok := rs.Primary.Attributes["revoke"]; ok {
+			v, err := strconv.ParseBool(val)
 			if err != nil {
 				return err
 			}
 			store.expectRevoked = v
-			return nil
 		}
-		return fmt.Errorf("certificate not found in state")
+
+		return nil
 	}
 }
 
@@ -413,4 +426,30 @@ func testPKICertRevocation(path string, store *testPKICertStore) resource.TestCh
 
 		return nil
 	}
+}
+
+func testPKICertReIssued(resourceName string, store *testPKICertStore) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, err := testGetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+		if store.serialNumber == "" {
+			return fmt.Errorf("serial_number must be set on test store %#v", store)
+		}
+
+		if store.serialNumber == rs.Primary.Attributes["serial_number"] {
+			return fmt.Errorf("expected certificate not re-issued, serial_number was not changed")
+		}
+
+		return nil
+	}
+}
+
+func testGetResourceFromRootModule(s *terraform.State, resourceName string) (*terraform.ResourceState, error) {
+	if rs, ok := s.RootModule().Resources[resourceName]; ok {
+		return rs, nil
+	}
+
+	return nil, fmt.Errorf("expected resource %q, not found in state", resourceName)
 }

@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -19,6 +20,8 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
 
+	var store testPKICertStore
+
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, "backend", path),
 		resource.TestCheckResourceAttr(resourceName, "type", "internal"),
@@ -34,6 +37,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "locality", "test"),
 		resource.TestCheckResourceAttr(resourceName, "province", "test"),
 		resource.TestCheckResourceAttrSet(resourceName, "serial"),
+		resource.TestCheckResourceAttrSet(resourceName, "serial_number"),
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -43,17 +47,11 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
-				Check:  resource.ComposeTestCheckFunc(checks...),
-			},
-			{
-				PreConfig: func() {
-					client := testProvider.Meta().(*api.Client)
-					_, err := client.Logical().Delete(fmt.Sprintf("%s/root", path))
-					if err != nil {
-						t.Fatal(err)
-					}
-				},
-				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks,
+						testCapturePKICert(resourceName, &store),
+					)...,
+				),
 			},
 			{
 				// test unmounted backend
@@ -64,6 +62,12 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 					}
 				},
 				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks,
+						testPKICertReIssued(resourceName, &store),
+						testCapturePKICert(resourceName, &store),
+					)...,
+				),
 			},
 			{
 				// test out of band update to the root CA
@@ -88,7 +92,11 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 					}
 				},
 				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
-				Check:  resource.ComposeTestCheckFunc(checks...),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks,
+						testPKICertReIssued(resourceName, &store),
+					)...,
+				),
 			},
 		},
 	})
@@ -146,4 +154,39 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 `, path)
 
 	return config
+}
+
+func Test_pkiSecretBackendRootCertUpgradeV0(t *testing.T) {
+	tests := []struct {
+		name     string
+		rawState map[string]interface{}
+		want     map[string]interface{}
+		wantErr  bool
+	}{
+		{
+			name: "basic",
+			rawState: map[string]interface{}{
+				"serial": "aa:bb:cc:dd:ee",
+			},
+			want: map[string]interface{}{
+				"serial":        "aa:bb:cc:dd:ee",
+				"serial_number": "aa:bb:cc:dd:ee",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := pkiSecretBackendRootCertUpgradeV0(nil, tt.rawState, nil)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("pkiSecretBackendRootCertUpgradeV0() error = %#v, wantErr %#v", err, tt.wantErr)
+				}
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("pkiSecretBackendRootCertUpgradeV0() got = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
 }
