@@ -86,9 +86,9 @@ func authMountInfoGet(client *api.Client, path string) (*api.AuthMount, error) {
 }
 
 func authMountTune(client *api.Client, path string, configured interface{}) error {
-	tune := expandAuthMethodTune(configured.(*schema.Set).List())
+	input := expandAuthMethodTune(configured.(*schema.Set).List())
 
-	return tuneMount(client, path, tune)
+	return tuneMount(client, path, input)
 }
 
 func tuneMount(client *api.Client, path string, input api.MountConfigInput) error {
@@ -129,7 +129,6 @@ func getAuthMountIfPresent(client *api.Client, path string) (*api.AuthMount, err
 	configuredPath := path + "/"
 
 	for authBackendPath, auth := range auths {
-
 		if authBackendPath == configuredPath {
 			return auth, nil
 		}

@@ -65,7 +65,7 @@ resource "vault_auth_backend" "test" {
 	description = "Test auth backend"
 	type 		= "github"
 	path 		= "%s"
-	local = true
+	local 		= true
 }`, path)
 }
 
@@ -75,7 +75,7 @@ resource "vault_auth_backend" "test" {
 	description = "Test auth backend updated"
 	type 		= "github"
 	path 		= "%s"
-	local = true
+	local 		= true
 }`, path)
 }
 
@@ -143,14 +143,6 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 		return nil
 	}
 }
-
-//var testResourceAuth_updateConfig = `
-//
-//resource "vault_auth_backend" "test" {
-//	type = "ldap"
-//}
-//
-//`
 
 func testResourceAuth_updateCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["vault_auth_backend.test"]
