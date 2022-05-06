@@ -6,6 +6,7 @@ BUGS:
 * `resource/identity_entity_alias`: Serialize create, update, and delete operations in order to prevent alias 
   mismatches.
   ([#1429](https://github.com/hashicorp/terraform-provider-vault/pull/1429))
+* `resource/auth_backend`: Remove `ForceNew` behavior when updating `description` ([#1439](https://github.com/hashicorp/terraform-provider-vault/pull/1439))
 
 ## 3.5.0 (April 20, 2022)
 FEATURES:
