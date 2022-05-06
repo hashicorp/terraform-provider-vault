@@ -215,51 +215,65 @@ resource "vault_pki_secret_backend_cert" "test" {
 }
 
 func TestPkiSecretBackendCert_renew(t *testing.T) {
-	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	path := "pki-root-" + strconv.Itoa(acctest.RandInt())
+
+	var store testPKICertStore
 
 	resourceName := "vault_pki_secret_backend_cert.test"
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", path),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
+		resource.TestCheckResourceAttr(resourceName, "ttl", "1h"),
+		resource.TestCheckResourceAttr(resourceName, "min_seconds_remaining", "3595"),
+		resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
+		resource.TestCheckResourceAttrSet(resourceName, "expiration"),
+		resource.TestCheckResourceAttrSet(resourceName, "serial_number"),
+	}
+
+	start := time.Now()
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testPkiSecretBackendCertDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendCertConfig_renew(rootPath),
+				Config: testPkiSecretBackendCertConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", rootPath),
-					resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "1h"),
-					resource.TestCheckResourceAttr(resourceName, "min_seconds_remaining", "3595"),
-					resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
-					resource.TestCheckResourceAttrSet(resourceName, "expiration"),
+					append(checks,
+						testCapturePKICert(resourceName, &store),
+					)...,
 				),
 			},
 			{
-				Config:   testPkiSecretBackendCertConfig_renew(rootPath),
-				PlanOnly: true,
-			},
-			{
-				Config: testPkiSecretBackendCertConfig_renew(rootPath),
+				// test renewal based on cert expiry
+				PreConfig: func() {
+					delay := 7*time.Second - time.Now().Sub(start)
+					if delay > 0 {
+						time.Sleep(delay)
+					}
+				},
+				Config: testPkiSecretBackendCertConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
-					testPkiSecretBackendCertWaitUntilRenewal(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "backend", rootPath),
-					resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "1h"),
-					resource.TestCheckResourceAttr(resourceName, "min_seconds_remaining", "3595"),
-					resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
-					resource.TestCheckResourceAttrSet(resourceName, "expiration"),
+					append(checks,
+						testPKICertReIssued(resourceName, &store),
+						testCapturePKICert(resourceName, &store),
+					)...,
 				),
-				ExpectNonEmptyPlan: true,
 			},
 			{
-				Config: testPkiSecretBackendCertConfig_renew(rootPath),
+				// test renewal based on cert expiry
+				// test unmounted backend
+				PreConfig: func() {
+					client := testProvider.Meta().(*api.Client)
+					if err := client.Sys().Unmount(path); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testPkiSecretBackendCertConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", rootPath),
-					resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "1h"),
-					resource.TestCheckResourceAttr(resourceName, "min_seconds_remaining", "3595"),
-					resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
-					resource.TestCheckResourceAttrSet(resourceName, "expiration"),
+					append(checks,
+						testPKICertReIssued(resourceName, &store),
+					)...,
 				),
 			},
 		},
@@ -269,49 +283,49 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 func testPkiSecretBackendCertConfig_renew(rootPath string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test-root" {
-  path = "%s"
-  type = "pki"
-  description = "test root"
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test root"
   default_lease_ttl_seconds = "8640000"
-  max_lease_ttl_seconds = "8640000"
+  max_lease_ttl_seconds     = "8640000"
 }
 
 resource "vault_pki_secret_backend_root_cert" "test" {
-  depends_on = [ "vault_mount.test-root" ]
-  backend = vault_mount.test-root.path
-  type = "internal"
-  common_name = "my.domain"
-  ttl = "86400"
-  format = "pem"
+  depends_on         = ["vault_mount.test-root"]
+  backend            = vault_mount.test-root.path
+  type               = "internal"
+  common_name        = "my.domain"
+  ttl                = "86400"
+  format             = "pem"
   private_key_format = "der"
-  key_type = "rsa"
-  key_bits = 4096
-  ou = "test"
-  organization = "test"
-  country = "test"
-  locality = "test"
-  province = "test"
+  key_type           = "rsa"
+  key_bits           = 4096
+  ou                 = "test"
+  organization       = "test"
+  country            = "test"
+  locality           = "test"
+  province           = "test"
 }
 
 resource "vault_pki_secret_backend_role" "test" {
-  depends_on = [ "vault_pki_secret_backend_root_cert.test" ]
-  backend = vault_mount.test-root.path
-  name = "test"
+  backend          = vault_pki_secret_backend_root_cert.test.backend
+  name             = "test"
   allowed_domains  = ["test.my.domain"]
   allow_subdomains = true
-  max_ttl = "3600"
-  key_usage = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
+  max_ttl          = "3600"
+  key_usage        = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
 }
 
 resource "vault_pki_secret_backend_cert" "test" {
-  depends_on = [ "vault_pki_secret_backend_role.test" ]
-  backend = vault_mount.test-root.path
-  name = vault_pki_secret_backend_role.test.name
-  common_name = "cert.test.my.domain"
-  ttl = "1h"
-  auto_renew = true
+  depends_on            = ["vault_pki_secret_backend_role.test"]
+  backend               = vault_mount.test-root.path
+  name                  = vault_pki_secret_backend_role.test.name
+  common_name           = "cert.test.my.domain"
+  ttl                   = "1h"
+  auto_renew            = true
   min_seconds_remaining = "3595"
-}`, rootPath)
+}
+`, rootPath)
 }
 
 func testPkiSecretBackendCertWaitUntilRenewal(n string) resource.TestCheckFunc {
