@@ -398,7 +398,6 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 		"require_cn":                         d.Get("require_cn"),
 		"basic_constraints_valid_for_non_ca": d.Get("basic_constraints_valid_for_non_ca"),
 		"not_before_duration":                d.Get("not_before_duration"),
-		"allowed_serial_numbers":             d.Get("allowed_serial_numbers"),
 	}
 
 	if len(allowedDomains) > 0 {
@@ -611,7 +610,6 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 		"require_cn":                         d.Get("require_cn"),
 		"basic_constraints_valid_for_non_ca": d.Get("basic_constraints_valid_for_non_ca"),
 		"not_before_duration":                d.Get("not_before_duration"),
-		"allowed_serial_numbers":             d.Get("allowed_serial_numbers"),
 	}
 
 	if len(allowedDomains) > 0 {
