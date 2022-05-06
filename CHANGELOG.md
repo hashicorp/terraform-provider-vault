@@ -1,4 +1,8 @@
 ## 3.6.0 (Unreleased)
+IMPROVEMENTS:
+* `resource/pki_secret_backend_root_cert`: Force new root CA resource creation on out-of-band changes.  
+  ([#1428](https://github.com/hashicorp/terraform-provider-vault/pull/1428))
+
 BUGS:
 * `resource/pki_secret_backend_root_sign_intermediate`: Ensure that the `certificate_bundle`, and `ca_chain` 
   do not contain duplicate certificates.  
