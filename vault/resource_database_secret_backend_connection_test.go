@@ -251,11 +251,13 @@ func TestAccDatabaseSecretBackendConnection_mongodbatlas(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineMongoDBAtlas)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.
-	values := testutil.SkipTestEnvUnset(t, "MONGODB_ATLAS_PUBLIC_KEY")
-	publicKey := values[0]
+	values := testutil.SkipTestEnvUnset(t,
+		"MONGODB_ATLAS_PUBLIC_KEY",
+		"MONGODB_ATLAS_PRIVATE_KEY",
+		"MONGODB_ATLAS_PROJECT_ID")
 
-	privateKey := os.Getenv("MONGODB_ATLAS_PRIVATE_KEY")
-	projectID := os.Getenv("MONGODB_ATLAS_PROJECT_ID")
+	publicKey, privateKey, projectID := values[0], values[1], values[0]
+
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineMongoDBAtlas.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")

@@ -1520,7 +1520,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineMongoDB:
 		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	case dbEngineMongoDBAtlas:
-		result = getConnectionDetailsMongoDBAtlas(d, resp)
+		result = getConnectionDetailsMongoDBAtlas(d, prefix, resp)
 	case dbEngineMSSQL:
 		values, err := getMSSQLConnectionDetailsFromResponse(d, prefix, resp)
 		if err != nil {
@@ -1612,22 +1612,19 @@ func getConnectionDetailsCassandra(d *schema.ResourceData, prefix string, resp *
 	return nil, nil
 }
 
-func getConnectionDetailsMongoDBAtlas(_ *schema.ResourceData, resp *api.Secret) map[string]interface{} {
-	details := resp.Data["connection_details"]
-	data, ok := details.(map[string]interface{})
-	result := map[string]interface{}{}
-	if ok {
-
-		if v, ok := data["public_key"]; ok {
-			result["public_key"] = v.(string)
-		}
-		if v, ok := data["private_key"]; ok {
-			result["private_key"] = v.(string)
-		}
-		if v, ok := data["project_id"]; ok {
-			result["project_id"] = v.(string)
+func getConnectionDetailsMongoDBAtlas(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+	result := map[string]interface{}{
+		// the private key is a secret that is never revealed by Vault
+		"private_key": d.Get(prefix + "private_key"),
+	}
+	if details, ok := resp.Data["connection_details"]; ok {
+		if data, ok := details.(map[string]interface{}); ok {
+			for _, k := range []string{"public_key", "project_id"} {
+				result[k] = data[k]
+			}
 		}
 	}
+
 	return result
 }
 

@@ -1,4 +1,8 @@
 ## 3.6.0 (Unreleased)
+IMPROVEMENTS:
+* `resource/pki_secret_backend_root_cert`: Force new root CA resource creation on out-of-band changes.  
+  ([#1428](https://github.com/hashicorp/terraform-provider-vault/pull/1428))
+
 BUGS:
 * `resource/pki_secret_backend_root_sign_intermediate`: Ensure that the `certificate_bundle`, and `ca_chain` 
   do not contain duplicate certificates.  
@@ -6,6 +10,9 @@ BUGS:
 * `resource/identity_entity_alias`: Serialize create, update, and delete operations in order to prevent alias 
   mismatches.
   ([#1429](https://github.com/hashicorp/terraform-provider-vault/pull/1429))
+* `database_secret*`: Ignore mongodb-atlas `private_key` on read from Vault.
+  mismatches.  
+  ([#1436](https://github.com/hashicorp/terraform-provider-vault/issues/1436))
 * `resource/auth_backend`: Remove `ForceNew` behavior when updating `description` ([#1439](https://github.com/hashicorp/terraform-provider-vault/pull/1439))
 
 ## 3.5.0 (April 20, 2022)
