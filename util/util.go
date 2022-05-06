@@ -42,7 +42,16 @@ func ToStringArray(input []interface{}) []string {
 }
 
 func Is404(err error) bool {
-	return strings.Contains(err.Error(), "Code: 404")
+	return ErrorContainsHTTPCode(err, http.StatusNotFound)
+}
+
+func ErrorContainsHTTPCode(err error, codes ...int) bool {
+	for _, code := range codes {
+		if strings.Contains(err.Error(), fmt.Sprintf("Code: %d", code)) {
+			return true
+		}
+	}
+	return false
 }
 
 func CalculateConflictsWith(self string, group []string) []string {
@@ -295,4 +304,21 @@ func SetResourceData(d *schema.ResourceData, data map[string]interface{}) error 
 	}
 
 	return nil
+}
+
+// NormalizeMountPath to be in a form valid for accessing values from api.MountOutput
+func NormalizeMountPath(path string) string {
+	return strings.Trim(path, "/") + "/"
+}
+
+// CheckMountEnabled in Vault, path must contain a trailing '/',
+func CheckMountEnabled(client *api.Client, path string) (bool, error) {
+	mounts, err := client.Sys().ListMounts()
+	if err != nil {
+		return false, err
+	}
+
+	_, ok := mounts[NormalizeMountPath(path)]
+
+	return ok, nil
 }
