@@ -8,8 +8,8 @@ import (
 
 	"encoding/json"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -175,8 +175,8 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     false,
 				Optional:     true,
-				Description:  "The type of generated keys.",
-				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec"}, false),
+				Description:  "The generated key type.",
+				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519", "any"}, false),
 				Default:      "rsa",
 			},
 			"key_bits": {

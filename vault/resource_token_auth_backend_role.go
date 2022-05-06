@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -20,10 +20,8 @@ func tokenAuthBackendRoleEmptyStringSet() (interface{}, error) {
 
 func tokenAuthBackendRoleTokenConfig() *addTokenFieldsConfig {
 	return &addTokenFieldsConfig{
-		TokenBoundCidrsConflict:     []string{"bound_cidrs"},
-		TokenExplicitMaxTTLConflict: []string{"explicit_max_ttl"},
-		TokenPeriodConflict:         []string{"period", "token_ttl"},
-		TokenTTLConflict:            []string{"period", "token_period"},
+		TokenPeriodConflict: []string{"token_ttl"},
+		TokenTTLConflict:    []string{"token_period"},
 
 		TokenTypeDefault: "default-service",
 	}
@@ -46,6 +44,15 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 			DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
 			Description: "List of allowed policies for given role.",
 		},
+		"allowed_policies_glob": {
+			Type:     schema.TypeSet,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
+			Description: "Set of allowed policies with glob match for given role.",
+		},
 		"disallowed_policies": {
 			Type:     schema.TypeSet,
 			Optional: true,
@@ -55,11 +62,29 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 			DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
 			Description: "List of disallowed policies for given role.",
 		},
+		"disallowed_policies_glob": {
+			Type:     schema.TypeSet,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
+			Description: "Set of disallowed policies with glob match for given role.",
+		},
 		"orphan": {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Default:     false,
 			Description: "If true, tokens created against this policy will be orphan tokens.",
+		},
+		"allowed_entity_aliases": {
+			Type:     schema.TypeSet,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			DefaultFunc: tokenAuthBackendRoleEmptyStringSet,
+			Description: "Set of allowed entity aliases for this role.",
 		},
 
 		"renewable": {
@@ -73,32 +98,6 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 			Optional:    true,
 			Default:     "",
 			Description: "Tokens created against this role will have the given suffix as part of their path in addition to the role name.",
-		},
-
-		// Deprecated
-		"period": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Description:   "Number of seconds to set the TTL to for issued tokens upon renewal. Makes the token a periodic token, which will never expire as long as it is renewed before the TTL each period.",
-			ConflictsWith: []string{"token_period", "token_ttl"},
-			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
-		},
-		"explicit_max_ttl": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Description:   "Number of seconds after which issued tokens can no longer be renewed.",
-			Deprecated:    "use `token_explicit_max_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_explicit_max_ttl"},
-		},
-		"bound_cidrs": {
-			Type:        schema.TypeSet,
-			Optional:    true,
-			Description: "List of CIDRs valid as the source address for login requests. This value is also encoded into any resulting token.",
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Deprecated:    "use `token_bound_cidrs` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_bound_cidrs"},
 		},
 	}
 
@@ -121,22 +120,14 @@ func tokenAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]in
 	setTokenFields(d, data, tokenAuthBackendRoleTokenConfig())
 
 	data["allowed_policies"] = d.Get("allowed_policies").(*schema.Set).List()
+	data["allowed_policies_glob"] = d.Get("allowed_policies_glob").(*schema.Set).List()
 	data["disallowed_policies"] = d.Get("disallowed_policies").(*schema.Set).List()
+	data["disallowed_policies_glob"] = d.Get("disallowed_policies_glob").(*schema.Set).List()
 	data["orphan"] = d.Get("orphan").(bool)
+	data["allowed_entity_aliases"] = d.Get("allowed_entity_aliases").(*schema.Set).List()
 	data["renewable"] = d.Get("renewable").(bool)
 	data["path_suffix"] = d.Get("path_suffix").(string)
 	data["token_type"] = d.Get("token_type").(string)
-
-	// Deprecated
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(string)
-	}
-	if v, ok := d.GetOk("explicit_max_ttl"); ok {
-		data["explicit_max_ttl"] = v.(string)
-	}
-	if v, ok := d.GetOk("bound_cidrs"); ok {
-		data["bound_cidrs"] = v.(*schema.Set).List()
-	}
 }
 
 func tokenAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
@@ -188,46 +179,12 @@ func tokenAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("role_name", roleName)
 
-	// Check if the user is using the deprecated `period`
-	if _, deprecated := d.GetOk("period"); deprecated {
-		// Then we see if `token_period` was set and unset it
-		// Vault will still return `period`
-		if _, ok := d.GetOk("token_period"); ok {
-			d.Set("token_period", nil)
-		}
-
-		if v, ok := resp.Data["period"]; ok {
-			d.Set("period", v)
-		}
+	params := []string{
+		"allowed_policies", "allowed_policies_glob", "disallowed_policies",
+		"disallowed_policies_glob", "allowed_entity_aliases", "orphan",
+		"path_suffix", "renewable",
 	}
-
-	// Check if the user is using the deprecated `period`
-	if _, deprecated := d.GetOk("explicit_max_ttl"); deprecated {
-		// Then we see if `token_explicit_max_ttl` was set and unset it
-		// Vault will still return `explicit_max_ttl`
-		if _, ok := d.GetOk("token_explicit_max_ttl"); ok {
-			d.Set("token_explicit_max_ttl", nil)
-		}
-
-		if v, ok := resp.Data["explicit_max_ttl"]; ok {
-			d.Set("explicit_max_ttl", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `bound_cidrs`
-	if _, deprecated := d.GetOk("bound_cidrs"); deprecated {
-		// Then we see if `token_bound_cidrs` was set and unset it
-		// Vault will still return `bound_cidrs`
-		if _, ok := d.GetOk("token_bound_cidrs"); ok {
-			d.Set("token_bound_cidrs", nil)
-		}
-
-		if v, ok := resp.Data["bound_cidrs"]; ok {
-			d.Set("bound_cidrs", v)
-		}
-	}
-
-	for _, k := range []string{"allowed_policies", "disallowed_policies", "orphan", "path_suffix", "renewable"} {
+	for _, k := range params {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return fmt.Errorf("error reading %s for Token auth backend role %q: %q", k, path, err)
 		}

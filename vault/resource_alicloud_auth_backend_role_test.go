@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAlicloudAuthBackendRole_basic(t *testing.T) {
@@ -16,7 +18,7 @@ func TestAlicloudAuthBackendRole_basic(t *testing.T) {
 	arn := acctest.RandomWithPrefix("acs:ram:123456:tf:role/")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAlicloudAuthBackedRoleDestroy,
 		Steps: []resource.TestStep{
@@ -66,7 +68,6 @@ func testAlicloudAuthBackedRoleDestroy(s *terraform.State) error {
 }
 
 func testAlicloudAuthBackedRoleConfig_basic(backend, name, arn string) string {
-
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "alicloud" {

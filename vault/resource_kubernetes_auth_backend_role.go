@@ -6,9 +6,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -27,75 +28,25 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 		"bound_service_account_names": {
 			Type:        schema.TypeSet,
 			Elem:        &schema.Schema{Type: schema.TypeString},
-			Description: "List of service account names able to access this role. If set to `[\"*\"]` all names are allowed, both this and bound_service_account_namespaces can not be \"*\".",
 			Required:    true,
+			Description: "List of service account names able to access this role. If set to `[\"*\"]` all names are allowed, both this and bound_service_account_namespaces can not be \"*\".",
 		},
 		"bound_service_account_namespaces": {
 			Type:        schema.TypeSet,
 			Elem:        &schema.Schema{Type: schema.TypeString},
-			Description: "List of namespaces allowed to access this role. If set to `[\"*\"]` all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
 			Required:    true,
+			Description: "List of namespaces allowed to access this role. If set to `[\"*\"]` all namespaces are allowed, both this and bound_service_account_names can not be set to \"*\".",
 		},
 		"backend": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Unique name of the kubernetes backend to configure.",
-			ForceNew:    true,
-			Default:     "kubernetes",
+			Type:     schema.TypeString,
+			Optional: true,
+			ForceNew: true,
+			Default:  "kubernetes",
 			// standardise on no beginning or trailing slashes
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
 			},
-		},
-
-		// Deprecated
-		"policies": {
-			Type:     schema.TypeSet,
-			Optional: true,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Description:   "Policies to be set on tokens issued using this role.",
-			Deprecated:    "use `token_policies` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_policies"},
-		},
-		"ttl": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "Default number of seconds to set as the TTL for issued tokens and at renewal time.",
-			ConflictsWith: []string{"token_ttl"},
-			Deprecated:    "use `token_ttl` instead if you are running Vault >= 1.2",
-		},
-		"max_ttl": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "Number of seconds after which issued tokens can no longer be renewed.",
-			Deprecated:    "use `token_max_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_max_ttl"},
-		},
-		"period": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "Number of seconds to set the TTL to for issued tokens upon renewal. Makes the token a periodic token, which will never expire as long as it is renewed before the TTL each period.",
-			ConflictsWith: []string{"token_period"},
-			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
-		},
-		"num_uses": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "Number of times issued tokens can be used. Setting this to 0 or leaving it unset means unlimited uses.",
-			Deprecated:    "use `token_num_uses` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_num_uses"},
-		},
-		"bound_cidrs": {
-			Type:        schema.TypeSet,
-			Optional:    true,
-			Description: "List of CIDRs valid as the source address for login requests. This value is also encoded into any resulting token.",
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Deprecated:    "use `token_bound_cidrs` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_bound_cidrs"},
+			Description: "Unique name of the kubernetes backend to configure.",
 		},
 		"audience": {
 			Type:        schema.TypeString,
@@ -103,16 +54,15 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 			Default:     "",
 			Description: "Optional Audience claim to verify in the JWT.",
 		},
+		"alias_name_source": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			Description: "Configures how identity aliases are generated. Valid choices are: serviceaccount_uid, serviceaccount_name",
+		},
 	}
 
-	addTokenFields(fields, &addTokenFieldsConfig{
-		TokenBoundCidrsConflict: []string{"bound_cidrs"},
-		TokenMaxTTLConflict:     []string{"max_ttl"},
-		TokenNumUsesConflict:    []string{"num_uses"},
-		TokenPeriodConflict:     []string{"period"},
-		TokenPoliciesConflict:   []string{"policies"},
-		TokenTTLConflict:        []string{"ttl"},
-	})
+	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
 		Create: kubernetesAuthBackendRoleCreate,
@@ -143,29 +93,16 @@ func kubernetesAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[stri
 		data["bound_service_account_namespaces"] = boundServiceAccountNamespaces.(*schema.Set).List()
 	}
 
-	if policies, ok := d.GetOk("policies"); ok {
-		data["policies"] = policies.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(int)
-	}
-
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(int)
-	}
-
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(int)
-	}
-
-	if create {
-		if v, ok := d.GetOk("audience"); ok {
-			data["audience"] = v.(string)
-		}
-	} else {
-		if d.HasChange("audience") {
-			data["audience"] = d.Get("audience").(string)
+	params := []string{"audience", "alias_name_source"}
+	for _, k := range params {
+		if create {
+			if v, ok := d.GetOk(k); ok {
+				data[k] = v
+			}
+		} else {
+			if d.HasChange(k) {
+				data[k] = d.Get(k)
+			}
 		}
 	}
 }
@@ -243,93 +180,15 @@ func kubernetesAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 
 	readTokenFields(d, resp)
 
-	d.Set("backend", backend)
-	d.Set("role_name", role)
-
-	if v, ok := resp.Data["audience"]; ok {
-		d.Set("audience", v)
+	if err := d.Set("backend", backend); err != nil {
+		return err
+	}
+	if err := d.Set("role_name", role); err != nil {
+		return err
 	}
 
-	// Check if the user is using the deprecated `policies`
-	if _, deprecated := d.GetOk("policies"); deprecated {
-		// Then we see if `token_policies` was set and unset it
-		// Vault will still return `policies`
-		if _, ok := d.GetOk("token_policies"); ok {
-			d.Set("token_policies", nil)
-		}
-
-		if v, ok := resp.Data["policies"]; ok {
-			d.Set("policies", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `period`
-	if _, deprecated := d.GetOk("period"); deprecated {
-		// Then we see if `token_period` was set and unset it
-		// Vault will still return `period`
-		if _, ok := d.GetOk("token_period"); ok {
-			d.Set("token_period", nil)
-		}
-
-		if v, ok := resp.Data["period"]; ok {
-			d.Set("period", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `ttl`
-	if _, deprecated := d.GetOk("ttl"); deprecated {
-		// Then we see if `token_ttl` was set and unset it
-		// Vault will still return `ttl`
-		if _, ok := d.GetOk("token_ttl"); ok {
-			d.Set("token_ttl", nil)
-		}
-
-		if v, ok := resp.Data["ttl"]; ok {
-			d.Set("ttl", v)
-		}
-
-	}
-
-	// Check if the user is using the deprecated `max_ttl`
-	if _, deprecated := d.GetOk("max_ttl"); deprecated {
-		// Then we see if `token_max_ttl` was set and unset it
-		// Vault will still return `max_ttl`
-		if _, ok := d.GetOk("token_max_ttl"); ok {
-			d.Set("token_max_ttl", nil)
-		}
-
-		if v, ok := resp.Data["max_ttl"]; ok {
-			d.Set("max_ttl", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `num_uses`
-	if _, deprecated := d.GetOk("num_uses"); deprecated {
-		// Then we see if `token_num_uses` was set and unset it
-		// Vault will still return `num_uses`
-		if _, ok := d.GetOk("token_num_uses"); ok {
-			d.Set("token_num_uses", nil)
-		}
-
-		if v, ok := resp.Data["num_uses"]; ok {
-			d.Set("num_uses", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `bound_cidrs`
-	if _, deprecated := d.GetOk("bound_cidrs"); deprecated {
-		// Then we see if `token_bound_cidrs` was set and unset it
-		// Vault will still return `bound_cidrs`
-		if _, ok := d.GetOk("token_bound_cidrs"); ok {
-			d.Set("token_bound_cidrs", nil)
-		}
-
-		if v, ok := resp.Data["bound_cidrs"]; ok {
-			d.Set("bound_cidrs", v)
-		}
-	}
-
-	for _, k := range []string{"bound_service_account_names", "bound_service_account_namespaces"} {
+	params := []string{"bound_service_account_names", "bound_service_account_namespaces", "audience", "alias_name_source"}
+	for _, k := range params {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
 				return fmt.Errorf("error reading %s for Kubernetes Auth Backend Role %q: %q", k, path, err)

@@ -7,22 +7,24 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestLDAPAuthBackend_import(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-ldap-path")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "false"),
+				Config: testLDAPAuthBackendConfig_basic(path, "false", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 			{
@@ -39,20 +41,28 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-ldap-path")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "false"),
+				Config: testLDAPAuthBackendConfig_basic(path, "false", "true"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
+				Check:  testLDAPAuthBackendCheck_attrs(path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_basic(path, "false", "false"),
+				Check:  testLDAPAuthBackendCheck_attrs(path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 		},
@@ -63,20 +73,28 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-ldap-tls-path")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_tls(path, "true"),
+				Config: testLDAPAuthBackendConfig_tls(path, "true", "true"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_tls(path, "false"),
+				Config: testLDAPAuthBackendConfig_tls(path, "false", "true"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_tls(path, "true"),
+				Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
+				Check:  testLDAPAuthBackendCheck_attrs(path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_tls(path, "false", "false"),
+				Check:  testLDAPAuthBackendCheck_attrs(path),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(path),
 			},
 		},
@@ -137,6 +155,11 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 			return fmt.Errorf("accessor in state %s does not match accessor returned from vault %s", instanceState.Attributes["accessor"], authMount.Accessor)
 		}
 
+		l := instanceState.Attributes["local"] == "true"
+		if l != authMount.Local {
+			return fmt.Errorf("local bool in state for %s does not match value returned from vault: State: %t, Vault: %t", path, l, authMount.Local)
+		}
+
 		configPath := "auth/" + endpoint + "/config"
 
 		resp, err := client.Logical().Read(configPath)
@@ -160,22 +183,24 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 		}
 
 		attrs := map[string]string{
-			"url":              "url",
-			"starttls":         "starttls",
-			"tls_min_version":  "tls_min_version",
-			"tls_max_version":  "tls_max_version",
-			"insecure_tls":     "insecure_tls",
-			"certificate":      "certificate",
-			"binddn":           "binddn",
-			"userdn":           "userdn",
-			"userattr":         "userattr",
-			"discoverdn":       "discoverdn",
-			"deny_null_bind":   "deny_null_bind",
-			"upndomain":        "upndomain",
-			"groupfilter":      "groupfilter",
-			"groupdn":          "groupdn",
-			"groupattr":        "groupattr",
-			"use_token_groups": "use_token_groups",
+			"url":                  "url",
+			"starttls":             "starttls",
+			"case_sensitive_names": "case_sensitive_names",
+			"tls_min_version":      "tls_min_version",
+			"tls_max_version":      "tls_max_version",
+			"insecure_tls":         "insecure_tls",
+			"certificate":          "certificate",
+			"binddn":               "binddn",
+			"userdn":               "userdn",
+			"userattr":             "userattr",
+			"userfilter":           "userfilter",
+			"discoverdn":           "discoverdn",
+			"deny_null_bind":       "deny_null_bind",
+			"upndomain":            "upndomain",
+			"groupfilter":          "groupfilter",
+			"groupdn":              "groupdn",
+			"groupattr":            "groupattr",
+			"use_token_groups":     "use_token_groups",
 		}
 
 		for stateAttr, apiAttr := range attrs {
@@ -243,13 +268,14 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 	}
 }
 
-func testLDAPAuthBackendConfig_basic(path, use_token_groups string) string {
-
+func testLDAPAuthBackendConfig_basic(path, use_token_groups string, local string) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_auth_backend" "test" {
     path                   = "%s"
+    local                  = %s
     url                    = "ldaps://example.org"
     starttls               = true
+    case_sensitive_names   = false
     tls_min_version        = "tls11"
     tls_max_version        = "tls12"
     insecure_tls           = false
@@ -258,18 +284,17 @@ resource "vault_ldap_auth_backend" "test" {
     discoverdn             = false
     deny_null_bind         = true
     description            = "example"
-
+	userfilter             = "({{.UserAttr}}={{.Username}})"
     use_token_groups = %s
 }
-`, path, use_token_groups)
-
+`, path, local, use_token_groups)
 }
 
-func testLDAPAuthBackendConfig_tls(path, use_token_groups string) string {
-
+func testLDAPAuthBackendConfig_tls(path, use_token_groups string, local string) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_auth_backend" "test" {
     path                   = "%s"
+    local                  = %s
     url                    = "ldaps://example.org"
     starttls               = true
     tls_min_version        = "tls11"
@@ -359,6 +384,5 @@ MvQzNd87hRypUZ9Hyx2C9RljNDHHjgwYwWv9JOT0xEOS4ZAaPfvTf20=
 EOT
     use_token_groups = %s
 }
-`, path, use_token_groups)
-
+`, path, local, use_token_groups)
 }

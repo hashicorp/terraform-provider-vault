@@ -22,11 +22,9 @@ for more details.
 ```hcl
 resource "vault_pki_secret_backend_sign" "test" {
   depends_on = [vault_pki_secret_backend_role.admin]
-
-  backend = vault_pki_secret_backend.pki.path
-
-  name = vault_pki_secret_backend_role.admin.name
-  csr = <<EOT
+  backend    = vault_mount.pki.path
+  name       = vault_pki_secret_backend_role.admin.name
+  csr        = <<EOT
 -----BEGIN CERTIFICATE REQUEST-----
 MIIEqDCCApACAQAwYzELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUx
 ITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEcMBoGA1UEAwwTY2Vy
@@ -99,6 +97,10 @@ In addition to the fields above, the following attributes are exported:
 
 * `ca_chain` - The CA chain
 
-* `serial` - The serial
+* `serial_number` - The certificate's serial number, hex formatted.
 
 * `expiration` - The expiration date of the certificate in unix epoch format
+
+## Deprecations
+
+* `serial` - Use `serial_number` instead.

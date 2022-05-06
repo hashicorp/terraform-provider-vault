@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -85,6 +85,12 @@ func awsSecretBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies a custom HTTP STS endpoint to use.",
 			},
+			"username_template": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Template describing how dynamic usernames are generated.",
+			},
 		},
 	}
 }
@@ -101,6 +107,7 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	region := d.Get("region").(string)
 	iamEndpoint := d.Get("iam_endpoint").(string)
 	stsEndpoint := d.Get("sts_endpoint").(string)
+	usernameTemplate := d.Get("username_template").(string)
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting AWS backend at %q", path)
@@ -118,11 +125,6 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Mounted AWS backend at %q", path)
 	d.SetId(path)
 
-	d.SetPartial("path")
-	d.SetPartial("description")
-	d.SetPartial("default_lease_ttl_seconds")
-	d.SetPartial("max_lease_ttl_seconds")
-
 	log.Printf("[DEBUG] Writing root credentials to %q", path+"/config/root")
 	data := map[string]interface{}{
 		"access_key": accessKey,
@@ -137,22 +139,16 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	if stsEndpoint != "" {
 		data["sts_endpoint"] = stsEndpoint
 	}
+	if usernameTemplate != "" {
+		data["username_template"] = usernameTemplate
+	}
 	_, err = client.Logical().Write(path+"/config/root", data)
 	if err != nil {
 		return fmt.Errorf("error configuring root credentials for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote root credentials to %q", path+"/config/root")
-	d.SetPartial("access_key")
-	d.SetPartial("secret_key")
 	if region == "" {
 		d.Set("region", "us-east-1")
-	}
-	d.SetPartial("region")
-	if iamEndpoint != "" {
-		d.SetPartial("iam_endpoint")
-	}
-	if stsEndpoint != "" {
-		d.SetPartial("sts_endpoint")
 	}
 	d.Partial(false)
 
@@ -216,6 +212,9 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		if v, ok := resp.Data["sts_endpoint"].(string); ok {
 			d.Set("sts_endpoint", v)
 		}
+		if v, ok := resp.Data["username_template"].(string); ok {
+			d.Set("username_template", v)
+		}
 	}
 
 	d.Set("path", path)
@@ -242,8 +241,6 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error updating mount TTLs for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
-		d.SetPartial("default_lease_ttl_seconds")
-		d.SetPartial("max_lease_ttl_seconds")
 	}
 	if d.HasChange("access_key") || d.HasChange("secret_key") || d.HasChange("region") || d.HasChange("iam_endpoint") || d.HasChange("sts_endpoint") {
 		log.Printf("[DEBUG] Updating root credentials at %q", path+"/config/root")
@@ -254,6 +251,8 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		region := d.Get("region").(string)
 		iamEndpoint := d.Get("iam_endpoint").(string)
 		stsEndpoint := d.Get("sts_endpoint").(string)
+		usernameTemplate := d.Get("username_template").(string)
+
 		if region != "" {
 			data["region"] = region
 		}
@@ -263,22 +262,16 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		if stsEndpoint != "" {
 			data["sts_endpoint"] = stsEndpoint
 		}
+		if usernameTemplate != "" {
+			data["username_template"] = usernameTemplate
+		}
 		_, err := client.Logical().Write(path+"/config/root", data)
 		if err != nil {
 			return fmt.Errorf("error configuring root credentials for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated root credentials at %q", path+"/config/root")
-		d.SetPartial("access_key")
-		d.SetPartial("secret_key")
 		if region == "" {
 			d.Set("region", "us-east-1")
-		}
-		d.SetPartial("region")
-		if iamEndpoint != "" {
-			d.SetPartial("iam_endpoint")
-		}
-		if stsEndpoint != "" {
-			d.SetPartial("sts_endpoint")
 		}
 	}
 	d.Partial(false)

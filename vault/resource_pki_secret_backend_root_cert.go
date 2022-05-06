@@ -1,21 +1,68 @@
 package vault
 
 import (
+	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func pkiSecretBackendRootCertResource() *schema.Resource {
 	return &schema.Resource{
 		Create: pkiSecretBackendRootCertCreate,
-		Read:   pkiSecretBackendRootCertRead,
-		Update: pkiSecretBackendRootCertUpdate,
 		Delete: pkiSecretBackendRootCertDelete,
+		Update: func(data *schema.ResourceData, i interface{}) error {
+			return nil
+		},
+		Read: pkiSecretBackendRootCertRead,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    pkiSecretBackendRootCertV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: pkiSecretBackendRootCertUpgradeV0,
+			},
+		},
+		SchemaVersion: 1,
+		CustomizeDiff: func(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			key := "serial"
+			o, _ := d.GetChange(key)
+			// skip on new resource
+			if o.(string) == "" {
+				return nil
+			}
+
+			client := meta.(*api.Client)
+			cert, err := getCACertificate(client, d.Get("backend").(string))
+			if err != nil {
+				return err
+			}
+
+			if cert != nil {
+				n := certutil.GetHexFormatted(cert.SerialNumber.Bytes(), ":")
+				if d.Get(key).(string) != n {
+					if err := d.SetNewComputed(key); err != nil {
+						return err
+					}
+					if err := d.ForceNew(key); err != nil {
+						return err
+					}
+				}
+
+			}
+
+			return nil
+		},
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -101,7 +148,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				Description:  "The desired key type.",
 				ForceNew:     true,
 				Default:      "rsa",
-				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519"}, false),
 			},
 			"key_bits": {
 				Type:        schema.TypeInt,
@@ -177,7 +224,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			"certificate": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The certicate.",
+				Description: "The certificate.",
 			},
 			"issuing_ca": {
 				Type:        schema.TypeString,
@@ -187,7 +234,13 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			"serial": {
 				Type:        schema.TypeString,
 				Computed:    true,
+				Deprecated:  "Use serial_number instead",
 				Description: "The serial number.",
+			},
+			"serial_number": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The certificate's serial number, hex formatted.",
 			},
 		},
 	}
@@ -279,17 +332,67 @@ func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) er
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("issuing_ca", resp.Data["issuing_ca"])
 	d.Set("serial", resp.Data["serial_number"])
+	d.Set("serial_number", resp.Data["serial_number"])
 
 	d.SetId(path)
-	return pkiSecretBackendRootCertRead(d, meta)
+
+	return nil
 }
 
 func pkiSecretBackendRootCertRead(d *schema.ResourceData, meta interface{}) error {
+	if d.IsNewResource() {
+		return nil
+	}
+
+	client := meta.(*api.Client)
+	path := d.Get("backend").(string)
+	enabled, err := util.CheckMountEnabled(client, path)
+	if err != nil {
+		log.Printf("[WARN] Failed to check if mount %q exist, preempting the read operation", path)
+		return nil
+	}
+
+	// trigger a resource re-creation whenever the engine's mount has disappeared
+	if !enabled {
+		log.Printf("[WARN] Mount %q does not exist, setting resource for re-creation", path)
+		d.SetId("")
+	}
+
 	return nil
 }
 
-func pkiSecretBackendRootCertUpdate(d *schema.ResourceData, m interface{}) error {
-	return nil
+func getCACertificate(client *api.Client, mount string) (*x509.Certificate, error) {
+	path := fmt.Sprintf("/v1/%s/ca/pem", mount)
+	req := client.NewRequest(http.MethodGet, path)
+	req.ClientToken = ""
+	resp, err := client.RawRequest(req)
+	if err != nil {
+		if util.ErrorContainsHTTPCode(err, http.StatusNotFound, http.StatusForbidden) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if resp == nil {
+		return nil, fmt.Errorf("expected a response body, got nil response")
+	}
+
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	b, _ := pem.Decode(data)
+	if b != nil {
+		cert, err := x509.ParseCertificate(b.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		return cert, nil
+	}
+
+	return nil, nil
 }
 
 func pkiSecretBackendRootCertDelete(d *schema.ResourceData, meta interface{}) error {
@@ -313,4 +416,24 @@ func pkiSecretBackendIntermediateSetSignedReadPath(backend string, rootType stri
 
 func pkiSecretBackendIntermediateSetSignedDeletePath(backend string) string {
 	return strings.Trim(backend, "/") + "/root"
+}
+
+func pkiSecretBackendRootCertV0() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"serial_number": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+		},
+	}
+}
+
+func pkiSecretBackendRootCertUpgradeV0(
+	_ context.Context, rawState map[string]interface{}, _ interface{},
+) (map[string]interface{}, error) {
+	rawState["serial_number"] = rawState["serial"]
+
+	return rawState, nil
 }

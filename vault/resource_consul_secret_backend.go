@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -90,6 +90,13 @@ func consulSecretBackendResource() *schema.Resource {
 				Description: "Client key used for Consul's TLS communication, must be x509 PEM encoded and if this is set you need to also set client_cert.",
 				Sensitive:   true,
 			},
+			"local": {
+				Type:        schema.TypeBool,
+				ForceNew:    true,
+				Optional:    true,
+				Default:     false,
+				Description: "Specifies if the secret backend is local only",
+			},
 		},
 	}
 }
@@ -104,12 +111,14 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	ca_cert := d.Get("ca_cert").(string)
 	client_cert := d.Get("client_cert").(string)
 	client_key := d.Get("client_key").(string)
+	local := d.Get("local").(bool)
 
 	configPath := consulSecretBackendConfigPath(path)
 
 	info := &api.MountInput{
 		Type:        "consul",
 		Description: d.Get("description").(string),
+		Local:       local,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
@@ -126,11 +135,6 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Mounted Consul backend at %q", path)
 	d.SetId(path)
 
-	d.SetPartial("path")
-	d.SetPartial("description")
-	d.SetPartial("default_lease_ttl_seconds")
-	d.SetPartial("max_lease_ttl_seconds")
-
 	log.Printf("[DEBUG] Writing Consul configuration to %q", configPath)
 	data := map[string]interface{}{
 		"address":     address,
@@ -144,12 +148,6 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("Error writing Consul configuration for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote Consul configuration to %q", configPath)
-	d.SetPartial("address")
-	d.SetPartial("token")
-	d.SetPartial("scheme")
-	d.SetPartial("ca_cert")
-	d.SetPartial("client_cert")
-	d.SetPartial("client_key")
 	d.Partial(false)
 
 	return nil
@@ -182,6 +180,7 @@ func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
+	d.Set("local", mount.Local)
 
 	log.Printf("[DEBUG] Reading %s from Vault", configPath)
 	secret, err := client.Logical().Read(configPath)
@@ -219,8 +218,6 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("Error updating mount TTLs for %q: %s", path, err)
 		}
 
-		d.SetPartial("default_lease_ttl_seconds")
-		d.SetPartial("max_lease_ttl_seconds")
 	}
 	if d.HasChange("address") || d.HasChange("token") || d.HasChange("scheme") ||
 		d.HasChange("ca_cert") || d.HasChange("client_cert") || d.HasChange("client_key") {
@@ -237,12 +234,6 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("Error configuring Consul configuration for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated Consul configuration at %q", configPath)
-		d.SetPartial("address")
-		d.SetPartial("token")
-		d.SetPartial("scheme")
-		d.SetPartial("ca_cert")
-		d.SetPartial("client_cert")
-		d.SetPartial("client_key")
 	}
 	d.Partial(false)
 	return consulSecretBackendRead(d, meta)

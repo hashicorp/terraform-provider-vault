@@ -23,7 +23,7 @@ for more details.
 resource "vault_pki_secret_backend_cert" "app" {
   depends_on = [vault_pki_secret_backend_role.admin]
 
-  backend = vault_pki_secret_backend.intermediate.path
+  backend = vault_mount.intermediate.path
   name = vault_pki_secret_backend_role.test.name
 
   common_name = "app.my.domain"
@@ -59,6 +59,8 @@ The following arguments are supported:
 * `min_seconds_remaining` - (Optional) Generate a new certificate when the expiration is within this number of seconds, default is 604800 (7 days)
 
 * `auto_renew` - (Optional) If set to `true`, certs will be renewed if the expiration is within `min_seconds_remaining`. Default `false`
+ 
+* `revoke` - If set to `true`, the certificate will be revoked on resource destruction. 
 
 ## Attributes Reference
 
@@ -77,3 +79,5 @@ In addition to the fields above, the following attributes are exported:
 * `serial_number` - The serial number
 
 * `expiration` - The expiration date of the certificate in unix epoch format
+ 
+* `revoke` - Boolean value denoting whether the certificate will be revoked on resource destruction.

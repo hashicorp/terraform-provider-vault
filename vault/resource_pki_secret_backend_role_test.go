@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestPkiSecretBackendRole_basic(t *testing.T) {
@@ -15,7 +17,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("role")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testPkiSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -124,13 +126,14 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 
 func testPkiSecretBackendRoleConfig_basic(name, path string) string {
 	return fmt.Sprintf(`
-resource "vault_pki_secret_backend" "pki" {
+resource "vault_mount" "pki" {
   path = "%s"
+  type = "pki"
 }
 
 resource "vault_pki_secret_backend_role" "test" {
-  depends_on = [ "vault_pki_secret_backend.pki" ]
-  backend = "${vault_pki_secret_backend.pki.path}"
+  depends_on = [ "vault_mount.pki" ]
+  backend = vault_mount.pki.path
   name = "%s"
   ttl = 3600
   max_ttl = 7200
@@ -173,13 +176,14 @@ resource "vault_pki_secret_backend_role" "test" {
 
 func testPkiSecretBackendRoleConfig_updated(name, path string) string {
 	return fmt.Sprintf(`
-resource "vault_pki_secret_backend" "pki" {
+resource "vault_mount" "pki" {
   path = "%s"
+  type = "pki"
 }
 
 resource "vault_pki_secret_backend_role" "test" {
-  depends_on = [ "vault_pki_secret_backend.pki" ]
-  backend = "${vault_pki_secret_backend.pki.path}"
+  depends_on = [ "vault_mount.pki" ]
+  backend = vault_mount.pki.path
   name = "%s"
   ttl = 1800
   max_ttl = 3600

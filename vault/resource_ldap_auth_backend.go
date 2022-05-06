@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -54,6 +54,11 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed:  true,
 			Sensitive: true,
 		},
+		"case_sensitive_names": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
 		"userdn": {
 			Type:     schema.TypeString,
 			Optional: true,
@@ -66,6 +71,11 @@ func ldapAuthBackendResource() *schema.Resource {
 			StateFunc: func(v interface{}) string {
 				return strings.ToLower(v.(string))
 			},
+		},
+		"userfilter": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Computed: true,
 		},
 		"discoverdn": {
 			Type:     schema.TypeBool,
@@ -118,7 +128,13 @@ func ldapAuthBackendResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-
+		"local": {
+			Type:        schema.TypeBool,
+			ForceNew:    true,
+			Optional:    true,
+			Default:     false,
+			Description: "Specifies if the auth method is local only",
+		},
 		"accessor": {
 			Type:        schema.TypeString,
 			Computed:    true,
@@ -161,12 +177,15 @@ func ldapAuthBackendConfigPath(path string) string {
 func ldapAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	authType := ldapAuthType
 	path := d.Get("path").(string)
-	desc := d.Get("description").(string)
+	options := &api.EnableAuthOptions{
+		Type:        ldapAuthType,
+		Description: d.Get("description").(string),
+		Local:       d.Get("local").(bool),
+	}
 
 	log.Printf("[DEBUG] Enabling LDAP auth backend %q", path)
-	err := client.Sys().EnableAuth(path, authType, desc)
+	err := client.Sys().EnableAuthWithOptions(path, options)
 	if err != nil {
 		return fmt.Errorf("error enabling ldap auth backend %q: %s", path, err)
 	}
@@ -215,12 +234,19 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["bindpass"] = v.(string)
 	}
 
+	if v, ok := d.GetOkExists("case_sensitive_names"); ok {
+		data["case_sensitive_names"] = v.(bool)
+	}
 	if v, ok := d.GetOk("userdn"); ok {
 		data["userdn"] = v.(string)
 	}
 
 	if v, ok := d.GetOk("userattr"); ok {
 		data["userattr"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("userfilter"); ok {
+		data["userfilter"] = v.(string)
 	}
 
 	if v, ok := d.GetOkExists("discoverdn"); ok {
@@ -291,6 +317,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("description", authMount.Description)
 	d.Set("accessor", authMount.Accessor)
+	d.Set("local", authMount.Local)
 
 	path = ldapAuthBackendConfigPath(path)
 
@@ -318,8 +345,10 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("insecure_tls", resp.Data["insecure_tls"])
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("binddn", resp.Data["binddn"])
+	d.Set("case_sensitive_names", resp.Data["case_sensitive_names"])
 	d.Set("userdn", resp.Data["userdn"])
 	d.Set("userattr", resp.Data["userattr"])
+	d.Set("userfilter", resp.Data["userfilter"])
 	d.Set("discoverdn", resp.Data["discoverdn"])
 	d.Set("deny_null_bind", resp.Data["deny_null_bind"])
 	d.Set("upndomain", resp.Data["upndomain"])

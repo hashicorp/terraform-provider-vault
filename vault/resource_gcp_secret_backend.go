@@ -5,11 +5,11 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
-func gcpSecretBackendResource() *schema.Resource {
+func gcpSecretBackendResource(name string) *schema.Resource {
 	return &schema.Resource{
 		Create: gcpSecretBackendCreate,
 		Read:   gcpSecretBackendRead,
@@ -47,8 +47,8 @@ func gcpSecretBackendResource() *schema.Resource {
 				// string. This makes terraform not want to change when an extra
 				// space is included in the JSON string. It is also necesarry
 				// when disable_read is false for comparing values.
-				StateFunc:    NormalizeDataJSON,
-				ValidateFunc: ValidateDataJSON,
+				StateFunc:    NormalizeDataJSONFunc(name),
+				ValidateFunc: ValidateDataJSONFunc(name),
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -108,11 +108,6 @@ func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 	log.Printf("[DEBUG] Mounted GCP backend at %q", path)
 	d.SetId(path)
-
-	d.SetPartial("path")
-	d.SetPartial("description")
-	d.SetPartial("default_lease_ttl_seconds")
-	d.SetPartial("max_lease_ttl_seconds")
 
 	log.Printf("[DEBUG] Writing GCP configuration to %q", configPath)
 	if credentials != "" {
@@ -177,8 +172,6 @@ func gcpSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error updating mount TTLs for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
-		d.SetPartial("default_lease_ttl_seconds")
-		d.SetPartial("max_lease_ttl_seconds")
 	}
 
 	if d.HasChange("credentials") {
@@ -190,7 +183,6 @@ func gcpSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error writing GCP credentials for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated credentials for %q", path)
-		d.SetPartial("credentials")
 	}
 
 	d.Partial(false)

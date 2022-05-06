@@ -1,13 +1,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -150,6 +151,12 @@ func pkiSecretBackendCertResource() *schema.Resource {
 				Computed:    true,
 				Description: "The certificate expiration.",
 			},
+			"revoke": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Revoke the certificate upon resource destruction.",
+			},
 		},
 	}
 }
@@ -245,7 +252,7 @@ func pkiSecretBackendCertNeedsRenewed(autoRenew bool, expiration int, minSecRema
 	return time.Now().After(renewTime)
 }
 
-func pkiSecretBackendCertDiff(d *schema.ResourceDiff, meta interface{}) error {
+func pkiSecretBackendCertDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	if d.Id() == "" {
 		return nil
 	}
@@ -285,6 +292,30 @@ func pkiSecretBackendCertUpdate(d *schema.ResourceData, m interface{}) error {
 }
 
 func pkiSecretBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
+	if d.Get("revoke").(bool) {
+		client := meta.(*api.Client)
+
+		backend := d.Get("backend").(string)
+		path := strings.Trim(backend, "/") + "/revoke"
+
+		serialNumber := d.Get("serial_number").(string)
+		commonName := d.Get("common_name").(string)
+		data := map[string]interface{}{
+			"serial_number": serialNumber,
+		}
+
+		log.Printf("[DEBUG] Revoking certificate %q with serial number %q on PKI secret backend %q",
+			commonName, serialNumber, backend)
+		_, err := client.Logical().Write(path, data)
+		if err != nil {
+			return fmt.Errorf("error revoking certificate %q with serial number %q for PKI secret backend %q: %w",
+				commonName, serialNumber, backend, err)
+		}
+		log.Printf("[DEBUG] Successfully revoked certificate %q with serial number %q on PKI secret backend %q",
+			commonName,
+			serialNumber, backend)
+	}
+
 	return nil
 }
 

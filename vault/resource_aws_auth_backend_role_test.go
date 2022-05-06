@@ -7,17 +7,19 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccAWSAuthBackendRole_importInferred(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -33,7 +35,8 @@ func TestAccAWSAuthBackendRole_importInferred(t *testing.T) {
 					"bound_ami_id", "bound_account_id", "bound_region",
 					"bound_vpc_id", "bound_subnet_id", "bound_iam_role_arn",
 					"bound_iam_instance_profile_arn", "bound_ec2_instance_id",
-					"bound_iam_principal_arn"},
+					"bound_iam_principal_arn",
+				},
 			},
 		},
 	})
@@ -43,7 +46,7 @@ func TestAccAWSAuthBackendRole_importEC2(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -64,7 +67,7 @@ func TestAccAWSAuthBackendRole_importIAM(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	role := acctest.RandomWithPrefix("test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -86,7 +89,7 @@ func TestAccAWSAuthBackendRole_inferred(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -103,7 +106,7 @@ func TestAccAWSAuthBackendRole_ec2(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -120,7 +123,7 @@ func TestAccAWSAuthBackendRole_iam(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -137,7 +140,7 @@ func TestAccAWSAuthBackendRole_iam_resolve_aws_unique_ids(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -154,7 +157,7 @@ func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -169,7 +172,7 @@ func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
 						"bound_iam_principal_arns.#", "1"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"bound_iam_principal_arns.3878455414", "arn:aws:iam::123456789012:role/MyRole/*"),
+						"bound_iam_principal_arns.0", "arn:aws:iam::123456789012:role/MyRole/*"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
 						"token_ttl", "30"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
@@ -177,9 +180,9 @@ func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
 						"token_policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"token_policies.1971754988", "default"),
+						"token_policies.0", "default"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"token_policies.326271447", "dev"),
+						"token_policies.1", "dev"),
 				),
 			},
 			{
@@ -200,30 +203,6 @@ func TestAccAWSAuthBackendRole_iamUpdate(t *testing.T) {
 						"token_ttl", "0"),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
 						"token_max_ttl", "0"),
-				),
-			},
-		},
-	})
-}
-
-func TestAccAWSAuthBackendRole_deprecatedEc2(t *testing.T) {
-	backend := acctest.RandomWithPrefix("aws")
-	role := acctest.RandomWithPrefix("test-role")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendRoleDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccAWSAuthBackendRoleConfig_deprecatedEc2(backend, role),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"ttl", "60"),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"max_ttl", "120"),
-					resource.TestCheckResourceAttr("vault_aws_auth_backend_role.role",
-						"policies.#", "3"),
 				),
 			},
 		},
@@ -283,6 +262,7 @@ func testAccAWSAuthBackendRoleCheck_attrs(backend, role string) resource.TestChe
 			{NameInVault: "bound_iam_instance_profile_arn", NameInProvider: "bound_iam_instance_profile_arns", PreviousNameInProvider: "bound_iam_instance_profile_arn"},
 			{NameInVault: "bound_ec2_instance_id", NameInProvider: "bound_ec2_instance_ids", PreviousNameInProvider: "bound_ec2_instance_id"},
 			{NameInVault: "role_tag", NameInProvider: "role_tag"},
+			{NameInVault: "role_id", NameInProvider: "role_id"},
 			{NameInVault: "bound_iam_principal_arn", NameInProvider: "bound_iam_principal_arns", PreviousNameInProvider: "bound_iam_principal_arn"},
 			{NameInVault: "inferred_entity_type", NameInProvider: "inferred_entity_type"},
 			{NameInVault: "inferred_aws_region", NameInProvider: "inferred_aws_region"},
@@ -393,7 +373,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_ami_ids = ["ami-8c1be5f6"]
@@ -418,7 +398,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/*"]
@@ -436,7 +416,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/*"]
@@ -454,7 +434,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/MyRole/*"]
@@ -472,7 +452,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/MyRole/*"]
@@ -489,7 +469,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["arn:aws:iam::123456789012:role/MyRole/*"]
@@ -504,7 +484,7 @@ resource "vault_auth_backend" "aws" {
   path = "%s"
 }
 resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "ec2"
   bound_ami_ids = ["ami-8c1be5f6"]
@@ -520,32 +500,6 @@ resource "vault_aws_auth_backend_role" "role" {
   token_ttl = 60
   token_max_ttl = 120
   token_policies = ["default", "dev", "prod"]
-}`, backend, role)
-}
-
-func testAccAWSAuthBackendRoleConfig_deprecatedEc2(backend, role string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "aws" {
-  type = "aws"
-  path = "%s"
-}
-resource "vault_aws_auth_backend_role" "role" {
-  backend = "${vault_auth_backend.aws.path}"
-  role = "%s"
-  auth_type = "ec2"
-  bound_ami_ids = ["ami-8c1be5f6"]
-  bound_account_ids = ["123456789012"]
-  bound_regions = ["us-east-1"]
-  bound_vpc_ids = ["vpc-b61106d4"]
-  bound_subnet_ids = ["vpc-a33128f1"]
-  bound_iam_role_arns = ["arn:aws:iam::123456789012:role/S3Access"]
-  bound_iam_instance_profile_arns = ["arn:aws:iam::123456789012:instance-profile/Webserver"]
-  bound_ec2_instance_ids = ["i-06bb291939760ba66"]
-  role_tag = "VaultRoleTag"
-  disallow_reauthentication = true
-  ttl = 60
-  max_ttl = 120
-  policies = ["default", "dev", "prod"]
 }`, backend, role)
 }
 

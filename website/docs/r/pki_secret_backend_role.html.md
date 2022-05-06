@@ -13,14 +13,15 @@ Creates a role on an PKI Secret Backend for Vault.
 ## Example Usage
 
 ```hcl
-resource "vault_pki_secret_backend" "pki" {
+resource "vault_mount" "pki" {
   path                      = "pki"
+  type                      = "pki"
   default_lease_ttl_seconds = 3600
   max_lease_ttl_seconds     = 86400
 }
 
 resource "vault_pki_secret_backend_role" "role" {
-  backend          = vault_pki_secret_backend.pki.path
+  backend          = vault_mount.pki.path
   name             = "my_role"
   ttl              = 3600
   allow_ip_sans    = true
@@ -73,7 +74,8 @@ The following arguments are supported:
 
 * `email_protection_flag` - (Optional) Flag to specify certificates for email protection use
 
-* `key_type` - (Optional) The type of generated keys
+* `key_type` - (Optional) The generated key type, choices: `rsa`, `ec`, `ed25519`, `any`  
+  Defaults to `rsa`
 
 * `key_bits` - (Optional) The number of bits of generated keys
 

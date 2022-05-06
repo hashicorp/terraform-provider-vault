@@ -5,12 +5,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccResourceTerraformCloudSecretCredsOrganizationBasic(t *testing.T) {
@@ -22,7 +23,7 @@ func TestAccResourceTerraformCloudSecretCredsOrganizationBasic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck: func() {
-			util.TestAccPreCheck(t)
+			testutil.TestAccPreCheck(t)
 			if token == "" || organization == "" {
 				t.Skipf("TEST_TF_TOKEN and TEST_TF_ORGANIZATION must be set. Are currently %s and %s respectively", token, organization)
 			}
@@ -51,7 +52,7 @@ func TestAccResourceTerraformCloudSecretCredsTeamBasic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck: func() {
-			util.TestAccPreCheck(t)
+			testutil.TestAccPreCheck(t)
 			if token == "" || organization == "" || teamId == "" {
 				t.Skipf("TEST_TF_TOKEN, TEST_TF_ORGANIZATION, and TEST_TF_TEAM_ID must be set. Are currently %s, %s and %s respectively", token, organization, teamId)
 			}
@@ -80,7 +81,7 @@ func TestAccResourceTerraformCloudSecretCredsUserBasic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck: func() {
-			util.TestAccPreCheck(t)
+			testutil.TestAccPreCheck(t)
 			if token == "" || userId == "" {
 				t.Skipf("TEST_TF_TOKEN and TEST_TF_USER_ID must be set. Are currently %s and %s respectively", token, userId)
 			}

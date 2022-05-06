@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -122,9 +122,9 @@ func gcpAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Read gcp auth backend role %q ID", path)
 
 	if resp == nil {
-		d.SetId("")
-		return nil
+		return fmt.Errorf("role not found at %q", path)
 	}
+
 	d.SetId(path)
 	for _, k := range gcpRoleFields {
 		if v, ok := resp.Data[k]; ok {

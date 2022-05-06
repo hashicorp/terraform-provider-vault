@@ -9,12 +9,13 @@ build: fmtcheck
 	go install
 
 test: fmtcheck
-	go test $(TEST) || exit 1
-	echo $(TEST) | \
-		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
+	TF_ACC= go test $(TESTARGS) -timeout 10m -parallel=4 ./...
 
 testacc: fmtcheck
-	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
+	TF_ACC=1 go test -v $(TESTARGS) -timeout 30m ./...
+
+testacc-ent:
+	make testacc TF_ACC_ENTERPRISE=1
 
 dev: fmtcheck
 	go build -o terraform-provider-vault
@@ -65,5 +66,4 @@ ifeq (,$(wildcard $(GOPATH)/src/$(WEBSITE_REPO)))
 endif
 	@$(MAKE) -C $(GOPATH)/src/$(WEBSITE_REPO) website-provider-test PROVIDER_PATH=$(shell pwd) PROVIDER_NAME=$(PKG_NAME)
 
-.PHONY: build test testacc vet fmt fmtcheck errcheck test-compile website website-test
-
+.PHONY: build test testacc testacc-ent vet fmt fmtcheck errcheck test-compile website website-test

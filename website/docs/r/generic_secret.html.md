@@ -54,13 +54,14 @@ The following arguments are supported:
 * `data_json` - (Required) String containing a JSON-encoded object that will be
   written as the secret data at the given path.
 
-* `allow_read` - (Optional, Deprecated) True/false. Set this to true if your
-  vault authentication is able to read the data, this allows the resource to be
-  compared and updated. Defaults to false.
-
-* `disable_read` - (Optional) True/false. Set this to true if your vault
+* `disable_read` - (Optional) true/false. Set this to true if your vault
   authentication is not able to read the data. Setting this to `true` will
   break drift detection. Defaults to false.
+
+* `delete_all_versions` - (Optional) true/false.  Only applicable for kv-v2 stores.
+  If set to `true`, permanently deletes all versions for
+  the specified key. The default behavior is to only delete the latest version of the
+  secret.
 
 ## Required Vault Capabilities
 

@@ -2,14 +2,15 @@ package vault
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func randomQuotaLeaseString() string {
@@ -18,16 +19,12 @@ func randomQuotaLeaseString() string {
 }
 
 func TestQuotaLeaseCount(t *testing.T) {
-	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
-	if isEnterprise == "" {
-		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
-	}
 	name := acctest.RandomWithPrefix("tf-test")
 	leaseCount := randomQuotaLeaseString()
 	newLeaseCount := randomQuotaLeaseString()
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestEntPreCheck(t) },
 		CheckDestroy: testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
 		Steps: []resource.TestStep{
 			{
@@ -64,7 +61,6 @@ func testQuotaLeaseCountCheckDestroy(leaseCounts []string) resource.TestCheckFun
 
 		for _, name := range leaseCounts {
 			resp, err := client.Logical().Read(quotaLeaseCountPath(name))
-
 			if err != nil {
 				return err
 			}

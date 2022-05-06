@@ -5,8 +5,6 @@ Terraform Provider
 - [![Gitter chat](https://badges.gitter.im/hashicorp-terraform/Lobby.png)](https://gitter.im/hashicorp-terraform/Lobby)
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
 
-<img src="https://cdn.rawgit.com/hashicorp/terraform-website/master/content/source/assets/images/logo-hashicorp.svg" width="600px">
-
 Maintainers
 -----------
 
@@ -24,8 +22,8 @@ This webinar walks you through how to protect secrets when using Terraform with 
 Requirements
 ------------
 
--	[Terraform](https://www.terraform.io/downloads.html) 0.11.x
--	[Go](https://golang.org/doc/install) 1.16 (to build the provider plugin)
+- [Terraform](https://www.terraform.io/downloads.html) 0.12.x and above, we recommend using the latest stable release whenever possible.
+- [Go](https://golang.org/doc/install) 1.17 (to build the provider plugin)
 
 Building The Provider
 ---------------------

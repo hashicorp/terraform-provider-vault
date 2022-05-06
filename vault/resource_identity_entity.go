@@ -1,15 +1,18 @@
 package vault
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-const identityEntityPath = "/identity/entity"
+var errEntityNotFound = errors.New("entity not found")
 
 func identityEntityResource() *schema.Resource {
 	return &schema.Resource{
@@ -108,7 +111,7 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 
 	name := d.Get("name").(string)
 
-	path := identityEntityPath
+	path := entity.RootEntityPath
 
 	data := map[string]interface{}{
 		"name": name,
@@ -117,7 +120,6 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 	identityEntityUpdateFields(d, data, true)
 
 	resp, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error writing IdentityEntity to %q: %s", name, err)
 	}
@@ -145,7 +147,7 @@ func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityEntity %q", id)
-	path := identityEntityIDPath(id)
+	path := entity.JoinEntityID(id)
 
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
@@ -155,7 +157,6 @@ func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
 	identityEntityUpdateFields(d, data, false)
 
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error updating IdentityEntity %q: %s", id, err)
 	}
@@ -168,19 +169,20 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	resp, err := readIdentityEntity(client, id)
+	log.Printf("[DEBUG] Read IdentityEntity %s", id)
+	resp, err := readIdentityEntity(client, id, d.IsNewResource())
 	if err != nil {
 		// We need to check if the secret_id has expired
 		if util.IsExpiredTokenErr(err) {
 			return nil
 		}
-		return fmt.Errorf("error reading IdentityEntity %q: %s", id, err)
-	}
-	log.Printf("[DEBUG] Read IdentityEntity %s", id)
-	if resp == nil {
-		log.Printf("[WARN] IdentityEntity %q not found, removing from state", id)
-		d.SetId("")
-		return nil
+
+		if isIdentityNotFoundError(err) {
+			log.Printf("[WARN] IdentityEntity %q not found, removing from state", id)
+			d.SetId("")
+			return nil
+		}
+		return fmt.Errorf("error reading IdentityEntity %q: %w", id, err)
 	}
 
 	for _, k := range []string{"name", "metadata", "disabled", "policies"} {
@@ -195,7 +197,7 @@ func identityEntityDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	path := identityEntityIDPath(id)
+	path := entity.JoinEntityID(id)
 
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
@@ -214,7 +216,7 @@ func identityEntityExists(d *schema.ResourceData, meta interface{}) (bool, error
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	path := identityEntityIDPath(id)
+	path := entity.JoinEntityID(id)
 	key := id
 
 	// use the name if no ID is set
@@ -234,20 +236,13 @@ func identityEntityExists(d *schema.ResourceData, meta interface{}) (bool, error
 }
 
 func identityEntityNamePath(name string) string {
-	return fmt.Sprintf("%s/name/%s", identityEntityPath, name)
-}
-
-func identityEntityIDPath(id string) string {
-	return fmt.Sprintf("%s/id/%s", identityEntityPath, id)
+	return fmt.Sprintf("%s/name/%s", entity.RootEntityPath, name)
 }
 
 func readIdentityEntityPolicies(client *api.Client, entityID string) ([]interface{}, error) {
-	resp, err := readIdentityEntity(client, entityID)
+	resp, err := readIdentityEntity(client, entityID, false)
 	if err != nil {
 		return nil, err
-	}
-	if resp == nil {
-		return nil, fmt.Errorf("error IdentityEntity %s does not exist", entityID)
 	}
 
 	if v, ok := resp.Data["policies"]; ok && v != nil {
@@ -256,14 +251,37 @@ func readIdentityEntityPolicies(client *api.Client, entityID string) ([]interfac
 	return make([]interface{}, 0), nil
 }
 
-// May return nil if entity does not exist
-func readIdentityEntity(client *api.Client, entityID string) (*api.Secret, error) {
-	path := identityEntityIDPath(entityID)
-	log.Printf("[DEBUG] Reading Entity %s from %q", entityID, path)
+func readIdentityEntity(client *api.Client, entityID string, retry bool) (*api.Secret, error) {
+	path := entity.JoinEntityID(entityID)
+	log.Printf("[DEBUG] Reading Entity %q from %q", entityID, path)
+
+	return readEntity(client, path, retry)
+}
+
+func readEntity(client *api.Client, path string, retry bool) (*api.Secret, error) {
+	log.Printf("[DEBUG] Reading Entity from %q", path)
+
+	var err error
+	if retry {
+		client, err = client.Clone()
+		if err != nil {
+			return nil, fmt.Errorf("error cloning client: %w", err)
+		}
+		util.SetupCCCRetryClient(client, maxHTTPRetriesCCC)
+	}
 
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return resp, fmt.Errorf("failed reading IdentityEntity %s from %s", entityID, path)
+		return resp, fmt.Errorf("failed reading %q", path)
 	}
+
+	if resp == nil {
+		return nil, fmt.Errorf("%w: %q", errEntityNotFound, path)
+	}
+
 	return resp, nil
+}
+
+func isIdentityNotFoundError(err error) bool {
+	return err != nil && errors.Is(err, errEntityNotFound)
 }

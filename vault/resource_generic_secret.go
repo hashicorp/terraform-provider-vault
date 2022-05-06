@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
 const latestSecretVersion = -1
 
-func genericSecretResource() *schema.Resource {
+func genericSecretResource(name string) *schema.Resource {
 	return &schema.Resource{
 		SchemaVersion: 1,
 
@@ -42,16 +42,9 @@ func genericSecretResource() *schema.Resource {
 				// string. This makes terraform not want to change when an extra
 				// space is included in the JSON string. It is also necesarry
 				// when disable_read is false for comparing values.
-				StateFunc:    NormalizeDataJSON,
-				ValidateFunc: ValidateDataJSON,
+				StateFunc:    NormalizeDataJSONFunc(name),
+				ValidateFunc: ValidateDataJSONFunc(name),
 				Sensitive:    true,
-			},
-
-			"allow_read": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Description: "Attempt to read the token from Vault if true; if false, drift won't be detected.",
-				Removed:     "Use disable_read instead.",
 			},
 
 			"disable_read": {
@@ -67,39 +60,61 @@ func genericSecretResource() *schema.Resource {
 				Description: "Map of strings read from Vault.",
 				Sensitive:   true,
 			},
+
+			"delete_all_versions": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Only applicable for kv-v2 stores. If set, permanently deletes all versions for the specified key.",
+			},
 		},
 	}
 }
 
-func ValidateDataJSON(configI interface{}, k string) ([]string, []error) {
-	dataJSON := configI.(string)
+func ValidateDataJSONFunc(name string) func(c interface{}, k string) ([]string, []error) {
+	return func(c interface{}, k string) ([]string, []error) {
+		return validateDataJSON(name, c.(string), k)
+	}
+}
+
+func validateDataJSON(name string, data, k string) ([]string, []error) {
 	dataMap := map[string]interface{}{}
-	err := json.Unmarshal([]byte(dataJSON), &dataMap)
+	err := json.Unmarshal([]byte(data), &dataMap)
 	if err != nil {
+		log.Printf("[ERROR] Failed to validate JSON data %q, resource=%q, key=%q, err=%s",
+			data, name, k, err)
 		return nil, []error{err}
 	}
 	return nil, nil
 }
 
-func NormalizeDataJSON(configI interface{}) string {
-	dataJSON := configI.(string)
+// NormalizeDataJSONFunc returns a NormalizeFunc that normalizes the JSON data
+// for storage in the TF state for a given resource denoted by `name`.
+func NormalizeDataJSONFunc(name string) func(c interface{}) string {
+	return func(c interface{}) string {
+		data := c.(string)
+		result, err := normalizeDataJSON(data)
+		if err != nil {
+			// The validate function should've prevented invalid JSON ever getting here.
+			log.Printf("[WARN] Failed to normalize JSON data %q, resource=%q, err=%s", data, name, err)
+		}
+		return result
+	}
+}
 
+func normalizeDataJSON(data string) (string, error) {
 	dataMap := map[string]interface{}{}
-	err := json.Unmarshal([]byte(dataJSON), &dataMap)
+	err := json.Unmarshal([]byte(data), &dataMap)
 	if err != nil {
-		// The validate function should've taken care of this.
-		log.Printf("[ERROR] Invalid JSON data in vault_generic_secret: %s", err)
-		return ""
+		return "", err
 	}
 
 	ret, err := json.Marshal(dataMap)
 	if err != nil {
 		// Should never happen.
-		log.Printf("[ERROR] Problem normalizing JSON for vault_generic_secret: %s", err)
-		return dataJSON
+		return data, err
 	}
-
-	return string(ret)
+	return string(ret), nil
 }
 
 func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error {
@@ -149,7 +164,12 @@ func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error
 	}
 
 	if v2 {
-		path = addPrefixToVKVPath(path, mountPath, "data")
+		base := "data"
+		deleteAllVersions := d.Get("delete_all_versions").(bool)
+		if deleteAllVersions {
+			base = "metadata"
+		}
+		path = addPrefixToVKVPath(path, mountPath, base)
 	}
 
 	log.Printf("[DEBUG] Deleting vault_generic_secret from %q", path)
@@ -164,11 +184,6 @@ func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error
 func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 	var data map[string]interface{}
 	shouldRead := !d.Get("disable_read").(bool)
-	if !shouldRead {
-		// if disable_read is set to false or unset (we can't know which)
-		// and allow_read is set to true, go with allow_read.
-		shouldRead = d.Get("allow_read").(bool)
-	}
 
 	path := d.Id()
 
@@ -177,7 +192,6 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 
 		log.Printf("[DEBUG] Reading %s from Vault", path)
 		secret, err := versionedSecret(latestSecretVersion, path, client)
-
 		if err != nil {
 			return fmt.Errorf("error reading from Vault: %s", err)
 		}

@@ -2,16 +2,17 @@ package vault
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"strconv"
-
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestPkiSecretBackendSign_basic(t *testing.T) {
@@ -20,7 +21,7 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testPkiSecretBackendSignDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -43,7 +44,7 @@ func testPkiSecretBackendSignDestroy(s *terraform.State) error {
 	}
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_pki_secret_backend" {
+		if rs.Type != "vault_mount" {
 			continue
 		}
 		for path, mount := range mounts {
@@ -59,24 +60,26 @@ func testPkiSecretBackendSignDestroy(s *terraform.State) error {
 
 func testPkiSecretBackendSignConfig_basic(rootPath string, intermediatePath string) string {
 	return fmt.Sprintf(`
-resource "vault_pki_secret_backend" "test-root" {
+resource "vault_mount" "test-root" {
   path = "%s"
+  type = "pki"
   description = "test root"
   default_lease_ttl_seconds = "8640000"
   max_lease_ttl_seconds = "8640000"
 }
 
-resource "vault_pki_secret_backend" "test-intermediate" {
-  depends_on = [ "vault_pki_secret_backend.test-root" ]
+resource "vault_mount" "test-intermediate" {
+  depends_on = [ "vault_mount.test-root" ]
   path = "%s"
+  type = "pki"
   description = "test intermediate"
   default_lease_ttl_seconds = "86400"
   max_lease_ttl_seconds = "86400"
 }
 
 resource "vault_pki_secret_backend_root_cert" "test" {
-  depends_on = [ "vault_pki_secret_backend.test-intermediate" ]
-  backend = "${vault_pki_secret_backend.test-root.path}"
+  depends_on = [ "vault_mount.test-intermediate" ]
+  backend = vault_mount.test-root.path
   type = "internal"
   common_name = "my.domain"
   ttl = "86400"
@@ -93,15 +96,15 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
   depends_on = [ "vault_pki_secret_backend_root_cert.test" ]
-  backend = "${vault_pki_secret_backend.test-intermediate.path}"
+  backend = vault_mount.test-intermediate.path
   type = "internal"
   common_name = "test.my.domain"
 }
 
 resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
   depends_on = [ "vault_pki_secret_backend_intermediate_cert_request.test" ]
-  backend = "${vault_pki_secret_backend.test-root.path}"
-  csr = "${vault_pki_secret_backend_intermediate_cert_request.test.csr}"
+  backend = vault_mount.test-root.path
+  csr = vault_pki_secret_backend_intermediate_cert_request.test.csr
   common_name = "test.my.domain"
   permitted_dns_domains = [".test.my.domain"]
   ou = "test"
@@ -113,13 +116,13 @@ resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
 
 resource "vault_pki_secret_backend_intermediate_set_signed" "test" {
   depends_on = [ "vault_pki_secret_backend_root_sign_intermediate.test" ]
-  backend = "${vault_pki_secret_backend.test-intermediate.path}"
-  certificate = "${vault_pki_secret_backend_root_sign_intermediate.test.certificate}"
+  backend = vault_mount.test-intermediate.path
+  certificate = vault_pki_secret_backend_root_sign_intermediate.test.certificate
 }
 
 resource "vault_pki_secret_backend_role" "test" {
   depends_on = [ "vault_pki_secret_backend_intermediate_set_signed.test" ]
-  backend = "${vault_pki_secret_backend.test-intermediate.path}"
+  backend = vault_mount.test-intermediate.path
   name = "test"
   allowed_domains  = ["test.my.domain"]
   allow_subdomains = true
@@ -129,8 +132,8 @@ resource "vault_pki_secret_backend_role" "test" {
 
 resource "vault_pki_secret_backend_sign" "test" {
   depends_on = [ "vault_pki_secret_backend_role.test" ]
-  backend = "${vault_pki_secret_backend.test-intermediate.path}"
-  name = "${vault_pki_secret_backend_role.test.name}"
+  backend = vault_mount.test-intermediate.path
+  name = vault_pki_secret_backend_role.test.name
   csr = <<EOT
 -----BEGIN CERTIFICATE REQUEST-----
 MIIEqDCCApACAQAwYzELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUx
@@ -169,7 +172,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testPkiSecretBackendCertDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -217,15 +220,16 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 
 func testPkiSecretBackendSignConfig_renew(rootPath string) string {
 	return fmt.Sprintf(`
-resource "vault_pki_secret_backend" "test-root" {
+resource "vault_mount" "test-root" {
   path = "%s"
+  type = "pki"
   description = "test root"
   default_lease_ttl_seconds = "8640000"
   max_lease_ttl_seconds = "8640000"
 }
 
 resource "vault_pki_secret_backend_root_cert" "test" {
-  backend = "${vault_pki_secret_backend.test-root.path}"
+  backend = vault_mount.test-root.path
   type = "internal"
   common_name = "my.domain"
   ttl = "86400"
@@ -242,7 +246,7 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 
 resource "vault_pki_secret_backend_role" "test" {
   depends_on = [ "vault_pki_secret_backend_root_cert.test" ]
-  backend = "${vault_pki_secret_backend.test-root.path}"
+  backend = vault_mount.test-root.path
   name = "test"
   allowed_domains  = ["test.my.domain"]
   allow_subdomains = true
@@ -252,8 +256,8 @@ resource "vault_pki_secret_backend_role" "test" {
 
 resource "vault_pki_secret_backend_sign" "test" {
   depends_on = [ "vault_pki_secret_backend_role.test" ]
-  backend = "${vault_pki_secret_backend.test-root.path}"
-  name = "${vault_pki_secret_backend_role.test.name}"
+  backend = vault_mount.test-root.path
+  name = vault_pki_secret_backend_role.test.name
   csr = <<EOT
 -----BEGIN CERTIFICATE REQUEST-----
 MIIEqDCCApACAQAwYzELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUx

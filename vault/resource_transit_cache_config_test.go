@@ -7,17 +7,19 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccTransitCacheConfig(t *testing.T) {
 	name := acctest.RandomWithPrefix("test-cache-config")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccTransitCacheConfigCheckDestroyed,
 		Steps: []resource.TestStep{
@@ -109,7 +111,7 @@ resource "vault_mount" "transit" {
 }
 
 resource "vault_transit_secret_cache_config" "cfg" {
-  backend = "${vault_mount.transit.path}"
+  backend = vault_mount.transit.path
   size    = %d
 }`, entityName, size)
 }

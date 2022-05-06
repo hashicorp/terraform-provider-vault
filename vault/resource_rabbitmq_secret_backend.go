@@ -2,19 +2,20 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 )
 
-func rabbitmqSecretBackendResource() *schema.Resource {
+func rabbitMQSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
-		Create: rabbitmqSecretBackendCreate,
-		Read:   rabbitmqSecretBackendRead,
-		Update: rabbitmqSecretBackendUpdate,
-		Delete: rabbitmqSecretBackendDelete,
-		Exists: rabbitmqSecretBackendExists,
+		Create: rabbitMQSecretBackendCreate,
+		Read:   rabbitMQSecretBackendRead,
+		Update: rabbitMQSecretBackendUpdate,
+		Delete: rabbitMQSecretBackendDelete,
+		Exists: rabbitMQSecretBackendExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -77,11 +78,21 @@ func rabbitmqSecretBackendResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Specifies whether to verify connection URI, username, and password.",
 			},
+			"password_policy": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies a password policy to use when creating dynamic credentials. Defaults to generating an alphanumeric password if not set.",
+			},
+			"username_template": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Template describing how dynamic usernames are generated.",
+			},
 		},
 	}
 }
 
-func rabbitmqSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Get("path").(string)
@@ -109,32 +120,25 @@ func rabbitmqSecretBackendCreate(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[DEBUG] Mounted Rabbitmq backend at %q", path)
 	d.SetId(path)
 
-	d.SetPartial("path")
-	d.SetPartial("description")
-	d.SetPartial("default_lease_ttl_seconds")
-	d.SetPartial("max_lease_ttl_seconds")
-
 	log.Printf("[DEBUG] Writing connection credentials to %q", path+"/config/connection")
 	data := map[string]interface{}{
 		"connection_uri":    connectionUri,
 		"username":          username,
 		"password":          password,
 		"verify_connection": verifyConnection,
+		"username_template": d.Get("username_template").(string),
+		"password_policy":   d.Get("password_policy").(string),
 	}
 	_, err = client.Logical().Write(path+"/config/connection", data)
 	if err != nil {
 		return fmt.Errorf("error configuring connection credentials for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote connection credentials to %q", path+"/config/connection")
-	d.SetPartial("connection_url")
-	d.SetPartial("username")
-	d.SetPartial("password")
-	d.SetPartial("verify_connection")
 	d.Partial(false)
-	return rabbitmqSecretBackendRead(d, meta)
+	return rabbitMQSecretBackendRead(d, meta)
 }
 
-func rabbitmqSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
@@ -163,12 +167,12 @@ func rabbitmqSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func rabbitmqSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
 	d.Partial(true)
-	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
+	if d.HasChanges("default_lease_ttl_seconds", "max_lease_ttl_seconds") {
 		config := api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
@@ -179,32 +183,28 @@ func rabbitmqSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 			return fmt.Errorf("error updating mount TTLs for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
-		d.SetPartial("default_lease_ttl_seconds")
-		d.SetPartial("max_lease_ttl_seconds")
 	}
-	if d.HasChange("connection_uri") || d.HasChange("username") || d.HasChange("password") || d.HasChange("verify_connection") {
+	if d.HasChanges("connection_uri", "username", "password", "verify_connection", "username_template", "password_policy") {
 		log.Printf("[DEBUG] Updating connecion credentials at %q", path+"/config/connection")
 		data := map[string]interface{}{
 			"connection_uri":    d.Get("connection_uri").(string),
 			"username":          d.Get("username").(string),
 			"password":          d.Get("password").(string),
 			"verify_connection": d.Get("verify_connection").(bool),
+			"username_template": d.Get("username_template").(string),
+			"password_policy":   d.Get("password_policy").(string),
 		}
 		_, err := client.Logical().Write(path+"/config/connection", data)
 		if err != nil {
 			return fmt.Errorf("error configuring connection credentials for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated root credentials at %q", path+"/config/connection")
-		d.SetPartial("connection_url")
-		d.SetPartial("username")
-		d.SetPartial("password")
-		d.SetPartial("verify_connection")
 	}
 	d.Partial(false)
-	return rabbitmqSecretBackendRead(d, meta)
+	return rabbitMQSecretBackendRead(d, meta)
 }
 
-func rabbitmqSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	path := d.Id()
@@ -217,7 +217,7 @@ func rabbitmqSecretBackendDelete(d *schema.ResourceData, meta interface{}) error
 	return nil
 }
 
-func rabbitmqSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func rabbitMQSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client := meta.(*api.Client)
 
 	path := d.Id()

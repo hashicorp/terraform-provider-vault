@@ -6,7 +6,7 @@ description: |-
   Creates a library on the Active Directory Secret Backend for Vault.
 ---
 
-# vault\ad\_secret\_backend\_library
+# vault\_ad\_secret\_backend\_library
 
 Creates a library on an Active Directory Secret Backend for Vault. Libraries create
 a pool of existing Active Directory service accounts which can be checked out

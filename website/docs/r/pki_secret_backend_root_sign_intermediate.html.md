@@ -14,10 +14,8 @@ Creates PKI certificate.
 
 ```hcl
 resource "vault_pki_secret_backend_root_sign_intermediate" "root" {
-  depends_on = [vault_pki_secret_backend_intermediate_cert_request.intermediate]
-
-  backend = vault_pki_secret_backend.root.path
-
+  depends_on           = [vault_pki_secret_backend_intermediate_cert_request.intermediate]
+  backend              = vault_mount.root.path
   csr                  = vault_pki_secret_backend_intermediate_cert_request.intermediate.csr
   common_name          = "Intermediate CA"
   exclude_cn_from_sans = true
@@ -48,12 +46,6 @@ The following arguments are supported:
 
 * `format` - (Optional) The format of data
 
-* `private_key_format` - (Optional) The private key format
-
-* `key_type` - (Optional) The desired key type
-
-* `key_bits` - (Optional) The number of bits to use
-
 * `max_path_length` - (Optional) The maximum path length to encode in the generated certificate
 
 * `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs
@@ -80,10 +72,13 @@ The following arguments are supported:
 
 In addition to the fields above, the following attributes are exported:
 
-* `certificate` - The certificate
+* `certificate` - The intermediate CA certificate in the `format` specified.
 
-* `issuing_ca` - The issuing CA
+* `issuing_ca` - The issuing CA certificate in the `format` specified.
 
-* `ca_chain` - The CA chain
+* `ca_chain` - A list of the issuing and intermediate CA certificates in the `format` specified.
+
+* `certificate_bundle` - The concatenation of the intermediate CA and the issuing CA certificates (PEM encoded). 
+  Requires the `format` to be set to any of: pem, pem_bundle. The value will be empty for all other formats.
 
 * `serial` - The serial

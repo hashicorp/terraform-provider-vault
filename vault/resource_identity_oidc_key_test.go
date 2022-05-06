@@ -3,24 +3,32 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccIdentityOidcKey(t *testing.T) {
 	key := acctest.RandomWithPrefix("test-key")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityOidcKeyDestroy,
 		Steps: []resource.TestStep{
+			{
+				// Test a create failure
+				Config:      testAccIdentityOidcKeyConfig_bad(key),
+				ExpectError: regexp.MustCompile(`unknown signing algorithm "RS123"`),
+			},
 			{
 				Config: testAccIdentityOidcKeyConfig(key),
 				Check: resource.ComposeTestCheckFunc(
@@ -45,7 +53,7 @@ func TestAccIdentityOidcKeyUpdate(t *testing.T) {
 	key := acctest.RandomWithPrefix("test-key")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityOidcKeyDestroy,
 		Steps: []resource.TestStep{
@@ -75,6 +83,11 @@ func TestAccIdentityOidcKeyUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_identity_oidc_key.key", "allowed_client_ids.#", "0"),
 				),
 			},
+			{
+				// Test an update failure
+				Config:      testAccIdentityOidcKeyConfig_bad(key),
+				ExpectError: regexp.MustCompile(`unknown signing algorithm "RS123"`),
+			},
 		},
 	})
 }
@@ -87,7 +100,6 @@ func testAccCheckIdentityOidcKeyDestroy(s *terraform.State) error {
 			continue
 		}
 		resp, err := identityOidcKeyApiRead(rs.Primary.Attributes["name"], client)
-
 		if err != nil {
 			return fmt.Errorf("error checking for identity oidc key %q: %s", rs.Primary.ID, err)
 		}
@@ -199,6 +211,16 @@ func testAccIdentityOidcKeyConfig(entityName string) string {
 resource "vault_identity_oidc_key" "key" {
   name = "%s"
 	algorithm = "RS256"
+
+	allowed_client_ids = []
+}`, entityName)
+}
+
+func testAccIdentityOidcKeyConfig_bad(entityName string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_oidc_key" "key" {
+  name = "%s"
+	algorithm = "RS123"
 
 	allowed_client_ids = []
 }`, entityName)

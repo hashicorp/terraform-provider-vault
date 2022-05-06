@@ -5,8 +5,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccKubernetesAuthBackendConfigDataSource_basic(t *testing.T) {
@@ -14,12 +16,12 @@ func TestAccKubernetesAuthBackendConfigDataSource_basic(t *testing.T) {
 	jwt := kubernetesJWT
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendConfigConfig_basic(backend, jwt),
+				Config: testAccKubernetesAuthBackendConfigConfig_basic(backend, jwt, kubernetesCAcert),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -58,7 +60,7 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 	disableLocalCaJwt := true
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
@@ -118,7 +120,7 @@ func testAccKubernetesAuthBackendConfigDataSourceConfig_basic(backend, jwt strin
 
 data "vault_kubernetes_auth_backend_config" "config" {
   backend = %q
-}`, testAccKubernetesAuthBackendConfigConfig_basic(backend, jwt), backend)
+}`, testAccKubernetesAuthBackendConfigConfig_basic(backend, jwt, kubernetesCAcert), backend)
 }
 
 func testAccKubernetesAuthBackendConfigDataSourceConfig_full(backend, jwt string, issuer string, disableIssValidation bool, disableLocalCaJwt bool) string {

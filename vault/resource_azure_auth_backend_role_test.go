@@ -7,10 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAzureAuthBackendRole_basic(t *testing.T) {
@@ -18,7 +20,7 @@ func TestAzureAuthBackendRole_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-azure-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAzureAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -35,7 +37,7 @@ func TestAzureAuthBackendRole(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-azure-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAzureAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -210,7 +212,6 @@ func testAzureAuthBackendRoleCheck_attrs(backend, name string) resource.TestChec
 }
 
 func testAzureAuthBackendRoleConfig_basic(backend, name string) string {
-
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "azure" {
@@ -219,7 +220,7 @@ resource "vault_auth_backend" "azure" {
 }
 
 resource "vault_azure_auth_backend_role" "test" {
-    backend                     = "${vault_auth_backend.azure.path}"
+    backend                     = vault_auth_backend.azure.path
     role                        = "%s"
     bound_service_principal_ids = ["foo"]
     bound_resource_groups       = ["bar"]
@@ -228,11 +229,9 @@ resource "vault_azure_auth_backend_role" "test" {
     token_policies              = ["policy_a", "policy_b"]
 }
 `, backend, name)
-
 }
 
 func testAzureAuthBackendRoleConfig(backend, name string) string {
-
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "azure" {
@@ -241,7 +240,7 @@ resource "vault_auth_backend" "azure" {
 }
 
 resource "vault_azure_auth_backend_role" "test" {
-    backend                    = "${vault_auth_backend.azure.path}"
+    backend                    = vault_auth_backend.azure.path
     role                       = "%s"
     token_ttl                  = 300
     token_max_ttl              = 600
@@ -253,7 +252,6 @@ resource "vault_azure_auth_backend_role" "test" {
 }
 
 func testAzureAuthBackendRoleUnset(backend, name string) string {
-
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "azure" {
@@ -262,7 +260,7 @@ resource "vault_auth_backend" "azure" {
 }
 
 resource "vault_azure_auth_backend_role" "test" {
-    backend                    = "${vault_auth_backend.azure.path}"
+    backend                    = vault_auth_backend.azure.path
     role                       = "%s"
     bound_locations	           = ["west us"]
     bound_resource_groups      = ["test"]
