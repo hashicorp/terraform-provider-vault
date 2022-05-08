@@ -60,80 +60,73 @@ func testPkiSecretBackendSignDestroy(s *terraform.State) error {
 func testPkiSecretBackendSignConfig_basic(rootPath string, intermediatePath string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test-root" {
-  path = "%s"
-  type = "pki"
-  description = "test root"
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test root"
   default_lease_ttl_seconds = "8640000"
-  max_lease_ttl_seconds = "8640000"
+  max_lease_ttl_seconds     = "8640000"
 }
 
 resource "vault_mount" "test-intermediate" {
-  depends_on = [ "vault_mount.test-root" ]
-  path = "%s"
-  type = "pki"
-  description = "test intermediate"
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test intermediate"
   default_lease_ttl_seconds = "86400"
-  max_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
 }
 
 resource "vault_pki_secret_backend_root_cert" "test" {
-  depends_on = [ "vault_mount.test-intermediate" ]
-  backend = vault_mount.test-root.path
-  type = "internal"
-  common_name = "my.domain"
-  ttl = "86400"
-  format = "pem"
+  backend            = vault_mount.test-root.path
+  type               = "internal"
+  common_name        = "my.domain"
+  ttl                = "86400"
+  format             = "pem"
   private_key_format = "der"
-  key_type = "rsa"
-  key_bits = 4096
-  ou = "test"
-  organization = "test"
-  country = "test"
-  locality = "test"
-  province = "test"
+  key_type           = "rsa"
+  key_bits           = 4096
+  ou                 = "test"
+  organization       = "test"
+  country            = "test"
+  locality           = "test"
+  province           = "test"
 }
 
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
-  depends_on = [ "vault_pki_secret_backend_root_cert.test" ]
-  backend = vault_mount.test-intermediate.path
-  type = "internal"
+  backend     = vault_mount.test-intermediate.path
+  type        = vault_pki_secret_backend_root_cert.test.type
   common_name = "test.my.domain"
 }
 
 resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
-  depends_on = [ "vault_pki_secret_backend_intermediate_cert_request.test" ]
-  backend = vault_mount.test-root.path
-  csr = vault_pki_secret_backend_intermediate_cert_request.test.csr
-  common_name = "test.my.domain"
+  backend               = vault_mount.test-root.path
+  csr                   = vault_pki_secret_backend_intermediate_cert_request.test.csr
+  common_name           = "test.my.domain"
   permitted_dns_domains = [".test.my.domain"]
-  ou = "test"
-  organization = "test"
-  country = "test"
-  locality = "test"
-  province = "test"
+  ou                    = "test"
+  organization          = "test"
+  country               = "test"
+  locality              = "test"
+  province              = "test"
 }
 
 resource "vault_pki_secret_backend_intermediate_set_signed" "test" {
-  depends_on = [ "vault_pki_secret_backend_root_sign_intermediate.test" ]
-  backend = vault_mount.test-intermediate.path
+  backend     = vault_mount.test-intermediate.path
   certificate = vault_pki_secret_backend_root_sign_intermediate.test.certificate
 }
 
 resource "vault_pki_secret_backend_role" "test" {
-  depends_on = [ "vault_pki_secret_backend_intermediate_set_signed.test" ]
-  backend = vault_mount.test-intermediate.path
-  name = "test"
+  backend          = vault_pki_secret_backend_intermediate_set_signed.test.backend
+  name             = "test"
   allowed_domains  = ["test.my.domain"]
   allow_subdomains = true
-  max_ttl = "3600"
-  key_usage = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
+  max_ttl          = "3600"
+  key_usage        = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
 }
 
 resource "vault_pki_secret_backend_sign" "test" {
-  depends_on = [ "vault_pki_secret_backend_role.test" ]
-  backend = vault_mount.test-intermediate.path
-  name = vault_pki_secret_backend_role.test.name
-  csr = <<EOT
+  backend     = vault_pki_secret_backend_role.test.backend
+  name        = vault_pki_secret_backend_role.test.name
+  csr         = <<EOT
 -----BEGIN CERTIFICATE REQUEST-----
 MIIEqDCCApACAQAwYzELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUx
 ITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEcMBoGA1UEAwwTY2Vy
@@ -163,7 +156,8 @@ o3DybUeUmknYjl109rdSf+76nuREICHatxXgN3xCMFuBaN4WLO+ksd6Y1Ys=
 -----END CERTIFICATE REQUEST-----
 EOT
   common_name = "cert.test.my.domain"
-}`, rootPath, intermediatePath)
+}
+`, rootPath, intermediatePath)
 }
 
 func TestPkiSecretBackendSign_renew(t *testing.T) {
@@ -226,44 +220,42 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 func testPkiSecretBackendSignConfig_renew(rootPath string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test-root" {
-  path = "%s"
-  type = "pki"
-  description = "test root"
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test root"
   default_lease_ttl_seconds = "8640000"
-  max_lease_ttl_seconds = "8640000"
+  max_lease_ttl_seconds     = "8640000"
 }
 
 resource "vault_pki_secret_backend_root_cert" "test" {
-  backend = vault_mount.test-root.path
-  type = "internal"
-  common_name = "my.domain"
-  ttl = "86400"
-  format = "pem"
+  backend            = vault_mount.test-root.path
+  type               = "internal"
+  common_name        = "my.domain"
+  ttl                = "86400"
+  format             = "pem"
   private_key_format = "der"
-  key_type = "rsa"
-  key_bits = 4096
-  ou = "test"
-  organization = "test"
-  country = "test"
-  locality = "test"
-  province = "test"
+  key_type           = "rsa"
+  key_bits           = 4096
+  ou                 = "test"
+  organization       = "test"
+  country            = "test"
+  locality           = "test"
+  province           = "test"
 }
 
 resource "vault_pki_secret_backend_role" "test" {
-  depends_on = [ "vault_pki_secret_backend_root_cert.test" ]
-  backend = vault_mount.test-root.path
-  name = "test"
+  backend          = vault_pki_secret_backend_root_cert.test.backend
+  name             = "test"
   allowed_domains  = ["test.my.domain"]
   allow_subdomains = true
-  max_ttl = "3600"
-  key_usage = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
+  max_ttl          = "3600"
+  key_usage        = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
 }
 
 resource "vault_pki_secret_backend_sign" "test" {
-  depends_on = [ "vault_pki_secret_backend_role.test" ]
-  backend = vault_mount.test-root.path
-  name = vault_pki_secret_backend_role.test.name
-  csr = <<EOT
+  backend               = vault_mount.test-root.path
+  name                  = vault_pki_secret_backend_role.test.name
+  csr                   = <<EOT
 -----BEGIN CERTIFICATE REQUEST-----
 MIIEqDCCApACAQAwYzELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUx
 ITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEcMBoGA1UEAwwTY2Vy
@@ -292,9 +284,10 @@ OTEc13lWf+B0PU9UJuGTsmpIuImPDVd0EVDayr3mT5dDbqTVDbe8ppf2IswABmf0
 o3DybUeUmknYjl109rdSf+76nuREICHatxXgN3xCMFuBaN4WLO+ksd6Y1Ys=
 -----END CERTIFICATE REQUEST-----
 EOT
-  common_name = "cert.test.my.domain"
-  ttl = "1h"
-  auto_renew = true
+  common_name           = "cert.test.my.domain"
+  ttl                   = "1h"
+  auto_renew            = true
   min_seconds_remaining = "3595"
-}`, rootPath)
+}
+`, rootPath)
 }
