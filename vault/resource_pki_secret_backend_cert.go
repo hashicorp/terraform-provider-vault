@@ -246,17 +246,8 @@ func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error 
 	return pkiSecretBackendCertRead(d, meta)
 }
 
-func checkPKICertExpiry(expiration int64, offset int64) (bool, error) {
-	if offset < 0 {
-		offset = 0
-	}
-
-	if offset > expiration {
-		return false, fmt.Errorf(
-			"expiry offset %d cannot be greater than the expiration time %d", offset, expiration)
-	}
-
-	return time.Now().UTC().After(time.Unix(expiration-offset, 0)), nil
+func checkPKICertExpiry(expiration int64) bool {
+	return time.Now().After(time.Unix(expiration, 0))
 }
 
 func pkiCertAutoRenewCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
@@ -264,15 +255,8 @@ func pkiCertAutoRenewCustomizeDiff(_ context.Context, d *schema.ResourceDiff, me
 		return nil
 	}
 
-	expired, err := checkPKICertExpiry(
-		int64(d.Get("expiration").(int)),
-		int64(d.Get("min_seconds_remaining").(int)),
-	)
-	if err != nil {
-		return err
-	}
-
-	if expired {
+	expiration := int64(d.Get("expiration").(int) - d.Get("min_seconds_remaining").(int))
+	if checkPKICertExpiry(expiration) {
 		log.Printf("[DEBUG] certificate %q is due for renewal", d.Id())
 		if err := d.SetNewComputed("certificate"); err != nil {
 			return err

@@ -21,9 +21,11 @@ import (
 )
 
 type testPKICertStore struct {
-	cert          string
-	serialNumber  string
-	expectRevoked bool
+	cert             string
+	serialNumber     string
+	expiration       int64
+	expirationWindow int64
+	expectRevoked    bool
 }
 
 func TestPkiSecretBackendCert_basic(t *testing.T) {
@@ -230,7 +232,6 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 		resource.TestCheckResourceAttrSet(resourceName, "serial_number"),
 	}
 
-	start := time.Now()
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -246,13 +247,8 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 			},
 			{
 				// test renewal based on cert expiry
-				PreConfig: func() {
-					delay := 7*time.Second - time.Now().Sub(start)
-					if delay > 0 {
-						time.Sleep(delay)
-					}
-				},
-				Config: testPkiSecretBackendCertConfig_renew(path),
+				PreConfig: testWaitCertExpiry(store),
+				Config:    testPkiSecretBackendCertConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						testPKICertReIssued(resourceName, &store),
@@ -261,7 +257,6 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 				),
 			},
 			{
-				// test renewal based on cert expiry
 				// test unmounted backend
 				PreConfig: func() {
 					client := testProvider.Meta().(*api.Client)
@@ -278,6 +273,19 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testWaitCertExpiry(store testPKICertStore) func() {
+	return func() {
+		expiry := time.Unix(store.expiration-store.expirationWindow, 0)
+		for {
+			isAfter := time.Now().After(expiry)
+			if isAfter {
+				return
+			}
+			time.Sleep(250 * time.Millisecond)
+		}
+	}
 }
 
 func testPkiSecretBackendCertConfig_renew(rootPath string) string {
@@ -328,34 +336,6 @@ resource "vault_pki_secret_backend_cert" "test" {
 `, rootPath)
 }
 
-func testPkiSecretBackendCertWaitUntilRenewal(n string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
-		if !ok {
-			return fmt.Errorf("Not found: %s", n)
-		}
-
-		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
-		}
-
-		expiration, err := strconv.Atoi(rs.Primary.Attributes["expiration"])
-		if err != nil {
-			return fmt.Errorf("Invalid expiration value: %s", err)
-		}
-
-		minSecondsRemain, err := strconv.Atoi(rs.Primary.Attributes["min_seconds_remaining"])
-		if err != nil {
-			return fmt.Errorf("Invalid min_seconds_remaining value: %s", err)
-		}
-
-		secondsUntilRenewal := (expiration - (int(time.Now().Unix()) + minSecondsRemain))
-		time.Sleep(time.Duration(secondsUntilRenewal+1) * time.Second)
-
-		return nil
-	}
-}
-
 func testCapturePKICert(resourceName string, store *testPKICertStore) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, err := testGetResourceFromRootModule(s, resourceName)
@@ -374,6 +354,24 @@ func testCapturePKICert(resourceName string, store *testPKICertStore) resource.T
 			return fmt.Errorf("serial_number not found in state")
 		}
 		store.serialNumber = sn
+
+		if v, ok := rs.Primary.Attributes["expiration"]; ok {
+			e, err := strconv.Atoi(v)
+			if err != nil {
+				return err
+			}
+
+			store.expiration = int64(e)
+		}
+
+		if v, ok := rs.Primary.Attributes["min_seconds_remaining"]; ok {
+			e, err := strconv.Atoi(v)
+			if err != nil {
+				return err
+			}
+
+			store.expirationWindow = int64(e)
+		}
 
 		if val, ok := rs.Primary.Attributes["revoke"]; ok {
 			v, err := strconv.ParseBool(val)
