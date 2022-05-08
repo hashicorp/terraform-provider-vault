@@ -247,7 +247,7 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 			},
 			{
 				// test renewal based on cert expiry
-				PreConfig: testWaitCertExpiry(store),
+				PreConfig: testWaitCertExpiry(&store),
 				Config:    testPkiSecretBackendCertConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
@@ -275,12 +275,11 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 	})
 }
 
-func testWaitCertExpiry(store testPKICertStore) func() {
+func testWaitCertExpiry(store *testPKICertStore) func() {
 	return func() {
 		expiry := time.Unix(store.expiration-store.expirationWindow, 0)
 		for {
-			isAfter := time.Now().After(expiry)
-			if isAfter {
+			if time.Now().After(expiry) {
 				return
 			}
 			time.Sleep(250 * time.Millisecond)

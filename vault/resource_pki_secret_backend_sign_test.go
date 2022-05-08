@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -168,50 +167,56 @@ EOT
 }
 
 func TestPkiSecretBackendSign_renew(t *testing.T) {
-	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	path := "pki-root-" + strconv.Itoa(acctest.RandInt())
 
+	var store testPKICertStore
+
+	resourceName := "vault_pki_secret_backend_sign.test"
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", path),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
+		resource.TestCheckResourceAttr(resourceName, "ttl", "1h"),
+		resource.TestCheckResourceAttr(resourceName, "min_seconds_remaining", "3595"),
+		resource.TestCheckResourceAttrSet(resourceName, "expiration"),
+		resource.TestCheckResourceAttrSet(resourceName, "serial"),
+	}
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testPkiSecretBackendCertDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendSignConfig_renew(rootPath),
+				Config: testPkiSecretBackendSignConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "backend", rootPath),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "common_name", "cert.test.my.domain"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "ttl", "1h"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "min_seconds_remaining", "3595"),
-					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_sign.test", "expiration"),
-					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_sign.test", "serial"),
+					append(checks,
+						testCapturePKICert(resourceName, &store),
+					)...,
 				),
 			},
 			{
-				Config:   testPkiSecretBackendSignConfig_renew(rootPath),
-				PlanOnly: true,
-			},
-			{
-				Config: testPkiSecretBackendSignConfig_renew(rootPath),
+				// test renewal based on cert expiry
+				PreConfig: testWaitCertExpiry(&store),
+				Config:    testPkiSecretBackendSignConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
-					testPkiSecretBackendSignWaitUntilRenewal("vault_pki_secret_backend_sign.test"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "backend", rootPath),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "common_name", "cert.test.my.domain"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "ttl", "1h"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "min_seconds_remaining", "3595"),
-					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_sign.test", "expiration"),
-					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_sign.test", "serial"),
+					append(checks,
+						testPKICertReIssued(resourceName, &store),
+						testCapturePKICert(resourceName, &store),
+					)...,
 				),
-				ExpectNonEmptyPlan: true,
 			},
 			{
-				Config: testPkiSecretBackendSignConfig_renew(rootPath),
+				// test unmounted backend
+				PreConfig: func() {
+					client := testProvider.Meta().(*api.Client)
+					if err := client.Sys().Unmount(path); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testPkiSecretBackendSignConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "backend", rootPath),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "common_name", "cert.test.my.domain"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "ttl", "1h"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "min_seconds_remaining", "3595"),
-					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_sign.test", "expiration"),
-					resource.TestCheckResourceAttrSet("vault_pki_secret_backend_sign.test", "serial"),
+					append(checks,
+						testPKICertReIssued(resourceName, &store),
+					)...,
 				),
 			},
 		},
@@ -292,32 +297,4 @@ EOT
   auto_renew = true
   min_seconds_remaining = "3595"
 }`, rootPath)
-}
-
-func testPkiSecretBackendSignWaitUntilRenewal(n string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
-		if !ok {
-			return fmt.Errorf("Not found: %s", n)
-		}
-
-		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
-		}
-
-		expiration, err := strconv.Atoi(rs.Primary.Attributes["expiration"])
-		if err != nil {
-			return fmt.Errorf("Invalid expiration value: %s", err)
-		}
-
-		minSecondsRemain, err := strconv.Atoi(rs.Primary.Attributes["min_seconds_remaining"])
-		if err != nil {
-			return fmt.Errorf("Invalid min_seconds_remaining value: %s", err)
-		}
-
-		secondsUntilRenewal := (expiration - (int(time.Now().Unix()) + minSecondsRemain))
-		time.Sleep(time.Duration(secondsUntilRenewal+1) * time.Second)
-
-		return nil
-	}
 }

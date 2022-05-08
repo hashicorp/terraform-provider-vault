@@ -229,6 +229,7 @@ func pkiSecretBackendSignCreate(d *schema.ResourceData, meta interface{}) error 
 	d.Set("issuing_ca", resp.Data["issuing_ca"])
 	d.Set("ca_chain", resp.Data["ca_chain"])
 	d.Set("serial", resp.Data["serial_number"])
+	d.Set("serial_number", resp.Data["serial_number"])
 	d.Set("expiration", resp.Data["expiration"])
 
 	d.SetId(fmt.Sprintf("%s/%s/%s", backend, name, commonName))

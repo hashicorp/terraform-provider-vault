@@ -247,7 +247,10 @@ func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error 
 }
 
 func checkPKICertExpiry(expiration int64) bool {
-	return time.Now().After(time.Unix(expiration, 0))
+	expiry := time.Unix(expiration, 0)
+	now := time.Now()
+
+	return now.After(expiry)
 }
 
 func pkiCertAutoRenewCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
