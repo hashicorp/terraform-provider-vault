@@ -67,6 +67,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "policy_identifiers.0", "1.2.3.4"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "basic_constraints_valid_for_non_ca", "false"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "not_before_duration", "45m"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_serial_numbers.0", "*"),
 				),
 			},
 			{
@@ -116,6 +117,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "policy_identifiers.0", "1.2.3.4"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "basic_constraints_valid_for_non_ca", "false"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "not_before_duration", "45m"),
+					resource.TestCheckResourceAttr("vault_pki_secret_backend_role.test", "allowed_serial_numbers.0", "*"),
 				),
 			},
 		},
@@ -168,6 +170,7 @@ resource "vault_pki_secret_backend_role" "test" {
   policy_identifiers = ["1.2.3.4"]
   basic_constraints_valid_for_non_ca = false
   not_before_duration = "45m"
+  allowed_serial_numbers = ["*"]
 }`, path, name)
 }
 
@@ -218,6 +221,7 @@ resource "vault_pki_secret_backend_role" "test" {
   policy_identifiers = ["1.2.3.4"]
   basic_constraints_valid_for_non_ca = false
   not_before_duration = "45m"
+  allowed_serial_numbers = ["*"]
 }`, path, name)
 }
 
