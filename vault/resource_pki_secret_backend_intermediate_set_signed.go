@@ -12,7 +12,7 @@ import (
 func pkiSecretBackendIntermediateSetSignedResource() *schema.Resource {
 	return &schema.Resource{
 		Create: pkiSecretBackendIntermediateSetSignedCreate,
-		Read:   pkiSecretBackendIntermediateSetSignedRead,
+		Read:   pkiSecretBackendCertRead,
 		Delete: pkiSecretBackendIntermediateSetSignedDelete,
 
 		Schema: map[string]*schema.Schema{
@@ -51,11 +51,7 @@ func pkiSecretBackendIntermediateSetSignedCreate(d *schema.ResourceData, meta in
 	log.Printf("[DEBUG] Created intermediate set-signed on PKI secret backend %q", backend)
 
 	d.SetId(path)
-	return pkiSecretBackendIntermediateSetSignedRead(d, meta)
-}
-
-func pkiSecretBackendIntermediateSetSignedRead(d *schema.ResourceData, meta interface{}) error {
-	return nil
+	return pkiSecretBackendCertRead(d, meta)
 }
 
 func pkiSecretBackendIntermediateSetSignedDelete(d *schema.ResourceData, meta interface{}) error {

@@ -115,14 +115,27 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 	format := "pem"
 	commonName := "SubOrg Intermediate CA"
 
+	store := &testPKICertStore{}
+	resourceName := "vault_pki_secret_backend_root_sign_intermediate.test"
+	checks := testCheckPKISecretRootSignIntermediate(resourceName, rootPath, commonName, format)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testPkiSecretBackendRootSignIntermediateDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, ""),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, "", false),
+				Check: resource.ComposeTestCheckFunc(
+					checks,
+					testCapturePKICert(resourceName, store),
+				),
+			},
+			{
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, "", true),
+				Check: resource.ComposeTestCheckFunc(
+					checks,
+					testPKICertRevocation(rootPath, store),
+				),
 			},
 		},
 	})
@@ -140,7 +153,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem(t *testing.T) {
 		CheckDestroy: testPkiSecretBackendRootSignIntermediateDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false),
 				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
 			},
 		},
@@ -159,7 +172,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_der(t *testing.T) {
 		CheckDestroy: testPkiSecretBackendRootSignIntermediateDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false),
 				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
 			},
 		},
@@ -178,7 +191,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle(t *testing.T) {
 		CheckDestroy: testPkiSecretBackendRootSignIntermediateDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format),
+				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false),
 				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
 			},
 		},
@@ -308,59 +321,60 @@ func testPkiSecretBackendRootSignIntermediateDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, path, format string) string {
+func testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, path, format string, revoke bool) string {
 	config := fmt.Sprintf(`
 resource "vault_mount" "test-root" {
-  path = "%s"
-  type = "pki"
-  description = "test root"
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test root"
   default_lease_ttl_seconds = "8640000"
-  max_lease_ttl_seconds  = "8640000"
+  max_lease_ttl_seconds     = "8640000"
 }
 
 resource "vault_mount" "test-intermediate" {
-  path = "%s"
-  type = vault_mount.test-root.type
-  description = "test intermediate"
+  path                      = "%s"
+  type                      = vault_mount.test-root.type
+  description               = "test intermediate"
   default_lease_ttl_seconds = "86400"
-  max_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
 }
 
 resource "vault_pki_secret_backend_root_cert" "test" {
-  backend = vault_mount.test-root.path
-  type = "internal"
-  common_name = "RootOrg Root CA"
-  ttl = "86400"
-  format = "pem"
-  private_key_format = "der"
-  key_type = "rsa"
-  key_bits = 4096
+  backend              = vault_mount.test-root.path
+  type                 = "internal"
+  common_name          = "RootOrg Root CA"
+  ttl                  = "86400"
+  format               = "pem"
+  private_key_format   = "der"
+  key_type             = "rsa"
+  key_bits             = 4096
   exclude_cn_from_sans = true
-  ou = "Organizational Unit"
-  organization = "RootOrg"
-  country = "US"
-  locality = "San Francisco"
-  province = "CA"
+  ou                   = "Organizational Unit"
+  organization         = "RootOrg"
+  country              = "US"
+  locality             = "San Francisco"
+  province             = "CA"
 }
 
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
-  depends_on = [vault_pki_secret_backend_root_cert.test]
-  backend = vault_mount.test-intermediate.path
-  type = "internal"
+  depends_on  = [vault_pki_secret_backend_root_cert.test]
+  backend     = vault_mount.test-intermediate.path
+  type        = "internal"
   common_name = "SubOrg Intermediate CA"
 }
 
 resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
-  backend = vault_mount.test-root.path
-  csr = vault_pki_secret_backend_intermediate_cert_request.test.csr
-  common_name = "SubOrg Intermediate CA"
+  backend              = vault_mount.test-root.path
+  csr                  = vault_pki_secret_backend_intermediate_cert_request.test.csr
+  common_name          = "SubOrg Intermediate CA"
   exclude_cn_from_sans = true
-  ou = "SubUnit"
-  organization = "SubOrg"
-  country = "US"
-  locality = "San Francisco"
-  province = "CA"
-`, rootPath, path)
+  ou                   = "SubUnit"
+  organization         = "SubOrg"
+  country              = "US"
+  locality             = "San Francisco"
+  province             = "CA"
+  revoke               = %t
+`, rootPath, path, revoke)
 
 	if format != "" {
 		config += fmt.Sprintf(`
