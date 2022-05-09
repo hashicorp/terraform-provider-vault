@@ -25,7 +25,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 		Update: func(data *schema.ResourceData, i interface{}) error {
 			return nil
 		},
-		Read: pkiSecretBackendRootCertRead,
+		Read: pkiSecretBackendCertRead,
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
@@ -335,28 +335,6 @@ func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) er
 	d.Set("serial_number", resp.Data["serial_number"])
 
 	d.SetId(path)
-
-	return nil
-}
-
-func pkiSecretBackendRootCertRead(d *schema.ResourceData, meta interface{}) error {
-	if d.IsNewResource() {
-		return nil
-	}
-
-	client := meta.(*api.Client)
-	path := d.Get("backend").(string)
-	enabled, err := util.CheckMountEnabled(client, path)
-	if err != nil {
-		log.Printf("[WARN] Failed to check if mount %q exist, preempting the read operation", path)
-		return nil
-	}
-
-	// trigger a resource re-creation whenever the engine's mount has disappeared
-	if !enabled {
-		log.Printf("[WARN] Mount %q does not exist, setting resource for re-creation", path)
-		d.SetId("")
-	}
 
 	return nil
 }
