@@ -168,6 +168,7 @@ resource "vault_pki_secret_backend_role" "test" {
   policy_identifiers = ["1.2.3.4"]
   basic_constraints_valid_for_non_ca = false
   not_before_duration = "45m"
+  allowed_serial_numbers = ["*"]
 }`, path, name)
 }
 
@@ -218,6 +219,7 @@ resource "vault_pki_secret_backend_role" "test" {
   policy_identifiers = ["1.2.3.4"]
   basic_constraints_valid_for_non_ca = false
   not_before_duration = "45m"
+  allowed_serial_numbers = ["*"]
 }`, path, name)
 }
 
