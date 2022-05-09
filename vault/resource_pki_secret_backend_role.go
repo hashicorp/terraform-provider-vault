@@ -1,12 +1,11 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
-
-	"encoding/json"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -188,8 +187,8 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 			},
 			"key_usage": {
 				Type:        schema.TypeList,
-				Required:    false,
 				Optional:    true,
+				Computed:    true,
 				Description: "Specify the allowed key usage constraint on issued certificates.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -326,6 +325,10 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 
 	log.Printf("[DEBUG] Writing PKI secret backend role %q", path)
 
+	// TODO: selectively configure the engine by replacing all of the d.Get()
+	// calls with d.GetOk()
+	// The current approach is inconsistent with the majority of the other resources.
+	// It also sets a bad precedent for contributors.
 	iAllowedDomains := d.Get("allowed_domains").([]interface{})
 	allowedDomains := make([]string, 0, len(iAllowedDomains))
 	for _, iAllowedDomain := range iAllowedDomains {
