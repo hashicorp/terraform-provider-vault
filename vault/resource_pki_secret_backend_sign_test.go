@@ -1,7 +1,10 @@
 package vault
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -18,6 +21,7 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 
+	resourceName := "vault_pki_secret_backend_sign.test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -26,8 +30,9 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 			{
 				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "backend", intermediatePath),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_sign.test", "common_name", "cert.test.my.domain"),
+					resource.TestCheckResourceAttr(resourceName, "backend", intermediatePath),
+					resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
+					testValidateCSR(resourceName),
 				),
 			},
 		},
@@ -173,6 +178,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "min_seconds_remaining", "3595"),
 		resource.TestCheckResourceAttrSet(resourceName, "expiration"),
 		resource.TestCheckResourceAttrSet(resourceName, "serial"),
+		testValidateCSR(resourceName),
 	}
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -290,4 +296,53 @@ EOT
   min_seconds_remaining = "3595"
 }
 `, rootPath)
+}
+
+func testValidateCSR(resourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, err := testGetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		attrs := rs.Primary.Attributes
+
+		if attrs["format"] != "pem" {
+			// assumes that the certificate `format` is `pem`
+			return fmt.Errorf("test only valid for resources configured with the 'pem' format")
+		}
+
+		certPEM := attrs["certificate"]
+		if certPEM == "" {
+			return fmt.Errorf("certificate from state cannot be empty")
+		}
+
+		b, _ := pem.Decode([]byte(certPEM))
+		if err != nil {
+			return err
+		}
+
+		cert, err := x509.ParseCertificate(b.Bytes)
+		if err != nil {
+			return err
+		}
+
+		csrPEM := attrs["csr"]
+		if csrPEM == "" {
+			return fmt.Errorf("CSR from state cannot be empty")
+		}
+
+		c, _ := pem.Decode([]byte(csrPEM))
+		csr, err := x509.ParseCertificateRequest(c.Bytes)
+		if err != nil {
+			return err
+		}
+
+		if !reflect.DeepEqual(csr.PublicKey, cert.PublicKey) {
+			return fmt.Errorf("certificate is invalid, public key mismatch, csr=%v, cert=%v",
+				csr.PublicKey, cert.PublicKeyAlgorithm)
+		}
+
+		return nil
+	}
 }

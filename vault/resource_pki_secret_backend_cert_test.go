@@ -270,12 +270,9 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 
 func testWaitCertExpiry(store *testPKICertStore) func() {
 	return func() {
-		expiry := time.Unix(store.expiration-store.expirationWindow, 0)
-		for {
-			if time.Now().After(expiry) {
-				return
-			}
-			time.Sleep(250 * time.Millisecond)
+		delay := (store.expiration - store.expirationWindow) - time.Now().Unix()
+		if delay > 0 {
+			time.Sleep(time.Duration(delay) * time.Second)
 		}
 	}
 }
