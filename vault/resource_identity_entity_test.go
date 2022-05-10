@@ -109,7 +109,8 @@ func TestAccIdentityEntityUpdateRemovePolicies(t *testing.T) {
 				Config: testAccIdentityEntityConfigUpdateRemovePolicies(entity),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "external_policies", "true"),
-					resource.TestCheckResourceAttr(resourceName, "policies.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "policies.0", "test"),
 				),
 			},
 		},
