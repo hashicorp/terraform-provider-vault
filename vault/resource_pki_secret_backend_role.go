@@ -43,21 +43,15 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 			},
 			"ttl": {
 				Type:        schema.TypeString,
-				Required:    false,
 				Optional:    true,
+				Computed:    true,
 				Description: "The TTL.",
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					return old == "0"
-				},
 			},
 			"max_ttl": {
 				Type:        schema.TypeString,
-				Required:    false,
 				Optional:    true,
+				Computed:    true,
 				Description: "The maximum TTL.",
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					return old == "0"
-				},
 			},
 			"allow_localhost": {
 				Type:        schema.TypeBool,
