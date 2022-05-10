@@ -21,8 +21,8 @@ func pkiSecretBackendSignResource() *schema.Resource {
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
-				Type:    pkiSecretBackendRootCertV0().CoreConfigSchema().ImpliedType(),
-				Upgrade: pkiSecretBackendRootCertUpgradeV0,
+				Type:    pkiSecretSerialNumberResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: pkiSecretSerialNumberUpgradeV0,
 			},
 		},
 		SchemaVersion: 1,
@@ -83,7 +83,7 @@ func pkiSecretBackendSignResource() *schema.Resource {
 			"uri_sans": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "List of alterative URIs.",
+				Description: "List of alternative URIs.",
 				ForceNew:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,

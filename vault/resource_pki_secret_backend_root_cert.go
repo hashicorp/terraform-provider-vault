@@ -29,8 +29,8 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
-				Type:    pkiSecretBackendRootCertV0().CoreConfigSchema().ImpliedType(),
-				Upgrade: pkiSecretBackendRootCertUpgradeV0,
+				Type:    pkiSecretSerialNumberResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: pkiSecretSerialNumberUpgradeV0,
 			},
 		},
 		SchemaVersion: 1,
@@ -105,7 +105,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			"uri_sans": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "List of alterative URIs.",
+				Description: "List of alternative URIs.",
 				ForceNew:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -396,7 +396,7 @@ func pkiSecretBackendIntermediateSetSignedDeletePath(backend string) string {
 	return strings.Trim(backend, "/") + "/root"
 }
 
-func pkiSecretBackendRootCertV0() *schema.Resource {
+func pkiSecretSerialNumberResourceV0() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
 			"serial_number": {
@@ -408,7 +408,7 @@ func pkiSecretBackendRootCertV0() *schema.Resource {
 	}
 }
 
-func pkiSecretBackendRootCertUpgradeV0(
+func pkiSecretSerialNumberUpgradeV0(
 	_ context.Context, rawState map[string]interface{}, _ interface{},
 ) (map[string]interface{}, error) {
 	rawState["serial_number"] = rawState["serial"]

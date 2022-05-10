@@ -75,7 +75,7 @@ The following arguments are supported:
 
 * `ip_sans` - (Optional) List of alternative IPs
 
-* `uri_sans` - (Optional) List of alterative URIs
+* `uri_sans` - (Optional) List of alternative URIs
 
 * `ttl` - (Optional) Time to live
 

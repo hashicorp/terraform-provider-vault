@@ -32,9 +32,18 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 
-	var store testPKICertStore
+	store := &testPKICertStore{}
 
 	resourceName := "vault_pki_secret_backend_cert.test"
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", intermediatePath),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
+		resource.TestCheckResourceAttr(resourceName, "ttl", "720h"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
+	}
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -43,56 +52,29 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			{
 				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", intermediatePath),
-					resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "720h"),
-					resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
-					testCapturePKICert(resourceName, &store),
+					append(checks,
+						resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
+						testCapturePKICert(resourceName, store),
+						testPKICertRevocation(intermediatePath, store),
+					)...,
+				),
+			},
+			{
+				// revoke the cert, expect a new one is re-issued
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, true),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks,
+						resource.TestCheckResourceAttr(resourceName, "revoke", "true"),
+						testPKICertRevocation(intermediatePath, store),
+						testCapturePKICert(resourceName, store),
+					)...,
 				),
 			},
 			{
 				// remove the cert to test revocation flow (expect no revocation)
 				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, false, false),
 				Check: resource.ComposeTestCheckFunc(
-					testPKICertRevocation(intermediatePath, &store),
-				),
-			},
-		},
-	})
-}
-
-func TestPkiSecretBackendCert_revoke(t *testing.T) {
-	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
-	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
-
-	var store testPKICertStore
-
-	resourceName := "vault_pki_secret_backend_cert.test"
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendCertDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, true),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", intermediatePath),
-					resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "720h"),
-					resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "revoke", "true"),
-					testCapturePKICert(resourceName, &store),
-				),
-			},
-			{
-				// remove the cert to test revocation flow (expect revocation)
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, false, false),
-				Check: resource.ComposeTestCheckFunc(
-					testPKICertRevocation(intermediatePath, &store),
+					testPKICertRevocation(intermediatePath, store),
 				),
 			},
 		},
@@ -212,7 +194,7 @@ resource "vault_pki_secret_backend_cert" "test" {
 func TestPkiSecretBackendCert_renew(t *testing.T) {
 	path := "pki-root-" + strconv.Itoa(acctest.RandInt())
 
-	var store testPKICertStore
+	store := &testPKICertStore{}
 
 	resourceName := "vault_pki_secret_backend_cert.test"
 	checks := []resource.TestCheckFunc{
@@ -234,18 +216,18 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 				Config: testPkiSecretBackendCertConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
-						testCapturePKICert(resourceName, &store),
+						testCapturePKICert(resourceName, store),
 					)...,
 				),
 			},
 			{
 				// test renewal based on cert expiry
-				PreConfig: testWaitCertExpiry(&store),
+				PreConfig: testWaitCertExpiry(store),
 				Config:    testPkiSecretBackendCertConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
-						testPKICertReIssued(resourceName, &store),
-						testCapturePKICert(resourceName, &store),
+						testPKICertReIssued(resourceName, store),
+						testCapturePKICert(resourceName, store),
 					)...,
 				),
 			},
@@ -260,7 +242,7 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 				Config: testPkiSecretBackendCertConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
-						testPKICertReIssued(resourceName, &store),
+						testPKICertReIssued(resourceName, store),
 					)...,
 				),
 			},

@@ -17,15 +17,20 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 		Create: pkiSecretBackendRootSignIntermediateCreate,
 		Read:   pkiSecretBackendRootSignIntermediateRead,
 		Update: pkiSecretBackendRootSignIntermediateUpdate,
-		Delete: pkiSecretBackendRootSignIntermediateDelete,
+		Delete: pkiSecretBackendCertDelete,
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
 				Type:    pkiSecretRootSignIntermediateRV0().CoreConfigSchema().ImpliedType(),
 				Upgrade: pkiSecretRootSignIntermediateRUpgradeV0,
 			},
+			{
+				Version: 1,
+				Type:    pkiSecretSerialNumberResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: pkiSecretSerialNumberUpgradeV0,
+			},
 		},
-		SchemaVersion: 1,
+		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"backend": {
 				Type:        schema.TypeString,
@@ -66,7 +71,7 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 			"uri_sans": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "List of alterative URIs.",
+				Description: "List of alternative URIs.",
 				ForceNew:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -194,7 +199,19 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 			"serial": {
 				Type:        schema.TypeString,
 				Computed:    true,
+				Deprecated:  "Use serial_number instead",
 				Description: "The serial number.",
+			},
+			"serial_number": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The certificate's serial number, hex formatted.",
+			},
+			"revoke": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Revoke the certificate upon resource destruction.",
 			},
 		},
 	}
@@ -286,6 +303,7 @@ func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta int
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("issuing_ca", resp.Data["issuing_ca"])
 	d.Set("serial", resp.Data["serial_number"])
+	d.Set("serial_number", resp.Data["serial_number"])
 
 	if err := setCAChain(d, resp); err != nil {
 		return err

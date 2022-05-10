@@ -20,7 +20,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
 
-	var store testPKICertStore
+	store := &testPKICertStore{}
 
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, "backend", path),
@@ -49,7 +49,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
-						testCapturePKICert(resourceName, &store),
+						testCapturePKICert(resourceName, store),
 					)...,
 				),
 			},
@@ -64,8 +64,8 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
-						testPKICertReIssued(resourceName, &store),
-						testCapturePKICert(resourceName, &store),
+						testPKICertReIssued(resourceName, store),
+						testCapturePKICert(resourceName, store),
 					)...,
 				),
 			},
@@ -94,7 +94,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
-						testPKICertReIssued(resourceName, &store),
+						testPKICertReIssued(resourceName, store),
 					)...,
 				),
 			},
@@ -156,7 +156,7 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 	return config
 }
 
-func Test_pkiSecretBackendRootCertUpgradeV0(t *testing.T) {
+func Test_pkiSecretSerialNumberUpgradeV0(t *testing.T) {
 	tests := []struct {
 		name     string
 		rawState map[string]interface{}
@@ -176,16 +176,16 @@ func Test_pkiSecretBackendRootCertUpgradeV0(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := pkiSecretBackendRootCertUpgradeV0(nil, tt.rawState, nil)
+			got, err := pkiSecretSerialNumberUpgradeV0(nil, tt.rawState, nil)
 
 			if tt.wantErr {
 				if err == nil {
-					t.Fatalf("pkiSecretBackendRootCertUpgradeV0() error = %#v, wantErr %#v", err, tt.wantErr)
+					t.Fatalf("pkiSecretSerialNumberUpgradeV0() error = %#v, wantErr %#v", err, tt.wantErr)
 				}
 			}
 
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("pkiSecretBackendRootCertUpgradeV0() got = %#v, want %#v", got, tt.want)
+				t.Errorf("pkiSecretSerialNumberUpgradeV0() got = %#v, want %#v", got, tt.want)
 			}
 		})
 	}
