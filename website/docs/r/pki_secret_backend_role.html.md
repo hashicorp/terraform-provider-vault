@@ -40,9 +40,9 @@ The following arguments are supported:
 
 * `name` - (Required) The name to identify this role within the backend. Must be unique within the backend.
 
-* `ttl` - (Optional) The TTL
+* `ttl` - (Optional, integer) The TTL, in seconds, for any certificate issued against this role.
 
-* `max_ttl` - (Optional) The maximum TTL
+* `max_ttl` - (Optional, integer) The maximum lease TTL, in seconds, for the role.
 
 * `allow_localhost` - (Optional) Flag to allow certificates for localhost
 
