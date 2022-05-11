@@ -55,7 +55,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 			{
 				// test unmounted backend
 				PreConfig: func() {
-					client := testProvider.Meta().(*api.Client)
+					client := testProvider.Meta().(*ProviderMeta).GetClient()
 					if err := client.Sys().Unmount(path); err != nil {
 						t.Fatal(err)
 					}
@@ -71,7 +71,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 			{
 				// test out of band update to the root CA
 				PreConfig: func() {
-					client := testProvider.Meta().(*api.Client)
+					client := testProvider.Meta().(*ProviderMeta).GetClient()
 					_, err := client.Logical().Delete(fmt.Sprintf("%s/root", path))
 					if err != nil {
 						t.Fatal(err)
