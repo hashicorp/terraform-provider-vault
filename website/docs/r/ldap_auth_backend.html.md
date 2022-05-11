@@ -56,6 +56,8 @@ The following arguments are supported:
 
 * `userattr` - (Optional) Attribute on user object matching username passed in
 
+* `userfilter` - (Optional) LDAP user search filter
+
 * `upndomain` - (Optional) The userPrincipalDomain used to construct UPN string
 
 * `discoverdn`: (Optional) Use anonymous bind to discover the bind DN of a user.
@@ -108,12 +110,8 @@ These arguments are common across several Authentication Token resources since V
 * `token_no_default_policy` - (Optional) If set, the default policy will not be set on
   generated tokens; otherwise it will be added to the policies set in token_policies.
 
-* `token_num_uses` - (Optional) The number of times issued tokens can be used.
-  A value of 0 means unlimited uses.
-
-* `token_num_uses` - (Optional) The
-  [period](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
-  if any, in number of seconds to set on the token.
+* `token_num_uses` - (Optional) The [maximum number](https://www.vaultproject.io/api-docs/ldap#token_num_uses)
+   of times a generated token may be used (within its lifetime); 0 means unlimited.
 
 * `token_type` - (Optional) The type of token that should be generated. Can be `service`,
   `batch`, or `default` to use the mount's tuned default (which unless changed will be

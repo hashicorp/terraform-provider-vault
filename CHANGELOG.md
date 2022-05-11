@@ -1,3 +1,47 @@
+## 3.6.0 (Unreleased)
+IMPROVEMENTS:
+* `resource/pki_secret_backend_root_cert`: Force new root CA resource creation on out-of-band changes.  
+  ([#1428](https://github.com/hashicorp/terraform-provider-vault/pull/1428))
+
+BUGS:
+* `resource/pki_secret_backend_root_sign_intermediate`: Ensure that the `certificate_bundle`, and `ca_chain` 
+  do not contain duplicate certificates.  
+  ([#1428](https://github.com/hashicorp/terraform-provider-vault/pull/1428))
+* `resource/identity_entity_alias`: Serialize create, update, and delete operations in order to prevent alias 
+  mismatches.
+  ([#1429](https://github.com/hashicorp/terraform-provider-vault/pull/1429))
+* `database_secret*`: Ignore mongodb-atlas `private_key` on read from Vault.
+  mismatches.  
+  ([#1436](https://github.com/hashicorp/terraform-provider-vault/issues/1436))
+* `resource/auth_backend`: Remove `ForceNew` behavior when updating `description`
+  ([#1439](https://github.com/hashicorp/terraform-provider-vault/pull/1439))
+
+## 3.5.0 (April 20, 2022)
+FEATURES:
+* Add MFA support: new resources `vault_mfa_okta`, `vault_mfa_totp`, `vault_mfa_pingid` ([#1395](https://github.com/hashicorp/terraform-provider-vault/pull/1395))
+* *New* `resource/database_secrets_mount`: Configures any number of database secrets engines under 
+ a single, dedicated mount resource
+ ([#1400](https://github.com/terraform-providers/terraform-provider-vault/pull/1400))
+
+IMPROVEMENTS:
+* `data/vault_generic_secret`: Add new field `with_lease_start_time` to `vault_generic_secret` datasource 
+  ([#1414](https://github.com/hashicorp/terraform-provider-vault/pull/1414))
+* `resource/vault_ssh_secret_backend_role`: support configuring multiple public SSH key lengths in vault-1.10+
+  ([#1413](https://github.com/terraform-providers/terraform-provider-vault/pull/1413))
+* `resource/database_secret*`: Add support for configuring TLS, and the `username_template` field for the ElasticSearch.  
+* `resource/pki_secret_backend_cert`: Add support for optionally revoking the certificate upon resource destruction.
+  ([#1411](https://github.com/terraform-providers/terraform-provider-vault/pull/1411))
+* `provider`: Add support for setting the `tls_server_name` to use as the SNI host when connecting via TLS.
+  ([#1145](https://github.com/terraform-providers/terraform-provider-vault/pull/1145)
+* `docs`: Add links to Learn Tutorials.
+  ([#1399](https://github.com/terraform-providers/terraform-provider-vault/pull/1399))
+ 
+BUGS:
+* `resource/identity_group`: Fix issue where the group's `member_entity_ids` were being unset in error on update.
+  ([#1409](https://github.com/terraform-providers/terraform-provider-vault/pull/1409))
+* `resource/transit_secret_backend_key`: Add `auto_rotate_period` field which deprecates `auto_rotate_interval`.
+  ([#1402](https://github.com/hashicorp/terraform-provider-vault/pull/1402))
+
 ## 3.4.1 (March 31, 2022)
 BUGS:
 * `data/azure_access_credentials`: Fix panic when `tenant_id` and `subscription_id` are specified together; add new `environment` override field

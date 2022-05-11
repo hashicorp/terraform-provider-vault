@@ -72,6 +72,11 @@ func ldapAuthBackendResource() *schema.Resource {
 				return strings.ToLower(v.(string))
 			},
 		},
+		"userfilter": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Computed: true,
+		},
 		"discoverdn": {
 			Type:     schema.TypeBool,
 			Optional: true,
@@ -246,6 +251,10 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["userattr"] = v.(string)
 	}
 
+	if v, ok := d.GetOk("userfilter"); ok {
+		data["userfilter"] = v.(string)
+	}
+
 	if v, ok := d.GetOkExists("discoverdn"); ok {
 		data["discoverdn"] = v.(bool)
 	}
@@ -347,6 +356,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("case_sensitive_names", resp.Data["case_sensitive_names"])
 	d.Set("userdn", resp.Data["userdn"])
 	d.Set("userattr", resp.Data["userattr"])
+	d.Set("userfilter", resp.Data["userfilter"])
 	d.Set("discoverdn", resp.Data["discoverdn"])
 	d.Set("deny_null_bind", resp.Data["deny_null_bind"])
 	d.Set("upndomain", resp.Data["upndomain"])

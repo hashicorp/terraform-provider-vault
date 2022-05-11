@@ -109,9 +109,10 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	err := clientConfig.ConfigureTLS(&api.TLSConfig{
-		CACert:   d.Get("ca_cert_file").(string),
-		CAPath:   d.Get("ca_cert_dir").(string),
-		Insecure: d.Get("skip_tls_verify").(bool),
+		CACert:        d.Get("ca_cert_file").(string),
+		CAPath:        d.Get("ca_cert_dir").(string),
+		Insecure:      d.Get("skip_tls_verify").(bool),
+		TLSServerName: d.Get("tls_server_name").(string),
 
 		ClientCert: clientAuthCert,
 		ClientKey:  clientAuthKey,

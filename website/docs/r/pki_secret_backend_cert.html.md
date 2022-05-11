@@ -84,5 +84,3 @@ In addition to the fields above, the following attributes are exported:
 * `serial_number` - The serial number
 
 * `expiration` - The expiration date of the certificate in unix epoch format
- 
-* `revoke` - Boolean value denoting whether the certificate will be revoked on resource destruction.

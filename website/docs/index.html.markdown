@@ -142,6 +142,9 @@ variables in order to keep credential information out of the configuration.
   that Terraform can be tricked into writing secrets to a server controlled
   by an intruder. May be set via the `VAULT_SKIP_VERIFY` environment variable.
 
+* `tls_server_name` - (Optional) Name to use as the SNI host when connecting
+  via TLS. May be set via the `VAULT_TLS_SERVER_NAME` environment variable.
+
 * `skip_child_token` - (Optional) Set this to `true` to disable
   creation of an intermediate ephemeral Vault token for Terraform to
   use. Enabling this is strongly discouraged since it increases

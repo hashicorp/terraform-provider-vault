@@ -192,6 +192,7 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 			"binddn":               "binddn",
 			"userdn":               "userdn",
 			"userattr":             "userattr",
+			"userfilter":           "userfilter",
 			"discoverdn":           "discoverdn",
 			"deny_null_bind":       "deny_null_bind",
 			"upndomain":            "upndomain",
@@ -282,7 +283,7 @@ resource "vault_ldap_auth_backend" "test" {
     discoverdn             = false
     deny_null_bind         = true
     description            = "example"
-
+	userfilter             = "({{.UserAttr}}={{.Username}})"
     use_token_groups = %s
 }
 `, path, local, use_token_groups)

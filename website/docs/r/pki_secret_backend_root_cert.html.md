@@ -93,8 +93,10 @@ The following arguments are supported:
 
 In addition to the fields above, the following attributes are exported:
 
-* `certificate` - The certificate
+* `certificate` - The certificate.
 
-* `issuing_ca` - The issuing CA
+* `issuing_ca` - The issuing CA certificate.
 
-* `serial` - The serial
+* `serial` - Deprecated, use `serial_number` instead.
+ 
+* `serial_number` - The certificate's serial number, hex formatted.

@@ -28,19 +28,19 @@ resource "vault_aws_auth_backend_client" "example" {
 }
 
 resource "vault_aws_auth_backend_role" "example" {
-  backend                        = vault_auth_backend.aws.path
-  role                           = "test-role"
-  auth_type                      = "ec2"
-  bound_ami_id                   = "ami-8c1be5f6"
-  bound_account_id               = "123456789012"
-  bound_vpc_id                   = "vpc-b61106d4"
-  bound_subnet_id                = "vpc-133128f1"
-  bound_iam_instance_profile_arn = "arn:aws:iam::123456789012:instance-profile/MyProfile"
-  ttl                            = 60
-  max_ttl                        = 120
-  token_policies                 = ["default", "dev", "prod"]
+  backend                         = vault_auth_backend.aws.path
+  role                            = "test-role"
+  auth_type                       = "ec2"
+  bound_ami_id                    = "ami-8c1be5f6"
+  bound_account_id                = "123456789012"
+  bound_vpc_id                    = "vpc-b61106d4"
+  bound_subnet_id                 = "vpc-133128f1"
+  bound_iam_instance_profile_arns = ["arn:aws:iam::123456789012:instance-profile/MyProfile"]
+  ttl                             = 60
+  max_ttl                         = 120
+  token_policies                  = ["default", "dev", "prod"]
 
-  depends_on                     = ["vault_aws_auth_backend_client.example"]
+  depends_on                      = ["vault_aws_auth_backend_client.example"]
 }
 
 resource "vault_aws_auth_backend_login" "example" {

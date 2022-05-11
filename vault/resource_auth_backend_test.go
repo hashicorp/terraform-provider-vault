@@ -14,6 +14,8 @@ import (
 
 func TestResourceAuth(t *testing.T) {
 	path := "github-" + acctest.RandString(10)
+
+	resourceName := "vault_auth_backend.test"
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
@@ -23,8 +25,12 @@ func TestResourceAuth(t *testing.T) {
 				Check:  testResourceAuth_initialCheck(path),
 			},
 			{
-				Config: testResourceAuth_updateConfig,
-				Check:  testResourceAuth_updateCheck,
+				Config: testResourceAuth_updatedConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", "Test auth backend updated"),
+					resource.TestCheckResourceAttr(resourceName, "type", "github"),
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+				),
 			},
 		},
 	})
@@ -59,7 +65,17 @@ resource "vault_auth_backend" "test" {
 	description = "Test auth backend"
 	type 		= "github"
 	path 		= "%s"
-	local = true
+	local 		= true
+}`, path)
+}
+
+func testResourceAuth_updatedConfig(path string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "test" {
+	description = "Test auth backend updated"
+	type 		= "github"
+	path 		= "%s"
+	local 		= true
 }`, path)
 }
 
@@ -127,14 +143,6 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 		return nil
 	}
 }
-
-var testResourceAuth_updateConfig = `
-
-resource "vault_auth_backend" "test" {
-	type = "ldap"
-}
-
-`
 
 func testResourceAuth_updateCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["vault_auth_backend.test"]

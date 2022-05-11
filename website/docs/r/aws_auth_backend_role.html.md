@@ -161,9 +161,8 @@ These arguments are common across several Authentication Token resources since V
 * `token_no_default_policy` - (Optional) If set, the default policy will not be set on
   generated tokens; otherwise it will be added to the policies set in token_policies.
 
-* `token_num_uses` - (Optional) The
-  [period](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
-  if any, in number of seconds to set on the token.
+* `token_num_uses` - (Optional) The [maximum number](https://www.vaultproject.io/api-docs/auth/aws#token_num_uses)
+   of times a generated token may be used (within its lifetime); 0 means unlimited.
 
 * `token_type` - (Optional) The type of token that should be generated. Can be `service`,
   `batch`, or `default` to use the mount's tuned default (which unless changed will be
@@ -173,7 +172,7 @@ These arguments are common across several Authentication Token resources since V
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+* `role_id` - The Vault generated role ID.
 
 ## Import
 
