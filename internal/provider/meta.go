@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -15,10 +16,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/api/auth/azure"
 	"github.com/hashicorp/vault/command/config"
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+)
+
+const (
+	// provider methods for auth_login
+	providerMethodAWS   = "aws"
+	providerMethodAzure = "azure"
 )
 
 var MaxHTTPRetriesCCC int
@@ -180,16 +188,18 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 
 	if len(authLoginI) == 1 {
 		authLogin := authLoginI[0].(map[string]interface{})
-		authLoginPath := authLogin[consts.FieldPath].(string)
+		authLoginPath := authLogin["path"].(string)
 		authLoginNamespace := ""
-		if authLoginNamespaceI, ok := authLogin[consts.FieldNamespace]; ok {
+		if authLoginNamespaceI, ok := authLogin["namespace"]; ok {
 			authLoginNamespace = authLoginNamespaceI.(string)
 			client.SetNamespace(authLoginNamespace)
 		}
-		authLoginParameters := authLogin[consts.FieldParameters].(map[string]interface{})
+		authLoginParameters := authLogin["parameters"].(map[string]interface{})
 
-		method := authLogin[consts.FieldMethod].(string)
-		if method == "aws" {
+		method := authLogin["method"].(string)
+		var secret *api.Secret
+		switch method {
+		case providerMethodAWS:
 			logger := hclog.Default()
 			if logging.IsDebugOrHigher() {
 				logger.SetLevel(hclog.Debug)
@@ -199,13 +209,24 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 			if err := signAWSLogin(authLoginParameters, logger); err != nil {
 				return nil, fmt.Errorf("error signing AWS login request: %s", err)
 			}
-		}
-
-		secret, err := client.Logical().Write(authLoginPath, authLoginParameters)
-		if err != nil {
-			return nil, err
+			secret, err = client.Logical().Write(authLoginPath, authLoginParameters)
+			if err != nil {
+				return nil, err
+			}
+		case providerMethodAzure:
+			azureAuth, err := singInAzure(authLoginParameters)
+			if err != nil {
+				return nil, fmt.Errorf("unable to generate Azure signin data. err=%w", err)
+			}
+			secret, err = azureAuth.Login(context.TODO(), client)
+			if err != nil {
+				return nil, fmt.Errorf("unable to login onto azure with generated logindata. err=%w", err)
+			}
+		default:
+			return nil, fmt.Errorf("provider %s no handled. Only \"%s\" and \"%s\" are currently supported", providerMethodAWS, providerMethodAzure)
 		}
 		token = secret.Auth.ClientToken
+
 	}
 	if token != "" {
 		client.SetToken(token)
@@ -372,6 +393,28 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 	parameters["iam_request_body"] = loginData["iam_request_body"]
 
 	return nil
+}
+
+func singInAzure(authLoginParameters map[string]interface{}) (*azure.AzureAuth, error) {
+	var role, resource string
+	if val, ok := authLoginParameters["role"].(string); ok {
+		role = val
+	}
+	if val, ok := authLoginParameters["resource"].(string); ok {
+		resource = val
+	} else {
+		// default resource in vault azure auth package has an extra trailing slash.
+		//`"https://management.azure.com/"` instead of `"https://management.azure.com"`
+		// Here, if not specified in the provider method options, we define a correct default value
+		resource = "https://management.azure.com"
+	}
+	loginOpts := []azure.LoginOption{azure.WithResource(resource)}
+	azureLogin, err := azure.NewAzureAuth(role, loginOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("unable to generate azure login data. err=%w", err)
+	}
+
+	return azureLogin, nil
 }
 
 func GetToken(d *schema.ResourceData) (string, error) {

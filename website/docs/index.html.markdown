@@ -198,7 +198,7 @@ The `auth_login` configuration block accepts the following arguments:
 
 * `method` - (Optional) When configured, will enable auth method specific operations.
   For example, when set to `aws`, the provider will automatically sign login requests
-  for AWS authentication. Valid values include: `aws`.
+  for AWS authentication. Valid values include: `aws` and `azure`.
 
 * `parameters` - (Optional) A map of key-value parameters to send when authenticating
   against the auth backend. Refer to [Vault API documentation](https://www.vaultproject.io/api-docs/auth) for a particular auth method
@@ -322,6 +322,24 @@ provider "vault" {
     parameters = {
       role = "dev-role-iam"
       header_value = "vault.example.com"
+    }
+  }
+}
+```
+
+### Example `auth_login` With Azure Signing
+
+Sign AWS metadata for instance profile login requests:
+
+```hcl
+provider "vault" {
+  address = "http://127.0.0.1:8200"
+  auth_login {
+    path = "auth/azure/login"
+    method = "azure"
+    parameters = {
+      role     = "dev-role-azure"
+      resource = "https://management.azure.com"
     }
   }
 }
