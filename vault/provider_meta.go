@@ -234,8 +234,8 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 
 // GetClient is meant to be called from a schema.Resource function.
 // It ensures that the returned api.Client's matches the resource's configured
-// namespace. The value for the namespace is resolved from schema.ResourceData,
-// or terraform.InstanceState.
+// namespace. The value for the namespace is resolved from *schema.ResourceData,
+// *schema.ResourceDiff, or *terraform.InstanceState.
 func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	p, ok := meta.(*ProviderMeta)
 	if !ok {
@@ -248,10 +248,14 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 		if v, ok := v.GetOk(consts.FieldNamespace); ok {
 			ns = v.(string)
 		}
+	case *schema.ResourceDiff:
+		if v, ok := v.GetOk(consts.FieldNamespace); ok {
+			ns = v.(string)
+		}
 	case *terraform.InstanceState:
 		ns = v.Attributes[consts.FieldNamespace]
 	default:
-		return nil, fmt.Errorf("unsupported type %T", v)
+		return nil, fmt.Errorf("GetClient() called with unsupported type %T", v)
 	}
 
 	if ns != "" {
@@ -372,7 +376,9 @@ func providerToken(d *schema.ResourceData) (string, error) {
 					os.Unsetenv("VAULT_ADDR")
 				}()
 			}
-			os.Setenv("VAULT_ADDR", addr)
+			if err := os.Setenv("VAULT_ADDR", addr); err != nil {
+				return "", err
+			}
 		}
 	}
 
