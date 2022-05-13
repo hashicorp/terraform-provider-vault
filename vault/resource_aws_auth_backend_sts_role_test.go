@@ -40,6 +40,7 @@ func TestAccAWSAuthBackendSTSRole_basic(t *testing.T) {
 	accountID := strconv.Itoa(acctest.RandInt())
 	arn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
 	updatedArn := acctest.RandomWithPrefix("arn:aws:iam::" + accountID + ":role/test-role")
+	updatedaccountID := strconv.Itoa(acctest.RandInt())
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
@@ -52,6 +53,10 @@ func TestAccAWSAuthBackendSTSRole_basic(t *testing.T) {
 			{
 				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, accountID, updatedArn),
 				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, updatedArn),
+			},
+			{
+				Config: testAccAWSAuthBackendSTSRoleConfig_basic(backend, updatedaccountID, arn),
+				Check:  testAccAWSAuthBackendSTSRoleCheck_attrs(backend, updatedaccountID, arn),
 			},
 		},
 	})

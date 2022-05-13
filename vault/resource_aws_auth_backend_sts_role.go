@@ -31,6 +31,7 @@ func awsAuthBackendSTSRoleResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "AWS account ID to be associated with STS role.",
+				ForceNew:    true,
 			},
 			"sts_role": {
 				Type:        schema.TypeString,
