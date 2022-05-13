@@ -50,7 +50,8 @@ func TestAccAppRoleAuthBackendRole_import(t *testing.T) {
 				ResourceName:      "vault_approle_auth_backend_role.role",
 				ImportState:       true,
 				ImportStateVerify: true,
-				// ImportStateVerifyIgnore: []string{"token_bound_cidrs"},
+				// TODO: once we fully enforce that the values are in CIDR notation then we can drop this ignore.
+				ImportStateVerifyIgnore: []string{TokenFieldBoundCIDRs},
 			},
 		},
 	})
@@ -355,7 +356,7 @@ resource "vault_approle_auth_backend_role" "role" {
 }
 
 func testAccAppRoleAuthBackendRoleConfig_full(backend, role, roleID string) string {
-	return fmt.Sprintf(`
+	config := fmt.Sprintf(`
 resource "vault_auth_backend" "approle" {
   type = "approle"
   path = "%s"
@@ -374,7 +375,10 @@ resource "vault_approle_auth_backend_role" "role" {
   token_ttl = 3600
   token_max_ttl = 7200
   token_bound_cidrs = ["10.148.1.1/32", "10.150.0.0/20", "10.150.2.1", "::1/128"]
-}`, backend, role, roleID)
+}
+`, backend, role, roleID)
+
+	return config
 }
 
 func testAccAppRoleAuthBackendRoleConfig_fullUpdate(backend, role, roleID string) string {
