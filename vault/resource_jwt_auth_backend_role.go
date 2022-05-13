@@ -1,11 +1,13 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -133,20 +135,18 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
-		Create: jwtAuthBackendRoleCreate,
-		Read:   jwtAuthBackendRoleRead,
-		Update: jwtAuthBackendRoleUpdate,
-		Delete: jwtAuthBackendRoleDelete,
-		Exists: jwtAuthBackendRoleExists,
+		CreateContext: jwtAuthBackendRoleCreate,
+		ReadContext:   jwtAuthBackendRoleRead,
+		UpdateContext: jwtAuthBackendRoleUpdate,
+		DeleteContext: jwtAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
-
 		Schema: fields,
 	}
 }
 
-func jwtAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
+func jwtAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
@@ -157,7 +157,7 @@ func jwtAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	data := jwtAuthBackendRoleDataToWrite(d, true)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error writing JWT auth backend role %q: %s", path, err)
+		return diag.Errorf("error writing JWT auth backend role %q: %s", path, err)
 	}
 	d.SetId(path)
 	log.Printf("[DEBUG] Wrote JWT auth backend role %q", path)
@@ -168,32 +168,32 @@ func jwtAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 			"role_id": v.(string),
 		})
 		if err != nil {
-			return fmt.Errorf("error writing JWT auth backend role %q's RoleID: %s", path, err)
+			return diag.Errorf("error writing JWT auth backend role %q's RoleID: %s", path, err)
 		}
 		log.Printf("[DEBUG] Wrote JWT auth backend role %q RoleID", path)
 	}
 
-	return jwtAuthBackendRoleRead(d, meta)
+	return jwtAuthBackendRoleRead(ctx, d, meta)
 }
 
-func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
+func jwtAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
 	backend, err := jwtAuthBackendRoleBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for JWT auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for JWT auth backend role: %s", path, err)
 	}
 
 	role, err := jwtAuthBackendRoleNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for JWT auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for JWT auth backend role: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading JWT auth backend role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading JWT auth backend role %q: %s", path, err)
+		return diag.Errorf("error reading JWT auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read JWT auth backend role %q", path)
 	if resp == nil {
@@ -202,13 +202,15 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	readTokenFields(d, resp)
+	if err := readTokenFields(d, resp); err != nil {
+		return diag.FromErr(err)
+	}
 
 	if resp.Data["bound_audiences"] != nil {
 		boundAuds := util.JsonStringArrayToStringArray(resp.Data["bound_audiences"].([]interface{}))
 		err = d.Set("bound_audiences", boundAuds)
 		if err != nil {
-			return fmt.Errorf("error setting bound_audiences in state: %s", err)
+			return diag.Errorf("error setting bound_audiences in state: %s", err)
 		}
 	} else {
 		d.Set("bound_audiences", make([]string, 0))
@@ -220,7 +222,7 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		allowedRedirectUris := util.JsonStringArrayToStringArray(resp.Data["allowed_redirect_uris"].([]interface{}))
 		err = d.Set("allowed_redirect_uris", allowedRedirectUris)
 		if err != nil {
-			return fmt.Errorf("error setting allowed_redirect_uris in state: %s", err)
+			return diag.Errorf("error setting allowed_redirect_uris in state: %s", err)
 		}
 	}
 
@@ -231,7 +233,7 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		cidrs := util.JsonStringArrayToStringArray(resp.Data["oidc_scopes"].([]interface{}))
 		err = d.Set("oidc_scopes", cidrs)
 		if err != nil {
-			return fmt.Errorf("error setting oidc_scopes in state: %s", err)
+			return diag.Errorf("error setting oidc_scopes in state: %s", err)
 		}
 	} else {
 		d.Set("oidc_scopes", make([]string, 0))
@@ -251,7 +253,7 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 			case string:
 				boundClaims[k] = boundClaimVal
 			default:
-				return fmt.Errorf("bound claim is not a string or list: %v", v)
+				return diag.Errorf("bound claim is not a string or list: %v", v)
 			}
 		}
 		d.Set("bound_claims", boundClaims)
@@ -279,10 +281,12 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("backend", backend)
 	d.Set("role_name", role)
 
-	return nil
+	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
+
+	return diags
 }
 
-func jwtAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
+func jwtAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
@@ -293,7 +297,7 @@ func jwtAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	d.SetId(path)
 
 	if err != nil {
-		return fmt.Errorf("error updating JWT auth backend role %q: %s", path, err)
+		return diag.Errorf("error updating JWT auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated JWT auth backend role %q", path)
 
@@ -303,23 +307,22 @@ func jwtAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 			"role_id": d.Get("role_id").(string),
 		})
 		if err != nil {
-			return fmt.Errorf("error updating JWT auth backend role %q's RoleID: %s", path, err)
+			return diag.Errorf("error updating JWT auth backend role %q's RoleID: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated JWT auth backend role %q RoleID", path)
 	}
 
-	return jwtAuthBackendRoleRead(d, meta)
-
+	return jwtAuthBackendRoleRead(ctx, d, meta)
 }
 
-func jwtAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func jwtAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting JWT auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil && !util.Is404(err) {
-		return fmt.Errorf("error deleting JWT auth backend role %q", path)
+		return diag.Errorf("error deleting JWT auth backend role %q", path)
 	} else if err != nil {
 		log.Printf("[DEBUG] JWT auth backend role %q not found, removing from state", path)
 		d.SetId("")
@@ -328,21 +331,6 @@ func jwtAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleted JWT auth backend role %q", path)
 
 	return nil
-}
-
-func jwtAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if JWT auth backend role %q exists", path)
-
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if JWT auth backend role %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if JWT auth backend role %q exists", path)
-
-	return resp != nil, nil
 }
 
 func jwtAuthBackendRolePath(backend, role string) string {
