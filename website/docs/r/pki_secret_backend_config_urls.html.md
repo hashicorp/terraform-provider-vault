@@ -47,7 +47,7 @@ No additional attributes are exported by this resource.
 
 ## Import
 
-The PKI config URLs can be imported using the resources `id`. 
+The PKI config URLs can be imported using the resource's `id`. 
 In the case of the example above the `id` would be `pki-root/config/urls`, 
 where the `pki-root` component is the resource's `backend`, e.g.
 
