@@ -22,6 +22,25 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 	crlDistributionPoints := "http://127.0.0.1:8200/v1/pki/crl"
 	ocspServers := "http://127.0.0.1:8200/v1/pki/oscp"
 
+	resourceName := "vault_pki_secret_backend_config_urls.test"
+	getChecks := func(i, c, o string) []resource.TestCheckFunc {
+		checks := []resource.TestCheckFunc{
+			resource.TestCheckResourceAttr(
+				resourceName, "issuing_certificates.#", "1"),
+			resource.TestCheckResourceAttr(
+				resourceName, "issuing_certificates.0", i),
+			resource.TestCheckResourceAttr(
+				resourceName, "crl_distribution_points.#", "1"),
+			resource.TestCheckResourceAttr(
+				resourceName, "crl_distribution_points.0", c),
+			resource.TestCheckResourceAttr(
+				resourceName, "ocsp_servers.#", "1"),
+			resource.TestCheckResourceAttr(
+				resourceName, "ocsp_servers.0", o),
+		}
+		return checks
+	}
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -29,15 +48,28 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				// Test that reading from an unconfigured mount succeeds
-				Config: testPkiSecretBackendCertConfigUrlsConfig_rootOnly(rootPath),
+				Config: testPkiSecretBackendCertConfigUrlsMountConfig(rootPath),
 				Check:  testPkiSecretBackendConfigUrlsEmptyRead,
 			},
 			{
-				Config: testPkiSecretBackendCertConfigUrlsConfig_basic(rootPath, issuingCertificates, crlDistributionPoints, ocspServers),
+				Config: testPkiSecretBackendCertConfigUrlsConfig(
+					rootPath, issuingCertificates, crlDistributionPoints, ocspServers),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_config_urls.test", "issuing_certificates.0", issuingCertificates),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_config_urls.test", "crl_distribution_points.0", crlDistributionPoints),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_config_urls.test", "ocsp_servers.0", ocspServers),
+					getChecks(issuingCertificates, crlDistributionPoints, ocspServers)...,
+				),
+			},
+			{
+				Config: testPkiSecretBackendCertConfigUrlsConfig(
+					rootPath, issuingCertificates, crlDistributionPoints, ocspServers),
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testPkiSecretBackendCertConfigUrlsConfig(
+					rootPath, issuingCertificates+"/new", crlDistributionPoints+"/new", ocspServers+"/new"),
+				Check: resource.ComposeTestCheckFunc(
+					getChecks(issuingCertificates+"/new", crlDistributionPoints+"/new", ocspServers+"/new")...,
 				),
 			},
 		},
@@ -97,37 +129,29 @@ func listPkiPaths(s *terraform.State) ([]string, error) {
 	return paths, nil
 }
 
-func testPkiSecretBackendCertConfigUrlsConfig_rootOnly(rootPath string) string {
+func testPkiSecretBackendCertConfigUrlsMountConfig(rootPath string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test-root" {
-  path = "%s"
-  type = "pki"
-  description = "test root"
-  default_lease_ttl_seconds = "8640000"
-  max_lease_ttl_seconds = "8640000"
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test root"
+  default_lease_ttl_seconds = 8640000
+  max_lease_ttl_seconds     = 8640000
 }
 `, rootPath)
 }
 
-func testPkiSecretBackendCertConfigUrlsConfig_basic(rootPath string, issuingCertificates string, crlDistributionPoints string, ocspServers string) string {
+func testPkiSecretBackendCertConfigUrlsConfig(rootPath string, issuingCertificates string, crlDistributionPoints string, ocspServers string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test-root" {
-  path = "%s"
-  type = "pki"
-  description = "test root"
-  default_lease_ttl_seconds = "8640000"
-  max_lease_ttl_seconds = "8640000"
-}
+%s
 
 resource "vault_pki_secret_backend_config_urls" "test" {
-  depends_on = [ "vault_mount.test-root" ]
-
-  backend = vault_mount.test-root.path
-
-  issuing_certificates = ["%s"]
+  backend                 = vault_mount.test-root.path
+  issuing_certificates    = ["%s"]
   crl_distribution_points = ["%s"]
-  ocsp_servers = ["%s"]
-} 
-
-`, rootPath, issuingCertificates, crlDistributionPoints, ocspServers)
+  ocsp_servers            = ["%s"]
+}
+`,
+		testPkiSecretBackendCertConfigUrlsMountConfig(rootPath),
+		issuingCertificates, crlDistributionPoints, ocspServers)
 }

@@ -1,20 +1,38 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func pkiSecretBackendConfigUrlsResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendConfigUrlsCreate,
+		Create: pkiSecretBackendConfigUrlsCreateUpdate,
 		Read:   pkiSecretBackendConfigUrlsRead,
-		Update: pkiSecretBackendConfigUrlsUpdate,
+		Update: pkiSecretBackendConfigUrlsCreateUpdate,
 		Delete: pkiSecretBackendConfigUrlsDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: func(_ context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+				id := d.Id()
+				if id == "" {
+					return nil, fmt.Errorf("no path set for import, id=%q", id)
+				}
+
+				parts := strings.Split(util.NormalizeMountPath(id), "/")
+				if err := d.Set("backend", parts[0]); err != nil {
+					return nil, err
+				}
+
+				return []*schema.ResourceData{d}, nil
+			},
+		},
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -44,31 +62,35 @@ func pkiSecretBackendConfigUrlsResource() *schema.Resource {
 	}
 }
 
-func pkiSecretBackendConfigUrlsCreate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendConfigUrlsCreateUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
 
 	path := pkiSecretBackendConfigUrlsPath(backend)
 
-	issuingCertificates := d.Get("issuing_certificates")
-	crlDistributionsPoints := d.Get("crl_distribution_points")
-	ocspServers := d.Get("ocsp_servers")
+	action := "Create"
+	if !d.IsNewResource() {
+		action = "Update"
+	}
 
 	data := map[string]interface{}{
-		"issuing_certificates":    issuingCertificates,
-		"crl_distribution_points": crlDistributionsPoints,
-		"ocsp_servers":            ocspServers,
+		"issuing_certificates":    d.Get("issuing_certificates"),
+		"crl_distribution_points": d.Get("crl_distribution_points"),
+		"ocsp_servers":            d.Get("ocsp_servers"),
 	}
 
-	log.Printf("[DEBUG] Creating URL config on PKI secret backend %q", backend)
+	log.Printf("[DEBUG] %s URL config on PKI secret backend %q", action, backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating URL config PKI secret backend %q: %s", backend, err)
+		return fmt.Errorf("error writing PKI URL config to %q: %w", backend, err)
 	}
-	log.Printf("[DEBUG] Created URL config on PKI secret backend %q", backend)
+	log.Printf("[DEBUG] %sd URL config on PKI secret backend %q", action, backend)
 
-	d.SetId(fmt.Sprintf("%s/config/urls", backend))
+	if d.IsNewResource() {
+		d.SetId(fmt.Sprintf("%s/config/urls", backend))
+	}
+
 	return pkiSecretBackendConfigUrlsRead(d, meta)
 }
 
@@ -76,11 +98,13 @@ func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) er
 	client := meta.(*api.Client)
 
 	path := d.Id()
-	backend := pkiSecretBackendConfigUrlsPath(path)
 
-	log.Printf("[DEBUG] Reading URL config from PKI secret backend %q", backend)
+	if path == "" {
+		return fmt.Errorf("no path set, id=%q", d.Id())
+	}
+
+	log.Printf("[DEBUG] Reading URL config from PKI secret path %q", path)
 	config, err := client.Logical().Read(path)
-
 	if err != nil {
 		return fmt.Errorf("error reading URL config on PKI secret backend %q: %s", path, err)
 	}
@@ -91,39 +115,18 @@ func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) er
 		return nil
 	}
 
-	d.Set("issuing_certificates", config.Data["issuing_certificates"])
-	d.Set("crl_distribution_points", config.Data["crl_distribution_points"])
-	d.Set("ocsp_servers", config.Data["ocsp_servers"])
+	fields := []string{
+		"issuing_certificates",
+		"crl_distribution_points",
+		"ocsp_servers",
+	}
+	for _, k := range fields {
+		if err := d.Set(k, config.Data[k]); err != nil {
+			return err
+		}
+	}
 
 	return nil
-}
-
-func pkiSecretBackendConfigUrlsUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
-	backend := d.Get("backend").(string)
-
-	path := pkiSecretBackendConfigUrlsPath(backend)
-
-	issuingCertificates := d.Get("issuing_certificates")
-	crlDistributionsPoints := d.Get("crl_distribution_points")
-	ocspServers := d.Get("ocsp_servers")
-
-	data := map[string]interface{}{
-		"issuing_certificates":    issuingCertificates,
-		"crl_distribution_points": crlDistributionsPoints,
-		"ocsp_servers":            ocspServers,
-	}
-
-	log.Printf("[DEBUG] Updating URL config on PKI secret backend %q", backend)
-	_, err := client.Logical().Write(path, data)
-	if err != nil {
-		return fmt.Errorf("error updating URL config for PKI secret backend %q: %s", backend, err)
-	}
-	log.Printf("[DEBUG] Updated URL config on PKI secret backend %q", backend)
-
-	return pkiSecretBackendConfigUrlsRead(d, meta)
-
 }
 
 func pkiSecretBackendConfigUrlsDelete(d *schema.ResourceData, meta interface{}) error {
