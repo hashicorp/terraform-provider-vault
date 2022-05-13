@@ -11,8 +11,10 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-var snapshotAutoPath = "sys/storage/raft/snapshot-auto/config/%s"
-var allowedStorageTypes = []string{"local", "azure-blob", "aws-s3", "google-gcs"}
+var (
+	snapshotAutoPath    = "sys/storage/raft/snapshot-auto/config/%s"
+	allowedStorageTypes = []string{"local", "azure-blob", "aws-s3", "google-gcs"}
+)
 
 func raftSnapshotAgentConfigResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
@@ -196,7 +198,6 @@ func buildConfigFromResourceData(d *schema.ResourceData) (map[string]interface{}
 		} else {
 			return nil, errors.New("specified local storage without setting local_max_space")
 		}
-
 	}
 
 	if storageType == "aws-s3" {
@@ -306,11 +307,12 @@ func readSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[DEBUG] Reading %q", configPath)
 
 	resp, err := client.Logical().Read(configPath)
-	if err != nil && util.Is404(err) {
+	if resp == nil || (err != nil && util.Is404(err)) {
 		log.Printf("[WARN] %q not found, removing from state", name)
 		d.SetId("")
 		return nil
-	} else if err != nil {
+	}
+	if err != nil {
 		return fmt.Errorf("error reading %q: %s", configPath, err)
 	}
 

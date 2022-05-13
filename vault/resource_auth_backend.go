@@ -43,7 +43,6 @@ func AuthBackendResource() *schema.Resource {
 
 			"description": {
 				Type:        schema.TypeString,
-				ForceNew:    true,
 				Optional:    true,
 				Description: "The description of the auth backend",
 			},
@@ -146,19 +145,33 @@ func authBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
 
+	backendType := d.Get("type").(string)
+	var input api.MountConfigInput
+	var callTune bool
+
 	if d.HasChange("tune") {
 		log.Printf("[INFO] Auth '%q' tune configuration changed", path)
+
 		if raw, ok := d.GetOk("tune"); ok {
-			backendType := d.Get("type")
 			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
 
-			err := authMountTune(client, "auth/"+path, raw)
-			if err != nil {
-				return nil
-			}
-
-			log.Printf("[INFO] Written %s auth tune to '%q'", backendType, path)
+			input = expandAuthMethodTune(raw.(*schema.Set).List())
 		}
+		callTune = true
+	}
+
+	if d.HasChange("description") && !d.IsNewResource() {
+		desc := d.Get("description").(string)
+		input.Description = &desc
+		callTune = true
+	}
+
+	if callTune {
+		if err := tuneMount(client, "auth/"+path, input); err != nil {
+			return err
+		}
+
+		log.Printf("[INFO] Written %s auth tune to '%q'", backendType, path)
 	}
 
 	return authBackendRead(d, meta)

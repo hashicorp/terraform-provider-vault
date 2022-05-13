@@ -291,7 +291,8 @@ func readTokenFieldsWithHandlers(d *schema.ResourceData, resp *api.Secret, handl
 }
 
 func setValueWithHandlers(d *schema.ResourceData, fieldMap map[string]interface{}, resp *api.Secret,
-	handlers map[string]fieldHandlerFunc) error {
+	handlers map[string]fieldHandlerFunc,
+) error {
 	for k, v := range fieldMap {
 		var err error
 		if f, ok := handlers[k]; ok {

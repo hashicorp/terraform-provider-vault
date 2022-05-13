@@ -85,6 +85,16 @@ func awsSecretBackendRoleResource(name string) *schema.Resource {
 				Computed:    true,
 				Description: "The max allowed TTL in seconds for STS credentials (credentials TTL are capped to max_sts_ttl). Valid only when credential_type is one of assumed_role or federation_token.",
 			},
+			"permissions_boundary_arn": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The ARN of the AWS Permissions Boundary to attach to IAM users created in the role. Valid only when credential_type is iam_user. If not specified, then no permissions boundary policy will be attached.",
+			},
+			"user_path": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The path for the user name. Valid only when credential_type is iam_user. Default is /",
+			},
 		},
 	}
 }
@@ -113,8 +123,20 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	credentialType := d.Get("credential_type").(string)
 
+	userPath := d.Get("user_path").(string)
+
+	permissionBoundaryArn := d.Get("permissions_boundary_arn").(string)
+
 	data := map[string]interface{}{
 		"credential_type": credentialType,
+	}
+	if d.HasChange("permissions_boundary_arn") {
+		if credentialType == "iam_user" {
+			data["permissions_boundary_arn"] = permissionBoundaryArn
+		} else {
+			return fmt.Errorf("permissions_boundary_arn is only valid when credential_type is iam_user")
+		}
+
 	}
 	if d.HasChange("policy_document") {
 		data["policy_document"] = policyDocument
@@ -127,6 +149,13 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	}
 	if d.HasChange("iam_groups") {
 		data["iam_groups"] = iamGroups
+	}
+	if d.HasChange("user_path") {
+		if credentialType == "iam_user" {
+			data["user_path"] = userPath
+		} else {
+			return fmt.Errorf("user_path is only valid when credential_type is iam_user")
+		}
 	}
 
 	defaultStsTTL, defaultStsTTLOk := d.GetOk("default_sts_ttl")
@@ -202,6 +231,13 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := secret.Data["iam_groups"]; ok {
 		d.Set("iam_groups", v)
 	}
+	if v, ok := secret.Data["permissions_boundary_arn"]; ok {
+		d.Set("permissions_boundary_arn", v)
+	}
+	if v, ok := secret.Data["user_path"]; ok {
+		d.Set("user_path", v)
+	}
+
 	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
 	d.Set("name", pathPieces[len(pathPieces)-1])
 	return nil

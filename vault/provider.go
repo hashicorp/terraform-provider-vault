@@ -157,6 +157,12 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", false),
 				Description: "Set this to true only if the target Vault server is an insecure development instance.",
 			},
+			"tls_server_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultTLSServerName, ""),
+				Description: "Name to use as the SNI host when connecting via TLS.",
+			},
 			"max_lease_ttl_seconds": {
 				Type:     schema.TypeInt,
 				Optional: true,
@@ -296,6 +302,18 @@ var (
 			Resource:      gcpAuthBackendRoleDataSource(),
 			PathInventory: []string{"/auth/gcp/role/{role_name}"},
 		},
+		"vault_identity_oidc_client_creds": {
+			Resource:      identityOIDCClientCredsDataSource(),
+			PathInventory: []string{"/identity/oidc/client/{name}"},
+		},
+		"vault_identity_oidc_public_keys": {
+			Resource:      identityOIDCPublicKeysDataSource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/keys"},
+		},
+		"vault_identity_oidc_openid_config": {
+			Resource:      identityOIDCOpenIDConfigDataSource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/openid-configuration"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
@@ -409,6 +427,10 @@ var (
 		"vault_consul_secret_backend_role": {
 			Resource:      consulSecretBackendRoleResource(),
 			PathInventory: []string{"/consul/roles/{name}"},
+		},
+		"vault_database_secrets_mount": {
+			Resource:      databaseSecretsMountResource(),
+			PathInventory: []string{"/database/config/{name}"},
 		},
 		"vault_database_secret_backend_connection": {
 			Resource:      databaseSecretBackendConnectionResource(),
@@ -535,6 +557,21 @@ var (
 		"vault_mfa_duo": {
 			Resource:       mfaDuoResource(),
 			PathInventory:  []string{"/sys/mfa/method/duo/{name}"},
+			EnterpriseOnly: true,
+		},
+		"vault_mfa_okta": {
+			Resource:       mfaOktaResource(),
+			PathInventory:  []string{"/sys/mfa/method/okta/{name}"},
+			EnterpriseOnly: true,
+		},
+		"vault_mfa_totp": {
+			Resource:       mfaTOTPResource(),
+			PathInventory:  []string{"/sys/mfa/method/totp/{name}"},
+			EnterpriseOnly: true,
+		},
+		"vault_mfa_pingid": {
+			Resource:       mfaPingIDResource(),
+			PathInventory:  []string{"/sys/mfa/method/totp/{name}"},
 			EnterpriseOnly: true,
 		},
 		"vault_mount": {
@@ -705,6 +742,22 @@ var (
 			Resource:      kmipSecretRoleResource(),
 			PathInventory: []string{"/kmip/scope/{scope}/role/{role}"},
 		},
+		"vault_identity_oidc_scope": {
+			Resource:      identityOIDCScopeResource(),
+			PathInventory: []string{"/identity/oidc/scope/{scope}"},
+		},
+		"vault_identity_oidc_assignment": {
+			Resource:      identityOIDCAssignmentResource(),
+			PathInventory: []string{"/identity/oidc/assignment/{name}"},
+		},
+		"vault_identity_oidc_client": {
+			Resource:      identityOIDCClientResource(),
+			PathInventory: []string{"/identity/oidc/client/{name}"},
+		},
+		"vault_identity_oidc_provider": {
+			Resource:      identityOIDCProviderResource(),
+			PathInventory: []string{"/identity/oidc/provider/{name}"},
+		},
 	}
 )
 
@@ -761,9 +814,10 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	err := clientConfig.ConfigureTLS(&api.TLSConfig{
-		CACert:   d.Get("ca_cert_file").(string),
-		CAPath:   d.Get("ca_cert_dir").(string),
-		Insecure: d.Get("skip_tls_verify").(bool),
+		CACert:        d.Get("ca_cert_file").(string),
+		CAPath:        d.Get("ca_cert_dir").(string),
+		Insecure:      d.Get("skip_tls_verify").(bool),
+		TLSServerName: d.Get("tls_server_name").(string),
 
 		ClientCert: clientAuthCert,
 		ClientKey:  clientAuthKey,

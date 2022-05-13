@@ -46,12 +46,6 @@ The following arguments are supported:
 
 * `format` - (Optional) The format of data
 
-* `private_key_format` - (Optional) The private key format
-
-* `key_type` - (Optional) The desired key type
-
-* `key_bits` - (Optional) The number of bits to use
-
 * `max_path_length` - (Optional) The maximum path length to encode in the generated certificate
 
 * `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs
@@ -74,6 +68,8 @@ The following arguments are supported:
 
 * `postal_code` - (Optional) The postal code
 
+* `revoke` - If set to `true`, the certificate will be revoked on resource destruction.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
@@ -86,5 +82,9 @@ In addition to the fields above, the following attributes are exported:
 
 * `certificate_bundle` - The concatenation of the intermediate CA and the issuing CA certificates (PEM encoded). 
   Requires the `format` to be set to any of: pem, pem_bundle. The value will be empty for all other formats.
+ 
+* `serial_number` - The certificate's serial number, hex formatted.
 
-* `serial` - The serial
+## Deprecations
+
+* `serial` - Use `serial_number` instead.

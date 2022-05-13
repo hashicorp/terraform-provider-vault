@@ -40,9 +40,9 @@ The following arguments are supported:
 
 * `name` - (Required) The name to identify this role within the backend. Must be unique within the backend.
 
-* `ttl` - (Optional) The TTL
+* `ttl` - (Optional, integer) The TTL, in seconds, for any certificate issued against this role.
 
-* `max_ttl` - (Optional) The maximum TTL
+* `max_ttl` - (Optional, integer) The maximum lease TTL, in seconds, for the role.
 
 * `allow_localhost` - (Optional) Flag to allow certificates for localhost
 
@@ -74,7 +74,8 @@ The following arguments are supported:
 
 * `email_protection_flag` - (Optional) Flag to specify certificates for email protection use
 
-* `key_type` - (Optional) The type of generated keys
+* `key_type` - (Optional) The generated key type, choices: `rsa`, `ec`, `ed25519`, `any`  
+  Defaults to `rsa`
 
 * `key_bits` - (Optional) The number of bits of generated keys
 
@@ -111,6 +112,8 @@ The following arguments are supported:
 * `basic_constraints_valid_for_non_ca` - (Optional) Flag to mark basic constraints valid when issuing non-CA certificates
 
 * `not_before_duration` - (Optional) Specifies the duration by which to backdate the NotBefore property.
+
+* `allowed_serial_numbers` - (Optional) An array of allowed serial numbers to put in Subject
 
 ## Attributes Reference
 

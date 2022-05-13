@@ -59,6 +59,8 @@ The following arguments are supported:
 * `min_seconds_remaining` - (Optional) Generate a new certificate when the expiration is within this number of seconds, default is 604800 (7 days)
 
 * `auto_renew` - (Optional) If set to `true`, certs will be renewed if the expiration is within `min_seconds_remaining`. Default `false`
+ 
+* `revoke` - If set to `true`, the certificate will be revoked on resource destruction. 
 
 ## Attributes Reference
 

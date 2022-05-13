@@ -8,10 +8,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
-
-const identityEntityPath = "/identity/entity"
 
 var errEntityNotFound = errors.New("entity not found")
 
@@ -112,7 +111,7 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 
 	name := d.Get("name").(string)
 
-	path := identityEntityPath
+	path := entity.RootEntityPath
 
 	data := map[string]interface{}{
 		"name": name,
@@ -148,7 +147,7 @@ func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityEntity %q", id)
-	path := identityEntityIDPath(id)
+	path := entity.JoinEntityID(id)
 
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
@@ -170,20 +169,20 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
 
+	log.Printf("[DEBUG] Read IdentityEntity %s", id)
 	resp, err := readIdentityEntity(client, id, d.IsNewResource())
 	if err != nil {
 		// We need to check if the secret_id has expired
-		if resp == nil && util.IsExpiredTokenErr(err) {
+		if util.IsExpiredTokenErr(err) {
 			return nil
 		}
-		return fmt.Errorf("error reading IdentityEntity %q: %s", id, err)
-	}
 
-	log.Printf("[DEBUG] Read IdentityEntity %s", id)
-	if resp == nil {
-		log.Printf("[WARN] IdentityEntity %q not found, removing from state", id)
-		d.SetId("")
-		return nil
+		if isIdentityNotFoundError(err) {
+			log.Printf("[WARN] IdentityEntity %q not found, removing from state", id)
+			d.SetId("")
+			return nil
+		}
+		return fmt.Errorf("error reading IdentityEntity %q: %w", id, err)
 	}
 
 	for _, k := range []string{"name", "metadata", "disabled", "policies"} {
@@ -198,7 +197,7 @@ func identityEntityDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	path := identityEntityIDPath(id)
+	path := entity.JoinEntityID(id)
 
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
@@ -217,7 +216,7 @@ func identityEntityExists(d *schema.ResourceData, meta interface{}) (bool, error
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	path := identityEntityIDPath(id)
+	path := entity.JoinEntityID(id)
 	key := id
 
 	// use the name if no ID is set
@@ -237,11 +236,7 @@ func identityEntityExists(d *schema.ResourceData, meta interface{}) (bool, error
 }
 
 func identityEntityNamePath(name string) string {
-	return fmt.Sprintf("%s/name/%s", identityEntityPath, name)
-}
-
-func identityEntityIDPath(id string) string {
-	return fmt.Sprintf("%s/id/%s", identityEntityPath, id)
+	return fmt.Sprintf("%s/name/%s", entity.RootEntityPath, name)
 }
 
 func readIdentityEntityPolicies(client *api.Client, entityID string) ([]interface{}, error) {
@@ -257,7 +252,7 @@ func readIdentityEntityPolicies(client *api.Client, entityID string) ([]interfac
 }
 
 func readIdentityEntity(client *api.Client, entityID string, retry bool) (*api.Secret, error) {
-	path := identityEntityIDPath(entityID)
+	path := entity.JoinEntityID(entityID)
 	log.Printf("[DEBUG] Reading Entity %q from %q", entityID, path)
 
 	return readEntity(client, path, retry)

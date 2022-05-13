@@ -167,6 +167,10 @@ Exactly one of the nested blocks of configuration options must be supplied.
   docs](https://www.vaultproject.io/api-docs/secret/databases/mongodb.html#sample-payload)
   for an example.
 
+* `username` - (Optional) The root credential username used in the connection URL.
+
+* `password` - (Optional) The root credential password used in the connection URL.
+
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
@@ -195,6 +199,12 @@ See the [Vault
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
+* `username` - (Optional) The root credential username used in the connection URL.
+
+* `password` - (Optional) The root credential password used in the connection URL.
+
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
+
 ### MSSQL Configuration Options
 
 * `connection_url` - (Required) A URL containing connection information. See
@@ -214,6 +224,12 @@ See the [Vault
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
+* `username` - (Optional) The root credential username used in the connection URL.
+
+* `password` - (Optional) The root credential password used in the connection URL.
+
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
 * `contained_db` - (Optional bool: false) For Vault v1.9+. Set to true when the target is a
   Contained Database, e.g. AzureSQL.
@@ -235,6 +251,10 @@ See the [Vault
 
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
+
+* `username` - (Optional) The root credential username used in the connection URL.
+
+* `password` - (Optional) The root credential password used in the connection URL.
 
 * `tls_certificate_key` - (Optional) x509 certificate for connecting to the database. This must be a PEM encoded version of the private key and the certificate combined.
 
@@ -260,6 +280,12 @@ See the [Vault
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
+* `username` - (Optional) The root credential username used in the connection URL.
+
+* `password` - (Optional) The root credential password used in the connection URL.
+
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
+
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
 See the [Vault
   docs](https://www.vaultproject.io/docs/concepts/username-templating)
@@ -277,6 +303,10 @@ See the [Vault
 * `max_idle_connections` - (Optional) The maximum number of idle connections to
   maintain.
 
+* `username` - (Optional) The root credential username used in the connection URL.
+
+* `password` - (Optional) The root credential password used in the connection URL.
+
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
@@ -292,6 +322,20 @@ See the [Vault
 * `username` - (Required) The username to be used in the connection.
 
 * `password` - (Required) The password to be used in the connection.
+
+* `ca_cert` - (Optional) The path to a PEM-encoded CA cert file to use to verify the Elasticsearch server's identity.
+
+* `ca_path` - (Optional) The path to a directory of PEM-encoded CA cert files to use to verify the Elasticsearch server's identity.
+
+* `client_cert` - (Optional) The path to the certificate for the Elasticsearch client to present for communication.
+
+* `client_key` - (Optional) The path to the key for the Elasticsearch client to use for communication.
+
+* `tls_server_name` - (Optional) This, if set, is used to set the SNI host when connecting via TLS.
+
+* `insecure` - (Optional) Whether to disable certificate verification.
+
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation. See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating) for more details.
 
 ### Snowflake Configuration Options
 
@@ -333,6 +377,8 @@ See the [Vault
 * `username` - (Optional) The root credential username used in the connection URL.
 
 * `password` - (Optional) The root credential password used in the connection URL.
+
+* `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 
