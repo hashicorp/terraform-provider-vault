@@ -151,6 +151,8 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed:  true,
 			Sensitive: true,
 		},
+
+		"tune": authMountTuneSchema(),
 	}
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
@@ -294,7 +296,23 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return fmt.Errorf("error writing ldap config %q: %s", path, err)
 	}
+
 	log.Printf("[DEBUG] Wrote LDAP config %q", path)
+
+	if d.HasChange("tune") {
+		log.Printf("[INFO] LDAP Auth '%q' tune configuration changed", d.Id())
+		if raw, ok := d.GetOk("tune"); ok {
+			backendType := d.Get("type")
+			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
+
+			err := authMountTune(client, path, raw)
+			if err != nil {
+				return nil
+			}
+
+			log.Printf("[INFO] Written %s auth tune to %q", backendType, path)
+		}
+	}
 
 	return ldapAuthBackendRead(d, meta)
 }
@@ -319,17 +337,17 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("accessor", authMount.Accessor)
 	d.Set("local", authMount.Local)
 
-	path = ldapAuthBackendConfigPath(path)
+	configPath := ldapAuthBackendConfigPath(path)
 
-	log.Printf("[DEBUG] Reading LDAP auth backend config %q", path)
-	resp, err := client.Logical().Read(path)
+	log.Printf("[DEBUG] Reading LDAP auth backend config %q", configPath)
+	resp, err := client.Logical().Read(configPath)
 	if err != nil {
-		return fmt.Errorf("error reading ldap auth backend config %q: %s", path, err)
+		return fmt.Errorf("error reading ldap auth backend config %q: %s", configPath, err)
 	}
-	log.Printf("[DEBUG] Read LDAP auth backend config %q", path)
+	log.Printf("[DEBUG] Read LDAP auth backend config %q", configPath)
 
 	if resp == nil {
-		log.Printf("[WARN] LDAP auth backend config %q not found, removing from state", path)
+		log.Printf("[WARN] LDAP auth backend config %q not found, removing from state", configPath)
 		d.SetId("")
 		return nil
 	}
@@ -359,6 +377,18 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 	// `bindpass`, `client_tls_cert` and `client_tls_key` cannot be read out from the API
 	// So... if they drift, they drift.
+
+	log.Printf("[DEBUG] Reading ldap auth tune from %q", path+"/tune")
+	rawTune, err := authMountTuneGet(client, "auth/"+path)
+	if err != nil {
+		return fmt.Errorf("error reading tune information from Vault: %s", err)
+	}
+
+	log.Printf("[CUSTOM] %+v", rawTune)
+	if err := d.Set("tune", []map[string]interface{}{rawTune}); err != nil {
+		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", path+"/tune", err)
+		return err
+	}
 
 	return nil
 }
