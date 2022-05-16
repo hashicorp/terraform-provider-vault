@@ -14,6 +14,8 @@ import (
 
 func TestResourceGenericSecret(t *testing.T) {
 	path := acctest.RandomWithPrefix("secretsv1/test")
+	resourceName := "vault_generic_secret.test"
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
@@ -26,12 +28,18 @@ func TestResourceGenericSecret(t *testing.T) {
 				Config: testResourceGenericSecret_updateConfig,
 				Check:  testResourceGenericSecret_updateCheck,
 			},
+			{
+				ImportState:  true,
+				ResourceName: resourceName,
+			},
 		},
 	})
 }
 
 func TestResourceGenericSecret_deleted(t *testing.T) {
 	path := acctest.RandomWithPrefix("secretsv1/test")
+	resourceName := "vault_generic_secret.test"
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
@@ -39,6 +47,10 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 			{
 				Config: testResourceGenericSecret_initialConfig(path),
 				Check:  testResourceGenericSecret_initialCheck(path),
+			},
+			{
+				ImportState:  true,
+				ResourceName: resourceName,
 			},
 			{
 				PreConfig: func() {
@@ -51,12 +63,18 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 				Config: testResourceGenericSecret_initialConfig(path),
 				Check:  testResourceGenericSecret_initialCheck(path),
 			},
+			{
+				ImportState:  true,
+				ResourceName: resourceName,
+			},
 		},
 	})
 }
 
 func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 	path := acctest.RandomWithPrefix("secretsv2/test")
+	resourceName := "vault_generic_secret.test"
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -67,8 +85,16 @@ func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 				Check:  testResourceGenericSecret_initialCheck_v2(path, "zap", 1),
 			},
 			{
+				ImportState:  true,
+				ResourceName: resourceName,
+			},
+			{
 				Config: testResourceGenericSecret_initialConfig_v2(path, true),
 				Check:  testResourceGenericSecret_initialCheck_v2(path, "zoop", 2),
+			},
+			{
+				ImportState:  true,
+				ResourceName: resourceName,
 			},
 		},
 	})
