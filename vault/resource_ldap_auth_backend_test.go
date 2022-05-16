@@ -285,7 +285,7 @@ resource "vault_ldap_auth_backend" "test" {
     discoverdn             = false
     deny_null_bind         = true
     description            = "example"
-	userfilter             = "({{.UserAttr}}={{.Username}})"
+    userfilter             = "({{.UserAttr}}={{.Username}})"
     username_as_alias      = true
     use_token_groups = %s
 }
