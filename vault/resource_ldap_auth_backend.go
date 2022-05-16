@@ -107,6 +107,11 @@ func ldapAuthBackendResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
+		"username_as_alias": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
 		"use_token_groups": {
 			Type:     schema.TypeBool,
 			Optional: true,
@@ -273,6 +278,10 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["groupattr"] = v.(string)
 	}
 
+	if v, ok := d.GetOk("username_as_alias"); ok {
+		data["username_as_alias"] = v.(bool)
+	}
+
 	if v, ok := d.GetOkExists("use_token_groups"); ok {
 		data["use_token_groups"] = v.(bool)
 	}
@@ -355,6 +364,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("groupfilter", resp.Data["groupfilter"])
 	d.Set("groupdn", resp.Data["groupdn"])
 	d.Set("groupattr", resp.Data["groupattr"])
+	d.Set("username_as_alias", resp.Data["username_as_alias"])
 	d.Set("use_token_groups", resp.Data["use_token_groups"])
 
 	// `bindpass`, `client_tls_cert` and `client_tls_key` cannot be read out from the API

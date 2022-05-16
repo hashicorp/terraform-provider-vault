@@ -198,6 +198,7 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 			"deny_null_bind":       "deny_null_bind",
 			"upndomain":            "upndomain",
 			"groupfilter":          "groupfilter",
+			"username_as_alias":    "username_as_alias",
 			"groupdn":              "groupdn",
 			"groupattr":            "groupattr",
 			"use_token_groups":     "use_token_groups",
@@ -285,6 +286,7 @@ resource "vault_ldap_auth_backend" "test" {
     deny_null_bind         = true
     description            = "example"
 	userfilter             = "({{.UserAttr}}={{.Username}})"
+    username_as_alias      = true
     use_token_groups = %s
 }
 `, path, local, use_token_groups)

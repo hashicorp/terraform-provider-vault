@@ -67,6 +67,8 @@ The following arguments are supported:
 
 * `groupattr` - (Optional) LDAP attribute to follow on objects returned by groupfilter
 
+* `username_as_alias` - (Optional) Force the auth method to use the username passed by the user as the alias name.
+
 * `use_token_groups` - (Optional) Use the Active Directory tokenGroups constructed attribute of the user to find the group memberships
 
 * `path` - (Optional) Path to mount the LDAP auth backend under
