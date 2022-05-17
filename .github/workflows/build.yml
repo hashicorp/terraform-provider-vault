@@ -3,8 +3,22 @@ name: Build
 on: push
 
 jobs:
-  runner-job:
+  go-version:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.go-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: go-version
+        run: echo "::set-output name=version::$(cat ./.go-version)"
+
+  runner-job:
+    needs: go-version
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: ["amd64"]
     services:
       vault:
         image: hashicorp/vault:latest
@@ -18,22 +32,6 @@ jobs:
           MYSQL_ROOT_PASSWORD: mysql
         ports:
           - 3306:3306
-  go-version:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.go-version.outputs.version }}
-    steps:
-      - uses: actions/checkout@v3
-      - id: go-version
-        run: echo "::set-output name=version::$(cat ./.go-version)"
-  build:
-    needs: go-version
-    name: build
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        arch: ["amd64"]
     steps:
       - name: Setup Go
         uses: actions/setup-go@v2
