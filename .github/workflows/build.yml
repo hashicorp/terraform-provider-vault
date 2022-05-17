@@ -42,3 +42,30 @@ jobs:
       - name: Build
         run: |
           make build
+
+  container-job:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: ["amd64"]
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.17.5
+    services:
+      vault:
+        image: hashicorp/vault:latest
+        env:
+          VAULT_DEV_ROOT_TOKEN_ID: root
+        ports:
+          - 8200:8200
+      mysql:
+        image: circleci/mysql:latest
+        env:
+          MYSQL_ROOT_PASSWORD: mysql
+        ports:
+          - 3306:3306
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build
+        run: |
+          make build
