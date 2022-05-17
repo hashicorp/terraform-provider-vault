@@ -108,9 +108,10 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed: true,
 		},
 		"username_as_alias": {
-			Type:     schema.TypeBool,
-			Optional: true,
-			Computed: true,
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+			Description: "Force the auth method to use the username passed by the user as the alias name.",
 		},
 		"use_token_groups": {
 			Type:     schema.TypeBool,
