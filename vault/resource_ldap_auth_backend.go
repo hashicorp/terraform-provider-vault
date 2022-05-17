@@ -279,7 +279,7 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["groupattr"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("username_as_alias"); ok {
+	if v, ok := d.GetOkExists("username_as_alias"); ok {
 		data["username_as_alias"] = v.(bool)
 	}
 
