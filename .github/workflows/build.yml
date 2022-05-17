@@ -50,7 +50,7 @@ jobs:
       matrix:
         arch: ["amd64"]
     container:
-      image: docker.mirror.hashicorp.services/cimg/go:1.17.5
+      image: docker.mirror.hashicorp.services/golang:1.17.10
     services:
       vault:
         image: hashicorp/vault:latest
