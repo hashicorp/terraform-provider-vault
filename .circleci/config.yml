@@ -42,21 +42,21 @@ jobs:
           no_output_timeout: 30m
           command: |
             make test TESTARGS='-v'
-      - run:
-          name: "Run Acceptance Tests"
-          no_output_timeout: 35m
-          command: |
-            export VAULT_TOKEN="root"
-            export VAULT_ADDR="http://127.0.0.1:8200"
-            export TF_ACC_TERRAFORM_VERSION="1.0.7"
-            export MYSQL_URL="root:mysql@tcp(127.0.0.1:3306)/"
-            export MYSQL_CONNECTION_URL="{{username}}:{{password}}@tcp(127.0.0.1:3306)/"
-            export MYSQL_CONNECTION_USERNAME="root"
-            export MYSQL_CONNECTION_PASSWORD="mysql"
-            export MONGODB_URL="mongodb://root:mongodb@127.0.0.1:27017/admin?ssl=false"
-            export MSSQL_URL="sqlserver://sa:yourStrong1000Password@127.0.0.1:1433"
-            # This will be removed after VAULT-4324 is fixed
-            make testacc TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
+      #- run:
+      #    name: "Run Acceptance Tests"
+      #    no_output_timeout: 35m
+      #    command: |
+      #      export VAULT_TOKEN="root"
+      #      export VAULT_ADDR="http://127.0.0.1:8200"
+      #      export TF_ACC_TERRAFORM_VERSION="1.0.7"
+      #      export MYSQL_URL="root:mysql@tcp(127.0.0.1:3306)/"
+      #      export MYSQL_CONNECTION_URL="{{username}}:{{password}}@tcp(127.0.0.1:3306)/"
+      #      export MYSQL_CONNECTION_USERNAME="root"
+      #      export MYSQL_CONNECTION_PASSWORD="mysql"
+      #      export MONGODB_URL="mongodb://root:mongodb@127.0.0.1:27017/admin?ssl=false"
+      #      export MSSQL_URL="sqlserver://sa:yourStrong1000Password@127.0.0.1:1433"
+      #      # This will be removed after VAULT-4324 is fixed
+      #      make testacc TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
       - run:
           name: "Run Build"
           command: |
