@@ -387,7 +387,7 @@ func checkCIDRs(d *schema.ResourceData, k string) diag.Diagnostics {
 		}
 
 		count := len(invalid)
-		if len(invalid) > 0 {
+		if count > 0 {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Warning,
 				Summary: fmt.Sprintf("found %d invalid CIDR block(s) for %q, values=%s", count, k,
