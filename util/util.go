@@ -322,3 +322,25 @@ func CheckMountEnabled(client *api.Client, path string) (bool, error) {
 
 	return ok, nil
 }
+
+// GetAPIRequestData to pass to Vault from schema.ResourceData.
+// The fieldMap specifies the schema field to its vault constituent.
+// If the vault field is empty, then two fields are mapped 1:1.
+func GetAPIRequestData(d *schema.ResourceData, fieldMap map[string]string) map[string]interface{} {
+	data := make(map[string]interface{})
+	for k1, k2 := range fieldMap {
+		if k2 == "" {
+			k2 = k1
+		}
+
+		sv := d.Get(k1)
+		switch v := sv.(type) {
+		case *schema.Set:
+			data[k2] = v.List()
+		default:
+			data[k2] = sv
+		}
+	}
+
+	return data
+}
