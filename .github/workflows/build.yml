@@ -3,6 +3,21 @@ name: Build
 on: push
 
 jobs:
+  runner-job:
+    runs-on: ubuntu-latest
+    services:
+      vault:
+        image: hashicorp/vault:latest
+        env:
+          VAULT_DEV_ROOT_TOKEN_ID: root
+        ports:
+          - 8200:8200
+      mysql:
+        image: circleci/mysql:latest
+        env:
+          MYSQL_ROOT_PASSWORD: mysql
+        ports:
+          - 3306:3306
   go-version:
     runs-on: ubuntu-latest
     outputs:
@@ -13,7 +28,7 @@ jobs:
         run: echo "::set-output name=version::$(cat ./.go-version)"
   build:
     needs: go-version
-    name: Build Terraform Vault Provider
+    name: build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
