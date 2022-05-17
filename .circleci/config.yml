@@ -18,15 +18,15 @@ jobs:
           - MONGO_INITDB_DATABASE: admin
       - image: circleci/mysql:latest
         environment:
-          - MYSQL_ROOT_PASSWORD=mysql
+          MYSQL_ROOT_PASSWORD: mysql
       - image: hashicorp/vault-enterprise:1.10.3-ent
         environment:
-          - VAULT_LICENSE=$VAULT_LICENSE
-          - VAULT_DEV_ROOT_TOKEN_ID=root
+          VAULT_LICENSE: $VAULT_LICENSE
+          VAULT_DEV_ROOT_TOKEN_ID: root
       - image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
         environment:
-          - ACCEPT_EULA=Y
-          - SA_PASSWORD=yourStrong1000Password
+          ACCEPT_EULA: Y
+          SA_PASSWORD: yourStrong1000Password
     working_directory: /tmp/go/src/github.com/hashicorp/terraform-provider-vault
     steps:
       - checkout
