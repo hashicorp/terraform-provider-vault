@@ -1,0 +1,31 @@
+name: Build
+
+on: push
+
+jobs:
+  go-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.go-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: go-version
+        run: echo "::set-output name=version::$(cat ./.go-version)"
+  build:
+    needs: go-version
+    name: Build Terraform Vault Provider
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: ["amd64"]
+    steps:
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '${{ needs.go-version.outputs.version }}'
+
+      - uses: actions/checkout@v3
+      - name: Build dev
+        run: |
+          make dev
