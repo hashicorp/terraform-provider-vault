@@ -3,46 +3,6 @@ name: Build
 on: push
 
 jobs:
-  go-version:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.go-version.outputs.version }}
-    steps:
-      - uses: actions/checkout@v3
-      - id: go-version
-        run: echo "::set-output name=version::$(cat ./.go-version)"
-
-  runner-job:
-    needs: go-version
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        arch: ["amd64"]
-    services:
-      vault:
-        image: hashicorp/vault:latest
-        env:
-          VAULT_DEV_ROOT_TOKEN_ID: root
-        ports:
-          - 8200:8200
-      mysql:
-        image: circleci/mysql:latest
-        env:
-          MYSQL_ROOT_PASSWORD: mysql
-        ports:
-          - 3306:3306
-    steps:
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: '${{ needs.go-version.outputs.version }}'
-
-      - uses: actions/checkout@v3
-      - name: Build
-        run: |
-          make build
-
   container-job:
     runs-on: ubuntu-latest
     strategy:
@@ -56,16 +16,33 @@ jobs:
         image: hashicorp/vault:latest
         env:
           VAULT_DEV_ROOT_TOKEN_ID: root
-        ports:
-          - 8200:8200
       mysql:
-        image: circleci/mysql:latest
+        image: mysql:latest
         env:
           MYSQL_ROOT_PASSWORD: mysql
-        ports:
-          - 3306:3306
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: yourStrong1000Password
     steps:
       - uses: actions/checkout@v3
       - name: Build
         run: |
           make build
+      - name: Unit Tests
+        run: |
+          make test TESTARGS='-v'
+      - name: Acceptance Tests
+        env:
+          VAULT_TOKEN: "root"
+          VAULT_ADDR: "http://127.0.0.1:8200"
+          TF_ACC_TERRAFORM_VERSION: "1.0.7"
+          MYSQL_URL: "root:mysql@mysql:3306/"
+          MYSQL_CONNECTION_URL: "{{username}}:{{password}}@mysql:3306/"
+          MYSQL_CONNECTION_USERNAME: "root"
+          MYSQL_CONNECTION_PASSWORD: "mysql"
+          #MONGODB_URL: "mongodb://root:mongodb@127.0.0.1:27017/admin?ssl: false"
+          MSSQL_URL: "sqlserver://sa:yourStrong1000Password@mssql:1433"
+        run: |
+          make testacc TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
