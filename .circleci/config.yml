@@ -21,7 +21,7 @@ jobs:
           MYSQL_ROOT_PASSWORD: mysql
       - image: hashicorp/vault-enterprise:1.10.3-ent
         environment:
-          VAULT_LICENSE: $VAULT_LICENSE
+          VAULT_LICENSE: "$VAULT_LICENSE"
           VAULT_DEV_ROOT_TOKEN_ID: root
       - image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
         environment:
