@@ -26,6 +26,6 @@ jobs:
           go-version: '${{ needs.go-version.outputs.version }}'
 
       - uses: actions/checkout@v3
-      - name: Build dev
+      - name: Build
         run: |
-          make dev
+          make build
