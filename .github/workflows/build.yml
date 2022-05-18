@@ -8,12 +8,12 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        arch: ["amd64"]
+        image: ["hashicorp/vault-enterprise:1.10-ent", "hashicorp/vault-enterprise:1.9-ent"]
     container:
       image: docker.mirror.hashicorp.services/golang:1.17.10
     services:
       vault:
-        image: hashicorp/vault-enterprise:1.10.3-ent
+        image: ${{ matrix.image }}
         env:
           VAULT_DEV_ROOT_TOKEN_ID: root
           VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
