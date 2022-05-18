@@ -1,13 +1,8 @@
 version: 2.1
 
-workflows:
-  build:
-    jobs:
-      - build
 jobs:
   build:
+    docker:
+      - image: cimg/base:2022.03
     steps:
-      - run:
-          name: "Moved to GitHub Actions"
-          command: |
-            echo "Moved to GitHub Actions: https://github.com/hashicorp/terraform-provider-vault/actions"
+      - run: echo 'Moved to GitHub Actions https://github.com/hashicorp/terraform-provider-vault/actions'
