@@ -45,4 +45,4 @@ jobs:
           #MONGODB_URL: "mongodb://root:mongodb@127.0.0.1:27017/admin?ssl: false"
           MSSQL_URL: "sqlserver://sa:yourStrong1000Password@mssql:1433"
         run: |
-          make testacc TESTARGS='-v -test.count 1 -test.run TestResourceGenericSecret*' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
+          make testacc TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
