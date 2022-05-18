@@ -1,0 +1,13 @@
+version: 2.1
+
+workflows:
+  build:
+    jobs:
+      - build
+jobs:
+  build:
+    steps:
+      - run:
+          name: "Moved to GitHub Actions"
+          command: |
+            echo "Moved to GitHub Actions: https://github.com/hashicorp/terraform-provider-vault/actions"
