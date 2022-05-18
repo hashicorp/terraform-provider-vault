@@ -31,10 +31,9 @@ jobs:
       - name: Build
         run: |
           make build
-      # TODO: re-enable
-      #- name: Unit Tests
-      #  run: |
-      #    make test TESTARGS='-v'
+      - name: Unit Tests
+        run: |
+          make test TESTARGS='-v'
       - name: Acceptance Tests
         env:
           VAULT_TOKEN: "root"
@@ -44,6 +43,7 @@ jobs:
           MYSQL_CONNECTION_URL: "{{username}}:{{password}}@tcp(mysql:3306)/"
           MYSQL_CONNECTION_USERNAME: "root"
           MYSQL_CONNECTION_PASSWORD: "mysql"
+          # TODO: setup mongodb tests
           #MONGODB_URL: "mongodb://root:mongodb@127.0.0.1:27017/admin?ssl: false"
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
         run: |
