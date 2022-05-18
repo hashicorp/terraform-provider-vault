@@ -45,6 +45,6 @@ jobs:
           MYSQL_CONNECTION_USERNAME: "root"
           MYSQL_CONNECTION_PASSWORD: "mysql"
           #MONGODB_URL: "mongodb://root:mongodb@127.0.0.1:27017/admin?ssl: false"
-          MSSQL_URL: "sqlserver://sa:${{ secret.MSSQL_SA_PASSWORD }}@mssql:1433"
+          MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
         run: |
           make testacc-ent TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
