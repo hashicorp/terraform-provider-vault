@@ -6,14 +6,16 @@ jobs:
   container-job:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        image: ["hashicorp/vault-enterprise:1.10-ent", "hashicorp/vault-enterprise:1.9-ent"]
+        # TODO: enable 1.9 job once the provider is Vault version aware
+        #image: ["vault-enterprise:1.9-ent", "vault-enterprise:1.10-ent"]
+        image: ["vault-enterprise:1.10-ent"]
     container:
       image: docker.mirror.hashicorp.services/golang:1.17.10
     services:
       vault:
-        image: ${{ matrix.image }}
+        image: hashicorp/${{ matrix.image }}
         env:
           VAULT_DEV_ROOT_TOKEN_ID: root
           VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}

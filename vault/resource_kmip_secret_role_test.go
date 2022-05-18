@@ -74,6 +74,7 @@ func TestAccKMIPSecretRole_basic(t *testing.T) {
 }
 
 func TestAccKMIPSecretRole_remount(t *testing.T) {
+	t.Skip("Skip until remount, and bind addr issues are resolved")
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	remountPath := acctest.RandomWithPrefix("tf-test-kmip-remount")
 	resourceName := "vault_kmip_secret_role.test"
