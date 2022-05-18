@@ -5,4 +5,6 @@ jobs:
     docker:
       - image: cimg/base:2022.03
     steps:
-      - run: echo 'Moved to GitHub Actions https://github.com/hashicorp/terraform-provider-vault/actions'
+      - run: sudo apt-get update && sudo apt-get install -y figlet
+      - run: figlet 'Moved to GitHub Actions'
+      - run: echo https://github.com/hashicorp/terraform-provider-vault/actions
