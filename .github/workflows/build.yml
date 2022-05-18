@@ -27,6 +27,25 @@ jobs:
           ACCEPT_EULA: Y
           SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
     steps:
+      - name: Tune Vault Quotas
+        env:
+          VAULT_TOKEN: "root"
+          VAULT_ADDR: "http://vault:8200"
+        run: |
+          cat > /tmp/payload.json <<HERE
+          {
+            "rate_limit_exempt_paths": [
+              "auth/token/create"
+            ]
+          }
+          HERE
+
+          curl \
+          --request POST \
+          --header "X-Vault-Token: ${VAULT_TOKEN}" \
+          --data @/tmp/payload.json \
+          ${VAULT_ADDR}/v1/sys/quotas/config
+          rm -f /tmp/payload.json
       - uses: actions/checkout@v3
       - name: Build
         run: |
