@@ -30,13 +30,13 @@ jobs:
       - name: Build
         run: |
           make build
-      - name: Unit Tests
-        run: |
-          make test TESTARGS='-v'
+      #- name: Unit Tests
+      #  run: |
+      #    make test TESTARGS='-v'
       - name: Acceptance Tests
         env:
           VAULT_TOKEN: "root"
-          VAULT_ADDR: "http://127.0.0.1:8200"
+          VAULT_ADDR: "http://vault:8200"
           TF_ACC_TERRAFORM_VERSION: "1.0.7"
           MYSQL_URL: "root:mysql@mysql:3306/"
           MYSQL_CONNECTION_URL: "{{username}}:{{password}}@mysql:3306/"
@@ -45,4 +45,4 @@ jobs:
           #MONGODB_URL: "mongodb://root:mongodb@127.0.0.1:27017/admin?ssl: false"
           MSSQL_URL: "sqlserver://sa:yourStrong1000Password@mssql:1433"
         run: |
-          make testacc TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
+          make testacc TESTARGS='-v -test.count 1 -test.run TestResourceGenericSecret*' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
