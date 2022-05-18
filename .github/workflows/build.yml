@@ -40,7 +40,7 @@ jobs:
           }
           HERE
 
-          curl \
+          curl --fail --show-error --silent \
           --request POST \
           --header "X-Vault-Token: ${VAULT_TOKEN}" \
           --data @/tmp/payload.json \
