@@ -71,19 +71,5 @@ Use of this resource requires the `read` capability on the given path.
 
 The following attributes are exported:
 
-* `data_json` - A string containing the full data payload retrieved from
-Vault, serialized in JSON format.
-
-* `keys` - A list of secret keys read from Vault that are configured under
+* `names` - A list of secret key names read from Vault that are configured under
 the provided path.
-
-* `lease_id` - The lease identifier assigned by Vault, if any.
-
-* `lease_duration` - The duration of the secret lease, in seconds relative
-to the time the data was requested. Once this time has passed any plan
-generated with this data may fail to apply.
-
-* `lease_renewable` - `true` if the lease can be renewed using Vault's
-`sys/renew/{lease-id}` endpoint. Terraform does not currently support lease
-renewal, and so it will request a new lease each time this data source is
-refreshed.
