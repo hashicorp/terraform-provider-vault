@@ -13,8 +13,7 @@ jobs:
       image: docker.mirror.hashicorp.services/golang:1.17.10
     services:
       vault:
-        image: hashicorp/vault-enterprise:latest
-        #image: hashicorp/vault:latest
+        image: hashicorp/vault-enterprise:1.10.3-ent
         env:
           VAULT_DEV_ROOT_TOKEN_ID: root
           VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
@@ -26,7 +25,7 @@ jobs:
         image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
         env:
           ACCEPT_EULA: Y
-          SA_PASSWORD: yourStrong1000Password
+          SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
     steps:
       - uses: actions/checkout@v3
       - name: Build
@@ -46,7 +45,6 @@ jobs:
           MYSQL_CONNECTION_USERNAME: "root"
           MYSQL_CONNECTION_PASSWORD: "mysql"
           #MONGODB_URL: "mongodb://root:mongodb@127.0.0.1:27017/admin?ssl: false"
-          MSSQL_URL: "sqlserver://sa:yourStrong1000Password@mssql:1433"
+          MSSQL_URL: "sqlserver://sa:${{ secret.MSSQL_SA_PASSWORD }}@mssql:1433"
         run: |
-          make testacc-ent TESTARGS='-v -test.run TestNamespace_basic' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
-          #make testacc TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
+          make testacc-ent TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
