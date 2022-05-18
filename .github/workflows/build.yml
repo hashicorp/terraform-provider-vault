@@ -13,11 +13,11 @@ jobs:
       image: docker.mirror.hashicorp.services/golang:1.17.10
     services:
       vault:
-        #image: hashicorp/vault-enterprise:latest
-        image: hashicorp/vault:latest
+        image: hashicorp/vault-enterprise:latest
+        #image: hashicorp/vault:latest
         env:
           VAULT_DEV_ROOT_TOKEN_ID: root
-          #VAULT_LICENSE: ${{ secrets.VAULT_LICENSE_CI }}
+          VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
       mysql:
         image: mysql:latest
         env:
@@ -48,5 +48,5 @@ jobs:
           #MONGODB_URL: "mongodb://root:mongodb@127.0.0.1:27017/admin?ssl: false"
           MSSQL_URL: "sqlserver://sa:yourStrong1000Password@mssql:1433"
         run: |
-          #make testacc TESTARGS='-v -test.run TestAccDatabaseSecretBackendConnection_mysql' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
-          make testacc TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
+          make testacc-ent TESTARGS='-v -test.run TestNamespace_basic' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
+          #make testacc TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
