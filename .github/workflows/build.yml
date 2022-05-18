@@ -41,11 +41,11 @@ jobs:
           VAULT_TOKEN: "root"
           VAULT_ADDR: "http://vault:8200"
           TF_ACC_TERRAFORM_VERSION: "1.0.7"
-          MYSQL_URL: "root:mysql@mysql:3306/"
-          MYSQL_CONNECTION_URL: "{{username}}:{{password}}@mysql:3306/"
+          MYSQL_URL: "root:mysql@tcp(mysql:3306)/"
+          MYSQL_CONNECTION_URL: "{{username}}:{{password}}@tcp(mysql:3306)/"
           MYSQL_CONNECTION_USERNAME: "root"
           MYSQL_CONNECTION_PASSWORD: "mysql"
           #MONGODB_URL: "mongodb://root:mongodb@127.0.0.1:27017/admin?ssl: false"
           MSSQL_URL: "sqlserver://sa:yourStrong1000Password@mssql:1433"
         run: |
-          make testacc TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
+          make testacc TESTARGS='-v -test.run TestAccDatabaseSecretBackendConnection_mysql' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
