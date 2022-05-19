@@ -34,27 +34,12 @@ jobs:
           VAULT_TOKEN: "root"
           VAULT_ADDR: "http://vault:8200"
         run: |
-          cat > /tmp/payload.json <<HERE
-          {
-            "rate_limit_exempt_paths": [
-              "/v1/sys/generate-recovery-token/attempt",
-              "/v1/sys/generate-recovery-token/update",
-              "/v1/sys/generate-root/attempt",
-              "/v1/sys/generate-root/update",
-              "/v1/sys/health",
-              "/v1/sys/seal-status",
-              "/v1/sys/unseal",
-              "/v1/auth/token/create"
-            ]
-          }
-          HERE
+          echo '{"max_leases": 60000}' | curl --fail --show-error --silent \
+            --request POST \
+            --header "X-Vault-Token: ${VAULT_TOKEN}" \
+            --data @-  \
+            ${VAULT_ADDR}/v1/sys/quotas/lease-count/default
 
-          curl --fail --show-error --silent \
-          --request POST \
-          --header "X-Vault-Token: ${VAULT_TOKEN}" \
-          --data @/tmp/payload.json \
-          ${VAULT_ADDR}/v1/sys/quotas/config
-          rm -f /tmp/payload.json
       - uses: actions/checkout@v3
       - name: Build
         run: |
