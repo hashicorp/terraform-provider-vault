@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -18,7 +17,7 @@ func genericSecretListDataSource() *schema.Resource {
 			"path": {
 				Type:         schema.TypeString,
 				Required:     true,
-				Description:  "Path where secret will be read.",
+				Description:  "Full KV-V1 path where secrets will be listed.",
 				ValidateFunc: validateNoTrailingSlash,
 			},
 
@@ -38,35 +37,16 @@ func genericSecretListDataSourceRead(_ context.Context, d *schema.ResourceData, 
 
 	path := d.Get("path").(string)
 
-	mountPath, v2, err := isKVv2(path, client)
+	names, err := kvListRequest(client, path)
 	if err != nil {
-		return diag.Errorf("error checking kv path %s, err=%s", path, err)
+		return diag.FromErr(err)
 	}
 
-	if v2 {
-		path = addPrefixToVKVPath(path, mountPath, "metadata")
-	}
-
-	log.Printf("[DEBUG] Listing secrets at %s from Vault", path)
-
-	resp, err := client.Logical().List(path)
-	if err != nil {
-		return diag.Errorf("error listing from Vault at path %s, err=%s", path, err)
-	}
-	if resp == nil {
-		return diag.Errorf("no secrets found at %q", path)
+	if err := d.Set("names", names); err != nil {
+		return diag.FromErr(err)
 	}
 
 	d.SetId(path)
-
-	// Set keys to state if there are keys in response
-	if keyList, ok := resp.Data["keys"]; ok && keyList != nil {
-		if keys, ok := keyList.([]interface{}); ok {
-			if err := d.Set("names", keys); err != nil {
-				return diag.FromErr(err)
-			}
-		}
-	}
 
 	return nil
 }

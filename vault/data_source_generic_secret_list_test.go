@@ -24,9 +24,10 @@ func TestDataSourceGenericSecretList_v1(t *testing.T) {
 				Config: testDataSourceGenericSecretListConfig(mount, s1, s2, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", mount),
-					resource.TestCheckResourceAttr(resourceName, "names.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "names.#", "3"),
 					resource.TestCheckResourceAttr(resourceName, "names.0", s2),
-					resource.TestCheckResourceAttr(resourceName, "names.1", s1),
+					resource.TestCheckResourceAttr(resourceName, "names.1", fmt.Sprintf("%s/", s2)),
+					resource.TestCheckResourceAttr(resourceName, "names.2", s1),
 				),
 			},
 		},
@@ -38,7 +39,7 @@ func TestDataSourceGenericSecretList_v2(t *testing.T) {
 	s1 := acctest.RandomWithPrefix("foo")
 	s2 := acctest.RandomWithPrefix("bar")
 
-	resourceName := "data.vault_generic_secret_list.test"
+	resourceName := "data.vault_generic_secret_list_v2.test"
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
@@ -46,10 +47,11 @@ func TestDataSourceGenericSecretList_v2(t *testing.T) {
 			{
 				Config: testDataSourceGenericSecretListConfig(mount, s1, s2, true),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", mount),
-					resource.TestCheckResourceAttr(resourceName, "names.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "path", fmt.Sprintf("%s/metadata", mount)),
+					resource.TestCheckResourceAttr(resourceName, "names.#", "3"),
 					resource.TestCheckResourceAttr(resourceName, "names.0", s2),
-					resource.TestCheckResourceAttr(resourceName, "names.1", s1),
+					resource.TestCheckResourceAttr(resourceName, "names.1", fmt.Sprintf("%s/", s2)),
+					resource.TestCheckResourceAttr(resourceName, "names.2", s1),
 				),
 			},
 		},
@@ -80,7 +82,7 @@ resource "vault_mount" "test" {
 	return ret
 }
 
-func testDataSourceGenericSecretListConfig(mount, secretPath1, secretPath2 string, isV2 bool) string {
+func testDataSourceGenericSecretConfig(mount, secretPath1, secretPath2 string, isV2 bool) string {
 	return fmt.Sprintf(`
 %s
 
@@ -115,10 +117,25 @@ resource "vault_generic_secret" "test_nested" {
 EOT
 }
 
-data "vault_generic_secret_list" "test" {
-    depends_on = [vault_generic_secret.test_1, vault_generic_secret.test_2]
-    path       = vault_mount.test.path
+`, testDataSourceGenericSecretListMountConfig(mount, isV2), secretPath1, secretPath2)
 }
 
-`, testDataSourceGenericSecretListMountConfig(mount, isV2), secretPath1, secretPath2)
+func testDataSourceGenericSecretListConfig(mount, secretPath1, secretPath2 string, isV2 bool) string {
+	ret := testDataSourceGenericSecretConfig(mount, secretPath1, secretPath2, isV2)
+
+	if isV2 {
+		ret += fmt.Sprintf(`
+data "vault_generic_secret_list_v2" "test" {
+    depends_on = [vault_generic_secret.test_1, vault_generic_secret.test_nested]
+    path       = "${vault_mount.test.path}/metadata"
+}`)
+	} else {
+		ret += fmt.Sprintf(`
+data "vault_generic_secret_list" "test" {
+    depends_on = [vault_generic_secret.test_1, vault_generic_secret.test_nested]
+    path       = vault_mount.test.path
+}`)
+	}
+
+	return ret
 }

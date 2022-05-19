@@ -1,14 +1,14 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_generic_secret_list data source"
-sidebar_current: "docs-vault-datasource-generic-secret_list"
+page_title: "Vault: vault_generic_secret_list_v2 data source"
+sidebar_current: "docs-vault-datasource-generic-secret_list_v2"
 description: |-
-  Lists all secrets under a given KV-V1 path
+  Lists all secrets under a given KV-V2 path
 ---
 
 # vault\_generic\_secret
 
-Lists all secrets under a given KV-V1 path in Vault.
+Lists all secrets under a given KV-V2 path in Vault.
 
 This resource is primarily intended to be used with
 [Vault's "generic" secret backend](https://www.vaultproject.io/docs/secrets/generic/index.html),
@@ -31,9 +31,9 @@ for more details.
 resource "vault_mount" "kv" {
   path        = "kv"
   type        = "kv"
-  description = "KV Version 1 secret engine mount"
+  description = "KV Version 2 secret engine mount"
   options     = { 
-    version = "1"
+    version = "2"
   }
 }
 
@@ -49,7 +49,7 @@ EOT
 }
 
 data "vault_generic_secret_list" "secret_list" {
-  path = vault_mount.kv.path
+  path = "${vault_mount.kv.path}/metadata"
 }
 ```
 
@@ -57,7 +57,7 @@ data "vault_generic_secret_list" "secret_list" {
 
 The following arguments are supported:
 
-* `path` - (Required) Full KV-V1 path where secrets will be listed.
+* `path` - (Required) Full KV-V2 path where secrets will be listed (including `metadata` prefix).
 
 ## Required Vault Capabilities
 
