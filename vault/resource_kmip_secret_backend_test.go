@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"net"
 	"strings"
 	"testing"
 
@@ -15,24 +14,21 @@ import (
 )
 
 func TestAccKMIPSecretBackend_basic(t *testing.T) {
-	t.Skip("Skip until listen_addr issues are resolved")
+	testutil.SkipTestAccEnt(t)
+
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	resourceName := "vault_kmip_secret_backend.test"
-	ln1, err := net.Listen("tcp", "127.0.0.1:0")
+
+	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ln2, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
+	addr1, addr2 := lns[0].Addr().String(), lns[1].Addr().String()
+
+	if err = closer(); err != nil {
 		t.Fatal(err)
 	}
-
-	addr1 := ln1.Addr().String()
-	addr2 := ln2.Addr().String()
-
-	ln1.Close()
-	ln2.Close()
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -80,18 +76,22 @@ func TestAccKMIPSecretBackend_basic(t *testing.T) {
 }
 
 func TestAccKMIPSecretBackend_remount(t *testing.T) {
+	testutil.SkipTestAccEnt(t)
+
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	remountPath := acctest.RandomWithPrefix("tf-test-kmip-updated")
 	resourceName := "vault_kmip_secret_backend.test"
 
-	ln1, err := net.Listen("tcp", "127.0.0.1:0")
+	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	addr1 := ln1.Addr().String()
+	addr1 := lns[0].Addr().String()
 
-	ln1.Close()
+	if err = closer(); err != nil {
+		t.Fatal(err)
+	}
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
