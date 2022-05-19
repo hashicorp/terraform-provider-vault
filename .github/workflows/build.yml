@@ -37,7 +37,14 @@ jobs:
           cat > /tmp/payload.json <<HERE
           {
             "rate_limit_exempt_paths": [
-              "auth/token/create"
+              "/v1/sys/generate-recovery-token/attempt",
+              "/v1/sys/generate-recovery-token/update",
+              "/v1/sys/generate-root/attempt",
+              "/v1/sys/generate-root/update",
+              "/v1/sys/health",
+              "/v1/sys/seal-status",
+              "/v1/sys/unseal",
+              "/v1/sys/auth/token/create"
             ]
           }
           HERE
