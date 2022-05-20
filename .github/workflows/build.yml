@@ -20,7 +20,7 @@ jobs:
           VAULT_DEV_ROOT_TOKEN_ID: root
           VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
       mysql:
-        image: mysql:latest
+        image: docker.mirror.hashicorp.services/mysql:latest
         env:
           MYSQL_ROOT_PASSWORD: mysql
       mssql:
@@ -29,11 +29,16 @@ jobs:
           ACCEPT_EULA: Y
           SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
       mongo:
-        image: docker.mirror.hashicorp.services/mongo
+        image: docker.mirror.hashicorp.services/mongo:latest
         env:
           MONGO_INITDB_ROOT_USERNAME: root
           MONGO_INITDB_ROOT_PASSWORD: mongodb
           MONGO_INITDB_DATABASE: admin
+      postgres:
+        image: docker.mirror.hashicorp.services/postgres:latest
+        env:
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: database
     steps:
       - name: Tune Vault Quotas
         env:
@@ -64,5 +69,6 @@ jobs:
           MYSQL_CONNECTION_PASSWORD: "mysql"
           MONGODB_URL: "mongodb://root:mongodb@mongo:27017/admin?ssl=false"
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
+          POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
         run: |
-          make testacc-ent TESTARGS='-v -test.run TestAccDatabaseSecretBackendConnection_mongodb' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
+          make testacc-ent TESTARGS='-v -test.run TestAccDatabaseSecretBackendConnection_postgresql*' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
