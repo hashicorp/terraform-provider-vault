@@ -67,4 +67,4 @@ jobs:
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
         run: |
-          make testacc-ent TESTARGS='-v -test.run *' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
+          make testacc-ent TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
