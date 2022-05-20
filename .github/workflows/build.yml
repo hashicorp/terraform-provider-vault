@@ -40,16 +40,6 @@ jobs:
           POSTGRES_PASSWORD: secret
           POSTGRES_DB: database
     steps:
-      #- name: Tune Vault Quotas
-      #  env:
-      #    VAULT_TOKEN: "root"
-      #    VAULT_ADDR: "http://vault:8200"
-      #  run: |
-      #    echo '{"max_leases": 60000}' | curl --fail --show-error --silent \
-      #      --request POST \
-      #      --header "X-Vault-Token: ${VAULT_TOKEN}" \
-      #      --data @-  \
-      #      ${VAULT_ADDR}/v1/sys/quotas/lease-count/default
       - uses: actions/checkout@v3
       - name: Build
         run: |
