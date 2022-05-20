@@ -22,7 +22,7 @@ jobs:
         run: |
           make build
   acceptance:
-    needs: [go-version]
+    needs: [go-version, build]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
