@@ -482,6 +482,7 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Description: "Connection parameters for the hana-database-plugin plugin.",
 			Elem: connectionStringResource(&connectionStringConfig{
 				excludeUsernameTemplate: true,
+				includeDisableEscaping:  true,
 				includeUserPass:         true,
 			}),
 			MaxItems:      1,
@@ -559,7 +560,8 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Optional:    true,
 			Description: "Connection parameters for the redshift-database-plugin plugin.",
 			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
+				includeUserPass:        true,
+				includeDisableEscaping: true,
 			}),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineRedshift.Name(), dbEngineTypes),
@@ -1501,7 +1503,8 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret,
 }
 
 func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
-	resp *api.Secret) (map[string]interface{}, error) {
+	resp *api.Secret,
+) (map[string]interface{}, error) {
 	var result map[string]interface{}
 
 	prefix := engine.ResourcePrefix(idx)
