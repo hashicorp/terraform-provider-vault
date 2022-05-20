@@ -28,6 +28,12 @@ jobs:
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
+      mongo:
+        image: docker.mirror.hashicorp.services/mongo
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: mongodb
+          MONGO_INITDB_DATABASE: admin
     steps:
       - name: Tune Vault Quotas
         env:
@@ -56,8 +62,7 @@ jobs:
           MYSQL_CONNECTION_URL: "{{username}}:{{password}}@tcp(mysql:3306)/"
           MYSQL_CONNECTION_USERNAME: "root"
           MYSQL_CONNECTION_PASSWORD: "mysql"
-          # TODO: setup mongodb tests
-          #MONGODB_URL: "mongodb://root:mongodb@127.0.0.1:27017/admin?ssl: false"
+          MONGODB_URL: "mongodb://root:mongodb@mongo:27017/admin?ssl=false"
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
         run: |
-          make testacc-ent TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
+          make testacc-ent TESTARGS='-v -test.run TestAccDatabaseSecretBackendConnection_mongodb' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
