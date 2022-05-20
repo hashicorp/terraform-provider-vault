@@ -538,7 +538,8 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Optional:    true,
 			Description: "Connection parameters for the postgresql-database-plugin plugin.",
 			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
+				includeUserPass:        true,
+				includeDisableEscaping: true,
 			}),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.Name(), dbEngineTypes),
