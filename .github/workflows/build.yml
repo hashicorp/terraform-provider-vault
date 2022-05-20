@@ -40,24 +40,20 @@ jobs:
           POSTGRES_PASSWORD: secret
           POSTGRES_DB: database
     steps:
-      - name: Tune Vault Quotas
-        env:
-          VAULT_TOKEN: "root"
-          VAULT_ADDR: "http://vault:8200"
-        run: |
-          echo '{"max_leases": 60000}' | curl --fail --show-error --silent \
-            --request POST \
-            --header "X-Vault-Token: ${VAULT_TOKEN}" \
-            --data @-  \
-            ${VAULT_ADDR}/v1/sys/quotas/lease-count/default
-
+      #- name: Tune Vault Quotas
+      #  env:
+      #    VAULT_TOKEN: "root"
+      #    VAULT_ADDR: "http://vault:8200"
+      #  run: |
+      #    echo '{"max_leases": 60000}' | curl --fail --show-error --silent \
+      #      --request POST \
+      #      --header "X-Vault-Token: ${VAULT_TOKEN}" \
+      #      --data @-  \
+      #      ${VAULT_ADDR}/v1/sys/quotas/lease-count/default
       - uses: actions/checkout@v3
       - name: Build
         run: |
           make build
-      #- name: Unit Tests
-      #  run: |
-      #    make test TESTARGS='-v'
       - name: Acceptance Tests
         env:
           VAULT_TOKEN: "root"
@@ -71,4 +67,4 @@ jobs:
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
         run: |
-          make testacc-ent TESTARGS='-v -test.run TestAccDatabaseSecretBackendConnection_postgresql*' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
+          make testacc-ent TESTARGS='-v -test.run *' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
