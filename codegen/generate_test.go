@@ -5,7 +5,7 @@ import (
 )
 
 func TestCodeFilePath(t *testing.T) {
-	homeDirPath, err := getRepoRoot()
+	repoRoot, err := getRepoRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,15 +45,15 @@ func TestCodeFilePath(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if actualDataSourceFilePath != homeDirPath+testCase.expectedDataSourceFilePath {
-			t.Fatalf("expected %q but received %q", homeDirPath+testCase.expectedDataSourceFilePath, actualDataSourceFilePath)
+		if actualDataSourceFilePath != repoRoot+testCase.expectedDataSourceFilePath {
+			t.Fatalf("expected %q but received %q", repoRoot+testCase.expectedDataSourceFilePath, actualDataSourceFilePath)
 		}
 		actualResourceFilePath, err := codeFilePath(tfTypeResource, testCase.input)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if actualResourceFilePath != homeDirPath+testCase.expectedResourceFilePath {
-			t.Fatalf("expected %q but received %q", homeDirPath+testCase.expectedResourceFilePath, actualResourceFilePath)
+		if actualResourceFilePath != repoRoot+testCase.expectedResourceFilePath {
+			t.Fatalf("expected %q but received %q", repoRoot+testCase.expectedResourceFilePath, actualResourceFilePath)
 		}
 	}
 }
