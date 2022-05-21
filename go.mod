@@ -10,6 +10,7 @@ require (
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11 // indirect
 	github.com/aws/aws-sdk-go v1.41.8
 	github.com/containerd/containerd v1.6.2 // indirect
+	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
 	github.com/denisenkom/go-mssqldb v0.11.0
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/go-sql-driver/mysql v1.6.0

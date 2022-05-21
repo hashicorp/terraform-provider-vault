@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"testing"
 
@@ -18,9 +17,7 @@ func TestAccRaftAutopilotConfig_basic(t *testing.T) {
 		Providers: testProviders,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			if _, ok := os.LookupEnv("SKIP_RAFT_TESTS"); ok {
-				t.Skip("Warning: SKIP_RAFT_TESTS set, skipping test")
-			}
+			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
 		},
 		CheckDestroy: testAccRaftAutopilotConfigCheckDestroy,
 		Steps: []resource.TestStep{

@@ -65,7 +65,7 @@ func TestTemplateName(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "pattern", `(\d{9})`),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "alphabet", "builtin/numeric"),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "encode_format", ""),
-					resource.TestCheckNoResourceAttr("vault_transform_template_name.test", "decode_formats"),
+					resource.TestCheckResourceAttr("vault_transform_template_name.test", "decode_formats.#", "0"),
 				),
 			},
 			{

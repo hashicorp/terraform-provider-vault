@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/coreos/pkg/multierror"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -288,4 +289,43 @@ func TestHTTPServer(t *testing.T, handler http.Handler) (*api.Config, net.Listen
 	config.Address = fmt.Sprintf("http://%s", ln.Addr())
 
 	return config, ln
+}
+
+func GetDynamicTCPListeners(host string, count int) ([]net.Listener, func() error, error) {
+	_, p, err := net.SplitHostPort(host)
+	if err != nil {
+		pErr := err.(*net.AddrError)
+		if pErr.Err != "missing port in address" {
+			return nil, nil, err
+		}
+	}
+	if p != "" {
+		return nil, nil, fmt.Errorf("host %q contains a port", host)
+	}
+
+	addr := host + ":0"
+	listeners := make([]net.Listener, count)
+	for i := 0; i < count; i++ {
+		ln, err := net.Listen("tcp", addr)
+		if err != nil {
+			return nil, nil, err
+		}
+		listeners[i] = ln
+	}
+
+	closer := func() error {
+		errs := multierror.Error{}
+		for _, ln := range listeners {
+			if err := ln.Close(); err != nil {
+				errs = append(errs, err)
+			}
+		}
+
+		if len(errs) > 0 {
+			return errs
+		}
+		return nil
+	}
+
+	return listeners, closer, nil
 }
