@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"strconv"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -13,16 +12,11 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func randomQuotaLeaseString() string {
-	whole := acctest.RandIntRange(50000, 60000)
-	return strconv.Itoa(whole + 1000)
-}
-
 func TestQuotaLeaseCount(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test")
 	ns := "ns-" + name
-	leaseCount := "2"    // randomQuotaLeaseString()
-	newLeaseCount := "3" // randomQuotaLeaseString()
+	leaseCount := "1001"
+	newLeaseCount := "2001"
 	resourceName := "vault_quota_lease_count.foobar"
 
 	resource.Test(t, resource.TestCase{
