@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/hashicorp/terraform-provider-vault/util"
 
@@ -139,17 +140,39 @@ func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	if !d.IsNewResource() && d.HasChange("path") {
-		newPath := d.Get("path").(string)
+		src := path
+		dest := d.Get("path").(string)
 
-		log.Printf("[DEBUG] Remount %s to %s in Vault", path, newPath)
+		log.Printf("[DEBUG] Remount %s to %s in Vault", src, dest)
 
-		err := client.Sys().Remount(path, newPath)
+		err := client.Sys().Remount(src, dest)
 		if err != nil {
 			return fmt.Errorf("error remounting in Vault: %s", err)
 		}
 
-		d.SetId(newPath)
-		path = newPath
+		// There is something similar in resource_mount.go, but in the call to TuneMount().
+		var tries int
+		for {
+			if tries > 10 {
+				return fmt.Errorf(
+					"mount %q did did not become available after %d tries, interval=1s", dest, tries)
+			}
+
+			enabled, err := util.CheckMountEnabled(client, dest)
+			if err != nil {
+				return err
+			}
+			if !enabled {
+				tries++
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			break
+		}
+
+		path = dest
+		d.SetId(path)
 	}
 
 	log.Printf("[DEBUG] Updating mount %s in Vault", path)

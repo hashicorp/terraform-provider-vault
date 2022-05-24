@@ -1,10 +1,11 @@
 package vault
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -97,12 +98,11 @@ func certAuthBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		SchemaVersion: 1,
 
-		Create: certAuthResourceWrite,
-		Update: certAuthResourceUpdate,
-		Read:   certAuthResourceRead,
-		Delete: certAuthResourceDelete,
-
-		Schema: fields,
+		CreateContext: certAuthResourceWrite,
+		UpdateContext: certAuthResourceUpdate,
+		ReadContext:   certAuthResourceRead,
+		DeleteContext: certAuthResourceDelete,
+		Schema:        fields,
 	}
 }
 
@@ -110,10 +110,10 @@ func certCertResourcePath(backend, name string) string {
 	return "auth/" + strings.Trim(backend, "/") + "/certs/" + strings.Trim(name, "/")
 }
 
-func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
+func certAuthResourceWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -159,19 +159,18 @@ func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing %q to cert auth backend: %s", path, err)
+		return diag.Errorf("Error writing %q to cert auth backend: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote %q to cert auth backend", path)
 
-	return certAuthResourceRead(d, meta)
+	return certAuthResourceRead(ctx, d, meta)
 }
 
-func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
+func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
-
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -210,25 +209,24 @@ func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating %q in cert auth backend", path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error updating %q in cert auth backend: %s", path, err)
+		return diag.Errorf("Error updating %q in cert auth backend: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated %q in cert auth backend", path)
 
-	return certAuthResourceRead(d, meta)
+	return certAuthResourceRead(ctx, d, meta)
 }
 
-func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
+func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
-
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading cert %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading cert %q: %s", path, err)
+		return diag.Errorf("Error reading cert %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read cert %q", path)
 
@@ -238,7 +236,9 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	readTokenFields(d, resp)
+	if err := readTokenFields(d, resp); err != nil {
+		return diag.FromErr(err)
+	}
 
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("display_name", resp.Data["display_name"])
@@ -309,21 +309,22 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 				schema.HashString, []interface{}{}))
 	}
 
-	return nil
+	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
+
+	return diags
 }
 
-func certAuthResourceDelete(d *schema.ResourceData, meta interface{}) error {
+func certAuthResourceDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
-
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting cert %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting cert %q", path)
+		return diag.Errorf("Error deleting cert %q", path)
 	}
 	log.Printf("[DEBUG] Deleted cert %q", path)
 

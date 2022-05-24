@@ -215,8 +215,12 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
 		}
 
-		d.Set("data_json", string(jsonData))
-		d.Set(consts.FieldPath, path)
+		if err := d.Set("data_json", string(jsonData)); err != nil {
+			return err
+		}
+		if err := d.Set(consts.FieldPath, path); err != nil {
+			return err
+		}
 	} else {
 		// Populate data from data_json from state
 		err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data)
@@ -225,7 +229,10 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 		}
 		log.Printf("[WARN] vault_generic_secret does not refresh when disable_read is set to true")
 	}
-	d.Set("disable_read", !shouldRead)
+
+	if err := d.Set("disable_read", !shouldRead); err != nil {
+		return err
+	}
 
 	// Since our "data" map can only contain string values, we
 	// will take strings from Data and write them in as-is,
@@ -245,6 +252,13 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 			dataMap[k] = string(vBytes)
 		}
 	}
-	d.Set("data", dataMap)
+	if err := d.Set("data", dataMap); err != nil {
+		return err
+	}
+
+	if err := d.Set("delete_all_versions", d.Get("delete_all_versions")); err != nil {
+		return err
+	}
+
 	return nil
 }

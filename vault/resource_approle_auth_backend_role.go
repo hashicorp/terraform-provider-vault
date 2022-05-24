@@ -1,11 +1,13 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -70,13 +72,12 @@ func approleAuthBackendRoleResource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
-		Create: approleAuthBackendRoleCreate,
-		Read:   approleAuthBackendRoleRead,
-		Update: approleAuthBackendRoleUpdate,
-		Delete: approleAuthBackendRoleDelete,
-		Exists: approleAuthBackendRoleExists,
+		CreateContext: approleAuthBackendRoleCreate,
+		ReadContext:   approleAuthBackendRoleRead,
+		UpdateContext: approleAuthBackendRoleUpdate,
+		DeleteContext: approleAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: fields,
 	}
@@ -120,10 +121,10 @@ func approleAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 	}
 }
 
-func approleAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
+func approleAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -133,13 +134,22 @@ func approleAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 
 	log.Printf("[DEBUG] Writing AppRole auth backend role %q", path)
 
+	diags := diag.Diagnostics{}
+
 	data := map[string]interface{}{}
 	approleAuthBackendRoleUpdateFields(d, data, true)
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error writing AppRole auth backend role %q: %s", path, err)
+		diags = append(diags,
+			diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  fmt.Sprintf("error writing AppRole auth backend role %q: %s", path, err),
+			},
+		)
+		return diags
 	}
+
 	d.SetId(path)
 	log.Printf("[DEBUG] Wrote AppRole auth backend role %q", path)
 
@@ -149,36 +159,43 @@ func approleAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 			"role_id": v.(string),
 		})
 		if err != nil {
-			return fmt.Errorf("error writing AppRole auth backend role %q's RoleID: %s", path, err)
+			diags = append(diags,
+				diag.Diagnostic{
+					Severity: diag.Error,
+					Summary:  fmt.Sprintf("error writing AppRole auth backend role %q's RoleID: %s", path, err),
+				},
+			)
+			return diags
 		}
+
 		log.Printf("[DEBUG] Wrote AppRole auth backend role %q RoleID", path)
 	}
 
-	return approleAuthBackendRoleRead(d, meta)
+	return append(diags, approleAuthBackendRoleRead(ctx, d, meta)...)
 }
 
-func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
+func approleAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 
 	backend, err := approleAuthBackendRoleBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for AppRole auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for AppRole auth backend role: %s", path, err)
 	}
 
 	role, err := approleAuthBackendRoleNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for AppRole auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for AppRole auth backend role: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading AppRole auth backend role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading AppRole auth backend role %q: %s", path, err)
+		return diag.FromErr(err)
 	}
 	log.Printf("[DEBUG] Read AppRole auth backend role %q", path)
 	if resp == nil {
@@ -187,37 +204,51 @@ func approleAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 		return nil
 	}
 
-	d.Set("backend", backend)
-	d.Set("role_name", role)
-	readTokenFields(d, resp)
+	if err := d.Set("backend", backend); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set("role_name", role); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := readTokenFields(d, resp); err != nil {
+		return diag.FromErr(err)
+	}
 
 	if v, ok := resp.Data["secret_id_bound_cidrs"]; ok {
-		d.Set("secret_id_bound_cidrs", v)
+		if err := d.Set("secret_id_bound_cidrs", v); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	for _, k := range []string{"bind_secret_id", "secret_id_num_uses", "secret_id_ttl"} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return fmt.Errorf("error setting state key \"%s\": %s", k, err)
+			return diag.FromErr(err)
 		}
 	}
 
 	log.Printf("[DEBUG] Reading AppRole auth backend role %q RoleID", path)
 	resp, err = client.Logical().Read(path + "/role-id")
 	if err != nil {
-		return fmt.Errorf("error reading AppRole auth backend role %q RoleID: %s", path, err)
+		return diag.Errorf("error reading AppRole auth backend role %q RoleID: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read AppRole auth backend role %q RoleID", path)
 	if resp != nil {
-		d.Set("role_id", resp.Data["role_id"])
+		if err := d.Set("role_id", resp.Data["role_id"]); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
-	return nil
+	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
+
+	return diags
 }
 
-func approleAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
+func approleAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -231,8 +262,9 @@ func approleAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) erro
 
 	d.SetId(path)
 
+	diags := diag.Diagnostics{}
 	if err != nil {
-		return fmt.Errorf("error updating AppRole auth backend role %q: %s", path, err)
+		return diag.Errorf("error updating AppRole auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated AppRole auth backend role %q", path)
 
@@ -242,52 +274,37 @@ func approleAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) erro
 			"role_id": d.Get("role_id").(string),
 		})
 		if err != nil {
-			return fmt.Errorf("error updating AppRole auth backend role %q's RoleID: %s", path, err)
+			return diag.Errorf("error updating AppRole auth backend role %q's RoleID: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated AppRole auth backend role %q RoleID", path)
 	}
 
-	return approleAuthBackendRoleRead(d, meta)
+	return append(diags, approleAuthBackendRoleRead(ctx, d, meta)...)
 }
 
-func approleAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func approleAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting AppRole auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
-	if err != nil && !util.Is404(err) {
-		return fmt.Errorf("error deleting AppRole auth backend role %q", path)
-	} else if err != nil {
-		log.Printf("[DEBUG] AppRole auth backend role %q not found, removing from state", path)
-		d.SetId("")
-		return nil
+	if err != nil {
+		if util.Is404(err) {
+			log.Printf("[DEBUG] AppRole auth backend role %q not found, removing from state", path)
+			d.SetId("")
+			return nil
+		} else {
+			return diag.Errorf("error deleting AppRole auth backend role %q, err=%s", path, err)
+		}
 	}
+
 	log.Printf("[DEBUG] Deleted AppRole auth backend role %q", path)
 
 	return nil
-}
-
-func approleAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if AppRole auth backend role %q exists", path)
-
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if AppRole auth backend role %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if AppRole auth backend role %q exists", path)
-
-	return resp != nil, nil
 }
 
 func approleAuthBackendRolePath(backend, role string) string {

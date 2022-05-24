@@ -72,7 +72,7 @@ func identityGroupMemberEntityIdsUpdate(d *schema.ResourceData, meta interface{}
 
 	var curIDS []interface{}
 	if t, ok := resp.Data["type"]; ok && t.(string) != "external" {
-		if v, ok := resp.Data["member_entity_ids"]; ok {
+		if v, ok := resp.Data["member_entity_ids"]; ok && v != nil {
 			curIDS = v.([]interface{})
 		}
 
@@ -203,7 +203,7 @@ func identityGroupMemberEntityIdsDelete(d *schema.ResourceData, meta interface{}
 			data["member_entity_ids"] = make([]string, 0)
 		} else {
 			set := map[interface{}]bool{}
-			if v, ok := resp.Data["member_entity_ids"]; ok {
+			if v, ok := resp.Data["member_entity_ids"]; ok && v != nil {
 				for _, id := range v.([]interface{}) {
 					set[id] = true
 				}

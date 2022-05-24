@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func identityEntityAliasResource() *schema.Resource {
@@ -53,35 +54,29 @@ func identityEntityAliasResource() *schema.Resource {
 }
 
 func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	lock, unlock := getEntityAliasLockFuncs(d)
+	lock, unlock := getEntityLockFuncs(d, entity.RootAliasIDPath)
 	lock()
 	defer unlock()
 
-	diags := diag.Diagnostics{}
 	client, e := GetClient(d, meta)
 	if e != nil {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  e.Error(),
-		})
-		return diags
+		return diag.FromErr(e)
 	}
 
 	path := entity.RootAliasPath
 	name := d.Get("name").(string)
-	mountAccessor := d.Get("mount_accessor").(string)
-	canonicalID := d.Get("canonical_id").(string)
-	customMetadata := d.Get("custom_metadata").(map[string]interface{})
+	data := util.GetAPIRequestData(d, map[string]string{
+		"name":            "",
+		"mount_accessor":  "",
+		"canonical_id":    "",
+		"custom_metadata": "",
+	})
 
-	data := map[string]interface{}{
-		"name":            name,
-		"mount_accessor":  mountAccessor,
-		"canonical_id":    canonicalID,
-		"custom_metadata": customMetadata,
-	}
+	diags := diag.Diagnostics{}
 
 	var duplicates []string
 
+	mountAccessor := data["mount_accessor"].(string)
 	aliases, err := entity.FindAliases(client, &entity.FindAliasParams{
 		Name:          name,
 		MountAccessor: mountAccessor,
@@ -144,55 +139,28 @@ func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta
 }
 
 func identityEntityAliasUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	lock, unlock := getEntityAliasLockFuncs(d)
+	lock, unlock := getEntityLockFuncs(d, entity.RootAliasIDPath)
 	lock()
 	defer unlock()
 
-	diags := diag.Diagnostics{}
 	client, e := GetClient(d, meta)
 	if e != nil {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  e.Error(),
-		})
-		return diags
+		return diag.FromErr(e)
 	}
 
 	id := d.Id()
+
 	log.Printf("[DEBUG] Updating entity alias %q", id)
 	path := entity.JoinAliasID(id)
 
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  fmt.Sprintf("error reading entity alias %q: %s", id, err),
-		})
-
-		return diags
-	}
-
-	data := map[string]interface{}{
-		"name":           resp.Data["name"],
-		"mount_accessor": resp.Data["mount_accessor"],
-		"canonical_id":   resp.Data["canonical_id"],
-	}
-
-	if name, ok := d.GetOk("name"); ok {
-		data["name"] = name
-	}
-	if mountAccessor, ok := d.GetOk("mount_accessor"); ok {
-		data["mount_accessor"] = mountAccessor
-	}
-	if canonicalID, ok := d.GetOk("canonical_id"); ok {
-		data["canonical_id"] = canonicalID
-	}
-
-	data["custom_metadata"] = d.Get("custom_metadata").(map[string]interface{})
-
-	_, err = client.Logical().Write(path, data)
-
-	if err != nil {
+	diags := diag.Diagnostics{}
+	data := util.GetAPIRequestData(d, map[string]string{
+		"name":            "",
+		"mount_accessor":  "",
+		"canonical_id":    "",
+		"custom_metadata": "",
+	})
+	if _, err := client.Logical().Write(path, data); err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("error updating entity alias %q: %s", id, err),
@@ -200,39 +168,37 @@ func identityEntityAliasUpdate(ctx context.Context, d *schema.ResourceData, meta
 
 		return diags
 	}
+
 	log.Printf("[DEBUG] Updated entity alias %q", id)
 
 	return identityEntityAliasRead(ctx, d, meta)
 }
 
 func identityEntityAliasRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	diags := diag.Diagnostics{}
 	client, e := GetClient(d, meta)
 	if e != nil {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  e.Error(),
-		})
-		return diags
+		return diag.FromErr(e)
 	}
 
 	id := d.Id()
+
 	path := entity.JoinAliasID(id)
 
+	diags := diag.Diagnostics{}
+
 	log.Printf("[DEBUG] Reading entity alias %q from %q", id, path)
-	resp, err := client.Logical().Read(path)
+	resp, err := readEntity(client, path, d.IsNewResource())
 	if err != nil {
+		if isIdentityNotFoundError(err) {
+			log.Printf("[WARN] entity alias %q not found, removing from state", id)
+			d.SetId("")
+			return diags
+		}
+
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("error reading entity alias %q: %s", id, err),
 		})
-
-		return diags
-	}
-	log.Printf("[DEBUG] Read entity alias %s", id)
-	if resp == nil {
-		log.Printf("[WARN] entity alias %q not found, removing from state", id)
-		d.SetId("")
 
 		return diags
 	}
@@ -253,22 +219,20 @@ func identityEntityAliasRead(ctx context.Context, d *schema.ResourceData, meta i
 }
 
 func identityEntityAliasDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	lock, unlock := getEntityAliasLockFuncs(d)
+	lock, unlock := getEntityLockFuncs(d, entity.RootAliasIDPath)
 	lock()
 	defer unlock()
 
-	diags := diag.Diagnostics{}
 	client, e := GetClient(d, meta)
 	if e != nil {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  e.Error(),
-		})
-		return diags
+		return diag.FromErr(e)
 	}
 
 	id := d.Id()
+
 	path := entity.JoinAliasID(id)
+
+	diags := diag.Diagnostics{}
 
 	baseMsg := fmt.Sprintf("entity alias ID %q on mount_accessor %q", id, d.Get("mount_accessor"))
 	log.Printf("[INFO] Deleting %s", baseMsg)
@@ -285,9 +249,9 @@ func identityEntityAliasDelete(ctx context.Context, d *schema.ResourceData, meta
 	return diags
 }
 
-func getEntityAliasLockFuncs(d *schema.ResourceData) (func(), func()) {
+func getEntityLockFuncs(d *schema.ResourceData, root string) (func(), func()) {
 	mountAccessor := d.Get("mount_accessor").(string)
-	lockKey := strings.Join([]string{entity.RootAliasIDPath, mountAccessor}, "/")
+	lockKey := strings.Join([]string{root, mountAccessor}, "/")
 	lock := func() {
 		vaultMutexKV.Lock(lockKey)
 	}

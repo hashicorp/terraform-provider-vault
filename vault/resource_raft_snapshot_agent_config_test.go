@@ -14,8 +14,11 @@ import (
 func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestEntPreCheck(t) },
+		Providers: testProviders,
+		PreCheck: func() {
+			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
+			testutil.TestEntPreCheck(t)
+		},
 		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -94,7 +97,10 @@ func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
 func TestAccRaftSnapshotAgentConfig_import(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestEntPreCheck(t) },
+		PreCheck: func() {
+			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
+			testutil.TestEntPreCheck(t)
+		},
 		Providers:    testProviders,
 		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{

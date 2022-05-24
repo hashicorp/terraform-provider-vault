@@ -30,7 +30,7 @@ const testDefaultDatabaseSecretBackendResource = "vault_database_secret_backend_
 // Currently we have to configure the Vault server with a plugin_directory,
 // copy/build a db plugin and install it with a unique name, then register it in vault.
 
-func TestAccDatabaseSecretBackendConnection_import(t *testing.T) {
+func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 	MaybeSkipDBTests(t, dbEnginePostgres)
 
 	// TODO: make these fatal once we auto provision the required test infrastructure.

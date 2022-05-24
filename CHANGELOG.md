@@ -1,20 +1,52 @@
-## 3.6.0 (Unreleased)
+## 3.6.0 (May 18, 2022)
 IMPROVEMENTS:
 * `resource/pki_secret_backend_root_cert`: Force new root CA resource creation on out-of-band changes.  
   ([#1428](https://github.com/hashicorp/terraform-provider-vault/pull/1428))
+* `resource/pki_secret_backend_intermediate_set_signed`: Document complete usage example.  
+  ([#1452](https://github.com/hashicorp/terraform-provider-vault/pull/1452))
+* `resource/pki_secret_backend_config_urls`: Add support for importing PKI config URLs  
+  ([#1451](https://github.com/hashicorp/terraform-provider-vault/pull/1451))
+* `vault/resource_pki_secret_backend*`: Extend revocation support to other resources    
+  ([#1446](https://github.com/hashicorp/terraform-provider-vault/pull/1446))
+* `vault/resource_pki_secret_backend*`: Force new root CA/cert resource creation on out-of-band changes.  
+  ([#1432](https://github.com/hashicorp/terraform-provider-vault/pull/1432))
+* `datasource/generic_secret`: Improve documentation.  
+  ([#1390](https://github.com/hashicorp/terraform-provider-vault/pull/1390))
+* `resource/ldap_auth_backend`: Support setting `userfilter`.  
+  ([#1378](https://github.com/hashicorp/terraform-provider-vault/pull/1378))
+* `resource/aws_auth_backend_role`: Add `role_id` as a computed field.   
+  ([#1377](https://github.com/hashicorp/terraform-provider-vault/pull/1377))
+* Auth: Handle CIDR prefix being stripped for hosts in `token_bound_cidrs`  
+  ([#1346](https://github.com/hashicorp/terraform-provider-vault/pull/1346))
+* Add `allowed_serial_numbers` support  
+  ([#1119](https://github.com/hashicorp/terraform-provider-vault/pull/1119))
+* `resource/pki_secret_backend_role`: Allow `key_type` to be set to `any`.   
+  ([#791](https://github.com/hashicorp/terraform-provider-vault/pull/791))
+* `resource/aws_secret_backend_role`: Add `user_path` and `permissions_boundary_arn` arguments.  
+  ([#781](https://github.com/hashicorp/terraform-provider-vault/pull/781))
 
 BUGS:
 * `resource/pki_secret_backend_root_sign_intermediate`: Ensure that the `certificate_bundle`, and `ca_chain` 
   do not contain duplicate certificates.  
   ([#1428](https://github.com/hashicorp/terraform-provider-vault/pull/1428))
 * `resource/identity_entity_alias`: Serialize create, update, and delete operations in order to prevent alias 
-  mismatches.
+  mismatches.  
   ([#1429](https://github.com/hashicorp/terraform-provider-vault/pull/1429))
 * `database_secret*`: Ignore mongodb-atlas `private_key` on read from Vault.
   mismatches.  
-  ([#1436](https://github.com/hashicorp/terraform-provider-vault/issues/1436))
-* `resource/auth_backend`: Remove `ForceNew` behavior when updating `description`
+  ([#1438](https://github.com/hashicorp/terraform-provider-vault/issues/1438))
+* `resource/auth_backend`: Remove `ForceNew` behavior when updating `description`.  
   ([#1439](https://github.com/hashicorp/terraform-provider-vault/pull/1439))
+* `resource/identity_group_member_entity_ids`: Properly handle nil `member_entity_ids` in response.  
+  ([#1448](https://github.com/hashicorp/terraform-provider-vault/pull/1448))  
+* `resource/pki_secret_backend_role`: Fix TTL handling in PKI role.  
+  ([#1447](https://github.com/hashicorp/terraform-provider-vault/pull/1447))
+* `resource/pki_secret_backend_role`: `key_usage` value should be computed.  
+  ([#1443](https://github.com/hashicorp/terraform-provider-vault/pull/1443))
+* `resource/vault_pki_secret_backend_{cert,sign}`: Properly force a new resource whenever the cert is near expiry.  
+  ([#1440](https://github.com/hashicorp/terraform-provider-vault/pull/1440))
+* `resource/identity_entity_alias`: Remove read operation on entity alias update.  
+  ([#1434](https://github.com/hashicorp/terraform-provider-vault/pull/1434))
 
 ## 3.5.0 (April 20, 2022)
 FEATURES:
