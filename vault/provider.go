@@ -758,6 +758,10 @@ var (
 			Resource:      identityOIDCProviderResource(),
 			PathInventory: []string{"/identity/oidc/provider/{name}"},
 		},
+		"vault_kubernetes_secret_backend": {
+			Resource:      kubernetesSecretBackendResource(),
+			PathInventory: []string{"/kubernetes/config"},
+		},
 	}
 )
 
