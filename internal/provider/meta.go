@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/vault/command/config"
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
-	"github.com/hashicorp/terraform-provider-vault/vault/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 var MaxHTTPRetriesCCC int
