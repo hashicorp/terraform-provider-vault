@@ -58,7 +58,7 @@ func TestAccKubernetesSecretBackend_basic(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
-					"path", "description", "default_lease_ttl",
+					"description", "default_lease_ttl",
 				},
 			},
 		},

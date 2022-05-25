@@ -12,6 +12,16 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
+const (
+	FieldPath              = "path"
+	FieldKubernetesHost    = "kubernetes_host"
+	FieldServiceAccountJWT = "service_account_jwt"
+	FieldKubernetesCACert  = "kubernetes_ca_cert"
+	FieldDisableLocalCAJWT = "disable_local_ca_jwt"
+	FieldDefaultLeaseTTL   = "default_lease_ttl"
+	FieldDescription       = "description"
+)
+
 func kubernetesSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: kubernetesSecretBackendCreate,
@@ -23,26 +33,26 @@ func kubernetesSecretBackendResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			FieldPath: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Path where Kubernetes engine is mounted",
 			},
-			"kubernetes_host": {
+			FieldKubernetesHost: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Kubernetes API URL to connect to",
 			},
-			"service_account_jwt": {
+			FieldServiceAccountJWT: {
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: "The JSON web token of the service account used by the " +
 					"secret engine to manage Kubernetes roles. Defaults to the " +
 					"local pod’s JWT if found",
 			},
-			"kubernetes_ca_cert": {
+			FieldKubernetesCACert: {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
@@ -50,19 +60,19 @@ func kubernetesSecretBackendResource() *schema.Resource {
 					"verify the Kubernetes API server certificate. Defaults to the " +
 					"local pod’s CA if found",
 			},
-			"disable_local_ca_jwt": {
+			FieldDisableLocalCAJWT: {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
 				Description: "Disable defaulting to the local CA certificate and service " +
 					"account JWT when running in a Kubernetes pod",
 			},
-			"default_lease_ttl": {
+			FieldDefaultLeaseTTL: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Default lease TTL in seconds",
 			},
-			"description": {
+			FieldDescription: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Description of the Kubernetes mount",
@@ -73,7 +83,7 @@ func kubernetesSecretBackendResource() *schema.Resource {
 
 func kubernetesSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
-	path := d.Get("path").(string)
+	path := d.Get(FieldPath).(string)
 
 	log.Printf("[DEBUG] Mounting Kubernetes backend at %q", path)
 	if err := client.Sys().Mount(path, &api.MountInput{
@@ -93,7 +103,7 @@ func kubernetesSecretBackendCreate(ctx context.Context, d *schema.ResourceData, 
 
 func kubernetesSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
-	path := d.Get("path").(string)
+	path := d.Get(FieldPath).(string)
 
 	log.Printf("[DEBUG] Updating mount %s in Vault", path)
 
@@ -113,32 +123,22 @@ func kubernetesSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, 
 
 	data := map[string]interface{}{}
 
-	nonBooleanFields := []string{
-		"service_account_jwt", "kubernetes_ca_cert",
+	fields := []string{
+		FieldServiceAccountJWT,
+		FieldKubernetesCACert,
+		FieldDisableLocalCAJWT,
+		FieldKubernetesHost,
 	}
 
-	// if kubernetes_host is set, it must always
-	// be provided with a POST request to config endpoint
-	if v, ok := d.GetOk("kubernetes_host"); ok {
-		data["kubernetes_host"] = v.(string)
-	}
-
-	for _, k := range nonBooleanFields {
+	for _, k := range fields {
 		if d.HasChange(k) {
-			if v, ok := d.GetOk(k); ok {
-				data[k] = v.(string)
-			}
+			data[k] = d.Get(k)
 		}
 	}
 
-	if d.HasChange("disable_local_ca_jwt") {
-		if v, ok := d.GetOkExists("disable_local_ca_jwt"); ok {
-			data["disable_local_ca_jwt"] = v.(bool)
-		}
-	}
-
-	if _, err := client.Logical().Write(fmt.Sprintf("%s/config", path), data); err != nil {
-		return diag.Errorf("error writing Kubernetes config %q, err=%s", fmt.Sprintf("%s/config", path), err)
+	configPath := fmt.Sprintf("%s/config", path)
+	if _, err := client.Logical().Write(configPath, data); err != nil {
+		return diag.Errorf(`error writing Kubernetes config %q, err=%s`, configPath, err)
 	}
 
 	return kubernetesSecretBackendRead(ctx, d, meta)
@@ -162,14 +162,24 @@ func kubernetesSecretBackendRead(_ context.Context, d *schema.ResourceData, meta
 	}
 
 	fields := []string{
-		"kubernetes_host", "service_account_jwt",
-		"kubernetes_ca_cert", "disable_local_ca_jwt",
+		FieldKubernetesHost,
+		FieldServiceAccountJWT,
+		FieldKubernetesCACert,
+		FieldDisableLocalCAJWT,
 	}
 
 	for _, k := range fields {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return diag.Errorf("error setting state key %q on Kubernetes config, err=%s", k, err)
 		}
+	}
+
+	if err := d.Set(FieldPath, d.Get(FieldPath)); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(FieldDescription, d.Get(FieldDescription)); err != nil {
+		return diag.FromErr(err)
 	}
 
 	return nil
