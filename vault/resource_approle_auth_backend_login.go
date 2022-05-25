@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func approleAuthBackendLoginResource() *schema.Resource {
@@ -88,7 +90,7 @@ func approleAuthBackendLoginResource() *schema.Resource {
 }
 
 func approleAuthBackendLoginCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -119,7 +121,7 @@ func approleAuthBackendLoginCreate(d *schema.ResourceData, meta interface{}) err
 }
 
 func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -161,7 +163,7 @@ func approleAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error
 }
 
 func approleAuthBackendLoginDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -179,7 +181,7 @@ func approleAuthBackendLoginDelete(d *schema.ResourceData, meta interface{}) err
 }
 
 func approleAuthBackendLoginExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

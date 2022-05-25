@@ -9,6 +9,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -63,7 +65,7 @@ func awsAuthBackendCertResource() *schema.Resource {
 }
 
 func awsAuthBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -93,7 +95,7 @@ func awsAuthBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendCertRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -135,7 +137,7 @@ func awsAuthBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -153,7 +155,7 @@ func awsAuthBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendCertExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

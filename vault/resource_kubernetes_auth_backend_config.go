@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var kubernetesAuthBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/config$")
@@ -84,7 +86,7 @@ func kubernetesAuthBackendConfigPath(backend string) string {
 }
 
 func kubernetesAuthBackendConfigCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -154,7 +156,7 @@ func kubernetesAuthBackendConfigBackendFromPath(path string) (string, error) {
 }
 
 func kubernetesAuthBackendConfigRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -203,7 +205,7 @@ func kubernetesAuthBackendConfigRead(d *schema.ResourceData, meta interface{}) e
 }
 
 func kubernetesAuthBackendConfigUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -264,7 +266,7 @@ func kubernetesAuthBackendConfigDelete(d *schema.ResourceData, meta interface{})
 }
 
 func kubernetesAuthBackendConfigExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

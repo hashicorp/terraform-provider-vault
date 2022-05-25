@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -191,7 +193,7 @@ func transitSecretBackendKeyResource() *schema.Resource {
 }
 
 func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -251,7 +253,7 @@ func getTransitAutoRotatePeriod(d *schema.ResourceData) int {
 }
 
 func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -389,7 +391,7 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 }
 
 func transitSecretBackendKeyUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -417,7 +419,7 @@ func transitSecretBackendKeyUpdate(d *schema.ResourceData, meta interface{}) err
 }
 
 func transitSecretBackendKeyDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -433,7 +435,7 @@ func transitSecretBackendKeyDelete(d *schema.ResourceData, meta interface{}) err
 }
 
 func transitSecretBackendKeyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

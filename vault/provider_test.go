@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/command/config"
 	"github.com/mitchellh/go-homedir"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -85,7 +86,7 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 	})
 
 	rootProviderData := rootProviderResource.TestResourceData()
-	if _, err := NewProviderMeta(rootProviderData); err != nil {
+	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -108,7 +109,7 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 	})
 
 	rootProviderData := rootProviderResource.TestResourceData()
-	if _, err := NewProviderMeta(rootProviderData); err != nil {
+	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -121,7 +122,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 		Schema: rootProvider.Schema,
 	}
 	rootProviderData := rootProviderResource.TestResourceData()
-	if _, err := NewProviderMeta(rootProviderData); err != nil {
+	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
 		t.Fatal(err)
 	}
 
@@ -148,7 +149,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	nsProviderData := nsProviderResource.TestResourceData()
 	nsProviderData.Set("namespace", namespacePath)
 	nsProviderData.Set("token", os.Getenv("VAULT_TOKEN"))
-	if _, err := NewProviderMeta(nsProviderData); err != nil {
+	if _, err := provider.NewProviderMeta(nsProviderData); err != nil {
 		t.Fatal(err)
 	}
 
@@ -234,7 +235,7 @@ func testResourceApproleLoginCheckAttrs(t *testing.T) resource.TestCheckFunc {
 		}
 		approleProviderData := approleProviderResource.TestResourceData()
 		approleProviderData.Set("auth_login", authLoginData)
-		_, err := NewProviderMeta(approleProviderData)
+		_, err := provider.NewProviderMeta(approleProviderData)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -291,7 +292,7 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 		ns2ProviderData := ns2ProviderResource.TestResourceData()
 		ns2ProviderData.Set("namespace", namespacePath)
 		ns2ProviderData.Set("token", vaultToken)
-		if _, err := NewProviderMeta(ns2ProviderData); err != nil {
+		if _, err := provider.NewProviderMeta(ns2ProviderData); err != nil {
 			t.Fatal(err)
 		}
 
@@ -354,9 +355,9 @@ func TestAccProviderToken(t *testing.T) {
 	}
 
 	// Create a "resource" we can use for constructing ResourceData.
-	provider := Provider()
+	p := Provider()
 	providerResource := &schema.Resource{
-		Schema: provider.Schema,
+		Schema: p.Schema,
 	}
 
 	type testcase struct {
@@ -373,7 +374,7 @@ func TestAccProviderToken(t *testing.T) {
 			expectedToken: "",
 		},
 		{
-			// The provider will read the token file "~/.vault-token".
+			// The p will read the token file "~/.vault-token".
 			name:          "File",
 			fileToken:     true,
 			expectedToken: "file-token",
@@ -423,8 +424,8 @@ func TestAccProviderToken(t *testing.T) {
 				d.Set("token", "schema-token")
 			}
 
-			// Get and check the provider token.
-			token, err := providerToken(d)
+			// Get and check the p token.
+			token, err := provider.GetToken(d)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -747,7 +748,7 @@ func TestAccProviderVaultAddrEnv(t *testing.T) {
 			}
 
 			// Get and check the provider token.
-			token, err := providerToken(d)
+			token, err := provider.GetToken(d)
 			if err != nil {
 				t.Fatal(err)
 			}

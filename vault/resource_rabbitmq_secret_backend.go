@@ -7,6 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func rabbitMQSecretBackendResource() *schema.Resource {
@@ -93,7 +95,7 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 }
 
 func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -142,7 +144,7 @@ func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error
 }
 
 func rabbitMQSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -174,7 +176,7 @@ func rabbitMQSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -214,7 +216,7 @@ func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 }
 
 func rabbitMQSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -230,7 +232,7 @@ func rabbitMQSecretBackendDelete(d *schema.ResourceData, meta interface{}) error
 }
 
 func rabbitMQSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

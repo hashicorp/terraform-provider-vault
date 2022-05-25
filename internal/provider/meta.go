@@ -1,4 +1,4 @@
-package vault
+package provider
 
 import (
 	"errors"
@@ -20,6 +20,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/vault/consts"
 )
+
+var MaxHTTPRetriesCCC int
 
 // ProviderMeta provides resources with access to the Vault client and
 // other bits
@@ -162,10 +164,10 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 
 	client.SetMaxRetries(d.Get("max_retries").(int))
 
-	maxHTTPRetriesCCC = d.Get("max_retries_ccc").(int)
+	MaxHTTPRetriesCCC = d.Get("max_retries_ccc").(int)
 
 	// Try an get the token from the config or token helper
-	token, err := providerToken(d)
+	token, err := GetToken(d)
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +362,7 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 	return nil
 }
 
-func providerToken(d *schema.ResourceData) (string, error) {
+func GetToken(d *schema.ResourceData) (string, error) {
 	if token := d.Get("token").(string); token != "" {
 		return token, nil
 	}
@@ -393,3 +395,5 @@ func providerToken(d *schema.ResourceData) (string, error) {
 	}
 	return strings.TrimSpace(token), nil
 }
+
+const DefaultMaxHTTPRetries = 2

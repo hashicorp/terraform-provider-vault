@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const identityOidcPathTemplate = "identity/oidc/config"
@@ -33,7 +35,7 @@ func identityOidcUpdateFields(d *schema.ResourceData, data map[string]interface{
 }
 
 func identityOidcCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -57,7 +59,7 @@ func identityOidcCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -81,7 +83,7 @@ func identityOidcUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -110,7 +112,7 @@ func identityOidcRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -134,7 +136,7 @@ func identityOidcDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

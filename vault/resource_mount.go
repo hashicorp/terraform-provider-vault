@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 type schemaMap map[string]*schema.Schema
@@ -128,7 +130,7 @@ func MountResource() *schema.Resource {
 }
 
 func mountWrite(d *schema.ResourceData, meta interface{}) error {
-	client, err := GetClient(d, meta)
+	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return err
 	}
@@ -174,7 +176,7 @@ func createMount(d *schema.ResourceData, client *api.Client, path string, mountT
 }
 
 func mountUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, err := GetClient(d, meta)
+	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return err
 	}
@@ -234,7 +236,7 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mountDelete(d *schema.ResourceData, meta interface{}) error {
-	client, err := GetClient(d, meta)
+	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return err
 	}
@@ -255,7 +257,7 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

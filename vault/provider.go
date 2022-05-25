@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/vault/consts"
 )
 
@@ -23,14 +24,11 @@ const (
 	UnknownPath = "unknown"
 
 	// DefaultMaxHTTPRetries is used for configuring the api.Client's MaxRetries.
-	DefaultMaxHTTPRetries = 2
 
 	// DefaultMaxHTTPRetriesCCC is used for configuring the api.Client's MaxRetries
 	// for Client Controlled Consistency related operations.
 	DefaultMaxHTTPRetriesCCC = 10
 )
-
-var maxHTTPRetriesCCC int
 
 // This is a global MutexKV for use within this provider.
 // Use this when you need to have multiple resources or even multiple instances
@@ -169,7 +167,7 @@ func Provider() *schema.Provider {
 			"max_retries": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", DefaultMaxHTTPRetries),
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_MAX_RETRIES", provider.DefaultMaxHTTPRetries),
 				Description: "Maximum number of retries when a 5xx error code is encountered.",
 			},
 			"max_retries_ccc": {
@@ -205,7 +203,7 @@ func Provider() *schema.Provider {
 				},
 			},
 		},
-		ConfigureFunc:  NewProviderMeta,
+		ConfigureFunc:  provider.NewProviderMeta,
 		DataSourcesMap: dataSourcesMap,
 		ResourcesMap:   resourcesMap,
 	}

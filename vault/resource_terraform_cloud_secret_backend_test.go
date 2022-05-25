@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -50,7 +51,7 @@ func TestTerraformCloudSecretBackend(t *testing.T) {
 }
 
 func testAccTerraformCloudSecretBackendCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {

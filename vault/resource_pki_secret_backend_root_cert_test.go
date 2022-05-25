@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -55,7 +56,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 			{
 				// test unmounted backend
 				PreConfig: func() {
-					client := testProvider.Meta().(*ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 					if err := client.Sys().Unmount(path); err != nil {
 						t.Fatal(err)
 					}
@@ -71,7 +72,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 			{
 				// test out of band update to the root CA
 				PreConfig: func() {
-					client := testProvider.Meta().(*ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 					_, err := client.Logical().Delete(fmt.Sprintf("%s/root", path))
 					if err != nil {
 						t.Fatal(err)
@@ -102,7 +103,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 }
 
 func testPkiSecretBackendRootCertificateDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {

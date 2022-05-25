@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -81,7 +82,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 }
 
 func testPkiSecretBackendCertDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
@@ -233,7 +234,7 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 			{
 				// test unmounted backend
 				PreConfig: func() {
-					client := testProvider.Meta().(*ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 					if err := client.Sys().Unmount(path); err != nil {
 						t.Fatal(err)
 					}
@@ -359,7 +360,7 @@ func testPKICertRevocation(path string, store *testPKICertStore) resource.TestCh
 			return fmt.Errorf("certificate in %#v is empty", store)
 		}
 
-		addr := testProvider.Meta().(*ProviderMeta).GetClient().Address()
+		addr := testProvider.Meta().(*provider.ProviderMeta).GetClient().Address()
 		url := fmt.Sprintf("%s/v1/%s/crl", addr, path)
 		c := cleanhttp.DefaultClient()
 		resp, err := c.Get(url)

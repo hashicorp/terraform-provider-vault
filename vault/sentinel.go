@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func readSentinelPolicy(client *api.Client, policyType string, name string) (map[string]interface{}, error) {
@@ -74,7 +76,7 @@ func ValidateSentinelEnforcementLevel(v interface{}, k string) (ws []string, err
 }
 
 func sentinelPolicyDelete(policyType string, d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -92,7 +94,7 @@ func sentinelPolicyDelete(policyType string, d *schema.ResourceData, meta interf
 }
 
 func sentinelPolicyRead(policyType string, attributes []string, d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -113,7 +115,7 @@ func sentinelPolicyRead(policyType string, attributes []string, d *schema.Resour
 }
 
 func sentinelPolicyWrite(policyType string, attributes []string, d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

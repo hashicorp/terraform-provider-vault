@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -49,7 +50,7 @@ func TestAccAWSAuthBackendIdentityWhitelist_basic(t *testing.T) {
 }
 
 func testAccCheckAWSAuthBackendIdentityWhitelistDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_aws_auth_backend_identity_whitelist" {
 			continue
@@ -97,7 +98,7 @@ func testAccAWSAuthBackendIdentityWhitelistCheck_attrs(backend string) resource.
 			return fmt.Errorf("expected ID to be %q, got %q", "auth/"+backend+"/config/tidy/identity-whitelist", endpoint)
 		}
 
-		client := testProvider.Meta().(*ProviderMeta).GetClient()
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 		resp, err := client.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("error reading back AWS auth bavkend identity whitelist config from %q: %s", endpoint, err)

@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -68,7 +69,7 @@ func testDataSourceIdentityGroup_check(resource string) resource.TestCheckFunc {
 		}
 
 		id := instanceState.ID
-		client := testProvider.Meta().(*ProviderMeta).GetClient()
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 		resp, err := identityGroupLookup(client, map[string]interface{}{"id": id})
 		if err != nil {

@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -42,7 +43,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				return nil
 			}
 
-			client, e := GetClient(d, meta)
+			client, e := provider.GetClient(d, meta)
 			if e != nil {
 				return e
 			}
@@ -251,7 +252,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 }
 
 func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -381,7 +382,7 @@ func getCACertificate(client *api.Client, mount string) (*x509.Certificate, erro
 }
 
 func pkiSecretBackendRootCertDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

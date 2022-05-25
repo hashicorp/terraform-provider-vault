@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -74,7 +76,7 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 }
 
 func databaseSecretBackendStaticRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -107,7 +109,7 @@ func databaseSecretBackendStaticRoleWrite(d *schema.ResourceData, meta interface
 }
 
 func databaseSecretBackendStaticRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -170,7 +172,7 @@ func databaseSecretBackendStaticRoleRead(d *schema.ResourceData, meta interface{
 }
 
 func databaseSecretBackendStaticRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -186,7 +188,7 @@ func databaseSecretBackendStaticRoleDelete(d *schema.ResourceData, meta interfac
 }
 
 func databaseSecretBackendStaticRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

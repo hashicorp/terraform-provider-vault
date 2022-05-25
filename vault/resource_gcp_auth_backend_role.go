@@ -9,6 +9,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -167,7 +169,7 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, cr
 }
 
 func gcpAuthResourceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
@@ -193,7 +195,7 @@ func gcpAuthResourceCreate(ctx context.Context, d *schema.ResourceData, meta int
 }
 
 func gcpAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
@@ -213,7 +215,7 @@ func gcpAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta int
 }
 
 func gcpAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
@@ -282,7 +284,7 @@ func gcpAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interfa
 }
 
 func gcpAuthResourceDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}

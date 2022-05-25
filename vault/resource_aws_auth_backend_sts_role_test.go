@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -57,7 +58,7 @@ func TestAccAWSAuthBackendSTSRole_basic(t *testing.T) {
 }
 
 func testAccCheckAWSAuthBackendSTSRoleDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_aws_auth_backend_sts_role" {
@@ -92,7 +93,7 @@ func testAccAWSAuthBackendSTSRoleCheck_attrs(backend, accountID, stsRole string)
 			return fmt.Errorf("expected ID to be %q, got %q instead", "auth/"+backend+"/config/sts/"+accountID, endpoint)
 		}
 
-		client := testProvider.Meta().(*ProviderMeta).GetClient()
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 		resp, err := client.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("error reading back sts role from %q: %s", endpoint, err)

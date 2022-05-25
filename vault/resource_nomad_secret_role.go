@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -66,7 +67,7 @@ func nomadSecretBackendRoleResource() *schema.Resource {
 }
 
 func createNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -117,7 +118,7 @@ func createNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -171,7 +172,7 @@ func readNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -213,7 +214,7 @@ func updateNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func deleteNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

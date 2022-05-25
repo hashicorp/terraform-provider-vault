@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -107,7 +108,7 @@ func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interfac
 }
 
 func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -146,7 +147,7 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -173,7 +174,7 @@ func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -205,7 +206,7 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -228,7 +229,7 @@ func identityEntityDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}
@@ -286,7 +287,7 @@ func readEntity(client *api.Client, path string, retry bool) (*api.Secret, error
 		if err != nil {
 			return nil, fmt.Errorf("error cloning client: %w", err)
 		}
-		util.SetupCCCRetryClient(client, maxHTTPRetriesCCC)
+		util.SetupCCCRetryClient(client, provider.MaxHTTPRetriesCCC)
 	}
 
 	resp, err := client.Logical().Read(path)

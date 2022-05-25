@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const identityOIDCScopePathPrefix = "identity/oidc/scope"
@@ -60,7 +62,7 @@ func getOIDCScopePath(name string) string {
 }
 
 func identityOIDCScopeCreateUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -80,7 +82,7 @@ func identityOIDCScopeCreateUpdate(d *schema.ResourceData, meta interface{}) err
 }
 
 func identityOIDCScopeRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -109,7 +111,7 @@ func identityOIDCScopeRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOIDCScopeDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

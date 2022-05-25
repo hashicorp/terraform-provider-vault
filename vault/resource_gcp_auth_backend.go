@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const (
@@ -17,7 +19,6 @@ const (
 
 func gcpAuthBackendResource() *schema.Resource {
 	return &schema.Resource{
-
 		Create: gcpAuthBackendWrite,
 		Update: gcpAuthBackendUpdate,
 		Read:   gcpAuthBackendRead,
@@ -113,7 +114,7 @@ func gcpAuthBackendConfigPath(path string) string {
 }
 
 func gcpAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -140,7 +141,7 @@ func gcpAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -164,7 +165,7 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -207,7 +208,7 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -225,7 +226,7 @@ func gcpAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

@@ -7,6 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func azureSecretBackendResource() *schema.Resource {
@@ -84,7 +86,7 @@ func azureSecretBackendResource() *schema.Resource {
 }
 
 func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -119,7 +121,7 @@ func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -178,7 +180,7 @@ func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -198,7 +200,7 @@ func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -215,7 +217,7 @@ func azureSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

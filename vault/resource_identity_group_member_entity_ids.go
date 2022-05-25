@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func identityGroupMemberEntityIdsResource() *schema.Resource {
@@ -53,7 +55,7 @@ func identityGroupMemberEntityIdsUpdate(d *schema.ResourceData, meta interface{}
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
 
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -120,7 +122,7 @@ func identityGroupMemberEntityIdsUpdate(d *schema.ResourceData, meta interface{}
 }
 
 func identityGroupMemberEntityIdsRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -180,7 +182,7 @@ func identityGroupMemberEntityIdsDelete(d *schema.ResourceData, meta interface{}
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
 
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

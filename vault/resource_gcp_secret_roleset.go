@@ -9,6 +9,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -108,7 +110,7 @@ func gcpSecretRolesetResource() *schema.Resource {
 }
 
 func gcpSecretRolesetCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -134,7 +136,7 @@ func gcpSecretRolesetCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretRolesetRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -198,7 +200,7 @@ func gcpSecretRolesetRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretRolesetUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -220,7 +222,7 @@ func gcpSecretRolesetUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretRolesetDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -258,7 +260,7 @@ func gcpSecretRolesetUpdateFields(d *schema.ResourceData, data map[string]interf
 }
 
 func gcpSecretRolesetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

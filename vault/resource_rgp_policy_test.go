@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -39,7 +40,7 @@ func TestAccRoleGoverningPolicy(t *testing.T) {
 }
 
 func testAccRoleGoverningPolicyCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_rgp_policy" {
 			continue

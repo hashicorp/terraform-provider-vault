@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -180,7 +181,7 @@ func TestAccAppRoleAuthBackendRoleSecretID_full(t *testing.T) {
 }
 
 func testAccCheckAppRoleAuthBackendRoleSecretIDDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_approle_auth_backend_role_secret_id" {
@@ -281,7 +282,7 @@ provider "vault" {
 
 func testAssertClientNamespace(expectedNS string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*ProviderMeta).GetClient()
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 		actualNS := client.Headers().Get(consts.NamespaceHeaderName)
 		if actualNS != expectedNS {
 			return fmt.Errorf("expected namespace %v, actual %v", expectedNS, actualNS)

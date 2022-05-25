@@ -7,6 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func sshSecretBackendCAResource() *schema.Resource {
@@ -56,7 +58,7 @@ func sshSecretBackendCAResource() *schema.Resource {
 }
 
 func sshSecretBackendCACreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -86,7 +88,7 @@ func sshSecretBackendCACreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func sshSecretBackendCARead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -123,7 +125,7 @@ func sshSecretBackendCARead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func sshSecretBackendCADelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

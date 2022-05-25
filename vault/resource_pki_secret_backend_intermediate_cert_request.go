@@ -7,6 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
@@ -171,7 +173,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 }
 
 func pkiSecretBackendIntermediateCertRequestCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

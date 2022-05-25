@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -68,7 +70,7 @@ func raftAutopilotConfigResource() *schema.Resource {
 }
 
 func createOrUpdateAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -93,7 +95,7 @@ func createOrUpdateAutopilotConfigResource(d *schema.ResourceData, meta interfac
 }
 
 func readAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -145,7 +147,7 @@ func readAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error
 }
 
 func deleteAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

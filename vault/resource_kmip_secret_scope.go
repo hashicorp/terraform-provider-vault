@@ -7,6 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var errKMIPScopeNotFound = errors.New("KMIP scope not found")
@@ -45,7 +47,7 @@ func kmipSecretScopeResource() *schema.Resource {
 }
 
 func kmipSecretScopeCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -71,7 +73,7 @@ func kmipSecretScopeCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretScopeRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -94,7 +96,7 @@ func kmipSecretScopeRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretScopeUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -120,7 +122,7 @@ func kmipSecretScopeUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretScopeDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

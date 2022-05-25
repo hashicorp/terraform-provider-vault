@@ -10,8 +10,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
 const nameEndpoint = "/transform/transformation/{name}"
@@ -81,7 +81,7 @@ func NameResource() *schema.Resource {
 }
 
 func createNameResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := vault.GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -117,7 +117,7 @@ func createNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readNameResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := vault.GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -177,7 +177,7 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateNameResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := vault.GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -208,7 +208,7 @@ func updateNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := vault.GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -227,7 +227,7 @@ func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceNameExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := vault.GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

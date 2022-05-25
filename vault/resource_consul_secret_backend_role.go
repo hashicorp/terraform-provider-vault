@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -107,7 +109,7 @@ func consulSecretBackendRoleGetBackend(d *schema.ResourceData) string {
 }
 
 func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -158,7 +160,7 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 }
 
 func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -235,7 +237,7 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 }
 
 func consulSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -252,7 +254,7 @@ func consulSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) err
 }
 
 func consulSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

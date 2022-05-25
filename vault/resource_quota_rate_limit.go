@@ -6,6 +6,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func quotaRateLimitPath(name string) string {
@@ -47,7 +49,7 @@ func quotaRateLimitResource() *schema.Resource {
 }
 
 func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -73,7 +75,7 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -106,7 +108,7 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -131,7 +133,7 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaRateLimitDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -150,7 +152,7 @@ func quotaRateLimitDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaRateLimitExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

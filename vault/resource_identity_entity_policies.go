@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -50,7 +51,7 @@ func identityEntityPoliciesResource() *schema.Resource {
 }
 
 func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -98,7 +99,7 @@ func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -141,7 +142,7 @@ func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func identityEntityPoliciesDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

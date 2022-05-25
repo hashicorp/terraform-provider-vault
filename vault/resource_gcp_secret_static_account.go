@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -95,7 +97,7 @@ func gcpSecretStaticAccountResource() *schema.Resource {
 }
 
 func gcpSecretStaticAccountCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -121,7 +123,7 @@ func gcpSecretStaticAccountCreate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func gcpSecretStaticAccountRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -181,7 +183,7 @@ func gcpSecretStaticAccountRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func gcpSecretStaticAccountUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -203,7 +205,7 @@ func gcpSecretStaticAccountUpdate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func gcpSecretStaticAccountDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -243,7 +245,7 @@ func gcpSecretStaticAccountUpdateFields(d *schema.ResourceData, data map[string]
 }
 
 func gcpSecretStaticAccountExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

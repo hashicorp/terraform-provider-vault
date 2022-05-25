@@ -7,6 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func terraformCloudSecretBackendResource() *schema.Resource {
@@ -75,7 +77,7 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 }
 
 func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -131,7 +133,7 @@ func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{})
 }
 
 func terraformCloudSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -179,7 +181,7 @@ func terraformCloudSecretBackendRead(d *schema.ResourceData, meta interface{}) e
 }
 
 func terraformCloudSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -222,7 +224,7 @@ func terraformCloudSecretBackendUpdate(d *schema.ResourceData, meta interface{})
 }
 
 func terraformCloudSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -239,7 +241,7 @@ func terraformCloudSecretBackendDelete(d *schema.ResourceData, meta interface{})
 }
 
 func terraformCloudSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

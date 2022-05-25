@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -68,7 +69,7 @@ func TestAccDatabaseSecretsMount_mssql(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 					resp, err := client.Logical().Read(fmt.Sprintf("%s/creds/%s", backend, "dev"))
 					if err != nil {
 						t.Fatal(err)
@@ -168,7 +169,7 @@ func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 					for _, role := range []string{"dev1", "dev2"} {
 						resp, err := client.Logical().Read(fmt.Sprintf("%s/creds/%s", backend, role))
@@ -320,7 +321,7 @@ resource "vault_database_secret_backend_role" "test2" {
 }
 
 func testAccDatabaseSecretsMountCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_database_secrets_mount" {

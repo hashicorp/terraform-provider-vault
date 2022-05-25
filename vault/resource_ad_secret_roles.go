@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -66,7 +68,7 @@ func adSecretBackendRoleResource() *schema.Resource {
 }
 
 func createRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -96,7 +98,7 @@ func createRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -155,7 +157,7 @@ func readRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -178,7 +180,7 @@ func updateRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func deleteRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

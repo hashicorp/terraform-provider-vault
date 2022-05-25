@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -220,7 +221,7 @@ func adSecretBackendResource() *schema.Resource {
 }
 
 func createConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -347,7 +348,7 @@ func createConfigResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -524,7 +525,7 @@ func readConfigResource(d *schema.ResourceData, meta interface{}) error {
 func updateConfigResource(d *schema.ResourceData, meta interface{}) error {
 	backend := d.Id()
 
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -649,7 +650,7 @@ func updateConfigResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func deleteConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

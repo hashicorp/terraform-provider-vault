@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const (
@@ -177,7 +179,7 @@ func kmipSecretRoleResource() *schema.Resource {
 }
 
 func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -206,7 +208,7 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -243,7 +245,7 @@ func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -277,7 +279,7 @@ func kmipSecretRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

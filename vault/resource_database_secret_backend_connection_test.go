@@ -21,6 +21,7 @@ import (
 	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -594,7 +595,7 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 				Config: testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, backend, testConnURL, secondaryRootUsername, secondaryRootPassword, 10),
 				PreConfig: func() {
 					path := fmt.Sprintf("%s/rotate-root/%s", backend, name)
-					client := testProvider.Meta().(*ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 					resp, err := client.Logical().Write(path, map[string]interface{}{})
 					if err != nil {
 						t.Error(err)
@@ -876,7 +877,7 @@ resource "vault_database_secret_backend_connection" "test" {
 }
 
 func testAccDatabaseSecretBackendConnectionCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_database_secret_backend_connection" {

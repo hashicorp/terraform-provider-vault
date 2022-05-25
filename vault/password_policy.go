@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func readPasswordPolicy(client *api.Client, name string) (map[string]interface{}, error) {
@@ -37,7 +39,7 @@ func readPasswordPolicy(client *api.Client, name string) (map[string]interface{}
 }
 
 func passwordPolicyDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -59,7 +61,7 @@ func passwordPolicyDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func passwordPolicyRead(attributes []string, d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -80,7 +82,7 @@ func passwordPolicyRead(attributes []string, d *schema.ResourceData, meta interf
 }
 
 func passwordPolicyWrite(attributes []string, d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

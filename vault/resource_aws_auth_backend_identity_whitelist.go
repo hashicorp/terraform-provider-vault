@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var awsAuthBackendIdentityWhitelistBackendFromPathRegex = regexp.MustCompile("^auth/(.+)/config/tidy/identity-whitelist$")
@@ -49,7 +51,7 @@ func awsAuthBackendIdentityWhitelistResource() *schema.Resource {
 }
 
 func awsAuthBackendIdentityWhitelistWrite(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -81,7 +83,7 @@ func awsAuthBackendIdentityWhitelistWrite(d *schema.ResourceData, meta interface
 }
 
 func awsAuthBackendIdentityWhitelistRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -113,7 +115,7 @@ func awsAuthBackendIdentityWhitelistRead(d *schema.ResourceData, meta interface{
 }
 
 func awsAuthBackendIdentityWhitelistDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -131,7 +133,7 @@ func awsAuthBackendIdentityWhitelistDelete(d *schema.ResourceData, meta interfac
 }
 
 func awsAuthBackendIdentityWhitelistExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

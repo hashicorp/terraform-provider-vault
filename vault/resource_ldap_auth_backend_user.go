@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -67,7 +69,7 @@ func ldapAuthBackendUserResourcePath(backend, username string) string {
 }
 
 func ldapAuthBackendUserResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -101,7 +103,7 @@ func ldapAuthBackendUserResourceWrite(d *schema.ResourceData, meta interface{}) 
 }
 
 func ldapAuthBackendUserResourceRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -153,7 +155,7 @@ func ldapAuthBackendUserResourceRead(d *schema.ResourceData, meta interface{}) e
 }
 
 func ldapAuthBackendUserResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -171,7 +173,7 @@ func ldapAuthBackendUserResourceDelete(d *schema.ResourceData, meta interface{})
 }
 
 func ldapAuthBackendUserResourceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

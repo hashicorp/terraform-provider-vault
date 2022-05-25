@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func alicloudAuthBackendRoleResource() *schema.Resource {
@@ -82,7 +84,7 @@ func alicloudAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string
 }
 
 func alicloudAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
@@ -108,7 +110,7 @@ func alicloudAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func alicloudAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
@@ -129,7 +131,7 @@ func alicloudAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func alicloudAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
@@ -178,7 +180,7 @@ func alicloudAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta
 }
 
 func alicloudAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}

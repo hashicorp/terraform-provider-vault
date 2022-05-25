@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -157,7 +158,7 @@ func TestAccKubernetesAuthBackendConfig_basic(t *testing.T) {
 }
 
 func testAccCheckKubernetesAuthBackendConfigDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*ProviderMeta).GetClient()
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_kubernetes_auth_backend_config" {
@@ -365,7 +366,7 @@ func TestAccKubernetesAuthBackendConfig_localCA(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 					path := kubernetesAuthBackendConfigPath(backend)
 					if _, err := client.Logical().Write(path, map[string]interface{}{
 						"kubernetes_ca_cert": kubernetesCAcert,

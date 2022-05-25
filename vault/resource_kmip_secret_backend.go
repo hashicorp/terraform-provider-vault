@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -108,7 +109,7 @@ func kmipSecretBackendResource() *schema.Resource {
 }
 
 func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -133,7 +134,7 @@ func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -218,7 +219,7 @@ func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -247,7 +248,7 @@ func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

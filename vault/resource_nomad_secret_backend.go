@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -106,7 +107,7 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 }
 
 func createNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -185,7 +186,7 @@ func createNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) e
 }
 
 func readNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -282,7 +283,7 @@ func readNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) err
 func updateNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {
 	backend := d.Id()
 
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -356,7 +357,7 @@ func updateNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) e
 }
 
 func deleteNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

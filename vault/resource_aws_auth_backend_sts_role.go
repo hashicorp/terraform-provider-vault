@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -52,7 +54,7 @@ func awsAuthBackendSTSRoleResource() *schema.Resource {
 }
 
 func awsAuthBackendSTSRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -80,7 +82,7 @@ func awsAuthBackendSTSRoleCreate(d *schema.ResourceData, meta interface{}) error
 }
 
 func awsAuthBackendSTSRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -116,7 +118,7 @@ func awsAuthBackendSTSRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsAuthBackendSTSRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -137,7 +139,7 @@ func awsAuthBackendSTSRoleUpdate(d *schema.ResourceData, meta interface{}) error
 }
 
 func awsAuthBackendSTSRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -154,7 +156,7 @@ func awsAuthBackendSTSRoleDelete(d *schema.ResourceData, meta interface{}) error
 }
 
 func awsAuthBackendSTSRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

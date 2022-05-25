@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func mfaTOTPResource() *schema.Resource {
@@ -110,7 +112,7 @@ func mfaTOTPRequestData(d *schema.ResourceData) map[string]interface{} {
 }
 
 func mfaTOTPWrite(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -129,7 +131,7 @@ func mfaTOTPWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaTOTPRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -162,7 +164,7 @@ func mfaTOTPUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaTOTPDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

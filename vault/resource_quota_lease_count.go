@@ -6,6 +6,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func quotaLeaseCountPath(name string) string {
@@ -48,7 +50,7 @@ func quotaLeaseCountResource() *schema.Resource {
 }
 
 func quotaLeaseCountCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -74,7 +76,7 @@ func quotaLeaseCountCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaLeaseCountRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -107,7 +109,7 @@ func quotaLeaseCountRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -132,7 +134,7 @@ func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaLeaseCountDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -151,7 +153,7 @@ func quotaLeaseCountDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func quotaLeaseCountExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

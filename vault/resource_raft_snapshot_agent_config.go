@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -279,7 +280,7 @@ func buildConfigFromResourceData(d *schema.ResourceData) (map[string]interface{}
 }
 
 func createOrUpdateSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -303,7 +304,7 @@ func createOrUpdateSnapshotAgentConfigResource(d *schema.ResourceData, meta inte
 }
 
 func readSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -487,7 +488,7 @@ func readSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) e
 }
 
 func deleteSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

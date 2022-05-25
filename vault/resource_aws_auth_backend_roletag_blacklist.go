@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var awsAuthBackendRoleTagBlacklistBackendFromPathRegex = regexp.MustCompile("^auth/(.+)/config/tidy/roletag-blacklist$")
@@ -50,7 +52,7 @@ func awsAuthBackendRoleTagBlacklistResource() *schema.Resource {
 }
 
 func awsAuthBackendRoleTagBlacklistWrite(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -77,7 +79,7 @@ func awsAuthBackendRoleTagBlacklistWrite(d *schema.ResourceData, meta interface{
 }
 
 func awsAuthBackendRoleTagBlacklistRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -111,7 +113,7 @@ func awsAuthBackendRoleTagBlacklistRead(d *schema.ResourceData, meta interface{}
 }
 
 func awsAuthBackendRoleTagBlacklistDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -129,7 +131,7 @@ func awsAuthBackendRoleTagBlacklistDelete(d *schema.ResourceData, meta interface
 }
 
 func awsAuthBackendRoleTagBlacklistExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

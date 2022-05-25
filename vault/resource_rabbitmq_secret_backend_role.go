@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func rabbitMQSecretBackendRoleResource() *schema.Resource {
@@ -111,7 +113,7 @@ func rabbitMQSecretBackendRoleResource() *schema.Resource {
 }
 
 func rabbitMQSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -146,7 +148,7 @@ func rabbitMQSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 }
 
 func rabbitMQSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -189,7 +191,7 @@ func rabbitMQSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 }
 
 func rabbitMQSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -205,7 +207,7 @@ func rabbitMQSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func rabbitMQSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

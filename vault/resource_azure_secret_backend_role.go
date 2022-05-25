@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func azureSecretBackendRoleResource() *schema.Resource {
@@ -149,7 +151,7 @@ func azureSecretBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 }
 
 func azureSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -178,7 +180,7 @@ func azureSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func azureSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -226,7 +228,7 @@ func azureSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func azureSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}

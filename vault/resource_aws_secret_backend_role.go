@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -99,7 +100,7 @@ func awsSecretBackendRoleResource(name string) *schema.Resource {
 }
 
 func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -138,7 +139,6 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		} else {
 			return fmt.Errorf("permissions_boundary_arn is only valid when credential_type is iam_user")
 		}
-
 	}
 	if d.HasChange("policy_document") {
 		data["policy_document"] = policyDocument
@@ -190,7 +190,7 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -249,7 +249,7 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -265,7 +265,7 @@ func awsSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error 
 }
 
 func awsSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
 	}

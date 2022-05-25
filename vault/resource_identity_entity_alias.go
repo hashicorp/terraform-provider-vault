@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -58,7 +59,7 @@ func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta
 	lock()
 	defer unlock()
 
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
@@ -143,7 +144,7 @@ func identityEntityAliasUpdate(ctx context.Context, d *schema.ResourceData, meta
 	lock()
 	defer unlock()
 
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
@@ -175,7 +176,7 @@ func identityEntityAliasUpdate(ctx context.Context, d *schema.ResourceData, meta
 }
 
 func identityEntityAliasRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
@@ -223,7 +224,7 @@ func identityEntityAliasDelete(ctx context.Context, d *schema.ResourceData, meta
 	lock()
 	defer unlock()
 
-	client, e := GetClient(d, meta)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
