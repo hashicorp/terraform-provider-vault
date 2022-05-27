@@ -124,7 +124,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "key_usage.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "key_usage.0", "DigitalSignature"),
 					resource.TestCheckResourceAttr(resourceName, "ext_key_usage.#", "0"),
-          resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.#", "0"),
+                                        resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.#", "0"
 					resource.TestCheckResourceAttr(resourceName, "use_csr_common_name", "true"),
 					resource.TestCheckResourceAttr(resourceName, "use_csr_sans", "true"),
 					resource.TestCheckResourceAttr(resourceName, "ou.0", "test"),
