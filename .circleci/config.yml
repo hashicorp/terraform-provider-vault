@@ -1,57 +1,13 @@
 version: 2.1
 
-workflows:
-  build:
-    jobs:
-      - build:
-          context:
-            - vault-plugin-secrets-terraform
-
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.16
-      - image: circleci/mongo:latest
-        environment:
-          - MONGO_INITDB_ROOT_USERNAME: root
-          - MONGO_INITDB_ROOT_PASSWORD: mongodb
-          - MONGO_INITDB_DATABASE: admin
-      - image: circleci/mysql:latest
-        environment:
-          - MYSQL_ROOT_PASSWORD=mysql
-      - image: vault:latest
-        environment:
-          - VAULT_DEV_ROOT_TOKEN_ID=root
-    working_directory: /go/src/github.com/hashicorp/terraform-provider-vault
+      - image: cimg/base:2022.03
     steps:
-      - checkout
       - run:
-          name: Wait for containers to starts
-          command: dockerize -wait http://127.0.0.1:8200 -wait tcp://127.0.0.1:3306 -timeout 30s
-      - run:
-          name: "Set Environment Variables"
+          name: "Moved to GitHub Actions"
           command: |
-            echo 'export VAULT_TOKEN="root"' >> $BASH_ENV
-            echo 'export VAULT_ADDR="http://127.0.0.1:8200"' >> $BASH_ENV
-            echo 'export TF_ACC="1"' >> $BASH_ENV
-            echo 'GO111MODULE=on' >> $BASH_ENV
-            echo 'export GOBIN=$GOPATH/bin' >> $BASH_ENV
-            echo 'export MYSQL_URL="root:mysql@tcp(127.0.0.1:3306)/"' >> $BASH_ENV
-            echo 'export MYSQL_CONNECTION_URL="{{username}}:{{password}}@tcp(127.0.0.1:3306)/"' >> $BASH_ENV
-            echo 'export MYSQL_CONNECTION_USERNAME="root"' >> $BASH_ENV
-            echo 'export MYSQL_CONNECTION_PASSWORD="mysql"' >> $BASH_ENV
-            echo 'export MONGODB_URL="mongodb://root:mongodb@localhost:27017/admin?ssl=false"' >> $BASH_ENV
-      - run:
-          name: "Run Tests"
-          command: |
-            go test -v ./...
-      - run:
-          name: "Run Build"
-          command: |
-            go build
-      - run:
-          name: "Generate Coverage Report"
-          command: |
-            cd cmd/coverage/
-            go build
-            ./coverage -openapi-doc=/go/src/github.com/hashicorp/terraform-provider-vault/testdata/openapi.json
+            sudo apt-get update && sudo apt-get install -y figlet
+            figlet 'Moved to GitHub Actions'
+            echo 'See https://github.com/hashicorp/terraform-provider-vault/actions'

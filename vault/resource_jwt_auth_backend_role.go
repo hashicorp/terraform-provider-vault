@@ -1,14 +1,17 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -94,6 +97,12 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			Optional:    true,
 			Description: "Map of claims/values to match against. The expected value may be a single string or a comma-separated string list.",
 		},
+		"disable_bound_claims_parsing": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Disable bound claim value parsing. Useful when values contain commas.",
+		},
 		"claim_mappings": {
 			Type:        schema.TypeMap,
 			Optional:    true,
@@ -103,12 +112,6 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "The claim to use to uniquely identify the set of groups to which the user belongs; this will be used as the names for the Identity group aliases created due to a successful login. The claim value must be a list of strings.",
-		},
-		"groups_claim_delimiter_pattern": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "A pattern of delimiters used to allow the groups_claim to live outside of the top-level JWT structure. For instance, a groups_claim of meta/user.name/groups with this field set to // will expect nested structures named meta, user.name, and groups. If this field was set to /./ the groups information would expect to be via nested structures of meta, user, name, and groups.",
-			Deprecated:  "`groups_claim_delimiter_pattern` has been removed since Vault 1.1. If the groups claim is not at the top level, it can now be specified as a JSONPointer.",
 		},
 		"verbose_oidc_logging": {
 			Type:        schema.TypeBool,
@@ -127,82 +130,23 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-
-		// Deprecated
-		"policies": {
-			Type:     schema.TypeSet,
-			Optional: true,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Description:   "Policies to be set on tokens issued using this role.",
-			Deprecated:    "use `token_policies` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_policies"},
-		},
-		"ttl": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "Default number of seconds to set as the TTL for issued tokens and at renewal time.",
-			ConflictsWith: []string{"period", "token_ttl", "token_period"},
-			Deprecated:    "use `token_ttl` instead if you are running Vault >= 1.2",
-		},
-		"max_ttl": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "Number of seconds after which issued tokens can no longer be renewed.",
-			Deprecated:    "use `token_max_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_max_ttl"},
-		},
-		"period": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "Number of seconds to set the TTL to for issued tokens upon renewal. Makes the token a periodic token, which will never expire as long as it is renewed before the TTL each period.",
-			ConflictsWith: []string{"ttl", "token_period", "token_ttl"},
-			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
-		},
-		"num_uses": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "Number of times issued tokens can be used. Setting this to 0 or leaving it unset means unlimited uses.",
-			Deprecated:    "use `token_num_uses` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_num_uses"},
-		},
-		"bound_cidrs": {
-			Type:        schema.TypeSet,
-			Optional:    true,
-			Description: "List of CIDRs valid as the source address for login requests. This value is also encoded into any resulting token.",
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Deprecated:    "use `token_bound_cidrs` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_bound_cidrs"},
-		},
 	}
 
-	addTokenFields(fields, &addTokenFieldsConfig{
-		TokenBoundCidrsConflict: []string{"bound_cidrs"},
-		TokenMaxTTLConflict:     []string{"max_ttl"},
-		TokenNumUsesConflict:    []string{"num_uses"},
-		TokenPeriodConflict:     []string{"period", "ttl", "token_ttl"},
-		TokenPoliciesConflict:   []string{"policies"},
-		TokenTTLConflict:        []string{"ttl", "period", "token_period"},
-	})
+	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
-		Create: jwtAuthBackendRoleCreate,
-		Read:   jwtAuthBackendRoleRead,
-		Update: jwtAuthBackendRoleUpdate,
-		Delete: jwtAuthBackendRoleDelete,
-		Exists: jwtAuthBackendRoleExists,
+		CreateContext: jwtAuthBackendRoleCreate,
+		ReadContext:   jwtAuthBackendRoleRead,
+		UpdateContext: jwtAuthBackendRoleUpdate,
+		DeleteContext: jwtAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
-
 		Schema: fields,
 	}
 }
 
-func jwtAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
+func jwtAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
@@ -213,7 +157,7 @@ func jwtAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	data := jwtAuthBackendRoleDataToWrite(d, true)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error writing JWT auth backend role %q: %s", path, err)
+		return diag.Errorf("error writing JWT auth backend role %q: %s", path, err)
 	}
 	d.SetId(path)
 	log.Printf("[DEBUG] Wrote JWT auth backend role %q", path)
@@ -224,32 +168,32 @@ func jwtAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 			"role_id": v.(string),
 		})
 		if err != nil {
-			return fmt.Errorf("error writing JWT auth backend role %q's RoleID: %s", path, err)
+			return diag.Errorf("error writing JWT auth backend role %q's RoleID: %s", path, err)
 		}
 		log.Printf("[DEBUG] Wrote JWT auth backend role %q RoleID", path)
 	}
 
-	return jwtAuthBackendRoleRead(d, meta)
+	return jwtAuthBackendRoleRead(ctx, d, meta)
 }
 
-func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
+func jwtAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
 	backend, err := jwtAuthBackendRoleBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for JWT auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for JWT auth backend role: %s", path, err)
 	}
 
 	role, err := jwtAuthBackendRoleNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for JWT auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for JWT auth backend role: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading JWT auth backend role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading JWT auth backend role %q: %s", path, err)
+		return diag.Errorf("error reading JWT auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read JWT auth backend role %q", path)
 	if resp == nil {
@@ -258,92 +202,15 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	readTokenFields(d, resp)
-
-	// Check if the user is using the deprecated `policies`
-	if _, deprecated := d.GetOk("policies"); deprecated {
-		// Then we see if `token_policies` was set and unset it
-		// Vault will still return `policies`
-		if _, ok := d.GetOk("token_policies"); ok {
-			d.Set("token_policies", nil)
-		}
-
-		if v, ok := resp.Data["policies"]; ok {
-			d.Set("policies", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `period`
-	if _, deprecated := d.GetOk("period"); deprecated {
-		// Then we see if `token_period` was set and unset it
-		// Vault will still return `period`
-		if _, ok := d.GetOk("token_period"); ok {
-			d.Set("token_period", nil)
-		}
-
-		if v, ok := resp.Data["period"]; ok {
-			d.Set("period", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `ttl`
-	if _, deprecated := d.GetOk("ttl"); deprecated {
-		// Then we see if `token_ttl` was set and unset it
-		// Vault will still return `ttl`
-		if _, ok := d.GetOk("token_ttl"); ok {
-			d.Set("token_ttl", nil)
-		}
-
-		if v, ok := resp.Data["ttl"]; ok {
-			d.Set("ttl", v)
-		}
-
-	}
-
-	// Check if the user is using the deprecated `max_ttl`
-	if _, deprecated := d.GetOk("max_ttl"); deprecated {
-		// Then we see if `token_max_ttl` was set and unset it
-		// Vault will still return `max_ttl`
-		if _, ok := d.GetOk("token_max_ttl"); ok {
-			d.Set("token_max_ttl", nil)
-		}
-
-		if v, ok := resp.Data["max_ttl"]; ok {
-			d.Set("max_ttl", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `num_uses`
-	if _, deprecated := d.GetOk("num_uses"); deprecated {
-		// Then we see if `token_num_uses` was set and unset it
-		// Vault will still return `num_uses`
-		if _, ok := d.GetOk("token_num_uses"); ok {
-			d.Set("token_num_uses", nil)
-		}
-
-		if v, ok := resp.Data["num_uses"]; ok {
-			d.Set("num_uses", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `bound_cidrs`
-	if _, deprecated := d.GetOk("bound_cidrs"); deprecated {
-		// Then we see if `token_bound_cidrs` was set and unset it
-		// Vault will still return `bound_cidrs`
-		if _, ok := d.GetOk("token_bound_cidrs"); ok {
-			d.Set("token_bound_cidrs", nil)
-		}
-
-		if v, ok := resp.Data["bound_cidrs"]; ok {
-			d.Set("bound_cidrs", v)
-		}
+	if err := readTokenFields(d, resp); err != nil {
+		return diag.FromErr(err)
 	}
 
 	if resp.Data["bound_audiences"] != nil {
 		boundAuds := util.JsonStringArrayToStringArray(resp.Data["bound_audiences"].([]interface{}))
 		err = d.Set("bound_audiences", boundAuds)
 		if err != nil {
-			return fmt.Errorf("error setting bound_audiences in state: %s", err)
+			return diag.Errorf("error setting bound_audiences in state: %s", err)
 		}
 	} else {
 		d.Set("bound_audiences", make([]string, 0))
@@ -355,7 +222,7 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		allowedRedirectUris := util.JsonStringArrayToStringArray(resp.Data["allowed_redirect_uris"].([]interface{}))
 		err = d.Set("allowed_redirect_uris", allowedRedirectUris)
 		if err != nil {
-			return fmt.Errorf("error setting allowed_redirect_uris in state: %s", err)
+			return diag.Errorf("error setting allowed_redirect_uris in state: %s", err)
 		}
 	}
 
@@ -366,7 +233,7 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		cidrs := util.JsonStringArrayToStringArray(resp.Data["oidc_scopes"].([]interface{}))
 		err = d.Set("oidc_scopes", cidrs)
 		if err != nil {
-			return fmt.Errorf("error setting oidc_scopes in state: %s", err)
+			return diag.Errorf("error setting oidc_scopes in state: %s", err)
 		}
 	} else {
 		d.Set("oidc_scopes", make([]string, 0))
@@ -386,7 +253,7 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 			case string:
 				boundClaims[k] = boundClaimVal
 			default:
-				return fmt.Errorf("bound claim is not a string or list: %v", v)
+				return diag.Errorf("bound claim is not a string or list: %v", v)
 			}
 		}
 		d.Set("bound_claims", boundClaims)
@@ -397,9 +264,6 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Set("groups_claim", resp.Data["groups_claim"].(string))
-	if resp.Data["groups_claim_delimiter_pattern"] != nil {
-		d.Set("groups_claim_delimiter_pattern", resp.Data["groups_claim_delimiter_pattern"].(string))
-	}
 
 	if v, ok := resp.Data["clock_skew_leeway"]; ok {
 		d.Set("clock_skew_leeway", v)
@@ -417,10 +281,12 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("backend", backend)
 	d.Set("role_name", role)
 
-	return nil
+	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
+
+	return diags
 }
 
-func jwtAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
+func jwtAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
@@ -431,7 +297,7 @@ func jwtAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	d.SetId(path)
 
 	if err != nil {
-		return fmt.Errorf("error updating JWT auth backend role %q: %s", path, err)
+		return diag.Errorf("error updating JWT auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated JWT auth backend role %q", path)
 
@@ -441,23 +307,22 @@ func jwtAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 			"role_id": d.Get("role_id").(string),
 		})
 		if err != nil {
-			return fmt.Errorf("error updating JWT auth backend role %q's RoleID: %s", path, err)
+			return diag.Errorf("error updating JWT auth backend role %q's RoleID: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated JWT auth backend role %q RoleID", path)
 	}
 
-	return jwtAuthBackendRoleRead(d, meta)
-
+	return jwtAuthBackendRoleRead(ctx, d, meta)
 }
 
-func jwtAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func jwtAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting JWT auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil && !util.Is404(err) {
-		return fmt.Errorf("error deleting JWT auth backend role %q", path)
+		return diag.Errorf("error deleting JWT auth backend role %q", path)
 	} else if err != nil {
 		log.Printf("[DEBUG] JWT auth backend role %q not found, removing from state", path)
 		d.SetId("")
@@ -466,21 +331,6 @@ func jwtAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleted JWT auth backend role %q", path)
 
 	return nil
-}
-
-func jwtAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if JWT auth backend role %q exists", path)
-
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if JWT auth backend role %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if JWT auth backend role %q exists", path)
-
-	return resp != nil, nil
 }
 
 func jwtAuthBackendRolePath(backend, role string) string {
@@ -538,18 +388,22 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 	}
 
 	if v, ok := d.GetOk("bound_claims"); ok {
+		var disableParseClaims bool
+		if v, ok := d.GetOkExists("disable_bound_claims_parsing"); ok {
+			disableParseClaims = v.(bool)
+		}
+
 		boundClaims := make(map[string]interface{})
 		for key, val := range v.(map[string]interface{}) {
-			valStr := val.(string)
-			if strings.Contains(valStr, ",") {
-				vals := strings.Split(valStr, ",")
-				for i := range vals {
-					vals[i] = strings.TrimSpace(vals[i])
+			var claims []string
+			if !disableParseClaims {
+				for _, v := range strings.Split(val.(string), ",") {
+					claims = append(claims, strings.TrimSpace(v))
 				}
-				boundClaims[key] = vals
 			} else {
-				boundClaims[key] = valStr
+				claims = append(claims, strings.TrimSpace(val.(string)))
 			}
+			boundClaims[key] = claims
 		}
 		data["bound_claims"] = boundClaims
 	}
@@ -562,35 +416,11 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 		data["groups_claim"] = v.(string)
 	}
 
-	if v, ok := d.GetOkExists("groups_claim_delimiter_pattern"); ok {
-		data["groups_claim_delimiter_pattern"] = v.(string)
-	}
-
 	data["clock_skew_leeway"] = d.Get("clock_skew_leeway").(int)
 	data["expiration_leeway"] = d.Get("expiration_leeway").(int)
 	data["not_before_leeway"] = d.Get("not_before_leeway").(int)
 
 	data["verbose_oidc_logging"] = d.Get("verbose_oidc_logging").(bool)
-
-	// Deprecated Fields
-	if dataList := util.TerraformSetToStringArray(d.Get("policies")); len(dataList) > 0 {
-		data["policies"] = dataList
-	}
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(int)
-	}
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(int)
-	}
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(int)
-	}
-	if v, ok := d.GetOk("num_uses"); ok {
-		data["num_uses"] = v.(int)
-	}
-	if dataList := util.TerraformSetToStringArray(d.Get("bound_cidrs")); len(dataList) > 0 {
-		data["bound_cidrs"] = dataList
-	}
 
 	return data
 }

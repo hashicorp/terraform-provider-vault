@@ -7,11 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestLDAPAuthBackendUser_import(t *testing.T) {
@@ -29,7 +31,7 @@ func TestLDAPAuthBackendUser_import(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testLDAPAuthBackendUserDestroy,
 		Steps: []resource.TestStep{
@@ -64,7 +66,7 @@ func TestLDAPAuthBackendUser_basic(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testLDAPAuthBackendUserDestroy,
 		Steps: []resource.TestStep{
@@ -88,7 +90,7 @@ func TestLDAPAuthBackendUser_noGroups(t *testing.T) {
 	groups := []string{}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testLDAPAuthBackendUserDestroy,
 		Steps: []resource.TestStep{
@@ -114,7 +116,7 @@ func TestLDAPAuthBackendUser_oneGroup(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testLDAPAuthBackendUserDestroy,
 		Steps: []resource.TestStep{
@@ -314,7 +316,6 @@ func testLDAPAuthBackendUserCheck_attrs(backend, username string) resource.TestC
 }
 
 func testLDAPAuthBackendUserConfig_basic(backend, username string, policies, groups []string) string {
-
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "ldap" {
@@ -323,11 +324,10 @@ resource "vault_auth_backend" "ldap" {
 }
 
 resource "vault_ldap_auth_backend_user" "test" {
-    backend  = "${vault_auth_backend.ldap.path}"
+    backend  = vault_auth_backend.ldap.path
     username = "%s"
     policies = %s
     groups   = %s
 }
 `, backend, username, util.ArrayToTerraformList(policies), util.ArrayToTerraformList(groups))
-
 }

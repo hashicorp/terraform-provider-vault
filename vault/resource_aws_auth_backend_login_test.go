@@ -5,21 +5,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
-	accessKey, secretKey := getTestAWSCreds(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	sess, err := session.NewSession(nil)
 	if err != nil {
@@ -46,7 +47,7 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	reqBody := base64.StdEncoding.EncodeToString(loginDataBody)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_iamIdentity(mountPath, accessKey, secretKey, reqMethod, reqURL, reqHeaders, reqBody, roleName, *testIdentity.Arn),
@@ -59,13 +60,11 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
-	if os.Getenv("TF_AWS_META") == "" {
-		t.Skip("Not running on EC2 instance, can't test EC2 auth methods")
-	}
+	testutil.SkipTestEnvUnset(t, "TF_AWS_META")
 
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
-	accessKey, secretKey := getTestAWSCreds(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	sess, err := session.NewSession(nil)
 	if err != nil {
@@ -98,7 +97,7 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_pkcs7(mountPath, accessKey, secretKey, roleName, ami, account, arn, pkcs7),
@@ -111,13 +110,11 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 }
 
 func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
-	if os.Getenv("TF_AWS_META") == "" {
-		t.Skip("Not running on EC2 instance, can't test EC2 auth methods")
-	}
+	testutil.SkipTestEnvUnset(t, "TF_AWS_META")
 
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
-	accessKey, secretKey := getTestAWSCreds(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	sess, err := session.NewSession(nil)
 	if err != nil {
@@ -156,7 +153,7 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAuthBackendLoginConfig_ec2Identity(mountPath, accessKey, secretKey, roleName, ami, account, arn, identity, sig),
@@ -176,13 +173,13 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "%s"
   secret_key = "%s"
 }
 
 resource "vault_aws_auth_backend_role" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["%s"]
@@ -191,8 +188,8 @@ resource "vault_aws_auth_backend_role" "test" {
 }
 
 resource "vault_aws_auth_backend_login" "test" {
-  backend = "${vault_auth_backend.aws.path}"
-  role = "${vault_aws_auth_backend_role.test.role}"
+  backend = vault_auth_backend.aws.path
+  role = vault_aws_auth_backend_role.test.role
   iam_http_request_method = "%s"
   iam_request_url = "%s"
   iam_request_headers = "%s"
@@ -209,13 +206,13 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "%s"
   secret_key = "%s"
 }
 
 resource "vault_aws_auth_backend_role" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "ec2"
   policies = ["default"]
@@ -227,8 +224,8 @@ resource "vault_aws_auth_backend_role" "test" {
 }
 
 resource "vault_aws_auth_backend_login" "test" {
-  backend = "${vault_auth_backend.aws.path}"
-  role = "${vault_aws_auth_backend_role.test.role}"
+  backend = vault_auth_backend.aws.path
+  role = vault_aws_auth_backend_role.test.role
   identity = "%s"
   signature = "%s"
 }
@@ -243,13 +240,13 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "%s"
   secret_key = "%s"
 }
 
 resource "vault_aws_auth_backend_role" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "ec2"
   policies = ["default"]
@@ -261,8 +258,8 @@ resource "vault_aws_auth_backend_role" "test" {
 }
 
 resource "vault_aws_auth_backend_login" "test" {
-  backend = "${vault_auth_backend.aws.path}"
-  role = "${vault_aws_auth_backend_role.test.role}"
+  backend = vault_auth_backend.aws.path
+  role = vault_aws_auth_backend_role.test.role
   pkcs7 = "%s"
 }
 `, mountPath, accessKey, secretKey, roleName, ami, account, arn, pkcs7)

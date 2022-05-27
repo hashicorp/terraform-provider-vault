@@ -1,12 +1,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -35,12 +37,6 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 			},
 			Optional: true,
 			ForceNew: true,
-		},
-		"project_id": {
-			Type:     schema.TypeString,
-			Optional: true,
-			ForceNew: true,
-			Removed:  `Use "bound_projects"`,
 		},
 		"add_group_aliases": {
 			Type:     schema.TypeBool,
@@ -106,58 +102,19 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-
-		// Deprecated
-		"ttl": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Computed:      true,
-			ConflictsWith: []string{"token_ttl"},
-			Deprecated:    "use `token_ttl` instead if you are running Vault >= 1.2",
-		},
-		"max_ttl": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_max_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_max_ttl"},
-		},
-		"period": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_period"},
-		},
-		"policies": {
-			Type: schema.TypeSet,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_policies` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_policies"},
-		},
 	}
 
-	addTokenFields(fields, &addTokenFieldsConfig{
-		TokenMaxTTLConflict:   []string{"max_ttl"},
-		TokenPeriodConflict:   []string{"period"},
-		TokenPoliciesConflict: []string{"policies"},
-		TokenTTLConflict:      []string{"ttl"},
-	})
+	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
 		SchemaVersion: 1,
 
-		Create: gcpAuthResourceCreate,
-		Update: gcpAuthResourceUpdate,
-		Read:   gcpAuthResourceRead,
-		Delete: gcpAuthResourceDelete,
-		Exists: gcpAuthResourceExists,
+		CreateContext: gcpAuthResourceCreate,
+		UpdateContext: gcpAuthResourceUpdate,
+		ReadContext:   gcpAuthResourceRead,
+		DeleteContext: gcpAuthResourceDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: fields,
 	}
@@ -174,28 +131,8 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, cr
 		data["type"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("project_id"); ok {
-		data["project_id"] = v.(string)
-	}
-
 	if v, ok := d.GetOk("bound_projects"); ok {
 		data["bound_projects"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("policies"); ok {
-		data["policies"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("bound_service_accounts"); ok {
@@ -231,7 +168,7 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, cr
 	}
 }
 
-func gcpAuthResourceCreate(d *schema.ResourceData, meta interface{}) error {
+func gcpAuthResourceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
@@ -247,14 +184,14 @@ func gcpAuthResourceCreate(d *schema.ResourceData, meta interface{}) error {
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing GCP auth role %q: %s", path, err)
+		return diag.Errorf("Error writing GCP auth role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote role %q to GCP auth backend", path)
 
-	return gcpAuthResourceRead(d, meta)
+	return gcpAuthResourceRead(ctx, d, meta)
 }
 
-func gcpAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
+func gcpAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
@@ -264,21 +201,21 @@ func gcpAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating role %q in GCP auth backend", path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error updating GCP auth role %q: %s", path, err)
+		return diag.Errorf("Error updating GCP auth role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated role %q to GCP auth backend", path)
 
-	return gcpAuthResourceRead(d, meta)
+	return gcpAuthResourceRead(ctx, d, meta)
 }
 
-func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
+func gcpAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading GCP role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading GCP role %q: %s", path, err)
+		return diag.Errorf("Error reading GCP role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read GCP role %q", path)
 
@@ -290,74 +227,23 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 
 	backend, err := gcpAuthResourceBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for GCP auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for GCP auth backend role: %s", path, err)
 	}
 	d.Set("backend", backend)
 	role, err := gcpAuthResourceRoleFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for GCP auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for GCP auth backend role: %s", path, err)
 	}
 	d.Set("role", role)
 
-	readTokenFields(d, resp)
-
-	// Check if the user is using the deprecated `policies`
-	if _, deprecated := d.GetOk("policies"); deprecated {
-		// Then we see if `token_policies` was set and unset it
-		// Vault will still return `policies`
-		if _, ok := d.GetOk("token_policies"); ok {
-			d.Set("token_policies", nil)
-		}
-
-		if v, ok := resp.Data["policies"]; ok {
-			d.Set("policies", v)
-		}
+	if err := readTokenFields(d, resp); err != nil {
+		return diag.FromErr(err)
 	}
 
-	// Check if the user is using the deprecated `period`
-	if _, deprecated := d.GetOk("period"); deprecated {
-		// Then we see if `token_period` was set and unset it
-		// Vault will still return `period`
-		if _, ok := d.GetOk("token_period"); ok {
-			d.Set("token_period", nil)
-		}
-
-		if v, ok := resp.Data["period"]; ok {
-			d.Set("period", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `ttl`
-	if _, deprecated := d.GetOk("ttl"); deprecated {
-		// Then we see if `token_ttl` was set and unset it
-		// Vault will still return `ttl`
-		if _, ok := d.GetOk("token_ttl"); ok {
-			d.Set("token_ttl", nil)
-		}
-
-		if v, ok := resp.Data["ttl"]; ok {
-			d.Set("ttl", v)
-		}
-
-	}
-
-	// Check if the user is using the deprecated `max_ttl`
-	if _, deprecated := d.GetOk("max_ttl"); deprecated {
-		// Then we see if `token_max_ttl` was set and unset it
-		// Vault will still return `max_ttl`
-		if _, ok := d.GetOk("token_max_ttl"); ok {
-			d.Set("token_max_ttl", nil)
-		}
-
-		if v, ok := resp.Data["max_ttl"]; ok {
-			d.Set("max_ttl", v)
-		}
-	}
-
-	for _, k := range []string{"project_id", "bound_projects", "add_group_aliases", "max_jwt_exp", "bound_service_accounts", "bound_zones", "bound_regions", "bound_instance_groups"} {
+	for _, k := range []string{"bound_projects", "add_group_aliases", "max_jwt_exp", "bound_service_accounts", "bound_zones", "bound_regions", "bound_instance_groups"} {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
-				return fmt.Errorf("error reading %s for GCP Auth Backend Role %q: %q", k, path, err)
+				return diag.Errorf("error reading %s for GCP Auth Backend Role %q: %q", k, path, err)
 			}
 		}
 	}
@@ -369,7 +255,7 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		}
 
 		if err := d.Set("bound_labels", labels); err != nil {
-			return fmt.Errorf("error setting bound_labels for GCP auth backend role: %q", err)
+			return diag.Errorf("error setting bound_labels for GCP auth backend role: %q", err)
 		}
 	}
 
@@ -383,35 +269,23 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("type", v)
 	}
 
-	return nil
+	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
+
+	return diags
 }
 
-func gcpAuthResourceDelete(d *schema.ResourceData, meta interface{}) error {
+func gcpAuthResourceDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting GCP role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting GCP role %q", path)
+		return diag.Errorf("Error deleting GCP role %q", path)
 	}
 	log.Printf("[DEBUG] Deleted GCP role %q", path)
 
 	return nil
-}
-
-func gcpAuthResourceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-	path := d.Id()
-
-	log.Printf("[DEBUG] Checking if gcp auth role %q exists", path)
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking for existence of gcp auth resource config %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if gcp auth role %q exists", path)
-
-	return resp != nil, nil
 }
 
 func gcpAuthResourceBackendFromPath(path string) (string, error) {

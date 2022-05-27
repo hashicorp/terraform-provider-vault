@@ -7,10 +7,12 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccGithubTeam_basic(t *testing.T) {
@@ -19,7 +21,7 @@ func TestAccGithubTeam_basic(t *testing.T) {
 	team := "my-team-slugified"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccGithubTeamCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -51,7 +53,7 @@ func TestAccGithubTeam_teamConfigError(t *testing.T) {
 	team := "Team With Spaces"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccGithubTeamCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -67,7 +69,7 @@ func TestAccGithubTeam_importBasic(t *testing.T) {
 	resName := "vault_github_team.team"
 	team := "import-team"
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
@@ -118,11 +120,11 @@ func testAccGithubTeamConfig_basic(backend string, team string, policies []strin
 	return fmt.Sprintf(`
 resource "vault_github_auth_backend" "gh" {
 	path = "%s"
-  	organization = "vault"
+	organization = "hashicorp"
 }
 
 resource "vault_github_team" "team" {
-	backend = "${vault_github_auth_backend.gh.id}"
+	backend = vault_github_auth_backend.gh.id
 	team = "%s"
 	policies = %s
 }

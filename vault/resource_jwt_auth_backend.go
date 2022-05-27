@@ -1,13 +1,14 @@
 package vault
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"strconv"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -77,6 +78,19 @@ func jwtAuthBackendResource() *schema.Resource {
 				Description: "Client Secret used for OIDC",
 			},
 
+			"oidc_response_mode": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The response mode to be used in the OAuth2 request. Allowed values are 'query' and 'form_post'. Defaults to 'query'. If using Vault namespaces, and oidc_response_mode is 'form_post', then 'namespace_in_state' should be set to false.",
+			},
+
+			"oidc_response_types": {
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+				Description: "The response types to request. Allowed values are 'code' and 'id_token'. Defaults to 'code'. Note: 'id_token' may only be used if 'oidc_response_mode' is set to 'form_post'.",
+			},
+
 			"jwks_url": {
 				Type:          schema.TypeString,
 				Optional:      true,
@@ -122,6 +136,7 @@ func jwtAuthBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The accessor of the JWT auth backend",
 			},
+
 			"local": {
 				Type:        schema.TypeBool,
 				ForceNew:    true,
@@ -129,6 +144,7 @@ func jwtAuthBackendResource() *schema.Resource {
 				Default:     false,
 				Description: "Specifies if the auth method is local only",
 			},
+
 			"provider_config": {
 				Type:        schema.TypeMap,
 				Optional:    true,
@@ -137,12 +153,20 @@ func jwtAuthBackendResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+
+			"namespace_in_state": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Pass namespace in the OIDC state parameter instead of as a separate query parameter. With this setting, the allowed redirect URL(s) in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the OIDC provider side for all vault namespaces that will be authenticating against it. Defaults to true for new configs.",
+			},
+
 			"tune": authMountTuneSchema(),
 		},
 	}
 }
 
-func jwtCustomizeDiff(d *schema.ResourceDiff, meta interface{}) error {
+func jwtCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	attributes := []string{
 		"oidc_discovery_url",
 		"jwks_url",
@@ -170,6 +194,8 @@ var (
 		"oidc_discovery_ca_pem",
 		"oidc_client_id",
 		"oidc_client_secret",
+		"oidc_response_mode",
+		"oidc_response_types",
 		"jwks_url",
 		"jwks_ca_pem",
 		"jwt_validation_pubkeys",
@@ -177,6 +203,7 @@ var (
 		"jwt_supported_algs",
 		"default_role",
 		"provider_config",
+		"namespace_in_state",
 	}
 )
 
@@ -235,13 +262,13 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	d.Set("path", path)
 
-	backend, err := getJwtAuthBackendIfPresent(client, path)
+	mount, err := getAuthMountIfPresent(client, path)
 
 	if err != nil {
 		return fmt.Errorf("unable to check auth backends in Vault for path %s: %s", path, err)
 	}
 
-	if backend == nil {
+	if mount == nil {
 		// If we fell out here then we didn't find our Auth in the list.
 		d.SetId("")
 		return nil
@@ -254,15 +281,15 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if config == nil {
-		log.Printf("[WARN] JWT auth backend config %q not found, removing from state", path)
+		log.Printf("[WARN] JWT auth mount config %q not found, removing from state", path)
 		d.SetId("")
 		return nil
 	}
 
-	d.Set("type", backend.Type)
-	d.Set("local", backend.Local)
+	d.Set("type", mount.Type)
+	d.Set("local", mount.Local)
 
-	d.Set("accessor", backend.Accessor)
+	d.Set("accessor", mount.Accessor)
 	for _, configOption := range matchingJwtMountConfigOptions {
 		// The oidc_client_secret is sensitive so it will not be in the response
 		// Our options are to always assume it must be updated or always assume it
@@ -356,7 +383,6 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			}
 
 			log.Printf("[INFO] Written %s auth tune to %q", backendType, path)
-			d.SetPartial("tune")
 		}
 	}
 
@@ -365,24 +391,6 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 func jwtConfigEndpoint(path string) string {
 	return fmt.Sprintf("/auth/%s/config", path)
-}
-
-func getJwtAuthBackendIfPresent(client *api.Client, path string) (*api.AuthMount, error) {
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return nil, fmt.Errorf("error reading from Vault: %s", err)
-	}
-
-	configuredPath := path + "/"
-
-	for authBackendPath, auth := range auths {
-
-		if authBackendPath == configuredPath {
-			return auth, nil
-		}
-	}
-
-	return nil, nil
 }
 
 func getJwtPath(d *schema.ResourceData) string {

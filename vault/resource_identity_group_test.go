@@ -3,21 +3,24 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccIdentityGroup(t *testing.T) {
 	group := acctest.RandomWithPrefix("test-group")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
@@ -34,7 +37,7 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
@@ -44,7 +47,7 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 					testAccIdentityGroupCheckAttrs(),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "type", "external"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.0", "test"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "metadata.version", "1"),
 				),
 			},
@@ -56,8 +59,8 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_identity_group.group", "type", "internal"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "metadata.version", "2"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.0", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1", "test"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "member_entity_ids.#", "0"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "member_group_ids.#", "0"),
 				),
@@ -76,8 +79,8 @@ func TestAccIdentityGroupUpdate(t *testing.T) {
 					testAccIdentityGroupCheckAttrs(),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "type", "internal"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1785148924", "test"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.0", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1", "test"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "member_entity_ids.#", "1"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "member_group_ids.#", "1"),
 				),
@@ -100,13 +103,46 @@ func TestAccIdentityGroupExternal(t *testing.T) {
 	group := acctest.RandomWithPrefix("test-group")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupConfig(group),
 				Check:  testAccIdentityGroupCheckAttrs(),
+			},
+		},
+	})
+}
+
+func TestAccIdentityGroup_DuplicateCreate(t *testing.T) {
+	// group identity names are stored in lower case,
+	// this test attempts to create two resources with different casing for the
+	// same lower case group name.
+	group := fmt.Sprintf("test_group_%d", acctest.RandInt())
+	config := fmt.Sprintf(`
+resource "vault_identity_group" "test_lower" {
+  name     = %q
+  type     = "external"
+  policies = ["default"]
+}
+
+resource "vault_identity_group" "test_upper" {
+  name     = %q
+  type     = "external"
+  policies = ["default"]
+}
+`, group, strings.ToUpper(group[0:1])+group[1:])
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckIdentityGroupDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`(?i)failed to create identity group %q, reason=group already exists .+`, group)),
 			},
 		},
 	})
@@ -271,8 +307,8 @@ resource "vault_identity_group" "group" {
     version = "2"
   }
 
-  member_entity_ids = ["${vault_identity_entity.entity.id}"]
-  member_group_ids = ["${vault_identity_group.other_group.id}"]
+  member_entity_ids = [vault_identity_entity.entity.id]
+  member_group_ids = [vault_identity_group.other_group.id]
 }
 
 resource "vault_identity_entity" "entity" {

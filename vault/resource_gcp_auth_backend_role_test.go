@@ -7,10 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestGCPAuthBackend_pathRegex(t *testing.T) {
@@ -73,7 +75,7 @@ func testGCPAuthBackendRole_basic(t *testing.T, backend string) {
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testGCPAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -116,7 +118,7 @@ func TestGCPAuthBackendRole_gce(t *testing.T) {
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testGCPAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -126,32 +128,6 @@ func TestGCPAuthBackendRole_gce(t *testing.T) {
 					testGCPAuthBackendRoleCheck_attrs(backend, name),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
 						"bound_labels.#", "2"),
-				),
-			},
-		},
-	})
-}
-
-func TestGCPAuthBackendRole_deprecated(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-gcp-backend")
-	name := acctest.RandomWithPrefix("tf-test-gcp-role")
-	serviceAccount := acctest.RandomWithPrefix("tf-test-gcp-service-account")
-	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testGCPAuthBackendRoleDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testGCPAuthBackendRoleConfig_deprecated(backend, name, serviceAccount, projectId),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
-						"policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
-						"ttl", "300"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
-						"max_ttl", "600"),
 				),
 			},
 		},
@@ -342,7 +318,6 @@ func testGCPAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckF
 }
 
 func testGCPAuthBackendRoleConfig_basic(backend, name, serviceAccount, projectId string) string {
-
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "gcp" {
@@ -351,7 +326,7 @@ resource "vault_auth_backend" "gcp" {
 }
 
 resource "vault_gcp_auth_backend_role" "test" {
-    backend                = "${vault_auth_backend.gcp.path}"
+    backend                = vault_auth_backend.gcp.path
     role                   = "%s"
     type                   = "iam"
     bound_service_accounts = ["%s"]
@@ -362,11 +337,9 @@ resource "vault_gcp_auth_backend_role" "test" {
     add_group_aliases      = true
 }
 `, backend, name, serviceAccount, projectId)
-
 }
 
 func testGCPAuthBackendRoleConfig_unset(backend, name, serviceAccount, projectId string) string {
-
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "gcp" {
@@ -375,7 +348,7 @@ resource "vault_auth_backend" "gcp" {
 }
 
 resource "vault_gcp_auth_backend_role" "test" {
-    backend                = "${vault_auth_backend.gcp.path}"
+    backend                = vault_auth_backend.gcp.path
     role                   = "%s"
     type                   = "iam"
     bound_service_accounts = ["%s"]
@@ -383,11 +356,9 @@ resource "vault_gcp_auth_backend_role" "test" {
     add_group_aliases      = true
 }
 `, backend, name, serviceAccount, projectId)
-
 }
 
 func testGCPAuthBackendRoleConfig_gce(backend, name, projectId string) string {
-
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "gcp" {
@@ -396,7 +367,7 @@ resource "vault_auth_backend" "gcp" {
 }
 
 resource "vault_gcp_auth_backend_role" "test" {
-    backend                = "${vault_auth_backend.gcp.path}"
+    backend                = vault_auth_backend.gcp.path
     role                   = "%s"
     type                   = "gce"
     bound_projects         = ["%s"]
@@ -408,29 +379,4 @@ resource "vault_gcp_auth_backend_role" "test" {
     bound_labels           = ["foo:bar", "key:value"]
 }
 `, backend, name, projectId)
-
-}
-
-func testGCPAuthBackendRoleConfig_deprecated(backend, name, serviceAccount, projectId string) string {
-
-	return fmt.Sprintf(`
-
-resource "vault_auth_backend" "gcp" {
-    path = "%s"
-    type = "gcp"
-}
-
-resource "vault_gcp_auth_backend_role" "test" {
-    backend                = "${vault_auth_backend.gcp.path}"
-    role                   = "%s"
-    type                   = "iam"
-    bound_service_accounts = ["%s"]
-    bound_projects         = ["%s"]
-    ttl                    = 300
-    max_ttl                = 600
-    policies               = ["policy_a", "policy_b"]
-    add_group_aliases      = true
-}
-`, backend, name, serviceAccount, projectId)
-
 }

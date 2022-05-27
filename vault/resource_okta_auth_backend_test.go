@@ -7,10 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestAccOktaAuthBackend_basic(t *testing.T) {
@@ -18,7 +20,7 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 	path := resource.PrefixedUniqueId("okta-basic-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { util.TestAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
@@ -46,7 +48,7 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 	path := resource.PrefixedUniqueId("okta-import-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { util.TestAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
@@ -90,13 +92,13 @@ func TestAccOktaAuthBackend_invalid_ttl(t *testing.T) {
 	path := resource.PrefixedUniqueId("okta-invalid-ttl-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { util.TestAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccOktaAuthConfig_invalid_ttl(path, organization),
-				ExpectError: regexp.MustCompile(`invalid value for "ttl", could not parse "invalid_ttl"$`),
+				ExpectError: regexp.MustCompile(`Error: invalid value for "ttl", could not parse "invalid_ttl"`),
 			},
 		},
 	})
@@ -107,13 +109,13 @@ func TestAccOktaAuthBackend_invalid_max_ttl(t *testing.T) {
 	path := resource.PrefixedUniqueId("okta-invalid_max_ttl-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { util.TestAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccOktaAuthConfig_invalid_max_ttl(path, organization),
-				ExpectError: regexp.MustCompile(`invalid value for "max_ttl", could not parse "invalid_max_ttl"$`),
+				ExpectError: regexp.MustCompile(`Error: invalid value for "max_ttl", could not parse "invalid_max_ttl"`),
 			},
 		},
 	})
@@ -285,7 +287,6 @@ func testAccOktaAuthBackend_GroupsCheck(path, groupName string, expectedPolicies
 
 		return nil
 	}
-
 }
 
 func testAccOktaAuthBackend_UsersCheck(path, userName string, expectedGroups, expectedPolicies []string) resource.TestCheckFunc {
@@ -349,12 +350,10 @@ func testAccOktaAuthBackend_UsersCheck(path, userName string, expectedGroups, ex
 
 		return nil
 	}
-
 }
 
 func testAccOktaAuthBackend_Destroyed(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-
 		client := testProvider.Meta().(*api.Client)
 
 		authMounts, err := client.Sys().ListAuth()

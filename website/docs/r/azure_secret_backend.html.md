@@ -19,15 +19,33 @@ artifacts accordingly. See
 [the main provider documentation](../index.html)
 for more details.
 
-## Example Usage
+~> It is highly recommended that one transition to the Microsoft Graph API.
+See [use_microsoft_graph_api ](https://www.vaultproject.io/api-docs/secret/azure#use_microsoft_graph_api)
+for more information. The example below demonstrates how to do this. 
+
+## Example Usage: *vault-1.9 and above*
 
 ```hcl
 resource "vault_azure_secret_backend" "azure" {
-  subscription_id = "11111111-2222-3333-4444-111111111111"
-  tenant_id       = "11111111-2222-3333-4444-222222222222"
-  client_id       = "11111111-2222-3333-4444-333333333333"
-  client_secret   = "12345678901234567890"
-  environment     = "AzurePublicCloud"
+  use_microsoft_graph_api = true
+  subscription_id         = "11111111-2222-3333-4444-111111111111"
+  tenant_id               = "11111111-2222-3333-4444-222222222222"
+  client_id               = "11111111-2222-3333-4444-333333333333"
+  client_secret           = "12345678901234567890"
+  environment             = "AzurePublicCloud"
+}
+```
+
+## Example Usage: *vault-1.8 and below*
+
+```hcl
+resource "vault_azure_secret_backend" "azure" {
+  use_microsoft_graph_api = false
+  subscription_id         = "11111111-2222-3333-4444-111111111111"
+  tenant_id               = "11111111-2222-3333-4444-222222222222"
+  client_id               = "11111111-2222-3333-4444-333333333333"
+  client_secret           = "12345678901234567890"
+  environment             = "AzurePublicCloud"
 }
 ```
 
@@ -36,10 +54,18 @@ resource "vault_azure_secret_backend" "azure" {
 The following arguments are supported:
 
 - `subscription_id` (`string: <required>`) - The subscription id for the Azure Active Directory.
+
+- `use_microsoft_graph_api` (`bool: <optional>`) - Use the Microsoft Graph API introduced in `vault-1.9`. 
+   Should be set to true for `vault-1.10+`
+
 - `tenant_id` (`string: <required>`) - The tenant id for the Azure Active Directory.
+
 - `client_id` (`string:""`) - The OAuth2 client id to connect to Azure.
+
 - `client_secret` (`string:""`) - The OAuth2 client secret to connect to Azure.
+
 - `environment` (`string:""`) - The Azure environment.
+
 - `path` (`string: <optional>`) - The unique path this backend should be mounted at. Defaults to `azure`.
 
 ## Attributes Reference

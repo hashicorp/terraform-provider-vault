@@ -6,10 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAzureSecretBackendRole(t *testing.T) {
@@ -26,7 +28,7 @@ func TestAzureSecretBackendRole(t *testing.T) {
 	role := acctest.RandomWithPrefix("tf-test-azure-role")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccAzureSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -35,14 +37,14 @@ func TestAzureSecretBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "role", role+"-azure-roles"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "description", "Test for Vault Provider"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.#", "1"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.1111275791.role_name", "Reader"),
-					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.1111275791.scope"),
-					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.1111275791.role_id"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.0.role_name", "Reader"),
+					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.0.scope"),
+					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_roles", "azure_roles.0.role_id"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "role", role+"-azure-groups"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "description", "Test for Vault Provider"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.#", "1"),
-					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.2681484837.group_name", "foobar"),
-					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.2681484837.object_id"),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.0.group_name", "foobar"),
+					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.0.object_id"),
 				),
 			},
 		},
@@ -83,7 +85,7 @@ resource "vault_azure_secret_backend" "azure" {
 }
 
 resource "vault_azure_secret_backend_role" "test_azure_roles" {
-  backend     = "${vault_azure_secret_backend.azure.path}"
+  backend     = vault_azure_secret_backend.azure.path
   role        = "%[6]s-azure-roles"
   ttl         = 300
   max_ttl     = 600
@@ -96,7 +98,7 @@ resource "vault_azure_secret_backend_role" "test_azure_roles" {
 }
 
 resource "vault_azure_secret_backend_role" "test_azure_groups" {
-  backend     = "${vault_azure_secret_backend.azure.path}"
+  backend     = vault_azure_secret_backend.azure.path
   role        = "%[6]s-azure-groups"
   ttl         = 300
   max_ttl     = 600

@@ -7,43 +7,31 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
-)
 
-func TestAccTokenAuthBackendRoleImport(t *testing.T) {
-	role := acctest.RandomWithPrefix("test-role")
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckTokenAuthBackendRoleDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccTokenAuthBackendRoleConfig(role),
-				Check:  testAccTokenAuthBackendRoleCheck_attrs(role),
-			},
-			{
-				ResourceName:      "vault_token_auth_backend_role.role",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
+	"github.com/hashicorp/terraform-provider-vault/testutil"
+)
 
 func TestAccTokenAuthBackendRole(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
+	resourceName := "vault_token_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckTokenAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccTokenAuthBackendRoleConfig(role),
 				Check:  testAccTokenAuthBackendRoleCheck_attrs(role),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -53,8 +41,9 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 	roleUpdated := acctest.RandomWithPrefix("test-role-updated")
 
+	resourceName := "vault_token_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckTokenAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -66,20 +55,27 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 				Config: testAccTokenAuthBackendRoleConfigUpdate(role),
 				Check: resource.ComposeTestCheckFunc(
 					testAccTokenAuthBackendRoleCheck_attrs(role),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "role_name", role),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.1785148924", "test"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.1971754988", "default"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "orphan", "true"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_period", "86400"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "renewable", "false"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_explicit_max_ttl", "115200"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "path_suffix", "parth-suffix"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_bound_cidrs.#", "1"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_bound_cidrs.217649824", "0.0.0.0/0"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_type", "default-batch"),
+					resource.TestCheckResourceAttr(resourceName, "role_name", role),
+					resource.TestCheckResourceAttr(resourceName, "allowed_policies.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_policies.0", "dev"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_policies.1", "test"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_policies_glob.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_policies_glob.0", "dev/*"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_policies_glob.1", "test/*"),
+					resource.TestCheckResourceAttr(resourceName, "disallowed_policies.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "disallowed_policies.0", "default"),
+					resource.TestCheckResourceAttr(resourceName, "disallowed_policies_glob.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "disallowed_policies_glob.0", "def*"),
+					resource.TestCheckResourceAttr(resourceName, "orphan", "true"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_entity_aliases.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_entity_aliases.0", "test"),
+					resource.TestCheckResourceAttr(resourceName, "token_period", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "renewable", "false"),
+					resource.TestCheckResourceAttr(resourceName, "token_explicit_max_ttl", "115200"),
+					resource.TestCheckResourceAttr(resourceName, "path_suffix", "parth-suffix"),
+					resource.TestCheckResourceAttr(resourceName, "token_bound_cidrs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "token_bound_cidrs.0", "0.0.0.0/0"),
+					resource.TestCheckResourceAttr(resourceName, "token_type", "default-batch"),
 				),
 			},
 			{
@@ -87,89 +83,50 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccTokenAuthBackendRoleCheck_attrs(roleUpdated),
 					testAccTokenAuthBackendRoleCheck_deleted(role),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "role_name", roleUpdated),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.1785148924", "test"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.1971754988", "default"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "orphan", "true"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_period", "86400"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "renewable", "false"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_explicit_max_ttl", "115200"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "path_suffix", "parth-suffix"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_bound_cidrs.#", "1"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_bound_cidrs.217649824", "0.0.0.0/0"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_type", "default-batch"),
+					resource.TestCheckResourceAttr(resourceName, "role_name", roleUpdated),
+					resource.TestCheckResourceAttr(resourceName, "allowed_policies.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_policies.0", "dev"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_policies.1", "test"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_policies_glob.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_policies_glob.0", "dev/*"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_policies_glob.1", "test/*"),
+					resource.TestCheckResourceAttr(resourceName, "disallowed_policies.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "disallowed_policies.0", "default"),
+					resource.TestCheckResourceAttr(resourceName, "disallowed_policies_glob.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "disallowed_policies_glob.0", "def*"),
+					resource.TestCheckResourceAttr(resourceName, "orphan", "true"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_entity_aliases.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_entity_aliases.0", "test"),
+					resource.TestCheckResourceAttr(resourceName, "token_period", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "renewable", "false"),
+					resource.TestCheckResourceAttr(resourceName, "token_explicit_max_ttl", "115200"),
+					resource.TestCheckResourceAttr(resourceName, "path_suffix", "parth-suffix"),
+					resource.TestCheckResourceAttr(resourceName, "token_bound_cidrs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "token_bound_cidrs.0", "0.0.0.0/0"),
+					resource.TestCheckResourceAttr(resourceName, "token_type", "default-batch"),
 				),
 			},
 			{
 				Config: testAccTokenAuthBackendRoleConfig(roleUpdated),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccTokenAuthBackendRoleCheck_attrs(roleUpdated),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "role_name", roleUpdated),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.#", "0"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.#", "0"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "orphan", "false"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_period", "0"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "renewable", "true"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_explicit_max_ttl", "0"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "path_suffix", ""),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_bound_cidrs.#", "0"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_type", "default-service"),
-				),
-			},
-		},
-	})
-}
-
-func TestAccTokenAuthBackendRoleDeprecated(t *testing.T) {
-	role := acctest.RandomWithPrefix("test-role")
-	roleUpdated := acctest.RandomWithPrefix("test-role-updated")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckTokenAuthBackendRoleDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccTokenAuthBackendRoleConfigDeprecated(role),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "role_name", role),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.1785148924", "test"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.1971754988", "default"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "orphan", "true"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "period", "86400"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "renewable", "false"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "explicit_max_ttl", "115200"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "path_suffix", "parth-suffix"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "bound_cidrs.#", "1"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "bound_cidrs.217649824", "0.0.0.0/0"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_type", "default-batch"),
+					resource.TestCheckResourceAttr(resourceName, "role_name", roleUpdated),
+					resource.TestCheckResourceAttr(resourceName, "allowed_policies.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "disallowed_policies.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "orphan", "false"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_entity_aliases.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "token_period", "0"),
+					resource.TestCheckResourceAttr(resourceName, "renewable", "true"),
+					resource.TestCheckResourceAttr(resourceName, "token_explicit_max_ttl", "0"),
+					resource.TestCheckResourceAttr(resourceName, "path_suffix", ""),
+					resource.TestCheckResourceAttr(resourceName, "token_bound_cidrs.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "token_type", "default-service"),
 				),
 			},
 			{
-				Config: testAccTokenAuthBackendRoleConfigDeprecated(roleUpdated),
-				Check: resource.ComposeTestCheckFunc(
-					testAccTokenAuthBackendRoleCheck_deleted(role),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "role_name", roleUpdated),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.#", "2"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.326271447", "dev"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "allowed_policies.1785148924", "test"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.#", "1"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "disallowed_policies.1971754988", "default"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "orphan", "true"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "period", "86400"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "renewable", "false"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "explicit_max_ttl", "115200"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "path_suffix", "parth-suffix"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "bound_cidrs.#", "1"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "bound_cidrs.217649824", "0.0.0.0/0"),
-					resource.TestCheckResourceAttr("vault_token_auth_backend_role.role", "token_type", "default-batch"),
-				),
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -199,7 +156,6 @@ func testAccTokenAuthBackendRoleCheck_deleted(role string) resource.TestCheckFun
 		client := testProvider.Meta().(*api.Client)
 
 		resp, err := client.Logical().List(endpoint)
-
 		if err != nil {
 			return fmt.Errorf("%q returned unexpectedly", endpoint)
 		}
@@ -239,16 +195,19 @@ func testAccTokenAuthBackendRoleCheck_attrs(role string) resource.TestCheckFunc 
 		}
 
 		attrs := map[string]string{
-			"role_name":              "name",
-			"allowed_policies":       "allowed_policies",
-			"disallowed_policies":    "disallowed_policies",
-			"orphan":                 "orphan",
-			"token_period":           "token_period",
-			"token_explicit_max_ttl": "token_explicit_max_ttl",
-			"path_suffix":            "path_suffix",
-			"renewable":              "renewable",
-			"token_bound_cidrs":      "token_bound_cidrs",
-			"token_type":             "token_type",
+			"role_name":                "name",
+			"allowed_policies":         "allowed_policies",
+			"allowed_policies_glob":    "allowed_policies_glob",
+			"disallowed_policies":      "disallowed_policies",
+			"disallowed_policies_glob": "disallowed_policies_glob",
+			"allowed_entity_aliases":   "allowed_entity_aliases",
+			"orphan":                   "orphan",
+			"token_period":             "token_period",
+			"token_explicit_max_ttl":   "token_explicit_max_ttl",
+			"path_suffix":              "path_suffix",
+			"renewable":                "renewable",
+			"token_bound_cidrs":        "token_bound_cidrs",
+			"token_type":               "token_type",
 		}
 
 		for stateAttr, apiAttr := range attrs {
@@ -324,37 +283,26 @@ func testAccTokenAuthBackendRoleConfig(roleName string) string {
 	return fmt.Sprintf(`
 resource "vault_token_auth_backend_role" "role" {
   role_name = "%s"
-}`, roleName)
+}
+`, roleName)
 }
 
 func testAccTokenAuthBackendRoleConfigUpdate(role string) string {
 	return fmt.Sprintf(`
 resource "vault_token_auth_backend_role" "role" {
-  role_name = "%s"
-  allowed_policies = ["dev", "test"]
-  disallowed_policies = ["default"]
-  orphan = true
-  token_period = "86400"
-  renewable = false
-  token_explicit_max_ttl = "115200"
-  path_suffix = "parth-suffix"
-  token_bound_cidrs = ["0.0.0.0/0"]
-	token_type = "default-batch"
-}`, role)
+  role_name                = "%s"
+  allowed_policies         = ["dev", "test"]
+  allowed_policies_glob    = ["dev/*", "test/*"]
+  disallowed_policies      = ["default"]
+  disallowed_policies_glob = ["def*"]
+  orphan                   = true
+  allowed_entity_aliases   = ["test"]
+  token_period             = "86400"
+  renewable                = false
+  token_explicit_max_ttl   = "115200"
+  path_suffix              = "parth-suffix"
+  token_bound_cidrs        = ["0.0.0.0/0"]
+  token_type               = "default-batch"
 }
-
-func testAccTokenAuthBackendRoleConfigDeprecated(role string) string {
-	return fmt.Sprintf(`
-resource "vault_token_auth_backend_role" "role" {
-  role_name = "%s"
-  allowed_policies = ["dev", "test"]
-  disallowed_policies = ["default"]
-  orphan = true
-  period = "86400"
-  renewable = false
-  explicit_max_ttl = "115200"
-  path_suffix = "parth-suffix"
-  bound_cidrs = ["0.0.0.0/0"]
-  token_type = "default-batch"
-}`, role)
+`, role)
 }

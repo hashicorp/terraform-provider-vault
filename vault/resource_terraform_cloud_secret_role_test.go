@@ -5,10 +5,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestTerraformCloudSecretRole(t *testing.T) {
@@ -21,7 +23,7 @@ func TestTerraformCloudSecretRole(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck: func() {
-			testAccPreCheck(t)
+			testutil.TestAccPreCheck(t)
 			if token == "" || teamId == "" || userId == "" {
 				t.Skip("TEST_TF_TOKEN, TEST_TF_TEAM_ID and TEST_TF_USER_ID must be set.")
 			}

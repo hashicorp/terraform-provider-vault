@@ -7,8 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/helper"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 type Policy struct {
@@ -26,7 +27,16 @@ type PolicyRule struct {
 	DeniedParameters   map[string][]string
 }
 
-var allowedCapabilities = []string{"create", "read", "update", "delete", "list", "sudo", "deny"}
+var allowedCapabilities = []string{
+	"create",
+	"read",
+	"update",
+	"delete",
+	"list",
+	"sudo",
+	"deny",
+	"patch",
+}
 
 func policyDocumentDataSource() *schema.Resource {
 	return &schema.Resource{
@@ -135,7 +145,7 @@ func policyDocumentDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 	policy := &Policy{}
 
 	if rawRules, hasRawRules := d.GetOk("rule"); hasRawRules {
-		var rawRuleIntfs = rawRules.([]interface{})
+		rawRuleIntfs := rawRules.([]interface{})
 		rules := make([]*PolicyRule, len(rawRuleIntfs))
 
 		for i, ruleI := range rawRuleIntfs {
@@ -186,7 +196,7 @@ func policyDocumentDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 	if err != nil {
 		return fmt.Errorf("failed to store policy hcl: %s", err)
 	}
-	d.SetId(strconv.Itoa(hashcode.String(policyHCL)))
+	d.SetId(strconv.Itoa(helper.HashCodeString(policyHCL)))
 
 	return nil
 }

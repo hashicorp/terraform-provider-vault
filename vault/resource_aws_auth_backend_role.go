@@ -1,12 +1,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -30,12 +32,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			Description: "The auth type permitted for this role.",
 			ForceNew:    true,
 		},
-		"bound_ami_id": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Only EC2 instances using this AMI ID will be permitted to log in.",
-			Removed:     `Use "bound_ami_ids" as a list.`,
-		},
 		"bound_ami_ids": {
 			Type:        schema.TypeSet,
 			Optional:    true,
@@ -43,12 +39,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-		},
-		"bound_account_id": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Only EC2 instances with this account ID in their identity document will be permitted to log in.",
-			Removed:     `Use "bound_account_ids" as a list.`,
 		},
 		"bound_account_ids": {
 			Type:        schema.TypeSet,
@@ -58,12 +48,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 		},
-		"bound_region": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Only EC2 instances in this region will be permitted to log in.",
-			Removed:     `Use "bound_regions" as a list.`,
-		},
 		"bound_regions": {
 			Type:        schema.TypeSet,
 			Optional:    true,
@@ -71,13 +55,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-		},
-		"bound_vpc_id": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Description:   "Only EC2 instances associated with this VPC ID will be permitted to log in.",
-			Removed:       `Use "bound_vpc_ids" as a list.`,
-			ConflictsWith: []string{"bound_vpc_ids"},
 		},
 		"bound_vpc_ids": {
 			Type:        schema.TypeSet,
@@ -87,12 +64,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 		},
-		"bound_subnet_id": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Only EC2 instances associated with this subnet ID will be permitted to log in.",
-			Removed:     `Use "bound_subnet_ids" as a list.`,
-		},
 		"bound_subnet_ids": {
 			Type:        schema.TypeSet,
 			Optional:    true,
@@ -100,12 +71,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-		},
-		"bound_iam_role_arn": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Only EC2 instances that match this IAM role ARN will be permitted to log in.",
-			Removed:     `Use "bound_iam_role_arns" as a list.`,
 		},
 		"bound_iam_role_arns": {
 			Type:        schema.TypeSet,
@@ -115,12 +80,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 		},
-		"bound_iam_instance_profile_arn": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Only EC2 instances associated with an IAM instance profile ARN that matches this value will be permitted to log in.",
-			Removed:     `Use "bound_iam_instance_profile_arns" as a list.`,
-		},
 		"bound_iam_instance_profile_arns": {
 			Type:        schema.TypeSet,
 			Optional:    true,
@@ -128,15 +87,6 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-		},
-		"bound_ec2_instance_id": {
-			Type:        schema.TypeSet,
-			Optional:    true,
-			Description: "Only EC2 instances that match this instance ID will be permitted to log in.",
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Removed: `Use "bound_ec2_instance_ids".`,
 		},
 		"bound_ec2_instance_ids": {
 			Type:        schema.TypeSet,
@@ -151,11 +101,10 @@ func awsAuthBackendRoleResource() *schema.Resource {
 			Optional:    true,
 			Description: "The key of the tag on EC2 instance to use for role tags.",
 		},
-		"bound_iam_principal_arn": {
+		"role_id": {
 			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "The IAM principal that must be authenticated using the iam auth method.",
-			Removed:     `Use "bound_iam_principal_arns" as a list.`,
+			Computed:    true,
+			Description: "The Vault generated role ID.",
 		},
 		"bound_iam_principal_arns": {
 			Type:        schema.TypeSet,
@@ -204,63 +153,24 @@ func awsAuthBackendRoleResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-
-		// Deprecated
-		"ttl": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "The TTL period of tokens issued using this role, provided as the number of seconds.",
-			Deprecated:    "use `token_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_ttl"},
-		},
-		"max_ttl": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "The maximum allowed lifetime of tokens issued using this role, provided as the number of seconds.",
-			Deprecated:    "use `token_max_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_max_ttl"},
-		},
-		"period": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this field. The maximum allowed lifetime of token issued using this role. Specified as a number of seconds.",
-			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_period"},
-		},
-		"policies": {
-			Type:     schema.TypeSet,
-			Optional: true,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Description:   "Policies to be set on tokens issued using this role.",
-			Deprecated:    "use `token_policies` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_policies"},
-		},
 	}
 
-	addTokenFields(fields, &addTokenFieldsConfig{
-		TokenMaxTTLConflict:   []string{"max_ttl"},
-		TokenPoliciesConflict: []string{"policies"},
-		TokenPeriodConflict:   []string{"period"},
-		TokenTTLConflict:      []string{"ttl"},
-	})
+	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
 		CustomizeDiff: resourceVaultAwsAuthBackendRoleCustomizeDiff,
-		Create:        awsAuthBackendRoleCreate,
-		Read:          awsAuthBackendRoleRead,
-		Update:        awsAuthBackendRoleUpdate,
-		Delete:        awsAuthBackendRoleDelete,
-		Exists:        awsAuthBackendRoleExists,
+		CreateContext: awsAuthBackendRoleCreate,
+		ReadContext:   awsAuthBackendRoleRead,
+		UpdateContext: awsAuthBackendRoleUpdate,
+		DeleteContext: awsAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: fields,
 	}
 }
 
-func resourceVaultAwsAuthBackendRoleCustomizeDiff(diff *schema.ResourceDiff, v interface{}) error {
+func resourceVaultAwsAuthBackendRoleCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, v interface{}) error {
 	if diff.HasChange("resolve_aws_unique_ids") {
 		o, n := diff.GetChange("resolve_aws_unique_ids")
 		// The resolve_aws_unique_ids field can be updated from false to true
@@ -285,7 +195,7 @@ func setSlice(d *schema.ResourceData, tfFieldName, vaultFieldName string, data m
 	}
 }
 
-func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
+func awsAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
@@ -303,25 +213,8 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 	updateTokenFields(d, data, true)
 
-	// Deprecated Fields
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(int)
-	}
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(int)
-	}
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(int)
-	}
-	if v, ok := d.GetOk("policies"); ok {
-		data["policies"] = v.(*schema.Set).List()
-	}
-
 	if isEc2(authType, inferred) {
-
-		if v, ok := d.GetOk("bound_ami_id"); ok {
-			data["bound_ami_id"] = v.(string)
-		} else if _, ok := d.GetOk("bound_ami_ids"); ok {
+		if _, ok := d.GetOk("bound_ami_ids"); ok {
 			setSlice(d, "bound_ami_ids", "bound_ami_id", data)
 		}
 
@@ -399,31 +292,31 @@ func awsAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	d.SetId(path)
 	if _, err := client.Logical().Write(path, data); err != nil {
 		d.SetId("")
-		return fmt.Errorf("error writing AWS auth backend role %q: %s", path, err)
+		return diag.Errorf("error writing AWS auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote AWS auth backend role %q", path)
 
-	return awsAuthBackendRoleRead(d, meta)
+	return awsAuthBackendRoleRead(ctx, d, meta)
 }
 
-func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
+func awsAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
 	backend, err := awsAuthBackendRoleBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for AWS auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for AWS auth backend role: %s", path, err)
 	}
 
 	role, err := awsAuthBackendRoleNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for AWS auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for AWS auth backend role: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading AWS auth backend role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading AWS auth backend role %q: %s", path, err)
+		return diag.Errorf("error reading AWS auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read AWS auth backend role %q", path)
 	if resp == nil {
@@ -432,59 +325,8 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	readTokenFields(d, resp)
-
-	// Check if the user is using the deprecated `policies`
-	if _, deprecated := d.GetOk("policies"); deprecated {
-		// Then we see if `token_policies` was set and unset it
-		// Vault will still return `policies`
-		if _, ok := d.GetOk("token_policies"); ok {
-			d.Set("token_policies", nil)
-		}
-
-		if v, ok := resp.Data["policies"]; ok {
-			d.Set("policies", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `period`
-	if _, deprecated := d.GetOk("period"); deprecated {
-		// Then we see if `token_period` was set and unset it
-		// Vault will still return `period`
-		if _, ok := d.GetOk("token_period"); ok {
-			d.Set("token_period", nil)
-		}
-
-		if v, ok := resp.Data["period"]; ok {
-			d.Set("period", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `ttl`
-	if _, deprecated := d.GetOk("ttl"); deprecated {
-		// Then we see if `token_ttl` was set and unset it
-		// Vault will still return `ttl`
-		if _, ok := d.GetOk("token_ttl"); ok {
-			d.Set("token_ttl", nil)
-		}
-
-		if v, ok := resp.Data["ttl"]; ok {
-			d.Set("ttl", v)
-		}
-
-	}
-
-	// Check if the user is using the deprecated `max_ttl`
-	if _, deprecated := d.GetOk("max_ttl"); deprecated {
-		// Then we see if `token_max_ttl` was set and unset it
-		// Vault will still return `max_ttl`
-		if _, ok := d.GetOk("token_max_ttl"); ok {
-			d.Set("token_max_ttl", nil)
-		}
-
-		if v, ok := resp.Data["max_ttl"]; ok {
-			d.Set("max_ttl", v)
-		}
+	if err := readTokenFields(d, resp); err != nil {
+		return diag.FromErr(err)
 	}
 
 	d.Set("backend", backend)
@@ -546,16 +388,19 @@ func awsAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.Set("role_tag", resp.Data["role_tag"])
+	d.Set("role_id", resp.Data["role_id"])
 	d.Set("inferred_entity_type", resp.Data["inferred_entity_type"])
 	d.Set("inferred_aws_region", resp.Data["inferred_aws_region"])
 	d.Set("resolve_aws_unique_ids", resp.Data["resolve_aws_unique_ids"])
 	d.Set("allow_instance_migration", resp.Data["allow_instance_migration"])
 	d.Set("disallow_reauthentication", resp.Data["disallow_reauthentication"])
 
-	return nil
+	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
+
+	return diags
 }
 
-func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
+func awsAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
@@ -567,25 +412,8 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 	updateTokenFields(d, data, false)
 
-	// Deprecated Fields
-	if d.HasChange("ttl") {
-		data["ttl"] = d.Get("ttl").(int)
-	}
-	if d.HasChange("max_ttl") {
-		data["max_ttl"] = d.Get("max_ttl").(int)
-	}
-	if d.HasChange("period") {
-		data["period"] = d.Get("period").(int)
-	}
-	if d.HasChange("policies") {
-		data["policies"] = d.Get("policies").(*schema.Set).List()
-	}
-
 	if isEc2(authType, inferred) {
-
-		if v, ok := d.GetOk("bound_ami_id"); ok {
-			data["bound_ami_id"] = v.(string)
-		} else if _, ok := d.GetOk("bound_ami_ids"); ok {
+		if _, ok := d.GetOk("bound_ami_ids"); ok {
 			setSlice(d, "bound_ami_ids", "bound_ami_id", data)
 		}
 
@@ -666,11 +494,11 @@ func awsAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error updating AWS auth backend role %q: %s", path, err)
+		return diag.Errorf("error updating AWS auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated AWS auth backend role %q", path)
 
-	return awsAuthBackendRoleRead(d, meta)
+	return awsAuthBackendRoleRead(ctx, d, meta)
 }
 
 func isEc2(authType, inferred string) bool {
@@ -678,33 +506,18 @@ func isEc2(authType, inferred string) bool {
 	return authType == "ec2" || isEc2InstanceWithIam
 }
 
-func awsAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func awsAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting AWS auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("error deleting AWS auth backend role %q", path)
+		return diag.Errorf("error deleting AWS auth backend role %q", path)
 	}
 	log.Printf("[DEBUG] Deleted AWS auth backend role %q", path)
 
 	return nil
-}
-
-func awsAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if AWS auth backend role %q exists", path)
-
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if AWS auth backend role %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if AWS auth backend role %q exists", path)
-
-	return resp != nil, nil
 }
 
 func awsAuthBackendRolePath(backend, role string) string {

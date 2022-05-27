@@ -1,11 +1,12 @@
 package vault
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -92,68 +93,18 @@ func certAuthBackendRoleResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-
-		// Deprecated
-		"bound_cidrs": {
-			Type: schema.TypeSet,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_bound_cidrs` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_bound_cidrs"},
-		},
-		"ttl": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_ttl"},
-		},
-		"max_ttl": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_max_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_max_ttl"},
-		},
-		"period": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_period"},
-		},
-		"policies": {
-			Type: schema.TypeSet,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    "use `token_policies` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_policies"},
-		},
 	}
 
-	addTokenFields(fields, &addTokenFieldsConfig{
-		TokenBoundCidrsConflict: []string{"bound_cidrs"},
-		TokenMaxTTLConflict:     []string{"max_ttl"},
-		TokenPoliciesConflict:   []string{"policies"},
-		TokenPeriodConflict:     []string{"period"},
-		TokenTTLConflict:        []string{"ttl"},
-	})
+	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
 		SchemaVersion: 1,
 
-		Create: certAuthResourceWrite,
-		Update: certAuthResourceUpdate,
-		Read:   certAuthResourceRead,
-		Delete: certAuthResourceDelete,
-
-		Schema: fields,
+		CreateContext: certAuthResourceWrite,
+		UpdateContext: certAuthResourceUpdate,
+		ReadContext:   certAuthResourceRead,
+		DeleteContext: certAuthResourceDelete,
+		Schema:        fields,
 	}
 }
 
@@ -161,7 +112,7 @@ func certCertResourcePath(backend, name string) string {
 	return "auth/" + strings.Trim(backend, "/") + "/certs/" + strings.Trim(name, "/")
 }
 
-func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
+func certAuthResourceWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
@@ -202,40 +153,19 @@ func certAuthResourceWrite(d *schema.ResourceData, meta interface{}) error {
 		data["display_name"] = v.(string)
 	}
 
-	// Deprecated fields
-	if v, ok := d.GetOk("bound_cidrs"); ok {
-		data["bound_cidrs"] = v.(*schema.Set).List()
-	}
-
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("policies"); ok {
-		data["policies"] = v.(*schema.Set).List()
-	}
-
 	log.Printf("[DEBUG] Writing %q to cert auth backend", path)
 	d.SetId(path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing %q to cert auth backendq: %s", path, err)
+		return diag.Errorf("Error writing %q to cert auth backend: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote %q to cert auth backend", path)
 
-	return certAuthResourceRead(d, meta)
+	return certAuthResourceRead(ctx, d, meta)
 }
 
-func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
+func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
@@ -268,48 +198,28 @@ func certAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["required_extensions"] = v.(*schema.Set).List()
 	}
 
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("policies"); ok {
-		data["policies"] = v.(*schema.Set).List()
-	}
-
 	if v, ok := d.GetOk("display_name"); ok {
 		data["display_name"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("bound_cidrs"); ok {
-		data["bound_cidrs"] = v.(*schema.Set).List()
 	}
 
 	log.Printf("[DEBUG] Updating %q in cert auth backend", path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error updating %q in cert auth backend: %s", path, err)
+		return diag.Errorf("Error updating %q in cert auth backend: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated %q in cert auth backend", path)
 
-	return certAuthResourceRead(d, meta)
+	return certAuthResourceRead(ctx, d, meta)
 }
 
-func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
+func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading cert %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading cert %q: %s", path, err)
+		return diag.Errorf("Error reading cert %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read cert %q", path)
 
@@ -319,72 +229,8 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	readTokenFields(d, resp)
-
-	// Check if the user is using the deprecated `policies`
-	if _, deprecated := d.GetOk("policies"); deprecated {
-		// Then we see if `token_policies` was set and unset it
-		// Vault will still return `policies`
-		if _, ok := d.GetOk("token_policies"); ok {
-			d.Set("token_policies", nil)
-		}
-
-		if v, ok := resp.Data["policies"]; ok {
-			d.Set("policies", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `period`
-	if _, deprecated := d.GetOk("period"); deprecated {
-		// Then we see if `token_period` was set and unset it
-		// Vault will still return `period`
-		if _, ok := d.GetOk("token_period"); ok {
-			d.Set("token_period", nil)
-		}
-
-		if v, ok := resp.Data["period"]; ok {
-			d.Set("period", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `ttl`
-	if _, deprecated := d.GetOk("ttl"); deprecated {
-		// Then we see if `token_ttl` was set and unset it
-		// Vault will still return `ttl`
-		if _, ok := d.GetOk("token_ttl"); ok {
-			d.Set("token_ttl", nil)
-		}
-
-		if v, ok := resp.Data["ttl"]; ok {
-			d.Set("ttl", v)
-		}
-
-	}
-
-	// Check if the user is using the deprecated `max_ttl`
-	if _, deprecated := d.GetOk("max_ttl"); deprecated {
-		// Then we see if `token_max_ttl` was set and unset it
-		// Vault will still return `max_ttl`
-		if _, ok := d.GetOk("token_max_ttl"); ok {
-			d.Set("token_max_ttl", nil)
-		}
-
-		if v, ok := resp.Data["max_ttl"]; ok {
-			d.Set("max_ttl", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `bound_cidrs`
-	if _, deprecated := d.GetOk("bound_cidrs"); deprecated {
-		// Then we see if `token_bound_cidrs` was set and unset it
-		// Vault will still return `bound_cidrs`
-		if _, ok := d.GetOk("token_bound_cidrs"); ok {
-			d.Set("token_bound_cidrs", nil)
-		}
-
-		if v, ok := resp.Data["bound_cidrs"]; ok {
-			d.Set("bound_cidrs", v)
-		}
+	if err := readTokenFields(d, resp); err != nil {
+		return diag.FromErr(err)
 	}
 
 	d.Set("certificate", resp.Data["certificate"])
@@ -456,17 +302,19 @@ func certAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 				schema.HashString, []interface{}{}))
 	}
 
-	return nil
+	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
+
+	return diags
 }
 
-func certAuthResourceDelete(d *schema.ResourceData, meta interface{}) error {
+func certAuthResourceDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting cert %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting cert %q", path)
+		return diag.Errorf("Error deleting cert %q", path)
 	}
 	log.Printf("[DEBUG] Deleted cert %q", path)
 

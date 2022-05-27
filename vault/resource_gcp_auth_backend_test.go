@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 const gcpJSONCredentials string = `
@@ -29,7 +30,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 	path := resource.PrefixedUniqueId("gcp-basic-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { util.TestAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
@@ -45,7 +46,7 @@ func TestGCPAuthBackend_import(t *testing.T) {
 	path := resource.PrefixedUniqueId("gcp-import-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { util.TestAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testGCPAuthBackendDestroy,
 		Steps: []resource.TestStep{
@@ -102,7 +103,7 @@ func testGCPAuthBackendCheck_attrs() resource.TestCheckFunc {
 func testGCPAuthBackendConfig_basic(path, credentials string) string {
 	return fmt.Sprintf(`
 variable "json_credentials" {
-  type = "string"
+  type = string
   default = %q
 }
 
@@ -111,5 +112,4 @@ resource "vault_gcp_auth_backend" "test" {
   credentials                   = var.json_credentials
 }
 `, credentials, path)
-
 }
