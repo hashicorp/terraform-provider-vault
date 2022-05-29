@@ -556,8 +556,8 @@ var (
 		},
 		"vault_mfa_duo": {
 			Resource:       mfaDuoResource(),
-			PathInventory:  []string{"/sys/mfa/method/duo/{name}"},
-			EnterpriseOnly: true,
+			PathInventory:  []string{"/identity/mfa/method/duo/{id}"},
+			EnterpriseOnly: false,
 		},
 		"vault_mfa_okta": {
 			Resource:       mfaOktaResource(),

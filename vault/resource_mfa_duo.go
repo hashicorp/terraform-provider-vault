@@ -11,8 +11,8 @@ import (
 
 func mfaDuoResource() *schema.Resource {
 	return &schema.Resource{
-		Create: mfaDuoWrite,
-		Update: mfaDuoWrite,
+		Create: mfaDuoCreate,
+		Update: mfaDuoUpdate,
 		Delete: mfaDuoDelete,
 		Read:   mfaDuoRead,
 		Importer: &schema.ResourceImporter{
@@ -20,16 +20,11 @@ func mfaDuoResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"name": {
-				Type:         schema.TypeString,
-				Required:     true,
-				Description:  "Name of the MFA method.",
-				ValidateFunc: validateNoTrailingSlash,
-			},
-			"mount_accessor": {
+			"id": {
 				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The mount to tie this method to for use in automatic mappings. The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.",
+				Optional:    true,
+				Computed:    true,
+				Description: "UUID identifying the MFA method.",
 			},
 			"username_format": {
 				Type:        schema.TypeString,
@@ -58,27 +53,54 @@ func mfaDuoResource() *schema.Resource {
 				Optional:    true,
 				Description: "Push information for Duo.",
 			},
+			"use_passcode": {
+				Type:        schema.TypeBool,
+				Default:     false,
+				Optional:    true,
+				Description: "If true, the user is reminded to use the passcode upon MFA validation.",
+			},
 		},
 	}
 }
 
-func mfaDuoWrite(d *schema.ResourceData, meta interface{}) error {
+func mfaDuoCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
-
-	name := d.Get("name").(string)
 
 	data := map[string]interface{}{}
 	mfaDuoUpdateFields(d, data)
 
-	log.Printf("[DEBUG] Writing role %q to MFA Duo auth backend", name)
-	d.SetId(name)
-
-	log.Printf("[DEBUG] Creating mfaDuo %s in Vault", name)
-	_, err := client.Logical().Write(mfaDuoPath(name), data)
+	id := ""
+	log.Printf("[DEBUG] Creating new mfaDuo method in Vault")
+	resp, err := client.Logical().Write(mfaDuoPath(id), data)
 
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
+	log.Printf("[DEBUG] Created new mfaDuo method in Vault")
+
+	d.SetId(resp.Data["method_id"].(string))
+
+	return mfaDuoRead(d, meta)
+}
+
+func mfaDuoUpdate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+	id := d.Id()
+
+	path := mfaDuoPath(id)
+	vaultMutexKV.Lock(path)
+	defer vaultMutexKV.Unlock(path)
+
+	data := map[string]interface{}{}
+	mfaDuoUpdateFields(d, data)
+
+	log.Printf("[DEBUG] Updating mfaDuo method %s in Vault", id)
+	_, err := client.Logical().Write(mfaDuoPath(id), data)
+
+	if err != nil {
+		return fmt.Errorf("error writing to Vault: %s", err)
+	}
+	log.Printf("[DEBUG] Updated mfaDuo method %s in Vault", id)
 
 	return mfaDuoRead(d, meta)
 }
@@ -86,11 +108,11 @@ func mfaDuoWrite(d *schema.ResourceData, meta interface{}) error {
 func mfaDuoDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	name := d.Get("name").(string)
+	id := d.Id()
 
-	log.Printf("[DEBUG] Deleting mfaDuo %s from Vault", mfaDuoPath(name))
+	log.Printf("[DEBUG] Deleting mfaDuo method %s from Vault", mfaDuoPath(id))
 
-	_, err := client.Logical().Delete(mfaDuoPath(name))
+	_, err := client.Logical().Delete(mfaDuoPath(id))
 
 	if err != nil {
 		return fmt.Errorf("error deleting from Vault: %s", err)
@@ -102,19 +124,20 @@ func mfaDuoDelete(d *schema.ResourceData, meta interface{}) error {
 func mfaDuoRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	name := d.Get("name").(string)
+	id := d.Get("id").(string)
 
-	resp, err := client.Logical().Read(mfaDuoPath(name))
+	resp, err := client.Logical().Read(mfaDuoPath(id))
 
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
-	log.Printf("[DEBUG] Read MFA Duo config %q", mfaDuoPath(name))
+	log.Printf("[DEBUG] Read MFA Duo method %q", mfaDuoPath(id))
 
-	d.Set("mount_accessor", resp.Data["mount_accessor"])
+	d.Set("id", resp.Data["id"])
 	d.Set("username_format", resp.Data["username_format"])
 	d.Set("api_hostname", resp.Data["api_hostname"])
+	d.Set("use_passcode", resp.Data["use_passcode"])
 
 	// When you push the data up, it's push_info
 	// when vault responds, it's pushinfo :(
@@ -123,14 +146,15 @@ func mfaDuoRead(d *schema.ResourceData, meta interface{}) error {
 	// secret_key and integration_key, can't read out from the api
 	// So... if it drifts, it drift.
 
-	d.SetId(name)
+	d.SetId(id)
 
 	return nil
 }
 
 func mfaDuoUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
-	if v, ok := d.GetOk("mount_accessor"); ok {
-		data["mount_accessor"] = v.(string)
+
+	if v, ok := d.GetOk("id"); ok {
+		data["id"] = v.(string)
 	}
 
 	if v, ok := d.GetOk("username_format"); ok {
@@ -153,8 +177,16 @@ func mfaDuoUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
 		data["push_info"] = v.(string)
 	}
 
+	if v, ok := d.GetOk("use_passcode"); ok {
+		data["use_passcode"] = v.(bool)
+	}
+
 }
 
-func mfaDuoPath(name string) string {
-	return "sys/mfa/method/duo/" + strings.Trim(name, "/") + "/"
+func mfaDuoPath(id string) string {
+	if id != "" {
+		return "identity/mfa/method/duo/" + strings.Trim(id, "/")
+	} else {
+		return "identity/mfa/method/duo"
+	}
 }
