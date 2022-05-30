@@ -406,6 +406,8 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 			boundClaims[key] = claims
 		}
 		data["bound_claims"] = boundClaims
+	} else {
+		data["bound_claims"] = make(map[string]interface{}, 0)
 	}
 
 	if v, ok := d.GetOk("claim_mappings"); ok {
