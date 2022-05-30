@@ -7,11 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
-	"github.com/terraform-providers/terraform-provider-vault/util"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func TestLDAPAuthBackendGroup_import(t *testing.T) {
@@ -24,7 +26,7 @@ func TestLDAPAuthBackendGroup_import(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testLDAPAuthBackendGroupDestroy,
 		Steps: []resource.TestStep{
@@ -51,7 +53,7 @@ func TestLDAPAuthBackendGroup_basic(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testLDAPAuthBackendGroupDestroy,
 		Steps: []resource.TestStep{
@@ -122,7 +124,7 @@ func testLDAPAuthBackendGroupCheck_attrs(backend, groupname string) resource.Tes
 			"policies": "policies",
 		}
 
-		//return fmt.Errorf("%q", resp.Data)
+		// return fmt.Errorf("%q", resp.Data)
 
 		for stateAttr, apiAttr := range attrs {
 			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
@@ -199,7 +201,6 @@ func testLDAPAuthBackendGroupCheck_attrs(backend, groupname string) resource.Tes
 }
 
 func testLDAPAuthBackendGroupConfig_basic(backend, groupname string, policies []string) string {
-
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "ldap" {
@@ -208,10 +209,9 @@ resource "vault_auth_backend" "ldap" {
 }
 
 resource "vault_ldap_auth_backend_group" "test" {
-    backend   = "${vault_auth_backend.ldap.path}"
+    backend   = vault_auth_backend.ldap.path
     groupname = "%s"
     policies  = %s
 }
 `, backend, groupname, util.ArrayToTerraformList(policies))
-
 }

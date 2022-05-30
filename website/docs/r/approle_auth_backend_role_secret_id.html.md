@@ -20,20 +20,20 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "example" {
-  backend   = "${vault_auth_backend.approle.path}"
-  role_name = "test-role"
-  policies  = ["default", "dev", "prod"]
+  backend         = vault_auth_backend.approle.path
+  role_name       = "test-role"
+  token_policies  = ["default", "dev", "prod"]
 }
 
 resource "vault_approle_auth_backend_role_secret_id" "id" {
-  backend   = "${vault_auth_backend.approle.path}"
-  role_name = "${vault_approle_auth_backend_role.example.role_name}"
+  backend   = vault_auth_backend.approle.path
+  role_name = vault_approle_auth_backend_role.example.role_name
 
-  metadata = <<EOT
-{
-  "hello": "world"
-}
-EOT
+  metadata = jsonencode(
+    {
+      "hello" = "world"
+    }
+  )
 }
 ```
 
@@ -56,6 +56,10 @@ The following arguments are supported:
   [response-wrapped](https://www.vaultproject.io/docs/concepts/response-wrapping)
   and available for the duration specified. Only a single unwrapping of the
   token is allowed.
+
+* `with_wrapped_accessor` - (Optional) Set to `true` to use the wrapped secret-id accessor as the resource ID.
+  If `false` (default value), a fresh secret ID will be regenerated whenever the wrapping token is expired or
+  invalidated through unwrapping.
 
 ## Attributes Reference
 

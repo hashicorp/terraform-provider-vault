@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
-	"github.com/terraform-providers/terraform-provider-vault/util"
 )
 
 func identityGroupMemberEntityIdsResource() *schema.Resource {
@@ -25,77 +24,95 @@ func identityGroupMemberEntityIdsResource() *schema.Resource {
 				},
 				Description: "Entity IDs to be assigned as group members.",
 			},
-
 			"exclusive": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     true,
-				Description: "Should the resource manage member entity ids exclusively? Beware of race conditions when disabling exclusive management",
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  true,
+				Description: `Should the resource manage member entity ids 
+exclusively? Beware of race conditions when disabling exclusive management`,
 			},
-
 			"group_id": {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Description: "ID of the group.",
 			},
-
 			"group_name": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Name of the group.",
+				Deprecated: `The value for group_name may not always be accurate, 
+use "data.vault_identity_group.*.group_name", "vault_identity_group.*.group_name" instead`,
 			},
 		},
 	}
 }
 
 func identityGroupMemberEntityIdsUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-	id := d.Get("group_id").(string)
-
-	log.Printf("[DEBUG] Updating IdentityGroupMemberEntityIds %q", id)
-	path := identityGroupIDPath(id)
-
+	gid := d.Get("group_id").(string)
+	path := identityGroupIDPath(gid)
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
 
-	data := make(map[string]interface{})
-	memberEntityIds := d.Get("member_entity_ids").(*schema.Set).List()
+	client := meta.(*api.Client)
 
-	resp, err := readIdentityGroup(client, id)
+	log.Printf("[DEBUG] Updating IdentityGroupMemberEntityIds %q", gid)
+
+	if d.HasChange("group_id") {
+		o, n := d.GetChange("group_id")
+		log.Printf("[DEBUG] Group ID has changed old=%q, new=%q", o, n)
+	}
+	data := make(map[string]interface{})
+	resp, err := readIdentityGroup(client, gid, d.IsNewResource())
 	if err != nil {
 		return err
 	}
 
-	t, ok := resp.Data["type"]
-	if ok && t != "external" {
-		if d.Get("exclusive").(bool) {
-			data["member_entity_ids"] = memberEntityIds
+	var curIDS []interface{}
+	if t, ok := resp.Data["type"]; ok && t.(string) != "external" {
+		if v, ok := resp.Data["member_entity_ids"]; ok && v != nil {
+			curIDS = v.([]interface{})
+		}
+
+		if d.Get("exclusive").(bool) || len(curIDS) == 0 {
+			data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
 		} else {
-			apiMemberEntityIds, err := readIdentityGroupMemberEntityIds(client, id)
-			if err != nil {
-				return err
+			set := map[interface{}]bool{}
+			for _, v := range curIDS {
+				set[v] = true
 			}
-			if d.HasChange("member_entity_ids") {
-				oldMemberEntityIdsI, _ := d.GetChange("member_entity_ids")
-				oldMemberEntityIds := oldMemberEntityIdsI.(*schema.Set).List()
-				for _, memberEntityId := range oldMemberEntityIds {
-					apiMemberEntityIds = util.SliceRemoveIfPresent(apiMemberEntityIds, memberEntityId)
+
+			o, _ := d.GetChange("member_entity_ids")
+			if !d.IsNewResource() && o != nil {
+				// set.delete()
+				for _, i := range o.(*schema.Set).List() {
+					delete(set, i)
 				}
 			}
-			for _, memberEntityId := range memberEntityIds {
-				apiMemberEntityIds = util.SliceAppendIfMissing(apiMemberEntityIds, memberEntityId)
+
+			if ids, ok := d.GetOk("member_entity_ids"); ok {
+				for _, id := range ids.(*schema.Set).List() {
+					// set.add()
+					set[id] = true
+				}
 			}
-			data["member_entity_ids"] = apiMemberEntityIds
+
+			// set.keys()
+			var result []interface{}
+			for k := range set {
+				result = append(result, k)
+			}
+			data["member_entity_ids"] = result
 		}
 	}
 
 	_, err = client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error updating IdentityGroupMemberEntityIds %q: %s", id, err)
+		return fmt.Errorf("error updating IdentityGroupMemberEntityIds %q: %s", gid, err)
 	}
-	log.Printf("[DEBUG] Updated IdentityGroupMemberEntityIds %q", id)
+	log.Printf("[DEBUG] Updated IdentityGroupMemberEntityIds %q", gid)
 
-	d.SetId(id)
+	d.SetId(gid)
 
 	return identityGroupMemberEntityIdsRead(d, meta)
 }
@@ -104,56 +121,70 @@ func identityGroupMemberEntityIdsRead(d *schema.ResourceData, meta interface{}) 
 	client := meta.(*api.Client)
 	id := d.Id()
 
-	resp, err := readIdentityGroup(client, id)
+	log.Printf("[DEBUG] Read IdentityGroupMemberEntityIds %s", id)
+	resp, err := readIdentityGroup(client, id, d.IsNewResource())
 	if err != nil {
+		if isIdentityNotFoundError(err) {
+			log.Printf("[WARN] IdentityGroupMemberEntityIds %q not found, removing from state", id)
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
-	log.Printf("[DEBUG] Read IdentityGroupMemberEntityIds %s", id)
-	if resp == nil {
-		log.Printf("[WARN] IdentityGroupMemberEntityIds %q not found, removing from state", id)
-		d.SetId("")
-		return nil
+
+	if err := d.Set("group_id", id); err != nil {
+		return err
+	}
+	if err := d.Set("group_name", resp.Data["name"]); err != nil {
+		return err
 	}
 
-	d.Set("group_id", id)
-	d.Set("group_name", resp.Data["name"])
-
+	curIDS := resp.Data["member_entity_ids"]
 	if d.Get("exclusive").(bool) {
-		respdata := resp.Data["member_entity_ids"]
-		if err = d.Set("member_entity_ids", respdata); err != nil {
-			return fmt.Errorf("error setting member entity ids for IdentityGroupMemberEntityIds %q: %s", id, err)
+		if err = d.Set("member_entity_ids", curIDS); err != nil {
+			return err
 		}
 	} else {
-		userMemberEntityIds := d.Get("member_entity_ids").(*schema.Set).List()
-		newMemberEntityIds := make([]string, 0)
-		apiMemberEntityIds := resp.Data["member_entity_ids"].([]interface{})
-
-		for _, memberEntityId := range userMemberEntityIds {
-			if found, _ := util.SliceHasElement(apiMemberEntityIds, memberEntityId); found {
-				newMemberEntityIds = append(newMemberEntityIds, memberEntityId.(string))
+		set := map[interface{}]bool{}
+		if curIDS != nil {
+			for _, v := range curIDS.([]interface{}) {
+				set[v] = true
 			}
 		}
-		if err = d.Set("member_entity_ids", newMemberEntityIds); err != nil {
-			return fmt.Errorf("error setting member entity ids for IdentityGroupMemberEntityIds %q: %s", id, err)
+
+		var result []interface{}
+		// set.intersection()
+		if i, ok := d.GetOk("member_entity_ids"); ok {
+			for _, v := range i.(*schema.Set).List() {
+				if _, ok := set[v]; ok {
+					result = append(result, v)
+				}
+			}
+		}
+		if err = d.Set("member_entity_ids", result); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
 func identityGroupMemberEntityIdsDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
 	id := d.Get("group_id").(string)
-
-	log.Printf("[DEBUG] Deleting IdentityGroupMemberEntityIds %q", id)
 	path := identityGroupIDPath(id)
-
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
 
+	client := meta.(*api.Client)
+
+	log.Printf("[DEBUG] Deleting IdentityGroupMemberEntityIds %q", id)
+
 	data := make(map[string]interface{})
 
-	resp, err := readIdentityGroup(client, id)
+	resp, err := readIdentityGroup(client, id, false)
 	if err != nil {
+		if isIdentityNotFoundError(err) {
+			return nil
+		}
 		return err
 	}
 
@@ -162,14 +193,26 @@ func identityGroupMemberEntityIdsDelete(d *schema.ResourceData, meta interface{}
 		if d.Get("exclusive").(bool) {
 			data["member_entity_ids"] = make([]string, 0)
 		} else {
-			apiMemberEntityIds, err := readIdentityGroupMemberEntityIds(client, id)
-			if err != nil {
-				return err
+			set := map[interface{}]bool{}
+			if v, ok := resp.Data["member_entity_ids"]; ok && v != nil {
+				for _, id := range v.([]interface{}) {
+					set[id] = true
+				}
 			}
-			for _, memberEntityId := range d.Get("member_entity_ids").(*schema.Set).List() {
-				apiMemberEntityIds = util.SliceRemoveIfPresent(apiMemberEntityIds, memberEntityId)
+
+			result := []interface{}{}
+			if len(set) > 0 {
+				if v, ok := d.GetOk("member_entity_ids"); ok {
+					for _, id := range v.(*schema.Set).List() {
+						delete(set, id)
+					}
+				}
+
+				for k := range set {
+					result = append(result, k)
+				}
 			}
-			data["member_entity_ids"] = apiMemberEntityIds
+			data["member_entity_ids"] = result
 		}
 	}
 

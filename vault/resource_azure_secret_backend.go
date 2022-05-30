@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -13,13 +13,12 @@ func azureSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: azureSecretBackendCreate,
 		Read:   azureSecretBackendRead,
-		Update: azureSecretBackendCreate,
+		Update: azureSecretBackendUpdate,
 		Delete: azureSecretBackendDelete,
 		Exists: azureSecretBackendExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,
@@ -42,6 +41,12 @@ func azureSecretBackendResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Human-friendly description of the mount for the backend.",
+			},
+			"use_microsoft_graph_api": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Use the Microsoft Graph API. Should be set to true on vault-1.10+",
 			},
 			"subscription_id": {
 				Type:        schema.TypeString,
@@ -83,38 +88,24 @@ func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Get("path").(string)
 	description := d.Get("description").(string)
-	tenantID := d.Get("tenant_id").(string)
-	clientID := d.Get("client_id").(string)
-	clientSecret := d.Get("client_secret").(string)
-	environment := d.Get("environment").(string)
-	subscriptionID := d.Get("subscription_id").(string)
-
 	configPath := azureSecretBackendPath(path)
-
-	data := map[string]interface{}{
-		"tenant_id":       tenantID,
-		"client_id":       clientID,
-		"client_secret":   clientSecret,
-		"environment":     environment,
-		"subscription_id": subscriptionID,
-	}
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting Azure backend at %q", path)
-	err := client.Sys().Mount(path, &api.MountInput{
+	input := &api.MountInput{
 		Type:        "azure",
 		Description: description,
 		Config:      api.MountConfigInput{},
-	})
-	if err != nil {
+	}
+	if err := client.Sys().Mount(path, input); err != nil {
 		return fmt.Errorf("error mounting to %q: %s", path, err)
 	}
+
 	log.Printf("[DEBUG] Mounted Azure backend at %q", path)
 	d.SetId(path)
 
-	d.SetPartial("path")
-
 	log.Printf("[DEBUG] Writing Azure configuration to %q", configPath)
+	data := azureSecretBackendRequestData(d)
 	if _, err := client.Logical().Write(configPath, data); err != nil {
 		return fmt.Errorf("error writing Azure configuration for %q: %s", path, err)
 	}
@@ -145,10 +136,56 @@ func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	d.Set("path", path)
-	d.Set("description", mount.Description)
+	log.Printf("[DEBUG] Read Azure secret Backend config %s", path)
+	resp, err := client.Logical().Read(azureSecretBackendPath(path))
+	if err != nil {
+		return fmt.Errorf("error reading from Vault: %s", err)
+	}
+
+	for _, k := range []string{"client_id", "subscription_id", "tenant_id", "use_microsoft_graph_api"} {
+		if v, ok := resp.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return err
+			}
+		}
+	}
+
+	if v, ok := resp.Data["environment"]; ok && v.(string) != "" {
+		if err := d.Set("environment", v); err != nil {
+			return err
+		}
+	} else {
+		if err := d.Set("environment", "AzurePublicCloud"); err != nil {
+			return err
+		}
+	}
+
+	if err := d.Set("path", path); err != nil {
+		return err
+	}
+
+	if err := d.Set("description", mount.Description); err != nil {
+		return err
+	}
 
 	return nil
+}
+
+func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*api.Client)
+
+	path := d.Id()
+
+	data := azureSecretBackendRequestData(d)
+	if len(data) > 0 {
+		_, err := client.Logical().Write(azureSecretBackendPath(path), data)
+		if err != nil {
+			return fmt.Errorf("error writing config for %q: %s", path, err)
+		}
+		log.Printf("[DEBUG] Updated Azure Backend Config at %q", azureSecretBackendPath(path))
+	}
+
+	return azureSecretBackendRead(d, meta)
 }
 
 func azureSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
@@ -180,4 +217,26 @@ func azureSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, e
 
 func azureSecretBackendPath(path string) string {
 	return strings.Trim(path, "/") + "/config"
+}
+
+func azureSecretBackendRequestData(d *schema.ResourceData) map[string]interface{} {
+	fields := []string{
+		"client_id",
+		"environment",
+		"tenant_id",
+		"client_secret",
+		"use_microsoft_graph_api",
+		"subscription_id",
+	}
+
+	data := make(map[string]interface{})
+	for _, k := range fields {
+		if d.IsNewResource() {
+			data[k] = d.Get(k)
+		} else if d.HasChange(k) {
+			data[k] = d.Get(k)
+		}
+	}
+
+	return data
 }

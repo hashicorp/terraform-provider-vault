@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
-func genericEndpointResource() *schema.Resource {
+func genericEndpointResource(name string) *schema.Resource {
 	return &schema.Resource{
 		SchemaVersion: 1,
 
@@ -41,8 +41,8 @@ func genericEndpointResource() *schema.Resource {
 				// necessary when disable_read is false for comparing values.
 				// NormalizeDataJSON and ValidateDataJSON are in
 				// resource_generic_secret.
-				StateFunc:    NormalizeDataJSON,
-				ValidateFunc: ValidateDataJSON,
+				StateFunc:    NormalizeDataJSONFunc(name),
+				ValidateFunc: ValidateDataJSONFunc(name),
 				Sensitive:    true,
 			},
 
@@ -176,7 +176,6 @@ func genericEndpointResourceRead(d *schema.ResourceData, meta interface{}) error
 
 		log.Printf("[DEBUG] Reading %s from Vault", path)
 		data, err := client.Logical().Read(path)
-
 		if err != nil {
 			return fmt.Errorf("error reading %s from Vault: %s", path, err)
 		}

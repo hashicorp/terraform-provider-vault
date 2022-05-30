@@ -27,6 +27,9 @@ resource "vault_jwt_auth_backend_role" "example" {
   token_policies  = ["default", "dev", "prod"]
 
   bound_audiences = ["https://myco.test"]
+  bound_claims = {
+    color = "red,green,blue"
+  }
   user_claim      = "https://vault/user"
   role_type       = "jwt"
 }
@@ -69,8 +72,13 @@ The following arguments are supported:
 * `bound_subject` - (Optional) If set, requires that the `sub` claim matches
   this value.
 
-* `bound_claims` - (Optional) If set, a map of claims/values to match against.
-  The expected value may be a single string or a list of strings.
+* `bound_claims` - (Optional) If set, a map of claims to values to match against.
+  A claim's value must be a string, which may contain one value or multiple
+  comma-separated values, e.g. `"red"` or `"red,green,blue"`.
+
+* `bound_claims_type` - (Optional) How to interpret values in the claims/values
+  map (`bound_claims`): can be either `string` (exact match) or `glob` (wildcard
+  match). Requires Vault 1.4.0 or above.
 
 * `claim_mappings` - (Optional) If set, a map of claims (keys) to be copied
   to specified metadata fields (values).
@@ -82,16 +90,6 @@ The following arguments are supported:
   the set of groups to which the user belongs; this will be used as the names
   for the Identity group aliases created due to a successful login. The claim
   value must be a list of strings.
-
-* `groups_claim_delimiter_pattern` - (Optional; Deprecated. This field has been
-  removed since Vault 1.1. If the groups claim is not at the top level, it can
-  now be specified as a [JSONPointer](https://tools.ietf.org/html/rfc6901).)
-  A pattern of delimiters
-  used to allow the groups_claim to live outside of the top-level JWT structure.
-  For instance, a groups_claim of meta/user.name/groups with this field
-  set to // will expect nested structures named meta, user.name, and groups.
-  If this field was set to /./ the groups information would expect to be
-  via nested structures of meta, user, name, and groups.
 
 * `backend` - (Optional) The unique name of the auth backend to configure.
   Defaults to `jwt`.
@@ -145,40 +143,14 @@ These arguments are common across several Authentication Token resources since V
 * `token_no_default_policy` - (Optional) If set, the default policy will not be set on
   generated tokens; otherwise it will be added to the policies set in token_policies.
 
-* `token_num_uses` - (Optional) The
-  [period](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
-  if any, in number of seconds to set on the token.
+* `token_num_uses` - (Optional) The [maximum number](https://www.vaultproject.io/api-docs/jwt#token_num_uses)
+   of times a generated token may be used (within its lifetime); 0 means unlimited.
 
 * `token_type` - (Optional) The type of token that should be generated. Can be `service`,
   `batch`, or `default` to use the mount's tuned default (which unless changed will be
   `service` tokens). For token store roles, there are two additional possibilities:
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
-
-### Deprecated Arguments
-
-These arguments are deprecated since Vault 1.2 in favour of the common token arguments
-documented above.
-
-* `num_uses` - (Optional; Deprecated, use `token_num_uses` instead if you are running Vault >= 1.2) If set, puts a use-count
-  limitation on the issued token.
-
-* `ttl` - (Optional; Deprecated, use `token_ttl` instead if you are running Vault >= 1.2) The TTL period of tokens issued
-  using this role, provided as a number of seconds.
-
-* `max_ttl` - (Optional; Deprecated, use `token_max_ttl` instead if you are running Vault >= 1.2) The maximum allowed lifetime of tokens
-  issued using this role, provided as a number of seconds.
-
-* `policies` - (Optional; Deprecated, use `token_policies` instead if you are running Vault >= 1.2) An array of strings
-  specifying the policies to be set on tokens issued using this role.
-
-* `period` - (Optional; Deprecated, use `token_period` instead if you are running Vault >= 1.2) If set, indicates that the
-  token generated using this role should never expire. The token should be renewed within the
-  duration specified by this value. At each renewal, the token's TTL will be set to the
-  value of this field. Specified in seconds.
-
-* `bound_cidrs` - (Optional; Deprecated, use `token_bound_cidrs` instead if you are running Vault >= 1.2) If set, a list of
-  CIDRs valid as the source address for login requests. This value is also encoded into any resulting token.
 
 ## Attributes Reference
 

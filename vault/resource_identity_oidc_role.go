@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -53,6 +53,7 @@ func identityOidcRole() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "The value that will be included in the `aud` field of all the OIDC identity tokens issued by this role",
 				Computed:    true,
+				Optional:    true,
 			},
 		},
 	}
@@ -60,6 +61,7 @@ func identityOidcRole() *schema.Resource {
 
 func identityOidcRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
 	data["key"] = d.Get("key").(string)
+	data["client_id"] = d.Get("client_id").(string)
 	data["template"] = d.Get("template").(string)
 	data["ttl"] = d.Get("ttl").(int)
 }

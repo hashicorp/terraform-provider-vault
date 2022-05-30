@@ -3,13 +3,13 @@ layout: "vault"
 page_title: "Provider: Vault"
 sidebar_current: "docs-vault-index"
 description: |-
-  The Vault provider allows Terraform to read from, write to, and configure Hashicorp Vault
+  The Vault provider allows Terraform to read from, write to, and configure HashiCorp Vault
 ---
 
 # Vault Provider
 
 The Vault provider allows Terraform to read from, write to, and configure
-[Hashicorp Vault](https://vaultproject.io/).
+[HashiCorp Vault](https://vaultproject.io/).
 
 ~> **Important** Interacting with Vault from Terraform causes any secrets
 that you read and write to be persisted in both Terraform's state file
@@ -21,6 +21,10 @@ This provider serves two pretty-distinct use-cases, which each have their
 own security trade-offs and caveats that are covered in the sections that
 follow. Consider these carefully before using this provider within your
 Terraform configuration.
+
+-> Visit the [Inject secrets into Terraform using the Vault provider](https://learn.hashicorp.com/tutorials/terraform/secrets-vault?utm_source=WEBSITE&utm_medium=WEB_IO&utm_offer=ARTICLE_PAGE&utm_content=DOCS) Learn tutorial to learn how to use
+short-lived credentials from Vault's AWS Secrets Engine to authenticate the
+AWS provider.
 
 ## Best Practices
 
@@ -94,14 +98,17 @@ variables in order to keep credential information out of the configuration.
   `VAULT_ADDR` in the Terraform process environment will be set to the
   value of the `address` argument from this provider. By default, this is false.
 
-* `token` - (Required) Vault token that will be used by Terraform to
+* `token` - (Optional) Vault token that will be used by Terraform to
   authenticate. May be set via the `VAULT_TOKEN` environment variable.
   If none is otherwise supplied, Terraform will attempt to read it from
   `~/.vault-token` (where the vault command stores its current token).
   Terraform will issue itself a new token that is a child of the one given,
-  with a short TTL to limit the exposure of any requested secrets. Note that
+  with a short TTL to limit the exposure of any requested secrets, unless
+  `skip_child_token` is set to `true` (see below). Note that
   the given token must have the update capability on the auth/token/create
-  path in Vault in order to create child tokens.
+  path in Vault in order to create child tokens.  A token is required for
+  the provider.  A token can explicitly set via token argument, alternatively 
+  a token can be implicitly set via an auth_login block.
 
 * `token_name` - (Optional) Token name, that will be used by Terraform when
   creating the child token (`display_name`). This is useful to provide a reference of the
@@ -120,7 +127,7 @@ variables in order to keep credential information out of the configuration.
 
 * `auth_login` - (Optional) A configuration block, described below, that
   attempts to authenticate using the `auth/<method>/login` path to
-  aquire a token which Terraform will use. Terraform still issues itself
+  acquire a token which Terraform will use. Terraform still issues itself
   a limited child token using auth/token/create in order to enforce a short
   TTL and limit exposure.
 
@@ -135,6 +142,21 @@ variables in order to keep credential information out of the configuration.
   that Terraform can be tricked into writing secrets to a server controlled
   by an intruder. May be set via the `VAULT_SKIP_VERIFY` environment variable.
 
+* `tls_server_name` - (Optional) Name to use as the SNI host when connecting
+  via TLS. May be set via the `VAULT_TLS_SERVER_NAME` environment variable.
+
+* `skip_child_token` - (Optional) Set this to `true` to disable
+  creation of an intermediate ephemeral Vault token for Terraform to
+  use. Enabling this is strongly discouraged since it increases
+  the potential for a renewable Vault token being exposed in clear text.
+  Only change this setting when the provided token cannot be permitted to
+  create child tokens and there is no risk of exposure from the output of
+  Terraform. May be set via the `TERRAFORM_VAULT_SKIP_CHILD_TOKEN` environment
+  variable. **Note**: Setting to `true` will cause `token_name`
+  and `max_lease_ttl_seconds` to be ignored.
+  Please see [Using Vault credentials in Terraform configuration](#using-vault-credentials-in-terraform-configuration)
+  before enabling this setting.
+
 * `max_lease_ttl_seconds` - (Optional) Used as the duration for the
   intermediate Vault token Terraform issues itself, which in turn limits
   the duration of secret leases issued by Vault. Defaults to 20 minutes
@@ -143,14 +165,23 @@ variables in order to keep credential information out of the configuration.
   for the implications of this setting.
 
 * `max_retries` - (Optional) Used as the maximum number of retries when a 5xx
-  error code is encountered. Defaults to 2 retries and may be set via the
+  error code is encountered. Defaults to `2` retries and may be set via the
   `VAULT_MAX_RETRIES` environment variable.
+
+* `max_retries_ccc` - (Optional) Maximum number of retries for _Client Controlled Consistency_
+  related operations. Defaults to `10` retries and may also be set via the
+  `VAULT_MAX_RETRIES_CCC` environment variable. See
+  [Vault Eventual Consistency](https://www.vaultproject.io/docs/enterprise/consistency#vault-eventual-consistency)
+  for more information.   
+  *As of Vault Enterprise 1.10 changing this parameter should no longer be required
+  See [Vault Eventual Consistency - Vault 1.10 Mitigations](https://www.vaultproject.io/docs/enterprise/consistency#vault-1-10-mitigations)
+  for more information.*
 
 * `namespace` - (Optional) Set the namespace to use. May be set via the
   `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
 
 * `headers` - (Optional) A configuration block, described below, that provides headers
-to be sent along with all requests to the Vault server.  This block can be specified 
+to be sent along with all requests to the Vault server.  This block can be specified
 multiple times.
 
 The `auth_login` configuration block accepts the following arguments:
@@ -162,6 +193,10 @@ The `auth_login` configuration block accepts the following arguments:
 * `namespace` - (Optional) The path to the namespace that has the mounted auth method.
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*
+
+* `method` - (Optional) When configured, will enable auth method specific operations.
+  For example, when set to `aws`, the provider will automatically sign login requests
+  for AWS authentication. Valid values include: `aws`.
 
 * `parameters` - (Optional) A map of key-value parameters to send when authenticating
   against the auth backend. Refer to [Vault API documentation](https://www.vaultproject.io/api-docs/auth) for a particular auth method
@@ -181,6 +216,21 @@ The `headers` configuration block accepts the following arguments:
 
 * `value` - (Required) The value of the header.
 
+## Provider Debugging
+
+Terraform supports various logging options by default.
+These are documented [here](https://www.terraform.io/docs/internals/debugging.html).
+
+~> The environment variables below can be configured to provide extended log output and require log level `DEBUG`
+or higher. It's important to note that any extended log output may **reveal secrets**, so please exercise caution
+when enabling any of the following:
+
+* `TERRAFORM_VAULT_LOG_BODY` - when set to `true` both the request and response body will be logged.
+
+* `TERRAFORM_VAULT_LOG_REQUEST_BODY` - when set to `true` the request body will be logged.
+
+* `TERRAFORM_VAULT_LOG_RESPONSE_BODY` - when set to `true` the response body will be logged.
+
 ## Example Usage
 
 ```hcl
@@ -197,12 +247,12 @@ provider "vault" {
 resource "vault_generic_secret" "example" {
   path = "secret/foo"
 
-  data_json = <<EOT
-{
-  "foo":   "bar",
-  "pizza": "cheese"
-}
-EOT
+  data_json = jsonencode(
+    {
+      "foo"   = "bar",
+      "pizza" = "cheese"
+    }
+  )
 }
 ```
 
@@ -242,22 +292,217 @@ provider "vault" {
 }
 ```
 
-## Example Multiple Namespace Support
-To leverage more than one namespace in Vault you can use a Terraform alias:
+### Example `auth_login` With AWS Signing
+
+Sign AWS metadata for instance profile login requests:
 
 ```hcl
 provider "vault" {
-  alias = "ns1"
-  namespace = "ns1"
-}
-
-provider "vault" {
-  alias = "ns2"
-  namespace = "ns2"
-}
-
-resource "vault_generic_secret" "secret"{
-  provider = "vault.ns1"
-  ...
+  address = "http://127.0.0.1:8200"
+  auth_login {
+    path = "auth/aws/login"
+    method = "aws"
+    parameters = {
+      role = "dev-role-iam"
+    }
+  }
 }
 ```
+
+If the Vault server's AWS auth method requires the `X-Vault-AWS-IAM-Server-ID` header to be set by clients, specify the server ID in `header_value` within the `parameters` block:
+
+```hcl
+provider "vault" {
+  address = "http://127.0.0.1:8200"
+  auth_login {
+    path = "auth/aws/login"
+    method = "aws"
+    parameters = {
+      role = "dev-role-iam"
+      header_value = "vault.example.com"
+    }
+  }
+}
+```
+
+## Namespace support
+
+The Vault provider supports managing [Namespaces][namespaces] (a feature of
+Vault Enterprise), as well as creating resources in those namespaces by
+utilizing [Provider Aliasing][aliasing]. The `namespace` option in the [provider
+block][provider-block] enables the management of  resources in the specified
+namespace.
+
+### Using Provider Aliases
+
+The below configuration is a simple example of using the provider block's
+`namespace` attribute to configure an aliased provider and create a resource
+within that namespace.
+
+```hcl
+# main provider block with no namespace
+provider vault {}
+
+# create the "everyone" namespace in the default root namespace
+resource "vault_namespace" "everyone" {
+  path = "everyone"
+}
+
+# configure an aliased provider, scope to the new namespace.
+provider vault {
+  alias     = "everyone"
+  namespace = vault_namespace.everyone.path
+}
+
+# create a policy in the "everyone" namespace
+resource "vault_policy" "example" {
+  provider = vault.everyone
+
+  depends_on = [vault_namespace.everyone]
+  name       = "vault_everyone_policy"
+  policy     = data.vault_policy_document.list_secrets.hcl
+}
+
+data "vault_policy_document" "list_secrets" {
+  rule {
+    path         = "secret/*"
+    capabilities = ["list"]
+    description  = "allow List on secrets under everyone/"
+  }
+}
+```
+
+Using this alias configuration, the policy `list_secrets` is created under the
+`everyone` namespace, but not under the "root" namespace:
+
+```
+$ vault policy list -namespace=everyone
+default
+vault_everyone_policy
+
+$ vault policy list
+default
+root
+```
+
+### Nested Namespaces
+
+A more complex example of nested namespaces is show below. Each provider blocks
+uses interpolation of the `ID` of namespace it belongs in to ensure the namespace
+exists before that provider gets configured:
+
+
+```hcl
+# main provider block with no namespace
+provider vault {}
+
+resource "vault_namespace" "everyone" {
+  path = "everyone"
+}
+
+provider vault {
+  alias     = "everyone"
+  namespace = trimsuffix(vault_namespace.everyone.id, "/")
+}
+
+data "vault_policy_document" "public_secrets" {
+  rule {
+    path         = "secret/*"
+    capabilities = ["list"]
+    description  = "allow List on secrets under everyone/ namespace"
+  }
+}
+
+resource "vault_policy" "everyone" {
+  provider = vault.everyone
+  name     = "vault_everyone_policy"
+  policy   = data.vault_policy_document.vault_team_secrets.hcl
+}
+
+resource "vault_namespace" "engineering" {
+  provider = vault.everyone
+  path     = "engineering"
+}
+
+provider vault {
+  alias = "engineering"
+  namespace = trimsuffix(vault_namespace.engineering.id, "/")
+}
+
+resource "vault_namespace" "vault-team" {
+  provider = vault.engineering
+  path     = "vault-team"
+}
+
+data "vault_policy_document" "vault_team_secrets" {
+  rule {
+    path         = "secret/*"
+    capabilities = ["create", "read", "update", "delete", "list"]
+    description  = "allow all on secrets under everyone/engineering/vault-team/"
+  }
+}
+
+provider vault {
+  alias = "vault-team"
+  namespace = trimsuffix(vault_namespace.vault-team.id, "/")
+}
+
+resource "vault_policy" "vault_team" {
+  provider = vault.vault-team
+  name     = "vault_team_policy"
+  policy   = data.vault_policy_document.vault_team_secrets.hcl
+}
+```
+
+Using this configuration, the namespace and policy structure looks like so:
+
+```
+<root>/
+  default
+  root
+  /everyone/
+   default
+   vault_everyone_policy
+    /engineering/
+      default
+      /vault-team/
+      default
+      vault_team_policy
+```
+
+Verify the structure with `vault` directly:
+
+```
+$ vault namespace list
+Keys
+----
+everyone/
+
+$ vault namespace list -namespace=everyone
+Keys
+----
+engineering/
+
+$ vault namespace list -namespace=everyone/engineering
+Keys
+----
+vault-team/
+
+$ vault namespace list -namespace=everyone/engineering/vault-team
+No namespaces found
+
+$ vault namespace list -namespace=everyone/engineering/vault-team
+
+$ vault policy list -namespace=everyone/engineering/vault-team
+default
+vault_team_policy
+```
+
+## Tutorials 
+
+Refer to the [Codify Management of Vault Enterprise Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-enterprise) tutorial for additional examples using Vault namespaces.
+
+
+[namespaces]: https://www.vaultproject.io/docs/enterprise/namespaces#vault-enterprise-namespaces
+[aliasing]: https://www.terraform.io/docs/configuration/providers.html#alias-multiple-provider-configurations
+[provider-block]: /docs#provider-arguments

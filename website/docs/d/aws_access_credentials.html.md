@@ -27,7 +27,7 @@ resource "vault_aws_secret_backend" "aws" {
 }
 
 resource "vault_aws_secret_backend_role" "role" {
-  backend = "${vault_aws_secret_backend.aws.path}"
+  backend = vault_aws_secret_backend.aws.path
   name    = "test"
 
   policy = <<EOT
@@ -46,13 +46,13 @@ EOT
 
 # generally, these blocks would be in a different module
 data "vault_aws_access_credentials" "creds" {
-  backend = "${vault_aws_secret_backend.aws.path}"
-  role    = "${vault_aws_secret_backend_role.role.name}"
+  backend = vault_aws_secret_backend.aws.path
+  role    = vault_aws_secret_backend_role.role.name
 }
 
 provider "aws" {
-  access_key = "${data.vault_aws_access_credentials.creds.access_key}"
-  secret_key = "${data.vault_aws_access_credentials.creds.secret_key}"
+  access_key = data.vault_aws_access_credentials.creds.access_key
+  secret_key = data.vault_aws_access_credentials.creds.secret_key
 }
 ```
 
@@ -74,6 +74,10 @@ in addition to the keys.
 * `role_arn` - (Required if role has multiple ARNs) The specific AWS ARN to use
 from the configured role. If the role does not have multiple ARNs, this does
 not need to be specified.
+
+* `ttl` - (Optional) Specifies the TTL for the use of the STS token. This
+is specified as a string with a duration suffix. Valid only when
+`credential_type` is `assumed_role` or `federation_token`
 
 ## Attributes Reference
 

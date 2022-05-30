@@ -2,18 +2,21 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccAWSAuthBackendClient_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
@@ -35,7 +38,7 @@ func TestAccAWSAuthBackendClient_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -54,7 +57,7 @@ func TestAccAWSAuthBackendClient_nested(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws") + "/nested"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -73,7 +76,7 @@ func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -91,6 +94,21 @@ func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", "access_key", "AWSACCESSKEY"),
 					resource.TestCheckNoResourceAttr("vault_aws_auth_backend_client.client", "secret_key"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccAWSAuthBackendClientStsRegionNoEndpoint(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccAWSAuthBackendClientConfigSTSRegionNoEndpoint(backend),
+				ExpectError: regexp.MustCompile("Error: both sts_endpoint and sts_region need to be set"),
 			},
 		},
 	})
@@ -146,6 +164,7 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 			"ec2_endpoint":               "endpoint",
 			"iam_endpoint":               "iam_endpoint",
 			"sts_endpoint":               "sts_endpoint",
+			"sts_region":                 "sts_region",
 			"iam_server_id_header_value": "iam_server_id_header_value",
 		}
 		for stateAttr, apiAttr := range attrs {
@@ -169,12 +188,13 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "client" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "AWSACCESSKEY"
   secret_key = "AWSSECRETKEY"
   ec2_endpoint = "http://vault.test/ec2"
   iam_endpoint = "http://vault.test/iam"
   sts_endpoint = "http://vault.test/sts"
+  sts_region = "vault-test"
   iam_server_id_header_value = "vault.test"
 }
 `, backend)
@@ -189,12 +209,13 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "client" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "UPDATEDAWSACCESSKEY"
   secret_key = "UPDATEDAWSSECRETKEY"
   ec2_endpoint = "http://updated.vault.test/ec2"
   iam_endpoint = "http://updated.vault.test/iam"
   sts_endpoint = "http://updated.vault.test/sts"
+  sts_region = "updated-vault-test"
   iam_server_id_header_value = "updated.vault.test"
 }`, backend)
 }
@@ -208,11 +229,12 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "client" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "AWSACCESSKEY"
   ec2_endpoint = "http://vault.test/ec2"
   iam_endpoint = "http://vault.test/iam"
   sts_endpoint = "http://vault.test/sts"
+  sts_region = "vault-test"
   iam_server_id_header_value = "vault.test"
 }`, backend)
 }
@@ -226,11 +248,30 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_client" "client" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   access_key = "AWSACCESSKEY"
   ec2_endpoint = "http://updated2.vault.test/ec2"
   iam_endpoint = "http://updated2.vault.test/iam"
   sts_endpoint = "http://updated2.vault.test/sts"
+  sts_region = "updated-vault-test"
   iam_server_id_header_value = "updated2.vault.test"
+}`, backend)
+}
+
+func testAccAWSAuthBackendClientConfigSTSRegionNoEndpoint(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
+  access_key = "AWSACCESSKEY"
+  ec2_endpoint = "http://vault.test/ec2"
+  iam_endpoint = "http://vault.test/iam"
+  sts_region = "vault-test"
+  iam_server_id_header_value = "vault.test"
 }`, backend)
 }

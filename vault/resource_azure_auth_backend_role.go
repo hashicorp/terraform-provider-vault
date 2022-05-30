@@ -1,12 +1,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -82,62 +84,23 @@ func azureAuthBackendRoleResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-
-		// Deprecated
-		"ttl": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "The TTL period of tokens issued using this role, provided as the number of seconds.",
-			Deprecated:    "use `token_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_ttl"},
-		},
-		"max_ttl": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "The maximum allowed lifetime of tokens issued using this role, provided as the number of seconds.",
-			Deprecated:    "use `token_max_ttl` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_max_ttl"},
-		},
-		"period": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Description:   "If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this field. The maximum allowed lifetime of token issued using this role. Specified as a number of seconds.",
-			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_period"},
-		},
-		"policies": {
-			Type:     schema.TypeList,
-			Optional: true,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
-			},
-			Description:   "Policies to be set on tokens issued using this role.",
-			Deprecated:    "use `token_policies` instead if you are running Vault >= 1.2",
-			ConflictsWith: []string{"token_policies"},
-		},
 	}
 
-	addTokenFields(fields, &addTokenFieldsConfig{
-		TokenMaxTTLConflict:   []string{"max_ttl"},
-		TokenPoliciesConflict: []string{"policies"},
-		TokenPeriodConflict:   []string{"period"},
-		TokenTTLConflict:      []string{"ttl"},
-	})
+	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
-		Create: azureAuthBackendRoleCreate,
-		Read:   azureAuthBackendRoleRead,
-		Update: azureAuthBackendRoleUpdate,
-		Delete: azureAuthBackendRoleDelete,
-		Exists: azureAuthBackendRoleExists,
+		CreateContext: azureAuthBackendRoleCreate,
+		ReadContext:   azureAuthBackendRoleRead,
+		UpdateContext: azureAuthBackendRoleUpdate,
+		DeleteContext: azureAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: fields,
 	}
 }
 
-func azureAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
+func azureAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
@@ -149,20 +112,6 @@ func azureAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 
 	data := map[string]interface{}{}
 	updateTokenFields(d, data, true)
-
-	// Deprecated Fields
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(int)
-	}
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(int)
-	}
-	if v, ok := d.GetOk("period"); ok {
-		data["period"] = v.(int)
-	}
-	if v, ok := d.GetOk("policies"); ok {
-		data["policies"] = v.([]interface{})
-	}
 
 	if _, ok := d.GetOk("bound_service_principal_ids"); ok {
 		iSPI := d.Get("bound_service_principal_ids").([]interface{})
@@ -221,31 +170,31 @@ func azureAuthBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 	d.SetId(path)
 	if _, err := client.Logical().Write(path, data); err != nil {
 		d.SetId("")
-		return fmt.Errorf("error writing Azure auth backend role %q: %s", path, err)
+		return diag.Errorf("error writing Azure auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote Azure auth backend role %q", path)
 
-	return azureAuthBackendRoleRead(d, meta)
+	return azureAuthBackendRoleRead(ctx, d, meta)
 }
 
-func azureAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
+func azureAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
 	backend, err := azureAuthBackendRoleBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for Azure auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for Azure auth backend role: %s", path, err)
 	}
 
 	role, err := azureAuthBackendRoleNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for Azure auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for Azure auth backend role: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading Azure auth backend role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading Azure auth backend role %q: %s", path, err)
+		return diag.Errorf("error reading Azure auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read Azure auth backend role %q", path)
 	if resp == nil {
@@ -254,60 +203,8 @@ func azureAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	readTokenFields(d, resp)
-
-	// Check if the user is using the deprecated `policies`
-	if _, deprecated := d.GetOk("policies"); deprecated {
-		// Then we see if `token_policies` was set and unset it
-		// Vault will still return `policies`
-		if _, ok := d.GetOk("token_policies"); ok {
-			d.Set("token_policies", nil)
-		}
-
-		if v, ok := resp.Data["policies"]; ok {
-			d.Set("policies", v)
-		}
-
-	}
-
-	// Check if the user is using the deprecated `period`
-	if _, deprecated := d.GetOk("period"); deprecated {
-		// Then we see if `token_period` was set and unset it
-		// Vault will still return `period`
-		if _, ok := d.GetOk("token_period"); ok {
-			d.Set("token_period", nil)
-		}
-
-		if v, ok := resp.Data["period"]; ok {
-			d.Set("period", v)
-		}
-	}
-
-	// Check if the user is using the deprecated `ttl`
-	if _, deprecated := d.GetOk("ttl"); deprecated {
-		// Then we see if `token_ttl` was set and unset it
-		// Vault will still return `ttl`
-		if _, ok := d.GetOk("token_ttl"); ok {
-			d.Set("token_ttl", nil)
-		}
-
-		if v, ok := resp.Data["ttl"]; ok {
-			d.Set("ttl", v)
-		}
-
-	}
-
-	// Check if the user is using the deprecated `max_ttl`
-	if _, deprecated := d.GetOk("max_ttl"); deprecated {
-		// Then we see if `token_max_ttl` was set and unset it
-		// Vault will still return `max_ttl`
-		if _, ok := d.GetOk("token_max_ttl"); ok {
-			d.Set("token_max_ttl", nil)
-		}
-
-		if v, ok := resp.Data["max_ttl"]; ok {
-			d.Set("max_ttl", v)
-		}
+	if err := readTokenFields(d, resp); err != nil {
+		return diag.FromErr(err)
 	}
 
 	d.Set("backend", backend)
@@ -337,10 +234,12 @@ func azureAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("bound_scale_sets", resp.Data["bound_scale_sets"])
 	}
 
-	return nil
+	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
+
+	return diags
 }
 
-func azureAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
+func azureAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
@@ -348,20 +247,6 @@ func azureAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 
 	data := map[string]interface{}{}
 	updateTokenFields(d, data, false)
-
-	// Deprecated Fields
-	if d.HasChange("ttl") {
-		data["ttl"] = d.Get("ttl").(int)
-	}
-	if d.HasChange("max_ttl") {
-		data["max_ttl"] = d.Get("max_ttl").(int)
-	}
-	if d.HasChange("period") {
-		data["period"] = d.Get("period").(int)
-	}
-	if d.HasChange("policies") {
-		data["policies"] = d.Get("policies").([]interface{})
-	}
 
 	if _, ok := d.GetOk("bound_service_principal_ids"); ok {
 		iSPI := d.Get("bound_service_principal_ids").([]interface{})
@@ -414,40 +299,25 @@ func azureAuthBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 	log.Printf("[DEBUG] Updating role %q in Azure auth backend", path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error updating Azure auth role %q: %s", path, err)
+		return diag.Errorf("Error updating Azure auth role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated role %q to Azure auth backend", path)
 
-	return azureAuthBackendRoleRead(d, meta)
+	return azureAuthBackendRoleRead(ctx, d, meta)
 }
 
-func azureAuthBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func azureAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting Azure auth backend role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("error deleting Azure auth backend role %q", path)
+		return diag.Errorf("error deleting Azure auth backend role %q", path)
 	}
 	log.Printf("[DEBUG] Deleted Azure auth backend role %q", path)
 
 	return nil
-}
-
-func azureAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if Azure auth backend role %q exists", path)
-
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if Azure auth backend role %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if Azure auth backend role %q exists", path)
-
-	return resp != nil, nil
 }
 
 func azureAuthBackendRolePath(backend, role string) string {

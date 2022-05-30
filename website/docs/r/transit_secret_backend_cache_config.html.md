@@ -1,12 +1,12 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_transit_secret_backend_cache_config resource"
-sidebar_current: "docs-vault-resource-transit-secret-backend-cache-config"
+page_title: "Vault: vault_transit_secret_cache_config resource"
+sidebar_current: "docs-vault-resource-transit-secret-cache-config"
 description: |-
   Configure the cache for the Transit Secret Backend in Vault.
 ---
 
-# vault\_transit\_secret\_backend\_cache\_config
+# vault\_transit\_secret\_cache\_config
 
 Configure the cache for the Transit Secret Backend in Vault.
 
@@ -21,8 +21,8 @@ resource "vault_mount" "transit" {
   max_lease_ttl_seconds     = 86400
 }
 
-resource "vault_transit_secret_backend_cache_config" "cfg" {
-  backend = "${vault_mount.transit.path}"
+resource "vault_transit_secret_cache_config" "cfg" {
+  backend = vault_mount.transit.path
   size    = 500
 }
 

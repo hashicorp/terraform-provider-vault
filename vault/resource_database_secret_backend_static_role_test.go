@@ -8,10 +8,12 @@ import (
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
@@ -30,7 +32,7 @@ func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -68,7 +70,7 @@ func TestAccDatabaseSecretBackendStaticRole_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -148,7 +150,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["*"]
 
@@ -158,8 +160,8 @@ resource "vault_database_secret_backend_connection" "test" {
 }
 
 resource "vault_database_secret_backend_static_role" "test" {
-  backend = "${vault_mount.db.path}"
-  db_name = "${vault_database_secret_backend_connection.test.name}"
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
   name = "%s"
   username = "%s"
   rotation_period = 3600
@@ -176,7 +178,7 @@ resource "vault_mount" "db" {
 }
 
 resource "vault_database_secret_backend_connection" "test" {
-  backend = "${vault_mount.db.path}"
+  backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["*"]
 
@@ -186,8 +188,8 @@ resource "vault_database_secret_backend_connection" "test" {
 }
 
 resource "vault_database_secret_backend_static_role" "test" {
-  backend = "${vault_mount.db.path}"
-  db_name = "${vault_database_secret_backend_connection.test.name}"
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
   name = "%s"
   username = "%s"
   rotation_period = 1800

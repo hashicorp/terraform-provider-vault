@@ -2,28 +2,35 @@ package vault
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestResourceAuth(t *testing.T) {
 	path := "github-" + acctest.RandString(10)
+
+	resourceName := "vault_auth_backend.test"
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAuth_initialConfig(path),
 				Check:  testResourceAuth_initialCheck(path),
 			},
 			{
-				Config: testResourceAuth_updateConfig,
-				Check:  testResourceAuth_updateCheck,
+				Config: testResourceAuth_updatedConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", "Test auth backend updated"),
+					resource.TestCheckResourceAttr(resourceName, "type", "github"),
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+				),
 			},
 		},
 	})
@@ -55,13 +62,20 @@ func testAccCheckAuthBackendDestroy(s *terraform.State) error {
 func testResourceAuth_initialConfig(path string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "test" {
-	type = "github"
-	path = "%s"
 	description = "Test auth backend"
-	default_lease_ttl_seconds = 3600
-	max_lease_ttl_seconds = 86400
-	listing_visibility = "unauth"
-	local = true
+	type 		= "github"
+	path 		= "%s"
+	local 		= true
+}`, path)
+}
+
+func testResourceAuth_updatedConfig(path string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "test" {
+	description = "Test auth backend updated"
+	type 		= "github"
+	path 		= "%s"
+	local 		= true
 }`, path)
 }
 
@@ -95,25 +109,12 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 			return fmt.Errorf("unexpected auth description")
 		}
 
-		if instanceState.Attributes["default_lease_ttl_seconds"] != "3600" {
-			return fmt.Errorf("unexpected auth default_lease_ttl_seconds")
-		}
-
-		if instanceState.Attributes["max_lease_ttl_seconds"] != "86400" {
-			return fmt.Errorf("unexpected auth max_lease_ttl_seconds")
-		}
-
-		if instanceState.Attributes["listing_visibility"] != "unauth" {
-			return fmt.Errorf("unexpected auth listing_visibility")
-		}
-
 		if instanceState.Attributes["local"] != "true" {
 			return fmt.Errorf("unexpected auth local")
 		}
 
 		client := testProvider.Meta().(*api.Client)
 		auths, err := client.Sys().ListAuth()
-
 		if err != nil {
 			return fmt.Errorf("error reading back auth: %s", err)
 		}
@@ -127,15 +128,6 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 				}
 				if serverAuth.Description != "Test auth backend" {
 					return fmt.Errorf("unexpected auth description")
-				}
-				if serverAuth.Config.DefaultLeaseTTL != 3600 {
-					return fmt.Errorf("unexpected auth default_lease_ttl_seconds")
-				}
-				if serverAuth.Config.MaxLeaseTTL != 86400 {
-					return fmt.Errorf("unexpected auth max_lease_ttl_seconds")
-				}
-				if serverAuth.Config.ListingVisibility != "unauth" {
-					return fmt.Errorf("unexpected auth listing_visibility")
 				}
 				if serverAuth.Local != true {
 					return fmt.Errorf("unexpected auth local")
@@ -151,14 +143,6 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 		return nil
 	}
 }
-
-var testResourceAuth_updateConfig = `
-
-resource "vault_auth_backend" "test" {
-	type = "ldap"
-}
-
-`
 
 func testResourceAuth_updateCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["vault_auth_backend.test"]
@@ -183,7 +167,6 @@ func testResourceAuth_updateCheck(s *terraform.State) error {
 
 	client := testProvider.Meta().(*api.Client)
 	auths, err := client.Sys().ListAuth()
-
 	if err != nil {
 		return fmt.Errorf("error reading back auth: %s", err)
 	}
@@ -212,7 +195,7 @@ func TestResourceAuthTune(t *testing.T) {
 	var resAuthFirst api.AuthMount
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAuthTune_initialConfig(backend),
@@ -221,9 +204,9 @@ func TestResourceAuthTune(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "type", "github"),
-					resource.TestCheckResourceAttr(resName, "tune.2820787064.default_lease_ttl", "60s"),
-					resource.TestCheckResourceAttr(resName, "tune.2820787064.max_lease_ttl", "3600s"),
-					resource.TestCheckResourceAttr(resName, "tune.2820787064.listing_visibility", "unauth"),
+					resource.TestCheckResourceAttr(resName, "tune.0.default_lease_ttl", "60s"),
+					resource.TestCheckResourceAttr(resName, "tune.0.max_lease_ttl", "3600s"),
+					resource.TestCheckResourceAttr(resName, "tune.0.listing_visibility", "unauth"),
 					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuthFirst.Accessor),
 					checkAuthMount(backend, listingVisibility("unauth")),
 					checkAuthMount(backend, defaultLeaseTtl(60)),
@@ -237,9 +220,9 @@ func TestResourceAuthTune(t *testing.T) {
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "type", "github"),
-					resource.TestCheckResourceAttr(resName, "tune.1501804413.default_lease_ttl", "60s"),
-					resource.TestCheckResourceAttr(resName, "tune.1501804413.max_lease_ttl", "7200s"),
-					resource.TestCheckResourceAttr(resName, "tune.1501804413.listing_visibility", ""),
+					resource.TestCheckResourceAttr(resName, "tune.0.default_lease_ttl", "60s"),
+					resource.TestCheckResourceAttr(resName, "tune.0.max_lease_ttl", "7200s"),
+					resource.TestCheckResourceAttr(resName, "tune.0.listing_visibility", ""),
 					checkAuthMount(backend, listingVisibility("unauth")),
 					checkAuthMount(backend, defaultLeaseTtl(60)),
 					checkAuthMount(backend, maxLeaseTtl(7200)),
@@ -274,97 +257,10 @@ resource "vault_auth_backend" "test" {
 }`, backend)
 }
 
-func TestResourceAuthTuneTtlConflict(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []resource.TestStep{
-			{
-				ExpectError: regexp.MustCompile(`config is invalid: "max_lease_ttl_seconds": conflicts with tune.0.max_lease_ttl`),
-				Config:      testResourceAuthTune_conflictWithTuneConfig(),
-			},
-		},
-	})
-}
-
-func testResourceAuthTune_conflictWithTuneConfig() string {
-	return `
-resource "vault_auth_backend" "test" {
-	type = "github"
-	max_lease_ttl_seconds = "4800"
-	tune {
-		max_lease_ttl      = "7200s"
-		default_lease_ttl  = "60s"
-	}
-}`
-}
-
-func TestResourceAuthMigrateToTune(t *testing.T) {
-	backend := acctest.RandomWithPrefix("github")
-	resName := "vault_auth_backend.test"
-	var resAuthFirst api.AuthMount
-	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []resource.TestStep{
-			{
-				Config: testResourceAuthMigrateToTune_initialConfig(backend),
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAuthMountExists(resName, &resAuthFirst),
-					resource.TestCheckResourceAttr(resName, "path", backend),
-					resource.TestCheckResourceAttr(resName, "id", backend),
-					resource.TestCheckResourceAttr(resName, "type", "github"),
-					resource.TestCheckResourceAttr(resName, "max_lease_ttl_seconds", "4800"),
-					resource.TestCheckResourceAttr(resName, "default_lease_ttl_seconds", "75"),
-					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuthFirst.Accessor),
-					checkAuthMount(backend, defaultLeaseTtl(75)),
-					checkAuthMount(backend, maxLeaseTtl(4800)),
-				),
-			},
-			{
-				Config: testResourceAuthMigrateToTune_updateConfig(backend),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuthFirst.Accessor),
-					resource.TestCheckResourceAttr(resName, "path", backend),
-					resource.TestCheckResourceAttr(resName, "id", backend),
-					resource.TestCheckResourceAttr(resName, "type", "github"),
-					resource.TestCheckResourceAttr(resName, "tune.4062844355.max_lease_ttl", "5600s"),
-					resource.TestCheckResourceAttr(resName, "tune.4062844355.default_lease_ttl", "90s"),
-					checkAuthMount(backend, defaultLeaseTtl(90)),
-					checkAuthMount(backend, maxLeaseTtl(5600)),
-				),
-			},
-		},
-	})
-}
-
-func testResourceAuthMigrateToTune_initialConfig(backend string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "test" {
-	type = "github"
-	path = "%s"
-	max_lease_ttl_seconds = "4800"
-    default_lease_ttl_seconds = "75"
-}`, backend)
-}
-
-func testResourceAuthMigrateToTune_updateConfig(backend string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "test" {
-	type = "github"
-	path = "%s"
-	tune {
-		max_lease_ttl      = "5600s"
-		default_lease_ttl  = "90s"
-	}
-}`, backend)
-}
-
 func checkAuthMount(backend string, checker func(*api.AuthMount) error) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*api.Client)
 		auths, err := client.Sys().ListAuth()
-
 		if err != nil {
 			return fmt.Errorf("error reading back auth: %s", err)
 		}

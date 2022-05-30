@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -24,29 +24,32 @@ func auditResource() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 				ForceNew:    true,
-				Description: "Path in which to enable the audit device",
+				Description: "Path in which to enable the audit device.",
 			},
-
 			"type": {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "Type of the audit device, such as 'file'",
+				Description: "Type of the audit device, such as 'file'.",
 			},
-
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "Human-friendly description of the audit device",
+				Description: "Human-friendly description of the audit device.",
 			},
-
+			"local": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Specifies if the audit device is a local only. Local audit devices are not replicated nor (if a secondary) removed by replication.",
+			},
 			"options": {
 				Type:        schema.TypeMap,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Required:    true,
 				ForceNew:    true,
-				Description: "Configuration options to pass to the audit device itself",
+				Description: "Configuration options to pass to the audit device itself.",
 			},
 		},
 	}
@@ -55,9 +58,12 @@ func auditResource() *schema.Resource {
 func auditWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
+	description := d.Get("description").(string)
+	local := d.Get("local").(bool)
+	mountType := d.Get("type").(string)
 	path := d.Get("path").(string)
 	if path == "" {
-		path = d.Get("type").(string)
+		path = mountType
 	}
 
 	optionsRaw := d.Get("options").(map[string]interface{})
@@ -68,13 +74,14 @@ func auditWrite(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[DEBUG] Enabling audit backend %s in Vault", path)
+	opts := &api.EnableAuditOptions{
+		Type:        mountType,
+		Description: description,
+		Local:       local,
+		Options:     options,
+	}
 
-	if err := client.Sys().EnableAudit(
-		path,
-		d.Get("type").(string),
-		d.Get("description").(string),
-		options,
-	); err != nil {
+	if err := client.Sys().EnableAuditWithOptions(path, opts); err != nil {
 		return fmt.Errorf("error enabling audit backend: %s", err)
 	}
 
@@ -104,8 +111,6 @@ func auditRead(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Reading audit backends %s from Vault", path)
 
-	client.Sys().ListAudit()
-
 	audits, err := client.Sys().ListAudit()
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
@@ -121,6 +126,7 @@ func auditRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
+	// Local is not returned by the List operation
 	d.Set("path", path)
 	d.Set("type", audit.Type)
 	d.Set("description", audit.Description)

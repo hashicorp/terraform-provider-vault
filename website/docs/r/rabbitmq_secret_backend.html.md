@@ -22,9 +22,9 @@ for more details.
 
 ```hcl
 resource "vault_rabbitmq_secret_backend" "rabbitmq" {
-  connection_uri = "https://....."
-  username = "user"
-  password = "password"
+  connection_uri  = "https://....."
+  username        = "user"
+  password        = "password"
 }
 ```
 
@@ -41,14 +41,17 @@ The following arguments are supported:
 * `verify_connection` - (Optional) Specifies whether to verify connection URI, username, and password.
 Defaults to `true`.
 
+* `password_policy` - (Optional) Specifies a password policy to use when creating dynamic credentials. Defaults to generating an alphanumeric password if not set.
+
+* `username_template` - (Optional) Template describing how dynamic usernames are generated.
 
 ~> **Important** Because Vault does not support reading the configured
 credentials back from the API, Terraform cannot detect and correct drift
-on `connection_uri`, `username`, `password` or `verify_connection`. Changing the values, however, _will_
+on `connection_uri`, `username`, `password`, `verify_connection`, `username_template`, and `password_policy`. Changing the values, however, _will_
 overwrite the previously stored values.
 
 * `path` - (Optional) The unique path this backend should be mounted at. Must
-not begin or end with a `/`. Defaults to `aws`.
+not begin or end with a `/`. Defaults to `rabbitmq`.
 
 * `description` - (Optional) A human-friendly description for this backend.
 

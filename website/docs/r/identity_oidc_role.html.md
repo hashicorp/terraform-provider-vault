@@ -90,14 +90,14 @@ The following arguments are supported:
 
 * `ttl` - (Optional) TTL of the tokens generated against the role in number of seconds.
 
+* `client_id` - (Optional) The value that will be included in the `aud` field of all the OIDC identity
+  tokens issued by this role
+
 ## Attributes Reference
 
 In addition to all arguments above, the following attributes are exported:
 
 * `id` - The name of the created role.
-
-* `client_id` - The value that will be included in the `aud` field of all the OIDC identity
-  tokens issued by this role
 
 ## Import
 

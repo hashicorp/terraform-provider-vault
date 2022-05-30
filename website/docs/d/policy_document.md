@@ -23,7 +23,7 @@ data "vault_policy_document" "example" {
 
 resource "vault_policy" "example" {
   name   = "example_policy"
-  policy = "${data.vault_policy_document.example.hcl}"
+  policy = data.vault_policy_document.example.hcl
 }
 ```
 
@@ -35,7 +35,7 @@ Each document configuration may have one or more `rule` blocks, which each accep
 
 * `capabilities` - (Required) A list of capabilities that this rule apply to `path`. For example, ["read", "write"].
 
-* `description` - (Optional) Description of the rule. Will be added as a commend to rendered rule.
+* `description` - (Optional) Description of the rule. Will be added as a comment to rendered rule.
 
 * `required_parameters` - (Optional) A list of parameters that must be specified.
 

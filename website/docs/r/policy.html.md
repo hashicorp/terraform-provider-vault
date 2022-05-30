@@ -17,7 +17,7 @@ resource "vault_policy" "example" {
 
   policy = <<EOT
 path "secret/my_app" {
-  capabilities = ["write"]
+  capabilities = ["update"]
 }
 EOT
 }
@@ -42,3 +42,11 @@ Policies can be imported using the `name`, e.g.
 ```
 $ terraform import vault_policy.example dev-team
 ```
+
+## Tutorials 
+
+Refer to the following tutorials for additional usage examples:
+
+- [Codify Management of Vault Enterprise Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-enterprise)
+
+- [Codify Management of Vault Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-oss)

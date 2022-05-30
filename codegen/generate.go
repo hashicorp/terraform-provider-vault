@@ -2,9 +2,11 @@ package codegen
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -14,10 +16,12 @@ import (
 
 // generatedDirPerms uses 0775 because it is the same as for
 // the "vault" directory, which is at "drwxrwxr-x".
-const generatedDirPerms os.FileMode = 0775
+const generatedDirPerms os.FileMode = 0o775
 
 var errUnsupported = errors.New("code and doc generation for this item is unsupported")
 
+// Run accepts a map of endpoint paths and generates both code and documentation
+// for NEW endpoints in the endpoint registry.
 func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
 	// Read in the templates we'll be using.
 	h, err := newTemplateHandler(logger)
@@ -170,11 +174,11 @@ we eventually cover all >500 of them and add tests.
 */
 func codeFilePath(tfTp tfType, endpoint string) (string, error) {
 	filename := fmt.Sprintf("%ss%s.go", tfTp.String(), endpoint)
-	homeDirPath, err := pathToHomeDir()
+	repoRoot, err := getRepoRoot()
 	if err != nil {
 		return "", err
 	}
-	path := filepath.Join(homeDirPath, "generated", filename)
+	path := filepath.Join(repoRoot, "generated", filename)
 	return stripCurlyBraces(path), nil
 }
 
@@ -207,13 +211,34 @@ we eventually cover all >500 of them and add tests.
 			└── transformation.md
 */
 func docFilePath(tfTp tfType, endpoint string) (string, error) {
-	filename := fmt.Sprintf("%ss%s.md", tfTp.String(), endpoint)
-	homeDirPath, err := pathToHomeDir()
+	endpoint = normalizeDocEndpoint(endpoint)
+	filename := fmt.Sprintf("%s/%s.html.md", tfTp.DocType(), endpoint)
+	repoRoot, err := getRepoRoot()
 	if err != nil {
 		return "", err
 	}
-	path := filepath.Join(homeDirPath, "website", "docs", "generated", filename)
-	return stripCurlyBraces(path), nil
+	return filepath.Join(repoRoot, "website", "docs", filename), nil
+}
+
+// normalizeDocEndpoint changes the raw endpoint into the format we expect for
+// using in generated documentation structure on registry.terraform.io.
+// Example:
+//  endpoint: /transform/alphabet/{name}
+//  normalized: transform_alphabet
+//
+//  endpoint: /transform/decode/{role_name}
+//  normalized: transform_decode
+//
+//  endpoint: /transform/encode/{role_name}
+//  normalized: transform_encode
+func normalizeDocEndpoint(endpoint string) string {
+	endpoint = stripCurlyBraces(endpoint)
+	endpoint = strings.TrimRight(endpoint, "name")
+	endpoint = strings.TrimRight(endpoint, "role_")
+	endpoint = strings.TrimRight(endpoint, "/")
+	endpoint = strings.ReplaceAll(endpoint, "/", "_")
+	endpoint = strings.TrimLeft(endpoint, "_")
+	return endpoint
 }
 
 // stripCurlyBraces converts a path like
@@ -225,15 +250,12 @@ func stripCurlyBraces(path string) string {
 	return path
 }
 
-// pathToHomeDir yields the path to the terraform-vault-provider
-// home directory on the machine on which it's running.
-// ex. /home/your-name/go/src/github.com/terraform-providers/terraform-provider-vault
-func pathToHomeDir() (string, error) {
-	repoName := "terraform-provider-vault"
-	wd, err := os.Getwd()
+// getRepoRoot relative to CWD.
+func getRepoRoot() (string, error) {
+	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
 	if err != nil {
 		return "", err
 	}
-	pathParts := strings.Split(wd, repoName)
-	return pathParts[0] + repoName, nil
+
+	return string(bytes.TrimRight(out, "\n")), nil
 }

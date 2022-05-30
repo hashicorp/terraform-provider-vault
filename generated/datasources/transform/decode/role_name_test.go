@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/terraform-providers/terraform-provider-vault/generated/resources/transform/role"
-	"github.com/terraform-providers/terraform-provider-vault/generated/resources/transform/transformation"
-	"github.com/terraform-providers/terraform-provider-vault/schema"
-	"github.com/terraform-providers/terraform-provider-vault/util"
-	"github.com/terraform-providers/terraform-provider-vault/vault"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	sdk_schema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/generated/resources/transform/role"
+	"github.com/hashicorp/terraform-provider-vault/generated/resources/transform/transformation"
+	"github.com/hashicorp/terraform-provider-vault/schema"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
+	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
 var roleNameTestProvider = func() *schema.Provider {
@@ -26,9 +27,9 @@ var roleNameTestProvider = func() *schema.Provider {
 func TestDecodeBasic(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { util.TestEntPreCheck(t) },
-		Providers: map[string]terraform.ResourceProvider{
-			"vault": roleNameTestProvider.ResourceProvider(),
+		PreCheck: func() { testutil.TestEntPreCheck(t) },
+		Providers: map[string]*sdk_schema.Provider{
+			"vault": roleNameTestProvider.SchemaProvider(),
 		},
 		Steps: []resource.TestStep{
 			{
@@ -71,9 +72,9 @@ data "vault_transform_decode_role_name" "test" {
 func TestDecodeBatch(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { util.TestEntPreCheck(t) },
-		Providers: map[string]terraform.ResourceProvider{
-			"vault": roleNameTestProvider.ResourceProvider(),
+		PreCheck: func() { testutil.TestEntPreCheck(t) },
+		Providers: map[string]*sdk_schema.Provider{
+			"vault": roleNameTestProvider.SchemaProvider(),
 		},
 		Steps: []resource.TestStep{
 			{

@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/plugin"
-	"github.com/terraform-providers/terraform-provider-vault/generated"
-	"github.com/terraform-providers/terraform-provider-vault/schema"
-	"github.com/terraform-providers/terraform-provider-vault/vault"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
+
+	"github.com/hashicorp/terraform-provider-vault/generated"
+	"github.com/hashicorp/terraform-provider-vault/schema"
+	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
 func main() {
@@ -16,5 +17,5 @@ func main() {
 		p.RegisterResource(name, resource)
 	}
 	plugin.Serve(&plugin.ServeOpts{
-		ProviderFunc: p.ResourceProvider})
+		ProviderFunc: p.SchemaProvider})
 }

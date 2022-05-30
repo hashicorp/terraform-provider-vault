@@ -21,20 +21,18 @@ for more details.
 
 ```hcl
 resource "vault_pki_secret_backend_root_cert" "test" {
-  depends_on = [ "vault_pki_secret_backend.pki" ]
-
-  backend = "${vault_pki_secret_backend.pki.path}"
-
-  type = "internal"
-  common_name = "Root CA"
-  ttl = "315360000"
-  format = "pem"
-  private_key_format = "der"
-  key_type = "rsa"
-  key_bits = 4096
-  exclude_cn_from_sans = true
-  ou = "My OU"
-  organization = "My organization"
+  depends_on            = [vault_mount.pki]
+  backend               = vault_mount.pki.path
+  type                  = "internal"
+  common_name           = "Root CA"
+  ttl                   = "315360000"
+  format                = "pem"
+  private_key_format    = "der"
+  key_type              = "rsa"
+  key_bits              = 4096
+  exclude_cn_from_sans  = true
+  ou                    = "My OU"
+  organization          = "My organization"
 }
 ```
 
@@ -90,8 +88,10 @@ The following arguments are supported:
 
 In addition to the fields above, the following attributes are exported:
 
-* `certificate` - The certificate
+* `certificate` - The certificate.
 
-* `issuing_ca` - The issuing CA
+* `issuing_ca` - The issuing CA certificate.
 
-* `serial` - The serial
+* `serial` - Deprecated, use `serial_number` instead.
+ 
+* `serial_number` - The certificate's serial number, hex formatted.

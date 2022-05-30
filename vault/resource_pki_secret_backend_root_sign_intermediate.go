@@ -1,12 +1,14 @@
 package vault
 
 import (
+	"context"
+	"encoding/pem"
 	"fmt"
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -15,8 +17,20 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 		Create: pkiSecretBackendRootSignIntermediateCreate,
 		Read:   pkiSecretBackendRootSignIntermediateRead,
 		Update: pkiSecretBackendRootSignIntermediateUpdate,
-		Delete: pkiSecretBackendRootSignIntermediateDelete,
-
+		Delete: pkiSecretBackendCertDelete,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    pkiSecretRootSignIntermediateRV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: pkiSecretRootSignIntermediateRUpgradeV0,
+			},
+			{
+				Version: 1,
+				Type:    pkiSecretSerialNumberResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: pkiSecretSerialNumberUpgradeV0,
+			},
+		},
+		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"backend": {
 				Type:        schema.TypeString,
@@ -57,7 +71,7 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 			"uri_sans": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "List of alterative URIs.",
+				Description: "List of alternative URIs.",
 				ForceNew:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -76,7 +90,7 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    false,
-				Description: "Time to leave.",
+				Description: "Time to live.",
 			},
 			"format": {
 				Type:         schema.TypeString,
@@ -160,22 +174,44 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 			"certificate": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The certicate.",
+				Description: "The signed intermediate CA certificate.",
 			},
 			"issuing_ca": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The issuing CA.",
+				Description: "The issuing CA certificate.",
 			},
 			"ca_chain": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeList,
 				Computed:    true,
-				Description: "The CA chain.",
+				Description: "The CA chain as a list of format specific certificates",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"certificate_bundle": {
+				Type:     schema.TypeString,
+				Computed: true,
+				Description: "The concatenation of the intermediate and issuing CA certificates (PEM encoded). " +
+					"Requires the format to be set to any of: pem, " +
+					"pem_bundle. The value will be empty for all other formats.",
 			},
 			"serial": {
 				Type:        schema.TypeString,
 				Computed:    true,
+				Deprecated:  "Use serial_number instead",
 				Description: "The serial number.",
+			},
+			"serial_number": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The certificate's serial number, hex formatted.",
+			},
+			"revoke": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Revoke the certificate upon resource destruction.",
 			},
 		},
 	}
@@ -266,11 +302,118 @@ func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta int
 
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("issuing_ca", resp.Data["issuing_ca"])
-	d.Set("ca_chain", resp.Data["ca_chain"])
 	d.Set("serial", resp.Data["serial_number"])
+	d.Set("serial_number", resp.Data["serial_number"])
+
+	if err := setCAChain(d, resp); err != nil {
+		return err
+	}
+
+	if err := setCertificateBundle(d, resp); err != nil {
+		return err
+	}
 
 	d.SetId(fmt.Sprintf("%s/%s", backend, commonName))
+
 	return pkiSecretBackendRootSignIntermediateRead(d, meta)
+}
+
+func setCAChain(d *schema.ResourceData, resp *api.Secret) error {
+	field := "ca_chain"
+	var caChain []string
+	if v, ok := resp.Data[field]; ok && v != nil {
+		switch v := v.(type) {
+		case []interface{}:
+			for _, v := range v {
+				caChain = append(caChain, v.(string))
+			}
+		default:
+			return fmt.Errorf("response contains an unexpected type %T for %q", v, field)
+		}
+	}
+
+	// provide the CAChain from the issuing_ca and the intermediate CA certificate
+	var err error
+	if len(caChain) == 0 {
+		caChain, err = getCAChain(resp.Data, !isPEMFormat(d))
+		if err != nil {
+			return err
+		}
+	}
+
+	return d.Set(field, caChain)
+}
+
+func getCAChain(m map[string]interface{}, literal bool) ([]string, error) {
+	return parseCertChain(m, true, literal)
+}
+
+func isPEMFormat(d *schema.ResourceData) bool {
+	format := d.Get("format").(string)
+	switch format {
+	case "pem", "pem_bundle":
+		return true
+	default:
+		return false
+	}
+}
+
+func setCertificateBundle(d *schema.ResourceData, resp *api.Secret) error {
+	field := "certificate_bundle"
+	if !isPEMFormat(d) {
+		log.Printf("[WARN] Cannot set the %q, not in PEM format", field)
+		return nil
+	}
+
+	chain, err := parseCertChain(resp.Data, false, false)
+	if err != nil {
+		return err
+	}
+
+	return d.Set(field, strings.Join(chain, "\n"))
+}
+
+func parseCertChain(m map[string]interface{}, asCA, literal bool) ([]string, error) {
+	var chain []string
+	seen := make(map[string]bool)
+	parseCert := func(data string) error {
+		var b *pem.Block
+		rest := []byte(data)
+		for {
+			b, rest = pem.Decode(rest)
+			if b == nil {
+				break
+			}
+
+			cert := strings.Trim(string(pem.EncodeToMemory(b)), "\n")
+			if _, ok := seen[cert]; !ok {
+				chain = append(chain, cert)
+				seen[cert] = true
+			}
+		}
+
+		return nil
+	}
+
+	fields := []string{"issuing_ca", "certificate"}
+	if !asCA {
+		fields = []string{fields[1], fields[0]}
+	}
+
+	for _, k := range fields {
+		if v, ok := m[k]; ok && v.(string) != "" {
+			value := v.(string)
+			if literal {
+				chain = append(chain, value)
+			} else if err := parseCert(value); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, fmt.Errorf("required certificate for %q is missing or empty", k)
+		}
+	}
+
+	return chain, nil
 }
 
 func pkiSecretBackendRootSignIntermediateRead(d *schema.ResourceData, meta interface{}) error {
@@ -287,4 +430,28 @@ func pkiSecretBackendRootSignIntermediateDelete(d *schema.ResourceData, meta int
 
 func pkiSecretBackendRootSignIntermediateCreatePath(backend string) string {
 	return strings.Trim(backend, "/") + "/root/sign-intermediate"
+}
+
+func pkiSecretRootSignIntermediateRV0() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"ca_chain": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+		},
+	}
+}
+
+func pkiSecretRootSignIntermediateRUpgradeV0(
+	_ context.Context, rawState map[string]interface{}, _ interface{},
+) (map[string]interface{}, error) {
+	caChain, err := getCAChain(rawState, false)
+	if err != nil {
+		return nil, err
+	}
+	rawState["ca_chain"] = caChain
+
+	return rawState, nil
 }

@@ -22,7 +22,7 @@ for more details.
 
 ```hcl
 resource "vault_gcp_secret_backend" "gcp" {
-  credentials = "${file("credentials.json")}"
+  credentials = file("credentials.json")
 }
 ```
 
@@ -47,6 +47,8 @@ issued by this backend. Defaults to '0'.
 
 * `max_lease_ttl_seconds` - (Optional) The maximum TTL that can be requested
 for credentials issued by this backend. Defaults to '0'.
+
+* `local` - (Optional) Boolean flag that can be explicitly set to true to enforce local mount in HA environment
 
 ## Attributes Reference
 

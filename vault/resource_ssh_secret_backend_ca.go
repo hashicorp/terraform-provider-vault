@@ -2,10 +2,11 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/vault/api"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 )
 
 func sshSecretBackendCAResource() *schema.Resource {
@@ -13,7 +14,6 @@ func sshSecretBackendCAResource() *schema.Resource {
 		Create: sshSecretBackendCACreate,
 		Read:   sshSecretBackendCARead,
 		Delete: sshSecretBackendCADelete,
-		Exists: sshSecretBackendCAExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -89,6 +89,15 @@ func sshSecretBackendCARead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Reading CA information from SSH backend %q", backend)
 	secret, err := client.Logical().Read(backend + "/config/ca")
 	if err != nil {
+		if apiRespErr, ok := err.(*api.ResponseError); ok {
+			for _, e := range apiRespErr.Errors {
+				if e == "keys haven't been configured yet" {
+					log.Printf("[WARN] CA information not found in SSH backend %q, removing from state", backend)
+					d.SetId("")
+					return nil
+				}
+			}
+		}
 		return fmt.Errorf("Error reading CA information from SSH backend %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Read CA information from SSH backend %q", backend)
@@ -118,18 +127,4 @@ func sshSecretBackendCADelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleted CA configuration for SSH backend %q", backend)
 
 	return nil
-}
-
-func sshSecretBackendCAExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-
-	backend := d.Id()
-	log.Printf("[DEBUG] Checking if CA information exists for backend %q ", backend)
-	secret, err := client.Logical().Read(backend + "/config/ca")
-	if err != nil {
-		return true, fmt.Errorf("Error checking if CA information exists for backend %q: %s", backend, err)
-	}
-	log.Printf("[DEBUG] Checked if CA information exists for backend %q", backend)
-
-	return secret != nil, nil
 }

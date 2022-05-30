@@ -6,11 +6,14 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
-const gcpAuthType string = "gcp"
+const (
+	gcpAuthType        = "gcp"
+	gcpAuthDefaultPath = "gcp"
+)
 
 func gcpAuthBackendResource() *schema.Resource {
 	return &schema.Resource{
@@ -20,7 +23,9 @@ func gcpAuthBackendResource() *schema.Resource {
 		Read:   gcpAuthBackendRead,
 		Delete: gcpAuthBackendDelete,
 		Exists: gcpAuthBackendExists,
-
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: map[string]*schema.Schema{
 			"credentials": {
 				Type:         schema.TypeString,
@@ -57,10 +62,16 @@ func gcpAuthBackendResource() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
-				Default:  "gcp",
+				Default:  gcpAuthDefaultPath,
 				StateFunc: func(v interface{}) string {
 					return strings.Trim(v.(string), "/")
 				},
+			},
+			"local": {
+				Type:        schema.TypeBool,
+				ForceNew:    true,
+				Optional:    true,
+				Description: "Specifies if the auth method is local only",
 			},
 		},
 	}
@@ -107,9 +118,14 @@ func gcpAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	authType := gcpAuthType
 	path := d.Get("path").(string)
 	desc := d.Get("description").(string)
+	local := d.Get("local").(bool)
 
 	log.Printf("[DEBUG] Enabling gcp auth backend %q", path)
-	err := client.Sys().EnableAuth(path, authType, desc)
+	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
+		Type:        authType,
+		Description: desc,
+		Local:       local,
+	})
 	if err != nil {
 		return fmt.Errorf("error enabling gcp auth backend %q: %s", path, err)
 	}
@@ -159,10 +175,24 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	d.Set("private_key_id", resp.Data["private_key_id"])
-	d.Set("client_id", resp.Data["client_id"])
-	d.Set("project_id", resp.Data["project_id"])
-	d.Set("client_email", resp.Data["client_email"])
+	params := []string{
+		"private_key_id",
+		"client_id",
+		"project_id",
+		"client_email",
+		"local",
+	}
+
+	for _, param := range params {
+		if err := d.Set(param, resp.Data[param]); err != nil {
+			return err
+		}
+	}
+
+	// set the auth backend's path
+	if err := d.Set("path", d.Id()); err != nil {
+		return err
+	}
 
 	return nil
 }

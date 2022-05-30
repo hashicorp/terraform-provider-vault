@@ -20,7 +20,7 @@ data "vault_kubernetes_auth_backend_config" "config" {
 }
 
 output "token_reviewer_jwt" {
-  value = "${data.vault_kubernetes_auth_backend_config.config.token_reviewer_jwt}"
+  value = data.vault_kubernetes_auth_backend_config.config.token_reviewer_jwt
 }
 ```
 

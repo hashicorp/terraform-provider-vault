@@ -4,17 +4,19 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestResourceAudit(t *testing.T) {
 	path := "example-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceAudit_initialConfig(path),
@@ -30,6 +32,7 @@ resource "vault_audit" "test" {
 	path = "%s"
 	type = "file"
 	description = "Example file audit for vault"
+	local = true
 	options = {
 		path = "stdout"
 	}
@@ -70,6 +73,10 @@ func testResourceAudit_initialCheck(expectedPath string) resource.TestCheckFunc 
 
 		if wanted := "file"; audit.Type != wanted {
 			return fmt.Errorf("type is %v; wanted %v", audit.Type, wanted)
+		}
+
+		if wanted := true; audit.Local != wanted {
+			return fmt.Errorf("local is %v; wanted %v", audit.Local, wanted)
 		}
 
 		if wanted := "stdout"; audit.Options["path"] != wanted {

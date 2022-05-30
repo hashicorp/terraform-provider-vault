@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 	"log"
 )
@@ -49,6 +49,18 @@ func kubernetesAuthBackendConfigDataSource() *schema.Resource {
 				Optional:    true,
 				Description: "Optional JWT issuer. If no issuer is specified, kubernetes.io/serviceaccount will be used as the default issuer.",
 			},
+			"disable_iss_validation": {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Optional:    true,
+				Description: "Optional disable JWT issuer validation. Allows to skip ISS validation.",
+			},
+			"disable_local_ca_jwt": {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Optional:    true,
+				Description: "Optional disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.",
+			},
 		},
 	}
 }
@@ -81,8 +93,9 @@ func kubernetesAuthBackendConfigDataSourceRead(d *schema.ResourceData, meta inte
 	}
 
 	d.Set("pem_keys", pemKeys)
-
 	d.Set("issuer", resp.Data["issuer"])
+	d.Set("disable_iss_validation", resp.Data["disable_iss_validation"])
+	d.Set("disable_local_ca_jwt", resp.Data["disable_local_ca_jwt"])
 
 	return nil
 }

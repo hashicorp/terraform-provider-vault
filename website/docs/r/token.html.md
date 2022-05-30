@@ -42,8 +42,6 @@ resource "vault_token" "example" {
   metadata = {
     "purpose" = "service-account"
   }
-
-  gpg_key = "keybase:my_username"
 }
 ```
 
@@ -75,13 +73,6 @@ The following arguments are supported:
 
 * `renew_increment` - (Optional) The renew increment
 
-* `pgp_key` - (Optional) The PGP key with which the `client_token` will be encrypted.
-   The key must be provided using either a base64 encoded non-armored PGP key, or a keybase
-   username in the form `keybase:somebody`.
-   The token won't be renewed automatically by the provider and `client_token` will be empty.
-   **If you do not set this argument, the `client_token` will be written as plain text in the
-   Terraform state.**
-
 * `metadata` - (Optional) Metadata to be set on this token
 
 ## Attributes Reference
@@ -91,8 +82,6 @@ The following arguments are supported:
 * `lease_started` - String containing the token lease started time if present in state file
 
 * `client_token` - String containing the client token if stored in present file
-
-* `encrypted_client_token` - String containing the client token encrypted with the given `pgp_key` if stored in present file
 
 ## Import
 

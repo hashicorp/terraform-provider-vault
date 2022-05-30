@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -79,6 +79,11 @@ func pkiSecretBackendCrlConfigRead(d *schema.ResourceData, meta interface{}) err
 		log.Printf("[WARN] Removing path %q its ID is invalid", path)
 		d.SetId("")
 		return fmt.Errorf("invalid path ID %q: %s", path, err)
+	}
+
+	if config == nil {
+		d.SetId("")
+		return nil
 	}
 
 	d.Set("expiry", config.Data["expiry"])

@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -29,16 +29,26 @@ func genericSecretDataSource() *schema.Resource {
 				Default:  latestSecretVersion,
 			},
 
+			"with_lease_start_time": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  true,
+				Description: "If set to true, stores 'lease_start_time' " +
+					"in the TF state.",
+			},
+
 			"data_json": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "JSON-encoded secret data read from Vault.",
+				Sensitive:   true,
 			},
 
 			"data": {
 				Type:        schema.TypeMap,
 				Computed:    true,
 				Description: "Map of strings read from Vault.",
+				Sensitive:   true,
 			},
 
 			"lease_id": {
@@ -84,12 +94,14 @@ func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error
 		return fmt.Errorf("no secret found at %q", path)
 	}
 
-	d.SetId(secret.RequestID)
+	d.SetId(path)
 
 	// Ignoring error because this value came from JSON in the
 	// first place so no reason why it should fail to re-encode.
 	jsonDataBytes, _ := json.Marshal(secret.Data)
-	d.Set("data_json", string(jsonDataBytes))
+	if err := d.Set("data_json", string(jsonDataBytes)); err != nil {
+		return err
+	}
 
 	// Since our "data" map can only contain string values, we
 	// will take strings from Data and write them in as-is,
@@ -107,12 +119,28 @@ func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error
 			dataMap[k] = string(vBytes)
 		}
 	}
-	d.Set("data", dataMap)
+	if err := d.Set("data", dataMap); err != nil {
+		return err
+	}
 
-	d.Set("lease_id", secret.LeaseID)
-	d.Set("lease_duration", secret.LeaseDuration)
-	d.Set("lease_start_time", time.Now().Format("RFC3339"))
-	d.Set("lease_renewable", secret.Renewable)
+	if err := d.Set("lease_id", secret.LeaseID); err != nil {
+		return err
+	}
 
+	if err := d.Set("lease_duration", secret.LeaseDuration); err != nil {
+		return err
+	}
+
+	if err := d.Set("lease_renewable", secret.Renewable); err != nil {
+		return err
+	}
+
+	if v, ok := d.GetOkExists("with_lease_start_time"); ok {
+		if v.(bool) {
+			if err := d.Set("lease_start_time", time.Now().UTC().Format(time.RFC3339)); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }

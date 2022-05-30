@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -60,6 +60,11 @@ func awsAuthBackendClientResource() *schema.Resource {
 				Optional:    true,
 				Description: "URL to override the default generated endpoint for making AWS STS API calls.",
 			},
+			"sts_region": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Region to override the default region for making AWS STS API calls.",
+			},
 			"iam_server_id_header_value": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -78,6 +83,8 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	ec2Endpoint := d.Get("ec2_endpoint").(string)
 	iamEndpoint := d.Get("iam_endpoint").(string)
 	stsEndpoint := d.Get("sts_endpoint").(string)
+	stsRegion := d.Get("sts_region").(string)
+
 	iamServerIDHeaderValue := d.Get("iam_server_id_header_value").(string)
 
 	path := awsAuthBackendClientPath(backend)
@@ -86,6 +93,7 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		"endpoint":                   ec2Endpoint,
 		"iam_endpoint":               iamEndpoint,
 		"sts_endpoint":               stsEndpoint,
+		"sts_region":                 stsRegion,
 		"iam_server_id_header_value": iamServerIDHeaderValue,
 	}
 
@@ -93,6 +101,11 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		log.Printf("[DEBUG] Updating AWS credentials at %q", path)
 		data["access_key"] = d.Get("access_key").(string)
 		data["secret_key"] = d.Get("secret_key").(string)
+	}
+
+	// sts_endpoint and sts_region are required to be set together
+	if (stsEndpoint == "") != (stsRegion == "") {
+		return fmt.Errorf("both sts_endpoint and sts_region need to be set")
 	}
 
 	log.Printf("[DEBUG] Writing AWS auth backend client config to %q", path)
@@ -134,6 +147,7 @@ func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("ec2_endpoint", secret.Data["endpoint"])
 	d.Set("iam_endpoint", secret.Data["iam_endpoint"])
 	d.Set("sts_endpoint", secret.Data["sts_endpoint"])
+	d.Set("sts_region", secret.Data["sts_region"])
 	d.Set("iam_server_id_header_value", secret.Data["iam_server_id_header_value"])
 	return nil
 }

@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccSSHSecretBackendCA_basic(t *testing.T) {
@@ -15,7 +17,7 @@ func TestAccSSHSecretBackendCA_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{
 			{
@@ -31,7 +33,7 @@ func TestAccSSHSecretBackendCA_provided(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{
 			{
@@ -46,7 +48,7 @@ func TestAccSSHSecretBackend_import(t *testing.T) {
 	backend := "ssh-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendCAConfigGenerated(backend),
@@ -86,10 +88,11 @@ func testAccSSHSecretBackendCAConfigGenerated(backend string) string {
 resource "vault_mount" "test" {
   type = "ssh"
   path = "%s"
+  description = "SSH Secret backend"
 }
 
 resource "vault_ssh_secret_backend_ca" "test" {
-  backend              = "${vault_mount.test.path}"
+  backend              = vault_mount.test.path
   generate_signing_key = true
 }`, backend)
 }
@@ -99,10 +102,11 @@ func testAccSSHSecretBackendCAConfigProvided(backend string) string {
 resource "vault_mount" "test" {
   type = "ssh"
   path = "%s"
+  description = "SSH Secret backend"
 }
 
 resource "vault_ssh_secret_backend_ca" "test" {
-  backend     = "${vault_mount.test.path}"
+  backend     = vault_mount.test.path
   private_key = <<EOF
 -----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAu/5/sDSqVMV6USjgPkGcHM9X3ENtgMU4AFrKAMCV85qbGhgR
@@ -138,6 +142,7 @@ EOF
 
 func testAccSSHSecretBackendCACheck(backend string) resource.TestCheckFunc {
 	return resource.ComposeTestCheckFunc(
+		resource.TestCheckResourceAttrSet("vault_mount.test", "description"),
 		resource.TestCheckResourceAttrSet("vault_ssh_secret_backend_ca.test", "public_key"),
 		resource.TestCheckResourceAttr("vault_ssh_secret_backend_ca.test", "backend", backend),
 	)

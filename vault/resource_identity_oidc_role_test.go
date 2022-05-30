@@ -7,10 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 const testAccIdentityOidcRoleTemplate = `{
@@ -21,7 +23,7 @@ func TestAccIdentityOidcRole(t *testing.T) {
 	name := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityOidcRoleDestroy,
 		Steps: []resource.TestStep{
@@ -44,35 +46,68 @@ func TestAccIdentityOidcRole(t *testing.T) {
 	})
 }
 
-func TestAccIdentityOidcRoleUpdate(t *testing.T) {
+func TestAccIdentityOidcRoleWithClientId(t *testing.T) {
 	name := acctest.RandomWithPrefix("test-role")
+	clientId := acctest.RandomWithPrefix("test-client-id")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityOidcRoleDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityOidcRoleConfig(name),
-				Check:  testAccIdentityOidcRoleCheckAttrs(),
-			},
-			{
-				Config: testAccIdentityOidcRoleConfigUpdate(name),
-				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityOidcRoleCheckAttrs(),
-					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "name", name),
-					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "key", name),
-					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "template", fmt.Sprintf("%s\n", testAccIdentityOidcRoleTemplate)),
-					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "ttl", "3600"),
-				),
-			},
-			{
-				Config: testAccIdentityOidcRoleConfig(name),
+				Config: testAccIdentityOidcRoleWithClientIdConfig(name, clientId),
 				Check: resource.ComposeTestCheckFunc(
 					testAccIdentityOidcRoleCheckAttrs(),
 					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "name", name),
 					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "key", name),
 					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "template", ""),
+					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "client_id", clientId),
+					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "ttl", "86400"),
+				),
+			},
+			{
+				ResourceName:      "vault_identity_oidc_role.role",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccIdentityOidcRoleUpdate(t *testing.T) {
+	name := acctest.RandomWithPrefix("test-role")
+	clientId := acctest.RandomWithPrefix("test-client-id")
+	updateClientId := acctest.RandomWithPrefix("test-update-client-id")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckIdentityOidcRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccIdentityOidcRoleWithClientIdConfig(name, clientId),
+				Check:  testAccIdentityOidcRoleCheckAttrs(),
+			},
+			{
+				Config: testAccIdentityOidcRoleConfigUpdate(name, updateClientId),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityOidcRoleCheckAttrs(),
+					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "name", name),
+					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "key", name),
+					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "template", fmt.Sprintf("%s\n", testAccIdentityOidcRoleTemplate)),
+					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "client_id", updateClientId),
+					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "ttl", "3600"),
+				),
+			},
+			{
+				Config: testAccIdentityOidcRoleWithClientIdConfig(name, clientId),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityOidcRoleCheckAttrs(),
+					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "name", name),
+					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "key", name),
+					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "template", ""),
+					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "client_id", clientId),
 					resource.TestCheckResourceAttr("vault_identity_oidc_role.role", "ttl", "86400"),
 				),
 			},
@@ -209,7 +244,7 @@ resource "vault_identity_oidc_role" "role" {
 `, entityName, entityName)
 }
 
-func testAccIdentityOidcRoleConfigUpdate(entityName string) string {
+func testAccIdentityOidcRoleWithClientIdConfig(entityName string, clientId string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_oidc_key" "key" {
   name = "%s"
@@ -219,10 +254,26 @@ resource "vault_identity_oidc_key" "key" {
 resource "vault_identity_oidc_role" "role" {
 	name = "%s"
 	key = vault_identity_oidc_key.key.name
+  client_id = "%s"
+}
+`, entityName, entityName, clientId)
+}
+
+func testAccIdentityOidcRoleConfigUpdate(entityName string, clientId string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_oidc_key" "key" {
+  name = "%s"
+  algorithm = "RS256"
+}
+
+resource "vault_identity_oidc_role" "role" {
+	name = "%s"
+	key = vault_identity_oidc_key.key.name
+  client_id = "%s"
 
 	template = <<EOF
 %s
 EOF
 	ttl = 3600
-}`, entityName, entityName, testAccIdentityOidcRoleTemplate)
+}`, entityName, entityName, clientId, testAccIdentityOidcRoleTemplate)
 }

@@ -12,8 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -69,6 +69,11 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 				Optional:    true,
 				Description: "ARN to use if multiple are available in the role. Required if the role has multiple ARNs.",
 			},
+			"region": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Region the read credentials belong to.",
+			},
 			"access_key": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -110,6 +115,11 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 				Computed:    true,
 				Description: "True if the duration of this lease can be extended through renewal.",
 			},
+			"ttl": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "User specified Time-To-Live for the STS token. Uses the Role defined default_sts_ttl when not specified",
+			},
 		},
 	}
 }
@@ -126,6 +136,10 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	// If the ARN is empty and only one is specified in the role definition, this should work without issue
 	data := map[string][]string{
 		"role_arn": {arn},
+	}
+
+	if v, ok := d.GetOk("ttl"); ok {
+		data["ttl"] = []string{v.(string)}
 	}
 
 	log.Printf("[DEBUG] Reading %q from Vault with data %#v", path, data)
@@ -159,6 +173,12 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}
+
+	region := d.Get("region").(string)
+	if region != "" {
+		awsConfig.Region = &region
+	}
+
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
 		return fmt.Errorf("error creating AWS session: %s", err)

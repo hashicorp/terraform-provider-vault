@@ -24,8 +24,9 @@ resource "vault_audit" "test" {
 
 ```hcl
 resource "vault_audit" "test" {
-  type = "socket"
-  path = "app_socket"
+  type  = "socket"
+  path  = "app_socket"
+  local = false
 
   options = {
     address     = "127.0.0.1:8000"
@@ -44,6 +45,8 @@ The following arguments are supported:
 * `path` - (optional) The path to mount the audit device. This defaults to the type.
 
 * `description` - (Optional) Human-friendly description of the audit device.
+
+* `local` - (Optional) Specifies if the audit device is a local only. Local audit devices are not replicated nor (if a secondary) removed by replication.
 
 * `options` - (Required) Configuration options to pass to the audit device itself.
 

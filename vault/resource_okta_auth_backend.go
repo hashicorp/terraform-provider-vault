@@ -4,12 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
-	"github.com/terraform-providers/terraform-provider-vault/util"
+
+	"github.com/hashicorp/terraform-provider-vault/helper"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var oktaAuthType = "okta"
@@ -20,9 +23,11 @@ func oktaAuthBackendResource() *schema.Resource {
 		Delete: oktaAuthBackendDelete,
 		Read:   oktaAuthBackendRead,
 		Update: oktaAuthBackendUpdate,
-
+		Exists: oktaAuthBackendExists,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: map[string]*schema.Schema{
-
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -76,17 +81,23 @@ func oktaAuthBackendResource() *schema.Resource {
 			},
 
 			"ttl": {
-				Type:        schema.TypeString,
-				Required:    false,
-				Optional:    true,
-				Description: "Duration after which authentication will be expired",
+				Type:         schema.TypeString,
+				Required:     false,
+				Optional:     true,
+				Default:      "0",
+				Description:  "Duration after which authentication will be expired",
+				ValidateFunc: validateOktaTTL,
+				StateFunc:    normalizeOktaTTL,
 			},
 
 			"max_ttl": {
-				Type:        schema.TypeString,
-				Required:    false,
-				Optional:    true,
-				Description: "Maximum duration after which authentication will be expired",
+				Type:         schema.TypeString,
+				Required:     false,
+				Optional:     true,
+				Description:  "Maximum duration after which authentication will be expired",
+				Default:      "0",
+				ValidateFunc: validateOktaTTL,
+				StateFunc:    normalizeOktaTTL,
 			},
 
 			"group": {
@@ -204,6 +215,34 @@ func oktaAuthBackendResource() *schema.Resource {
 	}
 }
 
+func normalizeOktaTTL(i interface{}) string {
+	s, err := parseDurationSeconds(i)
+	if err != nil {
+		// validateOktaTTL should prevent ever getting here
+		return i.(string)
+	}
+	return s
+}
+
+func validateOktaTTL(i interface{}, k string) ([]string, []error) {
+	var values []string
+	var errors []error
+	_, err := parseDurationSeconds(i)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("invalid value for %q, could not parse %q", k, i))
+	}
+	return values, errors
+}
+
+func parseDurationSeconds(i interface{}) (string, error) {
+	d, err := parseutil.ParseDurationSecond(i)
+	if err != nil {
+		log.Printf("[ERROR] Could not parse %v to seconds, error: %s", i, err)
+		return "", err
+	}
+	return strconv.Itoa(int(d.Seconds())), nil
+}
+
 func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
@@ -213,8 +252,6 @@ func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
 
-	// client.Sys().EnableAuth() is deprecated.
-	//err := client.Sys().EnableAuth(path, authType, desc)
 	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
 		Type:        authType,
 		Description: desc,
@@ -245,6 +282,10 @@ func oktaAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
+func oktaAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+	return isOktaAuthBackendPresent(meta.(*api.Client), d.Id())
+}
+
 func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
@@ -263,12 +304,21 @@ func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
+	if err := d.Set("path", path); err != nil {
+		return err
+	}
+
 	mount, err := authMountInfoGet(client, path)
 	if err != nil {
 		return fmt.Errorf("error reading okta oth mount from '%q': %s", path, err)
 	}
 
-	d.Set("accessor", mount.Accessor)
+	if err := d.Set("accessor", mount.Accessor); err != nil {
+		return err
+	}
+	if err := d.Set("description", mount.Description); err != nil {
+		return err
+	}
 
 	log.Printf("[DEBUG] Reading groups for mount %s from Vault", path)
 	groups, err := oktaReadAllGroups(client, path)
@@ -288,8 +338,50 @@ func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	return nil
+	if err := oktaReadAuthConfig(client, path, d); err != nil {
+		return err
+	}
 
+	return nil
+}
+
+func oktaReadAuthConfig(client *api.Client, path string, d *schema.ResourceData) error {
+	log.Printf("[DEBUG] Reading auth config for mount %s from Vault", path)
+	config, err := client.Logical().Read(oktaConfigEndpoint(path))
+	if err != nil {
+		return err
+	}
+
+	// map schema config TTL strings to okta auth TTL params.
+	// the provider input type of string does not match Vault's API of int64
+	ttlFieldMap := map[string]string{
+		"ttl":     "token_ttl",
+		"max_ttl": "token_max_ttl",
+	}
+	for k, v := range ttlFieldMap {
+		if v, ok := config.Data[v]; ok {
+			s, err := parseutil.ParseString(v)
+			if err != nil {
+				return err
+			}
+			if err := d.Set(k, s); err != nil {
+				return err
+			}
+		}
+	}
+
+	params := []string{
+		"base_url",
+		"bypass_okta_mfa",
+		"organization",
+	}
+	for _, param := range params {
+		if err := d.Set(param, config.Data[param]); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -479,7 +571,7 @@ func resourceOktaGroupHash(v interface{}) int {
 		return 0
 	}
 	if v, ok := m["group_name"]; ok {
-		return hashcode.String(v.(string))
+		return helper.HashCodeString(v.(string))
 	}
 
 	return 0
@@ -491,7 +583,7 @@ func resourceOktaUserHash(v interface{}) int {
 		return 0
 	}
 	if v, ok := m["username"]; ok {
-		return hashcode.String(v.(string))
+		return helper.HashCodeString(v.(string))
 	}
 
 	return 0

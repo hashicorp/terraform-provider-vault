@@ -7,20 +7,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	r "github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestDataSourceIdentityGroupName(t *testing.T) {
 	group := acctest.RandomWithPrefix("test-group")
 
-	r.Test(t, r.TestCase{
+	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []r.TestStep{
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityGroup_configName(group),
 				Check: resource.ComposeTestCheckFunc(
@@ -37,10 +38,10 @@ func TestDataSourceIdentityGroupName(t *testing.T) {
 func TestDataSourceIdentityGroupAlias(t *testing.T) {
 	group := acctest.RandomWithPrefix("test-group")
 
-	r.Test(t, r.TestCase{
+	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
-		Steps: []r.TestStep{
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityGroup_configAlias(group),
 				Check: resource.ComposeTestCheckFunc(

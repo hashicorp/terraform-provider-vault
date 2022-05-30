@@ -22,7 +22,7 @@ resource "vault_mount" "transit" {
 }
 
 resource "vault_transit_secret_backend_key" "key" {
-  backend = "${vault_mount.transit.path}"
+  backend = vault_mount.transit.path
   name    = "my_key"
 }
 ```
@@ -35,7 +35,7 @@ The following arguments are supported:
 
 * `name` - (Required) The name to identify this key within the backend. Must be unique within the backend.
 
-* `type` - (Optional) Specifies the type of key to create. The currently-supported types are: `aes256-gcm96` (default), `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `rsa-2048` and `rsa-4096`. 
+* `type` - (Optional) Specifies the type of key to create. The currently-supported types are: `aes128-gcm96`, `aes256-gcm96` (default), `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `rsa-2048`, `rsa-3072` and `rsa-4096`. 
     * Refer to the Vault documentation on transit key types for more information: [Key Types](https://www.vaultproject.io/docs/secrets/transit#key-types)
 
 * `deletion_allowed` - (Optional) Specifies if the keyring is allowed to be deleted. Must be set to 'true' before terraform will be able to destroy keys.
@@ -53,11 +53,14 @@ The following arguments are supported:
 
 * `min_encryption_version` - (Optional) Minimum key version to use for encryption
 
+* `auto_rotate_period` - (Optional) Amount of time the key should live before being automatically rotated.
+  A value of 0 disables automatic rotation for the key.
+
 ## Attributes Reference
 
 * `keys` - List of key versions in the keyring. This attribute is zero-indexed and will contain a map of values depending on the `type` of the encryption key.
-    * for key types `aes256-gcm96` and `chacha20-poly1305`, each key version will be a map of a single value `id` which is just a hash of the key's metadata.
-    * for key types `ed25519`, `ecdsa-p256`, `rsa-2048` and `rsa-4096`, each key version will be a map of the following:
+    * for key types `aes128-gcm96`, `aes256-gcm96` and `chacha20-poly1305`, each key version will be a map of a single value `id` which is just a hash of the key's metadata.
+    * for key types `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `rsa-2048`, `rsa-3072` and `rsa-4096`, each key version will be a map of the following:
         * `name` - Name of keychain
         * `creation_time` - ISO 8601 format timestamp indicating when the key version was created
         * `public_key` - This is the base64-encoded public key for use outside of Vault.
@@ -75,6 +78,9 @@ The following arguments are supported:
 * `supports_signing` - Whether or not the key supports signing, based on key type.
 
 
+## Deprecations
+
+* `auto_rotate_interval` - Replaced by `auto_rotate_period`.
 
 ## Import
 

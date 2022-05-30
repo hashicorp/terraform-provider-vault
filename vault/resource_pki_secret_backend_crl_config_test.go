@@ -6,10 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestPkiSecretBackendCrlConfig_basic(t *testing.T) {
@@ -17,7 +19,7 @@ func TestPkiSecretBackendCrlConfig_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testPkiSecretBackendCrlConfigDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -40,7 +42,7 @@ func testPkiSecretBackendCrlConfigDestroy(s *terraform.State) error {
 	}
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_pki_secret_backend" {
+		if rs.Type != "vault_mount" {
 			continue
 		}
 		for path, mount := range mounts {
@@ -82,7 +84,7 @@ resource "vault_pki_secret_backend_root_cert" "test-ca" {
 resource "vault_pki_secret_backend_crl_config" "test" {
   depends_on = ["vault_mount.test-root","vault_pki_secret_backend_root_cert.test-ca"]
 
-  backend = "${vault_mount.test-root.path}"
+  backend = vault_mount.test-root.path
 
   expiry = "72h"
   disable = true

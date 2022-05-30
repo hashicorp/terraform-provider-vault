@@ -1,0 +1,79 @@
+name: Build
+
+on: push
+
+jobs:
+  go-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.go-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: go-version
+        run: echo "::set-output name=version::$(cat ./.go-version)"
+  build:
+    needs: [go-version]
+    runs-on: ubuntu-latest
+    container:
+      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build
+        run: |
+          make build
+  acceptance:
+    needs: [go-version, build]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # TODO: enable 1.9 job once the provider is Vault version aware
+        #image: ["vault-enterprise:1.9-ent", "vault-enterprise:1.10-ent"]
+        image: ["vault-enterprise:1.10-ent"]
+    container:
+      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
+    services:
+      vault:
+        image: hashicorp/${{ matrix.image }}
+        env:
+          VAULT_DEV_ROOT_TOKEN_ID: root
+          VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
+      mysql:
+        image: docker.mirror.hashicorp.services/mysql:latest
+        env:
+          MYSQL_ROOT_PASSWORD: mysql
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
+      mongo:
+        image: docker.mirror.hashicorp.services/mongo:latest
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: mongodb
+          MONGO_INITDB_DATABASE: admin
+      postgres:
+        image: docker.mirror.hashicorp.services/postgres:latest
+        env:
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: database
+    steps:
+      - uses: actions/checkout@v3
+      - name: Acceptance Tests
+        env:
+          VAULT_TOKEN: "root"
+          VAULT_ADDR: "http://vault:8200"
+          TF_ACC_TERRAFORM_VERSION: "1.0.7"
+          MYSQL_URL: "root:mysql@tcp(mysql:3306)/"
+          MYSQL_CONNECTION_URL: "{{username}}:{{password}}@tcp(mysql:3306)/"
+          MYSQL_CONNECTION_USERNAME: "root"
+          MYSQL_CONNECTION_PASSWORD: "mysql"
+          MONGODB_URL: "mongodb://root:mongodb@mongo:27017/admin?ssl=false"
+          MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
+          POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
+        run: |
+          make testacc-ent TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
+      - name: "Generate Vault API Path Coverage Report"
+        run: |
+          go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json

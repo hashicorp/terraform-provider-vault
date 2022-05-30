@@ -32,7 +32,7 @@ resource "vault_auth_backend" "example" {
 }
 
 resource "vault_aws_auth_backend_client" "example" {
-  backend    = "${vault_auth_backend.example.path}"
+  backend    = vault_auth_backend.example.path
   access_key = "INSERT_AWS_ACCESS_KEY"
   secret_key = "INSERT_AWS_SECRET_KEY"
 }
@@ -59,6 +59,9 @@ The following arguments are supported:
 
 * `sts_endpoint` - (Optional) Override the URL Vault uses when making STS API
 	calls.
+
+* `sts_region` - (Optional) Override the default region when making STS API 
+    calls. The `sts_endpoint` argument must be set when using `sts_region`.
 
 * `iam_server_id_header_value` - (Optional) The value to require in the
 	`X-Vault-AWS-IAM-Server-ID` header as part of `GetCallerIdentity` requests

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -197,16 +197,16 @@ func identityEntityLookup(client *api.Client, data map[string]interface{}) (*api
 	resp, err := client.Logical().Write("identity/lookup/entity", data)
 
 	if err != nil {
-		return nil, fmt.Errorf("Error reading Identity Entity: %s", err)
+		return nil, fmt.Errorf("Error reading Identity Entity '%v': %s", data, err)
 	}
 
 	if resp == nil {
-		return nil, fmt.Errorf("no Identity Entity found")
+		return nil, fmt.Errorf("no Identity Entity found '%v'", data)
 	}
 
 	_, ok := resp.Data["id"]
 	if !ok {
-		return nil, fmt.Errorf("no Identity Entity found")
+		return nil, fmt.Errorf("no Identity Entity found '%v'", data)
 	}
 
 	return resp, nil

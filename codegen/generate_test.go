@@ -5,7 +5,7 @@ import (
 )
 
 func TestCodeFilePath(t *testing.T) {
-	homeDirPath, err := pathToHomeDir()
+	repoRoot, err := getRepoRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,21 +45,21 @@ func TestCodeFilePath(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if actualDataSourceFilePath != homeDirPath+testCase.expectedDataSourceFilePath {
-			t.Fatalf("expected %q but received %q", homeDirPath+testCase.expectedDataSourceFilePath, actualDataSourceFilePath)
+		if actualDataSourceFilePath != repoRoot+testCase.expectedDataSourceFilePath {
+			t.Fatalf("expected %q but received %q", repoRoot+testCase.expectedDataSourceFilePath, actualDataSourceFilePath)
 		}
 		actualResourceFilePath, err := codeFilePath(tfTypeResource, testCase.input)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if actualResourceFilePath != homeDirPath+testCase.expectedResourceFilePath {
-			t.Fatalf("expected %q but received %q", homeDirPath+testCase.expectedResourceFilePath, actualResourceFilePath)
+		if actualResourceFilePath != repoRoot+testCase.expectedResourceFilePath {
+			t.Fatalf("expected %q but received %q", repoRoot+testCase.expectedResourceFilePath, actualResourceFilePath)
 		}
 	}
 }
 
 func TestDocFilePath(t *testing.T) {
-	homeDirPath, err := pathToHomeDir()
+	repoRoot, err := getRepoRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,28 +71,23 @@ func TestDocFilePath(t *testing.T) {
 	}{
 		{
 			input:                      "/database/roles",
-			expectedDataSourceFilePath: "/website/docs/generated/datasources/database/roles.md",
-			expectedResourceFilePath:   "/website/docs/generated/resources/database/roles.md",
+			expectedDataSourceFilePath: "/website/docs/d/database_roles.html.md",
+			expectedResourceFilePath:   "/website/docs/r/database_roles.html.md",
 		},
 		{
 			input:                      "/database/roles/{name}",
-			expectedDataSourceFilePath: "/website/docs/generated/datasources/database/roles/name.md",
-			expectedResourceFilePath:   "/website/docs/generated/resources/database/roles/name.md",
-		},
-		{
-			input:                      "/auth/userpass/users/{username}/password",
-			expectedDataSourceFilePath: "/website/docs/generated/datasources/auth/userpass/users/username/password.md",
-			expectedResourceFilePath:   "/website/docs/generated/resources/auth/userpass/users/username/password.md",
+			expectedDataSourceFilePath: "/website/docs/d/database_roles.html.md",
+			expectedResourceFilePath:   "/website/docs/r/database_roles.html.md",
 		},
 		{
 			input:                      "/auth/userpass/users/{username}/policies",
-			expectedDataSourceFilePath: "/website/docs/generated/datasources/auth/userpass/users/username/policies.md",
-			expectedResourceFilePath:   "/website/docs/generated/resources/auth/userpass/users/username/policies.md",
+			expectedDataSourceFilePath: "/website/docs/d/auth_userpass_users_username_policies.html.md",
+			expectedResourceFilePath:   "/website/docs/r/auth_userpass_users_username_policies.html.md",
 		},
 		{
-			input:                      "/transit/export/{type}/{name}/{version}",
-			expectedDataSourceFilePath: "/website/docs/generated/datasources/transit/export/type/name/version.md",
-			expectedResourceFilePath:   "/website/docs/generated/resources/transit/export/type/name/version.md",
+			input:                      "/transit/export/{type}/{name}",
+			expectedDataSourceFilePath: "/website/docs/d/transit_export_type.html.md",
+			expectedResourceFilePath:   "/website/docs/r/transit_export_type.html.md",
 		},
 	}
 	for _, testCase := range testCases {
@@ -100,15 +95,15 @@ func TestDocFilePath(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if actualDataSourceDocPath != homeDirPath+testCase.expectedDataSourceFilePath {
-			t.Fatalf("expected %q but received %q", homeDirPath+testCase.expectedDataSourceFilePath, actualDataSourceDocPath)
+		if actualDataSourceDocPath != repoRoot+testCase.expectedDataSourceFilePath {
+			t.Fatalf("expected %q but received %q", repoRoot+testCase.expectedDataSourceFilePath, actualDataSourceDocPath)
 		}
 		actualResourceDocPath, err := docFilePath(tfTypeResource, testCase.input)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if actualResourceDocPath != homeDirPath+testCase.expectedResourceFilePath {
-			t.Fatalf("expected %q but received %q", homeDirPath+testCase.expectedResourceFilePath, actualResourceDocPath)
+		if actualResourceDocPath != repoRoot+testCase.expectedResourceFilePath {
+			t.Fatalf("expected %q but received %q", repoRoot+testCase.expectedResourceFilePath, actualResourceDocPath)
 		}
 	}
 }

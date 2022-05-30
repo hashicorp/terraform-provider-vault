@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/terraform-providers/terraform-provider-vault/util"
+
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func expandAuthMethodTune(rawL []interface{}) api.MountConfigInput {
