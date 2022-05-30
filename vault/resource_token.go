@@ -209,7 +209,11 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if v, ok := d.GetOk("metadata"); ok {
-		createRequest.Metadata = v.(map[string]string)
+		d := make(map[string]string)
+		for k, val := range v.(map[string]interface{}) {
+			d[k] = val.(string)
+		}
+		createRequest.Metadata = d
 	}
 
 	if v, ok := d.GetOk("wrapping_ttl"); ok {
@@ -256,6 +260,7 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		} else {
 			accessor = resp.Auth.Accessor
 		}
+
 		log.Printf("[DEBUG] Created token accessor %q", accessor)
 	}
 
