@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -20,6 +21,14 @@ func TestResourceAuth(t *testing.T) {
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
+			{
+				Config:      testResourceAuth_initialConfig(path + "/"),
+				ExpectError: regexp.MustCompile(`cannot write to a path ending in '/'`),
+			},
+			{
+				Config:      testResourceAuth_initialConfig("/" + path),
+				ExpectError: regexp.MustCompile(`cannot write to a path starting in '/'`),
+			},
 			{
 				Config: testResourceAuth_initialConfig(path),
 				Check:  testResourceAuth_initialCheck(path),
