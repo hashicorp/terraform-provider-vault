@@ -16,14 +16,15 @@ information.
 
 ```hcl
 resource "vault_token_auth_backend_role" "example" {
-  role_name           = "my-role"
-  allowed_policies    = ["dev", "test"]
-  disallowed_policies = ["default"]
-  orphan              = true
-  period              = "86400"
-  renewable           = true
-  explicit_max_ttl    = "115200"
-  path_suffix         = "path-suffix"
+  role_name              = "my-role"
+  allowed_policies       = ["dev", "test"]
+  disallowed_policies    = ["default"]
+  allowed_entity_aliases = ["test_entity"]
+  orphan                 = true
+  token_period           = "86400"
+  renewable              = true
+  token_explicit_max_ttl = "115200"
+  path_suffix            = "path-suffix"
 }
 ```
 
@@ -35,11 +36,17 @@ The following arguments are supported:
 
 * `allowed_policies` (Optional) List of allowed policies for given role.
 
+* `allowed_policies_glob` (Optional) Set of allowed policies with glob match for given role.
+
 * `disallowed_policies` (Optional) List of disallowed policies for given role.
+
+* `disallowed_policies_glob` (Optional) Set of disallowed policies with glob match for given role.
+
+* `allowed_entity_aliases` (Optional) List of allowed entity aliases.
 
 * `orphan` (Optional) If true, tokens created against this policy will be orphan tokens.
 
-* `renewable` (Optional) Wether to disable the ability of the token to be renewed past its initial TTL.
+* `renewable` (Optional) Whether to disable the ability of the token to be renewed past its initial TTL.
 
 * `path_suffix` (Optional) Tokens created against this role will have the given suffix as part of their path in addition to the role name.
 
@@ -72,31 +79,14 @@ These arguments are common across several Authentication Token resources since V
 * `token_no_default_policy` - (Optional) If set, the default policy will not be set on
   generated tokens; otherwise it will be added to the policies set in token_policies.
 
-* `token_num_uses` - (Optional) The
-  [period](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
-  if any, in number of seconds to set on the token.
+* `token_num_uses` - (Optional) The [maximum number](https://www.vaultproject.io/api-docs/token#token_num_uses)
+   of times a generated token may be used (within its lifetime); 0 means unlimited.
 
 * `token_type` - (Optional) The type of token that should be generated. Can be `service`,
   `batch`, or `default` to use the mount's tuned default (which unless changed will be
   `service` tokens). For token store roles, there are two additional possibilities:
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
-
-### Deprecated Arguments
-
-These arguments are deprecated since Vault 1.2 in favour of the common token arguments
-documented above.
-
-* `explicit_max_ttl` (Optional; Deprecated, use `token_explicit_max_ttl` instead) If set, the
-  token will have an explicit max TTL set upon it.
-
-* `period` - (Optional; Deprecated, use `token_period` instead if you are running Vault >= 1.2) If set, indicates that the
-  token generated using this role should never expire. The token should be renewed within the
-  duration specified by this value. At each renewal, the token's TTL will be set to the
-  value of this field. Specified in seconds.
-
-* `bound_cidrs` - (Optional; Deprecated, use `token_bound_cidrs` instead if you are running Vault >= 1.2) If set, a list of
-  CIDRs valid as the source address for login requests. This value is also encoded into any resulting token.
 
 ## Attributes Reference
 

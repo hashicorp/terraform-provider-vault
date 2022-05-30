@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_identity_group_member_entity_ids resource"
-sidebar_current: "docs-vault-resource-identity-group-meber-entity-ids"
+sidebar_current: "docs-vault-resource-identity-group-member-entity-ids"
 description: |-
   Manages member entities for an Identity Group for Vault.
 ---
@@ -16,9 +16,9 @@ Manages member entities for an Identity Group for Vault. The [Identity secrets e
 
 ```hcl
 resource "vault_identity_group" "internal" {
-  name     = "internal"
-  type     = "internal"
-  external_member_entity_ids = true
+  name                        = "internal"
+  type                        = "internal"
+  external_member_entity_ids  = true
 
   metadata = {
     version = "2"
@@ -31,9 +31,9 @@ resource "vault_identity_entity" "user" {
 
 resource "vault_identity_group_member_entity_ids" "members" {
 
-  exclusive = true
-  member_entity_ids = ["${vault_identity_entity.user.id}"]
-  group_id = vault_identity_group.internal.id
+  exclusive         = true
+  member_entity_ids = [vault_identity_entity.user.id]
+  group_id          = vault_identity_group.internal.id
 }
 ```
 
@@ -41,9 +41,9 @@ resource "vault_identity_group_member_entity_ids" "members" {
 
 ```hcl
 resource "vault_identity_group" "internal" {
-  name     = "internal"
-  type     = "internal"
-  external_member_entity_ids = true
+  name                        = "internal"
+  type                        = "internal"
+  external_member_entity_ids  = true
 
   metadata = {
     version = "2"
@@ -63,8 +63,8 @@ resource "vault_identity_entity" "dev_user" {
 }
 
 resource "vault_identity_group_member_entity_ids" "test" {
-  member_entity_ids = ["${vault_identity_entity.test_user.id}",
-    "${vault_identity_entity.second_test_user.id}"]
+  member_entity_ids = [vault_identity_entity.test_user.id,
+    vault_identity_entity.second_test_user.id]
 
   exclusive = false
 
@@ -72,7 +72,7 @@ resource "vault_identity_group_member_entity_ids" "test" {
 }
 
 resource "vault_identity_group_member_entity_ids" "others" {
-  member_entity_ids = ["${vault_identity_entity.dev_user.id}"]
+  member_entity_ids = [vault_identity_entity.dev_user.id]
 
   exclusive = false
 
@@ -98,4 +98,6 @@ The following arguments are supported:
 
 In addition to all arguments above, the following attributes are exported:
 
-* `group_name` - The name of the group that are assigned the member entities.
+* `group_name` - The name of the group that are assigned the member entities.  
+  *Deprecated: The value for group_name may not always be accurate*
+  *use* `data.vault_identity_group.*.group_name`, *or* `vault_identity_group.*.group_name` *instead.*

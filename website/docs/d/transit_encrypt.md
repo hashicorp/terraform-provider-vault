@@ -20,13 +20,13 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_transit_secret_backend_key" "test" {
-  backend = "${vault_mount.test.path}"
+  backend = "vault_mount.test.path
   name    = "test"
 }
 
 data "vault_transit_encrypt" "test" {
-  backend   = "${vault_mount.test.path}"
-  key       = "${vault_transit_secret_backend_key.test.name}"
+  backend   = vault_mount.test.path
+  key       = vault_transit_secret_backend_key.test.name
   plaintext = "foobar"
 }
 ```

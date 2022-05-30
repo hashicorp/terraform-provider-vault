@@ -2,9 +2,10 @@ package util
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 type testingStruct struct {
@@ -250,6 +251,116 @@ func TestPathParameters(t *testing.T) {
 			}
 			if !reflect.DeepEqual(result, testCase.expected) {
 				t.Fatalf("expected %+v but received %+v", testCase.expected, result)
+			}
+		})
+	}
+}
+
+func TestGetAPIRequestData(t *testing.T) {
+	tests := []struct {
+		name string
+		d    map[string]*schema.Schema
+		m    map[string]string
+		sm   map[string]interface{}
+		want map[string]interface{}
+	}{
+		{
+			name: "basic-default",
+			d: map[string]*schema.Schema{
+				"name": {
+					Type: schema.TypeString,
+				},
+			},
+			m: map[string]string{
+				"name": "",
+			},
+			sm: map[string]interface{}{
+				"name": "bob",
+			},
+			want: map[string]interface{}{
+				"name": "bob",
+			},
+		},
+		{
+			name: "basic-remap",
+			d: map[string]*schema.Schema{
+				"name": {
+					Type: schema.TypeString,
+				},
+			},
+			m: map[string]string{
+				"name": "nom",
+			},
+			sm: map[string]interface{}{
+				"name": "bob",
+			},
+			want: map[string]interface{}{
+				"nom": "bob",
+			},
+		},
+		{
+			name: "map",
+			d: map[string]*schema.Schema{
+				"name": {
+					Type: schema.TypeString,
+				},
+				"parts": {
+					Type: schema.TypeMap,
+				},
+			},
+			m: map[string]string{
+				"name":  "",
+				"parts": "",
+			},
+			sm: map[string]interface{}{
+				"name": "bob",
+				"parts": map[string]interface{}{
+					"bolt": "0.60",
+				},
+			},
+			want: map[string]interface{}{
+				"name": "bob",
+				"parts": map[string]interface{}{
+					"bolt": "0.60",
+				},
+			},
+		},
+		{
+			name: "set",
+			d: map[string]*schema.Schema{
+				"name": {
+					Type: schema.TypeString,
+				},
+				"parts": {
+					Type: schema.TypeSet,
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
+					},
+				},
+			},
+			m: map[string]string{
+				"name":  "",
+				"parts": "",
+			},
+			sm: map[string]interface{}{
+				"name": "alice",
+				"parts": []interface{}{
+					"bolt",
+				},
+			},
+			want: map[string]interface{}{
+				"name": "alice",
+				"parts": []interface{}{
+					"bolt",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := schema.TestResourceDataRaw(t, tt.d, tt.sm)
+			if got := GetAPIRequestData(r, tt.m); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetAPIRequestData() = %v, want %v", got, tt.want)
 			}
 		})
 	}

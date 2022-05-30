@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/terraform-provider-vault/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/terraform-provider-vault/vault"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	sdk_schema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/schema"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
+	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
 var nameTestProvider = func() *schema.Provider {
@@ -24,9 +26,9 @@ func TestAlphabetName(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { util.TestEntPreCheck(t) },
-		Providers: map[string]terraform.ResourceProvider{
-			"vault": nameTestProvider.ResourceProvider(),
+		PreCheck: func() { testutil.TestEntPreCheck(t) },
+		Providers: map[string]*sdk_schema.Provider{
+			"vault": nameTestProvider.SchemaProvider(),
 		},
 		CheckDestroy: destroy,
 		Steps: []resource.TestStep{

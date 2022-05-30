@@ -63,6 +63,21 @@ issued by this backend.
 * `max_lease_ttl_seconds` - (Optional) The maximum TTL that can be requested
 for credentials issued by this backend.
 
+* `iam_endpoint` - (Optional) Specifies a custom HTTP IAM endpoint to use.
+
+* `sts_endpoint` - (Optional) Specifies a custom HTTP STS endpoint to use.
+
+* `username_template` - (Optional)  Template describing how dynamic usernames are generated. The username template is used to generate both IAM usernames (capped at 64 characters) and STS usernames (capped at 32 characters). If no template is provided the field defaults to the template:
+
+```
+{{ if (eq .Type "STS") }}
+    {{ printf "vault-%s-%s" (unix_time) (random 20) | truncate 32 }}
+{{ else }}
+    {{ printf "vault-%s-%s-%s" (printf "%s-%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}
+{{ end }}
+
+```
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

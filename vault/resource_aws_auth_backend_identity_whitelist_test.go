@@ -6,16 +6,18 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccAWSAuthBackendIdentityWhitelist_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendIdentityWhitelistDestroy,
 		Steps: []resource.TestStep{
@@ -35,7 +37,7 @@ func TestAccAWSAuthBackendIdentityWhitelist_import(t *testing.T) {
 func TestAccAWSAuthBackendIdentityWhitelist_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendIdentityWhitelistDestroy,
 		Steps: []resource.TestStep{
@@ -72,7 +74,7 @@ resource "vault_auth_backend" "aws" {
 }
 
 resource "vault_aws_auth_backend_identity_whitelist" "test" {
-  backend = "${vault_auth_backend.aws.path}"
+  backend = vault_auth_backend.aws.path
   safety_buffer = 8600
   disable_periodic_tidy = true
 }`, backend)

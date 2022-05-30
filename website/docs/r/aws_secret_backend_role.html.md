@@ -27,7 +27,7 @@ resource "vault_aws_secret_backend" "aws" {
 }
 
 resource "vault_aws_secret_backend_role" "role" {
-  backend = "${vault_aws_secret_backend.aws.path}"
+  backend = vault_aws_secret_backend.aws.path
   name    = "deploy"
   credential_type = "iam_user"
 
@@ -94,6 +94,14 @@ The following arguments are supported:
 * `max_sts_ttl` - (Optional) The max allowed TTL in seconds for STS credentials
   (credentials TTL are capped to `max_sts_ttl`). Valid only when `credential_type` is
   one of `assumed_role` or `federation_token`.
+
+* `user_path` - (Optional) The path for the user name. Valid only when 
+`credential_type` is `iam_user`. Default is `/`.
+
+* `permissions_boundary_arn` - (Optional) The ARN of the AWS Permissions 
+Boundary to attach to IAM users created in the role. Valid only when 
+`credential_type` is `iam_user`. If not specified, then no permissions boundary 
+policy will be attached.
 
 ## Attributes Reference
 

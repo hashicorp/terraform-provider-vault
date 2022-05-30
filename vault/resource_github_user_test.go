@@ -6,10 +6,12 @@ import (
 	"log"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccGithubUser_basic(t *testing.T) {
@@ -18,7 +20,7 @@ func TestAccGithubUser_basic(t *testing.T) {
 	user := "john_doe"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccGithubUserCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -50,7 +52,7 @@ func TestAccGithubUser_importBasic(t *testing.T) {
 	resName := "vault_github_user.user"
 	user := "import"
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
@@ -101,11 +103,11 @@ func testAccGithubUserConfig_basic(backend string, user string, policies []strin
 	return fmt.Sprintf(`
 resource "vault_github_auth_backend" "gh" {
 	path = "%s"
-  	organization = "vault"
+	organization = "hashicorp"
 }
 
 resource "vault_github_user" "user" {
-	backend = "${vault_github_auth_backend.gh.id}"
+	backend = vault_github_auth_backend.gh.id
 	user = "%s"
 	policies = %s
 }

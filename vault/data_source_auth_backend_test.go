@@ -4,16 +4,18 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	r "github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	r "github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestDataSourceAuthBackend(t *testing.T) {
 	path := acctest.RandomWithPrefix("foo")
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []r.TestStep{
 			{
 				Config: testDataSourceAuthBackendBasic_config,
@@ -34,7 +36,7 @@ resource "vault_auth_backend" "test" {
 }
 
 data "vault_auth_backend" "test" {
-	path = "${vault_auth_backend.test.path}"
+	path = vault_auth_backend.test.path
 }
 
 `
@@ -47,7 +49,7 @@ resource "vault_auth_backend" "test" {
 }
 
 data "vault_auth_backend" "test" {
-	path = "${vault_auth_backend.test.path}"
+	path = vault_auth_backend.test.path
 }
 `, path)
 }

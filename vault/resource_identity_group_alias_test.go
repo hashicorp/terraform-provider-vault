@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccIdentityGroupAlias(t *testing.T) {
@@ -18,7 +20,7 @@ func TestAccIdentityGroupAlias(t *testing.T) {
 	nameGithubA := "vault_auth_backend.githubA"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityGroupAliasDestroy,
 		Steps: []resource.TestStep{
@@ -46,7 +48,7 @@ func TestAccIdentityGroupAliasUpdate(t *testing.T) {
 	aliasB := acctest.RandomWithPrefix("B-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityGroupAliasDestroy,
 		Steps: []resource.TestStep{
@@ -108,8 +110,8 @@ resource "vault_auth_backend" "githubB" {
 
 resource "vault_identity_group_alias" "group-alias" {
   name = "%s"
-  mount_accessor = "${vault_auth_backend.githubA.accessor}"
-  canonical_id = "${vault_identity_group.group.id}"
+  mount_accessor = vault_auth_backend.githubA.accessor
+  canonical_id = vault_identity_group.group.id
 }`, groupName, groupName, groupName, groupName)
 }
 
@@ -139,7 +141,7 @@ resource "vault_auth_backend" "githubB" {
 
 resource "vault_identity_group_alias" "group-alias" {
   name = "%s"
-  mount_accessor = "${%s.accessor}"
-  canonical_id = "${%s.id}"
+  mount_accessor = %s.accessor
+  canonical_id = %s.id
 }`, suffix, suffix, suffix, suffix, alias, backendName, groupName)
 }

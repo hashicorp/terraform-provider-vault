@@ -19,6 +19,37 @@ resource "vault_mount" "example" {
 }
 ```
 
+```hcl
+resource "vault_mount" "kvv2-example" {
+  path        = "version2-example"
+  type        = "kv-v2"
+  description = "This is an example KV Version 2 secret engine mount"
+}
+```
+
+```hcl
+resource "vault_mount" "transit-example" {
+  path        = "transit-example"
+  type        = "transit"
+  description = "This is an example transit secret engine mount"
+
+  options = {
+    convergent_encryption = false
+  }
+}
+```
+
+```hcl
+resource "vault_mount" "pki-example" {
+  path        = "pki-example"
+  type        = "pki"
+  description = "This is an example PKI mount"
+
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds     = 86400
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -32,6 +63,10 @@ The following arguments are supported:
 * `default_lease_ttl_seconds` - (Optional) Default lease duration for tokens and secrets in seconds
 
 * `max_lease_ttl_seconds` - (Optional) Maximum possible lease duration for tokens and secrets in seconds
+
+* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will not be HMAC'd by audit devices in the response data object.
+
+* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will not be HMAC'd by audit devices in the request data object.
 
 * `local` - (Optional) Boolean flag that can be explicitly set to true to enforce local mount in HA environment
 

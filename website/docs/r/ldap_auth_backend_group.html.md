@@ -27,7 +27,7 @@ resource "vault_ldap_auth_backend" "ldap" {
 resource "vault_ldap_auth_backend_group" "group" {
     groupname = "dba"
     policies  = ["dba"]
-    backend   = "${vault_ldap_auth_backend.ldap.path}"
+    backend   = vault_ldap_auth_backend.ldap.path
 }
 ```
 

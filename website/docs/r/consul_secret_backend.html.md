@@ -47,10 +47,18 @@ on `token`. Changing the value, however, _will_ overwrite the previously stored 
 
 * `scheme` - (Optional) Specifies the URL scheme to use. Defaults to `http`.
 
+* `ca_cert` - (Optional) CA certificate to use when verifying Consul server certificate, must be x509 PEM encoded.
+
+* `client_cert` - (Optional) Client certificate used for Consul's TLS communication, must be x509 PEM encoded and if this is set you need to also set client_key.
+
+* `client_key` - (Optional) Client key used for Consul's TLS communication, must be x509 PEM encoded and if this is set you need to also set client_cert.
+
 * `default_lease_ttl_seconds` - (Optional) The default TTL for credentials issued by this backend.
 
 * `max_lease_ttl_seconds` - (Optional) The maximum TTL that can be requested
 for credentials issued by this backend.
+
+* `local` - (Optional) Specifies if the secret backend is local only.
 
 ## Attributes Reference
 

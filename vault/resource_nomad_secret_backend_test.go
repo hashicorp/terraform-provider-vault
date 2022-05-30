@@ -5,20 +5,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccNomadSecretBackend(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
-	address, token := util.GetTestNomadCreds(t)
+	address, token := testutil.GetTestNomadCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers:                 testProviders,
-		PreCheck:                  func() { util.TestAccPreCheck(t) },
+		PreCheck:                  func() { testutil.TestAccPreCheck(t) },
 		PreventPostDestroyRefresh: true,
 		CheckDestroy:              testAccNomadSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{

@@ -5,26 +5,20 @@ import (
 	"regexp"
 	"testing"
 
-	"os"
-
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestNamespace_basic(t *testing.T) {
-
-	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
-	if isEnterprise == "" {
-		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
-	}
-
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
 	childPath := acctest.RandomWithPrefix("child-namespace")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestEntPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testNamespaceDestroy(namespacePath),
 		Steps: []resource.TestStep{
@@ -35,7 +29,7 @@ func TestNamespace_basic(t *testing.T) {
 			{
 				Config:      testNamespaceConfig(namespacePath + "/"),
 				Destroy:     false,
-				ExpectError: regexp.MustCompile("config is invalid: cannot write to a path ending in '/'"),
+				ExpectError: regexp.MustCompile("Error: cannot write to a path ending in '/'"),
 			},
 			{
 				Config: testNestedNamespaceConfig(namespacePath, childPath),
@@ -83,7 +77,6 @@ resource "vault_namespace" "test" {
   path                   = %q
 }
 `, path)
-
 }
 
 func testNestedNamespaceConfig(parentPath, childPath string) string {

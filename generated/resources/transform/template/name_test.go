@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	sdk_schema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
+
 	"github.com/hashicorp/terraform-provider-vault/generated/resources/transform/alphabet"
 	"github.com/hashicorp/terraform-provider-vault/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/vault"
-	"github.com/hashicorp/vault/api"
 )
 
 var nameTestProvider = func() *schema.Provider {
@@ -26,30 +28,44 @@ func TestTemplateName(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { util.TestEntPreCheck(t) },
-		Providers: map[string]terraform.ResourceProvider{
-			"vault": nameTestProvider.ResourceProvider(),
+		PreCheck: func() { testutil.TestEntPreCheck(t) },
+		Providers: map[string]*sdk_schema.Provider{
+			"vault": nameTestProvider.SchemaProvider(),
 		},
 		CheckDestroy: destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: basicConfig(path, "regex", `(\\d{4})-(\\d{4})-(\\d{4})-(\\d{4})`, "numerics"),
+				Config: basicConfig(path, "regex",
+					`(\\d{4})-(\\d{4})-(\\d{4})-(\\d{4})`,
+					"numerics",
+					"$1-$2-$3-$4",
+					`{ "last-four" = "$4" }`,
+				),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "path", path),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "name", "ccn"),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "type", "regex"),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "pattern", `(\d{4})-(\d{4})-(\d{4})-(\d{4})`),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "alphabet", "numerics"),
+					resource.TestCheckResourceAttr("vault_transform_template_name.test", "encode_format", "$1-$2-$3-$4"),
+					resource.TestCheckResourceAttr("vault_transform_template_name.test", "decode_formats.last-four", "$4"),
 				),
 			},
 			{
-				Config: basicConfig(path, "regex", `(\\d{9})`, "builtin/numeric"),
+				Config: basicConfig(path, "regex",
+					`(\\d{9})`,
+					"builtin/numeric",
+					"",
+					"",
+				),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "path", path),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "name", "ccn"),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "type", "regex"),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "pattern", `(\d{9})`),
 					resource.TestCheckResourceAttr("vault_transform_template_name.test", "alphabet", "builtin/numeric"),
+					resource.TestCheckResourceAttr("vault_transform_template_name.test", "encode_format", ""),
+					resource.TestCheckResourceAttr("vault_transform_template_name.test", "decode_formats.#", "0"),
 				),
 			},
 			{
@@ -79,23 +95,40 @@ func destroy(s *terraform.State) error {
 	return nil
 }
 
-func basicConfig(path, tp, pattern, alphabet string) string {
-	return fmt.Sprintf(`
+func basicConfig(path, tp, pattern, alphabet, encodeFormat, decodeFormats string) string {
+	config := fmt.Sprintf(`
 resource "vault_mount" "transform" {
   path = "%s"
   type = "transform"
 }
+
 resource "vault_transform_alphabet_name" "numerics" {
   path = vault_mount.transform.path
   name = "numerics"
   alphabet = "0123456789"
 }
+
 resource "vault_transform_template_name" "test" {
   path = vault_transform_alphabet_name.numerics.path
   name = "ccn"
-  type = "%s"
-  pattern = "%s"
-  alphabet = "%s"
-}
-`, path, tp, pattern, alphabet)
+  type = "%s"`, path, tp)
+
+	if pattern != "" {
+		config += fmt.Sprintf(`
+  pattern = "%s"`, pattern)
+	}
+	if alphabet != "" {
+		config += fmt.Sprintf(`
+  alphabet = "%s"`, alphabet)
+	}
+	if encodeFormat != "" {
+		config += fmt.Sprintf(`
+  encode_format = "%s"`, encodeFormat)
+	}
+	if decodeFormats != "" {
+		config += fmt.Sprintf(`
+  decode_formats = %s`, decodeFormats)
+	}
+
+	return config + "\n}\n"
 }

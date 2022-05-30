@@ -6,7 +6,7 @@ description: |-
   Creates a library on the Active Directory Secret Backend for Vault.
 ---
 
-# vault\ad\_secret\_backend\_library
+# vault\_ad\_secret\_backend\_library
 
 Creates a library on an Active Directory Secret Backend for Vault. Libraries create
 a pool of existing Active Directory service accounts which can be checked out
@@ -23,21 +23,21 @@ for more details.
 
 ```hcl
 resource "vault_ad_secret_backend" "config" {
-    backend = "ad"
-    binddn = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
-    bindpass = "SuperSecretPassw0rd"
-    url = "ldaps://ad"
-    insecure_tls = "true"
-    userdn = "CN=Users,DC=corp,DC=example,DC=net"
+    backend       = "ad"
+    binddn        = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
+    bindpass      = "SuperSecretPassw0rd"
+    url           = "ldaps://ad"
+    insecure_tls  = "true"
+    userdn        = "CN=Users,DC=corp,DC=example,DC=net"
 }
 
 resource "vault_ad_secret_library" "qa" {
-    backend = vault_ad_secret_backend.config.backend
-    name = "qa"
-    service_account_names = ["Bob", "Mary"]
-    ttl = 60
-    disable_check_in_enforcement = true
-    max_ttl = 120
+    backend                       = vault_ad_secret_backend.config.backend
+    name                          = "qa"
+    service_account_names         = ["Bob", "Mary"]
+    ttl                           = 60
+    disable_check_in_enforcement  = true
+    max_ttl                       = 120
 }
 ```
 

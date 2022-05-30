@@ -4,16 +4,18 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccAzureAuthBackendConfig_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("azure")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAzureAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
@@ -35,7 +37,7 @@ func TestAccAzureAuthBackendConfig_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("azure")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccCheckAzureAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -77,7 +79,7 @@ resource "vault_auth_backend" "azure" {
 }
 
 resource "vault_azure_auth_backend_config" "config" {
-  backend = "${vault_auth_backend.azure.path}"
+  backend = vault_auth_backend.azure.path
   tenant_id = "11111111-2222-3333-4444-555555555555"
   client_id = "11111111-2222-3333-4444-555555555555"
   client_secret = "12345678901234567890"
@@ -140,7 +142,7 @@ resource "vault_auth_backend" "azure" {
 }
 
 resource "vault_azure_auth_backend_config" "config" {
-  backend = "${vault_auth_backend.azure.path}"
+  backend = vault_auth_backend.azure.path
   tenant_id = "11111111-2222-3333-4444-555555555555"
   client_id = "11111111-2222-3333-4444-555555555555"
   client_secret = "12345678901234567890"

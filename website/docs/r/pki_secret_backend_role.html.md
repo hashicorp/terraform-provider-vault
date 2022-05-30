@@ -13,15 +13,22 @@ Creates a role on an PKI Secret Backend for Vault.
 ## Example Usage
 
 ```hcl
-resource "vault_pki_secret_backend" "pki" {
-  path = "%s"
+resource "vault_mount" "pki" {
+  path                      = "pki"
+  type                      = "pki"
   default_lease_ttl_seconds = 3600
-  max_lease_ttl_seconds = 86400
+  max_lease_ttl_seconds     = 86400
 }
 
 resource "vault_pki_secret_backend_role" "role" {
-  backend = "${vault_pki_secret_backend.pki.path}"
-  name    = "my_role"
+  backend          = vault_mount.pki.path
+  name             = "my_role"
+  ttl              = 3600
+  allow_ip_sans    = true
+  key_type         = "rsa"
+  key_bits         = 4096
+  allowed_domains  = ["example.com", "my.domain"]
+  allow_subdomains = true
 }
 ```
 
@@ -33,13 +40,15 @@ The following arguments are supported:
 
 * `name` - (Required) The name to identify this role within the backend. Must be unique within the backend.
 
-* `ttl` - (Optional) The TTL
+* `ttl` - (Optional, integer) The TTL, in seconds, for any certificate issued against this role.
 
-* `max_ttl` - (Optional) The maximum TTL
+* `max_ttl` - (Optional, integer) The maximum lease TTL, in seconds, for the role.
 
 * `allow_localhost` - (Optional) Flag to allow certificates for localhost
 
 * `allowed_domains` - (Optional) List of allowed domains for certificates 
+
+* `allowed_domains_template` - (Optional) Flag, if set, `allowed_domains` can be specified using identity template expressions such as `{{identity.entity.aliases.<mount accessor>.name}}`.
 
 * `allow_bare_domains` - (Optional) Flag to allow certificates matching the actual domain
 
@@ -65,7 +74,8 @@ The following arguments are supported:
 
 * `email_protection_flag` - (Optional) Flag to specify certificates for email protection use
 
-* `key_type` - (Optional) The type of generated keys
+* `key_type` - (Optional) The generated key type, choices: `rsa`, `ec`, `ed25519`, `any`  
+  Defaults to `rsa`
 
 * `key_bits` - (Optional) The number of bits of generated keys
 
@@ -102,6 +112,8 @@ The following arguments are supported:
 * `basic_constraints_valid_for_non_ca` - (Optional) Flag to mark basic constraints valid when issuing non-CA certificates
 
 * `not_before_duration` - (Optional) Specifies the duration by which to backdate the NotBefore property.
+
+* `allowed_serial_numbers` - (Optional) An array of allowed serial numbers to put in Subject
 
 ## Attributes Reference
 

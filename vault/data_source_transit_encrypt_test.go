@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestDataSourceTransitEncrypt(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceTransitEncrypt_config,
@@ -19,7 +21,6 @@ func TestDataSourceTransitEncrypt(t *testing.T) {
 			},
 		},
 	})
-
 }
 
 var testDataSourceTransitEncrypt_config = `

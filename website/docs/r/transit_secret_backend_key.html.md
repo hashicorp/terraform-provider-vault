@@ -22,7 +22,7 @@ resource "vault_mount" "transit" {
 }
 
 resource "vault_transit_secret_backend_key" "key" {
-  backend = "${vault_mount.transit.path}"
+  backend = vault_mount.transit.path
   name    = "my_key"
 }
 ```
@@ -53,6 +53,9 @@ The following arguments are supported:
 
 * `min_encryption_version` - (Optional) Minimum key version to use for encryption
 
+* `auto_rotate_period` - (Optional) Amount of time the key should live before being automatically rotated.
+  A value of 0 disables automatic rotation for the key.
+
 ## Attributes Reference
 
 * `keys` - List of key versions in the keyring. This attribute is zero-indexed and will contain a map of values depending on the `type` of the encryption key.
@@ -75,6 +78,9 @@ The following arguments are supported:
 * `supports_signing` - Whether or not the key supports signing, based on key type.
 
 
+## Deprecations
+
+* `auto_rotate_interval` - Replaced by `auto_rotate_period`.
 
 ## Import
 

@@ -3,9 +3,8 @@ package vault
 import (
 	"fmt"
 	"log"
-	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -47,41 +46,8 @@ func AuthBackendResource() *schema.Resource {
 
 			"description": {
 				Type:        schema.TypeString,
-				ForceNew:    true,
 				Optional:    true,
 				Description: "The description of the auth backend",
-			},
-
-			"default_lease_ttl_seconds": {
-				Type:          schema.TypeInt,
-				Required:      false,
-				Optional:      true,
-				Computed:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"tune.0.default_lease_ttl"},
-				Deprecated:    "Use the tune configuration block to avoid forcing creation of new resource on an update",
-				Description:   "Default lease duration in seconds",
-			},
-
-			"max_lease_ttl_seconds": {
-				Type:          schema.TypeInt,
-				Required:      false,
-				Optional:      true,
-				Computed:      true,
-				ForceNew:      true,
-				ConflictsWith: []string{"tune.0.max_lease_ttl"},
-				Deprecated:    "Use the tune configuration block to avoid forcing creation of new resource on an update",
-				Description:   "Maximum possible lease duration in seconds",
-			},
-
-			"listing_visibility": {
-				Type:          schema.TypeString,
-				ForceNew:      true,
-				Optional:      true,
-				Computed:      true,
-				ConflictsWith: []string{"tune.0.listing_visibility"},
-				Deprecated:    "Use the tune configuration block to avoid forcing creation of new resource on an update",
-				Description:   "Specifies whether to show this mount in the UI-specific listing endpoint",
 			},
 
 			"local": {
@@ -108,23 +74,17 @@ func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	mountType := d.Get("type").(string)
 	path := d.Get("path").(string)
 
-	options := &api.EnableAuthOptions{
-		Type:        mountType,
-		Description: d.Get("description").(string),
-		Config: api.AuthConfigInput{
-			DefaultLeaseTTL:   fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
-			MaxLeaseTTL:       fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds")),
-			ListingVisibility: d.Get("listing_visibility").(string),
-		},
-		Local: d.Get("local").(bool),
-	}
-
 	if path == "" {
 		path = mountType
 	}
 
-	log.Printf("[DEBUG] Writing auth %q to Vault", path)
+	options := &api.EnableAuthOptions{
+		Type:        mountType,
+		Description: d.Get("description").(string),
+		Local:       d.Get("local").(bool),
+	}
 
+	log.Printf("[DEBUG] Writing auth %q to Vault", path)
 	if err := client.Sys().EnableAuthWithOptions(path, options); err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -151,31 +111,34 @@ func authBackendDelete(d *schema.ResourceData, meta interface{}) error {
 func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 
-	targetPath := d.Id()
+	path := d.Id()
 
-	auths, err := client.Sys().ListAuth()
-
+	mount, err := getAuthMountIfPresent(client, path)
 	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+		return err
 	}
 
-	for path, auth := range auths {
-		path = strings.TrimSuffix(path, "/")
-		if path == targetPath {
-			d.Set("type", auth.Type)
-			d.Set("path", path)
-			d.Set("description", auth.Description)
-			d.Set("default_lease_ttl_seconds", auth.Config.DefaultLeaseTTL)
-			d.Set("max_lease_ttl_seconds", auth.Config.MaxLeaseTTL)
-			d.Set("listing_visibility", auth.Config.ListingVisibility)
-			d.Set("local", auth.Local)
-			d.Set("accessor", auth.Accessor)
-			return nil
-		}
+	if mount == nil {
+		d.SetId("")
+		return nil
 	}
 
-	// If we fell out here then we didn't find our Auth in the list.
-	d.SetId("")
+	if err := d.Set("type", mount.Type); err != nil {
+		return err
+	}
+	if err := d.Set("path", path); err != nil {
+		return err
+	}
+	if err := d.Set("description", mount.Description); err != nil {
+		return err
+	}
+	if err := d.Set("local", mount.Local); err != nil {
+		return err
+	}
+	if err := d.Set("accessor", mount.Accessor); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -185,20 +148,33 @@ func authBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
 
+	backendType := d.Get("type").(string)
+	var input api.MountConfigInput
+	var callTune bool
+
 	if d.HasChange("tune") {
-		log.Printf("[INFO] Auth '%q' tune configuration changed", d.Id())
+		log.Printf("[INFO] Auth '%q' tune configuration changed", path)
+
 		if raw, ok := d.GetOk("tune"); ok {
-			backendType := d.Get("type")
 			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
 
-			err := authMountTune(client, "auth/"+path, raw)
-			if err != nil {
-				return nil
-			}
-
-			log.Printf("[INFO] Written %s auth tune to '%q'", backendType, path)
-			d.SetPartial("tune")
+			input = expandAuthMethodTune(raw.(*schema.Set).List())
 		}
+		callTune = true
+	}
+
+	if d.HasChange("description") && !d.IsNewResource() {
+		desc := d.Get("description").(string)
+		input.Description = &desc
+		callTune = true
+	}
+
+	if callTune {
+		if err := tuneMount(client, "auth/"+path, input); err != nil {
+			return err
+		}
+
+		log.Printf("[INFO] Written %s auth tune to '%q'", backendType, path)
 	}
 
 	return authBackendRead(d, meta)

@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -110,8 +110,6 @@ func auditRead(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading audit backends %s from Vault", path)
-
-	client.Sys().ListAudit()
 
 	audits, err := client.Sys().ListAudit()
 	if err != nil {

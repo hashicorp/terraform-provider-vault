@@ -27,7 +27,7 @@ resource "vault_ldap_auth_backend" "ldap" {
 resource "vault_ldap_auth_backend_user" "user" {
     username = "test-user"
     policies = ["dba", "sysops"]
-    backend  = "${vault_ldap_auth_backend.ldap.path}"
+    backend  = vault_ldap_auth_backend.ldap.path
 }
 ```
 

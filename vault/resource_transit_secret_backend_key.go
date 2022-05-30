@@ -1,15 +1,16 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/customdiff"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -72,6 +73,21 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Optional:    true,
 				Description: "If set, enables taking backup of named key in the plaintext format. Once set, this cannot be disabled.",
 				Default:     false,
+			},
+			"auto_rotate_interval": {
+				Type:          schema.TypeInt,
+				Optional:      true,
+				Computed:      true,
+				Deprecated:    "Use auto_rotate_period instead",
+				Description:   "Amount of time the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
+				ConflictsWith: []string{"auto_rotate_period"},
+			},
+			"auto_rotate_period": {
+				Type:          schema.TypeInt,
+				Optional:      true,
+				Computed:      true,
+				Description:   "Amount of time the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
+				ConflictsWith: []string{"auto_rotate_interval"},
 			},
 			"type": {
 				Type:         schema.TypeString,
@@ -141,7 +157,7 @@ func transitSecretBackendKeyResource() *schema.Resource {
 			},
 		},
 		CustomizeDiff: customdiff.All(
-			customdiff.ValidateChange("exportable", func(old, new, meta interface{}) error {
+			customdiff.ValidateChange("exportable", func(_ context.Context, old, new, meta interface{}) error {
 				// 'exportable' Can only be enabled once, and once it is enabled, it cannot be disabled
 				//   without creating a new key
 
@@ -155,7 +171,7 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				}
 				return nil
 			}),
-			customdiff.ValidateChange("allow_plaintext_backup", func(old, new, meta interface{}) error {
+			customdiff.ValidateChange("allow_plaintext_backup", func(_ context.Context, old, new, meta interface{}) error {
 				// Same conditions as above. This cannot be disabled once enabled.
 				if new.(bool) && !old.(bool) {
 					return nil
@@ -165,10 +181,10 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				}
 				return nil
 			}),
-			customdiff.ForceNewIfChange("exportable", func(old, new, meta interface{}) bool {
+			customdiff.ForceNewIfChange("exportable", func(_ context.Context, old, new, meta interface{}) bool {
 				return !new.(bool) && old.(bool)
 			}),
-			customdiff.ForceNewIfChange("allow_plaintext_backup", func(old, new, meta interface{}) bool {
+			customdiff.ForceNewIfChange("allow_plaintext_backup", func(_ context.Context, old, new, meta interface{}) bool {
 				return !new.(bool) && old.(bool)
 			}),
 		),
@@ -183,18 +199,21 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 
 	path := transitSecretBackendKeyPath(backend, name)
 
+	autoRotatePeriod := getTransitAutoRotatePeriod(d)
 	configData := map[string]interface{}{
 		"min_decryption_version": d.Get("min_decryption_version").(int),
 		"min_encryption_versoin": d.Get("min_encryption_version").(int),
 		"deletion_allowed":       d.Get("deletion_allowed").(bool),
 		"exportable":             d.Get("exportable").(bool),
 		"allow_plaintext_backup": d.Get("allow_plaintext_backup").(bool),
+		"auto_rotate_period":     autoRotatePeriod,
 	}
 
 	data := map[string]interface{}{
 		"convergent_encryption": d.Get("convergent_encryption").(bool),
 		"derived":               d.Get("derived").(bool),
 		"type":                  d.Get("type").(string),
+		"auto_rotate_period":    autoRotatePeriod,
 	}
 
 	log.Printf("[DEBUG] Creating encryption key %s on transit secret backend %q", name, backend)
@@ -211,6 +230,22 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 	log.Printf("[DEBUG] Created encryption key %s on transit secret backend %q", name, backend)
 	d.SetId(path)
 	return transitSecretBackendKeyRead(d, meta)
+}
+
+func getTransitAutoRotatePeriod(d *schema.ResourceData) int {
+	var autoRotatePeriod int
+	v, ok := d.GetOkExists("auto_rotate_period")
+	if !ok {
+		if v, ok := d.GetOkExists("auto_rotate_interval"); ok {
+			log.Printf("[WARN] Using auto_rotate_internal to set auto_rotate_period, " +
+				"please use auto_rotate_period instead")
+			autoRotatePeriod = v.(int)
+		}
+	} else {
+		autoRotatePeriod = v.(int)
+	}
+
+	return autoRotatePeriod
 }
 
 func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error {
@@ -287,23 +322,63 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 		}
 	}
 
-	d.Set("keys", keys)
-	d.Set("backend", backend)
-	d.Set("name", name)
-	d.Set("allow_plaintext_backup", secret.Data["allow_plaintext_backup"].(bool))
-	d.Set("convergent_encryption", convergentEncryption)
-	d.Set("deletion_allowed", secret.Data["deletion_allowed"].(bool))
-	d.Set("derived", secret.Data["derived"].(bool))
-	d.Set("exportable", secret.Data["exportable"].(bool))
-	d.Set("latest_version", latestVersion)
-	d.Set("min_available_version", minAvailableVersion)
-	d.Set("min_decryption_version", minDecryptionVersion)
-	d.Set("min_encryption_version", minEncryptionVersion)
-	d.Set("supports_decryption", secret.Data["supports_decryption"].(bool))
-	d.Set("supports_derivation", secret.Data["supports_derivation"].(bool))
-	d.Set("supports_encryption", secret.Data["supports_encryption"].(bool))
-	d.Set("supports_signing", secret.Data["supports_signing"].(bool))
-	d.Set("type", secret.Data["type"].(string))
+	if err := d.Set("keys", keys); err != nil {
+		return err
+	}
+	if err := d.Set("backend", backend); err != nil {
+		return err
+	}
+	if err := d.Set("name", name); err != nil {
+		return err
+	}
+	if err := d.Set("latest_version", latestVersion); err != nil {
+		return err
+	}
+	if err := d.Set("min_available_version", minAvailableVersion); err != nil {
+		return err
+	}
+	if err := d.Set("min_decryption_version", minDecryptionVersion); err != nil {
+		return err
+	}
+	if err := d.Set("min_encryption_version", minEncryptionVersion); err != nil {
+		return err
+	}
+	if err := d.Set("convergent_encryption", convergentEncryption); err != nil {
+		return err
+	}
+
+	fields := []string{
+		"allow_plaintext_backup",
+		"deletion_allowed", "derived", "exportable",
+		"supports_decryption", "supports_derivation",
+		"supports_encryption", "supports_signing", "type",
+	}
+
+	set := func(f, k string) error {
+		v, ok := secret.Data[k]
+		if !ok {
+			log.Printf("[WARN] Expected key %q not found in response, path=%q", k, path)
+		}
+		if err := d.Set(f, v); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	for _, f := range fields {
+		if err := set(f, f); err != nil {
+			return err
+		}
+	}
+
+	autoRotatePeriodField := "auto_rotate_period"
+	if _, ok := d.GetOkExists("auto_rotate_interval"); ok {
+		autoRotatePeriodField = "auto_rotate_interval"
+	}
+
+	if err := set(autoRotatePeriodField, "auto_rotate_period"); err != nil {
+		return nil
+	}
 
 	return nil
 }
@@ -320,6 +395,7 @@ func transitSecretBackendKeyUpdate(d *schema.ResourceData, meta interface{}) err
 		"deletion_allowed":       d.Get("deletion_allowed"),
 		"exportable":             d.Get("exportable"),
 		"allow_plaintext_backup": d.Get("allow_plaintext_backup"),
+		"auto_rotate_period":     getTransitAutoRotatePeriod(d),
 	}
 
 	_, err := client.Logical().Write(path+"/config", data)

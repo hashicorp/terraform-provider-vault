@@ -10,20 +10,22 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccDataSourceAWSAccessCredentials_basic(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
-	accessKey, secretKey := getTestAWSCreds(t)
-	region := getTestAWSRegion(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	region := testutil.GetTestAWSRegion(t)
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAccessCredentialsConfig_basic(mountPath, accessKey, secretKey, region),
@@ -42,8 +44,8 @@ func TestAccDataSourceAWSAccessCredentials_basic(t *testing.T) {
 
 func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("aws")
-	accessKey, secretKey := getTestAWSCreds(t)
-	region := getTestAWSRegion(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	region := testutil.GetTestAWSRegion(t)
 
 	type testCase struct {
 		config string
@@ -61,17 +63,17 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 				}
 				
 				resource "vault_aws_secret_backend_role" "role" {
-					backend = "${vault_aws_secret_backend.aws.path}"
+					backend = vault_aws_secret_backend.aws.path
 					name = "test"
 					credential_type = "federation_token"
 					policy_document = "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"iam:*\", \"Resource\": \"*\"}]}"
 				}
 				
 				data "vault_aws_access_credentials" "test" {
-					backend = "${vault_aws_secret_backend.aws.path}"
-					role = "${vault_aws_secret_backend_role.role.name}"
+					backend = vault_aws_secret_backend.aws.path
+					role = vault_aws_secret_backend_role.role.name
 					type = "sts"
-					region = "${vault_aws_secret_backend.aws.region}"
+					region = vault_aws_secret_backend.aws.region
 				}`, mountPath, accessKey, secretKey, region),
 		},
 		"sts with role_arn": {
@@ -85,18 +87,18 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 				}
 				
 				resource "vault_aws_secret_backend_role" "role" {
-					backend = "${vault_aws_secret_backend.aws.path}"
+					backend = vault_aws_secret_backend.aws.path
 					name = "test"
 					credential_type = "federation_token"
 					policy_document = "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"iam:*\", \"Resource\": \"*\"}]}"
 				}
 				
 				data "vault_aws_access_credentials" "test" {
-					backend  = "${vault_aws_secret_backend.aws.path}"
-					role     = "${vault_aws_secret_backend_role.role.name}"
+					backend  = vault_aws_secret_backend.aws.path
+					role     = vault_aws_secret_backend_role.role.name
 					type     = "sts"
 					role_arn = "arn:aws:iam::012345678901:role/foobar"
-					region = "${vault_aws_secret_backend.aws.region}"
+					region = vault_aws_secret_backend.aws.region
 				}`, mountPath, accessKey, secretKey, region),
 		},
 	}
@@ -105,7 +107,7 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			resource.Test(t, resource.TestCase{
 				Providers: testProviders,
-				PreCheck:  func() { testAccPreCheck(t) },
+				PreCheck:  func() { testutil.TestAccPreCheck(t) },
 				Steps: []resource.TestStep{
 					{
 						Config: test.config,
@@ -126,13 +128,13 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 
 func TestAccDataSourceAWSAccessCredentials_sts_ttl(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
-	accessKey, secretKey := getTestAWSCreds(t)
-	region := getTestAWSRegion(t)
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	region := testutil.GetTestAWSRegion(t)
 	ttl := "18m"
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceAWSAccessCredentialsConfig_sts_basic(mountPath, accessKey, secretKey, region),
@@ -172,17 +174,17 @@ resource "vault_aws_secret_backend" "aws" {
 }
 
 resource "vault_aws_secret_backend_role" "role" {
-    backend = "${vault_aws_secret_backend.aws.path}"
+    backend = vault_aws_secret_backend.aws.path
     name = "test"
     credential_type = "iam_user"
     policy_document = "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"iam:*\", \"Resource\": \"*\"}]}"
 }
 
 data "vault_aws_access_credentials" "test" {
-    backend = "${vault_aws_secret_backend.aws.path}"
-    role = "${vault_aws_secret_backend_role.role.name}"
+    backend = vault_aws_secret_backend.aws.path
+    role = vault_aws_secret_backend_role.role.name
     type = "creds"
-	region = "${vault_aws_secret_backend.aws.region}"
+	region = vault_aws_secret_backend.aws.region
 }`, mountPath, accessKey, secretKey, region)
 }
 
@@ -197,17 +199,17 @@ resource "vault_aws_secret_backend" "aws" {
 }
 
 resource "vault_aws_secret_backend_role" "role" {
-	backend = "${vault_aws_secret_backend.aws.path}"
+	backend = vault_aws_secret_backend.aws.path
 	name = "test"
 	credential_type = "federation_token"
 	policy_document = "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"iam:*\", \"Resource\": \"*\"}]}"
 }
 
 data "vault_aws_access_credentials" "test" {
-	backend = "${vault_aws_secret_backend.aws.path}"
-	role = "${vault_aws_secret_backend_role.role.name}"
+	backend = vault_aws_secret_backend.aws.path
+	role = vault_aws_secret_backend_role.role.name
 	type = "sts"
-	region = "${vault_aws_secret_backend.aws.region}"
+	region = vault_aws_secret_backend.aws.region
 }`, mountPath, accessKey, secretKey, region)
 }
 
@@ -222,18 +224,18 @@ resource "vault_aws_secret_backend" "aws" {
 }
 
 resource "vault_aws_secret_backend_role" "role" {
-	backend = "${vault_aws_secret_backend.aws.path}"
+	backend = vault_aws_secret_backend.aws.path
 	name = "test"
 	credential_type = "federation_token"
 	policy_document = "{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"iam:*\", \"Resource\": \"*\"}]}"
 }
 
 data "vault_aws_access_credentials" "test" {
-	backend = "${vault_aws_secret_backend.aws.path}"
-	role = "${vault_aws_secret_backend_role.role.name}"
+	backend = vault_aws_secret_backend.aws.path
+	role = vault_aws_secret_backend_role.role.name
 	type = "sts"
 	ttl = "%s"
-	region = "${vault_aws_secret_backend.aws.region}"
+	region = vault_aws_secret_backend.aws.region
 }`, mountPath, accessKey, secretKey, region, ttl)
 }
 

@@ -3,12 +3,12 @@ layout: "vault"
 page_title: "Vault: vault_github_auth_backend resource"
 sidebar_current: "docs-vault-github-auth-backend"
 description: |-
-  Manages Github Auth mounts in Vault.
+  Manages GitHub Auth mounts in Vault.
 ---
 
 # vault\_github\_auth\_backend
 
-Manages a Github Auth mount in a Vault server. See the [Vault
+Manages a GitHub Auth mount in a Vault server. See the [Vault
 documentation](https://www.vaultproject.io/docs/auth/github/) for more
 information.
 
@@ -29,13 +29,16 @@ The following arguments are supported:
 
 * `organization` - (Required) The organization configured users must be part of.
 
+* `organization_id` (Optional) The ID of the organization users must be part of.
+  Vault will attempt to fetch and set this value if it is not provided. (Vault 1.10+)
+
 * `base_url` - (Optional) The API endpoint to use. Useful if you
   are running GitHub Enterprise or an API-compatible authentication server.
 
 * `description` - (Optional) Specifies the description of the mount.
   This overrides the current stored value, if any.
 
-* tune - (Optional) Extra configuration block. Structure is documented below.
+* `tune` - (Optional) Extra configuration block. Structure is documented below.
 
 The `tune` block is used to tune the auth backend:
 
@@ -101,12 +104,8 @@ These arguments are common across several Authentication Token resources since V
 * `token_no_default_policy` - (Optional) If set, the default policy will not be set on
   generated tokens; otherwise it will be added to the policies set in token_policies.
 
-* `token_num_uses` - (Optional) The number of times issued tokens can be used.
-  A value of 0 means unlimited uses.
-
-* `token_num_uses` - (Optional) The
-  [period](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
-  if any, in number of seconds to set on the token.
+* `token_num_uses` - (Optional) The [maximum number](https://www.vaultproject.io/api-docs/github#token_num_uses)
+   of times a generated token may be used (within its lifetime); 0 means unlimited.
 
 * `token_type` - (Optional) The type of token that should be generated. Can be `service`,
   `batch`, or `default` to use the mount's tuned default (which unless changed will be
@@ -114,20 +113,9 @@ These arguments are common across several Authentication Token resources since V
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
 
-### Deprecated Arguments
-
-These arguments are deprecated since Vault 1.2 in favour of the common token arguments
-documented above.
-
-* `ttl` - (Optional; Deprecated, use `token_ttl` instead if you are running Vault >= 1.2) The TTL period of tokens issued
-  using this role. This must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration).
-
-* `max_ttl` - (Optional; Deprecated, use `token_max_ttl` instead if you are running Vault >= 1.2) The maximum allowed lifetime of tokens
-  issued using this role. This must be a valid [duration string](https://golang.org/pkg/time/#ParseDuration).
-
 ## Import
 
-Github authentication mounts can be imported using the `path`, e.g.
+GitHub authentication mounts can be imported using the `path`, e.g.
 
 ```
 $ terraform import vault_github_auth_backend.example github

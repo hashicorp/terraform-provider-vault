@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -42,78 +42,6 @@ func githubUserResource() *schema.Resource {
 				Required:    true,
 				ForceNew:    true,
 				Description: "GitHub user name.",
-			},
-
-			// These token fields were added and released in error. They do nothing and should be
-			// removed at the next major version bump.
-			"token_bound_cidrs": {
-				Type: schema.TypeSet,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Description: "Specifies the blocks of IP addresses which are allowed to use the generated token",
-				Optional:    true,
-				Deprecated:  tokenParamDeprecationMsg,
-			},
-
-			"token_explicit_max_ttl": {
-				Type:        schema.TypeInt,
-				Description: "Generated Token's Explicit Maximum TTL in seconds",
-				Optional:    true,
-				Deprecated:  tokenParamDeprecationMsg,
-			},
-
-			"token_max_ttl": {
-				Type:        schema.TypeInt,
-				Description: "The maximum lifetime of the generated token",
-				Optional:    true,
-				Deprecated:  tokenParamDeprecationMsg,
-			},
-
-			"token_no_default_policy": {
-				Type:        schema.TypeBool,
-				Description: "If true, the 'default' policy will not automatically be added to generated tokens",
-				Optional:    true,
-				Deprecated:  tokenParamDeprecationMsg,
-			},
-
-			"token_period": {
-				Type:        schema.TypeInt,
-				Description: "Generated Token's Period",
-				Optional:    true,
-				Deprecated:  tokenParamDeprecationMsg,
-			},
-
-			"token_policies": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Description:   "Generated Token's Policies",
-				ConflictsWith: []string{"policies"},
-				Deprecated:    tokenParamDeprecationMsg,
-			},
-
-			"token_type": {
-				Type:        schema.TypeString,
-				Description: "The type of token to generate, service or batch",
-				Optional:    true,
-				Deprecated:  tokenParamDeprecationMsg,
-			},
-
-			"token_ttl": {
-				Type:        schema.TypeInt,
-				Description: "The initial ttl of the token to generate in seconds",
-				Optional:    true,
-				Deprecated:  tokenParamDeprecationMsg,
-			},
-
-			"token_num_uses": {
-				Type:        schema.TypeInt,
-				Description: "The maximum number of times a token may be used, a value of zero means unlimited",
-				Optional:    true,
-				Deprecated:  tokenParamDeprecationMsg,
 			},
 		},
 	}
