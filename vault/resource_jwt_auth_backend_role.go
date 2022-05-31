@@ -387,13 +387,13 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 		data["bound_claims_type"] = v.(string)
 	}
 
+	boundClaims := make(map[string]interface{})
 	if v, ok := d.GetOk("bound_claims"); ok {
 		var disableParseClaims bool
 		if v, ok := d.GetOkExists("disable_bound_claims_parsing"); ok {
 			disableParseClaims = v.(bool)
 		}
 
-		boundClaims := make(map[string]interface{})
 		for key, val := range v.(map[string]interface{}) {
 			var claims []string
 			if !disableParseClaims {
@@ -405,10 +405,8 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 			}
 			boundClaims[key] = claims
 		}
-		data["bound_claims"] = boundClaims
-	} else {
-		data["bound_claims"] = make(map[string]interface{}, 0)
 	}
+	data["bound_claims"] = boundClaims
 
 	if v, ok := d.GetOk("claim_mappings"); ok {
 		data["claim_mappings"] = v
