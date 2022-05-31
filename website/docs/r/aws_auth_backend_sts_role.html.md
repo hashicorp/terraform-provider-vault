@@ -38,9 +38,9 @@ resource "vault_aws_auth_backend_sts_role" "role" {
 
 The following arguments are supported:
 
-* `account_id` - (Optional) The AWS account ID to configure the STS role for.
+* `account_id` - (Required) The AWS account ID to configure the STS role for.
 
-* `sts_role` - (Optional) The STS role to assume when verifying requests made
+* `sts_role` - (Required) The STS role to assume when verifying requests made
    by EC2 instances in the account specified by `account_id`.
 
 * `backend` - (Optional) The path the AWS auth backend being configured was
