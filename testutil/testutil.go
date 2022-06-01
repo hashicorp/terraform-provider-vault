@@ -24,7 +24,7 @@ const (
 )
 
 func TestAccPreCheck(t *testing.T) {
-	FatalTestEnvUnset(t, "VAULT_ADDR", "VAULT_TOKEN")
+	FatalTestEnvUnset(t, api.EnvVaultAddress, api.EnvVaultToken)
 }
 
 func TestEntPreCheck(t *testing.T) {

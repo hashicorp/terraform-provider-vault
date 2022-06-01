@@ -50,7 +50,7 @@ func Provider() *schema.Provider {
 			"address": {
 				Type:        schema.TypeString,
 				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_ADDR", nil),
+				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultAddress, nil),
 				Description: "URL of the root of the target Vault server.",
 			},
 			"add_address_to_env": {
@@ -62,7 +62,7 @@ func Provider() *schema.Provider {
 			"token": {
 				Type:        schema.TypeString,
 				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN", ""),
+				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultToken, ""),
 				Description: "Token to use to authenticate to Vault.",
 			},
 			"token_name": {

@@ -2,13 +2,18 @@ package provider
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"reflect"
 	"sync"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
+	vault_consts "github.com/hashicorp/vault/sdk/helper/consts"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 func TestProviderMeta_GetNSClient(t *testing.T) {
@@ -103,7 +108,7 @@ func TestProviderMeta_GetNSClient(t *testing.T) {
 	}
 
 	assertClientNs := func(t *testing.T, c *api.Client, expectNs string) {
-		actualNs := c.Headers().Get(consts.NamespaceHeaderName)
+		actualNs := c.Headers().Get(vault_consts.NamespaceHeaderName)
 		if actualNs != expectNs {
 			t.Errorf("GetNSClient() got ns = %v, want %v", actualNs, expectNs)
 		}
@@ -163,6 +168,177 @@ func TestProviderMeta_GetNSClient(t *testing.T) {
 					}()
 				}
 				wg.Wait()
+			}
+		})
+	}
+}
+
+func TestGetClient(t *testing.T) {
+	rootClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// testing schema.ResourceDiff is not covered here
+	// since its field members are private.
+
+	rscData := func(t *testing.T, set bool, ns string) interface{} {
+		i := schema.TestResourceDataRaw(t,
+			map[string]*schema.Schema{
+				consts.FieldNamespace: {
+					Type:     schema.TypeString,
+					Required: true,
+				},
+			},
+			map[string]interface{}{},
+		)
+		if set {
+			if err := i.Set(consts.FieldNamespace, ns); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return i
+	}
+
+	instanceState := func(_ *testing.T, set bool, ns string) interface{} {
+		i := &terraform.InstanceState{
+			Attributes: map[string]string{},
+		}
+		if set {
+			i.Attributes[consts.FieldNamespace] = ns
+		}
+		return i
+	}
+
+	tests := []struct {
+		name      string
+		meta      *ProviderMeta
+		ifcNS     string
+		envNS     string
+		want      string
+		wantErr   bool
+		expectErr error
+		setAttr   bool
+		ifaceFunc func(t *testing.T, set bool, ns string) interface{}
+	}{
+		{
+			name:  "rsc-data",
+			ifcNS: "ns1-rsc-data",
+			meta: &ProviderMeta{
+				client:       rootClient,
+				resourceData: nil,
+			},
+			ifaceFunc: rscData,
+			want:      "ns1-rsc-data",
+			setAttr:   true,
+		},
+		{
+			name:  "inst-state",
+			ifcNS: "ns1-inst-state",
+			meta: &ProviderMeta{
+				client:       rootClient,
+				resourceData: nil,
+			},
+			want:      "ns1-inst-state",
+			setAttr:   true,
+			ifaceFunc: instanceState,
+		},
+		{
+			name: "import-env",
+			meta: &ProviderMeta{
+				client:       rootClient,
+				resourceData: nil,
+			},
+			ifaceFunc: instanceState,
+			envNS:     "ns1-import-env",
+			want:      "ns1-import-env",
+			setAttr:   false,
+		},
+		{
+			name: "ignore-env-rsc-data",
+			meta: &ProviderMeta{
+				client:       rootClient,
+				resourceData: nil,
+			},
+			ifaceFunc: rscData,
+			ifcNS:     "ns1",
+			envNS:     "ns1-import-env",
+			want:      "ns1",
+			setAttr:   true,
+		},
+		{
+			name: "ignore-env-inst-state",
+			meta: &ProviderMeta{
+				client:       rootClient,
+				resourceData: nil,
+			},
+			ifaceFunc: instanceState,
+			ifcNS:     "ns1",
+			envNS:     "ns1-import-env",
+			want:      "ns1",
+			setAttr:   true,
+		},
+		{
+			name: "error-unsupported-type",
+			meta: &ProviderMeta{
+				client:       rootClient,
+				resourceData: nil,
+			},
+			ifaceFunc: func(t *testing.T, set bool, ns string) interface{} {
+				return nil
+			},
+			wantErr:   true,
+			expectErr: fmt.Errorf("GetClient() called with unsupported type <nil>"),
+		},
+		{
+			name:      "error-not-provider-meta",
+			meta:      nil,
+			wantErr:   true,
+			expectErr: fmt.Errorf("meta argument must be a ProviderMeta"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.meta != nil {
+				tt.meta.resourceData = schema.TestResourceDataRaw(t,
+					map[string]*schema.Schema{
+						consts.FieldNamespace: {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+					map[string]interface{}{},
+				)
+			}
+
+			var i interface{}
+			if tt.ifaceFunc != nil {
+				i = tt.ifaceFunc(t, tt.setAttr, tt.ifcNS)
+			}
+
+			// set ns in env
+			if tt.envNS != "" {
+				if err := os.Setenv(consts.EnvVarVaultNamespaceImport, tt.envNS); err != nil {
+					t.Fatal(err)
+				}
+				defer os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+			}
+
+			got, err := GetClient(i, tt.meta)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("GetClient() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+				if !reflect.DeepEqual(err, tt.expectErr) {
+					t.Errorf("GetClient() expected err %#v, actual %#v", tt.expectErr, err)
+				}
+				return
+			}
+
+			actual := got.Headers().Get(vault_consts.NamespaceHeaderName)
+			if !reflect.DeepEqual(actual, tt.want) {
+				t.Errorf("GetClient() got = %v, want %v", actual, tt.want)
 			}
 		})
 	}

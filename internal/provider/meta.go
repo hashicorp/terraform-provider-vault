@@ -166,7 +166,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 
 	MaxHTTPRetriesCCC = d.Get("max_retries_ccc").(int)
 
-	// Try an get the token from the config or token helper
+	// Try and get the token from the config or token helper
 	token, err := GetToken(d)
 	if err != nil {
 		return nil, err
@@ -240,7 +240,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 // *schema.ResourceDiff, or *terraform.InstanceState.
 func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	p, ok := meta.(*ProviderMeta)
-	if !ok {
+	if p == nil || !ok {
 		return nil, fmt.Errorf("meta argument must be a ProviderMeta")
 	}
 
@@ -258,6 +258,12 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 		ns = v.Attributes[consts.FieldNamespace]
 	default:
 		return nil, fmt.Errorf("GetClient() called with unsupported type %T", v)
+	}
+
+	if ns == "" {
+		// in order to import namespaced resources the user must provide
+		// the namespace from an environment variable.
+		ns = os.Getenv(consts.EnvVarVaultNamespaceImport)
 	}
 
 	if ns != "" {
@@ -369,16 +375,17 @@ func GetToken(d *schema.ResourceData) (string, error) {
 
 	if addAddr := d.Get("add_address_to_env").(string); addAddr == "true" {
 		if addr := d.Get("address").(string); addr != "" {
-			if current, exists := os.LookupEnv("VAULT_ADDR"); exists {
+			addrEnvVar := api.EnvVaultAddress
+			if current, exists := os.LookupEnv(addrEnvVar); exists {
 				defer func() {
-					os.Setenv("VAULT_ADDR", current)
+					os.Setenv(addrEnvVar, current)
 				}()
 			} else {
 				defer func() {
-					os.Unsetenv("VAULT_ADDR")
+					os.Unsetenv(addrEnvVar)
 				}()
 			}
-			if err := os.Setenv("VAULT_ADDR", addr); err != nil {
+			if err := os.Setenv(addrEnvVar, addr); err != nil {
 				return "", err
 			}
 		}
