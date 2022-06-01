@@ -228,6 +228,19 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
+	dataMap := serializeDataMapToString(data)
+	if err := d.Set("data", dataMap); err != nil {
+		return err
+	}
+
+	if err := d.Set("delete_all_versions", d.Get("delete_all_versions")); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func serializeDataMapToString(data map[string]interface{}) map[string]string {
 	// Since our "data" map can only contain string values, we
 	// will take strings from Data and write them in as-is,
 	// and write everything else in as a JSON serialization of
@@ -246,13 +259,5 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 			dataMap[k] = string(vBytes)
 		}
 	}
-	if err := d.Set("data", dataMap); err != nil {
-		return err
-	}
-
-	if err := d.Set("delete_all_versions", d.Get("delete_all_versions")); err != nil {
-		return err
-	}
-
-	return nil
+	return dataMap
 }
