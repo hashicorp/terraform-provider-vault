@@ -766,6 +766,14 @@ var (
 			Resource:      identityOIDCProviderResource(),
 			PathInventory: []string{"/identity/oidc/provider/{name}"},
 		},
+		"vault_kv_secret_backend_v2": {
+			Resource:      kvSecretBackendV2Resource(),
+			PathInventory: []string{"/secret/data/{path}"},
+		},
+		"vault_kv_secret_v2": {
+			Resource:      kvSecretV2Resource("vault_kv_secret_v2"),
+			PathInventory: []string{"/secret/data/{path}"},
+		},
 	}
 )
 

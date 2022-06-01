@@ -10,7 +10,7 @@ description: |-
 
 Lists all secrets under a given KV-V2 path in Vault.
 
-This resource is primarily intended to be used with
+This data source is primarily intended to be used with
 [Vault's "generic" secret backend](https://www.vaultproject.io/docs/secrets/generic/index.html),
 but it is also compatible with any other Vault endpoint that supports
 the `vault read` command.
