@@ -201,8 +201,6 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 			return nil
 		}
 
-		log.Printf("[DEBUG] secret: %#v", secret)
-
 		data = secret.Data
 		jsonData, err := json.Marshal(secret.Data)
 		if err != nil {

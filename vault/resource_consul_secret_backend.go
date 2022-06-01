@@ -188,8 +188,6 @@ func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
-	log.Printf("[DEBUG] secret: %#v", secret)
-
 	// token, sadly, we can't read out
 	// the API doesn't support it
 	// So... if it drifts, it drift.
