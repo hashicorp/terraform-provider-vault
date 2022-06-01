@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -9,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -44,6 +46,7 @@ func TestResourceGenericSecretNS(t *testing.T) {
 	name := acctest.RandomWithPrefix("test")
 	path := fmt.Sprintf("%s/%s", mount, name)
 	resourceName := "vault_generic_secret.test"
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestEntPreCheck(t) },
@@ -54,6 +57,26 @@ func TestResourceGenericSecretNS(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "namespace", ns),
 					testResourceGenericSecret_initialCheck(path),
 				),
+			},
+			{
+				// unfortunately two steps are needed when testing import,
+				// since the tf-plugin-sdk does not allow for specifying environment variables :(
+				// neither does have any support for generic post-step functions.
+				// It is possible that this will cause issues if we ever want to support parallel tests.
+				// We would have to update the SDK to suport specifying extra env vars by step.
+				PreConfig: func() {
+					t.Setenv(consts.EnvVarVaultNamespaceImport, ns)
+				},
+				ImportState:  true,
+				ResourceName: resourceName,
+			},
+			{
+				// needed for the import step above :(
+				Config: testResourceGenericSecret_initialConfigNS(ns, mount, name),
+				PreConfig: func() {
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+				},
+				PlanOnly: true,
 			},
 			{
 				Config: testResourceGenericSecret_updateConfig(mount, name),

@@ -264,6 +264,9 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 		// in order to import namespaced resources the user must provide
 		// the namespace from an environment variable.
 		ns = os.Getenv(consts.EnvVarVaultNamespaceImport)
+		if ns != "" {
+			log.Printf("[DEBUG] Value for %q set from environment", consts.FieldNamespace)
+		}
 	}
 
 	if ns != "" {
