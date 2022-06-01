@@ -5,7 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const identityGroupAliasPath = "/identity/group-alias"
@@ -44,7 +45,10 @@ func identityGroupAliasResource() *schema.Resource {
 }
 
 func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 	mountAccessor := d.Get("mount_accessor").(string)
@@ -59,7 +63,6 @@ func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	resp, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error writing IdentityGroupAlias to %q: %s", name, err)
 	}
@@ -70,7 +73,11 @@ func identityGroupAliasCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityGroupAlias %q", id)
@@ -108,7 +115,11 @@ func identityGroupAliasUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	path := identityGroupAliasIDPath(id)
@@ -135,7 +146,11 @@ func identityGroupAliasRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	path := identityGroupAliasIDPath(id)
@@ -151,7 +166,11 @@ func identityGroupAliasDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupAliasExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	id := d.Id()
 
 	path := identityGroupAliasIDPath(id)

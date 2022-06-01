@@ -6,7 +6,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const latestSecretVersion = -1
@@ -25,7 +27,7 @@ func genericSecretResource(name string) *schema.Resource {
 		MigrateState: resourceGenericSecretMigrateState,
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
@@ -118,15 +120,16 @@ func normalizeDataJSON(data string) (string, error) {
 }
 
 func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	var data map[string]interface{}
-	err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data)
-	if err != nil {
+	if err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data); err != nil {
 		return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
 	}
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 	originalPath := path // if the path belongs to a v2 endpoint, it will be modified
 	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
@@ -154,8 +157,10 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 }
 
 func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 
 	mountPath, v2, err := isKVv2(path, client)
@@ -182,14 +187,16 @@ func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error
 }
 
 func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	var data map[string]interface{}
 	shouldRead := !d.Get("disable_read").(bool)
 
 	path := d.Id()
 
 	if shouldRead {
-		client := meta.(*api.Client)
-
 		log.Printf("[DEBUG] Reading %s from Vault", path)
 		secret, err := versionedSecret(latestSecretVersion, path, client)
 		if err != nil {
@@ -212,7 +219,7 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 		if err := d.Set("data_json", string(jsonData)); err != nil {
 			return err
 		}
-		if err := d.Set("path", path); err != nil {
+		if err := d.Set(consts.FieldPath, path); err != nil {
 			return err
 		}
 	} else {

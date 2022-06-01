@@ -29,6 +29,11 @@ resource "vault_identity_oidc_scope" "groups" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
+
 * `name` - (Required) The name of the scope. The `openid` scope name is reserved.
 
 * `template` - (Optional) The template string for the scope. This may be provided as escaped JSON or base64 encoded JSON.

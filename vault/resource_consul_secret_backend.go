@@ -7,6 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func consulSecretBackendResource() *schema.Resource {
@@ -102,7 +104,10 @@ func consulSecretBackendResource() *schema.Resource {
 }
 
 func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 	address := d.Get("address").(string)
@@ -154,7 +159,10 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	configPath := consulSecretBackendConfigPath(path)
@@ -200,7 +208,10 @@ func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	configPath := consulSecretBackendConfigPath(path)
@@ -240,7 +251,10 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func consulSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -254,7 +268,10 @@ func consulSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func consulSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 

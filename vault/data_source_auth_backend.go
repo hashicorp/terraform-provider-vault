@@ -5,7 +5,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func authBackendDataSource() *schema.Resource {
@@ -57,7 +58,10 @@ func authBackendDataSource() *schema.Resource {
 }
 
 func authBackendDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	targetPath := d.Get("path").(string)
 

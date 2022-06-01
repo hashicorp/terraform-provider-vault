@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -21,7 +22,7 @@ func TestDataSourceIdentityOIDCOpenIDConfig(t *testing.T) {
 	keyName := acctest.RandomWithPrefix("test-key")
 	clientName := acctest.RandomWithPrefix("test-client")
 
-	u, err := url.Parse(os.Getenv("VAULT_ADDR"))
+	u, err := url.Parse(os.Getenv(api.EnvVaultAddress))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 type schemaMap map[string]*schema.Schema
@@ -128,7 +130,10 @@ func MountResource() *schema.Resource {
 }
 
 func mountWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, err := provider.GetClient(d, meta)
+	if err != nil {
+		return err
+	}
 
 	path := d.Get("path").(string)
 	if err := createMount(d, client, path, d.Get("type").(string)); err != nil {
@@ -171,7 +176,10 @@ func createMount(d *schema.ResourceData, client *api.Client, path string, mountT
 }
 
 func mountUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, err := provider.GetClient(d, meta)
+	if err != nil {
+		return err
+	}
 
 	config := api.MountConfigInput{
 		DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
@@ -228,7 +236,10 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mountDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, err := provider.GetClient(d, meta)
+	if err != nil {
+		return err
+	}
 
 	path := d.Id()
 
@@ -246,7 +257,10 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 

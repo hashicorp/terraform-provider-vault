@@ -7,6 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func sshSecretBackendCAResource() *schema.Resource {
@@ -56,7 +58,11 @@ func sshSecretBackendCAResource() *schema.Resource {
 }
 
 func sshSecretBackendCACreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	backend := d.Get("backend").(string)
 
 	data := make(map[string]interface{})
@@ -82,7 +88,10 @@ func sshSecretBackendCACreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func sshSecretBackendCARead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Id()
 
@@ -116,7 +125,10 @@ func sshSecretBackendCARead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func sshSecretBackendCADelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Id()
 	log.Printf("[DEBUG] Deleting CA configuration for SSH backend %q", backend)

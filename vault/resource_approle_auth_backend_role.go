@@ -9,8 +9,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -123,7 +123,10 @@ func approleAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 }
 
 func approleAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role_name").(string)
@@ -173,7 +176,11 @@ func approleAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, m
 }
 
 func approleAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
 	path := d.Id()
 
 	backend, err := approleAuthBackendRoleBackendFromPath(path)
@@ -240,7 +247,11 @@ func approleAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 }
 
 func approleAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating AppRole auth backend role %q", path)
@@ -273,7 +284,11 @@ func approleAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, m
 }
 
 func approleAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting AppRole auth backend role %q", path)

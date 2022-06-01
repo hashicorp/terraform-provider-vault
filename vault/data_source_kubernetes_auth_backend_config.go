@@ -1,12 +1,13 @@
 package vault
 
 import (
+	"fmt"
+	"log"
 	"strings"
 
-	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
-	"log"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func kubernetesAuthBackendConfigDataSource() *schema.Resource {
@@ -66,7 +67,10 @@ func kubernetesAuthBackendConfigDataSource() *schema.Resource {
 }
 
 func kubernetesAuthBackendConfigDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := kubernetesAuthBackendConfigPath(d.Get("backend").(string))
 

@@ -7,8 +7,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -67,7 +68,11 @@ func adSecretBackendRoleResource() *schema.Resource {
 }
 
 func createRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
 	rolePath := fmt.Sprintf("%s/roles/%s", backend, role)
@@ -93,7 +98,11 @@ func createRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	rolePath := d.Id()
 	log.Printf("[DEBUG] Reading %q", rolePath)
 
@@ -148,7 +157,11 @@ func readRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	rolePath := d.Id()
 	log.Printf("[DEBUG] Updating %q", rolePath)
 
@@ -167,7 +180,11 @@ func updateRoleResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func deleteRoleResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	rolePath := d.Id()
 	log.Printf("[DEBUG] Deleting %q", rolePath)
 

@@ -5,7 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const identityOIDCScopePathPrefix = "identity/oidc/scope"
@@ -61,7 +62,10 @@ func getOIDCScopePath(name string) string {
 }
 
 func identityOIDCScopeCreateUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Get("name").(string)
 	path := getOIDCScopePath(name)
 
@@ -78,7 +82,10 @@ func identityOIDCScopeCreateUpdate(d *schema.ResourceData, meta interface{}) err
 }
 
 func identityOIDCScopeRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading OIDC Scope for %s", path)
@@ -104,7 +111,10 @@ func identityOIDCScopeRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOIDCScopeDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting OIDC Scope %s", path)
