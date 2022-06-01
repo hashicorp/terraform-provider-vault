@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -362,43 +361,6 @@ func TestGetAPIRequestData(t *testing.T) {
 			r := schema.TestResourceDataRaw(t, tt.d, tt.sm)
 			if got := GetAPIRequestData(r, tt.m); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetAPIRequestData() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestParseDurationSecond(t *testing.T) {
-	tests := map[string]struct {
-		in      interface{}
-		want    time.Duration
-		wantErr bool
-	}{
-		"valid duration": {
-			in:   "1m",
-			want: 60 * time.Second,
-		},
-		"valid string number": {
-			in:   "2",
-			want: 2 * time.Second,
-		},
-		"empty string": {
-			in:   "",
-			want: time.Duration(0),
-		},
-		"invalid input": {
-			in:      "foobar",
-			wantErr: true,
-		},
-	}
-	for tn, tt := range tests {
-		t.Run(tn, func(t *testing.T) {
-			got, err := ParseDurationSecond(tt.in)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ParseDurationSecond() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("ParseDurationSecond() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

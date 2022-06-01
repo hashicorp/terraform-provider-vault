@@ -32,7 +32,7 @@ func TestQuotaRateLimit(t *testing.T) {
 		CheckDestroy: testQuotaRateLimitCheckDestroy([]string{rateLimit, newRateLimit}),
 		Steps: []resource.TestStep{
 			{
-				Config: testQuotaRateLimit_Config(name, "", rateLimit, "1s", "0"),
+				Config: testQuotaRateLimit_Config(name, "", rateLimit, 1, 0),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", ""),
@@ -42,7 +42,7 @@ func TestQuotaRateLimit(t *testing.T) {
 				),
 			},
 			{
-				Config: testQuotaRateLimit_Config(name, "", newRateLimit, "60s", "120s"),
+				Config: testQuotaRateLimit_Config(name, "", newRateLimit, 60, 120),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", ""),
@@ -52,13 +52,13 @@ func TestQuotaRateLimit(t *testing.T) {
 				),
 			},
 			{
-				Config: testQuotaRateLimit_Config(name, "sys/", newRateLimit, "120", "60"),
+				Config: testQuotaRateLimit_Config(name, "sys/", newRateLimit, 60, 120),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", "sys/"),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "rate", newRateLimit),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "interval", "120"),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "block_interval", "60"),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "interval", "60"),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "block_interval", "120"),
 				),
 			},
 		},
@@ -85,14 +85,14 @@ func testQuotaRateLimitCheckDestroy(rateLimits []string) resource.TestCheckFunc 
 }
 
 // Caution: Don't set test rate values too low or other tests running concurrently might fail
-func testQuotaRateLimit_Config(name, path, rate, interval, blockInterval string) string {
+func testQuotaRateLimit_Config(name, path, rate string, interval, blockInterval int) string {
 	return fmt.Sprintf(`
 resource "vault_quota_rate_limit" "foobar" {
   name = "%s"
   path = "%s"
   rate = %s
-  interval = "%s"
-  block_interval = "%s"
+  interval = %d
+  block_interval = %d
 }
 `, name, path, rate, interval, blockInterval)
 }

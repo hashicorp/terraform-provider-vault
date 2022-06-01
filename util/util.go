@@ -3,13 +3,11 @@ package util
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -345,57 +343,4 @@ func GetAPIRequestData(d *schema.ResourceData, fieldMap map[string]string) map[s
 	}
 
 	return data
-}
-
-func ParseDurationSecond(in interface{}) (time.Duration, error) {
-	var dur time.Duration
-	jsonIn, ok := in.(json.Number)
-	if ok {
-		in = jsonIn.String()
-	}
-	switch inp := in.(type) {
-	case nil:
-		// return default of zero
-	case string:
-		if inp == "" {
-			return dur, nil
-		}
-		var err error
-		// Look for a suffix otherwise its a plain second value
-		if strings.HasSuffix(inp, "s") || strings.HasSuffix(inp, "m") || strings.HasSuffix(inp, "h") || strings.HasSuffix(inp, "ms") {
-			dur, err = time.ParseDuration(inp)
-			if err != nil {
-				return dur, err
-			}
-		} else {
-			// Plain integer
-			secs, err := strconv.ParseInt(inp, 10, 64)
-			if err != nil {
-				return dur, err
-			}
-			dur = time.Duration(secs) * time.Second
-		}
-	case int:
-		dur = time.Duration(inp) * time.Second
-	case int32:
-		dur = time.Duration(inp) * time.Second
-	case int64:
-		dur = time.Duration(inp) * time.Second
-	case uint:
-		dur = time.Duration(inp) * time.Second
-	case uint32:
-		dur = time.Duration(inp) * time.Second
-	case uint64:
-		dur = time.Duration(inp) * time.Second
-	case float32:
-		dur = time.Duration(inp) * time.Second
-	case float64:
-		dur = time.Duration(inp) * time.Second
-	case time.Duration:
-		dur = inp
-	default:
-		return 0, errors.New("could not parse duration from input")
-	}
-
-	return dur, nil
 }
