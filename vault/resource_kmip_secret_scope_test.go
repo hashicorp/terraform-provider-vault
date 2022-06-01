@@ -14,23 +14,36 @@ import (
 )
 
 func TestAccKMIPSecretScope_remount(t *testing.T) {
+	testutil.SkipTestAccEnt(t)
+
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	remountPath := acctest.RandomWithPrefix("tf-test-kmip-updated")
 	resourceName := "vault_kmip_secret_scope.test"
+
+	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = closer(); err != nil {
+		t.Fatal(err)
+	}
+
+	addr1 := lns[0].Addr().String()
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestEntPreCheck(t) },
 		CheckDestroy: testAccKMIPSecretScopeCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testKMIPSecretScope_initialConfig(path),
+				Config: testKMIPSecretScope_initialConfig(path, addr1),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 					resource.TestCheckResourceAttr(resourceName, "scope", "test"),
 				),
 			},
 			{
-				Config: testKMIPSecretScope_initialConfig(remountPath),
+				Config: testKMIPSecretScope_initialConfig(remountPath, addr1),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", remountPath),
 					resource.TestCheckResourceAttr(resourceName, "scope", "test"),
@@ -64,15 +77,16 @@ func testAccKMIPSecretScopeCheckDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testKMIPSecretScope_initialConfig(path string) string {
+func testKMIPSecretScope_initialConfig(path string, listenAddr string) string {
 	return fmt.Sprintf(`
 resource "vault_kmip_secret_backend" "kmip" {
   path = "%s"
+  listen_addrs = ["%s"]
   description = "test description"
 }
 
 resource "vault_kmip_secret_scope" "test" {
     path = vault_kmip_secret_backend.kmip.path
     scope = "test"
-}`, path)
+}`, path, listenAddr)
 }

@@ -1,11 +1,13 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/vault/api"
@@ -107,13 +109,12 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		SchemaVersion: 1,
 
-		Create: gcpAuthResourceCreate,
-		Update: gcpAuthResourceUpdate,
-		Read:   gcpAuthResourceRead,
-		Delete: gcpAuthResourceDelete,
-		Exists: gcpAuthResourceExists,
+		CreateContext: gcpAuthResourceCreate,
+		UpdateContext: gcpAuthResourceUpdate,
+		ReadContext:   gcpAuthResourceRead,
+		DeleteContext: gcpAuthResourceDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: fields,
 	}
@@ -167,7 +168,7 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, cr
 	}
 }
 
-func gcpAuthResourceCreate(d *schema.ResourceData, meta interface{}) error {
+func gcpAuthResourceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 
 	backend := d.Get("backend").(string)
@@ -183,14 +184,14 @@ func gcpAuthResourceCreate(d *schema.ResourceData, meta interface{}) error {
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing GCP auth role %q: %s", path, err)
+		return diag.Errorf("Error writing GCP auth role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote role %q to GCP auth backend", path)
 
-	return gcpAuthResourceRead(d, meta)
+	return gcpAuthResourceRead(ctx, d, meta)
 }
 
-func gcpAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
+func gcpAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
@@ -200,21 +201,21 @@ func gcpAuthResourceUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating role %q in GCP auth backend", path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error updating GCP auth role %q: %s", path, err)
+		return diag.Errorf("Error updating GCP auth role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated role %q to GCP auth backend", path)
 
-	return gcpAuthResourceRead(d, meta)
+	return gcpAuthResourceRead(ctx, d, meta)
 }
 
-func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
+func gcpAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading GCP role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading GCP role %q: %s", path, err)
+		return diag.Errorf("Error reading GCP role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read GCP role %q", path)
 
@@ -226,21 +227,23 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 
 	backend, err := gcpAuthResourceBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for GCP auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for GCP auth backend role: %s", path, err)
 	}
 	d.Set("backend", backend)
 	role, err := gcpAuthResourceRoleFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for GCP auth backend role: %s", path, err)
+		return diag.Errorf("invalid path %q for GCP auth backend role: %s", path, err)
 	}
 	d.Set("role", role)
 
-	readTokenFields(d, resp)
+	if err := readTokenFields(d, resp); err != nil {
+		return diag.FromErr(err)
+	}
 
 	for _, k := range []string{"bound_projects", "add_group_aliases", "max_jwt_exp", "bound_service_accounts", "bound_zones", "bound_regions", "bound_instance_groups"} {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
-				return fmt.Errorf("error reading %s for GCP Auth Backend Role %q: %q", k, path, err)
+				return diag.Errorf("error reading %s for GCP Auth Backend Role %q: %q", k, path, err)
 			}
 		}
 	}
@@ -252,7 +255,7 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		}
 
 		if err := d.Set("bound_labels", labels); err != nil {
-			return fmt.Errorf("error setting bound_labels for GCP auth backend role: %q", err)
+			return diag.Errorf("error setting bound_labels for GCP auth backend role: %q", err)
 		}
 	}
 
@@ -266,35 +269,23 @@ func gcpAuthResourceRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("type", v)
 	}
 
-	return nil
+	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
+
+	return diags
 }
 
-func gcpAuthResourceDelete(d *schema.ResourceData, meta interface{}) error {
+func gcpAuthResourceDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting GCP role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting GCP role %q", path)
+		return diag.Errorf("Error deleting GCP role %q", path)
 	}
 	log.Printf("[DEBUG] Deleted GCP role %q", path)
 
 	return nil
-}
-
-func gcpAuthResourceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-	path := d.Id()
-
-	log.Printf("[DEBUG] Checking if gcp auth role %q exists", path)
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking for existence of gcp auth resource config %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if gcp auth role %q exists", path)
-
-	return resp != nil, nil
 }
 
 func gcpAuthResourceBackendFromPath(path string) (string, error) {

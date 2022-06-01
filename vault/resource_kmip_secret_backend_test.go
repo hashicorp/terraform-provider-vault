@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"net"
 	"strings"
 	"testing"
 
@@ -15,23 +14,21 @@ import (
 )
 
 func TestAccKMIPSecretBackend_basic(t *testing.T) {
+	testutil.SkipTestAccEnt(t)
+
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	resourceName := "vault_kmip_secret_backend.test"
-	ln1, err := net.Listen("tcp", "127.0.0.1:0")
+
+	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ln2, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
+	addr1, addr2 := lns[0].Addr().String(), lns[1].Addr().String()
+
+	if err = closer(); err != nil {
 		t.Fatal(err)
 	}
-
-	addr1 := ln1.Addr().String()
-	addr2 := ln2.Addr().String()
-
-	ln1.Close()
-	ln2.Close()
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -44,7 +41,7 @@ func TestAccKMIPSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
 					resource.TestCheckResourceAttr(resourceName, "listen_addrs.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "listen_addrs.0", addr1),
+					resource.TestCheckTypeSetElemAttr(resourceName, "listen_addrs.*", addr1),
 					resource.TestCheckResourceAttr(resourceName, "server_ips.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "server_ips.0", "127.0.0.1"),
 					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_type", "ec"),
@@ -61,8 +58,8 @@ func TestAccKMIPSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
 					resource.TestCheckResourceAttr(resourceName, "listen_addrs.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "listen_addrs.0", addr1),
-					resource.TestCheckResourceAttr(resourceName, "listen_addrs.1", addr2),
+					resource.TestCheckTypeSetElemAttr(resourceName, "listen_addrs.*", addr1),
+					resource.TestCheckTypeSetElemAttr(resourceName, "listen_addrs.*", addr2),
 					resource.TestCheckResourceAttr(resourceName, "server_ips.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "server_ips.0", "127.0.0.1"),
 					resource.TestCheckResourceAttr(resourceName, "server_ips.1", "192.168.1.1"),
@@ -79,18 +76,22 @@ func TestAccKMIPSecretBackend_basic(t *testing.T) {
 }
 
 func TestAccKMIPSecretBackend_remount(t *testing.T) {
+	testutil.SkipTestAccEnt(t)
+
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	remountPath := acctest.RandomWithPrefix("tf-test-kmip-updated")
 	resourceName := "vault_kmip_secret_backend.test"
 
-	ln1, err := net.Listen("tcp", "127.0.0.1:0")
+	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	addr1 := ln1.Addr().String()
+	addr1 := lns[0].Addr().String()
 
-	ln1.Close()
+	if err = closer(); err != nil {
+		t.Fatal(err)
+	}
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -103,7 +104,7 @@ func TestAccKMIPSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
 					resource.TestCheckResourceAttr(resourceName, "listen_addrs.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "listen_addrs.0", addr1),
+					resource.TestCheckTypeSetElemAttr(resourceName, "listen_addrs.*", addr1),
 					resource.TestCheckResourceAttr(resourceName, "server_ips.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "server_ips.0", "127.0.0.1"),
 					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_type", "ec"),
@@ -120,7 +121,7 @@ func TestAccKMIPSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "path", remountPath),
 					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
 					resource.TestCheckResourceAttr(resourceName, "listen_addrs.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "listen_addrs.0", addr1),
+					resource.TestCheckTypeSetElemAttr(resourceName, "listen_addrs.*", addr1),
 					resource.TestCheckResourceAttr(resourceName, "server_ips.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "server_ips.0", "127.0.0.1"),
 					resource.TestCheckResourceAttr(resourceName, "tls_ca_key_type", "ec"),
