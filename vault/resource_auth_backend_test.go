@@ -23,12 +23,18 @@ func TestResourceAuth(t *testing.T) {
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config:      testResourceAuth_initialConfig(path + "/"),
-				ExpectError: regexp.MustCompile(`cannot write to a path ending in '/'`),
+				Config: testResourceAuth_initialConfig(path + pathDelim),
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`invalid value "%s" for %q, contains leading/trailing %q`,
+						path+pathDelim, "path", pathDelim),
+				),
 			},
 			{
-				Config:      testResourceAuth_initialConfig("/" + path),
-				ExpectError: regexp.MustCompile(`cannot write to a path starting in '/'`),
+				Config: testResourceAuth_initialConfig(pathDelim + path),
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`invalid value "%s" for %q, contains leading/trailing %q`,
+						pathDelim+path, "path", pathDelim),
+				),
 			},
 			{
 				Config: testResourceAuth_initialConfig(path),
