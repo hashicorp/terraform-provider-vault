@@ -5,7 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const identityOidcPathTemplate = "identity/oidc/config"
@@ -34,7 +35,11 @@ func identityOidcUpdateFields(d *schema.ResourceData, data map[string]interface{
 }
 
 func identityOidcCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := identityOidcPathTemplate
 
 	data := make(map[string]interface{})
@@ -43,7 +48,6 @@ func identityOidcCreate(d *schema.ResourceData, meta interface{}) error {
 	identityOidcUpdateFields(d, data)
 
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error writing IdentityOidc %s: %s", addr, err)
 	}
@@ -55,7 +59,11 @@ func identityOidcCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := identityOidcPathTemplate
 	addr := d.Id()
 
@@ -66,7 +74,6 @@ func identityOidcUpdate(d *schema.ResourceData, meta interface{}) error {
 	identityOidcUpdateFields(d, data)
 
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		return fmt.Errorf("error updating IdentityOidc for %s: %s", addr, err)
 	}
@@ -76,7 +83,11 @@ func identityOidcUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := identityOidcPathTemplate
 	addr := d.Id()
 
@@ -101,7 +112,11 @@ func identityOidcRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	addr := d.Id()
 	path := identityOidcPathTemplate
 
@@ -121,7 +136,11 @@ func identityOidcDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOidcExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	addr := d.Id()
 	path := identityOidcPathTemplate
 

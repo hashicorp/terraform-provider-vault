@@ -26,6 +26,11 @@ resource "vault_auth_backend" "example" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
+
 * `type` - (Required) The name of the auth method type.
 
 * `path` - (Optional) The path to mount the auth method — this defaults to the name of the type.

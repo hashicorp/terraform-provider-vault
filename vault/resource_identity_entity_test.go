@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -118,7 +119,7 @@ func TestAccIdentityEntityUpdateRemovePolicies(t *testing.T) {
 }
 
 func testAccCheckIdentityEntityDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_entity" {
@@ -294,9 +295,9 @@ func TestReadEntity(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer func() {
-				maxHTTPRetriesCCC = DefaultMaxHTTPRetriesCCC
+				provider.MaxHTTPRetriesCCC = DefaultMaxHTTPRetriesCCC
 			}()
-			maxHTTPRetriesCCC = tt.maxRetries
+			provider.MaxHTTPRetriesCCC = tt.maxRetries
 
 			r := tt.retryHandler
 

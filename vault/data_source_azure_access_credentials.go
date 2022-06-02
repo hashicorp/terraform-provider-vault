@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func azureAccessCredentialsDataSource() *schema.Resource {
@@ -109,7 +111,10 @@ Some possible values: AzurePublicCloud, AzureGovernmentCloud`,
 }
 
 func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -204,21 +209,21 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	}
 
 	clientOptions := &arm.ClientOptions{}
-	var e string
+	var environment string
 	if v, ok := d.GetOk("environment"); ok {
-		e = v.(string)
+		environment = v.(string)
 	} else {
 		data, err := getConfigData()
 		if err != nil {
 			return err
 		}
 		if v, ok := data["environment"]; ok && v.(string) != "" {
-			e = v.(string)
+			environment = v.(string)
 		}
 	}
 
-	if e != "" {
-		env, err := azure.EnvironmentFromName(e)
+	if environment != "" {
+		env, err := azure.EnvironmentFromName(environment)
 		if err != nil {
 			return err
 		}

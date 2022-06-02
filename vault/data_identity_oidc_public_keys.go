@@ -7,7 +7,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const identityOIDCPublicKeysPathSuffix = "/.well-known/keys"
@@ -35,7 +36,10 @@ func identityOIDCPublicKeysDataSource() *schema.Resource {
 }
 
 func readOIDCPublicKeysResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Get("name").(string)
 	path := "/v1/" + getOIDCProviderPath(name) + identityOIDCPublicKeysPathSuffix
 	r := client.NewRequest("GET", path)

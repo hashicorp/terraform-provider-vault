@@ -10,8 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -102,7 +102,7 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 }
 
 func testLDAPAuthBackendDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ldap_auth_backend" {
@@ -136,7 +136,7 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 			return fmt.Errorf("expected ID to be %q, got %q instead", endpoint, instanceState.ID)
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {
 			return err
@@ -198,6 +198,7 @@ func testLDAPAuthBackendCheck_attrs(path string) resource.TestCheckFunc {
 			"deny_null_bind":       "deny_null_bind",
 			"upndomain":            "upndomain",
 			"groupfilter":          "groupfilter",
+			"username_as_alias":    "username_as_alias",
 			"groupdn":              "groupdn",
 			"groupattr":            "groupattr",
 			"use_token_groups":     "use_token_groups",
@@ -284,7 +285,8 @@ resource "vault_ldap_auth_backend" "test" {
     discoverdn             = false
     deny_null_bind         = true
     description            = "example"
-	userfilter             = "({{.UserAttr}}={{.Username}})"
+    userfilter             = "({{.UserAttr}}={{.Username}})"
+    username_as_alias      = true
     use_token_groups = %s
 }
 `, path, local, use_token_groups)

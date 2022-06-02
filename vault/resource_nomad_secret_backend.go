@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -106,7 +107,11 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 }
 
 func createNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	backend := d.Get("backend").(string)
 	description := d.Get("description").(string)
 	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
@@ -181,7 +186,10 @@ func createNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) e
 }
 
 func readNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Reading %q", path)
@@ -275,7 +283,11 @@ func readNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) err
 func updateNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {
 	backend := d.Id()
 
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	tune := api.MountConfigInput{}
 	data := map[string]interface{}{}
 
@@ -345,7 +357,11 @@ func updateNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) e
 }
 
 func deleteNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Unmounting Nomad backend %q", vaultPath)
 

@@ -30,6 +30,11 @@ resource "vault_gcp_secret_backend" "gcp" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
+
 * `credentials` - (Optional) The GCP service account credentials in JSON format.
 
 ~> **Important** Because Vault does not support reading the configured

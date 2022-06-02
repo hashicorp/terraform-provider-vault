@@ -39,6 +39,11 @@ resource "vault_ssh_secret_backend_role" "bar" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
+
 * `name` - (Required) Specifies the name of the role to create.
 
 * `backend` - (Required) The path where the SSH secret backend is mounted.

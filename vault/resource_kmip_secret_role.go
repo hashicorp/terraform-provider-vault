@@ -5,7 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const (
@@ -60,7 +61,7 @@ func kmipSecretRoleResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Path where KMIP backend is mounted",
-				ValidateFunc: validateNoTrailingLeadingSlashes,
+				ValidateFunc: validateNoLeadingTrailingSlashes,
 			},
 			"scope": {
 				Type:        schema.TypeString,
@@ -178,7 +179,10 @@ func kmipSecretRoleResource() *schema.Resource {
 }
 
 func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	scope := d.Get("scope").(string)
 	role := d.Get("role").(string)
 
@@ -204,7 +208,10 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	rolePath := d.Id()
 	if rolePath == "" {
 		return fmt.Errorf("expected a path as ID, got empty string")
@@ -238,7 +245,10 @@ func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	rolePath := d.Id()
 
 	if d.HasChange("path") {
@@ -269,7 +279,10 @@ func kmipSecretRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	rolePath := d.Id()
 
 	log.Printf("[DEBUG] Deleting KMIP role %s", rolePath)
