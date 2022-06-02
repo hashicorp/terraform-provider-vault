@@ -385,11 +385,11 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 	data["user_claim"] = d.Get("user_claim").(string)
 
 	if v, ok := d.GetOkExists("user_claim_json_pointer"); ok {
-		data["user_claim_json_pointer"] = v.(bool)
+		data["user_claim_json_pointer"] = v
 	}
 
 	if v, ok := d.GetOk("max_age"); ok {
-		data["max_age"] = v.(int)
+		data["max_age"] = v
 	}
 
 	if dataList := util.TerraformSetToStringArray(d.Get("allowed_redirect_uris")); len(dataList) > 0 {
