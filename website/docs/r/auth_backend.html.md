@@ -31,11 +31,11 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
    *Available only for Vault Enterprise*.
 
-* `type` - (Required) The name of the auth method type
+* `type` - (Required) The name of the auth method type.
 
-* `path` - (Optional) The path to mount the auth method — this defaults to the name of the type
+* `path` - (Optional) The path to mount the auth method — this defaults to the name of the type.
 
-* `description` - (Optional) A description of the auth method
+* `description` - (Optional) A description of the auth method.
 
 * `local` - (Optional) Specifies if the auth method is local only.
 

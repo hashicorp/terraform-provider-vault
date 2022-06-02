@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -21,6 +22,20 @@ func TestResourceAuth(t *testing.T) {
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
+			{
+				Config: testResourceAuth_initialConfig(path + pathDelim),
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`invalid value "%s" for %q, contains leading/trailing %q`,
+						path+pathDelim, "path", pathDelim),
+				),
+			},
+			{
+				Config: testResourceAuth_initialConfig(pathDelim + path),
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`invalid value "%s" for %q, contains leading/trailing %q`,
+						pathDelim+path, "path", pathDelim),
+				),
+			},
 			{
 				Config: testResourceAuth_initialConfig(path),
 				Check:  testResourceAuth_initialCheck(path),
