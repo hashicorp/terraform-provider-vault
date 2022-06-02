@@ -145,6 +145,15 @@ func tokenResource() *schema.Resource {
 				Description: "The client wrapping accessor.",
 				Sensitive:   true,
 			},
+			"metadata": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Metadata to be associated with the token.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -205,6 +214,14 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		createRequest.Renewable = &renewable
 	}
 
+	if v, ok := d.GetOk("metadata"); ok {
+		d := make(map[string]string)
+		for k, val := range v.(map[string]interface{}) {
+			d[k] = val.(string)
+		}
+		createRequest.Metadata = d
+	}
+
 	if v, ok := d.GetOk("wrapping_ttl"); ok {
 		wrappingTTL := v.(string)
 
@@ -249,6 +266,7 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		} else {
 			accessor = resp.Auth.Accessor
 		}
+
 		log.Printf("[DEBUG] Created token accessor %q", accessor)
 	}
 
@@ -320,6 +338,8 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error parsing expire_time: %s", err)
 	}
 	d.Set("lease_duration", int(expireTime.Sub(issueTime).Seconds()))
+
+	d.Set("metadata", resp.Data["meta"])
 
 	if d.Get("renewable").(bool) && tokenCheckLease(d) {
 		if id == "" {
