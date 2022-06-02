@@ -382,11 +382,8 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 	updateTokenFields(d, data, create)
 
 	data["bound_audiences"] = util.TerraformSetToStringArray(d.Get("bound_audiences"))
-	data["user_claim"] = d.Get("user_claim").(string)
-
-	if v, ok := d.GetOkExists("user_claim_json_pointer"); ok {
-		data["user_claim_json_pointer"] = v
-	}
+	data["user_claim"] = d.Get("user_claim")
+	data["user_claim_json_pointer"] = d.Get("user_claim_json_pointer")
 
 	if v, ok := d.GetOk("max_age"); ok {
 		data["max_age"] = v
