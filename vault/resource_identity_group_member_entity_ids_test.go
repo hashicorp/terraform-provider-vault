@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -353,7 +353,7 @@ func (r *memberEntityTester) CheckMemberEntities(resourceName string) resource.T
 }
 
 func testAccCheckidentityGroupMemberEntityIdsDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_group_member_entity_ids" {
@@ -401,7 +401,7 @@ type vaultStateTest struct {
 }
 
 func assertVaultState(tfs *terraform.State, path string, stateTests ...*vaultStateTest) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 	resp, err := client.Logical().Read(path)
 	if err != nil {
 		return fmt.Errorf("%q doesn't exist", path)

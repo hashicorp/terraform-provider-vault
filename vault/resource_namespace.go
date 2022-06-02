@@ -6,7 +6,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func namespaceResource() *schema.Resource {
@@ -24,7 +25,7 @@ func namespaceResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Path of the namespace.",
-				ValidateFunc: validateNoTrailingSlash,
+				ValidateFunc: validateNoLeadingTrailingSlashes,
 			},
 
 			"namespace_id": {
@@ -37,13 +38,15 @@ func namespaceResource() *schema.Resource {
 }
 
 func namespaceWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 
 	log.Printf("[DEBUG] Creating namespace %s in Vault", path)
 	_, err := client.Logical().Write("sys/namespaces/"+path, nil)
-
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -52,14 +55,16 @@ func namespaceWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 
 	log.Printf("[DEBUG] Deleting namespace %s from Vault", path)
 
 	_, err := client.Logical().Delete("sys/namespaces/" + path)
-
 	if err != nil {
 		return fmt.Errorf("error deleting from Vault: %s", err)
 	}
@@ -68,14 +73,16 @@ func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func namespaceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	upgradeNonPathdNamespaceID(d)
 
 	path := d.Id()
 
 	resp, err := client.Logical().Read("sys/namespaces/" + path)
-
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}

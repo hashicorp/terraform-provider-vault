@@ -8,8 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	sdk_schema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/schema"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/vault"
@@ -58,7 +58,7 @@ func TestAlphabetName(t *testing.T) {
 }
 
 func destroy(s *terraform.State) error {
-	client := nameTestProvider.SchemaProvider().Meta().(*api.Client)
+	client := nameTestProvider.SchemaProvider().Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_transform_alphabet_name" {

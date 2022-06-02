@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -88,7 +89,7 @@ func testResourceAudit_initialCheck(expectedPath string) resource.TestCheckFunc 
 }
 
 func findAudit(path string) (*api.Audit, error) {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	path = path + "/"
 

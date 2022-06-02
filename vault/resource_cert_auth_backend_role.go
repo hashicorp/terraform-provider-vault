@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func certAuthBackendRoleResource() *schema.Resource {
@@ -113,7 +113,10 @@ func certCertResourcePath(backend, name string) string {
 }
 
 func certAuthResourceWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -166,7 +169,10 @@ func certAuthResourceWrite(ctx context.Context, d *schema.ResourceData, meta int
 }
 
 func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -213,7 +219,10 @@ func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta in
 }
 
 func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading cert %q", path)
@@ -308,7 +317,10 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 }
 
 func certAuthResourceDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting cert %q", path)

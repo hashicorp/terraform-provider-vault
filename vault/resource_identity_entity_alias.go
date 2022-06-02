@@ -8,9 +8,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -59,7 +59,10 @@ func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta
 	lock()
 	defer unlock()
 
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	path := entity.RootAliasPath
 	name := d.Get("name").(string)
@@ -141,14 +144,17 @@ func identityEntityAliasUpdate(ctx context.Context, d *schema.ResourceData, meta
 	lock()
 	defer unlock()
 
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating entity alias %q", id)
 	path := entity.JoinAliasID(id)
 
 	diags := diag.Diagnostics{}
-
 	data := util.GetAPIRequestData(d, map[string]string{
 		"name":            "",
 		"mount_accessor":  "",
@@ -170,7 +176,11 @@ func identityEntityAliasUpdate(ctx context.Context, d *schema.ResourceData, meta
 }
 
 func identityEntityAliasRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
 	id := d.Id()
 
 	path := entity.JoinAliasID(id)
@@ -214,7 +224,11 @@ func identityEntityAliasDelete(ctx context.Context, d *schema.ResourceData, meta
 	lock()
 	defer unlock()
 
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
 	id := d.Id()
 
 	path := entity.JoinAliasID(id)

@@ -42,6 +42,11 @@ resource "vault_aws_auth_backend_client" "example" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
+
 * `backend` - (Optional) The path the AWS auth backend being configured was
 	mounted at.  Defaults to `aws`.
 
