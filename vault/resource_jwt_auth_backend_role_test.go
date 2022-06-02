@@ -16,7 +16,10 @@ func TestAccJWTAuthBackendRole_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+		},
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -88,7 +91,10 @@ func TestAccJWTAuthBackendRole_basic(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+		},
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -205,7 +211,10 @@ func TestAccJWTAuthBackendRole_full(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+		},
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -269,7 +278,10 @@ func TestAccJWTAuthBackendRoleOIDC_full(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+		},
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -428,7 +440,10 @@ func TestAccJWTAuthBackendRole_fullUpdate(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+		},
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
