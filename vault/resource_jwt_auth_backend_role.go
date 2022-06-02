@@ -119,6 +119,17 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			Default:     false,
 			Description: "Log received OIDC tokens and claims when debug-level logging is active. Not recommended in production since sensitive information may be present in OIDC responses.",
 		},
+		"user_claim_json_pointer": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Specifies if the user_claim value uses JSON pointer syntax for referencing claims. By default, the user_claim value will not use JSON pointer.",
+		},
+		"max_age": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "Specifies the allowable elapsed time in seconds since the last time the user was actively authenticated.",
+		},
 		"backend": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -277,6 +288,12 @@ func jwtAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta inte
 	if v, ok := resp.Data["verbose_oidc_logging"]; ok {
 		d.Set("verbose_oidc_logging", v)
 	}
+	if v, ok := resp.Data["user_claim_json_pointer"]; ok {
+		d.Set("user_claim_json_pointer", v)
+	}
+	if v, ok := resp.Data["max_age"]; ok {
+		d.Set("max_age", v)
+	}
 
 	d.Set("backend", backend)
 	d.Set("role_name", role)
@@ -366,6 +383,14 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 
 	data["bound_audiences"] = util.TerraformSetToStringArray(d.Get("bound_audiences"))
 	data["user_claim"] = d.Get("user_claim").(string)
+
+	if v, ok := d.GetOkExists("user_claim_json_pointer"); ok {
+		data["user_claim_json_pointer"] = v.(bool)
+	}
+
+	if v, ok := d.GetOk("max_age"); ok {
+		data["max_age"] = v.(int)
+	}
 
 	if dataList := util.TerraformSetToStringArray(d.Get("allowed_redirect_uris")); len(dataList) > 0 {
 		data["allowed_redirect_uris"] = dataList
