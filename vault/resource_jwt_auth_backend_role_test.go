@@ -13,13 +13,12 @@ import (
 )
 
 func TestAccJWTAuthBackendRole_import(t *testing.T) {
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
-			testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
-		},
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -87,14 +86,12 @@ func TestAccJWTAuthBackendRole_import(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendRole_basic(t *testing.T) {
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
-
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
-			testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
-		},
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -207,14 +204,12 @@ func TestAccJWTAuthBackendRole_update(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendRole_full(t *testing.T) {
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
-
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
-			testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
-		},
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -274,14 +269,12 @@ func TestAccJWTAuthBackendRole_full(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendRoleOIDC_full(t *testing.T) {
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+
 	backend := acctest.RandomWithPrefix("oidc")
 	role := acctest.RandomWithPrefix("test-role")
-
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
-			testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
-		},
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
@@ -385,6 +378,8 @@ func TestAccJWTAuthBackendRoleOIDC_disableParsing(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendRole_fullUpdate(t *testing.T) {
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
 
@@ -440,10 +435,7 @@ func TestAccJWTAuthBackendRole_fullUpdate(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
-			testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
-		},
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckJWTAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
