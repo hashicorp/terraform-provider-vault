@@ -119,6 +119,8 @@ func TestAccJWTAuthBackendRole_basic(t *testing.T) {
 						"bound_claims_type", "string"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"user_claim", "https://vault/user"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"user_claim_json_pointer", "false"),
 				),
 			},
 		},
@@ -527,8 +529,8 @@ resource "vault_auth_backend" "jwt" {
 
 resource "vault_jwt_auth_backend_role" "role" {
   backend = vault_auth_backend.jwt.path
-	role_name = "%s"
-	role_type = "jwt"
+  role_name = "%s"
+  role_type = "jwt"
 
   bound_audiences = ["https://myco.test"]
   user_claim = "https://vault/user"
@@ -544,8 +546,8 @@ resource "vault_auth_backend" "jwt" {
 
 resource "vault_jwt_auth_backend_role" "role" {
   backend = vault_auth_backend.jwt.path
-	role_name = "%s"
-	role_type = "jwt"
+  role_name = "%s"
+  role_type = "jwt"
 
   bound_audiences = ["https://myco.test"]
   user_claim = "https://vault/user"
