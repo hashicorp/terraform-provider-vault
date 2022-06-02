@@ -38,4 +38,4 @@ In addition to the fields above, the following attributes are exported:
 
 * `local` - Specifies if the auth method is local only.
 
-* `accessor` - The accessor for this auth method
+* `accessor` - The accessor for this auth method.
