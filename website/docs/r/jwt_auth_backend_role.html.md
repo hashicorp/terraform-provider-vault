@@ -69,6 +69,10 @@ The following arguments are supported:
   the user; this will be used as the name for the Identity entity alias created
   due to a successful login.
 
+* `user_claim_json_pointer` - (Optional) Specifies if the `user_claim` value uses
+  [JSON pointer](https://www.vaultproject.io/docs/auth/jwt#claim-specifications-and-json-pointer) 
+  syntax for referencing claims. By default, the `user_claim` value will not use JSON pointer.
+
 * `bound_subject` - (Optional) If set, requires that the `sub` claim matches
   this value.
 
@@ -112,6 +116,9 @@ The following arguments are supported:
 * `verbose_oidc_logging` - (Optional) Log received OIDC tokens and claims when debug-level
   logging is active. Not recommended in production since sensitive information may be present
   in OIDC responses.
+
+* `max_age` - (Optional) Specifies the allowable elapsed time in seconds since the last time 
+  the user was actively authenticated with the OIDC provider.
 
 ### Common Token Arguments
 
