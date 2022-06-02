@@ -9,9 +9,9 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-func genericSecretListDataSource() *schema.Resource {
+func kvSecretListDataSource() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: genericSecretListDataSourceRead,
+		ReadContext: kvSecretListDataSourceRead,
 
 		Schema: map[string]*schema.Schema{
 			"path": {
@@ -32,7 +32,7 @@ func genericSecretListDataSource() *schema.Resource {
 	}
 }
 
-func genericSecretListDataSourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func kvSecretListDataSourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 
 	path := d.Get("path").(string)

@@ -282,14 +282,6 @@ var (
 			Resource:      genericSecretDataSource(),
 			PathInventory: []string{"/secret/data/{path}"},
 		},
-		"vault_generic_secret_list": {
-			Resource:      genericSecretListDataSource(),
-			PathInventory: []string{"/secret/data/{path}/?list=true"},
-		},
-		"vault_generic_secret_list_v2": {
-			Resource:      genericSecretListDataSourceV2(),
-			PathInventory: []string{"/secret/metadata/{path}/?list=true"},
-		},
 		"vault_policy_document": {
 			Resource:      policyDocumentDataSource(),
 			PathInventory: []string{"/sys/policy/{name}"},
@@ -321,6 +313,14 @@ var (
 		"vault_identity_oidc_openid_config": {
 			Resource:      identityOIDCOpenIDConfigDataSource(),
 			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/openid-configuration"},
+		},
+		"vault_kv_secret_list": {
+			Resource:      kvSecretListDataSource(),
+			PathInventory: []string{"/secret/data/{path}/?list=true"},
+		},
+		"vault_kv_secret_list_v2": {
+			Resource:      kvSecretListDataSourceV2(),
+			PathInventory: []string{"/secret/metadata/{path}/?list=true"},
 		},
 	}
 

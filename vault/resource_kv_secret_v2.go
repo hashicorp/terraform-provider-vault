@@ -185,7 +185,7 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 	return diags
 }
 
-func kvSecretV2Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func kvSecretV2Delete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 
 	mount := d.Get("mount").(string)

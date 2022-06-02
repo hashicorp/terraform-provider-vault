@@ -4,9 +4,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func genericSecretListDataSourceV2() *schema.Resource {
+func kvSecretListDataSourceV2() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: genericSecretListDataSourceRead,
+		ReadContext: kvSecretListDataSourceRead,
 
 		Schema: map[string]*schema.Schema{
 			"path": {
