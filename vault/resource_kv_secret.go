@@ -7,7 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func kvSecretResource(name string) *schema.Resource {
@@ -50,7 +51,7 @@ func kvSecretResource(name string) *schema.Resource {
 }
 
 func kvSecretWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client := meta.(*provider.ProviderMeta).GetClient()
 	path := d.Get("path").(string)
 
 	var secretData map[string]interface{}
@@ -79,7 +80,7 @@ func kvSecretRead(_ context.Context, d *schema.ResourceData, meta interface{}) d
 		return diag.FromErr(err)
 	}
 
-	client := meta.(*api.Client)
+	client := meta.(*provider.ProviderMeta).GetClient()
 
 	log.Printf("[DEBUG] Reading %s from Vault", path)
 	secret, err := client.Logical().Read(path)
@@ -104,7 +105,7 @@ func kvSecretRead(_ context.Context, d *schema.ResourceData, meta interface{}) d
 }
 
 func kvSecretDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client := meta.(*provider.ProviderMeta).GetClient()
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting vault_kv_secret from %q", path)

@@ -6,8 +6,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -60,7 +60,7 @@ func kvSecretBackendV2Resource() *schema.Resource {
 }
 
 func kvSecretBackendV2CreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client := meta.(*provider.ProviderMeta).GetClient()
 	mount := d.Get("mount").(string)
 
 	schemaToVaultFieldMap := map[string]string{
@@ -82,7 +82,7 @@ func kvSecretBackendV2CreateUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func kvSecretBackendV2Read(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client := meta.(*provider.ProviderMeta).GetClient()
 	diags := diag.Diagnostics{}
 
 	path := d.Id()

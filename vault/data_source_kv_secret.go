@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func kvSecretDataSource() *schema.Resource {
@@ -47,7 +47,7 @@ func kvSecretDataSource() *schema.Resource {
 }
 
 func kvSecretDataSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client := meta.(*provider.ProviderMeta).GetClient()
 
 	path := d.Get("path").(string)
 

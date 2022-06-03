@@ -8,7 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func kvSecretV2Resource(name string) *schema.Resource {
@@ -107,7 +108,7 @@ func getKVV2Path(mount, name, prefix string) string {
 }
 
 func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client := meta.(*provider.ProviderMeta).GetClient()
 	mount := d.Get("mount").(string)
 	name := d.Get("name").(string)
 
@@ -147,7 +148,7 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 	}
 
 	if shouldRead {
-		client := meta.(*api.Client)
+		client := meta.(*provider.ProviderMeta).GetClient()
 
 		log.Printf("[DEBUG] Reading %s from Vault", path)
 		secret, err := client.Logical().Read(path)
@@ -179,7 +180,7 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 }
 
 func kvSecretV2Delete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client := meta.(*provider.ProviderMeta).GetClient()
 
 	mount := d.Get("mount").(string)
 	name := d.Get("name").(string)
