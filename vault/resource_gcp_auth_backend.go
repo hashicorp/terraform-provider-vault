@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const (
@@ -17,7 +19,6 @@ const (
 
 func gcpAuthBackendResource() *schema.Resource {
 	return &schema.Resource{
-
 		Create: gcpAuthBackendWrite,
 		Update: gcpAuthBackendUpdate,
 		Read:   gcpAuthBackendRead,
@@ -113,7 +114,10 @@ func gcpAuthBackendConfigPath(path string) string {
 }
 
 func gcpAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	authType := gcpAuthType
 	path := d.Get("path").(string)
@@ -137,7 +141,10 @@ func gcpAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := gcpAuthBackendConfigPath(d.Id())
 	data := map[string]interface{}{}
@@ -148,7 +155,6 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Writing gcp config %q", path)
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		d.SetId("")
 		return fmt.Errorf("error writing gcp config %q: %s", path, err)
@@ -159,7 +165,11 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := gcpAuthBackendConfigPath(d.Id())
 
 	log.Printf("[DEBUG] Reading gcp auth backend config %q", path)
@@ -198,7 +208,11 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting gcp auth backend %q", path)
@@ -212,7 +226,11 @@ func gcpAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := gcpAuthBackendConfigPath(d.Id())
 
 	log.Printf("[DEBUG] Checking if gcp auth backend %q exists", path)

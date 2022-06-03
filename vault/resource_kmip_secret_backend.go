@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -38,7 +39,7 @@ func kmipSecretBackendResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Path where KMIP secret backend will be mounted",
-				ValidateFunc: validateNoTrailingLeadingSlashes,
+				ValidateFunc: validateNoLeadingTrailingSlashes,
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -108,7 +109,10 @@ func kmipSecretBackendResource() *schema.Resource {
 }
 
 func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Get("path").(string)
 	defaultTLSClientTTL := fmt.Sprintf("%ds", d.Get("default_tls_client_ttl").(int))
 
@@ -130,7 +134,10 @@ func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 
 	if !d.IsNewResource() && d.HasChange("path") {
@@ -212,7 +219,10 @@ func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Reading KMIP config at %s/config", path)
@@ -238,7 +248,10 @@ func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 	log.Printf("[DEBUG] Unmounting KMIP backend %q", path)
 

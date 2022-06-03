@@ -5,7 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const identityOIDCAssignmentPathPrefix = "identity/oidc/assignment"
@@ -67,7 +68,10 @@ func getOIDCAssignmentPath(name string) string {
 }
 
 func identityOIDCAssignmentCreateUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Get("name").(string)
 	path := getOIDCAssignmentPath(name)
 
@@ -84,7 +88,10 @@ func identityOIDCAssignmentCreateUpdate(d *schema.ResourceData, meta interface{}
 }
 
 func identityOIDCAssignmentRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading OIDC Assignment for %s", path)
@@ -110,7 +117,10 @@ func identityOIDCAssignmentRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func identityOIDCAssignmentDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting OIDC Assignment %s", path)

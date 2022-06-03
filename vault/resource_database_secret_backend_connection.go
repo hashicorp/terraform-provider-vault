@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -1304,7 +1305,10 @@ func setDatabaseConnectionDataWithDisableEscaping(d *schema.ResourceData, prefix
 func databaseSecretBackendConnectionCreateOrUpdate(
 	d *schema.ResourceData, meta interface{},
 ) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	engine, err := getDBEngine(d)
 	if err != nil {
@@ -1411,7 +1415,10 @@ func getSortedPluginPrefixes() ([]string, error) {
 }
 
 func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -1633,7 +1640,11 @@ func getConnectionDetailsMongoDBAtlas(d *schema.ResourceData, prefix string, res
 }
 
 func databaseSecretBackendConnectionDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Removing database connection config %q", path)
@@ -1647,7 +1658,10 @@ func databaseSecretBackendConnectionDelete(d *schema.ResourceData, meta interfac
 }
 
 func databaseSecretBackendConnectionExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 

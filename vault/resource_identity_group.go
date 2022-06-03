@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -154,7 +155,10 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 }
 
 func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 	typeValue := d.Get("type").(string)
@@ -194,7 +198,11 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityGroup %q", id)
@@ -219,7 +227,11 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Read IdentityGroup %s", id)
@@ -249,7 +261,11 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	path := identityGroupIDPath(id)
@@ -268,7 +284,11 @@ func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	id := d.Id()
 	key := id
 

@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -165,7 +166,6 @@ func TestResourceMount_KVV2(t *testing.T) {
 				max_lease_ttl_seconds = 36000
 			}`, path)
 	resource.Test(t, resource.TestCase{
-
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
@@ -664,7 +664,7 @@ resource "vault_mount" "test" {
 }
 
 func findMount(path string) (*api.MountOutput, error) {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	path = path + "/"
 

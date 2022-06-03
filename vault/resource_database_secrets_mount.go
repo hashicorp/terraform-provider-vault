@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 type dbConfigStore struct {
@@ -209,7 +211,10 @@ func setCommonDatabaseSchema(s schemaMap) schemaMap {
 }
 
 func databaseSecretsMountCreateOrUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	var root string
 	if d.IsNewResource() {
@@ -259,7 +264,10 @@ func databaseSecretsMountCreateOrUpdate(d *schema.ResourceData, meta interface{}
 }
 
 func databaseSecretsMountRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	if err := readMount(d, meta, true); err != nil {
 		return err

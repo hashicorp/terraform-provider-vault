@@ -6,7 +6,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func approleAuthBackendRoleIDDataSource() *schema.Resource {
@@ -41,7 +42,10 @@ func approleAuthBackendRoleIDDataSource() *schema.Resource {
 }
 
 func approleAuthBackendRoleIDRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := approleAuthBackendRolePath(d.Get("backend").(string), d.Get("role_name").(string))
 

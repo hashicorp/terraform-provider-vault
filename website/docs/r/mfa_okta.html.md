@@ -33,6 +33,11 @@ resource "vault_mfa_okta" "my_okta" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
+
 - `name` `(string: <required>)` – Name of the MFA method.
 
 - `mount_accessor` `(string: <required>)` - The mount to tie this method to for use in automatic mappings. 

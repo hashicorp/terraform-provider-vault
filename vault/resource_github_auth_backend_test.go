@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -193,7 +194,7 @@ func TestAccGithubAuthBackend_importTuning(t *testing.T) {
 
 func testAccCheckAuthMountExists(n string, out *api.AuthMount) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 		return authMountExistsHelper(n, s, client, out)
 	}
 }
@@ -203,7 +204,7 @@ func testAccCheckGithubAuthMountDestroy(s *terraform.State) error {
 }
 
 func testAccCheckAuthMountDestroy(s *terraform.State, resType string) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 	return authMountDestroyHelper(s, client, resType)
 }
 

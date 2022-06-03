@@ -8,8 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -113,14 +113,17 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 
 func TestAccJWTAuthBackend_invalid(t *testing.T) {
 	path := acctest.RandomWithPrefix("jwt")
+	invalidPath := path + pathDelim
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccJWTAuthBackendConfig(path + "/"),
-				Destroy:     false,
-				ExpectError: regexp.MustCompile("Error: cannot write to a path ending in '/'"),
+				Config:  testAccJWTAuthBackendConfig(invalidPath),
+				Destroy: false,
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`invalid value "%s" for "path", contains leading/trailing "%s"`,
+						invalidPath, pathDelim)),
 			},
 			{
 				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "jwt" {
@@ -229,7 +232,7 @@ resource "vault_jwt_auth_backend" "oidc" {
 
 func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {
