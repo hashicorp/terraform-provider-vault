@@ -48,6 +48,7 @@ func kvSecretBackendV2Resource() *schema.Resource {
 					"`delete_version_after_input` formatted by Vault in " +
 					"`00h00m00s` format",
 			},
+			// field used to avoid diff from Vault
 			"delete_version_after_input": {
 				Type:     schema.TypeString,
 				Optional: true,

@@ -10,132 +10,67 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestDataSourceGenericSecretList_v1(t *testing.T) {
+func TestDataSourceKVSecretList(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-kv")
 	s1 := acctest.RandomWithPrefix("foo")
 	s2 := acctest.RandomWithPrefix("bar")
 
-	resourceName := "data.vault_generic_secret_list.test"
+	datasourceName := "data.vault_kv_secret_list.test"
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testDataSourceGenericSecretListConfig(mount, s1, s2, false),
+				Config: testDataSourceKVSecretListConfig(mount, s1, s2),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", mount),
-					resource.TestCheckResourceAttr(resourceName, "names.#", "3"),
-					resource.TestCheckResourceAttr(resourceName, "names.0", s2),
-					resource.TestCheckResourceAttr(resourceName, "names.1", fmt.Sprintf("%s/", s2)),
-					resource.TestCheckResourceAttr(resourceName, "names.2", s1),
+					resource.TestCheckResourceAttr(datasourceName, "path", fmt.Sprintf("%s", mount)),
+					resource.TestCheckResourceAttr(datasourceName, "names.#", "3"),
+					resource.TestCheckResourceAttr(datasourceName, "names.0", s2),
+					resource.TestCheckResourceAttr(datasourceName, "names.1", fmt.Sprintf("%s/", s2)),
+					resource.TestCheckResourceAttr(datasourceName, "names.2", s1),
 				),
 			},
 		},
 	})
 }
 
-func TestDataSourceGenericSecretList_v2(t *testing.T) {
-	mount := acctest.RandomWithPrefix("tf-kv")
-	s1 := acctest.RandomWithPrefix("foo")
-	s2 := acctest.RandomWithPrefix("bar")
-
-	resourceName := "data.vault_generic_secret_list_v2.test"
-	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Steps: []resource.TestStep{
-			{
-				Config: testDataSourceGenericSecretListConfig(mount, s1, s2, true),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", fmt.Sprintf("%s/metadata", mount)),
-					resource.TestCheckResourceAttr(resourceName, "names.#", "3"),
-					resource.TestCheckResourceAttr(resourceName, "names.0", s2),
-					resource.TestCheckResourceAttr(resourceName, "names.1", fmt.Sprintf("%s/", s2)),
-					resource.TestCheckResourceAttr(resourceName, "names.2", s1),
-				),
-			},
-		},
-	})
-}
-
-func testDataSourceGenericSecretListMountConfig(mount string, isV2 bool) string {
-	ret := fmt.Sprintf(`
-resource "vault_mount" "test" {
-	  path = "%s"
-	  type = "kv"
-	  description = "Example KV Mount."
-`, mount)
-	if isV2 {
-		ret += fmt.Sprintf(`
-	  options = {
-		  version = "2"
-	  }
-}`)
-	} else {
-		ret += fmt.Sprintf(`
-	  options = {
-		  version = "1"
-	  }
-}`)
-	}
-
-	return ret
-}
-
-func testDataSourceGenericSecretConfig(mount, secretPath1, secretPath2 string, isV2 bool) string {
+func testDataSourceKVSecretListConfig(mount, secretPath1, secretPath2 string) string {
 	return fmt.Sprintf(`
 %s
 
-resource "vault_generic_secret" "test_1" {
-    path      = "${vault_mount.test.path}/%s"
-    data_json = <<EOT
-{
-    "zip": "zap"
-}
-EOT
-}
-
-resource "vault_generic_secret" "test_2" {
-  path      = "${vault_mount.test.path}/%s"
-
-  data_json = <<EOT
-{
-  "foo":   "bar",
-  "pizza": "cheese"
-}
-EOT
+resource "vault_kv_secret" "test_1" {
+  path = "${vault_mount.kvv1.path}/%s"
+  data_json = jsonencode(
+    {
+      zip = "zap",
+      foo = "bar"
+    }
+  )
 }
 
-resource "vault_generic_secret" "test_nested" {
-  path = "${vault_generic_secret.test_2.path}/biz"
-
-  data_json = <<EOT
-{
-  "foo":   "bar",
-  "pizza": "cheese"
-}
-EOT
-}
-
-`, testDataSourceGenericSecretListMountConfig(mount, isV2), secretPath1, secretPath2)
+resource "vault_kv_secret" "test_2" {
+  path = "${vault_mount.kvv1.path}/%s"
+  data_json = jsonencode(
+    {
+      zip = "zap",
+      foo = "bar"
+    }
+  )
 }
 
-func testDataSourceGenericSecretListConfig(mount, secretPath1, secretPath2 string, isV2 bool) string {
-	ret := testDataSourceGenericSecretConfig(mount, secretPath1, secretPath2, isV2)
+resource "vault_kv_secret" "test_nested" {
+  path = "${vault_kv_secret.test_2.path}/biz"
+  data_json = jsonencode(
+    {
+      zip = "zap",
+      foo = "bar"
+    }
+  )
+}
 
-	if isV2 {
-		ret += fmt.Sprintf(`
-data "vault_generic_secret_list_v2" "test" {
-    depends_on = [vault_generic_secret.test_1, vault_generic_secret.test_nested]
-    path       = "${vault_mount.test.path}/metadata"
-}`)
-	} else {
-		ret += fmt.Sprintf(`
-data "vault_generic_secret_list" "test" {
-    depends_on = [vault_generic_secret.test_1, vault_generic_secret.test_nested]
-    path       = vault_mount.test.path
-}`)
-	}
-
-	return ret
+data "vault_kv_secret_list" "test" {
+  path       = vault_mount.kvv1.path
+  depends_on = [vault_kv_secret.test_nested, vault_kv_secret.test_1]
+}`, kvV1MountConfig(mount), secretPath1, secretPath2)
 }
