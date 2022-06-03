@@ -27,8 +27,9 @@ const gcpJSONCredentials string = `
 `
 
 func TestGCPAuthBackend_basic(t *testing.T) {
-	path := resource.PrefixedUniqueId("gcp-basic-")
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
 
+	path := resource.PrefixedUniqueId("gcp-basic-")
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
@@ -37,6 +38,22 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
 				Check:  testGCPAuthBackendCheck_attrs(),
+			},
+			{
+				Config: testGCPAuthBackendConfig_update(path, gcpJSONCredentials),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testGCPAuthBackendCheck_attrs(),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.%", "4"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.api", "www.googleapis.com"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.iam", "iam.googleapis.com"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.crm", "cloudresourcemanager.googleapis.com"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.compute", "compute.googleapis.com"),
+				),
 			},
 		},
 	})
@@ -110,6 +127,26 @@ variable "json_credentials" {
 resource "vault_gcp_auth_backend" "test" {
   path                          = %q
   credentials                   = var.json_credentials
+}
+`, credentials, path)
+}
+
+func testGCPAuthBackendConfig_update(path, credentials string) string {
+	return fmt.Sprintf(`
+variable "json_credentials" {
+  type = string
+  default = %q
+}
+
+resource "vault_gcp_auth_backend" "test" {
+  path                          = %q
+  credentials                   = var.json_credentials
+  custom_endpoint = {
+    api     = "www.googleapis.com"
+    iam     = "iam.googleapis.com"
+    crm     = "cloudresourcemanager.googleapis.com"
+    compute = "compute.googleapis.com"
+  }
 }
 `, credentials, path)
 }

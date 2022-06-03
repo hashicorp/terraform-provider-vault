@@ -73,6 +73,14 @@ func gcpAuthBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies if the auth method is local only",
 			},
+			"custom_endpoint": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Specifies overrides to service endpoints used when making API requests to GCP",
+			},
 		},
 	}
 }
@@ -143,7 +151,11 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 
 	if v, ok := d.GetOk("credentials"); ok {
-		data["credentials"] = v.(string)
+		data["credentials"] = v
+	}
+
+	if v, ok := d.GetOk("custom_endpoint"); ok {
+		data["custom_endpoint"] = v
 	}
 
 	log.Printf("[DEBUG] Writing gcp config %q", path)
@@ -181,6 +193,7 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		"project_id",
 		"client_email",
 		"local",
+		"custom_endpoint",
 	}
 
 	for _, param := range params {
