@@ -239,9 +239,12 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 // namespace. The value for the namespace is resolved from *schema.ResourceData,
 // *schema.ResourceDiff, or *terraform.InstanceState.
 func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
-	p, ok := meta.(*ProviderMeta)
-	if p == nil || !ok {
-		return nil, fmt.Errorf("meta argument must be a ProviderMeta")
+	var p *ProviderMeta
+	switch v := meta.(type) {
+	case *ProviderMeta:
+		p = v
+	default:
+		return nil, fmt.Errorf("meta argument must be a %T, not %T", p, meta)
 	}
 
 	var ns string

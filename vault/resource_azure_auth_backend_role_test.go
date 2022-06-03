@@ -1,9 +1,7 @@
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -19,6 +17,7 @@ func TestAzureAuthBackendRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-azure-backend")
 	name := acctest.RandomWithPrefix("tf-test-azure-role")
 
+	resourceName := "vault_azure_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
@@ -26,7 +25,7 @@ func TestAzureAuthBackendRole_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAzureAuthBackendRoleConfig_basic(backend, name),
-				Check:  testAzureAuthBackendRoleCheck_attrs(backend, name),
+				Check:  testAzureAuthBackendRoleCheck_attrs(resourceName, backend, name),
 			},
 		},
 	})
@@ -36,6 +35,7 @@ func TestAzureAuthBackendRole(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-azure-backend")
 	name := acctest.RandomWithPrefix("tf-test-azure-role")
 
+	resourceName := "vault_azure_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
@@ -44,25 +44,19 @@ func TestAzureAuthBackendRole(t *testing.T) {
 			{
 				Config: testAzureAuthBackendRoleConfig(backend, name),
 				Check: resource.ComposeTestCheckFunc(
-					testAzureAuthBackendRoleCheck_attrs(backend, name),
-					resource.TestCheckResourceAttr("vault_azure_auth_backend_role.test",
-						"token_ttl", "300"),
-					resource.TestCheckResourceAttr("vault_azure_auth_backend_role.test",
-						"token_max_ttl", "600"),
-					resource.TestCheckResourceAttr("vault_azure_auth_backend_role.test",
-						"token_policies.#", "2"),
+					testAzureAuthBackendRoleCheck_attrs(resourceName, backend, name),
+					resource.TestCheckResourceAttr(resourceName, "token_ttl", "300"),
+					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "600"),
+					resource.TestCheckResourceAttr(resourceName, "token_policies.#", "2"),
 				),
 			},
 			{
 				Config: testAzureAuthBackendRoleUnset(backend, name),
 				Check: resource.ComposeTestCheckFunc(
-					testAzureAuthBackendRoleCheck_attrs(backend, name),
-					resource.TestCheckResourceAttr("vault_azure_auth_backend_role.test",
-						"token_ttl", "0"),
-					resource.TestCheckResourceAttr("vault_azure_auth_backend_role.test",
-						"token_max_ttl", "0"),
-					resource.TestCheckResourceAttr("vault_azure_auth_backend_role.test",
-						"token_policies.#", "0"),
+					testAzureAuthBackendRoleCheck_attrs(resourceName, backend, name),
+					resource.TestCheckResourceAttr(resourceName, "token_ttl", "0"),
+					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "0"),
+					resource.TestCheckResourceAttr(resourceName, "token_policies.#", "0"),
 				),
 			},
 		},
@@ -87,24 +81,25 @@ func testAzureAuthBackendRoleDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAzureAuthBackendRoleCheck_attrs(backend, name string) resource.TestCheckFunc {
+func testAzureAuthBackendRoleCheck_attrs(resourceName, backend, name string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_azure_auth_backend_role.test"]
-		if resourceState == nil {
-			return fmt.Errorf("resource not found in state")
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
 		}
 
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("resource has no primary instance")
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
+		if err != nil {
+			return err
 		}
+
+		path := rs.Primary.ID
 
 		endpoint := "auth/" + strings.Trim(backend, "/") + "/role/" + name
-		if endpoint != instanceState.ID {
-			return fmt.Errorf("expected ID to be %q, got %q instead", endpoint, instanceState.ID)
+		if endpoint != path {
+			return fmt.Errorf("expected ID to be %q, got %q instead", endpoint, path)
 		}
 
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {
 			return err
@@ -118,18 +113,7 @@ func testAzureAuthBackendRoleCheck_attrs(backend, name string) resource.TestChec
 		if "azure" != authMount.Type {
 			return fmt.Errorf("incorrect mount type: %s", authMount.Type)
 		}
-
-		resp, err := client.Logical().Read(instanceState.ID)
-		if err != nil {
-			return err
-		}
-
 		attrs := map[string]string{
-			"type":                        "role_type",
-			"token_ttl":                   "token_ttl",
-			"token_max_ttl":               "token_max_ttl",
-			"token_period":                "token_period",
-			"token_policies":              "token_policies",
 			"bound_service_principal_ids": "bound_service_principal_ids",
 			"bound_group_ids":             "bound_group_ids",
 			"bound_locations":             "bound_locations",
@@ -138,76 +122,26 @@ func testAzureAuthBackendRoleCheck_attrs(backend, name string) resource.TestChec
 			"bound_scale_sets":            "bound_scale_sets",
 		}
 
-		for stateAttr, apiAttr := range attrs {
-			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
-				continue
-			}
-			var match bool
-			switch resp.Data[apiAttr].(type) {
-			case json.Number:
-				apiData, err := resp.Data[apiAttr].(json.Number).Int64()
-				if err != nil {
-					return fmt.Errorf("Expected API field %s to be an int, was %q", apiAttr, resp.Data[apiAttr])
-				}
-				stateData, err := strconv.ParseInt(instanceState.Attributes[stateAttr], 10, 64)
-				if err != nil {
-					return fmt.Errorf("Expected state field %s to be an int, was %q", stateAttr, instanceState.Attributes[stateAttr])
-				}
-				match = apiData == stateData
-			case bool:
-				if _, ok := resp.Data[apiAttr]; !ok && instanceState.Attributes[stateAttr] == "" {
-					match = true
-				} else {
-					stateData, err := strconv.ParseBool(instanceState.Attributes[stateAttr])
-					if err != nil {
-						return fmt.Errorf("Expected state field %s to be a bool, was %q", stateAttr, instanceState.Attributes[stateAttr])
-					}
-					match = resp.Data[apiAttr] == stateData
-				}
-
-			case []interface{}:
-				apiData := resp.Data[apiAttr].([]interface{})
-				length := instanceState.Attributes[stateAttr+".#"]
-				if length == "" {
-					if len(resp.Data[apiAttr].([]interface{})) != 0 {
-						return fmt.Errorf("Expected state field %s to have %d entries, had 0", stateAttr, len(apiData))
-					}
-					match = true
-				} else {
-					count, err := strconv.Atoi(length)
-					if err != nil {
-						return fmt.Errorf("Expected %s.# to be a number, got %q", stateAttr, instanceState.Attributes[stateAttr+".#"])
-					}
-					if count != len(apiData) {
-						return fmt.Errorf("Expected %s to have %d entries in state, has %d", stateAttr, len(apiData), count)
-					}
-
-					for i := 0; i < count; i++ {
-						found := false
-						for stateKey, stateValue := range instanceState.Attributes {
-							if strings.HasPrefix(stateKey, stateAttr) {
-								if apiData[i] == stateValue {
-									found = true
-								}
-							}
-						}
-						if !found {
-							return fmt.Errorf("Expected item %d of %s (%s in state) of %q to be in state but wasn't", i, apiAttr, stateAttr, endpoint)
-						}
-					}
-					match = true
-				}
-			default:
-				match = resp.Data[apiAttr] == instanceState.Attributes[stateAttr]
-
-			}
-			if !match {
-				return fmt.Errorf("Expected %s (%s in state) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
-			}
-
+		for _, v := range commonTokenFields {
+			attrs[v] = v
 		}
 
-		return nil
+		tAttrs := []*testutil.VaultStateTest{}
+		for k, v := range attrs {
+			ta := &testutil.VaultStateTest{
+				ResourceName: resourceName,
+				StateAttr:    k,
+				VaultAttr:    v,
+			}
+			switch k {
+			case TokenFieldPolicies:
+				ta.AsSet = true
+			}
+
+			tAttrs = append(tAttrs, ta)
+		}
+
+		return testutil.AssertVaultState(client, s, path, tAttrs...)
 	}
 }
 

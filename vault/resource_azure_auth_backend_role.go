@@ -216,30 +216,12 @@ func azureAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 
 	d.Set("backend", backend)
 	d.Set("role", role)
-
-	if _, ok := d.GetOk("bound_service_principal_ids"); ok {
-		d.Set("bound_service_principal_ids", resp.Data["bound_service_principal_ids"])
-	}
-
-	if _, ok := d.GetOk("bound_group_ids"); ok {
-		d.Set("bound_group_ids", resp.Data["bound_group_ids"])
-	}
-
-	if _, ok := d.GetOk("bound_locations"); ok {
-		d.Set("bound_locations", resp.Data["bound_locations"])
-	}
-
-	if _, ok := d.GetOk("bound_subscription_ids"); ok {
-		d.Set("bound_subscription_ids", resp.Data["bound_subscription_ids"])
-	}
-
-	if _, ok := d.GetOk("bound_resource_groups"); ok {
-		d.Set("bound_resource_groups", resp.Data["bound_resource_groups"])
-	}
-
-	if _, ok := d.GetOk("bound_scale_sets"); ok {
-		d.Set("bound_scale_sets", resp.Data["bound_scale_sets"])
-	}
+	d.Set("bound_service_principal_ids", resp.Data["bound_service_principal_ids"])
+	d.Set("bound_group_ids", resp.Data["bound_group_ids"])
+	d.Set("bound_locations", resp.Data["bound_locations"])
+	d.Set("bound_subscription_ids", resp.Data["bound_subscription_ids"])
+	d.Set("bound_resource_groups", resp.Data["bound_resource_groups"])
+	d.Set("bound_scale_sets", resp.Data["bound_scale_sets"])
 
 	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
 

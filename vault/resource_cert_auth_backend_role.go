@@ -68,8 +68,19 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-			Optional: true,
-			Computed: true,
+			Optional:      true,
+			Computed:      true,
+			Deprecated:    "Use allowed_organizational_units",
+			ConflictsWith: []string{"allowed_organizational_units"},
+		},
+		"allowed_organizational_units": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Optional:      true,
+			Computed:      true,
+			ConflictsWith: []string{"allowed_organization_units"},
 		},
 		"required_extensions": {
 			Type: schema.TypeSet,
@@ -144,8 +155,11 @@ func certAuthResourceWrite(ctx context.Context, d *schema.ResourceData, meta int
 		data["allowed_uri_sans"] = v.(*schema.Set).List()
 	}
 
-	if v, ok := d.GetOk("allowed_organization_units"); ok {
-		data["allowed_organization_units"] = v.(*schema.Set).List()
+	for _, k := range []string{"allowed_organizational_units", "allowed_organization_units"} {
+		if v, ok := d.GetOk(k); ok {
+			data["allowed_organizational_units"] = v.(*schema.Set).List()
+			break
+		}
 	}
 
 	if v, ok := d.GetOk("required_extensions"); ok {
@@ -196,8 +210,11 @@ func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		data["allowed_uri_sans"] = v.(*schema.Set).List()
 	}
 
-	if v, ok := d.GetOk("allowed_organization_units"); ok {
-		data["allowed_organization_units"] = v.(*schema.Set).List()
+	for _, k := range []string{"allowed_organizational_units", "allowed_organization_units"} {
+		if v, ok := d.GetOk(k); ok {
+			data["allowed_organizational_units"] = v.(*schema.Set).List()
+			break
+		}
 	}
 
 	if v, ok := d.GetOk("required_extensions"); ok {
@@ -309,6 +326,12 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 		d.Set("required_extensions",
 			schema.NewSet(
 				schema.HashString, []interface{}{}))
+	}
+
+	for _, k := range []string{"allowed_organizational_units", "allowed_organization_units"} {
+		if err := d.Set(k, resp.Data["allowed_organizational_units"]); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
