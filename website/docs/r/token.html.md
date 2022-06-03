@@ -38,12 +38,21 @@ resource "vault_token" "example" {
 
   renew_min_lease = 43200
   renew_increment = 86400
+
+  metadata = {
+    "purpose" = "service-account"
+  }
 }
 ```
 
 ## Argument Reference
 
 The following arguments are supported:
+
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
 
 * `role_name` - (Optional) The token role name
 
@@ -68,6 +77,8 @@ The following arguments are supported:
 * `renew_min_lease` - (Optional) The minimal lease to renew this token
 
 * `renew_increment` - (Optional) The renew increment
+
+* `metadata` - (Optional) Metadata to be set on this token
 
 ## Attributes Reference
 

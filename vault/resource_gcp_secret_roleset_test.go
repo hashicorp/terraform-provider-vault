@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -120,7 +120,7 @@ func testGCPSecretRoleset_attrs(backend, roleset string) resource.TestCheckFunc 
 			return fmt.Errorf("expected ID to be %q, got %q instead", backend+"/roleset/"+roleset, endpoint)
 		}
 
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 		resp, err := client.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", endpoint)
@@ -290,7 +290,7 @@ func testGCPSecretRoleset_serviceAccountEmail(serviceAccountEmail *string, check
 }
 
 func testGCPSecretRolesetDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_gcp_secret_roleset" {

@@ -9,8 +9,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 const roleNameEndpoint = "/transform/encode/{role_name}"
@@ -73,7 +74,10 @@ func RoleNameDataSource() *schema.Resource {
 }
 
 func readRoleNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Get("path").(string)
 	vaultPath := util.ParsePath(path, roleNameEndpoint, d)
 	log.Printf("[DEBUG] Writing %q", vaultPath)

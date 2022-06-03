@@ -30,6 +30,11 @@ resource "vault_raft_autopilot" "autopilot" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
+
 - `cleanup_dead_servers` – (Optional) Specifies whether to remove dead server nodes
 periodically or when a new server joins. This requires that `min-quorum` is also set.
 

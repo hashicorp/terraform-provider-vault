@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func tokenResource() *schema.Resource {
@@ -143,12 +145,25 @@ func tokenResource() *schema.Resource {
 				Description: "The client wrapping accessor.",
 				Sensitive:   true,
 			},
+			"metadata": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Metadata to be associated with the token.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
 
 func tokenCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	var err error
 	var wrapped bool
 
@@ -199,6 +214,14 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		createRequest.Renewable = &renewable
 	}
 
+	if v, ok := d.GetOk("metadata"); ok {
+		d := make(map[string]string)
+		for k, val := range v.(map[string]interface{}) {
+			d[k] = val.(string)
+		}
+		createRequest.Metadata = d
+	}
+
 	if v, ok := d.GetOk("wrapping_ttl"); ok {
 		wrappingTTL := v.(string)
 
@@ -243,6 +266,7 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		} else {
 			accessor = resp.Auth.Accessor
 		}
+
 		log.Printf("[DEBUG] Created token accessor %q", accessor)
 	}
 
@@ -259,7 +283,10 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	id := d.Get("client_token").(string)
 	accessor := d.Id()
@@ -312,6 +339,8 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	d.Set("lease_duration", int(expireTime.Sub(issueTime).Seconds()))
 
+	d.Set("metadata", resp.Data["meta"])
+
 	if d.Get("renewable").(bool) && tokenCheckLease(d) {
 		if id == "" {
 			log.Printf("[DEBUG] Lease for token access %q cannot be renewed as it's been encrypted.", accessor)
@@ -350,7 +379,10 @@ func tokenUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	token := d.Id()
 
@@ -365,7 +397,11 @@ func tokenDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	accessor := d.Id()
 
 	log.Printf("[DEBUG] Checking if token accessor %q exists", accessor)

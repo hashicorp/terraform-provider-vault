@@ -6,7 +6,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func mfaOktaResource() *schema.Resource {
@@ -103,7 +104,10 @@ func mfaOktaRequestData(d *schema.ResourceData) map[string]interface{} {
 }
 
 func mfaOktaWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Get("name").(string)
 	path := mfaOktaPath(name)
 
@@ -119,7 +123,10 @@ func mfaOktaWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaOktaRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := mfaOktaPath(d.Id())
 
 	log.Printf("[DEBUG] Reading MFA Okta config %q", path)
@@ -148,7 +155,10 @@ func mfaOktaUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaOktaDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := mfaOktaPath(d.Id())
 
 	log.Printf("[DEBUG] Deleting mfaOkta %s from Vault", path)

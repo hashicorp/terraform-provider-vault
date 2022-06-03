@@ -8,13 +8,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestNamespace_basic(t *testing.T) {
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
+	invalidNamespace := namespacePath + pathDelim
 	childPath := acctest.RandomWithPrefix("child-namespace")
 
 	resource.Test(t, resource.TestCase{
@@ -27,9 +28,11 @@ func TestNamespace_basic(t *testing.T) {
 				Check:  testNamespaceCheckAttrs(),
 			},
 			{
-				Config:      testNamespaceConfig(namespacePath + "/"),
-				Destroy:     false,
-				ExpectError: regexp.MustCompile("Error: cannot write to a path ending in '/'"),
+				Config:  testNamespaceConfig(invalidNamespace),
+				Destroy: false,
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`invalid value "%s" for "path", contains leading/trailing "%s"`,
+						invalidNamespace, pathDelim)),
 			},
 			{
 				Config: testNestedNamespaceConfig(namespacePath, childPath),
@@ -57,7 +60,7 @@ func testNamespaceCheckAttrs() resource.TestCheckFunc {
 
 func testNamespaceDestroy(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 		namespaceRef, err := client.Logical().Read(fmt.Sprintf("/sys/namespaces/%s", path))
 		if err != nil {

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -280,7 +280,11 @@ func buildConfigFromResourceData(d *schema.ResourceData) (map[string]interface{}
 }
 
 func createOrUpdateSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Get("name").(string)
 	path := fmt.Sprintf(snapshotAutoPath, name)
 
@@ -300,7 +304,10 @@ func createOrUpdateSnapshotAgentConfigResource(d *schema.ResourceData, meta inte
 }
 
 func readSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 	configPath := fmt.Sprintf(snapshotAutoPath, name)
@@ -481,7 +488,11 @@ func readSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) e
 }
 
 func deleteSnapshotAgentConfigResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	name := d.Id()
 	path := fmt.Sprintf(snapshotAutoPath, name)
 

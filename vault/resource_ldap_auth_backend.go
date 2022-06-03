@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const ldapAuthType string = "ldap"
@@ -108,6 +110,12 @@ func ldapAuthBackendResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
+		"username_as_alias": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+			Description: "Force the auth method to use the username passed by the user as the alias name.",
+		},
 		"use_token_groups": {
 			Type:     schema.TypeBool,
 			Optional: true,
@@ -175,7 +183,10 @@ func ldapAuthBackendConfigPath(path string) string {
 }
 
 func ldapAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	path := d.Get("path").(string)
 	options := &api.EnableAuthOptions{
@@ -197,7 +208,10 @@ func ldapAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inte
 }
 
 func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	path := ldapAuthBackendConfigPath(d.Id())
 	data := map[string]interface{}{}
@@ -273,6 +287,10 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		data["groupattr"] = v.(string)
 	}
 
+	if v, ok := d.GetOkExists("username_as_alias"); ok {
+		data["username_as_alias"] = v.(bool)
+	}
+
 	if v, ok := d.GetOkExists("use_token_groups"); ok {
 		data["use_token_groups"] = v.(bool)
 	}
@@ -299,7 +317,10 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 }
 
 func ldapAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	path := d.Id()
 	auths, err := client.Sys().ListAuth()
@@ -354,6 +375,7 @@ func ldapAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interfa
 	d.Set("groupfilter", resp.Data["groupfilter"])
 	d.Set("groupdn", resp.Data["groupdn"])
 	d.Set("groupattr", resp.Data["groupattr"])
+	d.Set("username_as_alias", resp.Data["username_as_alias"])
 	d.Set("use_token_groups", resp.Data["use_token_groups"])
 
 	// `bindpass`, `client_tls_cert` and `client_tls_key` cannot be read out from the API
@@ -365,7 +387,10 @@ func ldapAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interfa
 }
 
 func ldapAuthBackendDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting LDAP auth backend %q", path)

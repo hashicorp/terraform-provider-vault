@@ -9,8 +9,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -164,7 +164,10 @@ func pkiSecretBackendCertResource() *schema.Resource {
 }
 
 func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -281,7 +284,10 @@ func pkiSecretBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Get("backend").(string)
 	enabled, err := util.CheckMountEnabled(client, path)
 	if err != nil {
@@ -305,7 +311,10 @@ func pkiSecretBackendCertUpdate(d *schema.ResourceData, m interface{}) error {
 
 func pkiSecretBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
 	if d.Get("revoke").(bool) {
-		client := meta.(*api.Client)
+		client, e := provider.GetClient(d, meta)
+		if e != nil {
+			return e
+		}
 
 		backend := d.Get("backend").(string)
 		path := strings.Trim(backend, "/") + "/revoke"

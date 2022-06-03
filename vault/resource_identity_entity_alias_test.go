@@ -8,9 +8,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -186,7 +186,7 @@ resource "vault_identity_entity_alias" "test2" {
 			{
 				// delete one of the alias's to ensure an update operation re-creates it.
 				PreConfig: func() {
-					client := testProvider.Meta().(*api.Client)
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 					aliases, err := entity.FindAliases(client, &entity.FindAliasParams{
 						Name: alias,
 					})
@@ -259,7 +259,7 @@ func TestAccIdentityEntityAlias_Update(t *testing.T) {
 }
 
 func testAccCheckIdentityEntityAliasDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_entity_alias" {

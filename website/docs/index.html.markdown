@@ -178,7 +178,9 @@ variables in order to keep credential information out of the configuration.
   for more information.*
 
 * `namespace` - (Optional) Set the namespace to use. May be set via the
-  `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
+  `VAULT_NAMESPACE` environment variable.
+  See [namespaces](https://www.vaultproject.io/docs/enterprise/namespaces) for more info.
+  *Available only for Vault Enterprise*.
 
 * `headers` - (Optional) A configuration block, described below, that provides headers
 to be sent along with all requests to the Vault server.  This block can be specified
@@ -192,7 +194,7 @@ The `auth_login` configuration block accepts the following arguments:
 
 * `namespace` - (Optional) The path to the namespace that has the mounted auth method.
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
-  *Available only for Vault Enterprise*
+  *Available only for Vault Enterprise*.
 
 * `method` - (Optional) When configured, will enable auth method specific operations.
   For example, when set to `aws`, the provider will automatically sign login requests
@@ -221,9 +223,9 @@ The `headers` configuration block accepts the following arguments:
 Terraform supports various logging options by default.
 These are documented [here](https://www.terraform.io/docs/internals/debugging.html).
 
-~> The environment variables below can be configured to provide extended log output and require log level `DEBUG`
-or higher. It's important to note that any extended log output may **reveal secrets**, so please exercise caution
-when enabling any of the following:
+~> The environment variables below can be configured to provide extended log output. The Terraform log level must 
+be set to `DEBUG` or higher. It's important to note that any extended log output 
+may **reveal secrets**, so please exercise caution when enabling any of the following:
 
 * `TERRAFORM_VAULT_LOG_BODY` - when set to `true` both the request and response body will be logged.
 
