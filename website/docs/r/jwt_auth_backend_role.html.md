@@ -72,6 +72,7 @@ The following arguments are supported:
 * `user_claim_json_pointer` - (Optional) Specifies if the `user_claim` value uses
   [JSON pointer](https://www.vaultproject.io/docs/auth/jwt#claim-specifications-and-json-pointer) 
   syntax for referencing claims. By default, the `user_claim` value will not use JSON pointer.
+  Requires Vault 1.11+.
 
 * `bound_subject` - (Optional) If set, requires that the `sub` claim matches
   this value.

@@ -13,8 +13,15 @@ Provides a resource to configure the [GCP auth backend within Vault](https://www
 ## Example Usage
 
 ```hcl
-resource "vault_gcp_auth_backend" "gcp" {
-    credentials  = file("vault-gcp-credentials.json")
+resource "vault_gcp_auth_backend" "gcp" { 
+  credentials  = file("vault-gcp-credentials.json")
+
+  custom_endpoint = {
+    api     = "www.googleapis.com"
+    iam     = "iam.googleapis.com"
+    crm     = "cloudresourcemanager.googleapis.com"
+    compute = "compute.googleapis.com"
+  }
 }
 ```
 
@@ -34,7 +41,7 @@ The following arguments are supported:
   [service endpoints](https://cloud.google.com/apis/design/glossary#api_service_endpoint)
   used when making API requests. This allows specific requests made during authentication
   to target alternative service endpoints for use in [Private Google Access](https://cloud.google.com/vpc/docs/configure-private-google-access)
-  environments.
+  environments. Requires Vault 1.11+.
 
   Overrides are set at the subdomain level using the following keys:
   - `api` - Replaces the service endpoint used in API requests to `https://www.googleapis.com`.
