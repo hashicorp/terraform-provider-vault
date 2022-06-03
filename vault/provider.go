@@ -330,6 +330,10 @@ var (
 			Resource:      kvSecretListDataSourceV2(),
 			PathInventory: []string{"/secret/metadata/{path}/?list=true"},
 		},
+		"vault_kv_secret_subkeys_v2": {
+			Resource:      kvSecretSubkeysV2DataSource(),
+			PathInventory: []string{"/secret/subkeys/{path}"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
