@@ -26,6 +26,8 @@ func TestDataSourceKVV2Secret(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "path", fmt.Sprintf("%s/data/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, "destroyed", "false"),
+					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
+					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
 				),
 			},
 		},

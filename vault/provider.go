@@ -314,13 +314,17 @@ var (
 			Resource:      identityOIDCOpenIDConfigDataSource(),
 			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/openid-configuration"},
 		},
+		"vault_kv_secret": {
+			Resource:      kvSecretDataSource(),
+			PathInventory: []string{"/secret/{path}"},
+		},
 		"vault_kv_secret_v2": {
 			Resource:      kvSecretV2DataSource(),
 			PathInventory: []string{"/secret/data/{path}/?version={version}}"},
 		},
 		"vault_kv_secret_list": {
 			Resource:      kvSecretListDataSource(),
-			PathInventory: []string{"/secret/data/{path}/?list=true"},
+			PathInventory: []string{"/secret/{path}/?list=true"},
 		},
 		"vault_kv_secret_list_v2": {
 			Resource:      kvSecretListDataSourceV2(),
