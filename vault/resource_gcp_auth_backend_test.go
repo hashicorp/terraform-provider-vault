@@ -44,15 +44,35 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testGCPAuthBackendCheck_attrs(),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
-						"custom_endpoint.%", "4"),
+						"custom_endpoint.%", "0"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
-						"custom_endpoint.api", "www.googleapis.com"),
+						"custom_endpoint.0.%", "4"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
-						"custom_endpoint.iam", "iam.googleapis.com"),
+						"custom_endpoint.0.api", "www.googleapis.com"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
-						"custom_endpoint.crm", "cloudresourcemanager.googleapis.com"),
+						"custom_endpoint.0.iam", "iam.googleapis.com"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
-						"custom_endpoint.compute", "compute.googleapis.com"),
+						"custom_endpoint.0.crm", "cloudresourcemanager.googleapis.com"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.compute", "compute.googleapis.com"),
+				),
+			},
+			{
+				Config: testGCPAuthBackendConfig_update_partial(path, gcpJSONCredentials),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testGCPAuthBackendCheck_attrs(),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.%", "0"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.%", "4"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.api", ""),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.iam", ""),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.crm", "example.com:9200"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.compute", "compute.example.com"),
 				),
 			},
 		},
@@ -141,11 +161,29 @@ variable "json_credentials" {
 resource "vault_gcp_auth_backend" "test" {
   path                          = %q
   credentials                   = var.json_credentials
-  custom_endpoint = {
+  custom_endpoint {
     api     = "www.googleapis.com"
     iam     = "iam.googleapis.com"
     crm     = "cloudresourcemanager.googleapis.com"
     compute = "compute.googleapis.com"
+  }
+}
+`, credentials, path)
+}
+
+func testGCPAuthBackendConfig_update_partial(path, credentials string) string {
+	return fmt.Sprintf(`
+variable "json_credentials" {
+  type = string
+  default = %q
+}
+
+resource "vault_gcp_auth_backend" "test" {
+  path                          = %q
+  credentials                   = var.json_credentials
+  custom_endpoint {
+    crm     = "example.com:9200"
+    compute = "compute.example.com"
   }
 }
 `, credentials, path)

@@ -74,12 +74,38 @@ func gcpAuthBackendResource() *schema.Resource {
 				Description: "Specifies if the auth method is local only",
 			},
 			"custom_endpoint": {
-				Type:     schema.TypeMap,
-				Optional: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Description: "Specifies overrides to service endpoints used when making API requests to GCP.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"api": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Description: "Replaces the service endpoint used in API requests " +
+								"to https://www.googleapis.com.",
+						},
+						"iam": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Description: "Replaces the service endpoint used in API requests " +
+								"to `https://iam.googleapis.com`.",
+						},
+						"crm": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Description: "Replaces the service endpoint used in API requests " +
+								"to `https://cloudresourcemanager.googleapis.com`.",
+						},
+						"compute": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Description: "Replaces the service endpoint used in API requests " +
+								"to `https://compute.googleapis.com`.",
+						},
+					},
 				},
-				Description: "Specifies overrides to service endpoints used when making API requests to GCP",
 			},
 		},
 	}
@@ -155,7 +181,14 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if v, ok := d.GetOk("custom_endpoint"); ok {
-		data["custom_endpoint"] = v
+		endpoints := make(map[string]interface{})
+		for _, ep := range v.([]interface{}) {
+			for epKey, epVal := range ep.(map[string]interface{}) {
+				endpoints[epKey] = epVal
+			}
+		}
+
+		data["custom_endpoint"] = endpoints
 	}
 
 	log.Printf("[DEBUG] Writing gcp config %q", path)
@@ -193,11 +226,17 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		"project_id",
 		"client_email",
 		"local",
-		"custom_endpoint",
 	}
 
 	for _, param := range params {
 		if err := d.Set(param, resp.Data[param]); err != nil {
+			return err
+		}
+	}
+
+	if v, ok := resp.Data["custom_endpoint"].(map[string]interface{}); ok {
+		endpoints := []map[string]interface{}{v}
+		if err := d.Set("custom_endpoint", endpoints); err != nil {
 			return err
 		}
 	}
