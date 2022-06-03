@@ -79,8 +79,6 @@ func kvSecretV2DataSource() *schema.Resource {
 func kvSecretV2DataSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*api.Client)
 
-	diags := diag.Diagnostics{}
-
 	mount := d.Get("mount").(string)
 	name := d.Get("name").(string)
 
@@ -141,5 +139,5 @@ func kvSecretV2DataSourceRead(ctx context.Context, d *schema.ResourceData, meta 
 		}
 	}
 
-	return diags
+	return nil
 }

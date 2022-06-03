@@ -138,8 +138,6 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 }
 
 func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	diags := diag.Diagnostics{}
-
 	shouldRead := !d.Get("disable_read").(bool)
 
 	path := d.Id()
@@ -175,14 +173,9 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 				return diag.FromErr(err)
 			}
 		}
-
-		// set path to the full path of the v2 secret
-		if err := d.Set("path", path); err != nil {
-			return diag.FromErr(err)
-		}
 	}
 
-	return diags
+	return nil
 }
 
 func kvSecretV2Delete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
