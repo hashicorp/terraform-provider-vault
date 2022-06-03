@@ -15,8 +15,8 @@ func TestDataSourceKVSecretListV2(t *testing.T) {
 	s1 := acctest.RandomWithPrefix("foo")
 	s2 := acctest.RandomWithPrefix("bar")
 
-	datasource1 := "data.vault_kv_secret_list_v2.test"
-	datasource2 := "data.vault_kv_secret_list_v2.test_internal"
+	datasource1 := "data.vault_kv_secrets_list_v2.test"
+	datasource2 := "data.vault_kv_secrets_list_v2.test_internal"
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
@@ -84,12 +84,12 @@ resource "vault_kv_secret_v2" "test_nested" {
   )
 }
 
-data "vault_kv_secret_list_v2" "test" {
+data "vault_kv_secrets_list_v2" "test" {
   mount      = vault_mount.kvv2.path
   depends_on = [vault_kv_secret_v2.test_nested, vault_kv_secret_v2.test_1]
 }
 
-data "vault_kv_secret_list_v2" "test_internal" {
+data "vault_kv_secrets_list_v2" "test_internal" {
   mount      = vault_mount.kvv2.path
   name       = vault_kv_secret_v2.test_2.name
   depends_on = [vault_kv_secret_v2.test_nested]

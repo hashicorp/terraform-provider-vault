@@ -322,11 +322,11 @@ var (
 			Resource:      kvSecretV2DataSource(),
 			PathInventory: []string{"/secret/data/{path}/?version={version}}"},
 		},
-		"vault_kv_secret_list": {
+		"vault_kv_secrets_list": {
 			Resource:      kvSecretListDataSource(),
 			PathInventory: []string{"/secret/{path}/?list=true"},
 		},
-		"vault_kv_secret_list_v2": {
+		"vault_kv_secrets_list_v2": {
 			Resource:      kvSecretListDataSourceV2(),
 			PathInventory: []string{"/secret/metadata/{path}/?list=true"},
 		},
