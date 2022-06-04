@@ -24,18 +24,18 @@ func kvSecretDataSource() *schema.Resource {
 			"data": {
 				Type:        schema.TypeMap,
 				Computed:    true,
-				Description: "Map of strings read from Vault",
+				Description: "Map of strings read from Vault.",
 				Sensitive:   true,
 			},
 			"lease_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Lease identifier assigned by vault.",
+				Description: "Lease identifier assigned by Vault.",
 			},
 			"lease_duration": {
 				Type:        schema.TypeInt,
 				Computed:    true,
-				Description: "Lease duration in seconds relative to the time in lease_start_time.",
+				Description: "Lease duration in seconds.",
 			},
 			"lease_renewable": {
 				Type:        schema.TypeBool,

@@ -31,15 +31,16 @@ func kvSecretV2DataSource() *schema.Resource {
 					"the name is 'foo/bar/baz'",
 			},
 
+			"version": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "Version of the secret to retrieve",
+			},
+
 			"path": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Full path where the generic secret will be written.",
-			},
-
-			"version": {
-				Type:     schema.TypeInt,
-				Optional: true,
+				Description: "Full path where the KVV2 secret is written.",
 			},
 
 			"data": {

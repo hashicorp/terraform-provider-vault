@@ -27,7 +27,7 @@ func kvSecretV2Resource(name string) *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "Path where KV-V2 engine will be mounted.",
+				Description: "Path where KV-V2 engine is mounted.",
 			},
 			"name": {
 				Type:     schema.TypeString,
@@ -41,7 +41,7 @@ func kvSecretV2Resource(name string) *schema.Resource {
 			"path": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Full path where the generic secret will be written.",
+				Description: "Full path where the KV-V2 secret will be written.",
 			},
 			"cas": {
 				Type:     schema.TypeInt,
@@ -90,7 +90,7 @@ func kvSecretV2Resource(name string) *schema.Resource {
 			"metadata": {
 				Type:        schema.TypeMap,
 				Computed:    true,
-				Description: "Metadata for this secret read from Vault.",
+				Description: "Metadata associated with this secret read from Vault.",
 			},
 
 			"delete_all_versions": {
