@@ -53,7 +53,7 @@ func kvSecretSubkeysV2DataSource() *schema.Resource {
 			"subkeys": {
 				Type:        schema.TypeMap,
 				Computed:    true,
-				Description: "Subkeys for the KV secret read from Vault.",
+				Description: "Subkeys for the KV-V2 secret read from Vault.",
 			},
 		},
 	}

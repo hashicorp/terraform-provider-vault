@@ -32,7 +32,7 @@ func kvSecretListDataSourceV2() *schema.Resource {
 			"path": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Full path where the generic secret will be written.",
+				Description: "Full path where the KV-V2 secrets are listed.",
 			},
 
 			"names": {

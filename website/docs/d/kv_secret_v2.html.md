@@ -23,8 +23,6 @@ for more details.
 
 ## Example Usage
 
-### KV-V2 secret
-
 ```hcl
 resource "vault_mount" "kvv2" {
   path        = "kvv2"
