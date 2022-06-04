@@ -46,9 +46,9 @@ func quotaRateLimitResource() *schema.Resource {
 			"interval": {
 				Type:         schema.TypeInt,
 				Optional:     true,
-				Description:  "The duration in seconds to enforce rate limiting for (default of 1).",
-				ValidateFunc: validation.IntAtLeast(0),
-				Default:      1,
+				Description:  "The duration in seconds to enforce rate limiting for.",
+				ValidateFunc: validation.IntAtLeast(1),
+				Computed:      true,
 			},
 			"block_interval": {
 				Type:         schema.TypeInt,
@@ -73,12 +73,12 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 	data["path"] = d.Get("path").(string)
 	data["rate"] = d.Get("rate").(float64)
 
-	if intervalRaw, ok := d.GetOk("interval"); ok {
-		data["interval"] = intervalRaw.(int)
+	if v, ok := d.GetOk("interval"); ok {
+		data["interval"] = v
 	}
 
-	if blockIntervalRaw, ok := d.GetOk("block_interval"); ok {
-		data["block_interval"] = blockIntervalRaw.(int)
+	if v, ok := d.GetOk("block_interval"); ok {
+		data["block_interval"] = v
 	}
 
 	_, err := client.Logical().Write(path, data)
@@ -133,12 +133,12 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 	data["path"] = d.Get("path").(string)
 	data["rate"] = d.Get("rate").(float64)
 
-	if intervalRaw, ok := d.GetOk("interval"); ok {
-		data["interval"] = intervalRaw.(int)
+	if v, ok := d.GetOk("interval"); ok {
+		data["interval"] = v
 	}
 
-	if blockIntervalRaw, ok := d.GetOk("block_interval"); ok {
-		data["block_interval"] = blockIntervalRaw.(int)
+	if v, ok := d.GetOk("block_interval"); ok {
+		data["block_interval"] = v
 	}
 
 	_, err := client.Logical().Write(path, data)
