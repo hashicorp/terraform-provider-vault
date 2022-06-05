@@ -8,21 +8,12 @@ description: |-
 
 # vault\_mfa-duo
 
-Provides a resource to manage [Duo MFA](https://www.vaultproject.io/docs/enterprise/mfa/mfa-duo.html).
-
-**Note** this feature is available only with Vault Enterprise.
+Provides a resource to manage [Duo MFA](https://www.vaultproject.io/api-docs/secret/identity/mfa/duo).
 
 ## Example Usage
 
 ```hcl
-resource "vault_auth_backend" "userpass" {
-  type = "userpass"
-  path = "userpass"
-}
-
 resource "vault_mfa_duo" "my_duo" {
-  name                  = "my_duo"
-  mount_accessor        = vault_auth_backend.userpass.accessor
   secret_key            = "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz"
   integration_key       = "BIACEUEAXI20BNWTEYXT"
   api_hostname          = "api-2b5c39f5.duosecurity.com"
@@ -32,10 +23,6 @@ resource "vault_mfa_duo" "my_duo" {
 ## Argument Reference
 
 The following arguments are supported:
-
-- `name` `(string: <required>)` – Name of the MFA method.
-
-- `mount_accessor` `(string: <required>)` - The mount to tie this method to for use in automatic mappings. The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.
 
 - `username_format` `(string)` - A format string for mapping Identity names to MFA method names. Values to substitute should be placed in `{{}}`. For example, `"{{alias.name}}@example.com"`. If blank, the Alias's Name field will be used as-is. Currently-supported mappings:
   - alias.name: The name returned by the mount configured via the `mount_accessor` parameter
@@ -51,11 +38,17 @@ The following arguments are supported:
 
 - `push_info` `(string)` - Push information for Duo.
 
+- `use_passcode` `(bool)` - If true, the user is reminded to use the passcode upon MFA validation.
+
+## Attributes Reference
+
+* `id` - ID of the Duo MFA method.
+
 ## Import
 
-Mounts can be imported using the `path`, e.g.
+Mounts can be imported using the `id`, e.g.
 
 ```
-$ terraform import vault_mfa_duo.my_duo my_duo
+$ terraform import vault_mfa_duo.my_duo "3856fb4d-3c91-dcaf-2401-68f446796bfb"
 ```
 
