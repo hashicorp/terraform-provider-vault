@@ -24,7 +24,7 @@ func TestDataSourceKVSecretList(t *testing.T) {
 			{
 				Config: testDataSourceKVSecretListConfig(mount, s1, s2),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "path", fmt.Sprintf("%s", mount)),
+					resource.TestCheckResourceAttr(datasourceName, "path", mount),
 					resource.TestCheckResourceAttr(datasourceName, "names.#", "3"),
 					resource.TestCheckResourceAttr(datasourceName, "names.0", s2),
 					resource.TestCheckResourceAttr(datasourceName, "names.1", fmt.Sprintf("%s/", s2)),
@@ -36,7 +36,7 @@ func TestDataSourceKVSecretList(t *testing.T) {
 }
 
 func testDataSourceKVSecretListConfig(mount, secretPath1, secretPath2 string) string {
-	return fmt.Sprintf(`
+	config := fmt.Sprintf(`
 %s
 
 resource "vault_kv_secret" "test_1" {
@@ -72,5 +72,8 @@ resource "vault_kv_secret" "test_nested" {
 data "vault_kv_secrets_list" "test" {
   path       = vault_mount.kvv1.path
   depends_on = [vault_kv_secret.test_nested, vault_kv_secret.test_1]
-}`, kvV1MountConfig(mount), secretPath1, secretPath2)
+}
+`, kvV1MountConfig(mount), secretPath1, secretPath2)
+
+	return config
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -16,13 +17,13 @@ func kvSecretV2DataSource() *schema.Resource {
 		ReadContext: kvSecretV2DataSourceRead,
 
 		Schema: map[string]*schema.Schema{
-			"mount": {
+			consts.FieldMount: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Path where KV-V2 engine is mounted",
 			},
 
-			"name": {
+			consts.FieldName: {
 				Type:     schema.TypeString,
 				Required: true,
 				Description: "Full name of the secret. For a nested secret, " +
@@ -37,13 +38,13 @@ func kvSecretV2DataSource() *schema.Resource {
 				Description: "Version of the secret to retrieve",
 			},
 
-			"path": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Full path where the KVV2 secret is written.",
 			},
 
-			"data": {
+			consts.FieldData: {
 				Type:        schema.TypeMap,
 				Computed:    true,
 				Description: "Map of strings read from Vault",

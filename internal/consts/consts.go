@@ -6,6 +6,9 @@ const (
 	FieldParameters = "parameters"
 	FieldMethod     = "method"
 	FieldNamespace  = "namespace"
+	FieldData       = "data"
+	FieldMount      = "mount"
+	FieldName       = "name"
 
 	// env vars
 	EnvVarVaultNamespaceImport = "TERRAFORM_VAULT_NAMESPACE_IMPORT"

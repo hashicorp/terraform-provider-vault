@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -22,7 +23,7 @@ func kvSecretBackendV2Resource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"mount": {
+			consts.FieldMount: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
