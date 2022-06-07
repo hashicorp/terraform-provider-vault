@@ -75,6 +75,30 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 						"custom_endpoint.0.compute", "compute.example.com"),
 				),
 			},
+			{
+				ResourceName:      "vault_gcp_auth_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"credentials",
+				},
+			},
+			{
+				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testGCPAuthBackendCheck_attrs(),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.#", "0"),
+				),
+			},
+			{
+				ResourceName:      "vault_gcp_auth_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"credentials",
+				},
+			},
 		},
 	})
 }
