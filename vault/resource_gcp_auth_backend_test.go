@@ -44,7 +44,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testGCPAuthBackendCheck_attrs(),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
-						"custom_endpoint.%", "0"),
+						"custom_endpoint.#", "1"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.0.%", "4"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
