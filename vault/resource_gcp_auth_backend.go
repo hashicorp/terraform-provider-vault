@@ -180,13 +180,17 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["credentials"] = v
 	}
 
-	if v, ok := d.GetOk("custom_endpoint"); ok {
+	epField := "custom_endpoint"
+	if d.HasChange(epField) {
 		endpoints := make(map[string]interface{})
-		for _, ep := range v.([]interface{}) {
-			for epKey, epVal := range ep.(map[string]interface{}) {
-				endpoints[epKey] = epVal
+		for epKey := range gcpAuthCustomEndpointSchema {
+			key := fmt.Sprintf("%s.%d.%s", epField, 0, epKey)
+			if d.HasChange(key) {
+				endpoints[epKey] = d.Get(key)
 			}
 		}
+		data["custom_endpoint"] = endpoints
+	}
 
 		data["custom_endpoint"] = endpoints
 	}
