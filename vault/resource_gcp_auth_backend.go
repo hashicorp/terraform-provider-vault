@@ -79,34 +79,38 @@ func gcpAuthBackendResource() *schema.Resource {
 				MaxItems:    1,
 				Description: "Specifies overrides to service endpoints used when making API requests to GCP.",
 				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"api": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Description: "Replaces the service endpoint used in API requests " +
-								"to https://www.googleapis.com.",
-						},
-						"iam": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Description: "Replaces the service endpoint used in API requests " +
-								"to `https://iam.googleapis.com`.",
-						},
-						"crm": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Description: "Replaces the service endpoint used in API requests " +
-								"to `https://cloudresourcemanager.googleapis.com`.",
-						},
-						"compute": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Description: "Replaces the service endpoint used in API requests " +
-								"to `https://compute.googleapis.com`.",
-						},
-					},
+					Schema: gcpAuthCustomEndpointSchema(),
 				},
 			},
+		},
+	}
+}
+
+func gcpAuthCustomEndpointSchema() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"api": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Replaces the service endpoint used in API requests " +
+				"to https://www.googleapis.com.",
+		},
+		"iam": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Replaces the service endpoint used in API requests " +
+				"to `https://iam.googleapis.com`.",
+		},
+		"crm": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Replaces the service endpoint used in API requests " +
+				"to `https://cloudresourcemanager.googleapis.com`.",
+		},
+		"compute": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Replaces the service endpoint used in API requests " +
+				"to `https://compute.googleapis.com`.",
 		},
 	}
 }
@@ -183,15 +187,12 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	epField := "custom_endpoint"
 	if d.HasChange(epField) {
 		endpoints := make(map[string]interface{})
-		for epKey := range gcpAuthCustomEndpointSchema {
+		for epKey := range gcpAuthCustomEndpointSchema() {
 			key := fmt.Sprintf("%s.%d.%s", epField, 0, epKey)
 			if d.HasChange(key) {
 				endpoints[epKey] = d.Get(key)
 			}
 		}
-		data["custom_endpoint"] = endpoints
-	}
-
 		data["custom_endpoint"] = endpoints
 	}
 
@@ -238,9 +239,12 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	if v, ok := resp.Data["custom_endpoint"].(map[string]interface{}); ok {
-		endpoints := []map[string]interface{}{v}
-		if err := d.Set("custom_endpoint", endpoints); err != nil {
+	if endpointsRaw, ok := resp.Data["custom_endpoint"]; ok {
+		endpoints, ok := endpointsRaw.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("custom_endpoint has unexpected type: %q", path)
+		}
+		if err := d.Set("custom_endpoint", []map[string]interface{}{endpoints}); err != nil {
 			return err
 		}
 	}
