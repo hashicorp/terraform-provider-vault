@@ -164,13 +164,13 @@ func testGCPAuthBackendCheck_attrs() resource.TestCheckFunc {
 func testGCPAuthBackendConfig_basic(path, credentials string) string {
 	return fmt.Sprintf(`
 variable "json_credentials" {
-  type = string
+  type    = string
   default = %q
 }
 
 resource "vault_gcp_auth_backend" "test" {
-  path                          = %q
-  credentials                   = var.json_credentials
+  path        = %q
+  credentials = var.json_credentials
 }
 `, credentials, path)
 }
@@ -178,13 +178,13 @@ resource "vault_gcp_auth_backend" "test" {
 func testGCPAuthBackendConfig_update(path, credentials string) string {
 	return fmt.Sprintf(`
 variable "json_credentials" {
-  type = string
+  type    = string
   default = %q
 }
 
 resource "vault_gcp_auth_backend" "test" {
-  path                          = %q
-  credentials                   = var.json_credentials
+  path        = %q
+  credentials = var.json_credentials
   custom_endpoint {
     api     = "www.googleapis.com"
     iam     = "iam.googleapis.com"
@@ -198,13 +198,13 @@ resource "vault_gcp_auth_backend" "test" {
 func testGCPAuthBackendConfig_update_partial(path, credentials string) string {
 	return fmt.Sprintf(`
 variable "json_credentials" {
-  type = string
+  type    = string
   default = %q
 }
 
 resource "vault_gcp_auth_backend" "test" {
-  path                          = %q
-  credentials                   = var.json_credentials
+  path        = %q
+  credentials = var.json_credentials
   custom_endpoint {
     crm     = "example.com:9200"
     compute = "compute.example.com"
