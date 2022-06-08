@@ -32,6 +32,16 @@ func TestAccKVSecretV2_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"data_json", "disable_read",
+					"delete_all_versions", "mount",
+					"name", "cas",
+				},
+			},
 		},
 	})
 }

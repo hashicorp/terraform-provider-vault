@@ -27,6 +27,12 @@ func TestAccKVSecret_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"data_json"},
+			},
 		},
 	})
 }

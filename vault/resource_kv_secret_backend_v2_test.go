@@ -36,6 +36,12 @@ func TestAccKVSecretBackendV2_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "cas_required", "true"),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"mount"},
+			},
 		},
 	})
 }
