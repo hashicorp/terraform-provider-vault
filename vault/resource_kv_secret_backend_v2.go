@@ -2,14 +2,15 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func kvSecretBackendV2Resource() *schema.Resource {
@@ -43,18 +44,10 @@ func kvSecretBackendV2Resource() *schema.Resource {
 					"parameter to be set on all write requests.",
 			},
 			"delete_version_after": {
-				Type:     schema.TypeString,
-				Computed: true,
-				Description: "The full duration string for " +
-					"'delete_version_after_input' formatted by Vault in " +
-					"'00h00m00s' format",
-			},
-			// field used to avoid diff from Vault
-			"delete_version_after_input": {
-				Type:     schema.TypeString,
+				Type:     schema.TypeInt,
 				Optional: true,
 				Description: "If set, specifies the length of time before " +
-					"a version is deleted. Accepts Go duration format string.",
+					"a version is deleted",
 			},
 		},
 	}
@@ -64,13 +57,18 @@ func kvSecretBackendV2CreateUpdate(ctx context.Context, d *schema.ResourceData, 
 	client := meta.(*provider.ProviderMeta).GetClient()
 	mount := d.Get("mount").(string)
 
-	schemaToVaultFieldMap := map[string]string{
-		"max_versions":               "",
-		"cas_required":               "",
-		"delete_version_after_input": "delete_version_after",
+	data := map[string]interface{}{}
+
+	fields := []string{"max_versions", "cas_required"}
+
+	for _, k := range fields {
+		data[k] = d.Get(k)
 	}
 
-	data := util.GetAPIRequestData(d, schemaToVaultFieldMap)
+	// convert input seconds to duration string
+	if deleteVersionSeconds, ok := d.GetOk("delete_version_after"); ok {
+		data["delete_version_after"] = formatIntToDurationString(deleteVersionSeconds.(int))
+	}
 
 	path := mount + "/config"
 	if _, err := client.Logical().Write(path, data); err != nil {
@@ -99,14 +97,31 @@ func kvSecretBackendV2Read(_ context.Context, d *schema.ResourceData, meta inter
 		return nil
 	}
 
-	configFields := []string{"max_versions", "cas_required", "delete_version_after"}
+	configFields := []string{"max_versions", "cas_required"}
 	for _, k := range configFields {
 		if err := d.Set(k, config.Data[k]); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
+	// convert delete_version_after to seconds
+	if err := config.Data["delete_version_after"]; err != nil {
+		durationString := config.Data["delete_version_after"].(string)
+		t, _ := time.ParseDuration(durationString)
+		if err := d.Set("delete_version_after", t.Seconds()); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	return diags
+}
+
+func formatIntToDurationString(input int) string {
+	hours := input / 3600
+	minutes := (input % 3600) / 60
+	seconds := (input % 3600) % 60
+
+	return fmt.Sprintf("%dh%dm%ds", hours, minutes, seconds)
 }
 
 func kvSecretBackendV2Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

@@ -23,8 +23,7 @@ func TestAccKVSecretBackendV2_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "5"),
-					resource.TestCheckResourceAttr(resourceName, "delete_version_after_input", "3.5h"),
-					resource.TestCheckResourceAttr(resourceName, "delete_version_after", "3h30m0s"),
+					resource.TestCheckResourceAttr(resourceName, "delete_version_after", "3700"),
 					resource.TestCheckResourceAttr(resourceName, "cas_required", "true"),
 				),
 			},
@@ -33,8 +32,7 @@ func TestAccKVSecretBackendV2_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "7"),
-					resource.TestCheckResourceAttr(resourceName, "delete_version_after_input", "12h"),
-					resource.TestCheckResourceAttr(resourceName, "delete_version_after", "12h0m0s"),
+					resource.TestCheckResourceAttr(resourceName, "delete_version_after", "87550"),
 					resource.TestCheckResourceAttr(resourceName, "cas_required", "true"),
 				),
 			},
@@ -51,18 +49,18 @@ func testKVSecretBackendV2Config(path string, isUpdate bool) string {
 	if !isUpdate {
 		ret += fmt.Sprintf(`
 resource "vault_kv_secret_backend_v2" "test" {
-  mount                      = vault_mount.kvv2.path
-  max_versions               = 5
-  delete_version_after_input = "3.5h"
-  cas_required               = true
+  mount                = vault_mount.kvv2.path
+  max_versions         = 5
+  delete_version_after = 3700
+  cas_required         = true
 }`)
 	} else {
 		ret += fmt.Sprintf(`
 resource "vault_kv_secret_backend_v2" "test" {
-  mount                      = vault_mount.kvv2.path
-  max_versions               = 7
-  delete_version_after_input = "12h"
-  cas_required               = true
+  mount                = vault_mount.kvv2.path
+  max_versions         = 7
+  delete_version_after = 87550
+  cas_required         = true
 }`)
 	}
 	return ret
