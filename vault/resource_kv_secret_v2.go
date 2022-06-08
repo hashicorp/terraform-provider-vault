@@ -88,7 +88,7 @@ func kvSecretV2Resource(name string) *schema.Resource {
 				Sensitive:   true,
 			},
 
-			"metadata": {
+			consts.FieldMetadata: {
 				Type:        schema.TypeMap,
 				Computed:    true,
 				Description: "Metadata associated with this secret read from Vault.",

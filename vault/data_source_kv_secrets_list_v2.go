@@ -36,7 +36,7 @@ func kvSecretListDataSourceV2() *schema.Resource {
 				Description: "Full path where the KV-V2 secrets are listed.",
 			},
 
-			"names": {
+			consts.FieldNames: {
 				Type:        schema.TypeList,
 				Computed:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},

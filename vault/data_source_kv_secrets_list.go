@@ -22,7 +22,7 @@ func kvSecretListDataSource() *schema.Resource {
 				ValidateFunc: validateNoTrailingSlash,
 			},
 
-			"names": {
+			consts.FieldNames: {
 				Type:        schema.TypeList,
 				Computed:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},

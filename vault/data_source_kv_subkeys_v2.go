@@ -38,7 +38,7 @@ func kvSecretSubkeysV2DataSource() *schema.Resource {
 				Description: "Full path where the generic secret will be written.",
 			},
 
-			"version": {
+			consts.FieldVersion: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Specifies the version to return. If not set the latest version is returned.",

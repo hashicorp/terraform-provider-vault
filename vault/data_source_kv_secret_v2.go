@@ -32,7 +32,7 @@ func kvSecretV2DataSource() *schema.Resource {
 					"the name is 'foo/bar/baz'",
 			},
 
-			"version": {
+			consts.FieldVersion: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Version of the secret to retrieve",

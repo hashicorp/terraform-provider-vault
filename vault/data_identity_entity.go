@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -62,7 +63,7 @@ var (
 			},
 			Computed: true,
 		},
-		"metadata": {
+		consts.FieldMetadata: {
 			Type:     schema.TypeMap,
 			Computed: true,
 		},
@@ -167,7 +168,7 @@ func identityEntityDataSource() *schema.Resource {
 				},
 				Computed: true,
 			},
-			"metadata": {
+			consts.FieldMetadata: {
 				Type:     schema.TypeMap,
 				Computed: true,
 			},

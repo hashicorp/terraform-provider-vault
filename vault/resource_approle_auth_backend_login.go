@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -66,7 +67,7 @@ func approleAuthBackendLoginResource() *schema.Resource {
 				Computed:    true,
 				Description: "The token.",
 			},
-			"metadata": {
+			consts.FieldMetadata: {
 				Type:        schema.TypeMap,
 				Computed:    true,
 				Description: "Metadata associated with the token.",
