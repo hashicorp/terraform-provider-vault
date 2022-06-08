@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -59,15 +58,9 @@ func kvSecretBackendV2CreateUpdate(ctx context.Context, d *schema.ResourceData, 
 
 	data := map[string]interface{}{}
 
-	fields := []string{"max_versions", "cas_required"}
-
+	fields := []string{"max_versions", "cas_required", "delete_version_after"}
 	for _, k := range fields {
 		data[k] = d.Get(k)
-	}
-
-	// convert input seconds to duration string
-	if deleteVersionSeconds, ok := d.GetOk("delete_version_after"); ok {
-		data["delete_version_after"] = formatIntToDurationString(deleteVersionSeconds.(int))
 	}
 
 	path := mount + "/config"
@@ -105,23 +98,18 @@ func kvSecretBackendV2Read(_ context.Context, d *schema.ResourceData, meta inter
 	}
 
 	// convert delete_version_after to seconds
-	if err := config.Data["delete_version_after"]; err != nil {
+	if v, ok := config.Data["delete_version_after"]; ok && v != nil {
 		durationString := config.Data["delete_version_after"].(string)
-		t, _ := time.ParseDuration(durationString)
+		t, err := time.ParseDuration(durationString)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if err := d.Set("delete_version_after", t.Seconds()); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
 	return diags
-}
-
-func formatIntToDurationString(input int) string {
-	hours := input / 3600
-	minutes := (input % 3600) / 60
-	seconds := (input % 3600) % 60
-
-	return fmt.Sprintf("%dh%dm%ds", hours, minutes, seconds)
 }
 
 func kvSecretBackendV2Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
