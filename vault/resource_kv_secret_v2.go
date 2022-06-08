@@ -166,13 +166,17 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 
 		data := secret.Data["data"]
 
-		if err := d.Set("data", serializeDataMapToString(data.(map[string]interface{}))); err != nil {
-			return diag.FromErr(err)
+		if v, ok := data.(map[string]interface{}); ok {
+			if err := d.Set("data", serializeDataMapToString(v)); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 
-		if v, ok := secret.Data["metadata"]; ok {
-			if err := d.Set("metadata", serializeDataMapToString(v.(map[string]interface{}))); err != nil {
-				return diag.FromErr(err)
+		if metadata, ok := secret.Data["metadata"]; ok {
+			if v, ok := metadata.(map[string]interface{}); ok {
+				if err := d.Set("metadata", serializeDataMapToString(v)); err != nil {
+					return diag.FromErr(err)
+				}
 			}
 		}
 	}

@@ -98,8 +98,10 @@ func kvSecretRead(_ context.Context, d *schema.ResourceData, meta interface{}) d
 
 	data := secret.Data["data"]
 
-	if err := d.Set("data", serializeDataMapToString(data.(map[string]interface{}))); err != nil {
-		return diag.FromErr(err)
+	if v, ok := data.(map[string]interface{}); ok {
+		if err := d.Set("data", serializeDataMapToString(v)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return nil

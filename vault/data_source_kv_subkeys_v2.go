@@ -89,9 +89,11 @@ func kvSecretSubkeysDataSourceRead(_ context.Context, d *schema.ResourceData, me
 		return diag.Errorf("error reading subkeys from Vault, err=%s", err)
 	}
 
-	if v, ok := secret.Data["subkeys"]; ok {
-		if err := d.Set("subkeys", serializeDataMapToString(v.(map[string]interface{}))); err != nil {
-			return diag.FromErr(err)
+	if subkeys, ok := secret.Data["subkeys"]; ok {
+		if v, ok := subkeys.(map[string]interface{}); ok {
+			if err := d.Set("subkeys", serializeDataMapToString(v)); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 

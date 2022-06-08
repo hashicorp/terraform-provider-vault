@@ -28,6 +28,7 @@ func TestDataSourceKVV2Secret(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "destroyed", "false"),
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "data.test", "false"),
 				),
 			},
 		},
@@ -46,7 +47,8 @@ resource "vault_kv_secret_v2" "test" {
   data_json                  = jsonencode(
   {
     zip       = "zap",
-    foo       = "bar" 
+    foo       = "bar",
+    test      = false
   }
   )
 }

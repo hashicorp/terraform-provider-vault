@@ -91,9 +91,11 @@ func kvListRequest(client *api.Client, path string) ([]interface{}, error) {
 
 	// Return key names if they are present in response
 	if keyNameList, ok := resp.Data["keys"]; ok && keyNameList != nil {
-		if keyNames, ok := keyNameList.([]interface{}); ok {
-			return keyNames, nil
+		keyNames, ok := keyNameList.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("")
 		}
+		return keyNames, nil
 	}
 
 	return nil, fmt.Errorf("keys are either not present or incorrectly formatted in response from Vault")

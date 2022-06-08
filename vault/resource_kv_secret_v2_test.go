@@ -27,6 +27,9 @@ func TestAccKVSecretV2_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "cas", "1"),
 					resource.TestCheckResourceAttr(resourceName, "path", fmt.Sprintf("%s/data/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, "delete_all_versions", "true"),
+					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
+					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
 				),
 			},
 		},
@@ -48,7 +51,8 @@ resource "vault_kv_secret_v2" "test" {
   data_json                  = jsonencode(
   {
     zip       = "zap",
-    foo       = "bar" 
+    foo       = "bar",
+    flag      = false
   }
   )
 }`, name)
