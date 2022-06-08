@@ -121,42 +121,49 @@ func GetTestAzureConf(t *testing.T) *AzureTestConf {
 }
 
 func GetTestGCPCreds(t *testing.T) (string, string) {
-	// v := SkipTestEnvUnset(t, "GOOGLE_CREDENTIALS", "GOOGLE_PROJECT")
-	v := SkipTestEnvUnset(t, "GOOGLE_CREDENTIALS")
+	t.Helper()
 
-	var project string
-	// maybeCreds, project := v[0], v[1]
-	maybeCreds := v[0]
-	maybeFilename := maybeCreds
-	if maybeCreds[0] == '~' {
+	credsEnvKey := "GOOGLE_CREDENTIALS"
+	projectEnvKey := "GOOGLE_PROJECT"
+	fileEnvKey := "GOOGLE_CREDENTIALS_FILE"
+
+	var creds string
+	if filename, ok := os.LookupEnv(fileEnvKey); ok {
+		var f string
 		var err error
-		maybeFilename, err = homedir.Expand(maybeCreds)
-		if err != nil {
-			t.Fatal("Error reading GOOGLE_CREDENTIALS: " + err.Error())
-		}
-	}
-
-	if _, err := os.Lstat(maybeFilename); err == nil {
-		contents, err := ioutil.ReadFile(maybeFilename)
-		if err != nil {
-			t.Fatal("Error reading GOOGLE_CREDENTIALS: " + err.Error())
-		}
-		maybeCreds = string(contents)
-
-	}
-	if _, ok := os.LookupEnv("GOOGLE_PROJECT"); !ok {
-		// attempt to get the project ID from the creds JSON
-		var i map[string]interface{}
-		if err := json.Unmarshal([]byte(maybeCreds), &i); err == nil {
-			if v, ok := i["project_id"]; ok {
-				project = v.(string)
+		if f, err = homedir.Expand(filename); err == nil {
+			var contents []byte
+			contents, err = ioutil.ReadFile(f)
+			if err == nil {
+				creds = string(contents)
 			}
 		}
+		if err != nil {
+			t.Fatalf("Error reading GCP creds from %s: %s", filename, err)
+		}
 	} else {
-		project = SkipTestEnvSet(t, "GOOGLE_PROJECT")[0]
+		creds = SkipTestEnvUnset(t, credsEnvKey)[0]
 	}
 
-	return maybeCreds, project
+	var project string
+	if _, ok := os.LookupEnv(projectEnvKey); !ok {
+		// attempt to get the project ID from the creds JSON
+		var i map[string]interface{}
+		if err := json.Unmarshal([]byte(creds), &i); err != nil {
+			t.Fatalf("Error invalid GCP creds JSON, err=%s", err)
+		}
+
+		k := "project_id"
+		v, ok := i[k]
+		if !ok {
+			t.Fatalf("Error %q not found in GCP creds JSON", k)
+		}
+		project = v.(string)
+	} else {
+		project = SkipTestEnvSet(t, projectEnvKey)[0]
+	}
+
+	return creds, project
 }
 
 func GetTestRMQCreds(t *testing.T) (string, string, string) {
