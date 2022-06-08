@@ -242,7 +242,7 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	if endpointsRaw, ok := resp.Data["custom_endpoint"]; ok {
 		endpoints, ok := endpointsRaw.(map[string]interface{})
 		if !ok {
-			return fmt.Errorf("custom_endpoint has unexpected type: %q", path)
+			return fmt.Errorf("custom_endpoint has unexpected type %T, path=%q", endpointsRaw, path)
 		}
 		if err := d.Set("custom_endpoint", []map[string]interface{}{endpoints}); err != nil {
 			return err
