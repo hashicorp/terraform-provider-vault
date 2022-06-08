@@ -49,7 +49,7 @@ func quotaRateLimitResource() *schema.Resource {
 				Optional:     true,
 				Description:  "The duration in seconds to enforce rate limiting for.",
 				ValidateFunc: validation.IntAtLeast(1),
-				Computed:      true,
+				Computed:     true,
 			},
 			"block_interval": {
 				Type:         schema.TypeInt,
