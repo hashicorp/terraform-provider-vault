@@ -82,7 +82,7 @@ func kvListRequest(client *api.Client, path string) ([]interface{}, error) {
 	log.Printf("[DEBUG] Listing secrets at %s from Vault", path)
 	resp, err := client.Logical().List(path)
 	if err != nil {
-		return nil, fmt.Errorf("error listing from Vault at path %s, err=%s", path, err)
+		return nil, fmt.Errorf("error listing from Vault at path %q, err=%s", path, err)
 	}
 
 	if resp == nil {
@@ -93,12 +93,12 @@ func kvListRequest(client *api.Client, path string) ([]interface{}, error) {
 	if keyNameList, ok := resp.Data["keys"]; ok && keyNameList != nil {
 		keyNames, ok := keyNameList.([]interface{})
 		if !ok {
-			return nil, fmt.Errorf("")
+			return nil, fmt.Errorf("keys are incorrectly formatted in response from Vault")
 		}
 		return keyNames, nil
 	}
 
-	return nil, fmt.Errorf("keys are either not present or incorrectly formatted in response from Vault")
+	return nil, fmt.Errorf("no keys present in response from Vault")
 }
 
 func kvPreflightVersionRequest(client *api.Client, path string) (string, int, error) {
