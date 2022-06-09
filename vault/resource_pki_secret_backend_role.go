@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
+	"github.com/hashicorp/terraform-provider-vault/internal"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -283,18 +283,20 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Default:     true,
 			},
 			"policy_identifiers": {
-				Type:        schema.TypeList,
-				Required:    false,
-				Optional:    true,
-				Description: "Specify the list of allowed policies OIDs.",
+				Type:          schema.TypeList,
+				Required:      false,
+				Optional:      true,
+				Description:   "Specify the list of allowed policies OIDs.",
+				ConflictsWith: []string{"policy_identifier"},
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
 			"policy_identifier": {
-				Type:        schema.TypeSet,
-				Optional:    true,
-				Description: "Policy identifier block; can only be used with Vault 1.11+",
+				Type:          schema.TypeSet,
+				Optional:      true,
+				Description:   "Policy identifier block; can only be used with Vault 1.11+",
+				ConflictsWith: []string{"policy_identifiers"},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"oid": {
@@ -381,7 +383,8 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 		extKeyUsage = append(extKeyUsage, iUsage.(string))
 	}
 
-	policyIdentifiers := readPolicyIdentifiers(d)
+	policyIdentifiersList := d.Get("policy_identifiers").([]interface{})
+	policyIdentifierBlocks := internal.ReadPolicyIdentifierBlocks(d.Get("policy_identifier").(*schema.Set))
 
 	iAllowedSerialNumbers := d.Get("allowed_serial_numbers").([]interface{})
 	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
@@ -436,8 +439,10 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 		data["ext_key_usage"] = extKeyUsage
 	}
 
-	if policyIdentifiers != nil {
-		data["policy_identifiers"] = policyIdentifiers
+	if len(policyIdentifiersList) > 0 {
+		data["policy_identifiers"] = policyIdentifiersList
+	} else if policyIdentifierBlocks != "" {
+		data["policy_identifiers"] = policyIdentifierBlocks
 	}
 
 	if len(allowedSerialNumbers) > 0 {
@@ -511,7 +516,7 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		extKeyUsage = append(extKeyUsage, iUsage.(string))
 	}
 
-	legacyPolicyIdentifiers, newPolicyIdentifiers, err := makePkiPolicyIdentifiersListOrSet(secret.Data["policy_identifiers"].([]interface{}))
+	legacyPolicyIdentifiers, newPolicyIdentifiers, err := internal.MakePkiPolicyIdentifiersListOrSet(secret.Data["policy_identifiers"].([]interface{}))
 	if err != nil {
 		return err
 	}
@@ -598,7 +603,8 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 		extKeyUsage = append(extKeyUsage, iUsage.(string))
 	}
 
-	policyIdentifiers := readPolicyIdentifiers(d)
+	policyIdentifiersList := d.Get("policy_identifiers").([]interface{})
+	policyIdentifierBlocks := internal.ReadPolicyIdentifierBlocks(d.Get("policy_identifier").(*schema.Set))
 
 	iAllowedSerialNumbers := d.Get("allowed_serial_numbers").([]interface{})
 	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
@@ -653,8 +659,10 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 		data["ext_key_usage"] = extKeyUsage
 	}
 
-	if policyIdentifiers != nil {
-		data["policy_identifiers"] = policyIdentifiers
+	if len(policyIdentifiersList) > 0 {
+		data["policy_identifiers"] = policyIdentifiersList
+	} else if policyIdentifierBlocks != "" {
+		data["policy_identifiers"] = policyIdentifierBlocks
 	}
 
 	if len(allowedSerialNumbers) > 0 {
