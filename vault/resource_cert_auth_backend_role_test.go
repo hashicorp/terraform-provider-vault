@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const testCertificate = `
@@ -74,6 +75,8 @@ func TestCertAuthBackend(t *testing.T) {
 		acctest.RandomWithPrefix("tf-ident-2"),
 	}
 
+	allowedOrgUnits := []string{"foo", "baz"}
+
 	resourceName := "vault_cert_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -81,7 +84,7 @@ func TestCertAuthBackend(t *testing.T) {
 		CheckDestroy: testCertAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testCertAuthBackendConfig_basic(backend, name, testCertificate, allowedNames),
+				Config: testCertAuthBackendConfig_basic(backend, name, testCertificate, allowedNames, allowedOrgUnits),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
@@ -89,6 +92,9 @@ func TestCertAuthBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "300"),
 					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "600"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_names.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_organizational_units.#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "allowed_organizational_units.*", "foo"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "allowed_organizational_units.*", "baz"),
 					testCertAuthBackendCheck_attrs(resourceName, backend, name),
 				),
 			},
@@ -101,6 +107,7 @@ func TestCertAuthBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "0"),
 					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "0"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_names.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_organizational_units.#", "0"),
 					testCertAuthBackendCheck_attrs(resourceName, backend, name),
 				),
 			},
@@ -165,7 +172,6 @@ func testCertAuthBackendCheck_attrs(resourceName, backend, name string) resource
 			"allowed_dns_sans":             "allowed_dns_sans",
 			"allowed_email_sans":           "allowed_email_sans",
 			"allowed_uri_sans":             "allowed_uri_sans",
-			"allowed_organization_units":   "allowed_organizational_units",
 			"allowed_organizational_units": "allowed_organizational_units",
 			"required_extensions":          "required_extensions",
 			"certificate":                  "certificate",
@@ -183,7 +189,7 @@ func testCertAuthBackendCheck_attrs(resourceName, backend, name string) resource
 				VaultAttr:    v,
 			}
 			switch k {
-			case TokenFieldPolicies, "allowed_names":
+			case TokenFieldPolicies, "allowed_names", "allowed_organizational_units":
 				ta.AsSet = true
 			}
 
@@ -194,13 +200,8 @@ func testCertAuthBackendCheck_attrs(resourceName, backend, name string) resource
 	}
 }
 
-func testCertAuthBackendConfig_basic(backend, name, certificate string, allowedNames []string) string {
-	quotedNames := make([]string, len(allowedNames))
-	for idx, name := range allowedNames {
-		quotedNames[idx] = fmt.Sprintf(`"%s"`, name)
-	}
-
-	return fmt.Sprintf(`
+func testCertAuthBackendConfig_basic(backend, name, certificate string, allowedNames, allowedOrgUnits []string) string {
+	config := fmt.Sprintf(`
 
 resource "vault_auth_backend" "cert" {
     path = "%s"
@@ -209,26 +210,23 @@ resource "vault_auth_backend" "cert" {
 
 resource "vault_cert_auth_backend_role" "test" {
     name          = "%s"
-    certificate   = <<__CERTIFICATE__
+    certificate   = <<EOF
 %s
-__CERTIFICATE__
-    allowed_names  = [%s]
-    backend        = vault_auth_backend.cert.path
-    token_ttl      = 300
-    token_max_ttl  = 600
-    token_policies = ["test_policy_1", "test_policy_2"]
+EOF
+    allowed_names                = %s
+    backend                      = vault_auth_backend.cert.path
+    token_ttl                    = 300
+    token_max_ttl                = 600
+    token_policies               = ["test_policy_1", "test_policy_2"]
+    allowed_organizational_units = %s
 }
+`, backend, name, certificate, util.ArrayToTerraformList(allowedNames), util.ArrayToTerraformList(allowedOrgUnits))
 
-`, backend, name, certificate, strings.Join(quotedNames, ", "))
+	return config
 }
 
 func testCertAuthBackendConfig_unset(backend, name, certificate string, allowedNames []string) string {
-	quotedNames := make([]string, len(allowedNames))
-	for idx, name := range allowedNames {
-		quotedNames[idx] = fmt.Sprintf(`"%s"`, name)
-	}
-
-	return fmt.Sprintf(`
+	config := fmt.Sprintf(`
 
 resource "vault_auth_backend" "cert" {
     path = "%s"
@@ -240,9 +238,11 @@ resource "vault_cert_auth_backend_role" "test" {
     certificate   = <<__CERTIFICATE__
 %s
 __CERTIFICATE__
-    allowed_names  = [%s]
+    allowed_names  = %s
     backend        = vault_auth_backend.cert.path
 }
+`, backend, name, certificate, util.ArrayToTerraformList(allowedNames),
+	)
 
-`, backend, name, certificate, strings.Join(quotedNames, ", "))
+	return config
 }
