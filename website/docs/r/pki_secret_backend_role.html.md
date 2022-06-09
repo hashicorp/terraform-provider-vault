@@ -51,7 +51,7 @@ The following arguments are supported:
 
 * `allow_localhost` - (Optional) Flag to allow certificates for localhost
 
-* `allowed_domains` - (Optional) List of allowed domains for certificates 
+* `allowed_domains` - (Optional) List of allowed domains for certificates
 
 * `allowed_domains_template` - (Optional) Flag, if set, `allowed_domains` can be specified using identity template expressions such as `{{identity.entity.aliases.<mount accessor>.name}}`.
 
@@ -79,7 +79,7 @@ The following arguments are supported:
 
 * `email_protection_flag` - (Optional) Flag to specify certificates for email protection use
 
-* `key_type` - (Optional) The generated key type, choices: `rsa`, `ec`, `ed25519`, `any`  
+* `key_type` - (Optional) The generated key type, choices: `rsa`, `ec`, `ed25519`, `any`
   Defaults to `rsa`
 
 * `key_bits` - (Optional) The number of bits of generated keys
@@ -112,7 +112,14 @@ The following arguments are supported:
 
 * `require_cn` - (Optional) Flag to force CN usage
 
-* `policy_identifiers` - (Optional) Specify the list of allowed policies IODs
+* `policy_identifiers` - (Optional) Specify the list of allowed policies OIDs; Deprecated: use `policy_identifier` blocks instead
+* `policy_identifier` - (Optional) (Vault 1.11+ only) A block for specifying policy identifers. The `policy_identifier` block can be repeated, and supports the following arguments:
+
+   - `oid` - (Required) The OID for the policy identifier
+
+   - `notice` - (Optional) A notice for the policy identifier
+
+   - `cps` - (Optional) The URL of the CPS for the policy identifier
 
 * `basic_constraints_valid_for_non_ca` - (Optional) Flag to mark basic constraints valid when issuing non-CA certificates
 
