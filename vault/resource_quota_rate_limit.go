@@ -44,6 +44,19 @@ func quotaRateLimitResource() *schema.Resource {
 				Description:  "The maximum number of requests at any given second to be allowed by the quota rule. The rate must be positive.",
 				ValidateFunc: validation.FloatAtLeast(0.0),
 			},
+			"interval": {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "The duration in seconds to enforce rate limiting for.",
+				ValidateFunc: validation.IntAtLeast(1),
+				Computed:     true,
+			},
+			"block_interval": {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "If set, when a client reaches a rate limit threshold, the client will be prohibited from any further requests until after the 'block_interval' in seconds has elapsed.",
+				ValidateFunc: validation.IntAtLeast(0),
+			},
 		},
 	}
 }
@@ -63,6 +76,14 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 	data["path"] = d.Get("path").(string)
 	data["rate"] = d.Get("rate").(float64)
+
+	if v, ok := d.GetOk("interval"); ok {
+		data["interval"] = v
+	}
+
+	if v, ok := d.GetOk("block_interval"); ok {
+		data["block_interval"] = v
+	}
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -95,7 +116,7 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"path", "rate"} {
+	for _, k := range []string{"path", "rate", "interval", "block_interval"} {
 		v, ok := resp.Data[k]
 		if ok {
 			if err := d.Set(k, v); err != nil {
@@ -121,6 +142,14 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 	data["path"] = d.Get("path").(string)
 	data["rate"] = d.Get("rate").(float64)
+
+	if v, ok := d.GetOk("interval"); ok {
+		data["interval"] = v
+	}
+
+	if v, ok := d.GetOk("block_interval"); ok {
+		data["block_interval"] = v
+	}
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
