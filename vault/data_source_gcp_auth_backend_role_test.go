@@ -61,6 +61,7 @@ func TestAccGCPAuthBackendRoleDataSource_gce(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-gcp-role")
 	projectId := acctest.RandomWithPrefix("tf-test-gcp-project-id")
 
+	resourceName := "vault_gcp_auth_backend_role.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
@@ -69,24 +70,18 @@ func TestAccGCPAuthBackendRoleDataSource_gce(t *testing.T) {
 			{
 				Config: testGCPAuthBackendRoleConfig_gce(backend, name, projectId),
 				Check: resource.ComposeTestCheckFunc(
-					testGCPAuthBackendRoleCheck_attrs(backend, name),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend_role.test",
-						"bound_labels.#", "2"),
+					testGCPAuthBackendRoleCheck_attrs(resourceName, backend, name),
+					resource.TestCheckResourceAttr(resourceName, "bound_labels.#", "2"),
 				),
 			},
 			{
 				Config: testAccGCPAuthBackendRoleDataSourceConfig_gce(backend, name, projectId),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vault_gcp_auth_backend_role.gcp_role",
-						"backend", backend),
-					resource.TestCheckResourceAttr("data.vault_gcp_auth_backend_role.gcp_role",
-						"role_name", name),
-					resource.TestCheckResourceAttr("data.vault_gcp_auth_backend_role.gcp_role",
-						"type", "gce"),
-					resource.TestCheckResourceAttrSet("data.vault_gcp_auth_backend_role.gcp_role",
-						"role_id"),
-					resource.TestCheckResourceAttr("data.vault_gcp_auth_backend_role.gcp_role",
-						"bound_labels.#", "2"),
+					resource.TestCheckResourceAttr("data.vault_gcp_auth_backend_role.gcp_role", "backend", backend),
+					resource.TestCheckResourceAttr("data.vault_gcp_auth_backend_role.gcp_role", "role_name", name),
+					resource.TestCheckResourceAttr("data.vault_gcp_auth_backend_role.gcp_role", "type", "gce"),
+					resource.TestCheckResourceAttrSet("data.vault_gcp_auth_backend_role.gcp_role", "role_id"),
+					resource.TestCheckResourceAttr("data.vault_gcp_auth_backend_role.gcp_role", "bound_labels.#", "2"),
 				),
 			},
 		},
