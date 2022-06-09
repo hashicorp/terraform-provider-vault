@@ -300,7 +300,7 @@ EOT
 
 func testValidateCSR(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		rs, err := testGetResourceFromRootModule(s, resourceName)
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
 		if err != nil {
 			return err
 		}

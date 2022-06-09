@@ -6,10 +6,10 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -197,9 +197,9 @@ func identityEntityDataSource() *schema.Resource {
 
 func identityEntityLookup(client *api.Client, data map[string]interface{}) (*api.Secret, error) {
 	log.Print("[DEBUG] Looking up IdentityEntity")
-	resp, err := client.Logical().Write("identity/lookup/entity", data)
+	resp, err := client.Logical().Write(entity.LookupPath, data)
 	if err != nil {
-		return nil, fmt.Errorf("Error reading Identity Entity '%v': %s", data, err)
+		return nil, fmt.Errorf("Error reading Identity Entity '%v': %w", data, err)
 	}
 
 	if resp == nil {

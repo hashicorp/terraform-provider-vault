@@ -12,6 +12,7 @@ const (
 	RootEntityIDPath = RootEntityPath + "/id"
 	RootAliasPath    = RootEntityPath + "-alias"
 	RootAliasIDPath  = RootAliasPath + "/id"
+	LookupPath       = "identity/lookup/entity"
 )
 
 // Entity represents a Vault identity entity

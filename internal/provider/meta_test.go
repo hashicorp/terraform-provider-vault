@@ -212,7 +212,7 @@ func TestGetClient(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		meta      *ProviderMeta
+		meta      interface{}
 		ifcNS     string
 		envNS     string
 		want      string
@@ -294,13 +294,14 @@ func TestGetClient(t *testing.T) {
 			name:      "error-not-provider-meta",
 			meta:      nil,
 			wantErr:   true,
-			expectErr: fmt.Errorf("meta argument must be a ProviderMeta"),
+			expectErr: fmt.Errorf("meta argument must be a *provider.ProviderMeta, not <nil>"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.meta != nil {
-				tt.meta.resourceData = schema.TestResourceDataRaw(t,
+				m := tt.meta.(*ProviderMeta)
+				m.resourceData = schema.TestResourceDataRaw(t,
 					map[string]*schema.Schema{
 						consts.FieldNamespace: {
 							Type:     schema.TypeString,
@@ -309,6 +310,7 @@ func TestGetClient(t *testing.T) {
 					},
 					map[string]interface{}{},
 				)
+				tt.meta = m
 			}
 
 			var i interface{}

@@ -68,8 +68,18 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-			Optional: true,
-			Computed: true,
+			Optional:      true,
+			Computed:      true,
+			Deprecated:    "Use allowed_organizational_units",
+			ConflictsWith: []string{"allowed_organizational_units"},
+		},
+		"allowed_organizational_units": {
+			Type: schema.TypeSet,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Optional:      true,
+			ConflictsWith: []string{"allowed_organization_units"},
 		},
 		"required_extensions": {
 			Type: schema.TypeSet,
@@ -144,8 +154,8 @@ func certAuthResourceWrite(ctx context.Context, d *schema.ResourceData, meta int
 		data["allowed_uri_sans"] = v.(*schema.Set).List()
 	}
 
-	if v, ok := d.GetOk("allowed_organization_units"); ok {
-		data["allowed_organization_units"] = v.(*schema.Set).List()
+	if v, ok := d.GetOk("allowed_organizational_units"); ok {
+		data["allowed_organizational_units"] = v.(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("required_extensions"); ok {
@@ -196,8 +206,8 @@ func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		data["allowed_uri_sans"] = v.(*schema.Set).List()
 	}
 
-	if v, ok := d.GetOk("allowed_organization_units"); ok {
-		data["allowed_organization_units"] = v.(*schema.Set).List()
+	if d.HasChange("allowed_organizational_units") {
+		data["allowed_organizational_units"] = d.Get("allowed_organizational_units").(*schema.Set).List()
 	}
 
 	if v, ok := d.GetOk("required_extensions"); ok {
@@ -290,17 +300,6 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 	}
 
 	// Vault sometimes returns these as null instead of an empty list.
-	if resp.Data["allowed_organization_units"] != nil {
-		d.Set("allowed_organization_units",
-			schema.NewSet(
-				schema.HashString, resp.Data["allowed_organization_units"].([]interface{})))
-	} else {
-		d.Set("allowed_organization_units",
-			schema.NewSet(
-				schema.HashString, []interface{}{}))
-	}
-
-	// Vault sometimes returns these as null instead of an empty list.
 	if resp.Data["required_extensions"] != nil {
 		d.Set("required_extensions",
 			schema.NewSet(
@@ -309,6 +308,10 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 		d.Set("required_extensions",
 			schema.NewSet(
 				schema.HashString, []interface{}{}))
+	}
+
+	if err := d.Set("allowed_organizational_units", resp.Data["allowed_organizational_units"]); err != nil {
+		return diag.FromErr(err)
 	}
 
 	diags := checkCIDRs(d, TokenFieldBoundCIDRs)

@@ -138,26 +138,31 @@ func testAccCheckIdentityEntityDestroy(s *terraform.State) error {
 
 func testAccIdentityEntityCheckAttrs(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		rs, err := testGetResourceFromRootModule(s, resourceName)
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
 		if err != nil {
 			return err
 		}
 
 		path := entity.JoinEntityID(rs.Primary.ID)
-		tAttrs := []*vaultStateTest{
+		tAttrs := []*testutil.VaultStateTest{
 			{
-				rs:        resourceName,
-				stateAttr: "name",
-				vaultAttr: "name",
+				ResourceName: resourceName,
+				StateAttr:    "name",
+				VaultAttr:    "name",
 			},
 			{
-				rs:        resourceName,
-				stateAttr: "policies",
-				vaultAttr: "policies",
+				ResourceName: resourceName,
+				StateAttr:    "policies",
+				VaultAttr:    "policies",
 			},
 		}
 
-		return assertVaultState(s, path, tAttrs...)
+		return testutil.AssertVaultState(client, s, path, tAttrs...)
 	}
 }
 

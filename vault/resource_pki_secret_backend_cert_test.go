@@ -307,7 +307,7 @@ resource "vault_pki_secret_backend_cert" "test" {
 
 func testCapturePKICert(resourceName string, store *testPKICertStore) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		rs, err := testGetResourceFromRootModule(s, resourceName)
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
 		if err != nil {
 			return err
 		}
@@ -411,7 +411,7 @@ func testPKICertRevocation(path string, store *testPKICertStore) resource.TestCh
 
 func testPKICertReIssued(resourceName string, store *testPKICertStore) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		rs, err := testGetResourceFromRootModule(s, resourceName)
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
 		if err != nil {
 			return err
 		}
@@ -425,12 +425,4 @@ func testPKICertReIssued(resourceName string, store *testPKICertStore) resource.
 
 		return nil
 	}
-}
-
-func testGetResourceFromRootModule(s *terraform.State, resourceName string) (*terraform.ResourceState, error) {
-	if rs, ok := s.RootModule().Resources[resourceName]; ok {
-		return rs, nil
-	}
-
-	return nil, fmt.Errorf("expected resource %q, not found in state", resourceName)
 }
