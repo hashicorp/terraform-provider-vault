@@ -122,6 +122,38 @@ The following arguments are supported:
 
    - `cps` - (Optional) The URL of the CPS for the policy identifier
 
+   Example usage:
+```hcl
+resource "vault_mount" "pki" {
+  path                      = "pki"
+  type                      = "pki"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds     = 86400
+}
+
+resource "vault_pki_secret_backend_role" "role" {
+  backend          = vault_mount.pki.path
+  name             = "my_role"
+  ttl              = 3600
+  allow_ip_sans    = true
+  key_type         = "rsa"
+  key_bits         = 4096
+  allowed_domains  = ["example.com", "my.domain"]
+  allow_subdomains = true
+
+  policy_identifier {
+    oid = "1.3.6.1.4.1.7.8"
+    notice= "I am a user Notice"
+  }
+  policy_identifier {
+    oid = "1.3.6.1.4.1.44947.1.2.4"
+    cps ="https://example.com"
+  }
+}
+```
+
+
+
 * `basic_constraints_valid_for_non_ca` - (Optional) Flag to mark basic constraints valid when issuing non-CA certificates
 
 * `not_before_duration` - (Optional) Specifies the duration by which to backdate the NotBefore property.

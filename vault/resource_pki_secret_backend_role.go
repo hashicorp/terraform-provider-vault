@@ -383,9 +383,6 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 		extKeyUsage = append(extKeyUsage, iUsage.(string))
 	}
 
-	policyIdentifiersList := d.Get("policy_identifiers").([]interface{})
-	policyIdentifierBlocks := pki.ReadPolicyIdentifierBlocks(d.Get("policy_identifier").(*schema.Set))
-
 	iAllowedSerialNumbers := d.Get("allowed_serial_numbers").([]interface{})
 	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
 	for _, iSerialNumber := range iAllowedSerialNumbers {
@@ -439,10 +436,10 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 		data["ext_key_usage"] = extKeyUsage
 	}
 
-	if len(policyIdentifiersList) > 0 {
-		data["policy_identifiers"] = policyIdentifiersList
-	} else if policyIdentifierBlocks != "" {
-		data["policy_identifiers"] = policyIdentifierBlocks
+	if policyIdentifiers, ok := d.GetOk("policy_identifiers"); ok {
+		data["policy_identifiers"] = policyIdentifiers
+	} else if policyIdentifierBlocksRaw, ok := d.GetOk("policy_identifier"); ok {
+		data["policy_identifiers"] = pki.ReadPolicyIdentifierBlocks(policyIdentifierBlocksRaw.(*schema.Set))
 	}
 
 	if len(allowedSerialNumbers) > 0 {
@@ -516,9 +513,16 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		extKeyUsage = append(extKeyUsage, iUsage.(string))
 	}
 
-	legacyPolicyIdentifiers, newPolicyIdentifiers, err := pki.MakePkiPolicyIdentifiersListOrSet(secret.Data["policy_identifiers"].([]interface{}))
-	if err != nil {
-		return err
+	var legacyPolicyIdentifiers []string = nil
+	var newPolicyIdentifiers *schema.Set = nil
+	if policyIdentifiersRaw, ok := secret.Data["policy_identifiers"]; ok {
+		if policyIdentifiersRawList, ok := policyIdentifiersRaw.([]interface{}); ok {
+			var err error
+			legacyPolicyIdentifiers, newPolicyIdentifiers, err = pki.MakePkiPolicyIdentifiersListOrSet(policyIdentifiersRawList)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	notBeforeDuration := flattenVaultDuration(secret.Data["not_before_duration"])
@@ -603,9 +607,6 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 		extKeyUsage = append(extKeyUsage, iUsage.(string))
 	}
 
-	policyIdentifiersList := d.Get("policy_identifiers").([]interface{})
-	policyIdentifierBlocks := pki.ReadPolicyIdentifierBlocks(d.Get("policy_identifier").(*schema.Set))
-
 	iAllowedSerialNumbers := d.Get("allowed_serial_numbers").([]interface{})
 	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
 	for _, iSerialNumber := range iAllowedSerialNumbers {
@@ -659,10 +660,10 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 		data["ext_key_usage"] = extKeyUsage
 	}
 
-	if len(policyIdentifiersList) > 0 {
-		data["policy_identifiers"] = policyIdentifiersList
-	} else if policyIdentifierBlocks != "" {
-		data["policy_identifiers"] = policyIdentifierBlocks
+	if policyIdentifiers, ok := d.GetOk("policy_identifiers"); ok {
+		data["policy_identifiers"] = policyIdentifiers
+	} else if policyIdentifierBlocksRaw, ok := d.GetOk("policy_identifier"); ok {
+		data["policy_identifiers"] = pki.ReadPolicyIdentifierBlocks(policyIdentifierBlocksRaw.(*schema.Set))
 	}
 
 	if len(allowedSerialNumbers) > 0 {

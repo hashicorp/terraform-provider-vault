@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -24,6 +25,7 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
   policy_identifier {
     oid = "1.2.3.4.5.6"
   }`
+	combinedPolicyIdentifiers := testLegacyPolicyIdentifiers + "\n  " + newPolicyIdentifiers
 
 	backend := acctest.RandomWithPrefix("pki")
 	name := acctest.RandomWithPrefix("role")
@@ -86,6 +88,11 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, newPolicyIdentifiers),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
@@ -94,6 +101,23 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 						resource.TestCheckTypeSetElemNestedAttrs(resourceName, "policy_identifier.*", map[string]string{"oid": "1.2.3.4.5.6"}),
 					)...,
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testPkiSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config:      testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, combinedPolicyIdentifiers),
+				ExpectError: regexp.MustCompile(".*Conflicting configuration arguments.*"),
 			},
 		},
 	})
@@ -163,6 +187,11 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 0, 0, testLegacyPolicyIdentifiers),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
@@ -172,6 +201,11 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, testLegacyPolicyIdentifiers),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
@@ -179,6 +213,11 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 						resource.TestCheckResourceAttr(resourceName, "max_ttl", "7200"),
 					)...,
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			{
 				Config: testPkiSecretBackendRoleConfig_updated(name, backend, testLegacyPolicyIdentifiers),
@@ -228,6 +267,11 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "basic_constraints_valid_for_non_ca", "false"),
 					resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
