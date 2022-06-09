@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/terraform-provider-vault/internal"
+	"github.com/hashicorp/terraform-provider-vault/internal/pki"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -384,7 +384,7 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	policyIdentifiersList := d.Get("policy_identifiers").([]interface{})
-	policyIdentifierBlocks := internal.ReadPolicyIdentifierBlocks(d.Get("policy_identifier").(*schema.Set))
+	policyIdentifierBlocks := pki.ReadPolicyIdentifierBlocks(d.Get("policy_identifier").(*schema.Set))
 
 	iAllowedSerialNumbers := d.Get("allowed_serial_numbers").([]interface{})
 	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
@@ -516,7 +516,7 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		extKeyUsage = append(extKeyUsage, iUsage.(string))
 	}
 
-	legacyPolicyIdentifiers, newPolicyIdentifiers, err := internal.MakePkiPolicyIdentifiersListOrSet(secret.Data["policy_identifiers"].([]interface{}))
+	legacyPolicyIdentifiers, newPolicyIdentifiers, err := pki.MakePkiPolicyIdentifiersListOrSet(secret.Data["policy_identifiers"].([]interface{}))
 	if err != nil {
 		return err
 	}
@@ -604,7 +604,7 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	policyIdentifiersList := d.Get("policy_identifiers").([]interface{})
-	policyIdentifierBlocks := internal.ReadPolicyIdentifierBlocks(d.Get("policy_identifier").(*schema.Set))
+	policyIdentifierBlocks := pki.ReadPolicyIdentifierBlocks(d.Get("policy_identifier").(*schema.Set))
 
 	iAllowedSerialNumbers := d.Get("allowed_serial_numbers").([]interface{})
 	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))

@@ -1,4 +1,4 @@
-package internal
+package pki
 
 import (
 	"encoding/json"
