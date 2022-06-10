@@ -74,8 +74,7 @@ In order to run the full suite of Acceptance tests, you will need the following:
 There may be additional variables for specific tests. Consult the specific test(s) for more information.
     - `AWS_ACCESS_KEY_ID`
     - `AWS_SECRET_ACCESS_KEY`
-    - `GOOGLE_CREDENTIALS`
-    - `GOOGLE_PROJECT`
+    - `GOOGLE_CREDENTIALS` the contents of a GCP creds JSON, alternatively read from `GOOGLE_CREDENTIALS_FILE`
     - `RMQ_CONNECTION_URI`
     - `RMQ_USERNAME`
     - `RMQ_PASSWORD`

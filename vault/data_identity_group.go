@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -171,7 +172,7 @@ func identityGroupDataSource() *schema.Resource {
 
 func identityGroupLookup(client *api.Client, data map[string]interface{}) (*api.Secret, error) {
 	log.Print("[DEBUG] Looking up IdentityGroup")
-	resp, err := client.Logical().Write("identity/lookup/group", data)
+	resp, err := client.Logical().Write(group.LookupPath, data)
 	if err != nil {
 		return nil, fmt.Errorf("Error reading Identity Group '%v': %s", data, err)
 	}

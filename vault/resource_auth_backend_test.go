@@ -160,51 +160,6 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 	}
 }
 
-func testResourceAuth_updateCheck(s *terraform.State) error {
-	resourceState := s.Modules[0].Resources["vault_auth_backend.test"]
-	if resourceState == nil {
-		return fmt.Errorf("resource not found in state")
-	}
-
-	instanceState := resourceState.Primary
-	if instanceState == nil {
-		return fmt.Errorf("resource has no primary instance")
-	}
-
-	name := instanceState.ID
-
-	if name != instanceState.Attributes["type"] {
-		return fmt.Errorf("id doesn't match name")
-	}
-
-	if name != "ldap" {
-		return fmt.Errorf("unexpected auth name")
-	}
-
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return fmt.Errorf("error reading back auth: %s", err)
-	}
-
-	found := false
-	for _, auth := range auths {
-		if auth.Type == name {
-			found = true
-			if wanted := instanceState.Attributes["accessor"]; auth.Accessor != wanted {
-				return fmt.Errorf("accessor is %v; wanted %v", auth.Accessor, wanted)
-			}
-			break
-		}
-	}
-
-	if !found {
-		return fmt.Errorf("could not find auth backend %s in %+v", name, auths)
-	}
-
-	return nil
-}
-
 func TestResourceAuthTune(t *testing.T) {
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_auth_backend.test"
