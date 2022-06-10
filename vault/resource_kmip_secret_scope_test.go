@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -38,14 +39,14 @@ func TestAccKMIPSecretScope_remount(t *testing.T) {
 			{
 				Config: testKMIPSecretScope_initialConfig(path, addr1),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "scope", "test"),
 				),
 			},
 			{
 				Config: testKMIPSecretScope_initialConfig(remountPath, addr1),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", remountPath),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, remountPath),
 					resource.TestCheckResourceAttr(resourceName, "scope", "test"),
 				),
 			},

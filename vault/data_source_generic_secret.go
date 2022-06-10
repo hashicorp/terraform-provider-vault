@@ -52,13 +52,13 @@ func genericSecretDataSource() *schema.Resource {
 				Sensitive:   true,
 			},
 
-			"lease_id": {
+			consts.FieldLeaseID: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Lease identifier assigned by vault.",
 			},
 
-			"lease_duration": {
+			consts.FieldLeaseDuration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "Lease duration in seconds relative to the time in lease_start_time.",
@@ -70,7 +70,7 @@ func genericSecretDataSource() *schema.Resource {
 				Description: "Time at which the lease was read, using the clock of the system where Terraform was running",
 			},
 
-			"lease_renewable": {
+			consts.FieldLeaseRenewable: {
 				Type:        schema.TypeBool,
 				Computed:    true,
 				Description: "True if the duration of this lease can be extended through renewal.",
@@ -127,15 +127,15 @@ func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	if err := d.Set("lease_id", secret.LeaseID); err != nil {
+	if err := d.Set(consts.FieldLeaseID, secret.LeaseID); err != nil {
 		return err
 	}
 
-	if err := d.Set("lease_duration", secret.LeaseDuration); err != nil {
+	if err := d.Set(consts.FieldLeaseDuration, secret.LeaseDuration); err != nil {
 		return err
 	}
 
-	if err := d.Set("lease_renewable", secret.Renewable); err != nil {
+	if err := d.Set(consts.FieldLeaseRenewable, secret.Renewable); err != nil {
 		return err
 	}
 

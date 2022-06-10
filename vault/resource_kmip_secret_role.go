@@ -57,7 +57,7 @@ func kmipSecretRoleResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Path where KMIP backend is mounted",

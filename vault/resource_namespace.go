@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -21,7 +22,7 @@ func namespaceResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Path of the namespace.",
@@ -43,7 +44,7 @@ func namespaceWrite(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 
 	log.Printf("[DEBUG] Creating namespace %s in Vault", path)
 	_, err := client.Logical().Write("sys/namespaces/"+path, nil)
@@ -60,7 +61,7 @@ func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 
 	log.Printf("[DEBUG] Deleting namespace %s from Vault", path)
 
@@ -97,7 +98,7 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("namespace_id", resp.Data["id"])
 
 	noTrailingSlashPath := strings.TrimSuffix(path, "/")
-	d.Set("path", noTrailingSlashPath)
+	d.Set(consts.FieldPath, noTrailingSlashPath)
 
 	return nil
 }
@@ -106,7 +107,7 @@ func upgradeNonPathdNamespaceID(d *schema.ResourceData) {
 	// Upgrade ID to path
 	id := d.Id()
 	oldID := d.Id()
-	path, ok := d.GetOk("path")
+	path, ok := d.GetOk(consts.FieldPath)
 	if id != path && ok {
 		log.Printf("[DEBUG] Upgrading old ID to path - %s to %s", id, path)
 		d.SetId(path.(string))

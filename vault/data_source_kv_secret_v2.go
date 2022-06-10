@@ -81,16 +81,16 @@ func kvSecretV2DataSource() *schema.Resource {
 func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*provider.ProviderMeta).GetClient()
 
-	mount := d.Get("mount").(string)
-	name := d.Get("name").(string)
+	mount := d.Get(consts.FieldMount).(string)
+	name := d.Get(consts.FieldName).(string)
 
-	path := getKVV2Path(mount, name, "data")
+	path := getKVV2Path(mount, name, consts.FieldData)
 
-	if err := d.Set("path", path); err != nil {
+	if err := d.Set(consts.FieldPath, path); err != nil {
 		return diag.FromErr(err)
 	}
 
-	if v, ok := d.GetOk("version"); ok {
+	if v, ok := d.GetOk(consts.FieldVersion); ok {
 		// add version to path as a query param
 		path = fmt.Sprintf("%s?version=%d", path, v.(int))
 	}
@@ -105,12 +105,10 @@ func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta in
 		return diag.Errorf("no secret found at %q", path)
 	}
 
-	d.SetId(path)
-
 	data := secret.Data["data"]
 
 	if v, ok := data.(map[string]interface{}); ok {
-		if err := d.Set("data", serializeDataMapToString(v)); err != nil {
+		if err := d.Set(consts.FieldData, serializeDataMapToString(v)); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -144,6 +142,8 @@ func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta in
 			}
 		}
 	}
+
+	d.SetId(path)
 
 	return nil
 }

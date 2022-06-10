@@ -172,7 +172,7 @@ func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error
 		base := "data"
 		deleteAllVersions := d.Get("delete_all_versions").(bool)
 		if deleteAllVersions {
-			base = "metadata"
+			base = consts.FieldMetadata
 		}
 		path = addPrefixToVKVPath(path, mountPath, base)
 	}

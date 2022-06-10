@@ -118,7 +118,7 @@ func tokenResource() *schema.Resource {
 				Optional:    true,
 				Description: "The renew increment.",
 			},
-			"lease_duration": {
+			consts.FieldLeaseDuration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "The token lease duration.",
@@ -338,7 +338,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error parsing expire_time: %s", err)
 	}
-	d.Set("lease_duration", int(expireTime.Sub(issueTime).Seconds()))
+	d.Set(consts.FieldLeaseDuration, int(expireTime.Sub(issueTime).Seconds()))
 
 	d.Set("metadata", resp.Data["meta"])
 
@@ -350,7 +350,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 		log.Printf("[DEBUG] Lease for token accessor %q expiring soon, renewing", accessor)
 
-		increment := d.Get("lease_duration").(int)
+		increment := d.Get(consts.FieldLeaseDuration).(int)
 
 		if v, ok := d.GetOk("renew_increment"); ok {
 			increment = v.(int)
@@ -365,7 +365,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 		log.Printf("[DEBUG] Lease for token accessor %q renewed, new lease duration %d", id, renewed.Auth.LeaseDuration)
 
-		d.Set("lease_duration", renewed.Data["lease_duration"])
+		d.Set(consts.FieldLeaseDuration, renewed.Data["lease_duration"])
 		d.Set("lease_started", time.Now().Format(time.RFC3339))
 		d.Set("client_token", renewed.Auth.ClientToken)
 
@@ -430,7 +430,7 @@ func tokenCheckLease(d *schema.ResourceData) bool {
 		return false
 	}
 
-	leaseDuration := d.Get("lease_duration").(int)
+	leaseDuration := d.Get(consts.FieldLeaseDuration).(int)
 
 	expireTime := started.Add(time.Second * time.Duration(leaseDuration))
 	if expireTime.Before(time.Now()) {

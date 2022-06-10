@@ -50,12 +50,12 @@ func kvSecretListDataSourceV2() *schema.Resource {
 func kvSecretV2ListDataSourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*provider.ProviderMeta).GetClient()
 
-	mount := d.Get("mount").(string)
-	name := d.Get("name").(string)
+	mount := d.Get(consts.FieldMount).(string)
+	name := d.Get(consts.FieldName).(string)
 
-	path := getKVV2Path(mount, name, "metadata")
+	path := getKVV2Path(mount, name, consts.FieldMetadata)
 
-	if err := d.Set("path", path); err != nil {
+	if err := d.Set(consts.FieldPath, path); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -64,7 +64,7 @@ func kvSecretV2ListDataSourceRead(_ context.Context, d *schema.ResourceData, met
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set("names", names); err != nil {
+	if err := d.Set(consts.FieldNames, names); err != nil {
 		return diag.FromErr(err)
 	}
 

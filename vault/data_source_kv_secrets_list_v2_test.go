@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -25,8 +26,8 @@ func TestDataSourceKVSecretListV2(t *testing.T) {
 			{
 				Config: testDataSourceKVV2SecretListConfig(mount, s1, s2),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(datasource1, "mount", mount),
-					resource.TestCheckResourceAttr(datasource1, "path", fmt.Sprintf("%s/metadata/", mount)),
+					resource.TestCheckResourceAttr(datasource1, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(datasource1, consts.FieldPath, fmt.Sprintf("%s/metadata/", mount)),
 					resource.TestCheckResourceAttr(datasource1, "names.#", "3"),
 					resource.TestCheckResourceAttr(datasource1, "names.0", s2),
 					resource.TestCheckResourceAttr(datasource1, "names.1", fmt.Sprintf("%s/", s2)),
@@ -36,9 +37,9 @@ func TestDataSourceKVSecretListV2(t *testing.T) {
 			{
 				Config: testDataSourceKVV2SecretListConfig(mount, s1, s2),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(datasource2, "mount", mount),
-					resource.TestCheckResourceAttr(datasource2, "name", s2),
-					resource.TestCheckResourceAttr(datasource2, "path", fmt.Sprintf("%s/metadata/%s", mount, s2)),
+					resource.TestCheckResourceAttr(datasource2, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(datasource2, consts.FieldName, s2),
+					resource.TestCheckResourceAttr(datasource2, consts.FieldPath, fmt.Sprintf("%s/metadata/%s", mount, s2)),
 					resource.TestCheckResourceAttr(datasource2, "names.#", "1"),
 					resource.TestCheckResourceAttr(datasource2, "names.0", "biz"),
 				),

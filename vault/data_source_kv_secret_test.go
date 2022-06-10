@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -22,8 +23,8 @@ func TestDataSourceKVSecret(t *testing.T) {
 			{
 				Config: testDataSourceKVSecretConfig(mount, name),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", fmt.Sprintf("%s/%s", mount, name)),
-					resource.TestCheckResourceAttr(resourceName, "lease_renewable", "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/%s", mount, name)),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLeaseRenewable, "false"),
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
 				),

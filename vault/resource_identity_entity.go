@@ -84,7 +84,7 @@ func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interfac
 			}
 		}
 
-		if metadata, ok := d.GetOk("metadata"); ok {
+		if metadata, ok := d.GetOk(consts.FieldMetadata); ok {
 			data["metadata"] = metadata
 		}
 

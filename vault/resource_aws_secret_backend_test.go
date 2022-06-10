@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -25,7 +26,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 			{
 				Config: testAccAWSSecretBackendConfig_basic(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
 					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
 					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
@@ -47,7 +48,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 			{
 				Config: testAccAWSSecretBackendConfig_updated(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
 					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "1800"),
 					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "43200"),
@@ -61,7 +62,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 			{
 				Config: testAccAWSSecretBackendConfig_noCreds(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
 					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "1800"),
 					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "43200"),

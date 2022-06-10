@@ -36,14 +36,14 @@ func kvSecretListDataSource() *schema.Resource {
 func kvSecretListDataSourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*provider.ProviderMeta).GetClient()
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 
 	names, err := kvListRequest(client, path)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set("names", names); err != nil {
+	if err := d.Set(consts.FieldNames, names); err != nil {
 		return diag.FromErr(err)
 	}
 

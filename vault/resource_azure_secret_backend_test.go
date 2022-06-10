@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -23,7 +24,7 @@ func TestAzureSecretBackend(t *testing.T) {
 			{
 				Config: testAzureSecretBackend_initialConfig(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "path", path),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", consts.FieldPath, path),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "subscription_id", "11111111-2222-3333-4444-111111111111"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "tenant_id", "11111111-2222-3333-4444-222222222222"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "client_id", "11111111-2222-3333-4444-333333333333"),
@@ -35,7 +36,7 @@ func TestAzureSecretBackend(t *testing.T) {
 			{
 				Config: testAzureSecretBackend_updated(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "path", path),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", consts.FieldPath, path),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "subscription_id", "11111111-2222-3333-4444-111111111111"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "tenant_id", "22222222-3333-4444-5555-333333333333"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "client_id", "22222222-3333-4444-5555-444444444444"),
@@ -47,7 +48,7 @@ func TestAzureSecretBackend(t *testing.T) {
 			{
 				Config: testAzureSecretBackend_updateSubscriptionID(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "path", path),
+					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", consts.FieldPath, path),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "subscription_id", "11111112-2221-3332-4443-111111111110"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "tenant_id", "22222222-3333-4444-5555-333333333333"),
 					resource.TestCheckResourceAttr("vault_azure_secret_backend.test", "client_id", "22222222-3333-4444-5555-444444444444"),

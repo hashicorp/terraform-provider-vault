@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -21,7 +22,7 @@ func TestAccKVSecretBackendV2_basic(t *testing.T) {
 			{
 				Config: testKVSecretBackendV2Config(mount, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "mount", mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "5"),
 					resource.TestCheckResourceAttr(resourceName, "delete_version_after", "3700"),
 					resource.TestCheckResourceAttr(resourceName, "cas_required", "true"),
@@ -30,7 +31,7 @@ func TestAccKVSecretBackendV2_basic(t *testing.T) {
 			{
 				Config: testKVSecretBackendV2Config(mount, true),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "mount", mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "7"),
 					resource.TestCheckResourceAttr(resourceName, "delete_version_after", "87550"),
 					resource.TestCheckResourceAttr(resourceName, "cas_required", "true"),

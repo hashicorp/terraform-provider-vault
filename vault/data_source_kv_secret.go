@@ -28,17 +28,17 @@ func kvSecretDataSource() *schema.Resource {
 				Description: "Map of strings read from Vault.",
 				Sensitive:   true,
 			},
-			"lease_id": {
+			consts.FieldLeaseID: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Lease identifier assigned by Vault.",
 			},
-			"lease_duration": {
+			consts.FieldLeaseDuration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "Lease duration in seconds.",
 			},
-			"lease_renewable": {
+			consts.FieldLeaseRenewable: {
 				Type:        schema.TypeBool,
 				Computed:    true,
 				Description: "True if the duration of this lease can be extended through renewal.",
@@ -50,9 +50,9 @@ func kvSecretDataSource() *schema.Resource {
 func kvSecretDataSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*provider.ProviderMeta).GetClient()
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 
-	if err := d.Set("path", path); err != nil {
+	if err := d.Set(consts.FieldPath, path); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -66,27 +66,27 @@ func kvSecretDataSourceRead(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.Errorf("no secret found at %q", path)
 	}
 
-	d.SetId(path)
-
 	data := secret.Data["data"]
 
 	if v, ok := data.(map[string]interface{}); ok {
-		if err := d.Set("data", serializeDataMapToString(v)); err != nil {
+		if err := d.Set(consts.FieldData, serializeDataMapToString(v)); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
-	if err := d.Set("lease_id", secret.LeaseID); err != nil {
+	if err := d.Set(consts.FieldLeaseID, secret.LeaseID); err != nil {
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set("lease_duration", secret.LeaseDuration); err != nil {
+	if err := d.Set(consts.FieldLeaseDuration, secret.LeaseDuration); err != nil {
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set("lease_renewable", secret.Renewable); err != nil {
+	if err := d.Set(consts.FieldLeaseRenewable, secret.Renewable); err != nil {
 		return diag.FromErr(err)
 	}
+
+	d.SetId(path)
 
 	return nil
 }

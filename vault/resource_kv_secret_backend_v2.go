@@ -54,7 +54,7 @@ func kvSecretBackendV2Resource() *schema.Resource {
 
 func kvSecretBackendV2CreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*provider.ProviderMeta).GetClient()
-	mount := d.Get("mount").(string)
+	mount := d.Get(consts.FieldMount).(string)
 
 	data := map[string]interface{}{}
 

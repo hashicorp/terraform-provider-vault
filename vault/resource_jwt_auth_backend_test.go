@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -25,7 +26,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "description", "JWT backend"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "path", path),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", consts.FieldPath, path),
 					resource.TestCheckResourceAttrSet("vault_jwt_auth_backend.jwt", "accessor"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", ""),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "type", "jwt"),
@@ -37,7 +38,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "description", "JWT backend"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "oidc_discovery_url", "https://myco.auth0.com/"),
-					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "path", path),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", consts.FieldPath, path),
 					resource.TestCheckResourceAttrSet("vault_jwt_auth_backend.jwt", "accessor"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "bound_issuer", ""),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend.jwt", "type", "jwt"),
@@ -122,7 +123,7 @@ func TestAccJWTAuthBackend_invalid(t *testing.T) {
 				Config:  testAccJWTAuthBackendConfig(invalidPath),
 				Destroy: false,
 				ExpectError: regexp.MustCompile(
-					fmt.Sprintf(`invalid value "%s" for "path", contains leading/trailing "%s"`,
+					fmt.Sprintf(`invalid value "%s" for consts.FieldPath, contains leading/trailing "%s"`,
 						invalidPath, pathDelim)),
 			},
 			{

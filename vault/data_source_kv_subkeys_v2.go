@@ -63,12 +63,12 @@ func kvSecretSubkeysV2DataSource() *schema.Resource {
 func kvSecretSubkeysDataSourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*provider.ProviderMeta).GetClient()
 
-	mount := d.Get("mount").(string)
-	name := d.Get("name").(string)
+	mount := d.Get(consts.FieldMount).(string)
+	name := d.Get(consts.FieldName).(string)
 
 	path := getKVV2Path(mount, name, "subkeys")
 
-	if v, ok := d.GetOk("version"); ok {
+	if v, ok := d.GetOk(consts.FieldVersion); ok {
 		// add version to path as a query param
 		path = fmt.Sprintf("%s?version=%d", path, v.(int))
 	}
@@ -78,7 +78,7 @@ func kvSecretSubkeysDataSourceRead(_ context.Context, d *schema.ResourceData, me
 		path = fmt.Sprintf("%s?depth=%d", path, v.(int))
 	}
 
-	if err := d.Set("path", path); err != nil {
+	if err := d.Set(consts.FieldPath, path); err != nil {
 		return diag.FromErr(err)
 	}
 

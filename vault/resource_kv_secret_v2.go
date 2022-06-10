@@ -110,10 +110,10 @@ func getKVV2Path(mount, name, prefix string) string {
 
 func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*provider.ProviderMeta).GetClient()
-	mount := d.Get("mount").(string)
-	name := d.Get("name").(string)
+	mount := d.Get(consts.FieldMount).(string)
+	name := d.Get(consts.FieldName).(string)
 
-	path := getKVV2Path(mount, name, "data")
+	path := getKVV2Path(mount, name, consts.FieldData)
 
 	var secretData map[string]interface{}
 	err := json.Unmarshal([]byte(d.Get("data_json").(string)), &secretData)
@@ -144,7 +144,7 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 
 	path := d.Id()
 
-	if err := d.Set("path", path); err != nil {
+	if err := d.Set(consts.FieldPath, path); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -167,14 +167,14 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 		data := secret.Data["data"]
 
 		if v, ok := data.(map[string]interface{}); ok {
-			if err := d.Set("data", serializeDataMapToString(v)); err != nil {
+			if err := d.Set(consts.FieldData, serializeDataMapToString(v)); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 
 		if metadata, ok := secret.Data["metadata"]; ok {
 			if v, ok := metadata.(map[string]interface{}); ok {
-				if err := d.Set("metadata", serializeDataMapToString(v)); err != nil {
+				if err := d.Set(consts.FieldMetadata, serializeDataMapToString(v)); err != nil {
 					return diag.FromErr(err)
 				}
 			}
@@ -187,13 +187,13 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 func kvSecretV2Delete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*provider.ProviderMeta).GetClient()
 
-	mount := d.Get("mount").(string)
-	name := d.Get("name").(string)
+	mount := d.Get(consts.FieldMount).(string)
+	name := d.Get(consts.FieldName).(string)
 
-	base := "data"
+	base := consts.FieldData
 	deleteAllVersions := d.Get("delete_all_versions").(bool)
 	if deleteAllVersions {
-		base = "metadata"
+		base = consts.FieldMetadata
 	}
 
 	path := getKVV2Path(mount, name, base)

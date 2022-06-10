@@ -38,7 +38,7 @@ func TestAccAppRoleAuthBackendLogin_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
 						"renewable"),
 					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
-						"lease_duration"),
+						consts.FieldLeaseDuration),
 					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
 						"lease_started"),
 					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",

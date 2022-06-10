@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -39,7 +40,7 @@ func identityGroupResource() *schema.Resource {
 				Optional:    true,
 				Default:     "internal",
 			},
-			"metadata": {
+			consts.FieldMetadata: {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				Description: "Metadata to be associated with the group.",
@@ -126,13 +127,13 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 			}
 		}
 
-		if metadata, ok := d.GetOk("metadata"); ok {
+		if metadata, ok := d.GetOk(consts.FieldMetadata); ok {
 			data["metadata"] = metadata
 		}
 	} else {
 		if d.HasChanges("name", "external_policies", "policies", "metadata", "member_entity_ids", "member_group_ids") {
 			data["name"] = d.Get("name")
-			data["metadata"] = d.Get("metadata")
+			data["metadata"] = d.Get(consts.FieldMetadata)
 			data["policies"] = d.Get("policies").(*schema.Set).List()
 			// Member groups and entities can't be set for external groups
 			if d.Get("type").(string) == "internal" {

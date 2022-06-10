@@ -53,7 +53,7 @@ func kvSecretResource(name string) *schema.Resource {
 
 func kvSecretWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*provider.ProviderMeta).GetClient()
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 
 	var secretData map[string]interface{}
 	err := json.Unmarshal([]byte(d.Get("data_json").(string)), &secretData)
@@ -77,7 +77,7 @@ func kvSecretWrite(ctx context.Context, d *schema.ResourceData, meta interface{}
 func kvSecretRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	path := d.Id()
 
-	if err := d.Set("path", path); err != nil {
+	if err := d.Set(consts.FieldPath, path); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -99,7 +99,7 @@ func kvSecretRead(_ context.Context, d *schema.ResourceData, meta interface{}) d
 	data := secret.Data["data"]
 
 	if v, ok := data.(map[string]interface{}); ok {
-		if err := d.Set("data", serializeDataMapToString(v)); err != nil {
+		if err := d.Set(consts.FieldData, serializeDataMapToString(v)); err != nil {
 			return diag.FromErr(err)
 		}
 	}

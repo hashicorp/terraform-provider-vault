@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -22,7 +23,7 @@ func TestDataSourceKVSubkeys_basic(t *testing.T) {
 			{
 				Config: testDataSourceKVSubkeysConfig(mount, secretPath),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", fmt.Sprintf("%s/subkeys/%s", mount, secretPath)),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/subkeys/%s", mount, secretPath)),
 					resource.TestCheckResourceAttr(resourceName, "subkeys.zip", "null"),
 					resource.TestCheckResourceAttr(resourceName, "subkeys.foo", "null"),
 				),

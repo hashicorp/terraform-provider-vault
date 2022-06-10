@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -38,7 +39,7 @@ func TestAccKMIPSecretRole_basic(t *testing.T) {
 			{
 				Config: testKMIPSecretRole_initialConfig(path, addr1),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "scope", "scope-1"),
 					resource.TestCheckResourceAttr(resourceName, "role", "test"),
 					resource.TestCheckResourceAttr(resourceName, fieldTLSClientKeyType, "ec"),
@@ -62,7 +63,7 @@ func TestAccKMIPSecretRole_basic(t *testing.T) {
 			{
 				Config: testKMIPSecretRole_updatedConfig(path, addr1),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "scope", "scope-1"),
 					resource.TestCheckResourceAttr(resourceName, "role", "test"),
 					resource.TestCheckResourceAttr(resourceName, fieldTLSClientKeyType, "rsa"),
@@ -112,7 +113,7 @@ func TestAccKMIPSecretRole_remount(t *testing.T) {
 			{
 				Config: testKMIPSecretRole_initialConfig(path, addr1),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "scope", "scope-1"),
 					resource.TestCheckResourceAttr(resourceName, "role", "test"),
 					resource.TestCheckResourceAttr(resourceName, fieldTLSClientKeyType, "ec"),
@@ -136,7 +137,7 @@ func TestAccKMIPSecretRole_remount(t *testing.T) {
 			{
 				Config: testKMIPSecretRole_initialConfig(remountPath, addr1),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", remountPath),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, remountPath),
 					resource.TestCheckResourceAttr(resourceName, "scope", "scope-1"),
 					resource.TestCheckResourceAttr(resourceName, "role", "test"),
 					resource.TestCheckResourceAttr(resourceName, fieldTLSClientKeyType, "ec"),

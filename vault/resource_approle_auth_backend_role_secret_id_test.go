@@ -173,7 +173,7 @@ func TestAccAppRoleAuthBackendRoleSecretID_full(t *testing.T) {
 					resource.TestCheckResourceAttr(secretIDResource, "secret_id", secretID),
 					resource.TestCheckResourceAttrSet(secretIDResource, "accessor"),
 					resource.TestCheckResourceAttr(secretIDResource, "cidr_list.#", "2"),
-					resource.TestCheckResourceAttr(secretIDResource, "metadata", `{"hello":"world"}`),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldMetadata, `{"hello":"world"}`),
 				),
 			},
 		},
