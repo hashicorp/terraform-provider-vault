@@ -93,12 +93,16 @@ resource "vault_identity_oidc_provider" "test" {
 }
 
 func testAccCheckOIDCProviderDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_oidc_provider" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		resp, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("error checking for OIDC provider at %s, err=%w", rs.Primary.ID, err)

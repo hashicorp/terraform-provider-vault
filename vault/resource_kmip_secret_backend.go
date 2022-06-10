@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 
@@ -118,7 +119,7 @@ func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Mounting KMIP backend at %q", path)
 	if err := client.Sys().Mount(path, &api.MountInput{
-		Type:        "kmip",
+		Type:        consts.MountTypeKMIP,
 		Description: d.Get("description").(string),
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: defaultTLSClientTTL,

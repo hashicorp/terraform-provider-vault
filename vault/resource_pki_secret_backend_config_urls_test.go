@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -22,7 +23,8 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 	crlDistributionPoints := "http://127.0.0.1:8200/v1/pki/crl"
 	ocspServers := "http://127.0.0.1:8200/v1/pki/oscp"
 
-	resourceName := "vault_pki_secret_backend_config_urls.test"
+	resourceType := "vault_pki_secret_backend_config_urls"
+	resourceName := resourceType + ".test"
 	getChecks := func(i, c, o string) []resource.TestCheckFunc {
 		checks := []resource.TestCheckFunc{
 			resource.TestCheckResourceAttr(
@@ -44,7 +46,7 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendConfigUrlsDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				// Test that reading from an unconfigured mount succeeds
@@ -88,18 +90,6 @@ func testPkiSecretBackendConfigUrlsEmptyRead(s *terraform.State) error {
 			return err
 		}
 	}
-	return nil
-}
-
-func testPkiSecretBackendConfigUrlsDestroy(s *terraform.State) error {
-	paths, err := listPkiPaths(s)
-	if err != nil {
-		return err
-	}
-	for _, path := range paths {
-		return fmt.Errorf("mount %q still exists", path)
-	}
-
 	return nil
 }
 

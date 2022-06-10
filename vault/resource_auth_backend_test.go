@@ -53,12 +53,6 @@ func TestResourceAuth(t *testing.T) {
 }
 
 func testAccCheckAuthBackendDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return err
-	}
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_auth_backend" {
 			continue
@@ -66,6 +60,16 @@ func testAccCheckAuthBackendDestroy(s *terraform.State) error {
 		instanceState := rs.Primary
 		if instanceState == nil {
 			return fmt.Errorf("resource not found in state")
+		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		auths, err := client.Sys().ListAuth()
+		if err != nil {
+			return err
 		}
 
 		if _, ok := auths[instanceState.ID]; ok {
@@ -129,7 +133,11 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 			return fmt.Errorf("unexpected auth local")
 		}
 
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client, e := provider.GetClient(instanceState, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		auths, err := client.Sys().ListAuth()
 		if err != nil {
 			return fmt.Errorf("error reading back auth: %s", err)

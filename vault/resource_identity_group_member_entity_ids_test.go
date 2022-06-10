@@ -351,11 +351,14 @@ func (r *memberEntityTester) CheckMemberEntities(resourceName string) resource.T
 }
 
 func testAccCheckidentityGroupMemberEntityIdsDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_group_member_entity_ids" {
 			continue
+		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
 		}
 
 		if _, err := readIdentityGroup(client, rs.Primary.ID, false); err != nil {

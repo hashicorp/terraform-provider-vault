@@ -75,11 +75,14 @@ func TestAccIdentityGroupPoliciesNonExclusive(t *testing.T) {
 }
 
 func testAccCheckidentityGroupPoliciesDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_group_policies" {
 			continue
+		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
 		}
 
 		if _, err := readIdentityGroup(client, rs.Primary.ID, false); err != nil {
