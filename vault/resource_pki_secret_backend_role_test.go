@@ -2,15 +2,126 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
+
+var testLegacyPolicyIdentifiers = `policy_identifiers = ["1.2.3.4"]`
+
+func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+	// TODO: this can be merged with TestPkiSecretBackendRole_basic after Vault 1.11 is released.
+	newPolicyIdentifiers := `policy_identifier {
+    oid = "1.2.3.4.5"
+    cps = "https://example.com/cps"
+    notice = "Some notice"
+  }
+  policy_identifier {
+    oid = "1.2.3.4.5.6"
+  }`
+	combinedPolicyIdentifiers := testLegacyPolicyIdentifiers + "\n  " + newPolicyIdentifiers
+
+	backend := acctest.RandomWithPrefix("pki")
+	name := acctest.RandomWithPrefix("role")
+	resourceName := "vault_pki_secret_backend_role.test"
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "name", name),
+		resource.TestCheckResourceAttr(resourceName, "backend", backend),
+		resource.TestCheckResourceAttr(resourceName, "allow_localhost", "true"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_domains.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_domains.0", "test.domain"),
+		resource.TestCheckResourceAttr(resourceName, "allow_bare_domains", "false"),
+		resource.TestCheckResourceAttr(resourceName, "allow_subdomains", "true"),
+		resource.TestCheckResourceAttr(resourceName, "allow_glob_domains", "false"),
+		resource.TestCheckResourceAttr(resourceName, "allow_any_name", "false"),
+		resource.TestCheckResourceAttr(resourceName, "enforce_hostnames", "true"),
+		resource.TestCheckResourceAttr(resourceName, "allow_ip_sans", "true"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans.0", "uri.test.domain"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_other_sans.0", "1.2.3.4.5.5;UTF8:test"),
+		resource.TestCheckResourceAttr(resourceName, "server_flag", "true"),
+		resource.TestCheckResourceAttr(resourceName, "client_flag", "true"),
+		resource.TestCheckResourceAttr(resourceName, "code_signing_flag", "false"),
+		resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
+		resource.TestCheckResourceAttr(resourceName, "key_type", "rsa"),
+		resource.TestCheckResourceAttr(resourceName, "key_bits", "2048"),
+		resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
+		resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
+		resource.TestCheckResourceAttr(resourceName, "key_usage.#", "3"),
+		resource.TestCheckResourceAttr(resourceName, "key_usage.0", "DigitalSignature"),
+		resource.TestCheckResourceAttr(resourceName, "key_usage.1", "KeyAgreement"),
+		resource.TestCheckResourceAttr(resourceName, "key_usage.2", "KeyEncipherment"),
+		resource.TestCheckResourceAttr(resourceName, "ext_key_usage.#", "0"),
+		resource.TestCheckResourceAttr(resourceName, "use_csr_common_name", "true"),
+		resource.TestCheckResourceAttr(resourceName, "use_csr_sans", "true"),
+		resource.TestCheckResourceAttr(resourceName, "ou.0", "test"),
+		resource.TestCheckResourceAttr(resourceName, "organization.0", "test"),
+		resource.TestCheckResourceAttr(resourceName, "country.0", "test"),
+		resource.TestCheckResourceAttr(resourceName, "locality.0", "test"),
+		resource.TestCheckResourceAttr(resourceName, "province.0", "test"),
+		resource.TestCheckResourceAttr(resourceName, "street_address.0", "123 test"),
+		resource.TestCheckResourceAttr(resourceName, "postal_code.0", "12345"),
+		resource.TestCheckResourceAttr(resourceName, "generate_lease", "false"),
+		resource.TestCheckResourceAttr(resourceName, "no_store", "false"),
+		resource.TestCheckResourceAttr(resourceName, "require_cn", "true"),
+		resource.TestCheckResourceAttr(resourceName, "basic_constraints_valid_for_non_ca", "false"),
+		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
+	}
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testPkiSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, testLegacyPolicyIdentifiers),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks,
+						resource.TestCheckResourceAttr(resourceName, "policy_identifiers.#", "1"),
+						resource.TestCheckResourceAttr(resourceName, "policy_identifiers.0", "1.2.3.4"),
+					)...,
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, newPolicyIdentifiers),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks,
+						resource.TestCheckResourceAttr(resourceName, "policy_identifier.#", "2"),
+						resource.TestCheckTypeSetElemNestedAttrs(resourceName, "policy_identifier.*", map[string]string{"oid": "1.2.3.4.5", "cps": "https://example.com/cps", "notice": "Some notice"}),
+						resource.TestCheckTypeSetElemNestedAttrs(resourceName, "policy_identifier.*", map[string]string{"oid": "1.2.3.4.5.6"}),
+					)...,
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testPkiSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config:      testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, combinedPolicyIdentifiers),
+				ExpectError: regexp.MustCompile(".*Conflicting configuration arguments.*"),
+			},
+		},
+	})
+}
 
 func TestPkiSecretBackendRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("pki")
@@ -56,10 +167,10 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "generate_lease", "false"),
 		resource.TestCheckResourceAttr(resourceName, "no_store", "false"),
 		resource.TestCheckResourceAttr(resourceName, "require_cn", "true"),
-		resource.TestCheckResourceAttr(resourceName, "policy_identifiers.#", "1"),
-		resource.TestCheckResourceAttr(resourceName, "policy_identifiers.0", "1.2.3.4"),
 		resource.TestCheckResourceAttr(resourceName, "basic_constraints_valid_for_non_ca", "false"),
 		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
+		resource.TestCheckResourceAttr(resourceName, "policy_identifiers.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "policy_identifiers.0", "1.2.3.4"),
 	}
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -67,7 +178,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		CheckDestroy: testPkiSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200),
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, testLegacyPolicyIdentifiers),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, "ttl", "3600"),
@@ -76,7 +187,12 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 0, 0),
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 0, 0, testLegacyPolicyIdentifiers),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, "ttl", "0"),
@@ -85,7 +201,12 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200),
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, testLegacyPolicyIdentifiers),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, "ttl", "3600"),
@@ -94,7 +215,12 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testPkiSecretBackendRoleConfig_updated(name, backend),
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testPkiSecretBackendRoleConfig_updated(name, backend, testLegacyPolicyIdentifiers),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
@@ -142,11 +268,16 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
 
-func testPkiSecretBackendRoleConfig_basic(name, path string, roleTTL, maxTTL int) string {
+func testPkiSecretBackendRoleConfig_basic(name, path string, roleTTL, maxTTL int, policyIdentifiers string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "pki" {
   path = "%s"
@@ -188,15 +319,15 @@ resource "vault_pki_secret_backend_role" "test" {
   generate_lease                     = false
   no_store                           = false
   require_cn                         = true
-  policy_identifiers                 = ["1.2.3.4"]
+  %s
   basic_constraints_valid_for_non_ca = false
   not_before_duration                = "45m"
   allowed_serial_numbers             = ["*"]
 }
-`, path, name, roleTTL, maxTTL)
+`, path, name, roleTTL, maxTTL, policyIdentifiers)
 }
 
-func testPkiSecretBackendRoleConfig_updated(name, path string) string {
+func testPkiSecretBackendRoleConfig_updated(name, path string, policyIdentifiers string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "pki" {
   path = "%s"
@@ -240,11 +371,11 @@ resource "vault_pki_secret_backend_role" "test" {
   generate_lease = false
   no_store = false
   require_cn = true
-  policy_identifiers = ["1.2.3.4"]
+  %s
   basic_constraints_valid_for_non_ca = false
   not_before_duration = "45m"
   allowed_serial_numbers = ["*"]
-}`, path, name)
+}`, path, name, policyIdentifiers)
 }
 
 func testPkiSecretBackendRoleCheckDestroy(s *terraform.State) error {
