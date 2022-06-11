@@ -16,10 +16,14 @@ func testCheckMountDestroyed(resourceType, mountType, pathField string) resource
 		if pathField == "" {
 			pathField = consts.FieldPath
 		}
+
+		var resourceCount int
 		for _, rs := range s.RootModule().Resources {
 			if rs.Type != resourceType {
 				continue
 			}
+
+			resourceCount++
 
 			client, e := provider.GetClient(rs.Primary, testProvider.Meta())
 			if e != nil {
@@ -43,6 +47,10 @@ func testCheckMountDestroyed(resourceType, mountType, pathField string) resource
 					return fmt.Errorf("mount %q still exists", path)
 				}
 			}
+		}
+
+		if resourceCount == 0 {
+			return fmt.Errorf("expected at least 1 resources of type %q in State", resourceType)
 		}
 
 		return nil
