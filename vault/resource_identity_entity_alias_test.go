@@ -186,10 +186,7 @@ resource "vault_identity_entity_alias" "test2" {
 			{
 				// delete one of the alias's to ensure an update operation re-creates it.
 				PreConfig: func() {
-					client, e := testProvider.Meta().(*provider.ProviderMeta).GetNSClient("")
-					if e != nil {
-						t.Fatal(e)
-					}
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 					aliases, err := entity.FindAliases(client, &entity.FindAliasParams{
 						Name: alias,

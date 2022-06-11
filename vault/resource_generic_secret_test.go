@@ -109,10 +109,7 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					client, e := testProvider.Meta().(*provider.ProviderMeta).GetNSClient("")
-					if e != nil {
-						t.Fatal(e)
-					}
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 					_, err := client.Logical().Delete(path)
 					if err != nil {
