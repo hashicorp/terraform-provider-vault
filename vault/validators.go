@@ -6,13 +6,15 @@ import (
 	"time"
 
 	"github.com/gosimple/slug"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 const pathDelim = "/"
 
 var (
-	regexpPathLeading  = regexp.MustCompile(fmt.Sprintf(`^%s`, pathDelim))
-	regexpPathTrailing = regexp.MustCompile(fmt.Sprintf(`%s$`, pathDelim))
+	regexpPathLeading  = regexp.MustCompile(fmt.Sprintf(`^%s`, consts.PathDelim))
+	regexpPathTrailing = regexp.MustCompile(fmt.Sprintf(`%s$`, consts.PathDelim))
 	regexpPath         = regexp.MustCompile(fmt.Sprintf(`%s|%s`, regexpPathLeading, regexpPathTrailing))
 )
 
@@ -71,7 +73,7 @@ func validatePath(r *regexp.Regexp, i interface{}, k string) error {
 	}
 
 	if r.MatchString(v) {
-		return fmt.Errorf("invalid value %q for %q, contains leading/trailing %q", v, k, pathDelim)
+		return fmt.Errorf("invalid value %q for %q, contains leading/trailing %q", v, k, consts.PathDelim)
 	}
 
 	return nil

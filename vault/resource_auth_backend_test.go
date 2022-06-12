@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -23,17 +24,17 @@ func TestResourceAuth(t *testing.T) {
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceAuth_initialConfig(path + pathDelim),
+				Config: testResourceAuth_initialConfig(path + consts.PathDelim),
 				ExpectError: regexp.MustCompile(
 					fmt.Sprintf(`invalid value "%s" for %q, contains leading/trailing %q`,
-						path+pathDelim, "path", pathDelim),
+						path+consts.PathDelim, "path", consts.PathDelim),
 				),
 			},
 			{
-				Config: testResourceAuth_initialConfig(pathDelim + path),
+				Config: testResourceAuth_initialConfig(consts.PathDelim + path),
 				ExpectError: regexp.MustCompile(
 					fmt.Sprintf(`invalid value "%s" for %q, contains leading/trailing %q`,
-						pathDelim+path, "path", pathDelim),
+						consts.PathDelim+path, "path", consts.PathDelim),
 				),
 			},
 			{
