@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -51,9 +52,11 @@ func kvSecretSubkeysV2DataSource() *schema.Resource {
 					"artificially treated as leaves and will thus be 'null' even if further " +
 					"underlying sub-keys exist.",
 			},
-			"subkeys": {
-				Type:        schema.TypeMap,
-				Computed:    true,
+			"data_json": {
+				Type:     schema.TypeString,
+				Computed: true,
+				// we save the subkeys as a JSON string in order to
+				// cleanly support nested values
 				Description: "Subkeys for the KV-V2 secret read from Vault.",
 			},
 		},
@@ -89,11 +92,13 @@ func kvSecretSubkeysDataSourceRead(_ context.Context, d *schema.ResourceData, me
 		return diag.Errorf("error reading subkeys from Vault, err=%s", err)
 	}
 
-	if subkeys, ok := secret.Data["subkeys"]; ok {
-		if v, ok := subkeys.(map[string]interface{}); ok {
-			if err := d.Set("subkeys", serializeDataMapToString(v)); err != nil {
-				return diag.FromErr(err)
-			}
+	if data, ok := secret.Data["subkeys"]; ok {
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			return diag.Errorf("error marshaling JSON for %q: %s", path, err)
+		}
+		if err := d.Set("data_json", string(jsonData)); err != nil {
+			return diag.FromErr(err)
 		}
 	}
 

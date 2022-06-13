@@ -123,8 +123,8 @@ func TestAccJWTAuthBackend_invalid(t *testing.T) {
 				Config:  testAccJWTAuthBackendConfig(invalidPath),
 				Destroy: false,
 				ExpectError: regexp.MustCompile(
-					fmt.Sprintf(`invalid value "%s" for consts.FieldPath, contains leading/trailing "%s"`,
-						invalidPath, pathDelim)),
+					fmt.Sprintf(`invalid value "%s" for "%s", contains leading/trailing "%s"`,
+						invalidPath, consts.FieldPath, pathDelim)),
 			},
 			{
 				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "jwt" {

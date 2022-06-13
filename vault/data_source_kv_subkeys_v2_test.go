@@ -16,6 +16,8 @@ func TestDataSourceKVSubkeys_basic(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-kvv2")
 	secretPath := acctest.RandomWithPrefix("foo")
 
+	expectedSubkeys := `{"baz":{"riff":null},"foo":null,"zip":null}`
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
@@ -24,8 +26,8 @@ func TestDataSourceKVSubkeys_basic(t *testing.T) {
 				Config: testDataSourceKVSubkeysConfig(mount, secretPath),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/subkeys/%s", mount, secretPath)),
-					resource.TestCheckResourceAttr(resourceName, "subkeys.zip", "null"),
-					resource.TestCheckResourceAttr(resourceName, "subkeys.foo", "null"),
+					resource.TestCheckResourceAttrSet(resourceName, "data_json"),
+					resource.TestCheckResourceAttr(resourceName, "data_json", expectedSubkeys),
 				),
 			},
 		},
@@ -43,11 +45,9 @@ resource "vault_kv_secret_v2" "test" {
     {
       zip = "zap",
       foo = "bar"
-      baz = jsonencode(
-        {
+      baz = {
           riff = "raff"
         }
-      )
     }
   )
 }
