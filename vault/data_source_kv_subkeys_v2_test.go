@@ -27,7 +27,7 @@ func TestDataSourceKVSubkeys_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/subkeys/%s", mount, secretPath)),
 					resource.TestCheckResourceAttrSet(resourceName, "data_json"),
-					resource.TestCheckResourceAttr(resourceName, "data_json", expectedSubkeys),
+					testutil.CheckJSONData(resourceName, "data_json", expectedSubkeys),
 				),
 			},
 		},

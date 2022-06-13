@@ -601,3 +601,34 @@ func GetResourceFromRootModule(s *terraform.State, resourceName string) (*terraf
 
 	return nil, fmt.Errorf("expected resource %q, not found in state", resourceName)
 }
+
+// CheckJSONData from an expected string for a given resource attribute.
+func CheckJSONData(resourceName, attr, expected string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, err := GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		actual, ok := rs.Primary.Attributes[attr]
+		if !ok {
+			return fmt.Errorf("resource %q has no attribute %q", resourceName, attr)
+		}
+
+		var e map[string]interface{}
+		if err := json.Unmarshal([]byte(expected), &e); err != nil {
+			return nil
+		}
+
+		var a map[string]interface{}
+		if err := json.Unmarshal([]byte(actual), &a); err != nil {
+			return nil
+		}
+
+		if !reflect.DeepEqual(e, a) {
+			return fmt.Errorf("expected %#v, got %#v for resource attr %s.%s", e, a, resourceName, attr)
+		}
+
+		return nil
+	}
+}
