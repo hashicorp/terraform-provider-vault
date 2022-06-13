@@ -748,6 +748,10 @@ var (
 			Resource:      updateSchemaResource(identityOIDCProviderResource()),
 			PathInventory: []string{"/identity/oidc/provider/{name}"},
 		},
+		"vault_managed_keys": {
+			Resource:      updateSchemaResource(managedKeysResource()),
+			PathInventory: []string{"/sys/managed-keys/{type}/{name}"},
+		},
 	}
 )
 
