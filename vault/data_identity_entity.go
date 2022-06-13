@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -22,7 +23,7 @@ var (
 		"last_update_time",
 		"merged_entity_ids",
 		"metadata",
-		"namespace_id",
+		consts.FieldNamespaceID,
 		"policies",
 	}
 
@@ -172,7 +173,7 @@ func identityEntityDataSource() *schema.Resource {
 				Type:     schema.TypeMap,
 				Computed: true,
 			},
-			"namespace_id": {
+			consts.FieldNamespaceID: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},

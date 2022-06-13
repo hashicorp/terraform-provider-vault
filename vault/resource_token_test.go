@@ -14,12 +14,16 @@ import (
 )
 
 func testResourceTokenCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_token" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		_, err := client.Auth().Token().LookupAccessor(rs.Primary.ID)
 		if err == nil {
 			return fmt.Errorf("token with accessor %q still exists", rs.Primary.ID)
@@ -322,7 +326,10 @@ func testResourceTokenLookup(n string) resource.TestCheckFunc {
 			return fmt.Errorf("No ID is set")
 		}
 
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
 
 		_, err := client.Auth().Token().LookupAccessor(rs.Primary.ID)
 		if err != nil {
@@ -344,7 +351,10 @@ func testResourceTokenCheckExpireTime(n string) resource.TestCheckFunc {
 			return fmt.Errorf("No ID is set")
 		}
 
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
 
 		token, err := client.Auth().Token().LookupAccessor(rs.Primary.ID)
 		if err != nil {
@@ -413,7 +423,10 @@ func testResourceTokenWaitRenewMinLeaseTime(n string) resource.TestCheckFunc {
 			return fmt.Errorf("No ID is set")
 		}
 
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
 
 		token, err := client.Auth().Token().LookupAccessor(rs.Primary.ID)
 		if err != nil {

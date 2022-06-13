@@ -9,14 +9,31 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestNamespace_basic(t *testing.T) {
+func TestAccNamespace(t *testing.T) {
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
-	invalidNamespace := namespacePath + pathDelim
-	childPath := acctest.RandomWithPrefix("child-namespace")
+	resourceNameParent := "vault_namespace.parent"
+	resourceNameChild := "vault_namespace.child"
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceNameParent, consts.FieldPath, namespacePath),
+	}
+	getNestedChecks := func(count int) []resource.TestCheckFunc {
+		var checks []resource.TestCheckFunc
+		for i := 0; i < count; i++ {
+			rsc := fmt.Sprintf("%s.%d", resourceNameChild, i)
+			checks = append(checks,
+				resource.TestCheckResourceAttr(
+					rsc, consts.FieldPath,
+					fmt.Sprintf("child_%d", i)),
+			)
+		}
+		return checks
+	}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestEntPreCheck(t) },
@@ -24,19 +41,43 @@ func TestNamespace_basic(t *testing.T) {
 		CheckDestroy: testNamespaceDestroy(namespacePath),
 		Steps: []resource.TestStep{
 			{
-				Config: testNamespaceConfig(namespacePath),
-				Check:  testNamespaceCheckAttrs(),
+				Config: testNestedNamespaces(namespacePath, 3),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					append(checks, getNestedChecks(3)...)...,
+				),
 			},
 			{
-				Config:  testNamespaceConfig(invalidNamespace),
+				Config:  testNestedNamespaces(namespacePath+"/", 3),
 				Destroy: false,
 				ExpectError: regexp.MustCompile(
-					fmt.Sprintf(`invalid value "%s" for "path", contains leading/trailing "%s"`,
-						invalidNamespace, pathDelim)),
+					fmt.Sprintf(`invalid value "%s/" for "path", contains leading/trailing "%s"`,
+						namespacePath, consts.PathDelim)),
 			},
 			{
-				Config: testNestedNamespaceConfig(namespacePath, childPath),
-				Check:  testNestedNamespaceCheckAttrs(childPath),
+				Config:  testNestedNamespaces("/"+namespacePath, 3),
+				Destroy: false,
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`invalid value "/%s" for "path", contains leading/trailing "%s"`,
+						namespacePath, consts.PathDelim)),
+			},
+			{
+				Config:  testNestedNamespaces("/"+namespacePath+"/", 3),
+				Destroy: false,
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`invalid value "/%s/" for "path", contains leading/trailing "%s"`,
+						namespacePath, consts.PathDelim)),
+			},
+			{
+				Config: testNestedNamespaces(namespacePath, 2),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					append(checks, getNestedChecks(2)...)...,
+				),
+			},
+			{
+				Config: testNestedNamespaces(namespacePath, 0),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					append(checks, getNestedChecks(0)...)...,
+				),
 			},
 		},
 	})
@@ -94,23 +135,26 @@ resource "vault_namespace" "test_child" {
 `, parentPath, childPath)
 }
 
-func testNestedNamespaceCheckAttrs(expectedPath string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_namespace.test_child"]
-		if resourceState == nil {
-			return fmt.Errorf("child namespace resource not found in state")
-		}
+func testNestedNamespaces(ns string, count int) string {
+	config := fmt.Sprintf(`
+variable "child_prefix" {
+  default = "child_"
+}
 
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("child namespace resource has no primary instance")
-		}
+variable "child_count" {
+  default = %d
+}
 
-		actualPath := instanceState.Attributes["path"]
-		if actualPath != expectedPath {
-			return fmt.Errorf("expected path to be %s, got %s", expectedPath, actualPath)
-		}
+resource "vault_namespace" "parent" {
+  path = "%s"
+}
 
-		return nil
-	}
+resource "vault_namespace" "child" {
+  namespace = vault_namespace.parent.path
+  count     = var.child_count
+  path      = "${var.child_prefix}${count.index}"
+}
+`, count, ns)
+
+	return config
 }

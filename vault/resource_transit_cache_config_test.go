@@ -47,12 +47,16 @@ func TestAccTransitCacheConfig(t *testing.T) {
 }
 
 func testAccTransitCacheConfigCheckDestroyed(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_transit_secret_cache_config" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("Error checking for transit cache config %q: %s", rs.Primary.ID, err)
@@ -78,7 +82,11 @@ func testAccTransitCacheConfigCheckApi(size int) resource.TestCheckFunc {
 
 		id := instanceState.ID
 
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client, e := provider.GetClient(instanceState, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		resp, err := client.Logical().Read(id)
 		if err != nil {
 			return err

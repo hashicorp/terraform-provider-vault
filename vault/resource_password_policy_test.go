@@ -62,11 +62,16 @@ func TestAccPasswordPolicy_import(t *testing.T) {
 }
 
 func testAccPasswordPolicyCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_password_policy" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		name := rs.Primary.Attributes["name"]
 		data, err := client.Logical().Read(fmt.Sprintf("sys/policies/password/%s", name))
 		if err != nil {

@@ -129,12 +129,16 @@ func TestGCPAuthBackendRole_gce(t *testing.T) {
 }
 
 func testGCPAuthBackendRoleDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_gcp_auth_backend_role" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("Error checking for GCP auth backend role %q: %s", rs.Primary.ID, err)

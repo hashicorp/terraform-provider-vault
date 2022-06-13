@@ -56,17 +56,21 @@ func TestADSecretBackend(t *testing.T) {
 }
 
 func testAccADSecretBackendCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return err
-	}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ad_secret_backend" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		mounts, err := client.Sys().ListMounts()
+		if err != nil {
+			return err
+		}
+
 		for backend, mount := range mounts {
 			backend = strings.Trim(backend, "/")
 			rsBackend := strings.Trim(rs.Primary.Attributes["backend"], "/")

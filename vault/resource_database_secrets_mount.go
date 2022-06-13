@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -219,7 +220,7 @@ func databaseSecretsMountCreateOrUpdate(d *schema.ResourceData, meta interface{}
 	var root string
 	if d.IsNewResource() {
 		root = d.Get("path").(string)
-		if err := createMount(d, client, root, "database"); err != nil {
+		if err := createMount(d, client, root, consts.MountTypeDatabase); err != nil {
 			return err
 		}
 	} else {
