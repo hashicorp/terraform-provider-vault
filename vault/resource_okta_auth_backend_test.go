@@ -203,7 +203,10 @@ func testAccOktaAuthBackend_InitialCheck(s *terraform.State) error {
 		return fmt.Errorf("id doesn't match path")
 	}
 
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	client, e := provider.GetClient(instanceState, testProvider.Meta())
+	if e != nil {
+		return e
+	}
 
 	authMounts, err := client.Sys().ListAuth()
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -113,7 +114,7 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 
 func TestAccJWTAuthBackend_invalid(t *testing.T) {
 	path := acctest.RandomWithPrefix("jwt")
-	invalidPath := path + pathDelim
+	invalidPath := path + consts.PathDelim
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
@@ -123,7 +124,7 @@ func TestAccJWTAuthBackend_invalid(t *testing.T) {
 				Destroy: false,
 				ExpectError: regexp.MustCompile(
 					fmt.Sprintf(`invalid value "%s" for "path", contains leading/trailing "%s"`,
-						invalidPath, pathDelim)),
+						invalidPath, consts.PathDelim)),
 			},
 			{
 				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "jwt" {

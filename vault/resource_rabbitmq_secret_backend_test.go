@@ -2,25 +2,24 @@ package vault
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccRabbitMQSecretBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
-	resourceName := "vault_rabbitmq_secret_backend.test"
+	resourceType := "vault_rabbitmq_secret_backend"
+	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccRabbitMQSecretBackendCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeRabbitMQ, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitMQSecretBackendConfig_basic(path, connectionUri, username, password),
@@ -60,11 +59,12 @@ func TestAccRabbitMQSecretBackend_basic(t *testing.T) {
 func TestAccRabbitMQSecretBackend_template(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
 	connectionUri, username, password := testutil.GetTestRMQCreds(t)
-	resourceName := "vault_rabbitmq_secret_backend.test"
+	resourceType := "vault_rabbitmq_secret_backend"
+	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccRabbitMQSecretBackendCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeRabbitMQ, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRabbitMQSecretBackendTemplateConfig(path, connectionUri, username, password, path, path),
@@ -86,29 +86,6 @@ func TestAccRabbitMQSecretBackend_template(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testAccRabbitMQSecretBackendCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return err
-	}
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_rabbitmq_secret_backend" {
-			continue
-		}
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "rabbitmq" && path == rsPath {
-				return fmt.Errorf("mount %q still exists", path)
-			}
-		}
-	}
-	return nil
 }
 
 func testAccRabbitMQSecretBackendConfig_basic(path, connectionUri, username, password string) string {

@@ -3,14 +3,12 @@ package vault
 import (
 	"fmt"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -22,7 +20,7 @@ func TestPkiSecretBackendIntermediateSetSigned_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendIntermediateSetSignedDestroy,
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendIntermediateSetSignedConfig_basic(rootPath, intermediatePath),
@@ -32,29 +30,6 @@ func TestPkiSecretBackendIntermediateSetSigned_basic(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testPkiSecretBackendIntermediateSetSignedDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return err
-	}
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_mount" {
-			continue
-		}
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "pki" && path == rsPath {
-				return fmt.Errorf("Mount %q still exists", path)
-			}
-		}
-	}
-	return nil
 }
 
 func testPkiSecretBackendIntermediateSetSignedConfig_basic(rootPath string, intermediatePath string) string {

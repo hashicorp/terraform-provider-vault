@@ -55,12 +55,16 @@ func TestAccIdentityOidcKeyAllowedClientId(t *testing.T) {
 }
 
 func testAccCheckIdentityOidcKeyAllowedClientIdDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_oidc_key_allowed_client_id" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		resp, err := identityOidcKeyApiRead(rs.Primary.ID, client)
 		if err != nil {
 			return err
@@ -90,7 +94,11 @@ func testAccIdentityOidcKeyAllowedClientIdCheckAttrs(clientIDResource string, cl
 		}
 
 		id := instanceState.ID
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client, e := provider.GetClient(instanceState, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		resp, err := identityOidcKeyApiRead(id, client)
 		if err != nil {
 			return err

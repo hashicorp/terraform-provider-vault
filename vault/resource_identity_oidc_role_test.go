@@ -116,12 +116,16 @@ func TestAccIdentityOidcRoleUpdate(t *testing.T) {
 }
 
 func testAccCheckIdentityOidcRoleDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_oidc_role" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(identityOidcRolePath(rs.Primary.ID))
 		if err != nil {
 			return fmt.Errorf("error checking for identity oidc role %q: %s", rs.Primary.ID, err)

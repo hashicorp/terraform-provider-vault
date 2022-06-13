@@ -65,12 +65,16 @@ func TestAccSSHSecretBackend_import(t *testing.T) {
 }
 
 func testAccCheckSSHSecretBackendCADestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ssh_secret_backend_ca" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		backend := rs.Primary.ID
 		secret, err := client.Logical().Read(backend + "/config/ca")
 		if err != nil {

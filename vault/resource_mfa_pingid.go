@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -73,7 +74,7 @@ func mfaPingIDResource() *schema.Resource {
 				Optional:    true,
 				Description: "ID computed by Vault.",
 			},
-			"namespace_id": {
+			consts.FieldNamespaceID: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Namespace ID computed by Vault.",
@@ -160,7 +161,7 @@ func mfaPingIDRead(d *schema.ResourceData, meta interface{}) error {
 	fields := []string{
 		"name", "idp_url", "admin_url",
 		"authenticator_url", "org_alias", "type",
-		"use_signature", "id", "namespace_id",
+		"use_signature", "id", consts.FieldNamespaceID,
 	}
 
 	for _, k := range fields {

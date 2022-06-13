@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -20,7 +21,7 @@ var (
 		"member_group_ids",
 		"metadata",
 		"modify_index",
-		"namespace_id",
+		consts.FieldNamespaceID,
 		"parent_group_ids",
 		"policies",
 		"type",
@@ -112,7 +113,7 @@ func identityGroupDataSource() *schema.Resource {
 				Type:     schema.TypeInt,
 				Computed: true,
 			},
-			"namespace_id": {
+			consts.FieldNamespaceID: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},

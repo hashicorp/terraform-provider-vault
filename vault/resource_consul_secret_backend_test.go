@@ -106,17 +106,21 @@ func TestConsulSecretBackend(t *testing.T) {
 }
 
 func testAccConsulSecretBackendCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return err
-	}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_consul_secret_backend" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		mounts, err := client.Sys().ListMounts()
+		if err != nil {
+			return err
+		}
+
 		for path, mount := range mounts {
 			path = strings.Trim(path, "/")
 			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")

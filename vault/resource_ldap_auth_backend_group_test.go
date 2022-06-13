@@ -66,12 +66,16 @@ func TestLDAPAuthBackendGroup_basic(t *testing.T) {
 }
 
 func testLDAPAuthBackendGroupDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ldap_auth_backend_group" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("error checking for ldap auth backend group %q: %s", rs.Primary.ID, err)

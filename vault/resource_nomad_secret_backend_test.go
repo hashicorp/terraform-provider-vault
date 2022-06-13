@@ -9,54 +9,58 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccNomadSecretBackend(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-nomad")
+	// TODO: test environment should exist in CI
 	address, token := testutil.GetTestNomadCreds(t)
 
+	resourceType := "vault_nomad_secret_backend"
+	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
 		Providers:                 testProviders,
 		PreCheck:                  func() { testutil.TestAccPreCheck(t) },
 		PreventPostDestroyRefresh: true,
-		CheckDestroy:              testAccNomadSecretBackendCheckDestroy,
+		CheckDestroy:              testCheckMountDestroyed(resourceType, consts.MountTypeNomad, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testNomadSecretBackendConfig(backend, address, token, 60, 30, 3600, 7200),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "backend", backend),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "description", "test description"),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "default_lease_ttl_seconds", "3600"),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "max_lease_ttl_seconds", "7200"),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "address", address),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "max_ttl", "60"),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "ttl", "30"),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "address", address),
+					resource.TestCheckResourceAttr(resourceName, "max_ttl", "60"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "30"),
 				),
 			},
 			{
 				Config: testNomadSecretBackendConfig(backend, "foobar", token, 90, 60, 7200, 14400),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "backend", backend),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "description", "test description"),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "default_lease_ttl_seconds", "7200"),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "max_lease_ttl_seconds", "14400"),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "address", "foobar"),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "max_ttl", "90"),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "ttl", "60"),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "14400"),
+					resource.TestCheckResourceAttr(resourceName, "address", "foobar"),
+					resource.TestCheckResourceAttr(resourceName, "max_ttl", "90"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "60"),
 				),
 			},
 			{
 				Config: testNomadSecretBackendConfig(backend, "foobar", token, 0, 0, -1, -1),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "backend", backend),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "description", "test description"),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "default_lease_ttl_seconds", "-1"),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "max_lease_ttl_seconds", "-1"),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "address", "foobar"),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "max_ttl", "0"),
-					resource.TestCheckResourceAttr("vault_nomad_secret_backend.test", "ttl", "0"),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "-1"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "-1"),
+					resource.TestCheckResourceAttr(resourceName, "address", "foobar"),
+					resource.TestCheckResourceAttr(resourceName, "max_ttl", "0"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "0"),
 				),
 			},
 		},
@@ -78,7 +82,7 @@ func testAccNomadSecretBackendCheckDestroy(s *terraform.State) error {
 		for backend, mount := range mounts {
 			backend = strings.Trim(backend, "/")
 			rsBackend := strings.Trim(rs.Primary.Attributes["backend"], "/")
-			if mount.Type == "nomad" && backend == rsBackend {
+			if mount.Type == consts.MountTypeNomad && backend == rsBackend {
 				return fmt.Errorf("Mount %q still exists", rsBackend)
 			}
 		}

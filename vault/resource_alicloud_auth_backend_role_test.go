@@ -50,12 +50,16 @@ func TestAlicloudAuthBackendRole_basic(t *testing.T) {
 }
 
 func testAlicloudAuthBackedRoleDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_alicloud_auth_backend_role" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("Error checking for AliCloud Auth Backend role %q: %s", rs.Primary.ID, err)

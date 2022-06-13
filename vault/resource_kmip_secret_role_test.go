@@ -2,14 +2,12 @@ package vault
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -17,7 +15,8 @@ func TestAccKMIPSecretRole_basic(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
-	resourceName := "vault_kmip_secret_role.test"
+	resourceType := "vault_kmip_secret_role"
+	resourceName := resourceType + ".test"
 
 	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 1)
 	if err != nil {
@@ -33,7 +32,7 @@ func TestAccKMIPSecretRole_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy: testAccKMIPSecretRoleCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPSecretRole_initialConfig(path, addr1),
@@ -103,11 +102,12 @@ func TestAccKMIPSecretRole_remount(t *testing.T) {
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	remountPath := acctest.RandomWithPrefix("tf-test-kmip-remount")
-	resourceName := "vault_kmip_secret_role.test"
+	resourceType := "vault_kmip_secret_role"
+	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy: testAccKMIPSecretRoleCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPSecretRole_initialConfig(path, addr1),
@@ -159,31 +159,6 @@ func TestAccKMIPSecretRole_remount(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testAccKMIPSecretRoleCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return err
-	}
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_kmip_secret_role" {
-			continue
-		}
-
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "kmip" && path == rsPath {
-				return fmt.Errorf("mount %q still exists", path)
-			}
-		}
-	}
-
-	return nil
 }
 
 func testKMIPSecretRole_initialConfig(path string, listenAddr string) string {

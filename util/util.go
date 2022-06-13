@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 func JsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
@@ -308,7 +310,12 @@ func SetResourceData(d *schema.ResourceData, data map[string]interface{}) error 
 
 // NormalizeMountPath to be in a form valid for accessing values from api.MountOutput
 func NormalizeMountPath(path string) string {
-	return strings.Trim(path, "/") + "/"
+	return TrimSlashes(path) + consts.PathDelim
+}
+
+// TrimSlashes from path.
+func TrimSlashes(path string) string {
+	return strings.Trim(path, consts.PathDelim)
 }
 
 // CheckMountEnabled in Vault, path must contain a trailing '/',
