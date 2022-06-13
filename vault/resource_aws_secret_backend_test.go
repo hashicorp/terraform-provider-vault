@@ -2,26 +2,24 @@ package vault
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccAWSSecretBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-aws")
-	resourceName := "vault_aws_secret_backend.test"
+	resourceType := "vault_aws_secret_backend"
+	resourceName := resourceType + ".test"
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccAWSSecretBackendCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSSecretBackendConfig_basic(path, accessKey, secretKey),
@@ -79,13 +77,14 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 
 func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-aws")
-	resourceName := "vault_aws_secret_backend.test"
+	resourceType := "vault_aws_secret_backend"
+	resourceName := resourceType + ".test"
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 	templ := fmt.Sprintf(`{{ printf "vault-%%s-%%s-%%s" (printf "%%s-%%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}`)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccAWSSecretBackendCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAWS, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSSecretBackendConfig_userTemplate(path, accessKey, secretKey, templ),
@@ -102,29 +101,6 @@ func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testAccAWSSecretBackendCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return err
-	}
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_aws_secret_backend" {
-			continue
-		}
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "aws" && path == rsPath {
-				return fmt.Errorf("mount %q still exists", path)
-			}
-		}
-	}
-	return nil
 }
 
 func testAccAWSSecretBackendConfig_basic(path, accessKey, secretKey string) string {

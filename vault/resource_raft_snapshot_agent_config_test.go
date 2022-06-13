@@ -127,12 +127,16 @@ func TestAccRaftSnapshotAgentConfig_import(t *testing.T) {
 }
 
 func testAccRaftSnapshotAgentConfigCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_raft_snapshot_agent_config" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		snapshot, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return err

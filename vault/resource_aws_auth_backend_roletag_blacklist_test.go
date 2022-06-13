@@ -87,11 +87,16 @@ func TestAccAWSAuthBackendRoleTagBlacklist_updated(t *testing.T) {
 }
 
 func testAccCheckAWSAuthBackendRoleTagBlacklistDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_aws_auth_backend_roletag_blacklist" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("Error checking for AWS Auth Backend roletag blacklist %q: %s", rs.Primary.ID, err)
@@ -163,7 +168,11 @@ func testAccAWSAuthBackendRoleTagBlacklistCheck_attrs(backend string) resource.T
 			return fmt.Errorf("expected ID to be %q, got %q", "auth/"+backend+"/config/tidy/roletag-blacklist", endpoint)
 		}
 
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client, e := provider.GetClient(instanceState, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		resp, err := client.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("error reading back AWS auth bavkend roletag blacklist config from %q: %s", endpoint, err)

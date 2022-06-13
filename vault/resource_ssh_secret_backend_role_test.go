@@ -138,12 +138,16 @@ func TestAccSSHSecretBackendRoleOTP_basic(t *testing.T) {
 }
 
 func testAccSSHSecretBackendRoleCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ssh_secret_backend_role" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		role, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return err

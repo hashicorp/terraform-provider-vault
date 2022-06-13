@@ -70,11 +70,14 @@ func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
 }
 
 func testAccCheckidentityEntityPoliciesDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_entity_policies" {
 			continue
+		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
 		}
 
 		if _, err := readIdentityEntity(client, rs.Primary.ID, false); err != nil {
@@ -157,7 +160,11 @@ func testAccIdentityEntityPoliciesCheckLogical(resource string, policies []strin
 		id := instanceState.ID
 
 		path := entity.JoinEntityID(id)
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client, e := provider.GetClient(instanceState, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		resp, err := client.Logical().Read(path)
 		if err != nil {
 			return fmt.Errorf("%q doesn't exist", path)

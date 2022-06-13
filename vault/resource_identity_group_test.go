@@ -151,12 +151,16 @@ resource "vault_identity_group" "test_upper" {
 }
 
 func testAccCheckIdentityGroupDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_group" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(identityGroupIDPath(rs.Primary.ID))
 		if err != nil {
 			return fmt.Errorf("error checking for identity group %q: %s", rs.Primary.ID, err)

@@ -114,7 +114,7 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 
 func TestAccJWTAuthBackend_invalid(t *testing.T) {
 	path := acctest.RandomWithPrefix("jwt")
-	invalidPath := path + pathDelim
+	invalidPath := path + consts.PathDelim
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
@@ -123,8 +123,8 @@ func TestAccJWTAuthBackend_invalid(t *testing.T) {
 				Config:  testAccJWTAuthBackendConfig(invalidPath),
 				Destroy: false,
 				ExpectError: regexp.MustCompile(
-					fmt.Sprintf(`invalid value "%s" for "%s", contains leading/trailing "%s"`,
-						invalidPath, consts.FieldPath, pathDelim)),
+					fmt.Sprintf(`invalid value "%s" for "path", contains leading/trailing "%s"`,
+						invalidPath, consts.PathDelim)),
 			},
 			{
 				Config: fmt.Sprintf(`resource "vault_jwt_auth_backend" "jwt" {

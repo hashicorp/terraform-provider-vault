@@ -48,12 +48,16 @@ func TestAccRaftAutopilotConfig_basic(t *testing.T) {
 }
 
 func testAccRaftAutopilotConfigCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_raft_autopilot_config" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		autopilot, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return err

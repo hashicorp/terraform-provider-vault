@@ -22,7 +22,7 @@ var (
 		"last_update_time",
 		"merged_entity_ids",
 		"metadata",
-		"namespace_id",
+		consts.FieldNamespaceID,
 		"policies",
 	}
 
@@ -172,7 +172,7 @@ func identityEntityDataSource() *schema.Resource {
 				Type:     schema.TypeMap,
 				Computed: true,
 			},
-			"namespace_id": {
+			consts.FieldNamespaceID: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},

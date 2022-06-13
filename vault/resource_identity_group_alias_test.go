@@ -73,12 +73,16 @@ func TestAccIdentityGroupAliasUpdate(t *testing.T) {
 }
 
 func testAccCheckIdentityGroupAliasDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_group_alias" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(identityGroupAliasIDPath(rs.Primary.ID))
 		if err != nil {
 			return fmt.Errorf("error checking for identity group %q: %s", rs.Primary.ID, err)
