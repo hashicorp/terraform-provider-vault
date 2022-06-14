@@ -30,6 +30,14 @@ func TestDataSourceKVSecret(t *testing.T) {
 					testutil.CheckJSONData(resourceName, consts.FieldDataJSON, expectedSubkeys),
 				),
 			},
+			{
+				Config: testDataSourceKVSecretConfig(mount, fmt.Sprintf("%s-updated", name)),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/%s-updated", mount, name)),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLeaseRenewable, "false"),
+					testutil.CheckJSONData(resourceName, consts.FieldDataJSON, expectedSubkeys),
+				),
+			},
 		},
 	})
 }
