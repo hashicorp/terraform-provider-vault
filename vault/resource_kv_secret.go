@@ -66,7 +66,7 @@ func kvSecretWrite(ctx context.Context, d *schema.ResourceData, meta interface{}
 	}
 
 	if _, err := client.Logical().Write(path, data); err != nil {
-		return diag.Errorf("error writing secret data to %s, err=%s", path, err)
+		return diag.Errorf("error writing secret data to %q, err=%s", path, err)
 	}
 
 	d.SetId(path)
