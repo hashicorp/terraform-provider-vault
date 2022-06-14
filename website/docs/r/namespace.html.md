@@ -14,9 +14,60 @@ Provides a resource to manage [Namespaces](https://www.vaultproject.io/docs/ente
 
 ## Example Usage
 
+### Single namespace
+
 ```hcl
 resource "vault_namespace" "ns1" {
   path = "ns1"
+}
+```
+
+### Nested namespaces
+
+```hcl
+provider "vault" {}
+
+variable "child_namespaces" {
+  default = [
+    "child_0",
+    "child_1",
+    "child_2",
+  ]
+}
+
+locals {
+  child_namespaces = toset(var.child_namespaces)
+}
+
+resource "vault_namespace" "parent" {
+  path = "parent"
+}
+
+resource "vault_namespace" "children" {
+  for_each  = local.child_namespaces
+  namespace = vault_namespace.parent.path
+  path      = each.key
+}
+
+resource "vault_mount" "children" {
+  for_each  = local.child_namespaces
+  namespace = vault_namespace.children[each.key].path_fq
+  path      = "secrets"
+  type      = "kv"
+  options = {
+    version = "1"
+  }
+}
+
+resource "vault_generic_secret" "children" {
+  for_each  = local.child_namespaces
+  namespace = vault_mount.children[each.key].namespace
+  path      = "${vault_mount.children[each.key].path}/secret"
+  data_json = jsonencode(
+    {
+      "ns" = each.key
+    }
+  )
 }
 ```
 
@@ -34,6 +85,8 @@ The following arguments are supported:
 ## Attributes Reference
 
 * `id` - ID of the namespace.
+
+* `path_fq` - The fully qualified path to the namespace. Usefully when provisioning resources in a child `namespace`.
 
 ## Import
 

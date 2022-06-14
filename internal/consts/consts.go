@@ -10,6 +10,7 @@ const (
 	FieldNamespace   = "namespace"
 	FieldNamespaceID = "namespace_id"
 	FieldBackend     = "backend"
+	FieldPathFQ      = "path_fq"
 
 	/*
 		common environment variables

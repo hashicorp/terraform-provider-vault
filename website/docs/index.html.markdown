@@ -333,13 +333,47 @@ The Vault provider supports managing [Namespaces][namespaces] (a feature of
 Vault Enterprise), as well as creating resources in those namespaces by
 utilizing [Provider Aliasing][aliasing]. The `namespace` option in the [provider
 block][provider-block] enables the management of  resources in the specified
-namespace.
+namespace. 
+In addition, all resources and data sources support specifying their `namespace`. 
+All resource `namespace`'s will are relative to the `provider`'s.
+
+### Simple namespace example
+```hcl
+provider vault{}
+
+resource "vault_namespace" "secret" {
+  path = "secret_ns"
+}
+
+resource "vault_mount" "secret" {
+  namespace = vault_namespace.secret.path
+  path      = "secrets"
+  type      = "kv"
+  options = {
+    version = "1"
+  }
+}
+
+resource "vault_generic_secret" "secret" {
+  namespace = vault_mount.secret.namespace
+  path      = "${vault_mount.secret.path}/secret"
+  data_json = jsonencode(
+    {
+      "ns" = "secret"
+    }
+  )
+}
+```
 
 ### Using Provider Aliases
 
+~> It is advised to set the `namespace` on individual resources and data sources,
+rather than having to manage multiple `provider` aliases. This 
+See [vault_namespace](r/namespace.html) for more information.
+
 The below configuration is a simple example of using the provider block's
 `namespace` attribute to configure an aliased provider and create a resource
-within that namespace.
+within that namespace. 
 
 ```hcl
 # main provider block with no namespace
@@ -389,22 +423,22 @@ root
 
 ### Nested Namespaces
 
-A more complex example of nested namespaces is show below. Each provider blocks
-uses interpolation of the `ID` of namespace it belongs in to ensure the namespace
-exists before that provider gets configured:
-
+The example below relies on setting the `namespace` per resource from a single `provider{}` block. 
+See the [vault_namespace](r/namespace.html#nested-namespaces) documentation for slightly less elaborate example.
 
 ```hcl
-# main provider block with no namespace
 provider vault {}
 
-resource "vault_namespace" "everyone" {
-  path = "everyone"
+variable "everyone_ns" {
+  default = "everyone"
 }
 
-provider vault {
-  alias     = "everyone"
-  namespace = trimsuffix(vault_namespace.everyone.id, "/")
+variable "engineering_ns" {
+  default = "engineering"
+}
+
+variable "vault_team_ns" {
+  default = "vault-team"
 }
 
 data "vault_policy_document" "public_secrets" {
@@ -415,27 +449,6 @@ data "vault_policy_document" "public_secrets" {
   }
 }
 
-resource "vault_policy" "everyone" {
-  provider = vault.everyone
-  name     = "vault_everyone_policy"
-  policy   = data.vault_policy_document.vault_team_secrets.hcl
-}
-
-resource "vault_namespace" "engineering" {
-  provider = vault.everyone
-  path     = "engineering"
-}
-
-provider vault {
-  alias = "engineering"
-  namespace = trimsuffix(vault_namespace.engineering.id, "/")
-}
-
-resource "vault_namespace" "vault-team" {
-  provider = vault.engineering
-  path     = "vault-team"
-}
-
 data "vault_policy_document" "vault_team_secrets" {
   rule {
     path         = "secret/*"
@@ -444,13 +457,29 @@ data "vault_policy_document" "vault_team_secrets" {
   }
 }
 
-provider vault {
-  alias = "vault-team"
-  namespace = trimsuffix(vault_namespace.vault-team.id, "/")
+resource "vault_namespace" "everyone" {
+  path = var.everyone_ns
+}
+
+resource "vault_namespace" "engineering" {
+  namespace = vault_namespace.everyone.path
+  path      = var.engineering_ns
+}
+
+resource "vault_namespace" "vault_team" {
+  namespace = vault_namespace.engineering.path_fq
+  path      = var.vault_team_ns
+}
+
+
+resource "vault_policy" "everyone" {
+  namespace = vault_namespace.everyone.path
+  name     = "vault_everyone_policy"
+  policy   = data.vault_policy_document.vault_team_secrets.hcl
 }
 
 resource "vault_policy" "vault_team" {
-  provider = vault.vault-team
+  namespace = vault_namespace.vault_team.path_fq
   name     = "vault_team_policy"
   policy   = data.vault_policy_document.vault_team_secrets.hcl
 }
@@ -492,8 +521,6 @@ vault-team/
 
 $ vault namespace list -namespace=everyone/engineering/vault-team
 No namespaces found
-
-$ vault namespace list -namespace=everyone/engineering/vault-team
 
 $ vault policy list -namespace=everyone/engineering/vault-team
 default

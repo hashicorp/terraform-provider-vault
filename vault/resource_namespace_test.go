@@ -31,6 +31,11 @@ func TestAccNamespace(t *testing.T) {
 					rsc, consts.FieldPath,
 					fmt.Sprintf("child_%d", i)),
 			)
+			checks = append(checks,
+				resource.TestCheckResourceAttr(
+					rsc, consts.FieldPathFQ,
+					fmt.Sprintf("%s/child_%d", namespacePath, i)),
+			)
 		}
 		return checks
 	}
