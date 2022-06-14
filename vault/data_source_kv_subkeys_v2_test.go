@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestDataSourceKVSubkeys_basic(t *testing.T) {
+func TestDataSourceKVSubkeys(t *testing.T) {
 	resourceName := "data.vault_kv_secret_subkeys_v2.test"
 	mount := acctest.RandomWithPrefix("tf-kvv2")
 	secretPath := acctest.RandomWithPrefix("foo")
