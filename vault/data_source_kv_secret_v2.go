@@ -54,7 +54,7 @@ func kvSecretV2DataSource() *schema.Resource {
 			"created_time": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Time at which secret was created",
+				Description: "Time at which the secret was created",
 			},
 
 			"custom_metadata": {
