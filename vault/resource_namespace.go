@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -15,7 +16,9 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-const SysNamespaceRoot = "sys/namespaces/"
+const (
+	SysNamespaceRoot = "sys/namespaces/"
+)
 
 func namespaceResource() *schema.Resource {
 	return &schema.Resource{
@@ -37,7 +40,12 @@ func namespaceResource() *schema.Resource {
 			consts.FieldNamespaceID: {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Namespace ID",
+				Description: "Namespace ID.",
+			},
+			consts.FieldPathFQ: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The fully qualified namespace path.",
 			},
 		},
 	}
@@ -123,6 +131,13 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 		consts.FieldNamespaceID: resp.Data["id"],
 		consts.FieldPath:        util.TrimSlashes(path),
 	}
+
+	pathFQ := path
+	if parent, ok := d.GetOk(consts.FieldNamespace); ok {
+		pathFQ = strings.Join([]string{parent.(string), path}, "/")
+	}
+	toSet[consts.FieldPathFQ] = pathFQ
+
 	if err := util.SetResourceData(d, toSet); err != nil {
 		return err
 	}

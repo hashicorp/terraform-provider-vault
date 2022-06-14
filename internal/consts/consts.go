@@ -10,6 +10,7 @@ const (
 	FieldNamespace      = "namespace"
 	FieldNamespaceID    = "namespace_id"
 	FieldBackend        = "backend"
+	FieldPathFQ         = "path_fq"
 	FieldData           = "data"
 	FieldMount          = "mount"
 	FieldName           = "name"
@@ -21,6 +22,7 @@ const (
 	FieldLeaseRenewable = "lease_renewable"
 	FieldDepth          = "depth"
 	FieldDataJSON       = "data_json"
+
 	/*
 		common environment variables
 	*/
