@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -247,92 +248,60 @@ func TestAccJWTAuthBackend_invalid(t *testing.T) {
 }
 
 func testAccJWTAuthBackendConfig(path, ns string, local bool) string {
-	var config string
-	if ns != "" {
-		config = fmt.Sprintf(`
-resource "vault_namespace" "test" {
-	path = "%s"
-}
-
-resource "vault_jwt_auth_backend" "jwt" {
-  namespace          = vault_namespace.test.path
-  description        = "JWT backend"
-  oidc_discovery_url = "https://myco.auth0.com/"
-  path               = "%s"
-  local              = %t
-}
-`, ns, path, local)
-	} else {
-		config = fmt.Sprintf(`
+	config := fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "jwt" {
   description        = "JWT backend"
   oidc_discovery_url = "https://myco.auth0.com/"
   path               = "%s"
   local              = %t
-}
 `, path, local)
+
+	var fragments []string
+	if ns != "" {
+		fragments = []string{
+			fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = "%s"
+}
+`, ns),
+		}
+		config += `
+  namespace = vault_namespace.test.path
+`
 	}
 
-	return config
+	return strings.Join(append(fragments, config, "}"), "\n")
 }
 
 func testAccJWTAuthBackendConfigFullOIDC(path string, oidcDiscoveryUrl string, boundIssuer string, supportedAlgs string, ns string) string {
-	var config string
-
-	if ns != "" {
-		config = fmt.Sprintf(`
-resource "vault_namespace" "test" {
-	path = "%s"
-}
-
-resource "vault_jwt_auth_backend" "jwt" {
-  namespace          = vault_namespace.test.path
-  description        = "JWT backend"
-  oidc_discovery_url = "%s"
-  bound_issuer       = "%s"
-  jwt_supported_algs = [%s]
-  path               = "%s"
-}
-`, ns, oidcDiscoveryUrl, boundIssuer, supportedAlgs, path)
-	} else {
-		config = fmt.Sprintf(`
+	config := fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "jwt" {
   description        = "JWT backend"
   oidc_discovery_url = "%s"
   bound_issuer       = "%s"
   jwt_supported_algs = [%s]
   path               = "%s"
-}
 `, oidcDiscoveryUrl, boundIssuer, supportedAlgs, path)
+
+	var fragments []string
+	if ns != "" {
+		fragments = []string{
+			fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = "%s"
+}
+`, ns),
+		}
+		config += `
+  namespace = vault_namespace.test.path
+`
 	}
 
-	return config
+	return strings.Join(append(fragments, config, "}"), "\n")
 }
 
 func testAccJWTAuthBackendConfigOIDC(path string, ns string) string {
-	var config string
-	if ns != "" {
-		config = fmt.Sprintf(`
-resource "vault_namespace" "test" {
-	path = "%s"
-}
-
-resource "vault_jwt_auth_backend" "oidc" {
-  namespace           = vault_namespace.test.path
-  description         = "OIDC backend"
-  oidc_discovery_url  = "https://myco.auth0.com/"
-  oidc_client_id      = "client"
-  oidc_client_secret  = "secret"
-  bound_issuer        = "api://default"
-  path                = "%s"
-  type                = "oidc"
-  default_role        = "api"
-  oidc_response_mode  = "query"
-  oidc_response_types = ["code"]
-}
-`, ns, path)
-	} else {
-		config = fmt.Sprintf(`
+	config := fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "oidc" {
   description         = "OIDC backend"
   oidc_discovery_url  = "https://myco.auth0.com/"
@@ -344,36 +313,27 @@ resource "vault_jwt_auth_backend" "oidc" {
   default_role        = "api"
   oidc_response_mode  = "query"
   oidc_response_types = ["code"]
-}
 `, path)
+
+	var fragments []string
+	if ns != "" {
+		fragments = []string{
+			fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = "%s"
+}
+`, ns),
+		}
+		config += `
+  namespace = vault_namespace.test.path
+`
 	}
 
-	return config
+	return strings.Join(append(fragments, config, "}"), "\n")
 }
 
 func testAccJWTAuthBackendProviderConfig(path string, ns string) string {
-	var config string
-
-	if ns != "" {
-		config = fmt.Sprintf(`
-resource "vault_namespace" "test" {
-	path = "%s"
-}
-
-resource "vault_jwt_auth_backend" "oidc" {
-  namespace          = vault_namespace.test.path
-  description        = "OIDC backend"
-  oidc_discovery_url = "https://myco.auth0.com/"
-  path               = "%s"
-  type               = "oidc"
-  provider_config = {
-    provider                 = "azure"
-    groups_recurse_max_depth = "1"
-  }
-}
-`, ns, path)
-	} else {
-		config = fmt.Sprintf(`
+	config := fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "oidc" {
   description        = "OIDC backend"
   oidc_discovery_url = "https://myco.auth0.com/"
@@ -383,11 +343,23 @@ resource "vault_jwt_auth_backend" "oidc" {
     provider                 = "azure"
     groups_recurse_max_depth = "1"
   }
-}
 `, path)
+
+	var fragments []string
+	if ns != "" {
+		fragments = []string{
+			fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = "%s"
+}
+`, ns),
+		}
+		config += `
+  namespace = vault_namespace.test.path
+`
 	}
 
-	return config
+	return strings.Join(append(fragments, config, "}"), "\n")
 }
 
 func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
