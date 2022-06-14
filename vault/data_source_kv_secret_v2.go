@@ -111,25 +111,27 @@ func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta in
 		if err := d.Set(consts.FieldData, serializeDataMapToString(v)); err != nil {
 			return diag.FromErr(err)
 		}
+	} else {
+		return diag.Errorf("error converting response data at path %q to a map", path)
 	}
 
 	if v, ok := secret.Data["metadata"]; ok {
 		metadata := v.(map[string]interface{})
 
 		if v, ok := metadata["created_time"]; ok {
-			if err := d.Set("created_time", v.(string)); err != nil {
+			if err := d.Set("created_time", v); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 
 		if v, ok := metadata["deletion_time"]; ok {
-			if err := d.Set("deletion_time", v.(string)); err != nil {
+			if err := d.Set("deletion_time", v); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 
 		if v, ok := metadata["destroyed"]; ok {
-			if err := d.Set("destroyed", v.(bool)); err != nil {
+			if err := d.Set("destroyed", v); err != nil {
 				return diag.FromErr(err)
 			}
 		}

@@ -58,7 +58,7 @@ func kvSecretWrite(ctx context.Context, d *schema.ResourceData, meta interface{}
 	var secretData map[string]interface{}
 	err := json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &secretData)
 	if err != nil {
-		return diag.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
+		return diag.Errorf("data_json syntax error: %s", err)
 	}
 
 	data := map[string]interface{}{

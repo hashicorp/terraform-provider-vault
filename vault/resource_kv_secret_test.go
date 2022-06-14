@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccKVSecret_basic(t *testing.T) {
+func TestAccKVSecret(t *testing.T) {
 	resourceName := "vault_kv_secret.test"
 	mount := acctest.RandomWithPrefix("tf-kvv2")
 	name := acctest.RandomWithPrefix("tf-secret")
