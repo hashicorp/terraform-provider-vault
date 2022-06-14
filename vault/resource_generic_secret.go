@@ -36,7 +36,7 @@ func genericSecretResource(name string) *schema.Resource {
 
 			// Data is passed as JSON so that an arbitrary structure is
 			// possible, rather than forcing e.g. all values to be strings.
-			"data_json": {
+			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "JSON-encoded secret data to write.",
@@ -125,8 +125,8 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 		return e
 	}
 	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data); err != nil {
-		return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
+	if err := json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &data); err != nil {
+		return fmt.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
 	}
 
 	path := d.Get(consts.FieldPath).(string)
@@ -214,7 +214,7 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
 		}
 
-		if err := d.Set("data_json", string(jsonData)); err != nil {
+		if err := d.Set(consts.FieldDataJSON, string(jsonData)); err != nil {
 			return err
 		}
 		if err := d.Set(consts.FieldPath, path); err != nil {
@@ -222,9 +222,9 @@ func genericSecretResourceRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	} else {
 		// Populate data from data_json from state
-		err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data)
+		err := json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &data)
 		if err != nil {
-			return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
+			return fmt.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
 		}
 		log.Printf("[WARN] vault_generic_secret does not refresh when disable_read is set to true")
 	}

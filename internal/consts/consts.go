@@ -19,6 +19,8 @@ const (
 	FieldLeaseID        = "lease_id"
 	FieldLeaseDuration  = "lease_duration"
 	FieldLeaseRenewable = "lease_renewable"
+	FieldDepth          = "depth"
+	FieldDataJSON       = "data_json"
 	/*
 		common environment variables
 	*/

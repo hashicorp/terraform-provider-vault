@@ -32,7 +32,7 @@ func TestAccKVSecret_basic(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"data_json"},
+				ImportStateVerifyIgnore: []string{consts.FieldDataJSON},
 			},
 		},
 	})

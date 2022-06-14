@@ -29,7 +29,7 @@ func kvSecretResource(name string) *schema.Resource {
 				ForceNew:    true,
 				Description: "Full path of the KV-V1 secret.",
 			},
-			"data_json": {
+			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "JSON-encoded secret data to write.",
@@ -56,9 +56,9 @@ func kvSecretWrite(ctx context.Context, d *schema.ResourceData, meta interface{}
 	path := d.Get(consts.FieldPath).(string)
 
 	var secretData map[string]interface{}
-	err := json.Unmarshal([]byte(d.Get("data_json").(string)), &secretData)
+	err := json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &secretData)
 	if err != nil {
-		return diag.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
+		return diag.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
 	}
 
 	data := map[string]interface{}{

@@ -44,7 +44,7 @@ func kvSecretSubkeysV2DataSource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies the version to return. If not set the latest version is returned.",
 			},
-			"depth": {
+			consts.FieldDepth: {
 				Type:     schema.TypeInt,
 				Optional: true,
 				Description: "Specifies the deepest nesting level to provide in the output." +
@@ -52,7 +52,7 @@ func kvSecretSubkeysV2DataSource() *schema.Resource {
 					"artificially treated as leaves and will thus be 'null' even if further " +
 					"underlying sub-keys exist.",
 			},
-			"data_json": {
+			consts.FieldDataJSON: {
 				Type:     schema.TypeString,
 				Computed: true,
 				// we save the subkeys as a JSON string in order to
@@ -76,7 +76,7 @@ func kvSecretSubkeysDataSourceRead(_ context.Context, d *schema.ResourceData, me
 		path = fmt.Sprintf("%s?version=%d", path, v.(int))
 	}
 
-	if v, ok := d.GetOk("depth"); ok {
+	if v, ok := d.GetOk(consts.FieldDepth); ok {
 		// add depth to path as a query param
 		path = fmt.Sprintf("%s?depth=%d", path, v.(int))
 	}
@@ -97,7 +97,7 @@ func kvSecretSubkeysDataSourceRead(_ context.Context, d *schema.ResourceData, me
 		if err != nil {
 			return diag.Errorf("error marshaling JSON for %q: %s", path, err)
 		}
-		if err := d.Set("data_json", string(jsonData)); err != nil {
+		if err := d.Set(consts.FieldDataJSON, string(jsonData)); err != nil {
 			return diag.FromErr(err)
 		}
 	}

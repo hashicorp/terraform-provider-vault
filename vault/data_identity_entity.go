@@ -122,7 +122,7 @@ func identityEntityDataSource() *schema.Resource {
 				Description: "Accessor of the mount to which the alias belongs to. This should be supplied in conjunction with `alias_name`.",
 			},
 
-			"data_json": {
+			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Entity data from Vault in JSON String form",
@@ -276,7 +276,7 @@ func identityEntityDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 	// Ignoring error because this value came from JSON in the
 	// first place so no reason why it should fail to re-encode.
 	jsonDataBytes, _ := json.Marshal(resp.Data)
-	d.Set("data_json", string(jsonDataBytes))
+	d.Set(consts.FieldDataJSON, string(jsonDataBytes))
 
 	return nil
 }

@@ -38,7 +38,7 @@ func genericSecretDataSource() *schema.Resource {
 					"in the TF state.",
 			},
 
-			"data_json": {
+			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "JSON-encoded secret data read from Vault.",
@@ -103,7 +103,7 @@ func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error
 	// Ignoring error because this value came from JSON in the
 	// first place so no reason why it should fail to re-encode.
 	jsonDataBytes, _ := json.Marshal(secret.Data)
-	if err := d.Set("data_json", string(jsonDataBytes)); err != nil {
+	if err := d.Set(consts.FieldDataJSON, string(jsonDataBytes)); err != nil {
 		return err
 	}
 

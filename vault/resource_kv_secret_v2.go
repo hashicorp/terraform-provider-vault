@@ -68,7 +68,7 @@ func kvSecretV2Resource(name string) *schema.Resource {
 
 			// Data is passed as JSON so that an arbitrary structure is
 			// possible, rather than forcing e.g. all values to be strings.
-			"data_json": {
+			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "JSON-encoded secret data to write.",
@@ -116,9 +116,9 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 	path := getKVV2Path(mount, name, consts.FieldData)
 
 	var secretData map[string]interface{}
-	err := json.Unmarshal([]byte(d.Get("data_json").(string)), &secretData)
+	err := json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &secretData)
 	if err != nil {
-		return diag.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
+		return diag.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
 	}
 
 	data := map[string]interface{}{
