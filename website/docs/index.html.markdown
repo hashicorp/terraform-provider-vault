@@ -334,8 +334,8 @@ Vault Enterprise), as well as creating resources in those namespaces by
 utilizing [Provider Aliasing][aliasing]. The `namespace` option in the [provider
 block][provider-block] enables the management of  resources in the specified
 namespace. 
-In addition, all resources and data sources support specifying their `namespace`. 
-All resource `namespace`'s will are relative to the `provider`'s.
+In addition, all resources and data sources support specifying their own `namespace`. 
+All resource's `namespace` will be made relative to the `provider`'s configured namespace.
 
 ### Simple namespace example
 ```hcl
@@ -367,11 +367,11 @@ resource "vault_generic_secret" "secret" {
 
 ### Using Provider Aliases
 
-~> It is advised to set the `namespace` on individual resources and data sources,
-rather than having to manage multiple `provider` aliases. This 
+~> It is advisable to set the `namespace` on individual resources and data sources,
+rather than having to manage multiple `provider` aliases.
 See [vault_namespace](r/namespace.html) for more information.
 
-The below configuration is a simple example of using the provider block's
+The configuration below is a simple example of using the provider block's
 `namespace` attribute to configure an aliased provider and create a resource
 within that namespace. 
 

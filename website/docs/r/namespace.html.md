@@ -86,7 +86,7 @@ The following arguments are supported:
 
 * `id` - ID of the namespace.
 
-* `path_fq` - The fully qualified path to the namespace. Usefully when provisioning resources in a child `namespace`.
+* `path_fq` - The fully qualified path to the namespace. Useful when provisioning resources in a child `namespace`.
 
 ## Import
 
