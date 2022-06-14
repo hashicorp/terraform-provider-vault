@@ -8,8 +8,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/sdk/helper/consts"
+	helper "github.com/hashicorp/vault/sdk/helper/consts"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -173,7 +174,7 @@ func TestAccAppRoleAuthBackendRoleSecretID_full(t *testing.T) {
 					resource.TestCheckResourceAttr(secretIDResource, "secret_id", secretID),
 					resource.TestCheckResourceAttrSet(secretIDResource, "accessor"),
 					resource.TestCheckResourceAttr(secretIDResource, "cidr_list.#", "2"),
-					resource.TestCheckResourceAttr(secretIDResource, "metadata", `{"hello":"world"}`),
+					resource.TestCheckResourceAttr(secretIDResource, consts.FieldMetadata, `{"hello":"world"}`),
 				),
 			},
 		},
@@ -287,7 +288,7 @@ provider "vault" {
 func testAssertClientNamespace(expectedNS string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-		actualNS := client.Headers().Get(consts.NamespaceHeaderName)
+		actualNS := client.Headers().Get(helper.NamespaceHeaderName)
 		if actualNS != expectedNS {
 			return fmt.Errorf("expected namespace %v, actual %v", expectedNS, actualNS)
 		}

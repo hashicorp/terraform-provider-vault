@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -28,7 +29,7 @@ func terraformCloudSecretCredsResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Name of the role.",
 			},
-			"lease_id": {
+			consts.FieldLeaseID: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Sensitive:   true,
@@ -91,9 +92,9 @@ func createTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 	d.SetId(tokenId)
 
 	if secret.LeaseID != "" {
-		d.Set("lease_id", secret.LeaseID)
+		d.Set(consts.FieldLeaseID, secret.LeaseID)
 	} else {
-		d.Set("lease_id", "")
+		d.Set(consts.FieldLeaseID, "")
 	}
 
 	d.Set("token", token)
@@ -110,7 +111,7 @@ func deleteTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interf
 		return e
 	}
 
-	leaseId := d.Get("lease_id").(string)
+	leaseId := d.Get(consts.FieldLeaseID).(string)
 
 	if leaseId != "" {
 		err := client.Sys().Revoke(leaseId)
@@ -140,7 +141,7 @@ func readTerraformCloudSecretCredsResource(d *schema.ResourceData, meta interfac
 		return e
 	}
 
-	leaseId := d.Get("lease_id")
+	leaseId := d.Get(consts.FieldLeaseID)
 
 	if leaseId != "" {
 		data := map[string]interface{}{

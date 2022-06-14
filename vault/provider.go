@@ -304,6 +304,26 @@ var (
 			Resource:      updateSchemaResource(identityOIDCOpenIDConfigDataSource()),
 			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/openid-configuration"},
 		},
+		"vault_kv_secret": {
+			Resource:      kvSecretDataSource(),
+			PathInventory: []string{"/secret/{path}"},
+		},
+		"vault_kv_secret_v2": {
+			Resource:      kvSecretV2DataSource(),
+			PathInventory: []string{"/secret/data/{path}/?version={version}}"},
+		},
+		"vault_kv_secrets_list": {
+			Resource:      kvSecretListDataSource(),
+			PathInventory: []string{"/secret/{path}/?list=true"},
+		},
+		"vault_kv_secrets_list_v2": {
+			Resource:      kvSecretListDataSourceV2(),
+			PathInventory: []string{"/secret/metadata/{path}/?list=true"},
+		},
+		"vault_kv_secret_subkeys_v2": {
+			Resource:      kvSecretSubkeysV2DataSource(),
+			PathInventory: []string{"/secret/subkeys/{path}"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
@@ -747,6 +767,18 @@ var (
 		"vault_identity_oidc_provider": {
 			Resource:      updateSchemaResource(identityOIDCProviderResource()),
 			PathInventory: []string{"/identity/oidc/provider/{name}"},
+		},
+		"vault_kv_secret_backend_v2": {
+			Resource:      kvSecretBackendV2Resource(),
+			PathInventory: []string{"/secret/data/{path}"},
+		},
+		"vault_kv_secret": {
+			Resource:      kvSecretResource("vault_kv_secret"),
+			PathInventory: []string{"/secret/{path}"},
+		},
+		"vault_kv_secret_v2": {
+			Resource:      kvSecretV2Resource("vault_kv_secret_v2"),
+			PathInventory: []string{"/secret/data/{path}"},
 		},
 	}
 )

@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -49,7 +50,7 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 				ForceNew: true,
 			},
 
-			"metadata": {
+			consts.FieldMetadata: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "JSON-encoded secret data to write.",
@@ -145,7 +146,7 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	if len(cidrs) > 0 {
 		data["cidr_list"] = strings.Join(cidrs, ",")
 	}
-	if v, ok := d.GetOk("metadata"); ok {
+	if v, ok := d.GetOk(consts.FieldMetadata); ok {
 		name := "vault_approle_auth_backend_role_secret_id"
 		result, err := normalizeDataJSON(v.(string))
 		if err != nil {
@@ -276,7 +277,7 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 	if err != nil {
 		return fmt.Errorf("error setting cidr_list in state: %s", err)
 	}
-	d.Set("metadata", string(metadata))
+	d.Set(consts.FieldMetadata, string(metadata))
 	d.Set("accessor", accessor)
 
 	return nil
