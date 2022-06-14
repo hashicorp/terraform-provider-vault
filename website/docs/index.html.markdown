@@ -424,7 +424,7 @@ root
 ### Nested Namespaces
 
 The example below relies on setting the `namespace` per resource from a single `provider{}` block. 
-See the [vault_namespace](r/namespace.html#nested-namespaces) documentation for slightly less elaborate example.
+See the [vault_namespace](r/namespace.html#nested-namespaces) documentation for a slightly less elaborate example.
 
 ```hcl
 provider vault {}
