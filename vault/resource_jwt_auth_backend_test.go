@@ -83,6 +83,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 	}
 
 	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
 		resource.Test(t, resource.TestCase{
 			PreCheck:     func() { testutil.TestAccPreCheck(t) },
 			Providers:    testProviders,
@@ -93,6 +94,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 	)
 
 	t.Run("ns", func(t *testing.T) {
+		t.Parallel()
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("jwt")
 		resource.Test(t, resource.TestCase{
@@ -133,6 +135,7 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 	}
 
 	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
 		resource.Test(t, resource.TestCase{
 			PreCheck:     func() { testutil.TestAccPreCheck(t) },
 			Providers:    testProviders,
@@ -143,6 +146,7 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 	)
 
 	t.Run("ns", func(t *testing.T) {
+		t.Parallel()
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("jwt")
 		resource.Test(t, resource.TestCase{
@@ -187,6 +191,7 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 	}
 
 	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
 		path := acctest.RandomWithPrefix("oidc")
 		resource.Test(t, resource.TestCase{
 			PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -198,6 +203,7 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 	)
 
 	t.Run("ns", func(t *testing.T) {
+		t.Parallel()
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("oidc")
 		resource.Test(t, resource.TestCase{

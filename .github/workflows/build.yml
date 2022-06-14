@@ -77,7 +77,7 @@ jobs:
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
         run: |
-          make testacc-ent TESTARGS='-v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
+          make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json
