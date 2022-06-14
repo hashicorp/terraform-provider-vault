@@ -24,7 +24,7 @@ func TestAccRabbitMQSecretBackend_basic(t *testing.T) {
 			{
 				Config: testAccRabbitMQSecretBackendConfig_basic(path, connectionUri, username, password),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
 					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
 					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
@@ -43,7 +43,7 @@ func TestAccRabbitMQSecretBackend_basic(t *testing.T) {
 			{
 				Config: testAccRabbitMQSecretBackendConfig_updated(path, connectionUri, username, password),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
 					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "1800"),
 					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "43200"),
@@ -69,7 +69,7 @@ func TestAccRabbitMQSecretBackend_template(t *testing.T) {
 			{
 				Config: testAccRabbitMQSecretBackendTemplateConfig(path, connectionUri, username, password, path, path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "connection_uri", connectionUri),
 					resource.TestCheckResourceAttr(resourceName, "username", username),
 					resource.TestCheckResourceAttr(resourceName, "password", password),

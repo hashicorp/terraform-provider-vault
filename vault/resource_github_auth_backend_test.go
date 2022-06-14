@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -39,7 +40,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
 					resource.TestCheckResourceAttr(resName, "id", path),
-					resource.TestCheckResourceAttr(resName, "path", path),
+					resource.TestCheckResourceAttr(resName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resName, "organization", testGHOrg),
 					// expect computed value for organization_id
 					resource.TestCheckResourceAttr(resName, "organization_id", strconv.Itoa(orgMeta.ID)),
@@ -53,7 +54,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
 					resource.TestCheckResourceAttr(resName, "id", path),
-					resource.TestCheckResourceAttr(resName, "path", path),
+					resource.TestCheckResourceAttr(resName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resName, "organization", "unknown"),
 					resource.TestCheckResourceAttr(resName, "organization_id", "2999"),
 					resource.TestCheckResourceAttr(resName, "token_ttl", "2400"),
@@ -84,7 +85,7 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
 					resource.TestCheckResourceAttr(resName, "id", backend),
-					resource.TestCheckResourceAttr(resName, "path", backend),
+					resource.TestCheckResourceAttr(resName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resName, "organization", testGHOrg),
 					resource.TestCheckResourceAttr(resName, "organization_id", strconv.Itoa(orgMeta.ID)),
 					resource.TestCheckResourceAttr(resName, "tune.0.default_lease_ttl", "10m"),
@@ -110,7 +111,7 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
 					resource.TestCheckResourceAttr(resName, "id", backend),
-					resource.TestCheckResourceAttr(resName, "path", backend),
+					resource.TestCheckResourceAttr(resName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resName, "organization", testGHOrg),
 					resource.TestCheckResourceAttr(resName, "organization_id", strconv.Itoa(orgMeta.ID)),
 					resource.TestCheckResourceAttr(resName, "tune.0.default_lease_ttl", "50m"),
@@ -151,7 +152,7 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 				Config: testAccGithubAuthBackendConfig_description(path, testGHOrg, "Github Auth Mount"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
-					resource.TestCheckResourceAttr(resName, "path", path),
+					resource.TestCheckResourceAttr(resName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resName, "organization", testGHOrg),
 					resource.TestCheckResourceAttr(resName, "organization_id", strconv.Itoa(orgMeta.ID)),
 					resource.TestCheckResourceAttr(resName, "description", "Github Auth Mount"),
@@ -161,7 +162,7 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 				Config: testAccGithubAuthBackendConfig_description(path, testGHOrg, "Github Auth Mount Updated"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
-					resource.TestCheckResourceAttr(resName, "path", path),
+					resource.TestCheckResourceAttr(resName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resName, "organization", orgMeta.Login),
 					resource.TestCheckResourceAttr(resName, "organization_id", strconv.Itoa(orgMeta.ID)),
 					resource.TestCheckResourceAttr(resName, "description", "Github Auth Mount Updated"),

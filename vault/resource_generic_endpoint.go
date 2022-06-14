@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -32,7 +33,7 @@ func genericEndpointResource(name string) *schema.Resource {
 
 			// Data is passed as JSON so that an arbitrary structure is
 			// possible, rather than forcing e.g. all values to be strings.
-			"data_json": {
+			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "JSON-encoded data to write.",
@@ -95,9 +96,9 @@ func genericEndpointResourceWrite(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	var data map[string]interface{}
-	err := json.Unmarshal([]byte(d.Get("data_json").(string)), &data)
+	err := json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &data)
 	if err != nil {
-		return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
+		return fmt.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
 	}
 
 	path := d.Get("path").(string)
@@ -200,9 +201,9 @@ func genericEndpointResourceRead(d *schema.ResourceData, meta interface{}) error
 		var relevantData map[string]interface{}
 		if ignore_absent_fields {
 			var suppliedData map[string]interface{}
-			err = json.Unmarshal([]byte(d.Get("data_json").(string)), &suppliedData)
+			err = json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &suppliedData)
 			if err != nil {
-				return fmt.Errorf("data_json %#v syntax error: %s", d.Get("data_json"), err)
+				return fmt.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
 			}
 			relevantData = suppliedData
 			for k, v := range data.Data {
@@ -218,7 +219,7 @@ func genericEndpointResourceRead(d *schema.ResourceData, meta interface{}) error
 		if err != nil {
 			return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
 		}
-		d.Set("data_json", string(jsonData))
+		d.Set(consts.FieldDataJSON, string(jsonData))
 		d.Set("path", path)
 	} else {
 		log.Printf("[WARN] endpoint does not refresh when disable_read is set to true")
