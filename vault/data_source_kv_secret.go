@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -22,8 +23,8 @@ func kvSecretDataSource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Full path of the KV-V1 secret.",
 			},
-			consts.FieldData: {
-				Type:        schema.TypeMap,
+			consts.FieldDataJSON: {
+				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Map of strings read from Vault.",
 				Sensitive:   true,
@@ -68,10 +69,13 @@ func kvSecretDataSourceRead(ctx context.Context, d *schema.ResourceData, meta in
 
 	data := secret.Data["data"]
 
-	if v, ok := data.(map[string]interface{}); ok {
-		if err := d.Set(consts.FieldData, serializeDataMapToString(v)); err != nil {
-			return diag.FromErr(err)
-		}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return diag.Errorf("error marshaling JSON for %q: %s", path, err)
+	}
+
+	if err := d.Set(consts.FieldDataJSON, string(jsonData)); err != nil {
+		return diag.FromErr(err)
 	}
 
 	if err := d.Set(consts.FieldLeaseID, secret.LeaseID); err != nil {

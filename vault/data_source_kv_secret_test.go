@@ -15,6 +15,8 @@ func TestDataSourceKVSecret(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-kv")
 	name := acctest.RandomWithPrefix("foo")
 
+	expectedSubkeys := `{"baz":{"riff":"raff"},"foo":"bar","zip":"zap","test":false}`
+
 	resourceName := "data.vault_kv_secret.test"
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
@@ -25,8 +27,7 @@ func TestDataSourceKVSecret(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLeaseRenewable, "false"),
-					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
-					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
+					testutil.CheckJSONData(resourceName, consts.FieldDataJSON, expectedSubkeys),
 				),
 			},
 		},
@@ -41,8 +42,12 @@ resource "vault_kv_secret" "test" {
   path = "${vault_mount.kvv1.path}/%s"
   data_json = jsonencode(
     {
-      zip = "zap",
-      foo = "bar"
+      zip  = "zap",
+      foo  = "bar",
+      test = false
+      baz = {
+          riff = "raff"
+        }
     }
   )
 }

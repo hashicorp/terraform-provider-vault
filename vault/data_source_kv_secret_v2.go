@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -44,8 +45,8 @@ func kvSecretV2DataSource() *schema.Resource {
 				Description: "Full path where the KVV2 secret is written.",
 			},
 
-			consts.FieldData: {
-				Type:        schema.TypeMap,
+			consts.FieldDataJSON: {
+				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Map of strings read from Vault",
 				Sensitive:   true,
@@ -84,6 +85,7 @@ func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta in
 	mount := d.Get(consts.FieldMount).(string)
 	name := d.Get(consts.FieldName).(string)
 
+	// prefix for v2 secrets is "data"
 	path := getKVV2Path(mount, name, consts.FieldData)
 
 	if err := d.Set(consts.FieldPath, path); err != nil {
@@ -107,12 +109,13 @@ func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta in
 
 	data := secret.Data["data"]
 
-	if v, ok := data.(map[string]interface{}); ok {
-		if err := d.Set(consts.FieldData, serializeDataMapToString(v)); err != nil {
-			return diag.FromErr(err)
-		}
-	} else {
-		return diag.Errorf("error converting response data at path %q to a map", path)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return diag.Errorf("error marshaling JSON for %q: %s", path, err)
+	}
+
+	if err := d.Set(consts.FieldDataJSON, string(jsonData)); err != nil {
+		return diag.FromErr(err)
 	}
 
 	if v, ok := secret.Data["metadata"]; ok {
