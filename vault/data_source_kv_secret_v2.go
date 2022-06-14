@@ -95,7 +95,7 @@ func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta in
 		path = fmt.Sprintf("%s?version=%d", path, v.(int))
 	}
 
-	log.Printf("[DEBUG] Reading secret at %s from Vault", path)
+	log.Printf("[DEBUG] Reading secret at %q from Vault", path)
 
 	secret, err := client.Logical().Read(path)
 	if err != nil {
