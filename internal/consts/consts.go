@@ -4,12 +4,24 @@ const (
 	/*
 		common field names
 	*/
-	FieldPath        = "path"
-	FieldParameters  = "parameters"
-	FieldMethod      = "method"
-	FieldNamespace   = "namespace"
-	FieldNamespaceID = "namespace_id"
-	FieldBackend     = "backend"
+	FieldPath           = "path"
+	FieldParameters     = "parameters"
+	FieldMethod         = "method"
+	FieldNamespace      = "namespace"
+	FieldNamespaceID    = "namespace_id"
+	FieldBackend        = "backend"
+	FieldPathFQ         = "path_fq"
+	FieldData           = "data"
+	FieldMount          = "mount"
+	FieldName           = "name"
+	FieldVersion        = "version"
+	FieldMetadata       = "metadata"
+	FieldNames          = "names"
+	FieldLeaseID        = "lease_id"
+	FieldLeaseDuration  = "lease_duration"
+	FieldLeaseRenewable = "lease_renewable"
+	FieldDepth          = "depth"
+	FieldDataJSON       = "data_json"
 
 	/*
 		common environment variables

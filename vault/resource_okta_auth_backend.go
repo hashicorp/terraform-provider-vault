@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -29,7 +30,7 @@ func oktaAuthBackendResource() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
@@ -252,7 +253,7 @@ func oktaAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 
 	authType := oktaAuthType
 	desc := d.Get("description").(string)
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
 
@@ -311,7 +312,7 @@ func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	if err := d.Set("path", path); err != nil {
+	if err := d.Set(consts.FieldPath, path); err != nil {
 		return err
 	}
 

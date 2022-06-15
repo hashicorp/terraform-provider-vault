@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -44,7 +45,7 @@ func TestResourceToken_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "ttl", "60s"),
-					resource.TestCheckResourceAttrSet(resourceName, "lease_duration"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLeaseDuration),
 					resource.TestCheckResourceAttrSet(resourceName, "lease_started"),
 					resource.TestCheckResourceAttrSet(resourceName, "client_token"),
 				),
@@ -65,7 +66,7 @@ func TestResourceToken_import(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "ttl", "60s"),
-					resource.TestCheckResourceAttrSet(resourceName, "lease_duration"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLeaseDuration),
 					resource.TestCheckResourceAttrSet(resourceName, "lease_started"),
 					resource.TestCheckResourceAttrSet(resourceName, "client_token"),
 				),
@@ -75,7 +76,7 @@ func TestResourceToken_import(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				// the API can't serve these fields, so ignore them
-				ImportStateVerifyIgnore: []string{"ttl", "lease_duration", "lease_started", "client_token"},
+				ImportStateVerifyIgnore: []string{"ttl", consts.FieldLeaseDuration, "lease_started", "client_token"},
 			},
 		},
 	})
@@ -115,7 +116,7 @@ func TestResourceToken_full(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "display_name", "test"),
 					resource.TestCheckResourceAttr(resourceName, "num_uses", "1"),
 					resource.TestCheckResourceAttr(resourceName, "period", "0"),
-					resource.TestCheckResourceAttr(resourceName, "lease_duration", "59"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLeaseDuration, "59"),
 					resource.TestCheckResourceAttrSet(resourceName, "lease_started"),
 					resource.TestCheckResourceAttrSet(resourceName, "client_token"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.fizz", "buzz"),
@@ -194,7 +195,7 @@ func TestResourceToken_expire(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testResourceTokenCheckExpireTime("vault_token.test"),
 					resource.TestCheckResourceAttr("vault_token.test", "ttl", "10s"),
-					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "9"),
+					resource.TestCheckResourceAttr("vault_token.test", consts.FieldLeaseDuration, "9"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
 				),
@@ -219,7 +220,7 @@ func TestResourceToken_expire(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testResourceTokenCheckExpireTime("vault_token.test"),
 					resource.TestCheckResourceAttr("vault_token.test", "ttl", "10s"),
-					resource.TestCheckResourceAttr("vault_token.test", "lease_duration", "9"),
+					resource.TestCheckResourceAttr("vault_token.test", consts.FieldLeaseDuration, "9"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "lease_started"),
 					resource.TestCheckResourceAttrSet("vault_token.test", "client_token"),
 				),
@@ -258,7 +259,7 @@ func TestResourceToken_renew(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "ttl", "30s"),
 					resource.TestCheckResourceAttr(resourceName, "renew_min_lease", "10"),
 					resource.TestCheckResourceAttr(resourceName, "renew_increment", "30"),
-					resource.TestCheckResourceAttr(resourceName, "lease_duration", "29"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLeaseDuration, "29"),
 					resource.TestCheckResourceAttrSet(resourceName, "lease_started"),
 					resource.TestCheckResourceAttrSet(resourceName, "client_token"),
 				),
@@ -271,7 +272,7 @@ func TestResourceToken_renew(t *testing.T) {
 				Config: testResourceTokenConfig_renew(),
 				Check: resource.ComposeTestCheckFunc(
 					testResourceTokenWaitRenewMinLeaseTime(resourceName),
-					resource.TestCheckResourceAttrSet(resourceName, "lease_duration"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLeaseDuration),
 					resource.TestCheckResourceAttrSet(resourceName, "lease_started"),
 					resource.TestCheckResourceAttrSet(resourceName, "client_token"),
 				),
@@ -287,7 +288,7 @@ func TestResourceToken_renew(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "ttl", "30s"),
 					resource.TestCheckResourceAttr(resourceName, "renew_min_lease", "10"),
 					resource.TestCheckResourceAttr(resourceName, "renew_increment", "30"),
-					resource.TestCheckResourceAttr(resourceName, "lease_duration", "29"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLeaseDuration, "29"),
 					resource.TestCheckResourceAttrSet(resourceName, "lease_started"),
 					resource.TestCheckResourceAttrSet(resourceName, "client_token"),
 				),

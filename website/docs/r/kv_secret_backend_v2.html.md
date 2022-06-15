@@ -1,0 +1,71 @@
+---
+layout: "vault"
+page_title: "Vault: vault_kv_secret_backend_v2 resource"
+sidebar_current: "docs-vault-resource-kv-secret-backend-v2"
+description: |-
+  Configures KV-V2 backend level settings that are applied to 
+  every key in the key-value store.
+---
+
+# vault\_kv\_secret\_v2
+
+Configures KV-V2 backend level settings that are applied to
+every key in the key-value store.
+
+For more information on Vault's KV-V2 secret backend
+[see here](https://www.vaultproject.io/docs/secrets/kv/kv-v2).
+
+## Example Usage
+
+```hcl
+resource "vault_mount" "kvv2" {
+  path        = "kvv2"
+  type        = "kv"
+  options     = { version = "2" }
+  description = "KV Version 2 secret engine mount"
+}
+
+resource "vault_kv_secret_backend_v2" "config" {
+  mount                      = vault_mount.kvv2.path
+  max_versions               = 5
+  delete_version_after_input = "3.5h"
+  cas_required               = true
+}
+```
+
+## Argument Reference
+
+The following arguments are supported:
+
+* `mount` - (Required) Path where KV-V2 engine is mounted.
+
+* `max_versions` - (Optional) The number of versions to keep per key.
+
+* `cas_required` - (Optional) If true, all keys will require the cas
+  parameter to be set on all write requests.
+
+* `delete_version_after_input` - (Optional) If set, specifies the length of time before
+  a version is deleted. Accepts Go duration format string.
+
+## Required Vault Capabilities
+
+Use of this resource requires the `create` or `update` capability
+(depending on whether the resource already exists) on the given path,
+the `delete` capability if the resource is removed from configuration,
+and the `read` capability for drift detection (by default).
+
+## Attributes Reference
+
+The following attributes are exported in addition to the above:
+
+* `delete_version_after` - The full duration string for
+  `delete_version_after_input` formatted by Vault in
+  `00h00m00s` format.
+
+## Import
+
+The KV-V2 secret backend can be imported using the `path`, e.g.
+
+```
+$ terraform import vault_kv_secret_backend_v2.config kvv2/config
+```

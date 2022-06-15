@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -101,7 +102,7 @@ func consulSecretBackendRoleResource() *schema.Resource {
 func consulSecretBackendRoleGetBackend(d *schema.ResourceData) string {
 	if v, ok := d.GetOk("backend"); ok {
 		return v.(string)
-	} else if v, ok := d.GetOk("path"); ok {
+	} else if v, ok := d.GetOk(consts.FieldPath); ok {
 		return v.(string)
 	} else {
 		return ""
@@ -198,8 +199,8 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 	var pathKey string
-	if _, ok := d.GetOk("path"); ok {
-		pathKey = "path"
+	if _, ok := d.GetOk(consts.FieldPath); ok {
+		pathKey = consts.FieldPath
 	} else {
 		pathKey = "backend"
 	}

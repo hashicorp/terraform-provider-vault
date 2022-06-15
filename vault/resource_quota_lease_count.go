@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -32,7 +33,7 @@ func quotaLeaseCountResource() *schema.Resource {
 				Description: "The name of the quota.",
 				ForceNew:    true,
 			},
-			"path": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    false,
@@ -120,7 +121,7 @@ func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating Resource Lease Count Quota %s", name)
 
 	data := map[string]interface{}{}
-	data["path"] = d.Get("path").(string)
+	data["path"] = d.Get(consts.FieldPath).(string)
 	data["max_leases"] = d.Get("max_leases").(int)
 
 	_, err := client.Logical().Write(path, data)

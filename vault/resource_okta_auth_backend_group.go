@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -24,7 +25,7 @@ func oktaAuthBackendGroupResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
@@ -74,7 +75,7 @@ func oktaAuthBackendGroupWrite(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 	groupName := d.Get("group_name").(string)
 
 	log.Printf("[DEBUG] Writing group %s to Okta auth backend %s", groupName, path)
@@ -136,7 +137,7 @@ func oktaAuthBackendGroupRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("policies", group.Policies)
 	d.Set("group_name", group.Name)
-	d.Set("path", backend)
+	d.Set(consts.FieldPath, backend)
 
 	return nil
 }
@@ -147,7 +148,7 @@ func oktaAuthBackendGroupDelete(d *schema.ResourceData, meta interface{}) error 
 		return e
 	}
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 	group := d.Get("group_name").(string)
 
 	log.Printf("[DEBUG] Deleting group %s from Okta auth backend %s", group, path)

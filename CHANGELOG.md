@@ -1,3 +1,33 @@
+## 3.7.0 (June 15, 2022)
+FEATURES: 
+* Support setting `namespace` by resource
+ ([#1305](https://github.com/hashicorp/terraform-provider-vault/pull/1305)) 
+ ([#1479](https://github.com/hashicorp/terraform-provider-vault/pull/1479))
+* Add dedicated KV (v1/v2) secret engine resources, and data sources, supersedes `vault_generic_secret`
+ ([#1457](https://github.com/hashicorp/terraform-provider-vault/pull/1457))
+ 
+IMPROVEMENTS:
+* Update vault libs to v1.10.3
+ ([#1483](https://github.com/hashicorp/terraform-provider-vault/pull/1483))
+* Drop debug log calls containing the full vault response
+ ([#1477](https://github.com/hashicorp/terraform-provider-vault/pull/1477))
+* `resource/token`: Add `metadata` support
+ ([#1470](https://github.com/hashicorp/terraform-provider-vault/pull/1470))
+* `resource/vault_ldap_auth_backend`: support LDAP `username_as_alias` attribute:
+ ([#1460](https://github.com/hashicorp/terraform-provider-vault/pull/1460))
+* `resource/vault_quota_rate_limit`: Add support for `interval` and `block_interval`:
+ ([#1084](https://github.com/hashicorp/terraform-provider-vault/pull/1084))
+* ci: Test against vault-enterprise 1.10.3-ent:
+  ([#1461](https://github.com/hashicorp/terraform-provider-vault/pull/1461))
+ 
+BUGS:
+* `resource/auth_backend`: validate `path`, disallowing leading/trailing /
+ ([#1471](https://github.com/hashicorp/terraform-provider-vault/pull/1471))
+* `resource/vault_jwt_auth_backend_role`: fix `bound_claims` not being unset when empty
+ ([#1469](https://github.com/hashicorp/terraform-provider-vault/pull/1469))
+* `resource/cert_auth_backend`: add the correct field name: `allowed_organizational_units`
+  ([#1496](https://github.com/hashicorp/terraform-provider-vault/pull/1496))
+ 
 ## 3.6.0 (May 18, 2022)
 IMPROVEMENTS:
 * `resource/pki_secret_backend_root_cert`: Force new root CA resource creation on out-of-band changes.  
@@ -867,5 +897,3 @@ BUG FIXES:
 ## 0.1.0 (June 21, 2017)
 
 NOTES:
-
-* Same functionality as that of Terraform 0.9.8. Repacked as part of [Provider Splitout](https://www.hashicorp.com/blog/upcoming-provider-changes-in-terraform-0-10/)
