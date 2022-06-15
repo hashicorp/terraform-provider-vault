@@ -25,7 +25,7 @@ BUGS:
  ([#1471](https://github.com/hashicorp/terraform-provider-vault/pull/1471))
 * `resource/vault_jwt_auth_backend_role`: fix `bound_claims` not being unset when empty
  ([#1469](https://github.com/hashicorp/terraform-provider-vault/pull/1469))
-* `resourxe/cert_auth_backend`: add the correct field name: `allowed_organizational_units`
+* `resource/cert_auth_backend`: add the correct field name: `allowed_organizational_units`
   ([#1496](https://github.com/hashicorp/terraform-provider-vault/pull/1496))
  
 ## 3.6.0 (May 18, 2022)
