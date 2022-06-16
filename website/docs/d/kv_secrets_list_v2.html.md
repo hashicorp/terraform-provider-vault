@@ -77,6 +77,11 @@ data "vault_kv_secrets_list_v2" "nested_secrets" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  *Available only for Vault Enterprise*.
+
 * `mount` - (Required) Path where KV-V2 engine is mounted.
 
 * `name` - (Optional) Full name of the secret. For a nested secret
