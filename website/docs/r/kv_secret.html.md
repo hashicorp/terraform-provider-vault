@@ -38,6 +38,11 @@ resource "vault_kv_secret" "secret" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  *Available only for Vault Enterprise*.
+
 * `path` - (Required) Full path of the KV-V1 secret.
 
 * `data_json` - (Required) String containing a JSON-encoded object that will be
