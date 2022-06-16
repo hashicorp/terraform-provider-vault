@@ -795,20 +795,30 @@ func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {
 	return resourceMap, errs
 }
 
-func addCommonSchemaFields(m map[string]*schema.Schema) map[string]*schema.Schema {
-	m[consts.FieldNamespace] = &schema.Schema{
-		Type:         schema.TypeString,
-		Optional:     true,
-		ForceNew:     true,
-		Description:  "Target namespace. (requires Enterprise)",
-		ValidateFunc: validateNoLeadingTrailingSlashes,
+func getNamespaceSchema() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		consts.FieldNamespace: {
+			Type:         schema.TypeString,
+			Optional:     true,
+			ForceNew:     true,
+			Description:  "Target namespace. (requires Enterprise)",
+			ValidateFunc: validateNoLeadingTrailingSlashes,
+		},
 	}
-
-	return m
 }
 
-// TODO: temporary solution for adding common schema fields to the current code base.
+func mustAddSchema(r *schema.Resource, m map[string]*schema.Schema) {
+	for k, s := range m {
+		if _, ok := r.Schema[k]; ok {
+			panic(fmt.Sprintf("cannot add schema field %q,  already exists in the Schema map", k))
+		}
+
+		r.Schema[k] = s
+	}
+}
+
 func updateSchemaResource(r *schema.Resource) *schema.Resource {
-	addCommonSchemaFields(r.Schema)
+	mustAddSchema(r, getNamespaceSchema())
+
 	return r
 }
