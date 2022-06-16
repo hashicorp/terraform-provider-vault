@@ -15,7 +15,7 @@ import (
 )
 
 func TestAccNamespace(t *testing.T) {
-	namespacePath := acctest.RandomWithPrefix("test-namespace")
+	namespacePath := acctest.RandomWithPrefix("parent-ns")
 	resourceNameParent := "vault_namespace.parent"
 	resourceNameChild := "vault_namespace.child"
 
@@ -108,7 +108,7 @@ func testNamespaceDestroy(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
-		namespaceRef, err := client.Logical().Read(fmt.Sprintf("/sys/namespaces/%s", path))
+		namespaceRef, err := client.Logical().Read(fmt.Sprintf("%s/%s", SysNamespaceRoot, path))
 		if err != nil {
 			return fmt.Errorf("error reading back configuration: %s", err)
 		}
@@ -126,18 +126,6 @@ resource "vault_namespace" "test" {
   path                   = %q
 }
 `, path)
-}
-
-func testNestedNamespaceConfig(parentPath, childPath string) string {
-	return fmt.Sprintf(`
-provider "vault" {
-	namespace = %q
-}
-
-resource "vault_namespace" "test_child" {
-	path = %q
-}
-`, parentPath, childPath)
 }
 
 func testNestedNamespaces(ns string, count int) string {
