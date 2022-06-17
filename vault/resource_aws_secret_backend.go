@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -23,7 +24,7 @@ func awsSecretBackendResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
@@ -103,7 +104,7 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 	description := d.Get("description").(string)
 	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
 	maxTTL := d.Get("max_lease_ttl_seconds").(int)
@@ -117,7 +118,7 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting AWS backend at %q", path)
 	err := client.Sys().Mount(path, &api.MountInput{
-		Type:        "aws",
+		Type:        consts.MountTypeAWS,
 		Description: description,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
@@ -225,7 +226,7 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	d.Set("path", path)
+	d.Set(consts.FieldPath, path)
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)

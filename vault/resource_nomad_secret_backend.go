@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 
@@ -120,7 +121,7 @@ func createNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) e
 
 	log.Printf("[DEBUG] Mounting Nomad backend at %q", backend)
 	err := client.Sys().Mount(backend, &api.MountInput{
-		Type:        "nomad",
+		Type:        consts.MountTypeNomad,
 		Description: description,
 		Local:       local,
 		Config: api.MountConfigInput{

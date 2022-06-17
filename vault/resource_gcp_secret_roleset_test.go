@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -36,7 +37,7 @@ func TestGCPSecretRoleset(t *testing.T) {
 			{
 				Config: testGCPSecretRolesetConfig(backend, roleset, credentials, project, initialRole),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceNameBackend, "path", backend),
+					resource.TestCheckResourceAttr(resourceNameBackend, consts.FieldPath, backend),
 					resource.TestCheckResourceAttrSet(resourceName, "service_account_email"),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "roleset", roleset),
@@ -60,7 +61,7 @@ func TestGCPSecretRoleset(t *testing.T) {
 			{
 				Config: testGCPSecretRolesetConfig(backend, roleset, credentials, project, updatedRole),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceNameBackend, "path", backend),
+					resource.TestCheckResourceAttr(resourceNameBackend, consts.FieldPath, backend),
 					resource.TestCheckResourceAttrSet(resourceName, "service_account_email"),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "roleset", roleset),
@@ -78,7 +79,7 @@ func TestGCPSecretRoleset(t *testing.T) {
 			{
 				Config: testGCPSecretRolesetServiceAccountKey(backend, roleset, credentials, project, updatedRole),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceNameBackend, "path", backend),
+					resource.TestCheckResourceAttr(resourceNameBackend, consts.FieldPath, backend),
 					resource.TestCheckResourceAttrSet(resourceName, "service_account_email"),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "roleset", roleset),
@@ -169,12 +170,16 @@ func testGCPSecretRolesetAttrs(resourceName, backend, roleset string, ignoreFiel
 }
 
 func testGCPSecretRolesetDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_gcp_secret_roleset" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("error checking for GCP Secrets Roleset %q: %s", rs.Primary.ID, err)

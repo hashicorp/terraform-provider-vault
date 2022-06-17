@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -23,17 +24,17 @@ func TestResourceAuth(t *testing.T) {
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceAuth_initialConfig(path + pathDelim),
+				Config: testResourceAuth_initialConfig(path + consts.PathDelim),
 				ExpectError: regexp.MustCompile(
 					fmt.Sprintf(`invalid value "%s" for %q, contains leading/trailing %q`,
-						path+pathDelim, "path", pathDelim),
+						path+consts.PathDelim, "path", consts.PathDelim),
 				),
 			},
 			{
-				Config: testResourceAuth_initialConfig(pathDelim + path),
+				Config: testResourceAuth_initialConfig(consts.PathDelim + path),
 				ExpectError: regexp.MustCompile(
 					fmt.Sprintf(`invalid value "%s" for %q, contains leading/trailing %q`,
-						pathDelim+path, "path", pathDelim),
+						consts.PathDelim+path, "path", consts.PathDelim),
 				),
 			},
 			{
@@ -53,12 +54,6 @@ func TestResourceAuth(t *testing.T) {
 }
 
 func testAccCheckAuthBackendDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return err
-	}
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_auth_backend" {
 			continue
@@ -66,6 +61,16 @@ func testAccCheckAuthBackendDestroy(s *terraform.State) error {
 		instanceState := rs.Primary
 		if instanceState == nil {
 			return fmt.Errorf("resource not found in state")
+		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		auths, err := client.Sys().ListAuth()
+		if err != nil {
+			return err
 		}
 
 		if _, ok := auths[instanceState.ID]; ok {
@@ -129,7 +134,11 @@ func testResourceAuth_initialCheck(expectedPath string) resource.TestCheckFunc {
 			return fmt.Errorf("unexpected auth local")
 		}
 
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client, e := provider.GetClient(instanceState, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		auths, err := client.Sys().ListAuth()
 		if err != nil {
 			return fmt.Errorf("error reading back auth: %s", err)

@@ -6,10 +6,10 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
-
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -22,7 +22,7 @@ var (
 		"last_update_time",
 		"merged_entity_ids",
 		"metadata",
-		"namespace_id",
+		consts.FieldNamespaceID,
 		"policies",
 	}
 
@@ -63,7 +63,7 @@ var (
 			},
 			Computed: true,
 		},
-		"metadata": {
+		consts.FieldMetadata: {
 			Type:     schema.TypeMap,
 			Computed: true,
 		},
@@ -122,7 +122,7 @@ func identityEntityDataSource() *schema.Resource {
 				Description: "Accessor of the mount to which the alias belongs to. This should be supplied in conjunction with `alias_name`.",
 			},
 
-			"data_json": {
+			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Entity data from Vault in JSON String form",
@@ -168,11 +168,11 @@ func identityEntityDataSource() *schema.Resource {
 				},
 				Computed: true,
 			},
-			"metadata": {
+			consts.FieldMetadata: {
 				Type:     schema.TypeMap,
 				Computed: true,
 			},
-			"namespace_id": {
+			consts.FieldNamespaceID: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -276,7 +276,7 @@ func identityEntityDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 	// Ignoring error because this value came from JSON in the
 	// first place so no reason why it should fail to re-encode.
 	jsonDataBytes, _ := json.Marshal(resp.Data)
-	d.Set("data_json", string(jsonDataBytes))
+	d.Set(consts.FieldDataJSON, string(jsonDataBytes))
 
 	return nil
 }

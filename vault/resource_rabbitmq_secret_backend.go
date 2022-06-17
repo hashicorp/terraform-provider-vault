@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -23,7 +24,7 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "rabbitmq",
@@ -100,7 +101,7 @@ func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error
 		return e
 	}
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 	description := d.Get("description").(string)
 	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
 	maxTTL := d.Get("max_lease_ttl_seconds").(int)
@@ -112,7 +113,7 @@ func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting Rabbitmq backend at %q", path)
 	err := client.Sys().Mount(path, &api.MountInput{
-		Type:        "rabbitmq",
+		Type:        consts.MountTypeRabbitMQ,
 		Description: description,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
@@ -163,7 +164,7 @@ func rabbitMQSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-	d.Set("path", path)
+	d.Set(consts.FieldPath, path)
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)

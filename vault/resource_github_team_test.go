@@ -100,14 +100,18 @@ func TestGithubTeamBackEndPath(t *testing.T) {
 }
 
 func testAccGithubTeamCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-	for _, r := range s.RootModule().Resources {
-		if r.Type != "vault_github_team" {
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "vault_github_team" {
 			continue
 		}
 
-		resp, err := client.RawRequest(client.NewRequest("GET", "/v1/"+r.Primary.ID))
-		log.Printf("[DEBUG] Checking if resource '%s' is destroyed, statusCode: %d, error: %s", r.Primary.ID, resp.StatusCode, err)
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		resp, err := client.RawRequest(client.NewRequest("GET", "/v1/"+rs.Primary.ID))
+		log.Printf("[DEBUG] Checking if resource '%s' is destroyed, statusCode: %d, error: %s", rs.Primary.ID, resp.StatusCode, err)
 		if resp.StatusCode == 404 {
 			return nil
 		}

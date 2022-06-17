@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -31,7 +32,7 @@ func AuthBackendResource() *schema.Resource {
 				Description: "Name of the auth backend",
 			},
 
-			"path": {
+			consts.FieldPath: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
@@ -74,7 +75,7 @@ func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	mountType := d.Get("type").(string)
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 
 	if path == "" {
 		path = mountType
@@ -134,7 +135,7 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 	if err := d.Set("type", mount.Type); err != nil {
 		return err
 	}
-	if err := d.Set("path", path); err != nil {
+	if err := d.Set(consts.FieldPath, path); err != nil {
 		return err
 	}
 	if err := d.Set("description", mount.Description); err != nil {

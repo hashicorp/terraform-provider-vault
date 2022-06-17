@@ -8,13 +8,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func githubAuthBackendResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		"path": {
+		consts.FieldPath: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			ForceNew:    true,
@@ -76,7 +77,7 @@ func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 	var description string
 
-	path := strings.Trim(d.Get("path").(string), "/")
+	path := strings.Trim(d.Get(consts.FieldPath).(string), "/")
 
 	if v, ok := d.GetOk("description"); ok {
 		description = v.(string)

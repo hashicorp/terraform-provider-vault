@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 func Test_validateNoTrailingSlash(t *testing.T) {
@@ -103,7 +105,7 @@ func Test_validateNoLeadingTrailingSlashes(t *testing.T) {
 			if tt.wantErr {
 				expectedErrs = []error{
 					fmt.Errorf(`invalid value %q for %q, contains leading/trailing %q`,
-						tt.args.i, tt.args.k, pathDelim),
+						tt.args.i, tt.args.k, consts.PathDelim),
 				}
 			}
 

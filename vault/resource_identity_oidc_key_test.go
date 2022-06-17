@@ -92,12 +92,16 @@ func TestAccIdentityOidcKeyUpdate(t *testing.T) {
 }
 
 func testAccCheckIdentityOidcKeyDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_oidc_key" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		resp, err := identityOidcKeyApiRead(rs.Primary.Attributes["name"], client)
 		if err != nil {
 			return fmt.Errorf("error checking for identity oidc key %q: %s", rs.Primary.ID, err)

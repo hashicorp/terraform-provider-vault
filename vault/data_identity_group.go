@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -20,7 +21,7 @@ var (
 		"member_group_ids",
 		"metadata",
 		"modify_index",
-		"namespace_id",
+		consts.FieldNamespaceID,
 		"parent_group_ids",
 		"policies",
 		"type",
@@ -76,7 +77,7 @@ func identityGroupDataSource() *schema.Resource {
 				Description: "Accessor of the mount to which the alias belongs to. This should be supplied in conjunction with `alias_name`.",
 			},
 
-			"data_json": {
+			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Group data from Vault in JSON String form",
@@ -112,7 +113,7 @@ func identityGroupDataSource() *schema.Resource {
 				Type:     schema.TypeInt,
 				Computed: true,
 			},
-			"namespace_id": {
+			consts.FieldNamespaceID: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -250,7 +251,7 @@ func identityGroupDataSourceRead(d *schema.ResourceData, meta interface{}) error
 	// Ignoring error because this value came from JSON in the
 	// first place so no reason why it should fail to re-encode.
 	jsonDataBytes, _ := json.Marshal(resp.Data)
-	d.Set("data_json", string(jsonDataBytes))
+	d.Set(consts.FieldDataJSON, string(jsonDataBytes))
 
 	return nil
 }

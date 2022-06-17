@@ -304,6 +304,26 @@ var (
 			Resource:      updateSchemaResource(identityOIDCOpenIDConfigDataSource()),
 			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/openid-configuration"},
 		},
+		"vault_kv_secret": {
+			Resource:      updateSchemaResource(kvSecretDataSource()),
+			PathInventory: []string{"/secret/{path}"},
+		},
+		"vault_kv_secret_v2": {
+			Resource:      updateSchemaResource(kvSecretV2DataSource()),
+			PathInventory: []string{"/secret/data/{path}/?version={version}}"},
+		},
+		"vault_kv_secrets_list": {
+			Resource:      updateSchemaResource(kvSecretListDataSource()),
+			PathInventory: []string{"/secret/{path}/?list=true"},
+		},
+		"vault_kv_secrets_list_v2": {
+			Resource:      updateSchemaResource(kvSecretListDataSourceV2()),
+			PathInventory: []string{"/secret/metadata/{path}/?list=true"},
+		},
+		"vault_kv_secret_subkeys_v2": {
+			Resource:      updateSchemaResource(kvSecretSubkeysV2DataSource()),
+			PathInventory: []string{"/secret/subkeys/{path}"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
@@ -748,6 +768,18 @@ var (
 			Resource:      updateSchemaResource(identityOIDCProviderResource()),
 			PathInventory: []string{"/identity/oidc/provider/{name}"},
 		},
+		"vault_kv_secret_backend_v2": {
+			Resource:      updateSchemaResource(kvSecretBackendV2Resource()),
+			PathInventory: []string{"/secret/data/{path}"},
+		},
+		"vault_kv_secret": {
+			Resource:      updateSchemaResource(kvSecretResource("vault_kv_secret")),
+			PathInventory: []string{"/secret/{path}"},
+		},
+		"vault_kv_secret_v2": {
+			Resource:      updateSchemaResource(kvSecretV2Resource("vault_kv_secret_v2")),
+			PathInventory: []string{"/secret/data/{path}"},
+		},
 		"vault_managed_keys": {
 			Resource:      updateSchemaResource(managedKeysResource()),
 			PathInventory: []string{"/sys/managed-keys/{type}/{name}"},
@@ -767,20 +799,30 @@ func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {
 	return resourceMap, errs
 }
 
-func addCommonSchemaFields(m map[string]*schema.Schema) map[string]*schema.Schema {
-	m[consts.FieldNamespace] = &schema.Schema{
-		Type:         schema.TypeString,
-		Optional:     true,
-		ForceNew:     true,
-		Description:  "Target namespace. (requires Enterprise)",
-		ValidateFunc: validateNoLeadingTrailingSlashes,
+func getNamespaceSchema() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		consts.FieldNamespace: {
+			Type:         schema.TypeString,
+			Optional:     true,
+			ForceNew:     true,
+			Description:  "Target namespace. (requires Enterprise)",
+			ValidateFunc: validateNoLeadingTrailingSlashes,
+		},
 	}
-
-	return m
 }
 
-// TODO: temporary solution for adding common schema fields to the current code base.
+func mustAddSchema(r *schema.Resource, m map[string]*schema.Schema) {
+	for k, s := range m {
+		if _, ok := r.Schema[k]; ok {
+			panic(fmt.Sprintf("cannot add schema field %q,  already exists in the Schema map", k))
+		}
+
+		r.Schema[k] = s
+	}
+}
+
 func updateSchemaResource(r *schema.Resource) *schema.Resource {
-	addCommonSchemaFields(r.Schema)
+	mustAddSchema(r, getNamespaceSchema())
+
 	return r
 }

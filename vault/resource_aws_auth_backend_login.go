@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -89,7 +90,7 @@ func awsAuthBackendLoginResource() *schema.Resource {
 				ForceNew:    true,
 			},
 
-			"lease_duration": {
+			consts.FieldLeaseDuration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "Lease duration in seconds relative to the time in lease_start_time.",
@@ -107,7 +108,7 @@ func awsAuthBackendLoginResource() *schema.Resource {
 				Description: "True if the duration of this lease can be extended through renewal.",
 			},
 
-			"metadata": {
+			consts.FieldMetadata: {
 				Type:        schema.TypeMap,
 				Computed:    true,
 				Description: "The metadata reported by the Vault server.",
@@ -221,10 +222,10 @@ func awsAuthBackendLoginRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("nonce", nonce)
 	}
 	d.SetId(id)
-	d.Set("lease_duration", secret.Auth.LeaseDuration)
+	d.Set(consts.FieldLeaseDuration, secret.Auth.LeaseDuration)
 	d.Set("lease_start_time", time.Now().Format(time.RFC3339))
 	d.Set("renewable", secret.Auth.Renewable)
-	d.Set("metadata", secret.Auth.Metadata)
+	d.Set(consts.FieldMetadata, secret.Auth.Metadata)
 	d.Set("policies", secret.Auth.Policies)
 	d.Set("accessor", secret.Auth.Accessor)
 	d.Set("client_token", secret.Auth.ClientToken)

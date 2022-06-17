@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"golang.org/x/oauth2/google"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -50,7 +51,7 @@ func TestGCPSecretStaticAccount(t *testing.T) {
 			{
 				Config: noBindings,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceNameBackend, "path", backend),
+					resource.TestCheckResourceAttr(resourceNameBackend, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "static_account", staticAccount),
 					resource.TestCheckResourceAttr(resourceName, "secret_type", "access_token"),
@@ -64,7 +65,7 @@ func TestGCPSecretStaticAccount(t *testing.T) {
 			{
 				Config: initialConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceNameBackend, "path", backend),
+					resource.TestCheckResourceAttr(resourceNameBackend, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "static_account", staticAccount),
 					resource.TestCheckResourceAttr(resourceName, "secret_type", "access_token"),
@@ -88,7 +89,7 @@ func TestGCPSecretStaticAccount(t *testing.T) {
 			{
 				Config: updatedConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceNameBackend, "path", backend),
+					resource.TestCheckResourceAttr(resourceNameBackend, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "static_account", staticAccount),
 					resource.TestCheckResourceAttr(resourceName, "secret_type", "access_token"),
@@ -106,7 +107,7 @@ func TestGCPSecretStaticAccount(t *testing.T) {
 			{
 				Config: keyConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceNameBackend, "path", backend),
+					resource.TestCheckResourceAttr(resourceNameBackend, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "static_account", staticAccount),
 					resource.TestCheckResourceAttr(resourceName, "secret_type", "service_account_key"),
@@ -175,12 +176,16 @@ func testGCPSecretStaticAccountAttrs(resourceName, backend, staticAccount string
 }
 
 func testGCPSecretStaticAccountDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_gcp_secret_static_account" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("error checking for GCP Secrets StaticAccount %q: %s", rs.Primary.ID, err)

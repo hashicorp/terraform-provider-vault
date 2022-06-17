@@ -8,6 +8,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v0.3.1
 	github.com/Azure/go-autorest/autorest v0.11.24
 	github.com/aws/aws-sdk-go v1.41.8
+	github.com/cenkalti/backoff/v4 v4.1.2
 	github.com/containerd/containerd v1.6.6 // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
 	github.com/denisenkom/go-mssqldb v0.12.0
