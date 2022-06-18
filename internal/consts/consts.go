@@ -22,6 +22,9 @@ const (
 	FieldLeaseRenewable = "lease_renewable"
 	FieldDepth          = "depth"
 	FieldDataJSON       = "data_json"
+	FieldAWS            = "aws"
+	FieldPKCS           = "pkcs"
+	FieldAzure          = "azure"
 
 	/*
 		common environment variables
