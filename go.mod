@@ -26,8 +26,8 @@ require (
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.6
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.16.0
 	github.com/hashicorp/vault v1.10.3
-	github.com/hashicorp/vault/api v1.6.0
-	github.com/hashicorp/vault/sdk v0.5.0
+	github.com/hashicorp/vault/api v1.7.2
+	github.com/hashicorp/vault/sdk v0.5.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/stretchr/testify v1.7.1 // indirect
