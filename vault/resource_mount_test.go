@@ -225,6 +225,7 @@ resource "vault_mount" "test" {
 	description = "Example mount for testing"
 	default_lease_ttl_seconds = 3600
 	max_lease_ttl_seconds = 36000
+    allowed_managed_keys = ["test-key"]
 	options = {
 		version = "1"
 	}
@@ -277,6 +278,10 @@ func testResourceMount_initialCheck(cfg mountConfig) resource.TestCheckFunc {
 
 		if wanted := cfg.version; mount.Options["version"] != wanted {
 			return fmt.Errorf("version is %v; wanted %v", mount.Options["version"], wanted)
+		}
+
+		if wanted := []string{"test-key"}; !reflect.DeepEqual(mount.Config.AllowedManagedKeys, wanted) {
+			return fmt.Errorf("expected allowed managed keys %s, got %s", mount.Config.AllowedManagedKeys, wanted)
 		}
 
 		return nil

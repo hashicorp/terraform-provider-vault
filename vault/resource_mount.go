@@ -109,6 +109,14 @@ func getMountSchema(excludes ...string) schemaMap {
 			ForceNew:    true,
 			Description: "Enable the secrets engine to access Vault's external entropy source",
 		},
+
+		"allowed_managed_keys": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			ForceNew:    true,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Description: "List of managed key registry entry names that the mount in question is allowed to access",
+		},
 	}
 	for _, v := range excludes {
 		delete(s, v)
@@ -166,6 +174,10 @@ func createMount(d *schema.ResourceData, client *api.Client, path string, mountT
 		input.Config.AuditNonHMACResponseKeys = expandStringSlice(v.([]interface{}))
 	}
 
+	if v, ok := d.GetOk("allowed_managed_keys"); ok {
+		input.Config.AllowedManagedKeys = expandStringSlice(v.([]interface{}))
+	}
+
 	log.Printf("[DEBUG] Creating mount %s in Vault", path)
 
 	if err := client.Sys().Mount(path, input); err != nil {
@@ -214,6 +226,10 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		d.SetId(newPath)
 		path = newPath
+	}
+
+	if d.HasChange("allowed_managed_keys") {
+		config.AllowedManagedKeys = expandStringSlice(d.Get("allowed_managed_keys").([]interface{}))
 	}
 
 	log.Printf("[DEBUG] Updating mount %s in Vault", path)
