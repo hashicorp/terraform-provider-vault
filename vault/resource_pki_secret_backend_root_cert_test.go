@@ -103,6 +103,36 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 	})
 }
 
+func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resourceName := "vault_pki_secret_backend_root_cert.test"
+	managedKeyName := acctest.RandomWithPrefix("kms-key")
+
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", path),
+		resource.TestCheckResourceAttr(resourceName, "type", "internal"),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "test Root CA"),
+		resource.TestCheckResourceAttr(resourceName, "managed_key_name", managedKeyName),
+	}
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendRootCertificateConfig_managedKeys(path, managedKeyName, accessKey, secretKey),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks)...,
+				),
+			},
+		},
+	})
+}
+
 func testPkiSecretBackendRootCertificateConfig_basic(path string) string {
 	config := fmt.Sprintf(`
 resource "vault_mount" "test" {
@@ -130,6 +160,39 @@ resource "vault_pki_secret_backend_root_cert" "test" {
   province             = "test"
 }
 `, path)
+
+	return config
+}
+
+func testPkiSecretBackendRootCertificateConfig_managedKeys(path, managedKeyName, accessKey, secretKey string) string {
+	config := fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  aws {
+    name       = "%s"
+    access_key = "%s"
+    secret_key = "%s"
+    key_bits   = "2048"
+    key_type   = "RSA"
+    kms_key    = "alias/test_identifier_string"
+  }
+}
+
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
+  allowed_managed_keys      = [vault_managed_keys.test.aws.0.name]
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend          = vault_mount.pki.path
+  type             = "internal"
+  common_name      = "test Root CA"
+  managed_key_name = vault_managed_keys.keys.aws.0.name
+}
+`, managedKeyName, accessKey, secretKey, path)
 
 	return config
 }
