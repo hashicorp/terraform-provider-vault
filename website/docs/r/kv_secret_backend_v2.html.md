@@ -49,8 +49,8 @@ The following arguments are supported:
 * `cas_required` - (Optional) If true, all keys will require the cas
   parameter to be set on all write requests.
 
-* `delete_version_after_input` - (Optional) If set, specifies the length of time before
-  a version is deleted. Accepts Go duration format string.
+* `delete_version_after` - (Optional) If set, specifies the length of time before
+  a version is deleted. Accepts duration in integer seconds.
 
 ## Required Vault Capabilities
 
@@ -61,11 +61,7 @@ and the `read` capability for drift detection (by default).
 
 ## Attributes Reference
 
-The following attributes are exported in addition to the above:
-
-* `delete_version_after` - The full duration string for
-  `delete_version_after_input` formatted by Vault in
-  `00h00m00s` format.
+No additional attributes are exported by this resource.
 
 ## Import
 
