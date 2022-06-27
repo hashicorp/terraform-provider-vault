@@ -19,7 +19,7 @@ const (
 
 func kubernetesServiceAccountTokenDataSource() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: readKubernetesServiceAccountTokenResource,
+		ReadContext: readKubernetesServiceAccountToken,
 		Schema: map[string]*schema.Schema{
 			consts.FieldBackend: {
 				Type: schema.TypeString,
@@ -86,7 +86,7 @@ func kubernetesServiceAccountTokenDataSource() *schema.Resource {
 	}
 }
 
-func readKubernetesServiceAccountTokenResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func readKubernetesServiceAccountToken(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return diag.FromErr(err)
