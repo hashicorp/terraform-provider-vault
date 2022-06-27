@@ -6,7 +6,7 @@ description: |-
     Provision OIDC Assignments in Vault.
 ---
 
-# vault\_identity\_oidc\_scope
+# vault\_identity\_oidc\_assignment
 
 Manages OIDC Assignments in a Vault server. See the [Vault documentation](https://www.vaultproject.io/api-docs/secret/identity/oidc-provider#create-or-update-an-assignment)
 for more information.
