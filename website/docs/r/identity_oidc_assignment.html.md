@@ -28,10 +28,10 @@ resource "vault_identity_entity" "test" {
 resource "vault_identity_oidc_assignment" "default" {
   name       = "assignment"
   entity_ids = [
-    vault_identity_entity.test.name,
+    vault_identity_entity.test.id,
   ]
   group_ids  = [
-    vault_identity_group.internal.name,
+    vault_identity_group.internal.id,
   ]
 }
 ```
