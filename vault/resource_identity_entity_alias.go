@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/vault/api"
 	"log"
 	"strings"
 
@@ -75,32 +76,22 @@ func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta
 
 	diags := diag.Diagnostics{}
 
-	var duplicates []string
-
 	mountAccessor := data["mount_accessor"].(string)
-	aliases, err := entity.FindAliases(client, &entity.FindAliasParams{
-		Name:          name,
-		MountAccessor: mountAccessor,
-	})
+	aliasId, err := lookupEntityAliasId(client, name, mountAccessor)
+
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("Failed to get entity aliases by mount accessor, err=%s", err),
 		})
-
-		return diags
 	}
 
-	if len(aliases) > 0 {
-		for _, alias := range aliases {
-			duplicates = append(duplicates, alias.ID)
-		}
-
+	if aliasId != "" {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary: fmt.Sprintf(
 				"entity alias %q already exists for mount accessor %q, "+
-					"ids=%q", name, mountAccessor, strings.Join(duplicates, ",")),
+					"id=%q", name, mountAccessor, aliasId),
 			Detail: "In the case where this error occurred during the creation of more than one alias, " +
 				"it may be necessary to assign a unique alias name to each of affected resources and " +
 				"then rerun the apply. After a successful apply the desired original alias names can then be " +
@@ -261,4 +252,32 @@ func getEntityLockFuncs(d *schema.ResourceData, root string) (func(), func()) {
 		vaultMutexKV.Unlock(lockKey)
 	}
 	return lock, unlock
+}
+
+func lookupEntityAliasId(client *api.Client, aliasName, mountAccessor string) (string, error) {
+	resp, err := client.Logical().Write(entity.LookupPath, map[string]interface{}{
+		"alias_name":           aliasName,
+		"alias_mount_accessor": mountAccessor,
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	var aliasId string
+	if resp != nil {
+		aliases, ok := resp.Data["aliases"]
+		if ok && aliases != nil {
+			rawAliases := aliases.([]interface{})
+			for _, alias := range rawAliases {
+				alias := alias.(map[string]interface{})
+
+				if alias["mount_accessor"] == mountAccessor {
+					aliasId = alias["id"].(string)
+					break
+				}
+			}
+		}
+	}
+	return aliasId, nil
 }
