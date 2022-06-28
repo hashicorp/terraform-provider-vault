@@ -61,7 +61,8 @@ func getKubernetesSecretsSchema() map[string]*schema.Schema {
 			Description: "The JSON web token of the service account used by the " +
 				"secrets engine to manage Kubernetes credentials. Defaults to the " +
 				"local pod’s JWT if found.",
-			Optional: true,
+			Optional:  true,
+			Sensitive: true,
 		},
 		fieldDisableLocalCAJWT: {
 			Type: schema.TypeBool,
