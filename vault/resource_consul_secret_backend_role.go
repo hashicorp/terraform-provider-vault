@@ -48,11 +48,40 @@ func consulSecretBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Deprecated:    `Deprecated in favor of "consul_policies" as of Vault 1.11`,
+				ConflictsWith: []string{"consul_policies"},
+			},
+			"consul_policies": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of Consul policies to associate with this role",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				ConflictsWith: []string{"policies"},
 			},
 			"consul_roles": {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: `Set of Consul roles to attach to the token. Applicable for Vault 1.10+ with Consul 1.5+`,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"service_identities": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Description: `Set of Consul service identities to attach to
+				the token. Applicable for Vault 1.11+ with Consul 1.5+`,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"node_identities": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Description: `Set of Consul node identities to attach to
+				the token. Applicable for Vault 1.11+ with Consul 1.8+`,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -88,6 +117,7 @@ func consulSecretBackendRoleResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies the type of token to create when using this role. Valid values are \"client\" or \"management\".",
 				Default:     "client",
+				Deprecated:  "Deprecated in Vault as of 1.11",
 			},
 			"local": {
 				Type:        schema.TypeBool,
@@ -125,15 +155,22 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 	path := consulSecretBackendRolePath(backend, name)
 
 	policies := d.Get("policies").([]interface{})
+	consulPolicies := d.Get("consul_policies").([]interface{})
 	roles := d.Get("consul_roles").(*schema.Set).List()
+	serviceIdentities := d.Get("service_identities").(*schema.Set).List()
+	nodeIdentities := d.Get("node_identities").(*schema.Set).List()
 
-	if len(policies) == 0 && len(roles) == 0 {
-		return fmt.Errorf("policies or consul_roles must be set")
+	if len(consulPolicies) == 0 && len(roles) == 0 &&
+		len(serviceIdentities) == 0 && len(nodeIdentities) == 0 {
+		return fmt.Errorf("consul_policies, consul_roles, service_identities, or node_identities must be set")
 	}
 
 	data := map[string]interface{}{
-		"policies":     policies,
-		"consul_roles": roles,
+		"policies":           policies,
+		"consul_policies":    consulPolicies,
+		"consul_roles":       roles,
+		"service_identities": serviceIdentities,
+		"node_identities":    nodeIdentities,
 	}
 
 	params := []string{
@@ -210,14 +247,22 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 
 	// map request params to schema fields
 	params := map[string]string{
-		"policies":         "policies",
-		"max_ttl":          "max_ttl",
-		"ttl":              "ttl",
-		"token_type":       "token_type",
-		"local":            "local",
-		"consul_roles":     "consul_roles",
-		"consul_namespace": "consul_namespace",
-		"partition":        "partition",
+		"max_ttl":            "max_ttl",
+		"ttl":                "ttl",
+		"token_type":         "token_type",
+		"local":              "local",
+		"consul_roles":       "consul_roles",
+		"consul_namespace":   "consul_namespace",
+		"partition":          "partition",
+		"service_identities": "service_identities",
+		"node_identities":    "node_identities",
+	}
+
+	if _, ok := d.GetOk("policies"); ok {
+		params["policies"] = "policies"
+	}
+	if _, ok := d.GetOk("consul_policies"); ok {
+		params["consul_policies"] = "consul_policies"
 	}
 
 	for k, v := range params {
@@ -226,6 +271,9 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 			switch k {
 			// TODO case this by Vault version (vault-1.10+ request params)
 			case "consul_roles", "consul_namespace", "partition":
+				continue
+			// TODO case this by Vault version (vault-1.11+ request params)
+			case "service_identities", "node_identities":
 				continue
 			}
 		}
