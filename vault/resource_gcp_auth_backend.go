@@ -74,6 +74,44 @@ func gcpAuthBackendResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies if the auth method is local only",
 			},
+			"custom_endpoint": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Description: "Specifies overrides to service endpoints used when making API requests to GCP.",
+				Elem: &schema.Resource{
+					Schema: gcpAuthCustomEndpointSchema(),
+				},
+			},
+		},
+	}
+}
+
+func gcpAuthCustomEndpointSchema() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"api": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Replaces the service endpoint used in API requests " +
+				"to https://www.googleapis.com.",
+		},
+		"iam": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Replaces the service endpoint used in API requests " +
+				"to `https://iam.googleapis.com`.",
+		},
+		"crm": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Replaces the service endpoint used in API requests " +
+				"to `https://cloudresourcemanager.googleapis.com`.",
+		},
+		"compute": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Replaces the service endpoint used in API requests " +
+				"to `https://compute.googleapis.com`.",
 		},
 	}
 }
@@ -150,7 +188,19 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 
 	if v, ok := d.GetOk("credentials"); ok {
-		data["credentials"] = v.(string)
+		data["credentials"] = v
+	}
+
+	epField := "custom_endpoint"
+	if d.HasChange(epField) {
+		endpoints := make(map[string]interface{})
+		for epKey := range gcpAuthCustomEndpointSchema() {
+			key := fmt.Sprintf("%s.%d.%s", epField, 0, epKey)
+			if d.HasChange(key) {
+				endpoints[epKey] = d.Get(key)
+			}
+		}
+		data["custom_endpoint"] = endpoints
 	}
 
 	log.Printf("[DEBUG] Writing gcp config %q", path)
@@ -195,6 +245,16 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 	for _, param := range params {
 		if err := d.Set(param, resp.Data[param]); err != nil {
+			return err
+		}
+	}
+
+	if endpointsRaw, ok := resp.Data["custom_endpoint"]; ok {
+		endpoints, ok := endpointsRaw.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("custom_endpoint has unexpected type %T, path=%q", endpointsRaw, path)
+		}
+		if err := d.Set("custom_endpoint", []map[string]interface{}{endpoints}); err != nil {
 			return err
 		}
 	}
