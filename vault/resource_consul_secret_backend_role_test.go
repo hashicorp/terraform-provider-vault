@@ -65,27 +65,27 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config:      testConsulSecretBackendRole_initialConfig(backend, name, token, false, false, false, false, false),
+				Config:      testConsulSecretBackendRole_initialConfig(backend, name, token, false, false),
 				ExpectError: regexp.MustCompile(`consul_policies, consul_roles, service_identities, or node_identities must be set`),
 			},
 			{
-				Config:      testConsulSecretBackendRole_initialConfig(backend, name, token, true, true, false, false, false),
+				Config:      testConsulSecretBackendRole_initialConfig(backend, name, token, true, true),
 				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
 			},
 			{
-				Config: testConsulSecretBackendRole_initialConfig(backend, name, token, false, true, true, true, true),
+				Config: testConsulSecretBackendRole_initialConfig(backend, name, token, false, true),
 				Check:  resource.ComposeTestCheckFunc(createTestCheckFuncs...),
 			},
 			{
-				Config:      testConsulSecretBackendRole_updateConfig(backend, name, token, false, false, false, false, false),
+				Config:      testConsulSecretBackendRole_updateConfig(backend, name, token, false, false),
 				ExpectError: regexp.MustCompile(`consul_policies, consul_roles, service_identities, or node_identities must be set`),
 			},
 			{
-				Config:      testConsulSecretBackendRole_updateConfig(backend, name, token, true, true, false, false, false),
+				Config:      testConsulSecretBackendRole_updateConfig(backend, name, token, true, true),
 				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
 			},
 			{
-				Config: testConsulSecretBackendRole_updateConfig(backend, name, token, false, true, true, true, true),
+				Config: testConsulSecretBackendRole_updateConfig(backend, name, token, false, true),
 				Check:  resource.ComposeTestCheckFunc(updateTestCheckFuncs...),
 			},
 			{
@@ -119,7 +119,7 @@ func testAccConsulSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testConsulSecretBackendRole_initialConfig(backend, name, token string, withPolicies, withConsulPolicies, withRoles, withServices, withNodes bool) string {
+func testConsulSecretBackendRole_initialConfig(backend, name, token string, withPoliciesConflict, withConsulRules bool) string {
 	config := fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -137,56 +137,44 @@ resource "vault_consul_secret_backend_role" "test" {
   partition = "partition-0"
 `, backend, token, name)
 
-	if withConsulPolicies {
-		config += `
-  consul_policies = [
-    "foo"
-  ]
-`
-	}
-
-	if withPolicies {
+	if withPoliciesConflict {
 		config += `
   policies = [
-    "biz"
+    "biz",
   ]
 `
 	}
 
-	if withRoles {
+	if withConsulRules {
 		config += `
-  consul_roles = [
-    "role-0",
-    # canary to ensure roles is a Set
-    "role-0",
-  ]
-`
-	}
+consul_policies = [
+	"foo",
+]
 
-	if withServices {
-		config += `
-	service_identities = [
-		"service-0:dc1",
-		# canary to ensure service identities is a Set
-		"service-0:dc1",
-	]
-`
-	}
+consul_roles = [
+	"role-0",
+	# canary to ensure roles is a Set
+	"role-0",
+]
 
-	if withNodes {
-		config += `
-	node_identities = [
-		"server-0:dc1",
-		# canary to ensure node identities is a Set
-		"server-0:dc1",
-	]
+service_identities = [
+	"service-0:dc1",
+	# canary to ensure service identities is a Set
+	"service-0:dc1",
+]
+
+node_identities = [
+	"server-0:dc1",
+	# canary to ensure node identities is a Set
+	"server-0:dc1",
+]
 `
 	}
 
 	return config + "}"
 }
 
-func testConsulSecretBackendRole_updateConfig(backend, name, token string, withPolicies, withConsulPolicies, withRoles, withServices, withNodes bool) string {
+func testConsulSecretBackendRole_updateConfig(backend, name, token string, withPoliciesConflict, withConsulRules bool) string {
 	config := fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -208,54 +196,42 @@ resource "vault_consul_secret_backend_role" "test" {
   token_type = "client"
 `, backend, token, name)
 
-	if withConsulPolicies {
-		config += `
-  consul_policies = [
-    "foo",
-    "bar",
-  ]
-`
-	}
-
-	if withPolicies {
+	if withPoliciesConflict {
 		config += `
   policies = [
-    "biz"
+    "biz",
   ]
 `
 	}
 
-	if withRoles {
+	if withConsulRules {
 		config += `
-  consul_roles = [
-    "role-0",
-    "role-1",
-    "role-2",
-    # canary to ensure roles is a Set
-    "role-2",
-  ]
-`
-	}
+consul_policies = [
+	"foo",
+	"bar",
+]
 
-	if withServices {
-		config += `
-	service_identities = [
-		"service-0:dc1",
-		"service-1",
-		# canary to ensure service identities is a Set
-		"service-1",
-	]
-`
-	}
+consul_roles = [
+	"role-0",
+	"role-1",
+	"role-2",
+	# canary to ensure roles is a Set
+	"role-2",
+]
 
-	if withNodes {
-		config += `
-	node_identities = [
-		"server-0:dc1",
-		"client-0:dc1",
-		# canary to ensure node identities is a Set
-		"client-0:dc1",
-	]
+service_identities = [
+	"service-0:dc1",
+	"service-1",
+	# canary to ensure service identities is a Set
+	"service-1",
+]
+
+node_identities = [
+	"server-0:dc1",
+	"client-0:dc1",
+	# canary to ensure node identities is a Set
+	"client-0:dc1",
+]
 `
 	}
 
