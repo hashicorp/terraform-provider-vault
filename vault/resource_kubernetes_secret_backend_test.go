@@ -6,9 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -16,12 +14,12 @@ func TestAccKubernetesSecretBackend(t *testing.T) {
 	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
 
 	path := acctest.RandomWithPrefix("tf-test-kubernetes")
-	resourceName := "vault_kubernetes_secret_backend.test"
-
+	resourceType := "vault_kubernetes_secret_backend"
+	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccKubernetesSecretBackendCheckDestroy(path),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeKubernetes, ""),
 		Steps: []resource.TestStep{
 			{
 				Config: testKubernetesSecretBackend_initialConfig(path),
@@ -82,23 +80,6 @@ func TestAccKubernetesSecretBackend(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testAccKubernetesSecretBackendCheckDestroy(path string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
-		mounts, err := client.Sys().ListMounts()
-		if err != nil {
-			return err
-		}
-
-		if _, ok := mounts[fmt.Sprintf("%s/", path)]; ok {
-			return fmt.Errorf("mount %q still exists", path)
-		}
-
-		return nil
-	}
 }
 
 func testKubernetesSecretBackend_initialConfig(path string) string {
