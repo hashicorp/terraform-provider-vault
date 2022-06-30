@@ -256,13 +256,8 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 		"partition":          "partition",
 		"service_identities": "service_identities",
 		"node_identities":    "node_identities",
-	}
-
-	if _, ok := d.GetOk("policies"); ok {
-		params["policies"] = "policies"
-	}
-	if _, ok := d.GetOk("consul_policies"); ok {
-		params["consul_policies"] = "consul_policies"
+		"policies":           "policies",
+		"consul_policies":    "consul_policies",
 	}
 
 	for k, v := range params {
