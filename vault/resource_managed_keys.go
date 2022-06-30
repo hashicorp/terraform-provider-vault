@@ -29,7 +29,7 @@ func managedKeysResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"pkcs": {
+			consts.FieldPKCS: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Configuration block for PKCS Managed Keys",
