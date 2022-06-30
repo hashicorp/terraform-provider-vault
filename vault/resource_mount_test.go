@@ -329,10 +329,6 @@ func testResourceMount_initialCheck(cfg mountConfig) resource.TestCheckFunc {
 			return fmt.Errorf("version is %v; wanted %v", mount.Options["version"], wanted)
 		}
 
-		//if wanted := []string{"test-key"}; !reflect.DeepEqual(mount.Config.AllowedManagedKeys, wanted) {
-		//	return fmt.Errorf("expected allowed managed keys %s, got %s", mount.Config.AllowedManagedKeys, wanted)
-		//}
-
 		return nil
 	}
 }
