@@ -217,6 +217,56 @@ func TestResourceMount_ExternalEntropyAccess(t *testing.T) {
 	})
 }
 
+func TestResourceMountMangedKeys(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-pki")
+	keyName := acctest.RandomWithPrefix("kms-key")
+
+	resourceName := "vault_mount.test"
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceMount_managedKeysConfig(keyName, path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "type", "pki"),
+					resource.TestCheckResourceAttr(resourceName, "description", "Example mount for testing managed keys"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "36000"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_managed_keys.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_managed_keys.0", keyName),
+				),
+			},
+		},
+	})
+}
+
+func testResourceMount_managedKeysConfig(keyName, path string) string {
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  aws {
+    name       = "%s"
+    access_key = "ASIAKBASDADA09090"
+    secret_key = "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz"
+    key_bits   = "2048"
+    key_type   = "RSA"
+    kms_key    = "alias/test_identifier_string"
+  }
+}
+
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "Example mount for testing managed keys"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds     = 36000
+  allowed_managed_keys      = [vault_managed_keys.test.aws.0.name]
+}
+`, keyName, path)
+}
+
 func testResourceMount_initialConfig(cfg mountConfig) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
@@ -225,7 +275,6 @@ resource "vault_mount" "test" {
 	description = "Example mount for testing"
 	default_lease_ttl_seconds = 3600
 	max_lease_ttl_seconds = 36000
-    allowed_managed_keys = ["test-key"]
 	options = {
 		version = "1"
 	}
@@ -280,9 +329,9 @@ func testResourceMount_initialCheck(cfg mountConfig) resource.TestCheckFunc {
 			return fmt.Errorf("version is %v; wanted %v", mount.Options["version"], wanted)
 		}
 
-		if wanted := []string{"test-key"}; !reflect.DeepEqual(mount.Config.AllowedManagedKeys, wanted) {
-			return fmt.Errorf("expected allowed managed keys %s, got %s", mount.Config.AllowedManagedKeys, wanted)
-		}
+		//if wanted := []string{"test-key"}; !reflect.DeepEqual(mount.Config.AllowedManagedKeys, wanted) {
+		//	return fmt.Errorf("expected allowed managed keys %s, got %s", mount.Config.AllowedManagedKeys, wanted)
+		//}
 
 		return nil
 	}

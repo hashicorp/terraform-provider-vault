@@ -249,7 +249,8 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			},
 			"managed_key_name": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 				Description: "The name of the previously configured managed key.",
 				ForceNew:    true,
 			},
