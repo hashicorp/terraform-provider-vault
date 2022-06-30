@@ -429,13 +429,6 @@ func managedKeysRead(ctx context.Context, d *schema.ResourceData, meta interface
 			if v, ok := resp.Data[k]; ok {
 				data[k] = v
 			}
-
-			// set these from TF config since they won't
-			// be returned from Vault
-			//if k == "pin" {
-			//	stateKey := fmt.Sprintf("%s.%d.%s", consts.FieldAzure, 0, k)
-			//	data[k] = d.Get(stateKey)
-			//}
 		}
 		if err := d.Set(consts.FieldAzure, []map[string]interface{}{data}); err != nil {
 			return diag.FromErr(err)
