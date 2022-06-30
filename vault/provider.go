@@ -789,7 +789,7 @@ var (
 			PathInventory: []string{"/kubernetes/config"},
 		},
 		"vault_kubernetes_secret_backend_role": {
-			Resource:      kubernetesSecretBackendRoleResource(),
+			Resource:      updateSchemaResource(kubernetesSecretBackendRoleResource()),
 			PathInventory: []string{"/kubernetes/roles/{name}"},
 		},
 	}
