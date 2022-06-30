@@ -20,7 +20,7 @@ const (
 )
 
 func kubernetesSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
+	resource := &schema.Resource{
 		CreateContext: kubernetesSecretBackendCreateUpdate,
 		ReadContext:   kubernetesSecretBackendRead,
 		UpdateContext: kubernetesSecretBackendCreateUpdate,
@@ -28,50 +28,43 @@ func kubernetesSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		Schema: getKubernetesSecretsMountSchema(),
+		Schema: map[string]*schema.Schema{
+			fieldKubernetesHost: {
+				Type:        schema.TypeString,
+				Description: "The Kubernetes API URL to connect to.",
+				Optional:    true,
+				Computed:    true,
+			},
+			fieldKubernetesCACert: {
+				Type: schema.TypeString,
+				Description: "A PEM-encoded CA certificate used by the secret engine to " +
+					"verify the Kubernetes API server certificate. Defaults to the " +
+					"local pod’s CA if found, or otherwise the host's root CA set.",
+				Optional: true,
+				Computed: true,
+			},
+			fieldServiceAccountJWT: {
+				Type: schema.TypeString,
+				Description: "The JSON web token of the service account used by the " +
+					"secrets engine to manage Kubernetes credentials. Defaults to the " +
+					"local pod’s JWT if found.",
+				Optional:  true,
+				Sensitive: true,
+			},
+			fieldDisableLocalCAJWT: {
+				Type: schema.TypeBool,
+				Description: "Disable defaulting to the local CA certificate and service " +
+					"account JWT when running in a Kubernetes pod.",
+				Optional: true,
+				Default:  false,
+			},
+		},
 	}
-}
 
-func getKubernetesSecretsMountSchema() map[string]*schema.Schema {
-	s := getMountSchema("type")
-	for k, v := range getKubernetesSecretsSchema() {
-		s[k] = v
-	}
-	return s
-}
+	// Add common mount schema to the resource
+	mustAddSchema(resource, getMountSchema("type"))
 
-func getKubernetesSecretsSchema() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		fieldKubernetesHost: {
-			Type:        schema.TypeString,
-			Description: "The Kubernetes API URL to connect to.",
-			Optional:    true,
-			Computed:    true,
-		},
-		fieldKubernetesCACert: {
-			Type: schema.TypeString,
-			Description: "A PEM-encoded CA certificate used by the secret engine to " +
-				"verify the Kubernetes API server certificate. Defaults to the " +
-				"local pod’s CA if found, or otherwise the host's root CA set.",
-			Optional: true,
-			Computed: true,
-		},
-		fieldServiceAccountJWT: {
-			Type: schema.TypeString,
-			Description: "The JSON web token of the service account used by the " +
-				"secrets engine to manage Kubernetes credentials. Defaults to the " +
-				"local pod’s JWT if found.",
-			Optional:  true,
-			Sensitive: true,
-		},
-		fieldDisableLocalCAJWT: {
-			Type: schema.TypeBool,
-			Description: "Disable defaulting to the local CA certificate and service " +
-				"account JWT when running in a Kubernetes pod.",
-			Optional: true,
-			Default:  false,
-		},
-	}
+	return resource
 }
 
 func kubernetesSecretBackendCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
