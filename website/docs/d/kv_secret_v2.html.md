@@ -54,6 +54,11 @@ data "vault_kv_secret_v2" "secret_data" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  *Available only for Vault Enterprise*.
+
 * `mount` - (Required) Path where KV-V2 engine is mounted.
 
 * `name` - (Required) Full name of the secret. For a nested secret
@@ -73,7 +78,7 @@ The following attributes are exported:
 
 * `path` - Full path where the KVV2 secret is written.
 
-* `data` - A mapping whose keys are the top-level data keys returned from
+* `data_json` - A mapping whose keys are the top-level data keys returned from
   Vault and whose values are the corresponding values. This map can only
   represent string data, so any non-string values returned from Vault are
   serialized as JSON.

@@ -101,7 +101,20 @@ func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error deleting from Vault: %s", err)
 	}
 
-	return nil
+	// wait for the namespace to be gone...
+	return backoff.RetryNotify(func() error {
+		if resp, _ := client.Logical().Read(SysNamespaceRoot + path); resp != nil {
+			return fmt.Errorf("namespace %q still exists", path)
+		}
+		return nil
+	},
+		bo,
+		func(err error, duration time.Duration) {
+			log.Printf(
+				"[WARN] Waiting for Vault to garbage collect the %q namespace, retrying in %s",
+				path, duration)
+		},
+	)
 }
 
 func namespaceRead(d *schema.ResourceData, meta interface{}) error {
