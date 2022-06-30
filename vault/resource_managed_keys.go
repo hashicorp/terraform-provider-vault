@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	KMSTypePKCS  = "pkcs11"
-	KMSTypeAWS   = "awskms"
-	KMSTypeAzure = "azurekeyvault"
+	kmsTypePKCS  = "pkcs11"
+	kmsTypeAWS   = "awskms"
+	kmsTypeAzure = "azurekeyvault"
 )
 
 func managedKeysResource() *schema.Resource {
@@ -325,7 +325,7 @@ func managedKeysWrite(ctx context.Context, d *schema.ResourceData, meta interfac
 
 	if _, ok := d.GetOk(consts.FieldAWS); ok {
 		awsKeyName, awsData := readManagedKeysConfigBlock(d, consts.FieldAWS, managedKeysAWSConfigSchema())
-		awsKeyPath := getManagedKeysPath(KMSTypeAWS, awsKeyName)
+		awsKeyPath := getManagedKeysPath(kmsTypeAWS, awsKeyName)
 
 		if _, err := client.Logical().Write(awsKeyPath, awsData); err != nil {
 			return diag.Errorf("error writing managed key %q, err=%s", awsKeyPath, err)
@@ -334,7 +334,7 @@ func managedKeysWrite(ctx context.Context, d *schema.ResourceData, meta interfac
 
 	if _, ok := d.GetOk(consts.FieldPKCS); ok {
 		pkcsKeyName, pkcsData := readManagedKeysConfigBlock(d, consts.FieldPKCS, managedKeysPKCSConfigSchema())
-		pkcsKeyPath := getManagedKeysPath(KMSTypePKCS, pkcsKeyName)
+		pkcsKeyPath := getManagedKeysPath(kmsTypePKCS, pkcsKeyName)
 
 		if _, err := client.Logical().Write(pkcsKeyPath, pkcsData); err != nil {
 			return diag.Errorf("error writing managed key %q, err=%s", pkcsKeyPath, err)
@@ -343,7 +343,7 @@ func managedKeysWrite(ctx context.Context, d *schema.ResourceData, meta interfac
 
 	if _, ok := d.GetOk(consts.FieldAzure); ok {
 		azureKeyName, azureData := readManagedKeysConfigBlock(d, consts.FieldAzure, managedKeysAzureConfigSchema())
-		azureKeyPath := getManagedKeysPath(KMSTypeAzure, azureKeyName)
+		azureKeyPath := getManagedKeysPath(kmsTypeAzure, azureKeyName)
 
 		if _, err := client.Logical().Write(azureKeyPath, azureData); err != nil {
 			return diag.Errorf("error writing managed key %q, err=%s", azureKeyPath, err)
@@ -364,7 +364,7 @@ func managedKeysRead(ctx context.Context, d *schema.ResourceData, meta interface
 
 	if _, ok := d.GetOk(consts.FieldAWS); ok {
 		awsKeyName := getKeyNameFromConfig(d, consts.FieldAWS)
-		awsKeyPath := getManagedKeysPath(KMSTypeAWS, awsKeyName)
+		awsKeyPath := getManagedKeysPath(kmsTypeAWS, awsKeyName)
 		resp, err := client.Logical().Read(awsKeyPath)
 		if err != nil {
 			return diag.FromErr(err)
@@ -391,7 +391,7 @@ func managedKeysRead(ctx context.Context, d *schema.ResourceData, meta interface
 
 	if _, ok := d.GetOk(consts.FieldPKCS); ok {
 		pkcsKeyName := getKeyNameFromConfig(d, consts.FieldPKCS)
-		pkcsKeyPath := getManagedKeysPath(KMSTypePKCS, pkcsKeyName)
+		pkcsKeyPath := getManagedKeysPath(kmsTypePKCS, pkcsKeyName)
 		resp, err := client.Logical().Read(pkcsKeyPath)
 		if err != nil {
 			return diag.FromErr(err)
@@ -418,7 +418,7 @@ func managedKeysRead(ctx context.Context, d *schema.ResourceData, meta interface
 
 	if _, ok := d.GetOk(consts.FieldAzure); ok {
 		azureKeyName := getKeyNameFromConfig(d, consts.FieldAzure)
-		azureKeyPath := getManagedKeysPath(KMSTypeAzure, azureKeyName)
+		azureKeyPath := getManagedKeysPath(kmsTypeAzure, azureKeyName)
 		resp, err := client.Logical().Read(azureKeyPath)
 		if err != nil {
 			return diag.FromErr(err)
@@ -447,7 +447,7 @@ func managedKeysDelete(ctx context.Context, d *schema.ResourceData, meta interfa
 
 	if _, ok := d.GetOk(consts.FieldAWS); ok {
 		awsKeyName := getKeyNameFromConfig(d, consts.FieldAWS)
-		path := getManagedKeysPath(KMSTypeAWS, awsKeyName)
+		path := getManagedKeysPath(kmsTypeAWS, awsKeyName)
 
 		log.Printf("[DEBUG] Deleting managed key %s", path)
 		_, err := client.Logical().Delete(path)
@@ -459,7 +459,7 @@ func managedKeysDelete(ctx context.Context, d *schema.ResourceData, meta interfa
 
 	if _, ok := d.GetOk(consts.FieldAzure); ok {
 		azureKeyName := getKeyNameFromConfig(d, consts.FieldAzure)
-		path := getManagedKeysPath(KMSTypeAzure, azureKeyName)
+		path := getManagedKeysPath(kmsTypeAzure, azureKeyName)
 
 		log.Printf("[DEBUG] Deleting managed key %s", path)
 		_, err := client.Logical().Delete(path)
