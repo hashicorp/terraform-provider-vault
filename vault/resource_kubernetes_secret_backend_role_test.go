@@ -32,8 +32,8 @@ func TestAccKubernetesSecretBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, fieldAllowedKubernetesNamespaces+".#", "1"),
 					resource.TestCheckResourceAttr(resourceName, fieldAllowedKubernetesNamespaces+".0", "*"),
 					resource.TestCheckResourceAttr(resourceName, fieldServiceAccountName, "test-service-account-with-generated-token"),
-					resource.TestCheckResourceAttr(resourceName, fieldTokenMaxTTL, "24h"),
-					resource.TestCheckResourceAttr(resourceName, fieldTokenDefaultTTL, "12h"),
+					resource.TestCheckResourceAttr(resourceName, fieldTokenMaxTTL, "86400"),
+					resource.TestCheckResourceAttr(resourceName, fieldTokenDefaultTTL, "43200"),
 				),
 			},
 			{
@@ -47,8 +47,8 @@ func TestAccKubernetesSecretBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, fieldKubernetesRoleType, "Role"),
 					resource.TestCheckResourceAttr(resourceName, fieldGeneratedRoleRules, "rules:\n- apiGroups: [\"\"]\n  resources: [\"pods\"]\n  verbs: [\"list\"]\n"),
 					resource.TestCheckResourceAttr(resourceName, fieldServiceAccountName, ""),
-					resource.TestCheckResourceAttr(resourceName, fieldTokenMaxTTL, "12h"),
-					resource.TestCheckResourceAttr(resourceName, fieldTokenDefaultTTL, "6h"),
+					resource.TestCheckResourceAttr(resourceName, fieldTokenMaxTTL, "43200"),
+					resource.TestCheckResourceAttr(resourceName, fieldTokenDefaultTTL, "21600"),
 					resource.TestCheckResourceAttr(resourceName, fieldExtraLabels+".%", "2"),
 					resource.TestCheckResourceAttr(resourceName, fieldExtraLabels+".id", "abc123"),
 					resource.TestCheckResourceAttr(resourceName, fieldExtraLabels+".name", "some_name"),
@@ -68,8 +68,8 @@ func TestAccKubernetesSecretBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, fieldServiceAccountName, ""),
 					resource.TestCheckResourceAttr(resourceName, fieldKubernetesRoleType, "Role"),
 					resource.TestCheckResourceAttr(resourceName, fieldKubernetesRoleName, "existing_role"),
-					resource.TestCheckResourceAttr(resourceName, fieldTokenMaxTTL, "0s"),
-					resource.TestCheckResourceAttr(resourceName, fieldTokenDefaultTTL, "0s"),
+					resource.TestCheckResourceAttr(resourceName, fieldTokenMaxTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, fieldTokenDefaultTTL, "0"),
 					resource.TestCheckResourceAttr(resourceName, fieldExtraLabels+".%", "0"),
 					resource.TestCheckResourceAttr(resourceName, fieldExtraAnnotations+".%", "0"),
 				),
@@ -119,8 +119,8 @@ resource "vault_kubernetes_secret_backend_role" "test" {
   name                          = "%s"
   allowed_kubernetes_namespaces = ["*"]
   service_account_name          = "test-service-account-with-generated-token"
-  token_max_ttl                 = "24h"
-  token_default_ttl             = "12h"
+  token_max_ttl                 = 86400
+  token_default_ttl             = 43200
 }
 `, backend, name)
 }
@@ -137,8 +137,8 @@ resource "vault_kubernetes_secret_backend_role" "test" {
   allowed_kubernetes_namespaces = ["dev", "int"]
   generated_role_rules          = "rules:\n- apiGroups: [\"\"]\n  resources: [\"pods\"]\n  verbs: [\"list\"]\n"
   kubernetes_role_type          = "Role"
-  token_max_ttl                 = "12h"
-  token_default_ttl             = "6h"
+  token_max_ttl                 = 43200
+  token_default_ttl             = 21600
   extra_labels = {
     id = "abc123"
     name = "some_name"

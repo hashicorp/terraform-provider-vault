@@ -65,18 +65,16 @@ func kubernetesSecretBackendRoleResource() *schema.Resource {
 				Required: true,
 			},
 			fieldTokenMaxTTL: {
-				Type: schema.TypeString,
-				Description: "The maximum TTL for generated Kubernetes tokens, specified " +
-					"in seconds or as a Go duration format string.",
-				Optional: true,
-				Default:  "0s",
+				Type:        schema.TypeInt,
+				Description: "The maximum TTL for generated Kubernetes tokens in seconds.",
+				Optional:    true,
+				Default:     0,
 			},
 			fieldTokenDefaultTTL: {
-				Type: schema.TypeString,
-				Description: "The default TTL for generated Kubernetes tokens, specified " +
-					"in seconds or as a Go duration format string.",
-				Optional: true,
-				Default:  "0s",
+				Type:        schema.TypeInt,
+				Description: "The default TTL for generated Kubernetes tokens in seconds.",
+				Optional:    true,
+				Default:     0,
 			},
 			fieldServiceAccountName: {
 				Type: schema.TypeString,
@@ -198,6 +196,8 @@ func kubernetesSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, 
 	fields := []string{
 		consts.FieldName,
 		fieldAllowedKubernetesNamespaces,
+		fieldTokenMaxTTL,
+		fieldTokenDefaultTTL,
 		fieldServiceAccountName,
 		fieldKubernetesRoleName,
 		fieldKubernetesRoleType,
@@ -208,17 +208,6 @@ func kubernetesSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, 
 	}
 	for _, k := range fields {
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return diag.Errorf("error setting state key %q on Kubernetes backend role, err=%s",
-				k, err)
-		}
-	}
-
-	timeFields := []string{
-		fieldTokenMaxTTL,
-		fieldTokenDefaultTTL,
-	}
-	for _, k := range timeFields {
-		if err := d.Set(k, flattenVaultDuration(resp.Data[k])); err != nil {
 			return diag.Errorf("error setting state key %q on Kubernetes backend role, err=%s",
 				k, err)
 		}
