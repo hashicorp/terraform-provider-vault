@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 
@@ -11,6 +12,8 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
+
+	goversion "github.com/hashicorp/go-version"
 )
 
 func TestConsulSecretBackendRole(t *testing.T) {
@@ -59,42 +62,138 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourcePath, "partition", "partition-1"),
 	}
 
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config:      testConsulSecretBackendRole_initialConfig(backend, name, token, false, false),
-				ExpectError: regexp.MustCompile(`consul_policies, consul_roles, service_identities, or node_identities must be set`),
+	versionTestFlag := false
+	if val, defined := os.LookupEnv("VAULT_VERSION"); defined {
+		cutoffVersion, _ := goversion.NewVersion("1.11")
+		envVersion, err := goversion.NewVersion(val)
+		if err != nil {
+			t.Fatalf("error parsing vault version from VAULT_VERSION environment variable: %v", err)
+		} else {
+			// Check if the given Vault version is at least 1.11 to enable the new feature tests
+			if envVersion.GreaterThanOrEqual(cutoffVersion) {
+				versionTestFlag = true
+			} else {
+				// If the given Vault version is 1.10.4 or older, check that the `policy` parameter still works
+				backendOld := acctest.RandomWithPrefix("tf-test-backend")
+				nameOld := acctest.RandomWithPrefix("tf-test-name")
+
+				createTestCheckFuncsOld := []resource.TestCheckFunc{
+					resource.TestCheckResourceAttr(resourcePath, "backend", backendOld),
+					resource.TestCheckResourceAttr(resourcePath, "name", nameOld),
+					resource.TestCheckResourceAttr(resourcePath, "policies.#", "1"),
+					resource.TestCheckResourceAttr(resourcePath, "policies.0", "boo"),
+				}
+
+				updateTestCheckFuncsOld := []resource.TestCheckFunc{
+					resource.TestCheckResourceAttr(resourcePath, "backend", backendOld),
+					resource.TestCheckResourceAttr(resourcePath, "name", nameOld),
+					resource.TestCheckResourceAttr(resourcePath, "policies.#", "2"),
+					resource.TestCheckResourceAttr(resourcePath, "policies.0", "boo"),
+					resource.TestCheckResourceAttr(resourcePath, "policies.1", "far"),
+				}
+
+				resource.Test(t, resource.TestCase{
+					Providers:    testProviders,
+					PreCheck:     func() { testutil.TestAccPreCheck(t) },
+					CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
+					Steps: []resource.TestStep{
+						{
+							Config: testConsulSecretBackendRole_initialConfig(backendOld, nameOld, token, true, false),
+							Check:  resource.ComposeTestCheckFunc(createTestCheckFuncsOld...),
+						},
+						{
+							Config: testConsulSecretBackendRole_updateConfig(backendOld, nameOld, token, true, false),
+							Check:  resource.ComposeTestCheckFunc(updateTestCheckFuncsOld...),
+						},
+						{
+							ResourceName:      resourcePath,
+							ImportState:       true,
+							ImportStateVerify: true,
+						},
+					},
+				})
+			}
+		}
+	} else {
+		// If the VAULT_VERSION environment variable was not specified, assume they are using the latest version
+		versionTestFlag = true
+	}
+
+	if versionTestFlag {
+		resource.Test(t, resource.TestCase{
+			Providers:    testProviders,
+			PreCheck:     func() { testutil.TestAccPreCheck(t) },
+			CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
+			Steps: []resource.TestStep{
+				{
+					Config:      testConsulSecretBackendRole_initialConfig(backend, name, token, false, false),
+					ExpectError: regexp.MustCompile(`Use either a policy document, a list of policies or roles, or a set of service or node identities, depending on your Consul version`),
+				},
+				{
+					Config:      testConsulSecretBackendRole_initialConfig(backend, name, token, true, true),
+					ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
+				},
+				{
+					Config: testConsulSecretBackendRole_initialConfig(backend, name, token, false, true),
+					Check:  resource.ComposeTestCheckFunc(createTestCheckFuncs...),
+				},
+				{
+					Config:      testConsulSecretBackendRole_updateConfig(backend, name, token, false, false),
+					ExpectError: regexp.MustCompile(`Use either a policy document, a list of policies or roles, or a set of service or node identities, depending on your Consul version`),
+				},
+				{
+					Config:      testConsulSecretBackendRole_updateConfig(backend, name, token, true, true),
+					ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
+				},
+				{
+					Config: testConsulSecretBackendRole_updateConfig(backend, name, token, false, true),
+					Check:  resource.ComposeTestCheckFunc(updateTestCheckFuncs...),
+				},
+				{
+					ResourceName:      resourcePath,
+					ImportState:       true,
+					ImportStateVerify: true,
+				},
 			},
-			{
-				Config:      testConsulSecretBackendRole_initialConfig(backend, name, token, true, true),
-				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
-			},
-			{
-				Config: testConsulSecretBackendRole_initialConfig(backend, name, token, false, true),
-				Check:  resource.ComposeTestCheckFunc(createTestCheckFuncs...),
-			},
-			{
-				Config:      testConsulSecretBackendRole_updateConfig(backend, name, token, false, false),
-				ExpectError: regexp.MustCompile(`consul_policies, consul_roles, service_identities, or node_identities must be set`),
-			},
-			{
-				Config:      testConsulSecretBackendRole_updateConfig(backend, name, token, true, true),
-				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
-			},
-			{
-				Config: testConsulSecretBackendRole_updateConfig(backend, name, token, false, true),
-				Check:  resource.ComposeTestCheckFunc(updateTestCheckFuncs...),
-			},
-			{
-				ResourceName:      resourcePath,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
+		})
+	}
+}
+
+func checkVaultVersionEnvPolicies() (bool, error) {
+	if val, ok := os.LookupEnv("VAULT_VERSION"); ok {
+		consulPoliciesVersion, _ := goversion.NewVersion("1.11")
+		envVersion, err := goversion.NewVersion(val)
+		if err != nil {
+			return true, fmt.Errorf("error parsing vault version from VAULT_VERSION environment variable: %v", err)
+		} else {
+			if envVersion.GreaterThanOrEqual(consulPoliciesVersion) {
+				return true, nil
+			}
+		}
+	} else {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func checkVaultVersionEnvConsulPolicies() (bool, error) {
+	if val, ok := os.LookupEnv("VAULT_VERSION"); ok {
+		consulPoliciesVersion, _ := goversion.NewVersion("1.11")
+		envVersion, err := goversion.NewVersion(val)
+
+		if err != nil {
+			return true, fmt.Errorf("error parsing vault version from VAULT_VERSION environment variable: %v", err)
+		} else {
+			if envVersion.GreaterThanOrEqual(consulPoliciesVersion) {
+				return true, nil
+			}
+		}
+	} else {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func testAccConsulSecretBackendRoleCheckDestroy(s *terraform.State) error {
@@ -119,7 +218,7 @@ func testAccConsulSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testConsulSecretBackendRole_initialConfig(backend, name, token string, withPoliciesConflict, withConsulRules bool) string {
+func testConsulSecretBackendRole_initialConfig(backend, name, token string, withPolicies, withACLRules bool) string {
 	config := fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -137,15 +236,15 @@ resource "vault_consul_secret_backend_role" "test" {
   partition = "partition-0"
 `, backend, token, name)
 
-	if withPoliciesConflict {
+	if withPolicies {
 		config += `
   policies = [
-    "biz",
+    "boo",
   ]
 `
 	}
 
-	if withConsulRules {
+	if withACLRules {
 		config += `
 consul_policies = [
 	"foo",
@@ -199,7 +298,8 @@ resource "vault_consul_secret_backend_role" "test" {
 	if withPoliciesConflict {
 		config += `
   policies = [
-    "biz",
+    "boo",
+	 "far",
   ]
 `
 	}
