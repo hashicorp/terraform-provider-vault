@@ -160,11 +160,6 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 	serviceIdentities := d.Get("service_identities").(*schema.Set).List()
 	nodeIdentities := d.Get("node_identities").(*schema.Set).List()
 
-	if len(consulPolicies) == 0 && len(roles) == 0 &&
-		len(serviceIdentities) == 0 && len(nodeIdentities) == 0 {
-		return fmt.Errorf("consul_policies, consul_roles, service_identities, or node_identities must be set")
-	}
-
 	data := map[string]interface{}{
 		"policies":           policies,
 		"consul_policies":    consulPolicies,
@@ -256,8 +251,16 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 		"partition":          "partition",
 		"service_identities": "service_identities",
 		"node_identities":    "node_identities",
-		"policies":           "policies",
-		"consul_policies":    "consul_policies",
+	}
+
+	if _, exists := secret.Data["consul_policies"]; exists {
+		if _, ok := d.GetOk("policies"); ok {
+			params["policies"] = "consul_policies"
+		} else {
+			params["consul_policies"] = "consul_policies"
+		}
+	} else {
+		params["policies"] = "policies"
 	}
 
 	for k, v := range params {
