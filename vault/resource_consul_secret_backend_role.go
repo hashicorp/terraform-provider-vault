@@ -117,7 +117,6 @@ func consulSecretBackendRoleResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies the type of token to create when using this role. Valid values are \"client\" or \"management\".",
 				Default:     "client",
-				Deprecated:  "Deprecated in Vault as of 1.11",
 			},
 			"local": {
 				Type:        schema.TypeBool,
@@ -255,7 +254,7 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 
 	if _, exists := secret.Data["consul_policies"]; exists {
 		if _, ok := d.GetOk("policies"); ok {
-			params["policies"] = "consul_policies"
+			params["consul_policies"] = "policies"
 		} else {
 			params["consul_policies"] = "consul_policies"
 		}
@@ -271,7 +270,7 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 			case "consul_roles", "consul_namespace", "partition":
 				continue
 			// TODO case this by Vault version (vault-1.11+ request params)
-			case "service_identities", "node_identities":
+			case "consul_policies", "service_identities", "node_identities":
 				continue
 			}
 		}
