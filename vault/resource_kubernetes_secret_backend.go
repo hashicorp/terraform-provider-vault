@@ -33,7 +33,6 @@ func kubernetesSecretBackendResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "The Kubernetes API URL to connect to.",
 				Optional:    true,
-				Computed:    true,
 			},
 			fieldKubernetesCACert: {
 				Type: schema.TypeString,
@@ -41,7 +40,6 @@ func kubernetesSecretBackendResource() *schema.Resource {
 					"verify the Kubernetes API server certificate. Defaults to the " +
 					"local pod’s CA if found, or otherwise the host's root CA set.",
 				Optional: true,
-				Computed: true,
 			},
 			fieldServiceAccountJWT: {
 				Type: schema.TypeString,
