@@ -99,7 +99,7 @@ func kubernetesSecretBackendCreateUpdate(ctx context.Context, d *schema.Resource
 
 	// kubernetes_host always needs to be provided on configuration updates.
 	// Otherwise, an error will occur if the KUBERNETES_SERVICE_HOST and
-	// KUBERNETES_SERVICE_PORT environment variables aren't set.
+	// KUBERNETES_SERVICE_PORT_HTTPS environment variables aren't set.
 	data[fieldKubernetesHost] = d.Get(fieldKubernetesHost)
 
 	configPath := fmt.Sprintf("%s/config", path)
