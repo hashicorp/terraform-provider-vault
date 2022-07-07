@@ -79,15 +79,16 @@ func kubernetesSecretBackendRoleResource() *schema.Resource {
 			fieldServiceAccountName: {
 				Type: schema.TypeString,
 				Description: "The pre-existing service account to generate tokens for. " +
-					"Mutually exclusive with all role parameters. If set, only a " +
-					"Kubernetes token will be created when credentials are requested.",
+					"Mutually exclusive with 'kubernetes_role_name' and 'generated_role_rules'. " +
+					"If set, only a Kubernetes token will be created when credentials are requested.",
 				Optional:     true,
 				ExactlyOneOf: []string{fieldKubernetesRoleName, fieldGeneratedRoleRules},
 			},
 			fieldKubernetesRoleName: {
 				Type: schema.TypeString,
 				Description: "The pre-existing Role or ClusterRole to bind a generated " +
-					"service account to. If set, Kubernetes token, service account, and " +
+					"service account to. Mutually exclusive with 'service_account_name' and " +
+					"'generated_role_rules'. If set, Kubernetes token, service account, and " +
 					"role binding objects will be created when credentials are requested.",
 				Optional: true,
 			},
@@ -100,8 +101,9 @@ func kubernetesSecretBackendRoleResource() *schema.Resource {
 			fieldGeneratedRoleRules: {
 				Type: schema.TypeString,
 				Description: "The Role or ClusterRole rules to use when generating a role. " +
-					"Accepts either JSON or YAML formatted rules. If set, the entire chain " +
-					"of Kubernetes objects will be generated when credentials are requested.",
+					"Accepts either JSON or YAML formatted rules. Mutually exclusive with " +
+					"'service_account_name' and 'kubernetes_role_name'. If set, the entire " +
+					"chain of Kubernetes objects will be generated when credentials are requested.",
 				Optional: true,
 			},
 			fieldNameTemplate: {
