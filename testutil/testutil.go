@@ -181,6 +181,11 @@ func GetTestNomadCreds(t *testing.T) (string, string) {
 	return v[0], v[1]
 }
 
+func GetTestVaultVersion(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "TF_VAULT_VERSION")
+	return v[0]
+}
+
 func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState, ok := s.RootModule().Resources[name]

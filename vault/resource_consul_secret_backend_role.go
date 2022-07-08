@@ -52,7 +52,7 @@ func consulSecretBackendRoleResource() *schema.Resource {
 				ConflictsWith: []string{"consul_policies"},
 			},
 			"consul_policies": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "List of Consul policies to associate with this role",
 				Elem: &schema.Schema{
@@ -154,7 +154,7 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 	path := consulSecretBackendRolePath(backend, name)
 
 	policies := d.Get("policies").([]interface{})
-	consulPolicies := d.Get("consul_policies").([]interface{})
+	consulPolicies := d.Get("consul_policies").(*schema.Set).List()
 	roles := d.Get("consul_roles").(*schema.Set).List()
 	serviceIdentities := d.Get("service_identities").(*schema.Set).List()
 	nodeIdentities := d.Get("node_identities").(*schema.Set).List()
@@ -252,12 +252,8 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 		"node_identities":    "node_identities",
 	}
 
-	if _, exists := secret.Data["consul_policies"]; exists {
-		if _, ok := d.GetOk("policies"); ok {
-			params["consul_policies"] = "policies"
-		} else {
-			params["consul_policies"] = "consul_policies"
-		}
+	if _, exists := data["consul_policies"]; exists {
+		params["consul_policies"] = "consul_policies"
 	} else {
 		params["policies"] = "policies"
 	}
