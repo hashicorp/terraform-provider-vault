@@ -1,4 +1,6 @@
 builds:
+  - env:
+      - CGO_ENABLE=0
   - binary: terraform-provider-vault_v{{.Version}}
     goos:
       - darwin
