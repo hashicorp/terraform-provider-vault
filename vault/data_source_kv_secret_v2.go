@@ -80,7 +80,10 @@ func kvSecretV2DataSource() *schema.Resource {
 }
 
 func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*provider.ProviderMeta).GetClient()
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	mount := d.Get(consts.FieldMount).(string)
 	name := d.Get(consts.FieldName).(string)
