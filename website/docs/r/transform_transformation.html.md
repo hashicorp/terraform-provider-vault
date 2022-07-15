@@ -47,3 +47,8 @@ The following arguments are supported:
 * `templates` - (Optional) Templates configured for transformation.
 * `tweak_source` - (Optional) The source of where the tweak value comes from. Only valid when in FPE mode.
 * `type` - (Optional) The type of transformation to perform.
+
+
+## Tutorials
+
+Refer to the [Codify Management of Vault Enterprise Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-enterprise) tutorial for additional examples of configuring data transformation using the Transform secrets engine.
