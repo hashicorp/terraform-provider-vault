@@ -94,3 +94,8 @@ AWS secret backends can be imported using the `path`, e.g.
 ```
 $ terraform import vault_aws_secret_backend.aws aws
 ```
+
+## Tutorials
+
+Refer to the [Inject Secrets into Terraform Using the Vault Provider](https://learn.hashicorp.com/tutorials/terraform/secrets-vault) tutorial for a step-by-step usage example.
+
