@@ -46,13 +46,14 @@ func TestConsulSecretBackendRole(t *testing.T) {
 	envVersion, err := goversion.NewVersion(version)
 
 	if err != nil {
-		t.Fatalf("error parsing vault version from VAULT_VERSION environment variable: %v", err)
+		t.Fatalf("error parsing vault version from TF_VAULT_VERSION environment variable: %v", err)
 	} else {
 		if envVersion.GreaterThanOrEqual(cutoffVersion) {
 			isVersion111orNewer = true
 			missingParametersError = "Use either a policy document, a list of policies or roles, or a set of service or node identities, depending on your Consul version"
 
 			createTestCheckFuncs = append(createTestCheckFuncs,
+				resource.TestCheckResourceAttr(resourcePath, "policies.#", "0"),
 				resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "1"),
 				resource.TestCheckTypeSetElemAttr(resourcePath, "consul_policies.*", "foo"),
 				resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "1"),
@@ -63,6 +64,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 				resource.TestCheckTypeSetElemAttr(resourcePath, "node_identities.*", "server-0:dc1"))
 
 			updateTestCheckFuncs = append(updateTestCheckFuncs,
+				resource.TestCheckResourceAttr(resourcePath, "policies.#", "0"),
 				resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "2"),
 				resource.TestCheckTypeSetElemAttr(resourcePath, "consul_policies.*", "foo"),
 				resource.TestCheckTypeSetElemAttr(resourcePath, "consul_policies.*", "bar"),
@@ -78,10 +80,12 @@ func TestConsulSecretBackendRole(t *testing.T) {
 				resource.TestCheckTypeSetElemAttr(resourcePath, "node_identities.*", "client-0:dc1"))
 		} else {
 			createTestCheckFuncs = append(createTestCheckFuncs,
+				resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "0"),
 				resource.TestCheckResourceAttr(resourcePath, "policies.#", "1"),
 				resource.TestCheckResourceAttr(resourcePath, "policies.0", "boo"))
 
 			updateTestCheckFuncs = append(updateTestCheckFuncs,
+				resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "0"),
 				resource.TestCheckResourceAttr(resourcePath, "policies.#", "2"),
 				resource.TestCheckResourceAttr(resourcePath, "policies.0", "boo"),
 				resource.TestCheckResourceAttr(resourcePath, "policies.1", "far"))
