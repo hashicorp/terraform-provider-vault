@@ -11,8 +11,6 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-
-	goversion "github.com/hashicorp/go-version"
 )
 
 func TestConsulSecretBackendRole(t *testing.T) {
@@ -40,56 +38,47 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourcePath, "partition", "partition-1"),
 	}
 
-	isVersion111orNewer := false
-	version := testutil.GetTestVaultVersion(t)
-	cutoffVersion, _ := goversion.NewVersion("1.11")
-	envVersion, err := goversion.NewVersion(version)
+	testNewParameters := testutil.CheckTestVaultVersion(t)
+	if testNewParameters {
+		missingParametersError = "Use either a policy document, a list of policies or roles, or a set of service or node identities, depending on your Consul version"
 
-	if err != nil {
-		t.Fatalf("error parsing vault version from TF_VAULT_VERSION environment variable: %v", err)
+		createTestCheckFuncs = append(createTestCheckFuncs,
+			resource.TestCheckResourceAttr(resourcePath, "policies.#", "0"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "1"),
+			resource.TestCheckTypeSetElemAttr(resourcePath, "consul_policies.*", "foo"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "1"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
+			resource.TestCheckResourceAttr(resourcePath, "service_identities.#", "1"),
+			resource.TestCheckTypeSetElemAttr(resourcePath, "service_identities.*", "service-0:dc1"),
+			resource.TestCheckResourceAttr(resourcePath, "node_identities.#", "1"),
+			resource.TestCheckTypeSetElemAttr(resourcePath, "node_identities.*", "server-0:dc1"))
+
+		updateTestCheckFuncs = append(updateTestCheckFuncs,
+			resource.TestCheckResourceAttr(resourcePath, "policies.#", "0"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "2"),
+			resource.TestCheckTypeSetElemAttr(resourcePath, "consul_policies.*", "foo"),
+			resource.TestCheckTypeSetElemAttr(resourcePath, "consul_policies.*", "bar"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "3"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_roles.1", "role-1"),
+			resource.TestCheckResourceAttr(resourcePath, "consul_roles.2", "role-2"),
+			resource.TestCheckResourceAttr(resourcePath, "service_identities.#", "2"),
+			resource.TestCheckTypeSetElemAttr(resourcePath, "service_identities.*", "service-0:dc1"),
+			resource.TestCheckTypeSetElemAttr(resourcePath, "service_identities.*", "service-1"),
+			resource.TestCheckResourceAttr(resourcePath, "node_identities.#", "2"),
+			resource.TestCheckTypeSetElemAttr(resourcePath, "node_identities.*", "server-0:dc1"),
+			resource.TestCheckTypeSetElemAttr(resourcePath, "node_identities.*", "client-0:dc1"))
 	} else {
-		if envVersion.GreaterThanOrEqual(cutoffVersion) {
-			isVersion111orNewer = true
-			missingParametersError = "Use either a policy document, a list of policies or roles, or a set of service or node identities, depending on your Consul version"
+		createTestCheckFuncs = append(createTestCheckFuncs,
+			resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "0"),
+			resource.TestCheckResourceAttr(resourcePath, "policies.#", "1"),
+			resource.TestCheckResourceAttr(resourcePath, "policies.0", "boo"))
 
-			createTestCheckFuncs = append(createTestCheckFuncs,
-				resource.TestCheckResourceAttr(resourcePath, "policies.#", "0"),
-				resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "1"),
-				resource.TestCheckTypeSetElemAttr(resourcePath, "consul_policies.*", "foo"),
-				resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "1"),
-				resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
-				resource.TestCheckResourceAttr(resourcePath, "service_identities.#", "1"),
-				resource.TestCheckTypeSetElemAttr(resourcePath, "service_identities.*", "service-0:dc1"),
-				resource.TestCheckResourceAttr(resourcePath, "node_identities.#", "1"),
-				resource.TestCheckTypeSetElemAttr(resourcePath, "node_identities.*", "server-0:dc1"))
-
-			updateTestCheckFuncs = append(updateTestCheckFuncs,
-				resource.TestCheckResourceAttr(resourcePath, "policies.#", "0"),
-				resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "2"),
-				resource.TestCheckTypeSetElemAttr(resourcePath, "consul_policies.*", "foo"),
-				resource.TestCheckTypeSetElemAttr(resourcePath, "consul_policies.*", "bar"),
-				resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "3"),
-				resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
-				resource.TestCheckResourceAttr(resourcePath, "consul_roles.1", "role-1"),
-				resource.TestCheckResourceAttr(resourcePath, "consul_roles.2", "role-2"),
-				resource.TestCheckResourceAttr(resourcePath, "service_identities.#", "2"),
-				resource.TestCheckTypeSetElemAttr(resourcePath, "service_identities.*", "service-0:dc1"),
-				resource.TestCheckTypeSetElemAttr(resourcePath, "service_identities.*", "service-1"),
-				resource.TestCheckResourceAttr(resourcePath, "node_identities.#", "2"),
-				resource.TestCheckTypeSetElemAttr(resourcePath, "node_identities.*", "server-0:dc1"),
-				resource.TestCheckTypeSetElemAttr(resourcePath, "node_identities.*", "client-0:dc1"))
-		} else {
-			createTestCheckFuncs = append(createTestCheckFuncs,
-				resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "0"),
-				resource.TestCheckResourceAttr(resourcePath, "policies.#", "1"),
-				resource.TestCheckResourceAttr(resourcePath, "policies.0", "boo"))
-
-			updateTestCheckFuncs = append(updateTestCheckFuncs,
-				resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "0"),
-				resource.TestCheckResourceAttr(resourcePath, "policies.#", "2"),
-				resource.TestCheckResourceAttr(resourcePath, "policies.0", "boo"),
-				resource.TestCheckResourceAttr(resourcePath, "policies.1", "far"))
-		}
+		updateTestCheckFuncs = append(updateTestCheckFuncs,
+			resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "0"),
+			resource.TestCheckResourceAttr(resourcePath, "policies.#", "2"),
+			resource.TestCheckResourceAttr(resourcePath, "policies.0", "boo"),
+			resource.TestCheckResourceAttr(resourcePath, "policies.1", "far"))
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -106,7 +95,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
 			},
 			{
-				Config: testConsulSecretBackendRole_initialConfig(backend, name, token, !isVersion111orNewer, isVersion111orNewer),
+				Config: testConsulSecretBackendRole_initialConfig(backend, name, token, !testNewParameters, testNewParameters),
 				Check:  resource.ComposeTestCheckFunc(createTestCheckFuncs...),
 			},
 			{
@@ -118,7 +107,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
 			},
 			{
-				Config: testConsulSecretBackendRole_updateConfig(backend, name, token, !isVersion111orNewer, isVersion111orNewer),
+				Config: testConsulSecretBackendRole_updateConfig(backend, name, token, !testNewParameters, testNewParameters),
 				Check:  resource.ComposeTestCheckFunc(updateTestCheckFuncs...),
 			},
 			{

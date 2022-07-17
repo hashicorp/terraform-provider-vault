@@ -19,6 +19,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/go-homedir"
+
+	goversion "github.com/hashicorp/go-version"
 )
 
 const (
@@ -181,9 +183,18 @@ func GetTestNomadCreds(t *testing.T) (string, string) {
 	return v[0], v[1]
 }
 
-func GetTestVaultVersion(t *testing.T) string {
+func CheckTestVaultVersion(t *testing.T) bool {
 	v := SkipTestEnvUnset(t, "TF_VAULT_VERSION")
-	return v[0]
+
+	cutoffVersion, _ := goversion.NewVersion("1.11")
+	envVersion, err := goversion.NewVersion(v[0])
+	if err != nil {
+		t.Fatalf("error parsing vault version from TF_VAULT_VERSION environment variable: %v", err)
+	} else {
+		return envVersion.GreaterThanOrEqual(cutoffVersion)
+	}
+
+	return false
 }
 
 func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {
