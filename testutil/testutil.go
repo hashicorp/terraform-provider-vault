@@ -183,10 +183,11 @@ func GetTestNomadCreds(t *testing.T) (string, string) {
 	return v[0], v[1]
 }
 
-func CheckTestVaultVersion(t *testing.T) bool {
+// Returns true if TF_VAULT_VERSION is greater than or equal to the given Vault version
+func CheckTestVaultVersion(t *testing.T, cutoff string) bool {
 	v := SkipTestEnvUnset(t, "TF_VAULT_VERSION")
 
-	cutoffVersion, _ := goversion.NewVersion("1.11")
+	cutoffVersion, _ := goversion.NewVersion(cutoff)
 	envVersion, err := goversion.NewVersion(v[0])
 	if err != nil {
 		t.Fatalf("error parsing vault version from TF_VAULT_VERSION environment variable: %v", err)

@@ -38,7 +38,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourcePath, "partition", "partition-1"),
 	}
 
-	testNewParameters := testutil.CheckTestVaultVersion(t)
+	testNewParameters := testutil.CheckTestVaultVersion(t, "1.11")
 	if testNewParameters {
 		missingParametersError = "Use either a policy document, a list of policies or roles, or a set of service or node identities, depending on your Consul version"
 
