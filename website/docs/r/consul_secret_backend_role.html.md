@@ -44,15 +44,19 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the Consul secrets engine role to create.
 
-* `consul_policies` - (Required)<sup><a href="#note-about-required-arguments">SEE NOTE</a></sup> The list of Consul ACL policies to associate with these roles.
+* `policies` - (Optional) The list of Consul ACL policies to associate with these roles.
+  **NOTE:** The new parameter `consul_policies` should be used in favor of this. This parameter,
+  `policies`, remains supported for legacy users, but Vault has deprecated this field.
 
-* `consul_roles` - (Required)<sup><a href="#note-about-required-arguments">SEE NOTE</a></sup> Set of Consul roles to attach to the token.
+* `consul_policies` - (Optional)<sup><a href="#note-about-required-arguments">SEE NOTE</a></sup> The list of Consul ACL policies to associate with these roles.
+
+* `consul_roles` - (Optional)<sup><a href="#note-about-required-arguments">SEE NOTE</a></sup> Set of Consul roles to attach to the token.
    Applicable for Vault 1.10+ with Consul 1.5+.
 
-* `service_identities` - (Required)<sup><a href="#note-about-required-arguments">SEE NOTE</a></sup> Set of Consul
+* `service_identities` - (Optional)<sup><a href="#note-about-required-arguments">SEE NOTE</a></sup> Set of Consul
 service identities to attach to the token. Applicable for Vault 1.11+ with Consul 1.5+.
 
-* `node_identities` - (Required)<sup><a href="#note-about-required-arguments">SEE NOTE</a></sup> Set of Consul node
+* `node_identities` - (Optional)<sup><a href="#note-about-required-arguments">SEE NOTE</a></sup> Set of Consul node
 identities to attach to the token. Applicable for Vault 1.11+ with Consul 1.8+.
 
 * `consul_namespace` - (Optional) The Consul namespace that the token will be created in.
