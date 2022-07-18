@@ -141,7 +141,7 @@ func testAccConsulSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testConsulSecretBackendRole_initialConfig(backend, name, token string, withPolicies, isVersion111OrNewer bool) string {
+func testConsulSecretBackendRole_initialConfig(backend, name, token string, withPolicies, isAboveVersionThreshold bool) string {
 	config := fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -167,7 +167,7 @@ resource "vault_consul_secret_backend_role" "test" {
 `
 	}
 
-	if isVersion111OrNewer {
+	if isAboveVersionThreshold {
 		config += `
 consul_policies = [
 	"foo",
@@ -196,7 +196,7 @@ node_identities = [
 	return config + "}"
 }
 
-func testConsulSecretBackendRole_updateConfig(backend, name, token string, withPolicies, isVersion111OrNewer bool) string {
+func testConsulSecretBackendRole_updateConfig(backend, name, token string, withPolicies, isAboveVersionThreshold bool) string {
 	config := fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -227,7 +227,7 @@ resource "vault_consul_secret_backend_role" "test" {
 `
 	}
 
-	if isVersion111OrNewer {
+	if isAboveVersionThreshold {
 		config += `
 consul_policies = [
 	"foo",
