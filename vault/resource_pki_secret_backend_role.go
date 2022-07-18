@@ -42,6 +42,12 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Unique name for the role.",
 			},
+			"issuer_ref": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the default issuer. May be the value \"default\", a name, or an issuer ID.",
+				Default:     "default",
+			},
 			"ttl": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -367,6 +373,7 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	data := map[string]interface{}{
+		"issuer_ref":                         d.Get("issuer_ref"),
 		"ttl":                                d.Get("ttl"),
 		"max_ttl":                            d.Get("max_ttl"),
 		"allow_localhost":                    d.Get("allow_localhost"),
@@ -504,6 +511,7 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("backend", backend)
 	d.Set("name", name)
+	d.Set("issuer_ref", secret.Data["issuer_ref"])
 	d.Set("ttl", secret.Data["ttl"])
 	d.Set("max_ttl", secret.Data["max_ttl"])
 	d.Set("allow_localhost", secret.Data["allow_localhost"])
@@ -585,6 +593,7 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	data := map[string]interface{}{
+		"issuer_ref":                         d.Get("issuer_ref"),
 		"ttl":                                d.Get("ttl"),
 		"max_ttl":                            d.Get("max_ttl"),
 		"allow_localhost":                    d.Get("allow_localhost"),

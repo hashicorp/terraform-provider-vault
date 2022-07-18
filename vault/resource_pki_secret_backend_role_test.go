@@ -20,6 +20,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, "name", name),
 		resource.TestCheckResourceAttr(resourceName, "backend", backend),
+		resource.TestCheckResourceAttr(resourceName, "issuer_ref", "default"),
 		resource.TestCheckResourceAttr(resourceName, "allow_localhost", "true"),
 		resource.TestCheckResourceAttr(resourceName, "allowed_domains.#", "1"),
 		resource.TestCheckResourceAttr(resourceName, "allowed_domains.0", "test.domain"),
@@ -98,6 +99,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "issuer_ref", "default"),
 					resource.TestCheckResourceAttr(resourceName, "ttl", "1800"),
 					resource.TestCheckResourceAttr(resourceName, "max_ttl", "3600"),
 					resource.TestCheckResourceAttr(resourceName, "allow_localhost", "true"),
@@ -207,6 +209,7 @@ resource "vault_pki_secret_backend_role" "test" {
   depends_on = [ "vault_mount.pki" ]
   backend = vault_mount.pki.path
   name = "%s"
+  issuer_ref = "default"
   ttl = 1800
   max_ttl = 3600
   allow_localhost = true

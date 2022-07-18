@@ -42,6 +42,13 @@ func pkiSecretBackendSignResource() *schema.Resource {
 				Description: "Name of the role to create the certificate against.",
 				ForceNew:    true,
 			},
+			"issuer_ref": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Reference to an existing issuer, either Vault-generated identifier or name assigned to an issuer.",
+				ForceNew:    true,
+				Default:     "default",
+			},
 			"csr": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -166,8 +173,9 @@ func pkiSecretBackendSignCreate(d *schema.ResourceData, meta interface{}) error 
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
+	issuerRef := d.Get("issuer_ref").(string)
 
-	path := pkiSecretBackendIssuePath(backend, name)
+	path := pkiSecretBackendIssuePath(backend, name, issuerRef)
 
 	commonName := d.Get("common_name").(string)
 
@@ -245,6 +253,9 @@ func pkiSecretBackendSignDelete(d *schema.ResourceData, meta interface{}) error 
 	return nil
 }
 
-func pkiSecretBackendIssuePath(backend string, name string) string {
-	return strings.Trim(backend, "/") + "/sign/" + strings.Trim(name, "/")
+func pkiSecretBackendIssuePath(backend string, name string, issuerRef string) string {
+	if issuerRef == "default" {
+		return strings.Trim(backend, "/") + "/sign/" + strings.Trim(name, "/")
+	}
+	return strings.Trim(backend, "/") + "/issuer/" + strings.Trim(issuerRef, "/") + "/sign/" + strings.Trim(name, "/")
 }

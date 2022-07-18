@@ -40,6 +40,13 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Description: "The PKI secret backend the resource belongs to.",
 				ForceNew:    true,
 			},
+			"issuer_ref": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Reference to an existing issuer, either by Vault-generated identifier or the name assigned to an issuer.",
+				ForceNew:    true,
+				Default:     "default",
+			},
 			"csr": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -209,6 +216,19 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 				Computed:    true,
 				Description: "The certificate's serial number, hex formatted.",
 			},
+			"not_before_duration": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the duration by which to backdate the NotBefore property.",
+				ForceNew:    true,
+				Default:     "30s",
+			},
+			"not_after": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Set the Not After field of the certificate with specified date value.",
+				ForceNew:    true,
+			},
 			"revoke": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -226,8 +246,9 @@ func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta int
 	}
 
 	backend := d.Get("backend").(string)
+	issuerRef := d.Get("issuer_ref").(string)
 
-	path := pkiSecretBackendRootSignIntermediateCreatePath(backend)
+	path := pkiSecretBackendRootSignIntermediateCreatePath(backend, issuerRef)
 
 	commonName := d.Get("common_name").(string)
 
@@ -262,6 +283,7 @@ func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta int
 	}
 
 	data := map[string]interface{}{
+		"issuer_ref":           d.Get("issuer_ref").(string),
 		"csr":                  d.Get("csr").(string),
 		"common_name":          d.Get("common_name").(string),
 		"ttl":                  d.Get("ttl").(string),
@@ -276,6 +298,7 @@ func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta int
 		"province":             d.Get("province").(string),
 		"street_address":       d.Get("street_address").(string),
 		"postal_code":          d.Get("postal_code").(string),
+		"not_before_duration":  d.Get("not_before_duration").(string),
 	}
 
 	if len(altNames) > 0 {
@@ -296,6 +319,10 @@ func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta int
 
 	if len(permittedDNSDomains) > 0 {
 		data["permitted_dns_domains"] = strings.Join(permittedDNSDomains, ",")
+	}
+
+	if v, ok := d.GetOk("not_after"); ok {
+		data["not_after"] = v.(string)
 	}
 
 	log.Printf("[DEBUG] Creating root sign-intermediate on PKI secret backend %q", backend)
@@ -433,8 +460,11 @@ func pkiSecretBackendRootSignIntermediateDelete(d *schema.ResourceData, meta int
 	return nil
 }
 
-func pkiSecretBackendRootSignIntermediateCreatePath(backend string) string {
-	return strings.Trim(backend, "/") + "/root/sign-intermediate"
+func pkiSecretBackendRootSignIntermediateCreatePath(backend string, issuerRef string) string {
+	if issuerRef == "default" {
+		return strings.Trim(backend, "/") + "/root/sign-intermediate"
+	}
+	return strings.Trim(backend, "/") + "/issuer/" + strings.Trim(issuerRef, "/") + "/sign-intermediate"
 }
 
 func pkiSecretRootSignIntermediateRV0() *schema.Resource {

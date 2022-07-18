@@ -168,3 +168,68 @@ func Test_pkiSecretSerialNumberUpgradeV0(t *testing.T) {
 		})
 	}
 }
+
+func TestPkiSecretBackendRootCertificate_existing(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resourceNameInternal := "vault_pki_secret_backend_root_cert.internal"
+	resourceNameExisting := "vault_pki_secret_backend_root_cert.existing"
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendRootCertificateConfig_existing(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceNameInternal, "backend", path),
+					resource.TestCheckResourceAttr(resourceNameInternal, "type", "internal"),
+					resource.TestCheckResourceAttr(resourceNameInternal, "issuer_name", "issuer1"),
+					resource.TestCheckResourceAttr(resourceNameInternal, "key_name", "issuer1_key"),
+					resource.TestCheckResourceAttr(resourceNameInternal, "key_type", "rsa"),
+					resource.TestCheckResourceAttr(resourceNameInternal, "key_bits", "4096"),
+					resource.TestCheckResourceAttr(resourceNameInternal, "common_name", "test.my.domain"),
+					resource.TestCheckResourceAttr(resourceNameExisting, "backend", path),
+					resource.TestCheckResourceAttr(resourceNameExisting, "type", "existing"),
+					resource.TestCheckResourceAttr(resourceNameExisting, "key_ref", "issuer1_key"),
+					resource.TestCheckResourceAttr(resourceNameExisting, "issuer_name", "issuer2"),
+					resource.TestCheckResourceAttr(resourceNameExisting, "common_name", "test2.my.domain"),
+					resource.TestCheckResourceAttr(resourceNameExisting, "not_before_duration", "60s"),
+					resource.TestCheckResourceAttr(resourceNameExisting, "not_after", "9999-12-31T23:59:59Z"),
+				),
+			},
+		},
+	})
+}
+
+func testPkiSecretBackendRootCertificateConfig_existing(path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = 86400
+  max_lease_ttl_seconds     = 86400
+}
+
+resource "vault_pki_secret_backend_root_cert" "internal" {
+  backend     = vault_mount.test.path
+  type        = "internal"
+  issuer_name = "issuer1"
+  key_name    = "issuer1_key"
+  key_type    = "rsa"
+  key_bits    = "4096"
+  common_name = "test.my.domain"
+}
+
+resource "vault_pki_secret_backend_root_cert" "existing" {
+  backend              = vault_mount.test.path
+  type                 = "existing"
+  key_ref              = vault_pki_secret_backend_root_cert.internal.key_name
+  issuer_name          = "issuer2"
+  common_name          = "test2.my.domain"
+  not_before_duration  = "60s"
+  not_after            = "9999-12-31T23:59:59Z"
+}
+`, path)
+}

@@ -27,9 +27,9 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 			"type": {
 				Type:         schema.TypeString,
 				Required:     true,
-				Description:  "Type of intermediate to create. Must be either \"exported\" or \"internal\".",
+				Description:  "Type of intermediate to create. Must be either \"exported\", \"internal\", \"existing\" or \"kms\".",
 				ForceNew:     true,
-				ValidateFunc: validation.StringInSlice([]string{"exported", "internal"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"exported", "internal", "existing", "kms"}, false),
 			},
 			"common_name": {
 				Type:        schema.TypeString,
@@ -96,6 +96,13 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				ForceNew:     true,
 				Default:      "rsa",
 				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519"}, false),
+				// Suppress the diff if group type is "existing" or "kms" because we cannot manage the key type.
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					if d.Get("type").(string) == "existing" || d.Get("type").(string) == "kms" {
+						return true
+					}
+					return false
+				},
 			},
 			"key_bits": {
 				Type:        schema.TypeInt,
@@ -103,6 +110,27 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Description: "The number of bits to use.",
 				ForceNew:    true,
 				Default:     2048,
+				// Suppress the diff if group type is "existing" or "kms" because we cannot manage the key bits.
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					if d.Get("type").(string) == "existing" || d.Get("type").(string) == "kms" {
+						return true
+					}
+					return false
+				},
+			},
+			"key_name": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Description:  "Specifies the name of the key when it is created with this resource.",
+				ForceNew:     true,
+				ValidateFunc: validation.StringNotInSlice([]string{"default"}, false),
+			},
+			"key_ref": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the key (either default, by name, or by identifier).",
+				ForceNew:    true,
+				Default:     "default",
 			},
 			"exclude_cn_from_sans": {
 				Type:        schema.TypeBool,
@@ -168,6 +196,18 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Computed:    true,
 				Description: "The private key type.",
 			},
+			"managed_key_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The managed key's configured name.",
+				ForceNew:    true,
+			},
+			"managed_key_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The managed key's UUID.",
+				ForceNew:    true,
+			},
 		},
 	}
 }
@@ -211,8 +251,7 @@ func pkiSecretBackendIntermediateCertRequestCreate(d *schema.ResourceData, meta 
 		"common_name":          d.Get("common_name").(string),
 		"format":               d.Get("format").(string),
 		"private_key_format":   d.Get("private_key_format").(string),
-		"key_type":             d.Get("key_type").(string),
-		"key_bits":             d.Get("key_bits").(int),
+		"key_ref":              d.Get("key_ref").(string),
 		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
 		"ou":                   d.Get("ou").(string),
 		"organization":         d.Get("organization").(string),
@@ -237,6 +276,26 @@ func pkiSecretBackendIntermediateCertRequestCreate(d *schema.ResourceData, meta 
 
 	if len(otherSans) > 0 {
 		data["other_sans"] = strings.Join(otherSans, ",")
+	}
+
+	if v, ok := d.GetOk("key_type"); ok {
+		data["key_type"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("key_bits"); ok {
+		data["key_bits"] = v.(int)
+	}
+
+	if v, ok := d.GetOk("key_name"); ok {
+		data["key_name"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("managed_key_name"); ok {
+		data["managed_key_name"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("managed_key_id"); ok {
+		data["managed_key_id"] = v.(string)
 	}
 
 	log.Printf("[DEBUG] Creating intermediate cert request on PKI secret backend %q", backend)
@@ -266,5 +325,8 @@ func pkiSecretBackendIntermediateCertRequestDelete(d *schema.ResourceData, meta 
 }
 
 func pkiSecretBackendIntermediateGeneratePath(backend string, intermediateType string) string {
+	if intermediateType == "existing" {
+		return strings.Trim(backend, "/") + "/intermediate/cross-sign"
+	}
 	return strings.Trim(backend, "/") + "/intermediate/generate/" + strings.Trim(intermediateType, "/")
 }
