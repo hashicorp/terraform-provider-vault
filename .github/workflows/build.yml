@@ -38,7 +38,6 @@ jobs:
         env:
           VAULT_DEV_ROOT_TOKEN_ID: root
           VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
-          TF_VAULT_VERSION: 1.10
         options: >-
           --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
           --health-interval 1s
@@ -77,6 +76,7 @@ jobs:
           MONGODB_URL: "mongodb://root:mongodb@mongo:27017/admin?ssl=false"
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
+          TF_VAULT_VERSION: "1.10"
         run: |
           make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"
