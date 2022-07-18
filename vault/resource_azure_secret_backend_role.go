@@ -51,12 +51,13 @@ func azureSecretBackendRoleResource() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"role_id": {
 							Type:     schema.TypeString,
+							Optional: true,
 							Computed: true,
 						},
 
 						"role_name": {
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
 						},
 
 						"scope": {
@@ -106,6 +107,25 @@ func azureSecretBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 
 	if v, ok := d.GetOk("azure_roles"); ok {
 		rawAzureList := v.(*schema.Set).List()
+
+		// Validate that we have one of role_id or role_name, but not both.
+		for _, s := range rawAzureList {
+			azureRole := s.(map[string]interface{})
+
+			roleId := azureRole["role_id"]
+			log.Printf("[DEBUG] role_id is: %v", roleId)
+
+			roleName := azureRole["role_name"]
+			log.Printf("[DEBUG] role_name is: %v", roleName)
+
+			if roleId == "" && roleName == "" {
+				return fmt.Errorf("One of role_id or role_name must be set.")
+			}
+
+			if roleId != "" && roleName != "" {
+				return fmt.Errorf("Both role_id and role_name can't be set at the same time. %v", roleName)
+			}
+		}
 
 		// Vaults API requires we send the policy as an escaped string
 		// So we marshall and then change into a string
