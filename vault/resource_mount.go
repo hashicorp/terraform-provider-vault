@@ -111,7 +111,7 @@ func getMountSchema(excludes ...string) schemaMap {
 		},
 
 		"allowed_managed_keys": {
-			Type:        schema.TypeList,
+			Type:        schema.TypeSet,
 			Optional:    true,
 			ForceNew:    true,
 			Elem:        &schema.Schema{Type: schema.TypeString},
@@ -175,7 +175,7 @@ func createMount(d *schema.ResourceData, client *api.Client, path string, mountT
 	}
 
 	if v, ok := d.GetOk("allowed_managed_keys"); ok {
-		input.Config.AllowedManagedKeys = expandStringSlice(v.([]interface{}))
+		input.Config.AllowedManagedKeys = expandStringSlice(v.(*schema.Set).List())
 	}
 
 	log.Printf("[DEBUG] Creating mount %s in Vault", path)
@@ -229,7 +229,7 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if d.HasChange("allowed_managed_keys") {
-		config.AllowedManagedKeys = expandStringSlice(d.Get("allowed_managed_keys").([]interface{}))
+		config.AllowedManagedKeys = expandStringSlice(d.Get("allowed_managed_keys").(*schema.Set).List())
 	}
 
 	log.Printf("[DEBUG] Updating mount %s in Vault", path)

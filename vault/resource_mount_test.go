@@ -228,7 +228,7 @@ func TestResourceMountMangedKeys(t *testing.T) {
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testResourceMount_managedKeysConfig(keyName, path),
+				Config: testResourceMount_managedKeysConfig(keyName, path, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 					resource.TestCheckResourceAttr(resourceName, "type", "pki"),
@@ -239,13 +239,26 @@ func TestResourceMountMangedKeys(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_managed_keys.0", keyName),
 				),
 			},
+			{
+				Config: testResourceMount_managedKeysConfig(keyName, path, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "type", "pki"),
+					resource.TestCheckResourceAttr(resourceName, "description", "Updated desc - Example mount for testing managed keys"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_managed_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_managed_keys.0", keyName),
+					resource.TestCheckResourceAttr(resourceName, "allowed_managed_keys.1", fmt.Sprintf("%s-2", keyName)),
+				),
+			},
 		},
 	})
 }
 
-func testResourceMount_managedKeysConfig(keyName, path string) string {
-	return fmt.Sprintf(`
-resource "vault_managed_keys" "test" {
+func testResourceMount_managedKeysConfig(keyName, path string, isUpdate bool) string {
+	ret := fmt.Sprintf(`
+resource "vault_managed_keys" "test_key_1" {
   aws {
     name       = "%s"
     access_key = "ASIAKBASDADA09090"
@@ -256,15 +269,43 @@ resource "vault_managed_keys" "test" {
   }
 }
 
+resource "vault_managed_keys" "test_key_2" {
+  aws {
+    name       = "%s-2"
+    access_key = "ASIAKBASDADA09090"
+    secret_key = "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz"
+    key_bits   = "2048"
+    key_type   = "RSA"
+    kms_key    = "alias/test_identifier_string"
+  }
+}
+`, keyName, keyName)
+
+	if !isUpdate {
+		ret += fmt.Sprintf(`
 resource "vault_mount" "test" {
   path                      = "%s"
   type                      = "pki"
   description               = "Example mount for testing managed keys"
   default_lease_ttl_seconds = 3600
   max_lease_ttl_seconds     = 36000
-  allowed_managed_keys      = [vault_managed_keys.test.aws.0.name]
+  allowed_managed_keys      = [vault_managed_keys.test_key_1.aws.0.name]
 }
-`, keyName, path)
+`, path)
+	} else {
+		ret += fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "Updated desc - Example mount for testing managed keys"
+  default_lease_ttl_seconds = 7200
+  max_lease_ttl_seconds     = 86400
+  allowed_managed_keys      = [vault_managed_keys.test_key_1.aws.0.name, vault_managed_keys.test_key_2.aws.0.name]
+}
+`, path)
+	}
+
+	return ret
 }
 
 func testResourceMount_initialConfig(cfg mountConfig) string {
