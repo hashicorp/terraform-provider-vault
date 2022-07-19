@@ -120,3 +120,7 @@ resource "vault_namespace" "example2" {
     path         = "example2"
 }
 ```
+
+## Tutorials
+
+Refer to the [Codify Management of Vault Enterprise Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-enterprise) tutorial for additional examples using Vault namespaces.
