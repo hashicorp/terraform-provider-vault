@@ -62,7 +62,7 @@ func managedKeysResource() *schema.Resource {
 
 func getCommonManagedKeysSchema() schemaMap {
 	return schemaMap{
-		"allow_generate_key": {
+		consts.FieldAllowGenerateKey: {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
@@ -70,7 +70,17 @@ func getCommonManagedKeysSchema() schemaMap {
 				"backend, instructs Vault to generate a key within the backend",
 		},
 
-		"allow_store_key": {
+		consts.FieldAllowReplaceKey: {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+			Description: " Controls the ability for Vault to replace through " +
+				"generation or importing a key into the configured backend even " +
+				"if a key is present, if set to false those operations are forbidden " +
+				"if a key exists.",
+		},
+
+		consts.FieldAllowStoreKey: {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
@@ -78,7 +88,7 @@ func getCommonManagedKeysSchema() schemaMap {
 				"configured backend, if 'false', those operations will be forbidden",
 		},
 
-		"any_mount": {
+		consts.FieldAnyMount: {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Computed:    true,
@@ -103,52 +113,52 @@ func managedKeysPKCSConfigSchema() schemaMap {
 			Description: "A unique lowercase name that serves as " +
 				"identifying the key",
 		},
-		"library": {
+		consts.FieldLibrary: {
 			Type:     schema.TypeString,
 			Required: true,
 			Description: "The name of the kms_library stanza to use from Vault's config " +
 				"to lookup the local library path",
 		},
-		"key_label": {
+		consts.FieldKeyLabel: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The label of the key to use",
 		},
-		"key_id": {
+		consts.FieldKeyID: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The id of a PKCS#11 key to use",
 		},
-		"mechanism": {
+		consts.FieldMechanism: {
 			Type:     schema.TypeString,
 			Required: true,
 			Description: "The encryption/decryption mechanism to use, specified as a " +
 				"hexadecimal (prefixed by 0x) string.",
 		},
-		"pin": {
+		consts.FieldPin: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The PIN for login",
 		},
-		"slot": {
+		consts.FieldSlot: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Description: "The slot number to use, specified as a string in a " +
 				"decimal format (e.g. '2305843009213693953')",
 		},
-		"token_label": {
+		consts.FieldTokenLabel: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "The PIN for login",
 		},
-		"curve": {
+		consts.FieldCurve: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Description: "Supplies the curve value when using " +
 				"the 'CKM_ECDSA' mechanism. Required if " +
 				"'allow_generate_key' is true",
 		},
-		"key_bits": {
+		consts.FieldKeyBits: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Description: "Supplies the size in bits of the key when using " +
@@ -156,7 +166,7 @@ func managedKeysPKCSConfigSchema() schemaMap {
 				"as a value for 'mechanism'. Required if " +
 				"'allow_generate_key' is true",
 		},
-		"force_rw_session": {
+		consts.FieldForceRWSession: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "The PIN for login",
@@ -175,47 +185,47 @@ func managedKeysAWSConfigSchema() schemaMap {
 			Description: "A unique lowercase name that serves as " +
 				"identifying the key",
 		},
-		"access_key": {
+		consts.FieldAWSAccessKey: {
 			Type:     schema.TypeString,
 			Required: true,
 			Description: "The AWS access key to use. This can also " +
 				"be provided with the 'AWS_ACCESS_KEY_ID' env variable",
 		},
-		"secret_key": {
+		consts.FieldAWSSecretKey: {
 			Type:     schema.TypeString,
 			Required: true,
 			Description: "The AWS secret key to use. This can also " +
 				"be provided with the 'AWS_SECRET_ACCESS_KEY' env variable",
 		},
-		"curve": {
+		consts.FieldCurve: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Description: "The curve to use for an ECDSA key. Used " +
 				"when key_type is 'ECDSA'. Required if " +
 				"'allow_generate_key' is true",
 		},
-		"endpoint": {
+		consts.FieldEndpoint: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "Used to specify a custom AWS endpoint",
 		},
-		"key_bits": {
+		consts.FieldKeyBits: {
 			Type:     schema.TypeString,
 			Required: true,
 			Description: "The size in bits for an RSA key. This " +
 				"field is required when 'key_type' is 'RSA'",
 		},
-		"key_type": {
+		consts.FieldKeyType: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The type of key to use",
 		},
-		"kms_key": {
+		consts.FieldKMSKey: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "An identifier for the key",
 		},
-		"region": {
+		consts.FieldRegion: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Default:     "us-east-1",
@@ -228,57 +238,57 @@ func managedKeysAWSConfigSchema() schemaMap {
 
 func managedKeysAzureConfigSchema() schemaMap {
 	s := schemaMap{
-		"name": {
+		consts.FieldName: {
 			Type:     schema.TypeString,
 			Required: true,
 			ForceNew: true,
 			Description: "A unique lowercase name that serves as " +
 				"identifying the key",
 		},
-		"tenant_id": {
+		consts.FieldTenantID: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The tenant id for the Azure Active Directory organization",
 		},
-		"client_id": {
+		consts.FieldClientID: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The client id for credentials to query the Azure APIs",
 		},
-		"client_secret": {
+		consts.FieldClientSecret: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The client secret for credentials to query the Azure APIs",
 		},
-		"environment": {
+		consts.FieldEnvironment: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Default:     "AZUREPUBLICCLOUD",
 			Description: "The Azure Cloud environment API endpoints to use",
 		},
-		"vault_name": {
+		consts.FieldVaultName: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The Key Vault vault to use the encryption keys for encryption and decryption",
 		},
-		"key_name": {
+		consts.FieldKeyName: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The Key Vault key to use for encryption and decryption",
 		},
-		"resource": {
+		consts.FieldResource: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Default:     "vault.azure.net",
 			Description: "The Azure Key Vault resource's DNS Suffix to connect to",
 		},
-		"key_bits": {
+		consts.FieldKeyBits: {
 			Type:     schema.TypeString,
 			Optional: true,
 			Description: "The size in bits for an RSA key. This field is required " +
 				"when 'key_type' is 'RSA' or when 'allow_generate_key' is true",
 		},
-		"key_type": {
+		consts.FieldKeyType: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The type of key to use",
@@ -350,90 +360,134 @@ func managedKeysWrite(ctx context.Context, d *schema.ResourceData, meta interfac
 		}
 	}
 
-	// @TODO figure out what the ID should be
 	d.SetId("sys/managed-keys")
 
 	return managedKeysRead(ctx, d, meta)
 }
 
-func managedKeysRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func readAWSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return diag.FromErr(e)
+		return e
 	}
 
+	awsKeyName := getKeyNameFromConfig(d, consts.FieldAWS)
+	awsKeyPath := getManagedKeysPath(kmsTypeAWS, awsKeyName)
+	resp, err := client.Logical().Read(awsKeyPath)
+	if err != nil {
+		return err
+	}
+
+	data := map[string]interface{}{}
+	for k := range managedKeysAWSConfigSchema() {
+		if v, ok := resp.Data[k]; ok {
+			data[k] = v
+		}
+
+		// set these from TF config since they won't
+		// be returned from Vault
+		if k == "access_key" || k == "secret_key" {
+			stateKey := fmt.Sprintf("%s.%d.%s", consts.FieldAWS, 0, k)
+			data[k] = d.Get(stateKey)
+		}
+	}
+	if err := d.Set(consts.FieldAWS, []map[string]interface{}{data}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func readAzureManagedKeys(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	azureKeyName := getKeyNameFromConfig(d, consts.FieldAzure)
+	azureKeyPath := getManagedKeysPath(kmsTypeAzure, azureKeyName)
+	resp, err := client.Logical().Read(azureKeyPath)
+	if err != nil {
+		return err
+	}
+
+	data := map[string]interface{}{}
+	for k := range managedKeysAzureConfigSchema() {
+		if v, ok := resp.Data[k]; ok {
+			data[k] = v
+		}
+	}
+	if err := d.Set(consts.FieldAzure, []map[string]interface{}{data}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func readPKCSManagedKeys(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	pkcsKeyName := getKeyNameFromConfig(d, consts.FieldPKCS)
+	pkcsKeyPath := getManagedKeysPath(kmsTypePKCS, pkcsKeyName)
+	resp, err := client.Logical().Read(pkcsKeyPath)
+	if err != nil {
+		return err
+	}
+
+	data := map[string]interface{}{}
+	for k := range managedKeysPKCSConfigSchema() {
+		if v, ok := resp.Data[k]; ok {
+			data[k] = v
+		}
+
+		// set these from TF config since they won't
+		// be returned from Vault
+		if k == "pin" {
+			stateKey := fmt.Sprintf("%s.%d.%s", consts.FieldPKCS, 0, k)
+			data[k] = d.Get(stateKey)
+		}
+	}
+	if err := d.Set(consts.FieldPKCS, []map[string]interface{}{data}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func managedKeysRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	diags := diag.Diagnostics{}
+
 	if _, ok := d.GetOk(consts.FieldAWS); ok {
-		awsKeyName := getKeyNameFromConfig(d, consts.FieldAWS)
-		awsKeyPath := getManagedKeysPath(kmsTypeAWS, awsKeyName)
-		resp, err := client.Logical().Read(awsKeyPath)
+		err := readAWSManagedKeys(d, meta)
 		if err != nil {
-			return diag.FromErr(err)
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  fmt.Sprintf("Failed to read AWS Managed Keys, err=%s", err),
+			})
 		}
-
-		data := map[string]interface{}{}
-		for k := range managedKeysAWSConfigSchema() {
-			if v, ok := resp.Data[k]; ok {
-				data[k] = v
-			}
-
-			// set these from TF config since they won't
-			// be returned from Vault
-			if k == "access_key" || k == "secret_key" {
-				stateKey := fmt.Sprintf("%s.%d.%s", consts.FieldAWS, 0, k)
-				data[k] = d.Get(stateKey)
-			}
-		}
-		if err := d.Set(consts.FieldAWS, []map[string]interface{}{data}); err != nil {
-			return diag.FromErr(err)
-		}
-
 	}
 
 	if _, ok := d.GetOk(consts.FieldPKCS); ok {
-		pkcsKeyName := getKeyNameFromConfig(d, consts.FieldPKCS)
-		pkcsKeyPath := getManagedKeysPath(kmsTypePKCS, pkcsKeyName)
-		resp, err := client.Logical().Read(pkcsKeyPath)
+		err := readPKCSManagedKeys(d, meta)
 		if err != nil {
-			return diag.FromErr(err)
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  fmt.Sprintf("Failed to read PKCS Managed Keys, err=%s", err),
+			})
 		}
-
-		data := map[string]interface{}{}
-		for k := range managedKeysPKCSConfigSchema() {
-			if v, ok := resp.Data[k]; ok {
-				data[k] = v
-			}
-
-			// set these from TF config since they won't
-			// be returned from Vault
-			if k == "pin" {
-				stateKey := fmt.Sprintf("%s.%d.%s", consts.FieldPKCS, 0, k)
-				data[k] = d.Get(stateKey)
-			}
-		}
-		if err := d.Set(consts.FieldPKCS, []map[string]interface{}{data}); err != nil {
-			return diag.FromErr(err)
-		}
-
 	}
 
 	if _, ok := d.GetOk(consts.FieldAzure); ok {
-		azureKeyName := getKeyNameFromConfig(d, consts.FieldAzure)
-		azureKeyPath := getManagedKeysPath(kmsTypeAzure, azureKeyName)
-		resp, err := client.Logical().Read(azureKeyPath)
+		err := readAzureManagedKeys(d, meta)
 		if err != nil {
-			return diag.FromErr(err)
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  fmt.Sprintf("Failed to read Azure Managed Keys, err=%s", err),
+			})
 		}
-
-		data := map[string]interface{}{}
-		for k := range managedKeysAzureConfigSchema() {
-			if v, ok := resp.Data[k]; ok {
-				data[k] = v
-			}
-		}
-		if err := d.Set(consts.FieldAzure, []map[string]interface{}{data}); err != nil {
-			return diag.FromErr(err)
-		}
-
 	}
 
 	return nil
