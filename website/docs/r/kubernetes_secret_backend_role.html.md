@@ -3,7 +3,7 @@ layout: "vault"
 page_title: "Vault: vault_kubernetes_secret_backend_role resource"
 sidebar_current: "docs-vault-resource-kubernetes-secret-backend-role"
 description: |-
-Creates a role for the Kubernetes Secrets Engine in Vault.
+  Creates a role for the Kubernetes Secrets Engine in Vault.
 ---
 
 # vault\_kubernetes\_secret\_backend\_role
@@ -23,21 +23,19 @@ for more details.
 
 ## Example Usage
 
-```hcl
-resource "vault_kubernetes_secret_backend" "config" {
-  path                      = "kubernetes"
-  description               = "kubernetes secrets engine description"
-  kubernetes_host           = "https://127.0.0.1:61233"
-  kubernetes_ca_cert        = file("/path/to/cert")
-  service_account_jwt       = file("/path/to/token")
-  disable_local_ca_jwt      = false
-}
-```
-
 Example using `service_account_name` mode:
 
 ```hcl
-resource "vault_kubernetes_secret_backend_role" "role-1" {
+resource "vault_kubernetes_secret_backend" "config" {
+  path                 = "kubernetes"
+  description          = "kubernetes secrets engine description"
+  kubernetes_host      = "https://127.0.0.1:61233"
+  kubernetes_ca_cert   = file("/path/to/cert")
+  service_account_jwt  = file("/path/to/token")
+  disable_local_ca_jwt = false
+}
+
+resource "vault_kubernetes_secret_backend_role" "sa-example" {
   backend                       = vault_kubernetes_secret_backend.config.path
   name                          = "service-account-name-role"
   allowed_kubernetes_namespaces = ["*"]
@@ -49,6 +47,7 @@ resource "vault_kubernetes_secret_backend_role" "role-1" {
     id   = "abc123"
     name = "some_name"
   }
+
   extra_annotations = {
     env      = "development"
     location = "earth"
@@ -59,7 +58,16 @@ resource "vault_kubernetes_secret_backend_role" "role-1" {
 Example using `kubernetes_role_name` mode:
 
 ```hcl
-resource "vault_kubernetes_secret_backend_role" "role-3" {
+resource "vault_kubernetes_secret_backend" "config" {
+  path                 = "kubernetes"
+  description          = "kubernetes secrets engine description"
+  kubernetes_host      = "https://127.0.0.1:61233"
+  kubernetes_ca_cert   = file("/path/to/cert")
+  service_account_jwt  = file("/path/to/token")
+  disable_local_ca_jwt = false
+}
+
+resource "vault_kubernetes_secret_backend_role" "name-example" {
   backend                       = vault_kubernetes_secret_backend.config.path
   name                          = "service-account-name-role"
   allowed_kubernetes_namespaces = ["*"]
@@ -71,6 +79,7 @@ resource "vault_kubernetes_secret_backend_role" "role-3" {
     id   = "abc123"
     name = "some_name"
   }
+
   extra_annotations = {
     env      = "development"
     location = "earth"
@@ -81,19 +90,34 @@ resource "vault_kubernetes_secret_backend_role" "role-3" {
 Example using `generated_role_rules` mode:
 
 ```hcl
-resource "vault_kubernetes_secret_backend_role" "role-2" {
+resource "vault_kubernetes_secret_backend" "config" {
+  path                 = "kubernetes"
+  description          = "kubernetes secrets engine description"
+  kubernetes_host      = "https://127.0.0.1:61233"
+  kubernetes_ca_cert   = file("/path/to/cert")
+  service_account_jwt  = file("/path/to/token")
+  disable_local_ca_jwt = false
+}
+
+resource "vault_kubernetes_secret_backend_role" "rules-example" {
   backend                       = vault_kubernetes_secret_backend.config.path
   name                          = "service-account-name-role"
   allowed_kubernetes_namespaces = ["*"]
   token_max_ttl                 = 43200
   token_default_ttl             = 21600
-  generated_role_rules          = "rules:\n- apiGroups: [\"\"]\n  resources: [\"pods\"]\n  verbs: [\"list\"]\n"
   kubernetes_role_type          = "Role"
+  generated_role_rules          = <<EOF
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["list"]
+EOF
 
   extra_labels = {
     id   = "abc123"
     name = "some_name"
   }
+
   extra_annotations = {
     env      = "development"
     location = "earth"
@@ -153,3 +177,12 @@ This resource also directly accepts all [vault_mount](mount.html.md) fields.
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+The Kubernetes secret backend role can be imported using the full path to the role
+of the form: `<backend_path>/roles/<role_name>` e.g.
+
+```
+$ terraform import vault_kubernetes_secret_backend_role.example kubernetes kubernetes/roles/example-role
+```
