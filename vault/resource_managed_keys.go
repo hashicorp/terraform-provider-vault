@@ -380,11 +380,10 @@ func readAWSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 	for k := range managedKeysAWSConfigSchema() {
 		if v, ok := resp.Data[k]; ok {
 			data[k] = v
-			continue
 		}
 
-		// set these from TF config since they won't
-		// be returned from Vault
+		// set these from TF config since they are
+		// returned as "redacted"
 		if k == "access_key" || k == "secret_key" {
 			stateKey := fmt.Sprintf("%s.%d.%s", consts.FieldAWS, 0, k)
 			data[k] = d.Get(stateKey)
@@ -440,11 +439,10 @@ func readPKCSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 	for k := range managedKeysPKCSConfigSchema() {
 		if v, ok := resp.Data[k]; ok {
 			data[k] = v
-			continue
 		}
 
-		// set these from TF config since they won't
-		// be returned from Vault
+		// set these from TF config since they are
+		// returned as "redacted"
 		if k == "pin" {
 			stateKey := fmt.Sprintf("%s.%d.%s", consts.FieldPKCS, 0, k)
 			data[k] = d.Get(stateKey)
@@ -514,6 +512,18 @@ func managedKeysDelete(ctx context.Context, d *schema.ResourceData, meta interfa
 	if _, ok := d.GetOk(consts.FieldAzure); ok {
 		azureKeyName := getKeyNameFromConfig(d, consts.FieldAzure)
 		path := getManagedKeysPath(kmsTypeAzure, azureKeyName)
+
+		log.Printf("[DEBUG] Deleting managed key %s", path)
+		_, err := client.Logical().Delete(path)
+		if err != nil {
+			return diag.Errorf("error deleting managed key %s", path)
+		}
+		log.Printf("[DEBUG] Deleted managed key %q", path)
+	}
+
+	if _, ok := d.GetOk(consts.FieldPKCS); ok {
+		pkcsKeyName := getKeyNameFromConfig(d, consts.FieldPKCS)
+		path := getManagedKeysPath(kmsTypePKCS, pkcsKeyName)
 
 		log.Printf("[DEBUG] Deleting managed key %s", path)
 		_, err := client.Logical().Delete(path)
