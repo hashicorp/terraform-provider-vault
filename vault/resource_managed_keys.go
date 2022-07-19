@@ -186,16 +186,14 @@ func managedKeysAWSConfigSchema() schemaMap {
 				"identifying the key",
 		},
 		consts.FieldAWSAccessKey: {
-			Type:     schema.TypeString,
-			Required: true,
-			Description: "The AWS access key to use. This can also " +
-				"be provided with the 'AWS_ACCESS_KEY_ID' env variable",
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "The AWS access key to use",
 		},
 		consts.FieldAWSSecretKey: {
-			Type:     schema.TypeString,
-			Required: true,
-			Description: "The AWS secret key to use. This can also " +
-				"be provided with the 'AWS_SECRET_ACCESS_KEY' env variable",
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "The AWS secret key to use",
 		},
 		consts.FieldCurve: {
 			Type:     schema.TypeString,
@@ -382,6 +380,7 @@ func readAWSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 	for k := range managedKeysAWSConfigSchema() {
 		if v, ok := resp.Data[k]; ok {
 			data[k] = v
+			continue
 		}
 
 		// set these from TF config since they won't
@@ -441,6 +440,7 @@ func readPKCSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 	for k := range managedKeysPKCSConfigSchema() {
 		if v, ok := resp.Data[k]; ok {
 			data[k] = v
+			continue
 		}
 
 		// set these from TF config since they won't
