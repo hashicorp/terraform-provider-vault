@@ -109,10 +109,12 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
-					_, err := client.Logical().Delete(path)
+					client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 					if err != nil {
+						t.Fatal(err)
+					}
+
+					if _, err := client.Logical().Delete(path); err != nil {
 						t.Fatalf("unable to manually delete the secret via the SDK: %s", err)
 					}
 				},

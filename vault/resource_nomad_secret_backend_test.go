@@ -68,7 +68,10 @@ func TestAccNomadSecretBackend(t *testing.T) {
 }
 
 func testAccNomadSecretBackendCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	if err != nil {
+		return err
+	}
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {

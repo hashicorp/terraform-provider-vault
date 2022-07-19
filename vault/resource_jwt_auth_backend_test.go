@@ -364,7 +364,10 @@ resource "vault_namespace" "test" {
 
 func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		if err != nil {
+			return err
+		}
 
 		authMounts, err := client.Sys().ListAuth()
 		if err != nil {

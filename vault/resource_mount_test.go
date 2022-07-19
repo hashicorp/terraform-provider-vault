@@ -664,7 +664,10 @@ resource "vault_mount" "test" {
 }
 
 func findMount(path string) (*api.MountOutput, error) {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	if err != nil {
+		return nil, err
+	}
 
 	path = path + "/"
 

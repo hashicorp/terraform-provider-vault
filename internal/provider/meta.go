@@ -33,72 +33,28 @@ type ProviderMeta struct {
 }
 
 // GetClient returns the providers default Vault client.
-func (p *ProviderMeta) GetClient() *api.Client {
-	return p.client
-}
-
-// GetNSClient returns a namespaced Vault client.
-// The provided namespace will always be set relative to the default client's
-// namespace.
-func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
+func (p *ProviderMeta) GetClient() (*api.Client, error) {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	if err := p.validate(); err != nil {
-		return nil, err
+	// client has already been initialized.
+	if p.client != nil {
+		return p.client, nil
 	}
 
-	if ns == "" {
-		return nil, fmt.Errorf("empty namespace not allowed")
+	d := p.resourceData
+	if d == nil {
+		return nil, fmt.Errorf("badly created ProviderMeta, no client and no resourceData")
 	}
 
-	ns = strings.Trim(ns, "/")
-	if root, ok := p.resourceData.GetOk(consts.FieldNamespace); ok && root.(string) != "" {
-		ns = fmt.Sprintf("%s/%s", root, ns)
-	}
-
-	if p.clientCache == nil {
-		p.clientCache = make(map[string]*api.Client)
-	}
-
-	if v, ok := p.clientCache[ns]; ok {
-		return v, nil
-	}
-
-	c, err := p.client.Clone()
-	if err != nil {
-		return nil, err
-	}
-
-	c.SetNamespace(ns)
-	p.clientCache[ns] = c
-
-	return c, nil
-}
-
-func (p *ProviderMeta) validate() error {
-	if p.client == nil {
-		return fmt.Errorf("root api.Client not set, init with NewProviderMeta()")
-	}
-
-	if p.resourceData == nil {
-		return fmt.Errorf("provider ResourceData not set, init with NewProviderMeta()")
-	}
-
-	return nil
-}
-
-// NewProviderMeta sets up the Provider to service Vault requests.
-// It is meant to be used as a schema.ConfigureFunc.
-func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	clientConfig := api.DefaultConfig()
-	addr := d.Get("address").(string)
-	if addr != "" {
+	addr, ok := d.Get("address").(string)
+	if ok && addr != "" {
 		clientConfig.Address = addr
 	}
 
-	clientAuthI := d.Get("client_auth").([]interface{})
-	if len(clientAuthI) > 1 {
+	clientAuthI, ok := d.Get("client_auth").([]interface{})
+	if ok && len(clientAuthI) > 1 {
 		return nil, fmt.Errorf("client_auth block may appear only once")
 	}
 
@@ -110,17 +66,23 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		clientAuthKey = clientAuth["key_file"].(string)
 	}
 
-	err := clientConfig.ConfigureTLS(&api.TLSConfig{
-		CACert:        d.Get("ca_cert_file").(string),
-		CAPath:        d.Get("ca_cert_dir").(string),
-		Insecure:      d.Get("skip_tls_verify").(bool),
-		TLSServerName: d.Get("tls_server_name").(string),
+	caCert, okCACert := d.Get("ca_cert_file").(string)
+	caPath, okCAPath := d.Get("ca_cert_dir").(string)
+	insecure, okInsecure := d.Get("skip_tls_verify").(bool)
+	tlsServerName, okTlsServerName := d.Get("tls_server_name").(string)
+	if okCACert && okCAPath && okInsecure && okTlsServerName {
+		err := clientConfig.ConfigureTLS(&api.TLSConfig{
+			CACert:        caCert,
+			CAPath:        caPath,
+			Insecure:      insecure,
+			TLSServerName: tlsServerName,
 
-		ClientCert: clientAuthCert,
-		ClientKey:  clientAuthKey,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to configure TLS for Vault API: %s", err)
+			ClientCert: clientAuthCert,
+			ClientKey:  clientAuthKey,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to configure TLS for Vault API: %s", err)
+		}
 	}
 
 	clientConfig.HttpClient.Transport = helper.NewTransport(
@@ -147,24 +109,31 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	client.SetCloneToken(true)
 
 	// Set headers if provided
-	headers := d.Get("headers").([]interface{})
+	headers, okHeaders := d.Get("headers").([]interface{})
 	parsedHeaders := client.Headers().Clone()
 
 	if parsedHeaders == nil {
 		parsedHeaders = make(http.Header)
 	}
 
-	for _, h := range headers {
-		header := h.(map[string]interface{})
-		if name, ok := header["name"]; ok {
-			parsedHeaders.Add(name.(string), header["value"].(string))
+	if okHeaders {
+		for _, h := range headers {
+			header := h.(map[string]interface{})
+			if name, ok := header["name"]; ok {
+				parsedHeaders.Add(name.(string), header["value"].(string))
+			}
 		}
 	}
+
 	client.SetHeaders(parsedHeaders)
 
-	client.SetMaxRetries(d.Get("max_retries").(int))
+	if maxRetries, ok := d.Get("max_retries").(int); ok {
+		client.SetMaxRetries(maxRetries)
+	}
 
-	MaxHTTPRetriesCCC = d.Get("max_retries_ccc").(int)
+	if maxHTTPRetriesCCC, ok := d.Get("max_retries_ccc").(int); ok {
+		MaxHTTPRetriesCCC = maxHTTPRetriesCCC
+	}
 
 	// Try and get the token from the config or token helper
 	token, err := GetToken(d)
@@ -173,9 +142,9 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	// Attempt to use auth/<mount>login if 'auth_login' is provided in provider config
-	authLoginI := d.Get("auth_login").([]interface{})
-	if len(authLoginI) > 1 {
-		return "", fmt.Errorf("auth_login block may appear only once")
+	authLoginI, ok := d.Get("auth_login").([]interface{})
+	if ok && len(authLoginI) > 1 {
+		return nil, fmt.Errorf("auth_login block may appear only once")
 	}
 
 	if len(authLoginI) == 1 {
@@ -214,8 +183,8 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		return nil, errors.New("no vault token found")
 	}
 
-	skipChildToken := d.Get("skip_child_token").(bool)
-	if !skipChildToken {
+	skipChildToken, ok := d.Get("skip_child_token").(bool)
+	if ok && !skipChildToken {
 		err := setChildToken(d, client)
 		if err != nil {
 			return nil, err
@@ -223,14 +192,82 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	// Set the namespace to the requested namespace, if provided
-	namespace := d.Get(consts.FieldNamespace).(string)
-	if namespace != "" {
+	namespace, ok := d.Get(consts.FieldNamespace).(string)
+	if ok && namespace != "" {
 		client.SetNamespace(namespace)
 	}
 
+	// Store the client for later use
+	p.client = client
+
+	return p.client, nil
+}
+
+// GetNSClient returns a namespaced Vault client.
+// The provided namespace will always be set relative to the default client's
+// namespace.
+func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
+	if err := p.validate(); err != nil {
+		return nil, err
+	}
+
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	if ns == "" {
+		return nil, fmt.Errorf("empty namespace not allowed")
+	}
+
+	ns = strings.Trim(ns, "/")
+	if root, ok := p.resourceData.GetOk(consts.FieldNamespace); ok && root.(string) != "" {
+		ns = fmt.Sprintf("%s/%s", root, ns)
+	}
+
+	if p.clientCache == nil {
+		p.clientCache = make(map[string]*api.Client)
+	}
+
+	if v, ok := p.clientCache[ns]; ok {
+		return v, nil
+	}
+
+	c, err := p.client.Clone()
+	if err != nil {
+		return nil, err
+	}
+
+	c.SetNamespace(ns)
+	p.clientCache[ns] = c
+
+	return c, nil
+}
+
+func (p *ProviderMeta) validate() error {
+	_, err := p.GetClient()
+	if err != nil {
+		return fmt.Errorf("could not init client: %w", err)
+	}
+
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	if p.client == nil {
+		return fmt.Errorf("root api.Client not set, init with NewProviderMeta()")
+	}
+
+	if p.resourceData == nil {
+		return fmt.Errorf("provider ResourceData not set, init with NewProviderMeta()")
+	}
+
+	return nil
+}
+
+// NewProviderMeta sets up the Provider to service Vault requests.
+// It is meant to be used as a schema.ConfigureFunc.
+func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	return &ProviderMeta{
 		resourceData: d,
-		client:       client,
+		client:       nil,
 	}, nil
 }
 
@@ -276,7 +313,7 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 		return p.GetNSClient(ns)
 	}
 
-	return p.GetClient(), nil
+	return p.GetClient()
 }
 
 func setChildToken(d *schema.ResourceData, c *api.Client) error {
@@ -375,11 +412,11 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 }
 
 func GetToken(d *schema.ResourceData) (string, error) {
-	if token := d.Get("token").(string); token != "" {
+	if token, ok := d.Get("token").(string); ok && token != "" {
 		return token, nil
 	}
 
-	if addAddr := d.Get("add_address_to_env").(string); addAddr == "true" {
+	if addAddr, ok := d.Get("add_address_to_env").(string); ok && addAddr == "true" {
 		if addr := d.Get("address").(string); addr != "" {
 			addrEnvVar := api.EnvVaultAddress
 			if current, exists := os.LookupEnv(addrEnvVar); exists {

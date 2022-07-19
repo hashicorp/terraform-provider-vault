@@ -287,7 +287,11 @@ provider "vault" {
 
 func testAssertClientNamespace(expectedNS string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		if err != nil {
+			return err
+		}
+
 		actualNS := client.Headers().Get(helper.NamespaceHeaderName)
 		if actualNS != expectedNS {
 			return fmt.Errorf("expected namespace %v, actual %v", expectedNS, actualNS)

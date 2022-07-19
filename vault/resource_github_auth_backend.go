@@ -212,5 +212,10 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	return authMountDisable(meta.(*provider.ProviderMeta).GetClient(), d.Id())
+	client, err := meta.(*provider.ProviderMeta).GetClient()
+	if err != nil {
+		return fmt.Errorf("error obtaining Vault client: %w", err)
+	}
+
+	return authMountDisable(client, d.Id())
 }

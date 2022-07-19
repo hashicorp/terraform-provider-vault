@@ -212,7 +212,10 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 			{
 				// test unmounted backend
 				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					if err != nil {
+						t.Fatal(err)
+					}
 
 					if err := client.Sys().Unmount(path); err != nil {
 						t.Fatal(err)
@@ -338,8 +341,12 @@ func testPKICertRevocation(path string, store *testPKICertStore) resource.TestCh
 		if store.cert == "" {
 			return fmt.Errorf("certificate in %#v is empty", store)
 		}
+		client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		if err != nil {
+			return err
+		}
 
-		addr := testProvider.Meta().(*provider.ProviderMeta).GetClient().Address()
+		addr := client.Address()
 		url := fmt.Sprintf("%s/v1/%s/crl", addr, path)
 		c := cleanhttp.DefaultClient()
 		resp, err := c.Get(url)

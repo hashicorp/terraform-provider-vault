@@ -595,7 +595,10 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 				Config: testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, backend, testConnURL, secondaryRootUsername, secondaryRootPassword, 10),
 				PreConfig: func() {
 					path := fmt.Sprintf("%s/rotate-root/%s", backend, name)
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					if err != nil {
+						t.Fatal(err)
+					}
 
 					resp, err := client.Logical().Write(path, map[string]interface{}{})
 					if err != nil {

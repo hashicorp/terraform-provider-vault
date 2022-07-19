@@ -239,7 +239,11 @@ resource "vault_auth_backend" "test" {
 
 func checkAuthMount(backend string, checker func(*api.AuthMount) error) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		if err != nil {
+			return err
+		}
+
 		auths, err := client.Sys().ListAuth()
 		if err != nil {
 			return fmt.Errorf("error reading back auth: %s", err)

@@ -35,7 +35,10 @@ func TestMFATOTPBasic(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					if err != nil {
+						t.Fatal(err)
+					}
 
 					resp, err := client.Logical().Read(mfaTOTPPath(path))
 					if err != nil {

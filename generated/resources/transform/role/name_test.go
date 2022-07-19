@@ -61,7 +61,10 @@ func TestRoleName(t *testing.T) {
 }
 
 func destroy(s *terraform.State) error {
-	client := nameTestProvider.SchemaProvider().Meta().(*provider.ProviderMeta).GetClient()
+	client, err := nameTestProvider.SchemaProvider().Meta().(*provider.ProviderMeta).GetClient()
+	if err != nil {
+		return err
+	}
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_transform_role_name" {

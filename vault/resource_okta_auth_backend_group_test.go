@@ -111,7 +111,10 @@ func testAccOktaAuthBackendGroup_InitialCheck(s *terraform.State) error {
 
 func testAccOktaAuthBackendGroup_Destroyed(path, groupName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		if err != nil {
+			return err
+		}
 
 		group, err := client.Logical().Read(fmt.Sprintf("/auth/%s/groups/%s", path, groupName))
 		if err != nil {

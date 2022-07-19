@@ -370,7 +370,10 @@ func TestAccKubernetesAuthBackendConfig_localCA(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					if err != nil {
+						t.Fatal(err)
+					}
 
 					path := kubernetesAuthBackendConfigPath(backend)
 					if _, err := client.Logical().Write(path, map[string]interface{}{

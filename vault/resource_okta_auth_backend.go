@@ -289,7 +289,12 @@ func oktaAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func oktaAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	return isOktaAuthBackendPresent(meta.(*provider.ProviderMeta).GetClient(), d.Id())
+	client, err := meta.(*provider.ProviderMeta).GetClient()
+	if err != nil {
+		return true, fmt.Errorf("error obtaining Vault client: %w", err)
+	}
+
+	return isOktaAuthBackendPresent(client, d.Id())
 }
 
 func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {

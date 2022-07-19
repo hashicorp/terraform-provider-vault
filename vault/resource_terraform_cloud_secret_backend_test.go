@@ -51,7 +51,10 @@ func TestTerraformCloudSecretBackend(t *testing.T) {
 }
 
 func testAccTerraformCloudSecretBackendCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	if err != nil {
+		return err
+	}
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {

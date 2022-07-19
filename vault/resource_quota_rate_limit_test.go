@@ -67,7 +67,10 @@ func TestQuotaRateLimit(t *testing.T) {
 
 func testQuotaRateLimitCheckDestroy(rateLimits []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		if err != nil {
+			return err
+		}
 
 		for _, name := range rateLimits {
 			resp, err := client.Logical().Read(quotaRateLimitPath(name))

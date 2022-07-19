@@ -96,7 +96,10 @@ func testPkiSecretBackendConfigUrlsEmptyRead(s *terraform.State) error {
 func listPkiPaths(s *terraform.State) ([]string, error) {
 	var paths []string
 
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	if err != nil {
+		return nil, err
+	}
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {

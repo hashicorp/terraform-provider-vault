@@ -40,7 +40,11 @@ func TestAccIdentityOidc(t *testing.T) {
 }
 
 func testAccCheckIdentityOidcDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+	if err != nil {
+		return err
+	}
+
 	path := identityOidcPathTemplate
 
 	resp, err := client.Logical().Read(path)
