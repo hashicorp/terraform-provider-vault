@@ -40,6 +40,11 @@ func TestAccKubernetesSecretCredentialsDataSource(t *testing.T) {
 	})
 }
 
+// To run this test, Vault needs to be running in Kubernetes or the following
+// vault_kubernetes_secret_backend fields need to be set:
+//  - kubernetes_host
+//  - kubernetes_ca_cert
+//  - service_account_jwt
 func testDataSourceKubernetesServiceAccountTokenConfig(backend, name string) string {
 	return fmt.Sprintf(`
 resource "vault_kubernetes_secret_backend" "backend" {
