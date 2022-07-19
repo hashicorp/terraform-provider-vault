@@ -49,7 +49,10 @@ func kvSecretDataSource() *schema.Resource {
 }
 
 func kvSecretDataSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*provider.ProviderMeta).GetClient()
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	path := d.Get(consts.FieldPath).(string)
 
