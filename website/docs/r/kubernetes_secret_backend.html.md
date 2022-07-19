@@ -3,7 +3,7 @@ layout: "vault"
 page_title: "Vault: vault_kubernetes_secret_backend resource"
 sidebar_current: "docs-vault-resource-kubernetes-secret-backend"
 description: |-
-Creates a Kubernetes Secrets Engine in Vault.
+  Creates a Kubernetes Secrets Engine in Vault.
 ---
 
 # vault\_kubernetes\_secret\_backend
@@ -65,3 +65,11 @@ Additionally, the following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+The Kubernetes secret backend can be imported using its `path` e.g.
+
+```
+$ terraform import vault_kubernetes_secret_backend.config kubernetes
+```
