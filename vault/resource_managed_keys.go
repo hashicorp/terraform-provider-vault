@@ -302,7 +302,7 @@ func getKeyNameFromConfig(d *schema.ResourceData, configType string) string {
 	return d.Get(stateKey).(string)
 }
 
-func readManagedKeysConfigBlock(d *schema.ResourceData, keyType string, sm schemaMap) (string, map[string]interface{}) {
+func getManagedKeysConfigData(d *schema.ResourceData, keyType string, sm schemaMap) (string, map[string]interface{}) {
 	data := map[string]interface{}{}
 	var name string
 
@@ -332,7 +332,7 @@ func managedKeysWrite(ctx context.Context, d *schema.ResourceData, meta interfac
 	}
 
 	if _, ok := d.GetOk(consts.FieldAWS); ok {
-		awsKeyName, awsData := readManagedKeysConfigBlock(d, consts.FieldAWS, managedKeysAWSConfigSchema())
+		awsKeyName, awsData := getManagedKeysConfigData(d, consts.FieldAWS, managedKeysAWSConfigSchema())
 		awsKeyPath := getManagedKeysPath(kmsTypeAWS, awsKeyName)
 
 		if _, err := client.Logical().Write(awsKeyPath, awsData); err != nil {
@@ -341,7 +341,7 @@ func managedKeysWrite(ctx context.Context, d *schema.ResourceData, meta interfac
 	}
 
 	if _, ok := d.GetOk(consts.FieldPKCS); ok {
-		pkcsKeyName, pkcsData := readManagedKeysConfigBlock(d, consts.FieldPKCS, managedKeysPKCSConfigSchema())
+		pkcsKeyName, pkcsData := getManagedKeysConfigData(d, consts.FieldPKCS, managedKeysPKCSConfigSchema())
 		pkcsKeyPath := getManagedKeysPath(kmsTypePKCS, pkcsKeyName)
 
 		if _, err := client.Logical().Write(pkcsKeyPath, pkcsData); err != nil {
@@ -350,7 +350,7 @@ func managedKeysWrite(ctx context.Context, d *schema.ResourceData, meta interfac
 	}
 
 	if _, ok := d.GetOk(consts.FieldAzure); ok {
-		azureKeyName, azureData := readManagedKeysConfigBlock(d, consts.FieldAzure, managedKeysAzureConfigSchema())
+		azureKeyName, azureData := getManagedKeysConfigData(d, consts.FieldAzure, managedKeysAzureConfigSchema())
 		azureKeyPath := getManagedKeysPath(kmsTypeAzure, azureKeyName)
 
 		if _, err := client.Logical().Write(azureKeyPath, azureData); err != nil {
