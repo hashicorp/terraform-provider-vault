@@ -79,7 +79,8 @@ jobs:
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
         run: |
-          export TF_VAULT_VERSION=$(echo ${{ matrix.image }} | awk -F: '{match($NF, /^([0-9]+\.[0-9]+\.[0-9]+)/, a); printf("%s", a[1])}')
+          export TF_VAULT_VERSION=$(echo ${{ matrix.image }} | \
+           awk -F: '{match($NF, /^([0-9]+\.[0-9]+\.[0-9]+)/); printf("%s", substr($NF, RSTART, RLENGTH))}')
           [ -n "${TF_VAULT_VERSION}" ] || (echo "could not get vault version from matrix.image: ${{ matrix.image }}" >&2 ; exit 1)
           make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"
