@@ -83,6 +83,7 @@ There may be additional variables for specific tests. Consult the specific test(
     - `ARM_CLIENT_ID`
     - `ARM_CLIENT_SECRET`
     - `ARM_RESOURCE_GROUP`
+    - `TF_VAULT_VERSION`
 4. Run `make testacc`
 
 If you wish to run specific tests, use the `TESTARGS` environment variable:

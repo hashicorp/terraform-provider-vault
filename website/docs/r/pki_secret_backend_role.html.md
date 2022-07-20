@@ -51,7 +51,7 @@ The following arguments are supported:
 
 * `allow_localhost` - (Optional) Flag to allow certificates for localhost
 
-* `allowed_domains` - (Optional) List of allowed domains for certificates 
+* `allowed_domains` - (Optional) List of allowed domains for certificates
 
 * `allowed_domains_template` - (Optional) Flag, if set, `allowed_domains` can be specified using identity template expressions such as `{{identity.entity.aliases.<mount accessor>.name}}`.
 
@@ -112,7 +112,47 @@ The following arguments are supported:
 
 * `require_cn` - (Optional) Flag to force CN usage
 
-* `policy_identifiers` - (Optional) Specify the list of allowed policies IODs
+* `policy_identifiers` - (Optional) Specify the list of allowed policies OIDs. Use with Vault 1.10 or before. For Vault 1.11+, use `policy_identifier` blocks instead
+
+* `policy_identifier` - (Optional) (Vault 1.11+ only) A block for specifying policy identifers. The `policy_identifier` block can be repeated, and supports the following arguments:
+
+   - `oid` - (Required) The OID for the policy identifier
+
+   - `notice` - (Optional) A notice for the policy identifier
+
+   - `cps` - (Optional) The URL of the CPS for the policy identifier
+
+   Example usage:
+```hcl
+resource "vault_mount" "pki" {
+  path                      = "pki"
+  type                      = "pki"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds     = 86400
+}
+
+resource "vault_pki_secret_backend_role" "role" {
+  backend          = vault_mount.pki.path
+  name             = "my_role"
+  ttl              = 3600
+  allow_ip_sans    = true
+  key_type         = "rsa"
+  key_bits         = 4096
+  allowed_domains  = ["example.com", "my.domain"]
+  allow_subdomains = true
+
+  policy_identifier {
+    oid = "1.3.6.1.4.1.7.8"
+    notice= "I am a user Notice"
+  }
+  policy_identifier {
+    oid = "1.3.6.1.4.1.44947.1.2.4"
+    cps ="https://example.com"
+  }
+}
+```
+
+
 
 * `basic_constraints_valid_for_non_ca` - (Optional) Flag to mark basic constraints valid when issuing non-CA certificates
 

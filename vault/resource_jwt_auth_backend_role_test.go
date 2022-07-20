@@ -13,6 +13,8 @@ import (
 )
 
 func TestAccJWTAuthBackendRole_import(t *testing.T) {
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
 	resource.Test(t, resource.TestCase{
@@ -69,6 +71,8 @@ func TestAccJWTAuthBackendRole_import(t *testing.T) {
 						"not_before_leeway", "120"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"verbose_oidc_logging", "true"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"user_claim_json_pointer", "true"),
 				),
 			},
 			{
@@ -82,9 +86,10 @@ func TestAccJWTAuthBackendRole_import(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendRole_basic(t *testing.T) {
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
@@ -117,6 +122,8 @@ func TestAccJWTAuthBackendRole_basic(t *testing.T) {
 						"bound_claims_type", "string"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"user_claim", "https://vault/user"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"user_claim_json_pointer", "false"),
 				),
 			},
 		},
@@ -197,9 +204,10 @@ func TestAccJWTAuthBackendRole_update(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendRole_full(t *testing.T) {
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
@@ -261,9 +269,10 @@ func TestAccJWTAuthBackendRole_full(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendRoleOIDC_full(t *testing.T) {
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+
 	backend := acctest.RandomWithPrefix("oidc")
 	role := acctest.RandomWithPrefix("test-role")
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
@@ -324,6 +333,10 @@ func TestAccJWTAuthBackendRoleOIDC_full(t *testing.T) {
 						"claim_mappings.preferred_language", "language"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"verbose_oidc_logging", "true"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"user_claim_json_pointer", "true"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"max_age", "120"),
 				),
 			},
 		},
@@ -365,6 +378,8 @@ func TestAccJWTAuthBackendRoleOIDC_disableParsing(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendRole_fullUpdate(t *testing.T) {
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+
 	backend := acctest.RandomWithPrefix("jwt")
 	role := acctest.RandomWithPrefix("test-role")
 
@@ -415,6 +430,8 @@ func TestAccJWTAuthBackendRole_fullUpdate(t *testing.T) {
 			"verbose_oidc_logging", "true"),
 		resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 			"bound_claims.%", "0"),
+		resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+			"user_claim_json_pointer", "true"),
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -479,6 +496,8 @@ func TestAccJWTAuthBackendRole_fullUpdate(t *testing.T) {
 						"not_before_leeway", "0"),
 					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
 						"verbose_oidc_logging", "false"),
+					resource.TestCheckResourceAttr("vault_jwt_auth_backend_role.role",
+						"user_claim_json_pointer", "false"),
 				),
 			},
 			// Repeat test case again to remove attributes like `bound_claims`
@@ -521,8 +540,8 @@ resource "vault_auth_backend" "jwt" {
 
 resource "vault_jwt_auth_backend_role" "role" {
   backend = vault_auth_backend.jwt.path
-	role_name = "%s"
-	role_type = "jwt"
+  role_name = "%s"
+  role_type = "jwt"
 
   bound_audiences = ["https://myco.test"]
   user_claim = "https://vault/user"
@@ -538,8 +557,8 @@ resource "vault_auth_backend" "jwt" {
 
 resource "vault_jwt_auth_backend_role" "role" {
   backend = vault_auth_backend.jwt.path
-	role_name = "%s"
-	role_type = "jwt"
+  role_name = "%s"
+  role_type = "jwt"
 
   bound_audiences = ["https://myco.test"]
   user_claim = "https://vault/user"
@@ -574,6 +593,7 @@ resource "vault_jwt_auth_backend_role" "role" {
   not_before_leeway = 120
 
   verbose_oidc_logging = true
+  user_claim_json_pointer = true
 }`, backend, role)
 }
 
@@ -618,6 +638,8 @@ resource "vault_jwt_auth_backend_role" "role" {
   }
 
   verbose_oidc_logging = true
+  user_claim_json_pointer = true
+  max_age = 120
 }`, backend, role)
 }
 
@@ -662,8 +684,8 @@ resource "vault_auth_backend" "jwt" {
 
 resource "vault_jwt_auth_backend_role" "role" {
   backend = vault_auth_backend.jwt.path
-	role_name = "%s"
-	role_type = "jwt"
+  role_name = "%s"
+  role_type = "jwt"
 
   bound_subject = "sl29dlldsfj3uECzsU3Sbmh0F29Fios1@update"
   token_bound_cidrs = ["10.150.0.0/20", "10.152.0.0/20"]
@@ -679,5 +701,6 @@ resource "vault_jwt_auth_backend_role" "role" {
     department = "engineering-*-admin"
     sector = "7g"
   }
+  user_claim_json_pointer = false
 }`, backend, role)
 }

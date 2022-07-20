@@ -27,8 +27,9 @@ const gcpJSONCredentials string = `
 `
 
 func TestGCPAuthBackend_basic(t *testing.T) {
-	path := resource.PrefixedUniqueId("gcp-basic-")
+	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
 
+	path := resource.PrefixedUniqueId("gcp-basic-")
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
@@ -37,6 +38,66 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
 				Check:  testGCPAuthBackendCheck_attrs(),
+			},
+			{
+				Config: testGCPAuthBackendConfig_update(path, gcpJSONCredentials),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testGCPAuthBackendCheck_attrs(),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.#", "1"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.%", "4"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.api", "www.googleapis.com"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.iam", "iam.googleapis.com"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.crm", "cloudresourcemanager.googleapis.com"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.compute", "compute.googleapis.com"),
+				),
+			},
+			{
+				Config: testGCPAuthBackendConfig_update_partial(path, gcpJSONCredentials),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testGCPAuthBackendCheck_attrs(),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.#", "1"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.%", "4"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.api", ""),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.iam", ""),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.crm", "example.com:9200"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.0.compute", "compute.example.com"),
+				),
+			},
+			{
+				ResourceName:      "vault_gcp_auth_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"credentials",
+				},
+			},
+			{
+				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testGCPAuthBackendCheck_attrs(),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+						"custom_endpoint.#", "0"),
+				),
+			},
+			{
+				ResourceName:      "vault_gcp_auth_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"credentials",
+				},
 			},
 		},
 	})
@@ -107,13 +168,51 @@ func testGCPAuthBackendCheck_attrs() resource.TestCheckFunc {
 func testGCPAuthBackendConfig_basic(path, credentials string) string {
 	return fmt.Sprintf(`
 variable "json_credentials" {
-  type = string
+  type    = string
   default = %q
 }
 
 resource "vault_gcp_auth_backend" "test" {
-  path                          = %q
-  credentials                   = var.json_credentials
+  path        = %q
+  credentials = var.json_credentials
+}
+`, credentials, path)
+}
+
+func testGCPAuthBackendConfig_update(path, credentials string) string {
+	return fmt.Sprintf(`
+variable "json_credentials" {
+  type    = string
+  default = %q
+}
+
+resource "vault_gcp_auth_backend" "test" {
+  path        = %q
+  credentials = var.json_credentials
+  custom_endpoint {
+    api     = "www.googleapis.com"
+    iam     = "iam.googleapis.com"
+    crm     = "cloudresourcemanager.googleapis.com"
+    compute = "compute.googleapis.com"
+  }
+}
+`, credentials, path)
+}
+
+func testGCPAuthBackendConfig_update_partial(path, credentials string) string {
+	return fmt.Sprintf(`
+variable "json_credentials" {
+  type    = string
+  default = %q
+}
+
+resource "vault_gcp_auth_backend" "test" {
+  path        = %q
+  credentials = var.json_credentials
+  custom_endpoint {
+    crm     = "example.com:9200"
+    compute = "compute.example.com"
+  }
 }
 `, credentials, path)
 }

@@ -28,8 +28,9 @@ jobs:
       fail-fast: false
       matrix:
         # TODO: enable 1.9 job once the provider is Vault version aware
-        #image: ["vault-enterprise:1.9-ent", "vault-enterprise:1.10-ent"]
-        image: ["vault-enterprise:1.10-ent"]
+        image:
+        - "vault-enterprise:1.10.4-ent"
+        - "vault-enterprise:1.11.0-ent"
     container:
       image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     services:
@@ -77,7 +78,10 @@ jobs:
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
         run: |
-          make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true
+          export TF_VAULT_VERSION=$(echo ${{ matrix.image }} | \
+           awk -F: '{match($NF, /^([0-9]+\.[0-9]+\.[0-9]+)/); printf("%s", substr($NF, RSTART, RLENGTH))}')
+          [ -n "${TF_VAULT_VERSION}" ] || (echo "could not get vault version from matrix.image: ${{ matrix.image }}" >&2 ; exit 1)
+          make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json
