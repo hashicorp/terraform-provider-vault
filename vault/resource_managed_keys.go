@@ -74,7 +74,7 @@ func getCommonManagedKeysSchema() schemaMap {
 			Type:     schema.TypeBool,
 			Optional: true,
 			Computed: true,
-			Description: " Controls the ability for Vault to replace through " +
+			Description: "Controls the ability for Vault to replace through " +
 				"generation or importing a key into the configured backend even " +
 				"if a key is present, if set to false those operations are forbidden " +
 				"if a key exists.",
@@ -149,7 +149,7 @@ func managedKeysPKCSConfigSchema() schemaMap {
 		consts.FieldTokenLabel: {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "The PIN for login",
+			Description: "The slot token label to use",
 		},
 		consts.FieldCurve: {
 			Type:     schema.TypeString,
@@ -167,9 +167,10 @@ func managedKeysPKCSConfigSchema() schemaMap {
 				"'allow_generate_key' is true",
 		},
 		consts.FieldForceRWSession: {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "The PIN for login",
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "Force all operations to open up a read-write session " +
+				"to the HSM",
 		},
 	}
 
