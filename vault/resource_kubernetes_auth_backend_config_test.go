@@ -347,6 +347,8 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 }
 
 func TestAccKubernetesAuthBackendConfig_localCA(t *testing.T) {
+	t.Skip("Skip until VAULT-6698 is resolved")
+
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
 

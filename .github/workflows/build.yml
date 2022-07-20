@@ -28,7 +28,6 @@ jobs:
       fail-fast: false
       matrix:
         # TODO: enable 1.9 job once the provider is Vault version aware
-        #image: ["vault-enterprise:1.9-ent", "vault-enterprise:1.10-ent"]
         image:
         - "vault-enterprise:1.10.4-ent"
         - "vault-enterprise:1.11.0-ent"
