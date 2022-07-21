@@ -62,7 +62,6 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 			"username": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    false,
 				Sensitive:   true,
 				Description: "Specifies the RabbitMQ management administrator username",
 			},
