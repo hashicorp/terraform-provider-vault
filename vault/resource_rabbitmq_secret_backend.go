@@ -57,20 +57,20 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 			"connection_uri": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
+				ForceNew:    false,
 				Description: "Specifies the RabbitMQ connection URI.",
 			},
 			"username": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
+				ForceNew:    false,
 				Sensitive:   true,
 				Description: "Specifies the RabbitMQ management administrator username",
 			},
 			"password": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
+				ForceNew:    false,
 				Sensitive:   true,
 				Description: "Specifies the RabbitMQ management administrator password",
 			},
@@ -78,7 +78,7 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     true,
-				ForceNew:    true,
+				ForceNew:    false,
 				Description: "Specifies whether to verify connection URI, username, and password.",
 			},
 			"password_policy": {
@@ -197,7 +197,7 @@ func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
 	}
 	if d.HasChanges("connection_uri", "username", "password", "verify_connection", "username_template", "password_policy") {
-		log.Printf("[DEBUG] Updating connecion credentials at %q", path+"/config/connection")
+		log.Printf("[DEBUG] Updating connection credentials at %q", path+"/config/connection")
 		data := map[string]interface{}{
 			"connection_uri":    d.Get("connection_uri").(string),
 			"username":          d.Get("username").(string),
