@@ -29,6 +29,7 @@ func TestManagedKeys(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "aws.0.key_bits", "2048"),
 					resource.TestCheckResourceAttr(resourceName, "aws.0.key_type", "RSA"),
 					resource.TestCheckResourceAttr(resourceName, "aws.0.kms_key", "alias/test_identifier_string"),
+					resource.TestCheckResourceAttrSet(resourceName, "aws.0.uuid"),
 				),
 			},
 		},

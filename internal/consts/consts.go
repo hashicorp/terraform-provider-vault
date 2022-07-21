@@ -52,6 +52,7 @@ const (
 	FieldAllowReplaceKey  = "allow_replace_key"
 	FieldAllowStoreKey    = "allow_store_key"
 	FieldAnyMount         = "any_mount"
+	FieldUUID             = "uuid"
 
 	/*
 		common environment variables

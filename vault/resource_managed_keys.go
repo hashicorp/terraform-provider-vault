@@ -94,6 +94,12 @@ func getCommonManagedKeysSchema() schemaMap {
 			Computed:    true,
 			Description: "Allow usage from any mount point within the namespace if 'true'",
 		},
+
+		consts.FieldUUID: {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "ID of the managed key read from Vault",
+		},
 	}
 }
 
@@ -383,6 +389,14 @@ func readAWSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 			data[k] = v
 		}
 
+		// TF can only have fields as lowercase
+		// but Vault returns uppercase field name 'UUID'
+		if k == consts.FieldUUID {
+			if v, ok := resp.Data["UUID"]; ok {
+				data[k] = v
+			}
+		}
+
 		// set these from TF config since they are
 		// returned as "redacted"
 		if k == "access_key" || k == "secret_key" {
@@ -415,6 +429,14 @@ func readAzureManagedKeys(d *schema.ResourceData, meta interface{}) error {
 		if v, ok := resp.Data[k]; ok {
 			data[k] = v
 		}
+
+		// TF can only have fields as lowercase
+		// but Vault returns uppercase field name 'UUID'
+		if k == consts.FieldUUID {
+			if v, ok := resp.Data["UUID"]; ok {
+				data[k] = v
+			}
+		}
 	}
 	if err := d.Set(consts.FieldAzure, []map[string]interface{}{data}); err != nil {
 		return err
@@ -442,6 +464,14 @@ func readPKCSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 			data[k] = v
 		}
 
+		// TF can only have fields as lowercase
+		// but Vault returns uppercase field name 'UUID'
+		if k == consts.FieldUUID {
+			if v, ok := resp.Data["UUID"]; ok {
+				data[k] = v
+			}
+		}
+
 		// set these from TF config since they are
 		// returned as "redacted"
 		if k == "pin" {
@@ -456,7 +486,7 @@ func readPKCSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func managedKeysRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func managedKeysRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	diags := diag.Diagnostics{}
 
 	if _, ok := d.GetOk(consts.FieldAWS); ok {
@@ -492,7 +522,7 @@ func managedKeysRead(ctx context.Context, d *schema.ResourceData, meta interface
 	return nil
 }
 
-func managedKeysDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func managedKeysDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
