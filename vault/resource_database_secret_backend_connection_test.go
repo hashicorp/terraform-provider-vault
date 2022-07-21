@@ -174,7 +174,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 	host1TLS := fmt.Sprintf("couchbases://%s", host1)
 
 	getBase64PEM := func(host string) string {
-		resp, err := http.Get(fmt.Sprintf("http://%s:8091"))
+		resp, err := http.Get(fmt.Sprintf("http://%s:8091", host))
 		defer resp.Body.Close()
 
 		if err != nil {

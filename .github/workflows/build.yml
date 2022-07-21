@@ -67,14 +67,14 @@ jobs:
       couchbase-1:
         image: docker.io/couchbase/server-sandbox:7.1.1
         options: >-
-          --health-cmd "curl -f 'http://Administrator:password@127.0.0.1:8091/sampleBuckets"
+          --health-cmd "curl -f http://Administrator:password@127.0.0.1:8091/sampleBuckets"
           --health-interval 1s
           --health-timeout 5s
           --health-retries 60
       couchbase-2:
         image: docker.io/couchbase/server-sandbox:7.1.1
         options: >-
-          --health-cmd "curl -f 'http://Administrator:password@127.0.0.1:8091/sampleBuckets"
+          --health-cmd "curl -f http://Administrator:password@127.0.0.1:8091/sampleBuckets"
           --health-interval 1s
           --health-timeout 5s
           --health-retries 60
