@@ -200,6 +200,8 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle_multiple_intermediates(t *testing.T) {
+	t.Skip("Skip until VAULT-6700 is resolved")
+
 	random := strconv.Itoa(acctest.RandInt())
 	rootPath := "pki-root-" + random
 	intermediate1Path := "pki-intermediate1-" + random

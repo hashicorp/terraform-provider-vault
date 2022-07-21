@@ -52,7 +52,11 @@ func kvSecretResource(name string) *schema.Resource {
 }
 
 func kvSecretWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*provider.ProviderMeta).GetClient()
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
 	path := d.Get(consts.FieldPath).(string)
 
 	var secretData map[string]interface{}
@@ -81,7 +85,10 @@ func kvSecretRead(_ context.Context, d *schema.ResourceData, meta interface{}) d
 		return diag.FromErr(err)
 	}
 
-	client := meta.(*provider.ProviderMeta).GetClient()
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	log.Printf("[DEBUG] Reading %s from Vault", path)
 	secret, err := client.Logical().Read(path)
@@ -108,7 +115,11 @@ func kvSecretRead(_ context.Context, d *schema.ResourceData, meta interface{}) d
 }
 
 func kvSecretDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*provider.ProviderMeta).GetClient()
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting vault_kv_secret from %q", path)

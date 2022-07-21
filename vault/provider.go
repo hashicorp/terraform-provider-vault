@@ -268,6 +268,10 @@ var (
 			Resource:      updateSchemaResource(azureAccessCredentialsDataSource()),
 			PathInventory: []string{"/azure/creds/{role}"},
 		},
+		"vault_kubernetes_service_account_token": {
+			Resource:      updateSchemaResource(kubernetesServiceAccountTokenDataSource()),
+			PathInventory: []string{"/kubernetes/creds/{role}"},
+		},
 		"vault_generic_secret": {
 			Resource:      updateSchemaResource(genericSecretDataSource()),
 			PathInventory: []string{"/secret/data/{path}"},
@@ -779,6 +783,14 @@ var (
 		"vault_kv_secret_v2": {
 			Resource:      updateSchemaResource(kvSecretV2Resource("vault_kv_secret_v2")),
 			PathInventory: []string{"/secret/data/{path}"},
+		},
+		"vault_kubernetes_secret_backend": {
+			Resource:      updateSchemaResource(kubernetesSecretBackendResource()),
+			PathInventory: []string{"/kubernetes/config"},
+		},
+		"vault_kubernetes_secret_backend_role": {
+			Resource:      updateSchemaResource(kubernetesSecretBackendRoleResource()),
+			PathInventory: []string{"/kubernetes/roles/{name}"},
 		},
 		"vault_managed_keys": {
 			Resource:      updateSchemaResource(managedKeysResource()),

@@ -188,6 +188,10 @@ func createMount(d *schema.ResourceData, client *api.Client, path string, mountT
 }
 
 func mountUpdate(d *schema.ResourceData, meta interface{}) error {
+	return updateMount(d, meta, false)
+}
+
+func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return err
@@ -248,7 +252,7 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 		break
 	}
 
-	return mountRead(d, meta)
+	return readMount(d, meta, excludeType)
 }
 
 func mountDelete(d *schema.ResourceData, meta interface{}) error {
