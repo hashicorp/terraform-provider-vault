@@ -68,7 +68,6 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 			"password": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    false,
 				Sensitive:   true,
 				Description: "Specifies the RabbitMQ management administrator password",
 			},
