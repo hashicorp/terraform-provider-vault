@@ -1021,11 +1021,10 @@ func getCouchbaseConnectionDetailsFromResponse(d *schema.ResourceData, prefix st
 	if v, ok := data["insecure_tls"]; ok {
 		result["insecure_tls"] = v.(bool)
 	}
-	if v, ok := data["base64_pem"]; ok {
-		result["base64_pem"] = v.(string)
-	} else if v, ok := d.GetOk(prefix + "base64_pem"); ok {
-		result["base64_pem"] = v.(string)
-	}
+
+	// base64_pem maps to base64pem in Vault
+	result["base64_pem"] = data["base64pem"]
+
 	if v, ok := data["bucket_name"]; ok {
 		result["bucket_name"] = v.(string)
 	}
@@ -1241,7 +1240,8 @@ func setCouchbaseDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 		data["insecure_tls"] = v.(bool)
 	}
 	if v, ok := d.GetOkExists(prefix + "base64_pem"); ok {
-		data["base64_pem"] = v.(string)
+		// base64_pem maps to base64pem in Vault
+		data["base64pem"] = v.(string)
 	}
 	if v, ok := d.GetOkExists(prefix + "bucket_name"); ok {
 		data["bucket_name"] = v.(string)

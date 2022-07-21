@@ -64,6 +64,10 @@ jobs:
         env:
           POSTGRES_PASSWORD: secret
           POSTGRES_DB: database
+      couchbase-1:
+        image: docker.io/couchbase/server-sandbox:7.1.1
+      couchbase-2:
+        image: docker.io/couchbase/server-sandbox:7.1.1
     steps:
       - uses: actions/checkout@v3
       - name: Acceptance Tests
@@ -77,11 +81,16 @@ jobs:
           MONGODB_URL: "mongodb://root:mongodb@mongo:27017/admin?ssl=false"
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
+          COUCHBASE_USERNAME: Administrator
+          COUCHBASE_PASSWORD: password
+          COUCHBASE_HOST_1: couchbase-1
+          COUCHBASE_HOST_2: couchbase-2
         run: |
           export TF_VAULT_VERSION=$(echo ${{ matrix.image }} | \
            awk -F: '{match($NF, /^([0-9]+\.[0-9]+\.[0-9]+)/); printf("%s", substr($NF, RSTART, RLENGTH))}')
           [ -n "${TF_VAULT_VERSION}" ] || (echo "could not get vault version from matrix.image: ${{ matrix.image }}" >&2 ; exit 1)
-          make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
+          #make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
+          make testacc-ent TESTARGS='-test.v -test.parallel=10 -test.run=TestAccDatabaseSecretBackendConnection_couchbase' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json

@@ -194,6 +194,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "couchbase.0.tls", "false"),
 					resource.TestCheckResourceAttr(resourceName, "couchbase.0.insecure_tls", "false"),
 					resource.TestCheckResourceAttr(resourceName, "couchbase.0.base64_pem", ""),
+					resource.TestCheckResourceAttr(resourceName, "couchbase.0.bucket_name", "travel-sample"),
 				),
 			},
 			{
@@ -996,15 +997,17 @@ resource "vault_mount" "db" {
   path = "%s"
   type = "database"
 }
+
 resource "vault_database_secret_backend_connection" "test" {
   backend                  = vault_mount.db.path
   name                     = "%s"
   allowed_roles            = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
   couchbase {
-    hosts    = ["%s", "%s"]
-    username = "%s"
-    password = "%s"
+    hosts       = ["%s", "%s"]
+    username    = "%s"
+    password    = "%s"
+    bucket_name = "travel-sample"
   }
 }
 `, path, name, host1, host2, username, password)
