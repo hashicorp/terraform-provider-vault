@@ -40,6 +40,7 @@ The following arguments are supported:
 * `backend` - (Required) The PKI secret backend the resource belongs to.
 
 * `type` - (Required) Type of intermediate to create. Must be either \"exported\" or \"internal\"
+  or \"kms\"
 
 * `common_name` - (Required) CN of intermediate to create
 
@@ -74,6 +75,13 @@ The following arguments are supported:
 * `street_address` - (Optional) The street address
 
 * `postal_code` - (Optional) The postal code
+
+* `managed_key_name` - (Optional) The name of the previously configured managed key. This field is
+  required if `type` is `kms`  and it conflicts with `managed_key_id`
+
+* `managed_key_id` - (Optional) The ID of the previously configured managed key. This field is
+  required if `type` is `kms` and it conflicts with `managed_key_name`
+
 
 ## Attributes Reference
 

@@ -113,7 +113,7 @@ func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
 
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, "backend", path),
-		resource.TestCheckResourceAttr(resourceName, "type", "internal"),
+		resource.TestCheckResourceAttr(resourceName, "type", "kms"),
 		resource.TestCheckResourceAttr(resourceName, "common_name", "test Root CA"),
 		resource.TestCheckResourceAttr(resourceName, "managed_key_name", managedKeyName),
 	}
@@ -188,9 +188,9 @@ resource "vault_mount" "test" {
 
 resource "vault_pki_secret_backend_root_cert" "test" {
   backend          = vault_mount.pki.path
-  type             = "internal"
+  type             = "kms"
   common_name      = "test Root CA"
-  managed_key_name = vault_managed_keys.keys.aws.0.name
+  managed_key_id = vault_managed_keys.keys.aws.0.uuid
 }
 `, managedKeyName, accessKey, secretKey, path)
 

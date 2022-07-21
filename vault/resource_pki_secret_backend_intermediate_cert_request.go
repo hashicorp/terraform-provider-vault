@@ -170,10 +170,18 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Description: "The private key type.",
 			},
 			"managed_key_name": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The name of the previously configured managed key.",
-				ForceNew:    true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The name of the previously configured managed key.",
+				ForceNew:      true,
+				ConflictsWith: []string{"managed_key_id"},
+			},
+			"managed_key_id": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The ID of the previously configured managed key.",
+				ForceNew:      true,
+				ConflictsWith: []string{"managed_key_name"},
 			},
 		},
 	}
@@ -227,6 +235,7 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 		"street_address":       d.Get("street_address").(string),
 		"postal_code":          d.Get("postal_code").(string),
 		"managed_key_name":     d.Get("managed_key_name").(string),
+		"managed_key_id":       d.Get("managed_key_id").(string),
 	}
 
 	if intermediateType != "kms" {

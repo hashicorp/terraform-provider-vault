@@ -248,11 +248,20 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				Description: "The certificate's serial number, hex formatted.",
 			},
 			"managed_key_name": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Computed:    true,
-				Description: "The name of the previously configured managed key.",
-				ForceNew:    true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				Description:   "The name of the previously configured managed key.",
+				ForceNew:      true,
+				ConflictsWith: []string{"managed_key_id"},
+			},
+			"managed_key_id": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				Description:   "The ID of the previously configured managed key.",
+				ForceNew:      true,
+				ConflictsWith: []string{"managed_key_name"},
 			},
 		},
 	}
@@ -314,6 +323,7 @@ func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) er
 		"street_address":       d.Get("street_address").(string),
 		"postal_code":          d.Get("postal_code").(string),
 		"managed_key_name":     d.Get("managed_key_name").(string),
+		"managed_key_id":       d.Get("managed_key_id").(string),
 	}
 
 	if rootType != "kms" {
