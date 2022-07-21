@@ -221,7 +221,7 @@ func TestAccDatabaseSecretBackendConnection_couchbaseTLS(t *testing.T) {
 	host1TLS := fmt.Sprintf("couchbases://%s", host1)
 
 	getBase64PEM := func(host string) string {
-		resp, err := http.Get(fmt.Sprintf("http://%s:8091", host))
+		resp, err := http.Get(fmt.Sprintf("http://%s:8091/pools/default/certificate", host))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1097,6 +1097,7 @@ resource "vault_database_secret_backend_connection" "test" {
     hosts       = ["%s"]
     username    = "%s"
     password    = "%s"
+    tls         = true
     base64_pem  = "%s"
   }
 }
