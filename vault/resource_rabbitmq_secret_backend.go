@@ -75,7 +75,6 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     true,
-				ForceNew:    false,
 				Description: "Specifies whether to verify connection URI, username, and password.",
 			},
 			"password_policy": {
