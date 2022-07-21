@@ -14,7 +14,6 @@ import (
 
 func TestPkiSecretBackendConfigCA_basic(t *testing.T) {
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
-	keyName := acctest.RandomWithPrefix("kms-key")
 
 	resourceName := "vault_pki_secret_backend_config_ca.test"
 
@@ -24,18 +23,16 @@ func TestPkiSecretBackendConfigCA_basic(t *testing.T) {
 		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendConfigCAConfig_basic(path, keyName),
+				Config: testPkiSecretBackendConfigCAConfig_basic(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", path),
-					resource.TestCheckResourceAttr(resourceName, "type", "kms"),
-					resource.TestCheckResourceAttr(resourceName, "managed_key_name", keyName),
 				),
 			},
 		},
 	})
 }
 
-func testPkiSecretBackendConfigCAConfig_basic(path, keyName string) string {
+func testPkiSecretBackendConfigCAConfig_basic(path string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -45,23 +42,9 @@ resource "vault_mount" "test" {
   max_lease_ttl_seconds = "8640000"
 }
 
-resource "vault_managed_keys" "test" {
-
-  aws {
-    name       = "%s"
-    access_key = "ASIAKBASDADA09090"
-    secret_key = "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz"
-    key_bits   = "2048"
-    key_type   = "RSA"
-    kms_key    = "alias/test_identifier_string"
-  }
-}
-
 resource "vault_pki_secret_backend_config_ca" "test" {
   depends_on       = ["vault_mount.test"]
   backend          = vault_mount.test.path
-  managed_key_name = vault_managed_keys.test.aws.0.name
-  type             = "kms"
   pem_bundle       = <<EOT
 -----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAwvEHeJCXnFgi88rE1dTX6FHdBPK0wSjedh0ywVnCZxLWbBv/
@@ -113,5 +96,5 @@ MUR4qFxeUOW/GJGccMUd
 -----END CERTIFICATE-----
 EOT
 }
-`, path, keyName)
+`, path)
 }

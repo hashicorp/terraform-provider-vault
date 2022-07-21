@@ -31,20 +31,6 @@ func pkiSecretBackendConfigCAResource() *schema.Resource {
 				ForceNew:    true,
 				Sensitive:   true,
 			},
-			"type": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Description: "If present, and set to 'kms', stores " +
-					"the provided key material in the KMS key.",
-				Default:  "internal",
-				ForceNew: true,
-			},
-			"managed_key_name": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The name of the previously configured KMS Key.",
-				ForceNew:    true,
-			},
 		},
 	}
 }
@@ -59,12 +45,8 @@ func pkiSecretBackendConfigCACreate(ctx context.Context, d *schema.ResourceData,
 
 	path := pkiSecretBackendConfigCAPath(backend)
 
-	data := map[string]interface{}{}
-
-	for _, k := range []string{"pem_bundle", "type", "managed_key_name"} {
-		if v, ok := d.GetOk(k); ok {
-			data[k] = v
-		}
+	data := map[string]interface{}{
+		"pem_bundle": d.Get("pem_bundle").(string),
 	}
 
 	log.Printf("[DEBUG] Creating CA config on PKI secret backend %q", backend)
