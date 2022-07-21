@@ -57,7 +57,6 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 			"connection_uri": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    false,
 				Description: "Specifies the RabbitMQ connection URI.",
 			},
 			"username": {
