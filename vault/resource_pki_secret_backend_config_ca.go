@@ -26,7 +26,7 @@ func pkiSecretBackendConfigCAResource() *schema.Resource {
 			},
 			"pem_bundle": {
 				Type:        schema.TypeString,
-				Optional:    true,
+				Required:    true,
 				Description: "The key and certificate PEM bundle.",
 				ForceNew:    true,
 				Sensitive:   true,
