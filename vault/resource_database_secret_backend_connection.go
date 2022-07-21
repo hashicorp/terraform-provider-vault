@@ -1228,10 +1228,10 @@ func setCouchbaseDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 		data["hosts"] = strings.Join(hosts, ",")
 	}
 	if v, ok := d.GetOk(prefix + "username"); ok {
-		data["username"] = v.(string)
+		data["username"] = v
 	}
 	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
+		data["password"] = v
 	}
 	if v, ok := d.GetOkExists(prefix + "tls"); ok {
 		data["tls"] = v.(bool)
@@ -1239,15 +1239,15 @@ func setCouchbaseDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	if v, ok := d.GetOkExists(prefix + "insecure_tls"); ok {
 		data["insecure_tls"] = v.(bool)
 	}
-	if v, ok := d.GetOkExists(prefix + "base64_pem"); ok {
+	if v, ok := d.GetOk(prefix + "base64_pem"); ok {
 		// base64_pem maps to base64pem in Vault
-		data["base64pem"] = v.(string)
+		data["base64pem"] = v
 	}
-	if v, ok := d.GetOkExists(prefix + "bucket_name"); ok {
-		data["bucket_name"] = v.(string)
+	if v, ok := d.GetOk(prefix + "bucket_name"); ok {
+		data["bucket_name"] = v
 	}
-	if v, ok := d.GetOkExists(prefix + "username_template"); ok {
-		data["username_template"] = v.(int)
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		data["username_template"] = v
 	}
 }
 

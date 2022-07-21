@@ -171,24 +171,6 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 	host2 := values[1]
 	username := values[2]
 	password := values[3]
-	host1TLS := fmt.Sprintf("couchbases://%s", host1)
-
-	getBase64PEM := func(host string) string {
-		resp, err := http.Get(fmt.Sprintf("http://%s:8091", host))
-		defer resp.Body.Close()
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		b, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return base64.StdEncoding.EncodeToString(b)
-	}
-
-	host1Base64PEM := getBase64PEM(host1)
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineCouchbase.DefaultPluginName()
@@ -225,6 +207,45 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"verify_connection", "couchbase.0.password"},
 			},
+		},
+	})
+}
+
+func TestAccDatabaseSecretBackendConnection_couchbaseTLS(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineCouchbase)
+
+	values := testutil.SkipTestEnvUnset(t, "COUCHBASE_HOST_1", "COUCHBASE_USERNAME", "COUCHBASE_PASSWORD")
+	host1 := values[0]
+	username := values[1]
+	password := values[2]
+	host1TLS := fmt.Sprintf("couchbases://%s", host1)
+
+	getBase64PEM := func(host string) string {
+		resp, err := http.Get(fmt.Sprintf("http://%s:8091", host))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		defer resp.Body.Close()
+
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return base64.StdEncoding.EncodeToString(b)
+	}
+
+	host1Base64PEM := getBase64PEM(host1)
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineCouchbase.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+	resourceName := testDefaultDatabaseSecretBackendResource
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretBackendConnectionConfig_couchbaseTLS(
 					name, backend, host1TLS, username, password, host1Base64PEM),
@@ -242,7 +263,6 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "couchbase.0.tls", "true"),
 					resource.TestCheckResourceAttr(resourceName, "couchbase.0.insecure_tls", "false"),
 					resource.TestCheckResourceAttr(resourceName, "couchbase.0.base64_pem", host1Base64PEM),
-					resource.TestCheckResourceAttr(resourceName, "couchbase.0.bucket_name", "travel-sample"),
 				),
 			},
 			{
@@ -1077,7 +1097,6 @@ resource "vault_database_secret_backend_connection" "test" {
     hosts       = ["%s"]
     username    = "%s"
     password    = "%s"
-    bucket_name = "travel-sample"
     base64_pem  = "%s"
   }
 }
