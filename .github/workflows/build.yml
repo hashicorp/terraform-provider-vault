@@ -67,16 +67,16 @@ jobs:
       couchbase-1:
         image: docker.io/couchbase/server-sandbox:7.1.1
         ports:
-          - 8091
-          - 8092
-          - 8093
-          - 8094
-          - 11207
-          - 11210
-          - 18091
-          - 18092
-          - 18093
-          - 18094
+          - 8091:8091
+          - 8092:8092
+          - 8093:8093
+          - 8094:8094
+          - 11207:11207
+          - 11210:11210
+          - 18091:18091
+          - 18092:18092
+          - 18093:18093
+          - 18094:18094
         options: >-
           --health-cmd "curl -f http://Administrator:password@127.0.0.1:8091/sampleBuckets"
           --health-interval 1s
@@ -85,16 +85,16 @@ jobs:
       couchbase-2:
         image: docker.io/couchbase/server-sandbox:7.1.1
         ports:
-          - 8091
-          - 8092
-          - 8093
-          - 8094
-          - 11207
-          - 11210
-          - 18091
-          - 18092
-          - 18093
-          - 18094
+          - 8091:8091
+          - 8092:8092
+          - 8093:8093
+          - 8094:8094
+          - 11207:11207
+          - 11210:11210
+          - 18091:18091
+          - 18092:18092
+          - 18093:18093
+          - 18094:18094
         options: >-
           --health-cmd "curl -f http://Administrator:password@127.0.0.1:8091/sampleBuckets"
           --health-interval 1s
