@@ -17,6 +17,9 @@ func identityOIDCScopeResource() *schema.Resource {
 		Update: identityOIDCScopeCreateUpdate,
 		Read:   identityOIDCScopeRead,
 		Delete: identityOIDCScopeDelete,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -106,6 +109,9 @@ func identityOIDCScopeRead(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error setting state key %q on OIDC Scope %q, err=%w", k, path, err)
 		}
 	}
+
+	// @TODO parse name from path and set it to TF state
+	// if err := d.Set("name", d.Get())
 
 	return nil
 }

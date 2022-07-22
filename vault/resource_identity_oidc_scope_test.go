@@ -42,6 +42,12 @@ func TestAccIdentityOIDCScope(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "template", updatedScope),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"name"},
+			},
 		},
 	})
 }
