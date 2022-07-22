@@ -29,7 +29,7 @@ jobs:
       matrix:
         # TODO: enable 1.9 job once the provider is Vault version aware
         image:
-        - "vault-enterprise:1.10.4-ent"
+        #- "vault-enterprise:1.10.4-ent"
         - "vault-enterprise:1.11.0-ent"
     container:
       image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
@@ -82,24 +82,23 @@ jobs:
           --health-interval 1s
           --health-timeout 5s
           --health-retries 60
-      couchbase-2:
-        image: docker.io/couchbase/server-sandbox:7.1.1
-        ports:
-          - 8091:8091
-          - 8092:8092
-          - 8093:8093
-          - 8094:8094
-          - 11207:11207
-          - 11210:11210
-          - 18091:18091
-          - 18092:18092
-          - 18093:18093
-          - 18094:18094
-        options: >-
-          --health-cmd "curl -f http://Administrator:password@127.0.0.1:8091/sampleBuckets"
-          --health-interval 1s
-          --health-timeout 5s
-          --health-retries 60
+      #couchbase-2:
+      #  image: docker.io/couchbase/server-sandbox:7.1.1
+      #  ports:
+      #    - 8091:8091
+      #    - 8092:8092
+      #    - 8093:8093
+      #    - 8094:8094
+      #    - 11207:11207
+      #    - 11210:11210
+      #    - 18091:18091
+      #    - 18092:18092
+      #    - 18093:18093
+      #  options: >-
+      #    --health-cmd "curl -f http://Administrator:password@127.0.0.1:8091/sampleBuckets"
+      #    --health-interval 1s
+      #    --health-timeout 5s
+      #    --health-retries 60
     steps:
       - uses: actions/checkout@v3
       - name: Acceptance Tests
@@ -116,7 +115,7 @@ jobs:
           COUCHBASE_USERNAME: Administrator
           COUCHBASE_PASSWORD: password
           COUCHBASE_HOST_1: couchbase-1
-          COUCHBASE_HOST_2: couchbase-2
+          #COUCHBASE_HOST_2: couchbase-2
         run: |
           export TF_VAULT_VERSION=$(echo ${{ matrix.image }} | \
            awk -F: '{match($NF, /^([0-9]+\.[0-9]+\.[0-9]+)/); printf("%s", substr($NF, RSTART, RLENGTH))}')
