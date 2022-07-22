@@ -261,7 +261,7 @@ func TestAccDatabaseSecretBackendConnection_couchbaseTLS(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "couchbase.0.username", username),
 					resource.TestCheckResourceAttr(resourceName, "couchbase.0.password", password),
 					resource.TestCheckResourceAttr(resourceName, "couchbase.0.tls", "true"),
-					resource.TestCheckResourceAttr(resourceName, "couchbase.0.insecure_tls", "false"),
+					resource.TestCheckResourceAttr(resourceName, "couchbase.0.insecure_tls", "true"),
 					resource.TestCheckResourceAttr(resourceName, "couchbase.0.base64_pem", host1Base64PEM),
 				),
 			},
@@ -1094,12 +1094,13 @@ resource "vault_database_secret_backend_connection" "test" {
   allowed_roles            = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
   couchbase {
-    hosts       = ["%s"]
-    username    = "%s"
-    password    = "%s"
-    tls         = true
-    base64_pem  = "%s"
-    bucket_name = "travel-sample"
+    hosts        = ["%s"]
+    username     = "%s"
+    password     = "%s"
+    tls          = true
+    insecure_tls = true
+    base64_pem   = "%s"
+    bucket_name  = "travel-sample"
   }
 }
 `, path, name, host1, username, password, base64PEM)
