@@ -1099,6 +1099,7 @@ resource "vault_database_secret_backend_connection" "test" {
     password    = "%s"
     tls         = true
     base64_pem  = "%s"
+    bucket_name = "travel-sample"
   }
 }
 `, path, name, host1, username, password, base64PEM)

@@ -94,6 +94,7 @@ jobs:
       #    - 18091:18091
       #    - 18092:18092
       #    - 18093:18093
+      #    - 18094:18094
       #  options: >-
       #    --health-cmd "curl -f http://Administrator:password@127.0.0.1:8091/sampleBuckets"
       #    --health-interval 1s
