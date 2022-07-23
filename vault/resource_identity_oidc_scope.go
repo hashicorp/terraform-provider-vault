@@ -26,10 +26,9 @@ func identityOIDCScopeResource() *schema.Resource {
 				Required:    true,
 			},
 			"template": {
-				Type:         schema.TypeString,
-				Description:  "The template string for the scope. This may be provided as escaped JSON or base64 encoded JSON.",
-				Optional:     true,
-				ValidateFunc: ValidateDataJSONFunc("vault_identity_oidc_scope"),
+				Type:        schema.TypeString,
+				Description: "The template string for the scope. This may be provided as escaped JSON or base64 encoded JSON.",
+				Optional:    true,
 			},
 			"description": {
 				Type:        schema.TypeString,
