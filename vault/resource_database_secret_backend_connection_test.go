@@ -213,7 +213,8 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_couchbase(name, backend, host, username, password),
+				Config: testAccDatabaseSecretBackendConnectionConfig_couchbase(
+					name, backend, host, username, password, ""),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					append(commonChecks,
 						resource.TestCheckResourceAttr(resourceName, "couchbase.0.hosts.#", "1"),
@@ -231,7 +232,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"verify_connection", "couchbase.0.password"},
 			},
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_couchbaseTLS(
+				Config: testAccDatabaseSecretBackendConnectionConfig_couchbase(
 					name, backend, hostTLS, username, password, host1Base64PEM),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					append(commonChecks,
@@ -1037,30 +1038,17 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, host, username, password)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_couchbase(name, path, host, username, password string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "db" {
-  path = "%s"
-  type = "database"
-}
+func testAccDatabaseSecretBackendConnectionConfig_couchbase(name, path, host1, username, password, base64PEM string) string {
+	var tlsConfig string
+	if base64PEM != "" {
+		tlsConfig = fmt.Sprintf(`
+    tls          = true
+    insecure_tls = true
+    base64_pem   = "%s"
+`, base64PEM)
+	}
 
-resource "vault_database_secret_backend_connection" "test" {
-  backend                  = vault_mount.db.path
-  name                     = "%s"
-  allowed_roles            = ["dev", "prod"]
-  root_rotation_statements = ["FOOBAR"]
-  couchbase {
-    hosts       = ["%s"]
-    username    = "%s"
-    password    = "%s"
-    bucket_name = "travel-sample"
-  }
-}
-`, path, name, host, username, password)
-}
-
-func testAccDatabaseSecretBackendConnectionConfig_couchbaseTLS(name, path, host1, username, password, base64PEM string) string {
-	return fmt.Sprintf(`
+	config := fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
   type = "database"
@@ -1075,13 +1063,13 @@ resource "vault_database_secret_backend_connection" "test" {
     hosts        = ["%s"]
     username     = "%s"
     password     = "%s"
-    tls          = true
-    insecure_tls = true
-    base64_pem   = "%s"
     bucket_name  = "travel-sample"
+%s
   }
 }
-`, path, name, host1, username, password, base64PEM)
+`, path, name, host1, username, password, tlsConfig)
+
+	return config
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_elasticsearch(name, path, host, username, password string) string {
