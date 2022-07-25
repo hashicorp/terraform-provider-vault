@@ -48,7 +48,6 @@ func jwtAuthBackendResource() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Required:    false,
-				ForceNew:    true,
 				Optional:    true,
 				Description: "The description of the auth backend",
 			},
