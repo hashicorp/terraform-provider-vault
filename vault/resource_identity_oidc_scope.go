@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -17,6 +18,9 @@ func identityOIDCScopeResource() *schema.Resource {
 		Update: identityOIDCScopeCreateUpdate,
 		Read:   identityOIDCScopeRead,
 		Delete: identityOIDCScopeDelete,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -104,6 +108,11 @@ func identityOIDCScopeRead(d *schema.ResourceData, meta interface{}) error {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return fmt.Errorf("error setting state key %q on OIDC Scope %q, err=%w", k, path, err)
 		}
+	}
+
+	name := strings.Trim(strings.TrimPrefix(path, identityOIDCScopePathPrefix), "/")
+	if err := d.Set("name", name); err != nil {
+		return fmt.Errorf("error setting state key %q on OIDC Scope %q, err=%w", "name", path, err)
 	}
 
 	return nil
