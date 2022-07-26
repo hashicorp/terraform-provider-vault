@@ -32,6 +32,7 @@ const (
 	FieldLocal                    = "local"
 	FieldSealWrap                 = "seal_wrap"
 	FieldExternalEntropyAccess    = "external_entropy_access"
+	FieldMountAccessor            = "mount_accessor"
 
 	/*
 		common environment variables
