@@ -347,7 +347,10 @@ func TestAccKubernetesAuthBackendConfig_fullUpdate(t *testing.T) {
 }
 
 func TestAccKubernetesAuthBackendConfig_localCA(t *testing.T) {
-	t.Skip("Skip until VAULT-6698 is resolved")
+	isAboveVersionCutoff := testutil.CheckTestVaultVersion(t, "1.11")
+	if isAboveVersionCutoff {
+		t.Skip("Skip until test is fixed for 1.11")
+	}
 
 	backend := acctest.RandomWithPrefix("kubernetes")
 	jwt := kubernetesJWT
