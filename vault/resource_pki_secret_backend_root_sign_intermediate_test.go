@@ -5,6 +5,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -118,7 +119,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_default(t *testing.T) {
 
 	store := &testPKICertStore{}
 	resourceName := "vault_pki_secret_backend_root_sign_intermediate.test"
-	checks := testCheckPKISecretRootSignIntermediate(resourceName, rootPath, commonName, format)
+	checks := testCheckPKISecretRootSignIntermediate(t, resourceName, rootPath, commonName, format)
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -155,7 +156,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
+				Check:  testCheckPKISecretRootSignIntermediate(t, "vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
 			},
 		},
 	})
@@ -174,7 +175,7 @@ func TestPkiSecretBackendRootSignIntermediate_basic_der(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
+				Check:  testCheckPKISecretRootSignIntermediate(t, "vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
 			},
 		},
 	})
@@ -193,15 +194,13 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, format, false),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
+				Check:  testCheckPKISecretRootSignIntermediate(t, "vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, format),
 			},
 		},
 	})
 }
 
 func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle_multiple_intermediates(t *testing.T) {
-	t.Skip("Skip until VAULT-6700 is resolved")
-
 	random := strconv.Itoa(acctest.RandInt())
 	rootPath := "pki-root-" + random
 	intermediate1Path := "pki-intermediate1-" + random
@@ -216,26 +215,44 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle_multiple_intermed
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_multiple_inter(rootPath, intermediate1Path, intermediate2Path, format),
-				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.two", intermediate1Path, commonName, format),
+				Check:  testCheckPKISecretRootSignIntermediate(t, "vault_pki_secret_backend_root_sign_intermediate.two", intermediate1Path, commonName, format),
 			},
 		},
 	})
 }
 
-func testCheckPKISecretRootSignIntermediate(res, path, commonName, format string) resource.TestCheckFunc {
-	return resource.ComposeTestCheckFunc(
-		resource.TestCheckResourceAttr(res, "backend", path),
-		resource.TestCheckResourceAttr(res, "common_name", commonName),
-		resource.TestCheckResourceAttr(res, "ou", "SubUnit"),
-		resource.TestCheckResourceAttr(res, "organization", "SubOrg"),
-		resource.TestCheckResourceAttr(res, "country", "US"),
-		resource.TestCheckResourceAttr(res, "locality", "San Francisco"),
-		resource.TestCheckResourceAttr(res, "province", "CA"),
-		resource.TestCheckResourceAttr(res, "format", format),
-		resource.TestCheckResourceAttrSet(res, "serial"),
-		assertPKICertificateBundle(res, format),
-		assertPKICAChain(res),
-	)
+func testCheckPKISecretRootSignIntermediate(t *testing.T, res, path, commonName, format string) resource.TestCheckFunc {
+	testNewParameters := testutil.CheckTestVaultVersion(t, "1.11")
+
+	if testNewParameters {
+		return resource.ComposeTestCheckFunc(
+			resource.TestCheckResourceAttr(res, "backend", path),
+			resource.TestCheckResourceAttr(res, "common_name", commonName),
+			resource.TestCheckResourceAttr(res, "ou", "SubUnit"),
+			resource.TestCheckResourceAttr(res, "organization", "SubOrg"),
+			resource.TestCheckResourceAttr(res, "country", "US"),
+			resource.TestCheckResourceAttr(res, "locality", "San Francisco"),
+			resource.TestCheckResourceAttr(res, "province", "CA"),
+			resource.TestCheckResourceAttr(res, "format", format),
+			resource.TestCheckResourceAttrSet(res, "serial"),
+			assertPKICertificateBundle(res, format),
+			assertPKICAChain(res, 3),
+		)
+	} else {
+		return resource.ComposeTestCheckFunc(
+			resource.TestCheckResourceAttr(res, "backend", path),
+			resource.TestCheckResourceAttr(res, "common_name", commonName),
+			resource.TestCheckResourceAttr(res, "ou", "SubUnit"),
+			resource.TestCheckResourceAttr(res, "organization", "SubOrg"),
+			resource.TestCheckResourceAttr(res, "country", "US"),
+			resource.TestCheckResourceAttr(res, "locality", "San Francisco"),
+			resource.TestCheckResourceAttr(res, "province", "CA"),
+			resource.TestCheckResourceAttr(res, "format", format),
+			resource.TestCheckResourceAttrSet(res, "serial"),
+			assertPKICertificateBundle(res, format),
+			assertPKICAChain(res, 2),
+		)
+	}
 }
 
 func assertPKICertificateBundle(res, expectedFormat string) resource.TestCheckFunc {
@@ -273,27 +290,56 @@ func assertPKICertificateBundle(res, expectedFormat string) resource.TestCheckFu
 	}
 }
 
-func assertPKICAChain(res string) resource.TestCheckFunc {
+func assertPKICAChain(res string, count int) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[res]
 		if !ok {
 			return fmt.Errorf("resource %q not found in the state", res)
 		}
 
-		if err := resource.TestCheckResourceAttr(res, "ca_chain.#", "2")(s); err != nil {
+		countStr := strconv.Itoa(count)
+
+		if err := resource.TestCheckResourceAttr(res, "ca_chain.#", countStr)(s); err != nil {
 			return err
 		}
 
-		expected := []string{
-			rs.Primary.Attributes["issuing_ca"],
-			rs.Primary.Attributes["certificate"],
-		}
-		actual := []string{
-			rs.Primary.Attributes["ch_chain.0"],
-			rs.Primary.Attributes["ch_chain.1"],
+		var expected []string
+		parseCert := func(data string) error {
+			var b *pem.Block
+			rest := []byte(data)
+			for {
+				b, rest = pem.Decode(rest)
+				if b == nil {
+					break
+				}
+
+				cert := strings.Trim(string(pem.EncodeToMemory(b)), "\n")
+				expected = append(expected, cert)
+			}
+
+			return nil
 		}
 
-		if reflect.DeepEqual(expected, actual) {
+		for _, k := range []string{"issuing_ca", "certificate"} {
+			if err := parseCert(rs.Primary.Attributes[k]); err != nil {
+				return err
+			}
+		}
+
+		var actual []string
+		for i := 0; i < count; i++ {
+			stateKey := fmt.Sprintf("ca_chain.%d", i)
+			actual = append(actual, rs.Primary.Attributes[stateKey])
+		}
+
+		if len(expected) != len(actual) {
+			return fmt.Errorf("expected %d CA chains, got %d", len(expected), len(actual))
+		}
+
+		sort.Strings(expected)
+		sort.Strings(actual)
+
+		if !reflect.DeepEqual(expected, actual) {
 			return fmt.Errorf("expected ca_chain %q, actual %q", expected, actual)
 		}
 
