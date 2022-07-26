@@ -64,6 +64,24 @@ jobs:
         env:
           POSTGRES_PASSWORD: secret
           POSTGRES_DB: database
+      couchbase:
+        image: docker.io/couchbase/server-sandbox:7.1.1
+        ports:
+          - 8091:8091
+          - 8092:8092
+          - 8093:8093
+          - 8094:8094
+          - 11207:11207
+          - 11210:11210
+          - 18091:18091
+          - 18092:18092
+          - 18093:18093
+          - 18094:18094
+        options: >-
+          --health-cmd "curl -f http://Administrator:password@127.0.0.1:8091/sampleBuckets"
+          --health-interval 1s
+          --health-timeout 5s
+          --health-retries 60
     steps:
       - uses: actions/checkout@v3
       - name: Acceptance Tests
@@ -77,9 +95,12 @@ jobs:
           MONGODB_URL: "mongodb://root:mongodb@mongo:27017/admin?ssl=false"
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
+          COUCHBASE_HOST: couchbase
+          COUCHBASE_USERNAME: Administrator
+          COUCHBASE_PASSWORD: password
         run: |
           export TF_VAULT_VERSION=$(echo ${{ matrix.image }} | \
-           awk -F: '{match($NF, /^([0-9]+\.[0-9]+\.[0-9]+)/); printf("%s", substr($NF, RSTART, RLENGTH))}')
+            awk -F: '{match($NF, /^([0-9]+\.[0-9]+\.[0-9]+)/); printf("%s", substr($NF, RSTART, RLENGTH))}')
           [ -n "${TF_VAULT_VERSION}" ] || (echo "could not get vault version from matrix.image: ${{ matrix.image }}" >&2 ; exit 1)
           make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"

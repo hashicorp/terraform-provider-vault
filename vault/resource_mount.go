@@ -32,7 +32,6 @@ func getMountSchema(excludes ...string) schemaMap {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Required:    false,
-			ForceNew:    false,
 			Description: "Human-friendly description of the mount",
 		},
 		"default_lease_ttl_seconds": {

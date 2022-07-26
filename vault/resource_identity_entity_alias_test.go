@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -31,7 +32,7 @@ func TestAccIdentityEntityAlias(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "name", nameEntity, "name"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntity, "id"),
-					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubA, "accessor"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, consts.FieldMountAccessor, nameGithubA, "accessor"),
 				),
 			},
 			{
@@ -136,8 +137,8 @@ resource "vault_identity_entity_alias" "test2" {
 				Config: fmt.Sprintf(configTmpl, alias+"-1", alias+"-2"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrPair(
-						aliasResource1, "mount_accessor",
-						aliasResource2, "mount_accessor"),
+						aliasResource1, consts.FieldMountAccessor,
+						aliasResource2, consts.FieldMountAccessor),
 					resource.TestCheckResourceAttr(
 						aliasResource1, "name", alias+"-1"),
 					resource.TestCheckResourceAttr(
@@ -165,8 +166,8 @@ resource "vault_identity_entity_alias" "test2" {
 				Config: fmt.Sprintf(configTmpl, alias, alias+"-2"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrPair(
-						aliasResource1, "mount_accessor",
-						aliasResource2, "mount_accessor"),
+						aliasResource1, consts.FieldMountAccessor,
+						aliasResource2, consts.FieldMountAccessor),
 					resource.TestCheckResourceAttr(
 						aliasResource1, "name", alias),
 					resource.TestCheckResourceAttr(
@@ -207,8 +208,8 @@ resource "vault_identity_entity_alias" "test2" {
 				Config: fmt.Sprintf(configTmpl, alias, alias+"-2"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrPair(
-						aliasResource1, "mount_accessor",
-						aliasResource2, "mount_accessor"),
+						aliasResource1, consts.FieldMountAccessor,
+						aliasResource2, consts.FieldMountAccessor),
 					resource.TestCheckResourceAttr(
 						aliasResource1, "name", alias),
 					resource.TestCheckResourceAttr(
@@ -244,7 +245,7 @@ func TestAccIdentityEntityAlias_Update(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "name", nameEntityA, "name"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntityA, "id"),
-					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubA, "accessor"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, consts.FieldMountAccessor, nameGithubA, "accessor"),
 				),
 			},
 			{
@@ -252,7 +253,7 @@ func TestAccIdentityEntityAlias_Update(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "name", nameEntityB, "name"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntityB, "id"),
-					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubB, "accessor"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, consts.FieldMountAccessor, nameGithubB, "accessor"),
 				),
 			},
 		},
@@ -302,7 +303,7 @@ func TestAccIdentityEntityAlias_Metadata(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "name", nameEntityA, "name"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntityA, "id"),
-					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubA, "accessor"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, consts.FieldMountAccessor, nameGithubA, "accessor"),
 					resource.TestCheckResourceAttr(nameEntityAlias, "custom_metadata.%", "1"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "custom_metadata.version", nameEntityA, "metadata.version"),
 				),
@@ -312,7 +313,7 @@ func TestAccIdentityEntityAlias_Metadata(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "name", nameEntityB, "name"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", nameEntityB, "id"),
-					resource.TestCheckResourceAttrPair(nameEntityAlias, "mount_accessor", nameGithubB, "accessor"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, consts.FieldMountAccessor, nameGithubB, "accessor"),
 					resource.TestCheckResourceAttr(nameEntityAlias, "custom_metadata.%", "1"),
 					resource.TestCheckResourceAttrPair(nameEntityAlias, "custom_metadata.version", nameEntityB, "metadata.version"),
 				),

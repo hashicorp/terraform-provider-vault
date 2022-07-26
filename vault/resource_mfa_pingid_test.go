@@ -37,7 +37,7 @@ func TestMFAPingIDBasic(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"mount_accessor", "username_format", "settings_file_base64"},
+				ImportStateVerifyIgnore: []string{consts.FieldMountAccessor, "username_format", "settings_file_base64"},
 			},
 		},
 	})
