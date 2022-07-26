@@ -68,7 +68,7 @@ variable "azure_account_key" {}
 
 resource "vault_raft_snapshot_agent_config" "azure_backups" {
   name             = "azure_backup"
-  interval_seconds = 60 # 24h
+  interval_seconds = 86400 # 24h
   retain           = 7
   path_prefix      = "/"
   storage_type     = "azure-blob"
