@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -28,7 +29,7 @@ func mfaOktaResource() *schema.Resource {
 				Description:  "Name of the MFA method.",
 				ValidateFunc: validateNoTrailingSlash,
 			},
-			"mount_accessor": {
+			consts.FieldMountAccessor: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -90,7 +91,7 @@ func mfaOktaRequestData(d *schema.ResourceData) map[string]interface{} {
 	}
 
 	fields := []string{
-		"name", "api_token", "mount_accessor",
+		"name", "api_token", consts.FieldMountAccessor,
 		"username_format", "org_name", "base_url",
 	}
 
@@ -136,7 +137,7 @@ func mfaOktaRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	fields := []string{
-		"name", "mount_accessor", "username_format",
+		"name", consts.FieldMountAccessor, "username_format",
 		"org_name", "base_url", "primary_email",
 		"id",
 	}
