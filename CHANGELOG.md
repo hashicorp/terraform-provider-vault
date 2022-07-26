@@ -1,3 +1,36 @@
+## 3.8.0 (July 26, 2022)
+FEATURES:
+* Adds support for Kubernetes secrets engine:
+  ([#1515](https://github.com/hashicorp/terraform-provider-vault/pull/1515))
+* PKI: Add support for CPS URL in custom policy identifiers:
+  ([#1495](https://github.com/hashicorp/terraform-provider-vault/pull/1495))
+
+IMPROVEMENTS:
+* Fix Import for OIDC Scope resource:
+  ([#1548](https://github.com/hashicorp/terraform-provider-vault/pull/1548))
+* Update entity alias creation to use entity lookup api: 
+  ([#1517](https://github.com/hashicorp/terraform-provider-vault/pull/1517))
+  ([#1552](https://github.com/hashicorp/terraform-provider-vault/pull/1552))
+* Add support for Consul secrets engine enhancements: 
+  ([#1518](https://github.com/hashicorp/terraform-provider-vault/pull/1518))
+* auth/gcp: adds `custom_endpoint` parameter to backend config: 
+  ([#1482](https://github.com/hashicorp/terraform-provider-vault/pull/1482))
+* auth/jwt: adds `user_claim_json_pointer` and `max_age` to roles:
+  ([#1478](https://github.com/hashicorp/terraform-provider-vault/pull/1478))
+
+BUGS:
+* Support updating backend descriptions: 
+ ([#1550](https://github.com/hashicorp/terraform-provider-vault/pull/1550))
+ ([#1543](https://github.com/hashicorp/terraform-provider-vault/pull/1543))
+* Properly set the `base64_pem` in Vault for Couchbase:
+ ([#1545](https://github.com/hashicorp/terraform-provider-vault/pull/1545))
+* Fix bug where some rabbitmq config changes trigger erroneous mount recreation:
+ ([#1542](https://github.com/hashicorp/terraform-provider-vault/pull/1542))
+* Update `*kv_secrets*` resources to support namespaces: 
+ ([#1529](https://github.com/hashicorp/terraform-provider-vault/pull/1529))
+* Do not validate JSON on OIDC scope template:
+ ([#1547](https://github.com/hashicorp/terraform-provider-vault/pull/1547))
+
 ## 3.7.0 (June 15, 2022)
 FEATURES: 
 * Support setting `namespace` by resource
