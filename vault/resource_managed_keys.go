@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -36,16 +37,15 @@ func managedKeysResource() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: managedKeysPKCSConfigSchema(),
 				},
-				MaxItems: 1,
 			},
 			consts.FieldAWS: {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Configuration block for AWS Managed Keys",
 				Elem: &schema.Resource{
 					Schema: managedKeysAWSConfigSchema(),
 				},
-				MaxItems: 1,
+				Set: hashManagedKeys,
 			},
 			consts.FieldAzure: {
 				Type:        schema.TypeList,
@@ -54,10 +54,20 @@ func managedKeysResource() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: managedKeysAzureConfigSchema(),
 				},
-				MaxItems: 1,
 			},
 		},
 	}
+}
+
+func hashManagedKeys(v interface{}) int {
+	var result int
+	if m, ok := v.(map[string]interface{}); ok {
+		if v, ok := m[consts.FieldName]; ok {
+			result = helper.HashCodeString(v.(string))
+		}
+	}
+
+	return result
 }
 
 func getCommonManagedKeysSchema() schemaMap {
@@ -309,14 +319,12 @@ func getKeyNameFromConfig(d *schema.ResourceData, configType string) string {
 	return d.Get(stateKey).(string)
 }
 
-func getManagedKeysConfigData(d *schema.ResourceData, keyType string, sm schemaMap) (string, map[string]interface{}) {
+func getManagedKeysConfigData(config map[string]interface{}, sm schemaMap) (string, map[string]interface{}) {
 	data := map[string]interface{}{}
 	var name string
 
-	blockField := keyType
 	for blockKey := range sm {
-		stateKey := fmt.Sprintf("%s.%d.%s", blockField, 0, blockKey)
-		if v, ok := d.GetOk(stateKey); ok {
+		if v, ok := config[blockKey]; ok {
 			data[blockKey] = v
 
 			if blockKey == consts.FieldName {
@@ -332,40 +340,65 @@ func getManagedKeysPath(keyType, name string) string {
 	return fmt.Sprintf("sys/managed-keys/%s/%s", keyType, name)
 }
 
-func managedKeysWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func writeManagedKeysData(d *schema.ResourceData, meta interface{}, providerType string) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
 
-	if _, ok := d.GetOk(consts.FieldAWS); ok {
-		awsKeyName, awsData := getManagedKeysConfigData(d, consts.FieldAWS, managedKeysAWSConfigSchema())
-		awsKeyPath := getManagedKeysPath(kmsTypeAWS, awsKeyName)
+	var keyType string
+	handlers := map[string]func() schemaMap{
+		kmsTypeAWS:   managedKeysAWSConfigSchema,
+		kmsTypePKCS:  managedKeysPKCSConfigSchema,
+		kmsTypeAzure: managedKeysAzureConfigSchema,
+	}
 
-		if _, err := client.Logical().Write(awsKeyPath, awsData); err != nil {
-			return diag.Errorf("error writing managed key %q, err=%s", awsKeyPath, err)
+	switch providerType {
+	case consts.FieldAWS:
+		keyType = kmsTypeAWS
+
+	case consts.FieldPKCS:
+		keyType = kmsTypePKCS
+
+	case consts.FieldAzure:
+		keyType = kmsTypeAzure
+	}
+
+	if mKeysBlocks, ok := d.GetOk(providerType); ok {
+		for _, data := range mKeysBlocks.(*schema.Set).List() {
+			keyName, data := getManagedKeysConfigData(data.(map[string]interface{}), handlers[keyType]())
+			path := getManagedKeysPath(keyType, keyName)
+
+			if _, err := client.Logical().Write(path, data); err != nil {
+				return diag.Errorf("error writing managed key %q, err=%s", path, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func managedKeysWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if _, ok := d.GetOk(consts.FieldAWS); ok {
+		if diag := writeManagedKeysData(d, meta, consts.FieldAWS); diag != nil {
+			return diag
 		}
 	}
 
 	if _, ok := d.GetOk(consts.FieldPKCS); ok {
-		pkcsKeyName, pkcsData := getManagedKeysConfigData(d, consts.FieldPKCS, managedKeysPKCSConfigSchema())
-		pkcsKeyPath := getManagedKeysPath(kmsTypePKCS, pkcsKeyName)
-
-		if _, err := client.Logical().Write(pkcsKeyPath, pkcsData); err != nil {
-			return diag.Errorf("error writing managed key %q, err=%s", pkcsKeyPath, err)
+		if diag := writeManagedKeysData(d, meta, consts.FieldPKCS); diag != nil {
+			return diag
 		}
 	}
 
 	if _, ok := d.GetOk(consts.FieldAzure); ok {
-		azureKeyName, azureData := getManagedKeysConfigData(d, consts.FieldAzure, managedKeysAzureConfigSchema())
-		azureKeyPath := getManagedKeysPath(kmsTypeAzure, azureKeyName)
-
-		if _, err := client.Logical().Write(azureKeyPath, azureData); err != nil {
-			return diag.Errorf("error writing managed key %q, err=%s", azureKeyPath, err)
+		if diag := writeManagedKeysData(d, meta, consts.FieldAzure); diag != nil {
+			return diag
 		}
 	}
 
-	d.SetId("sys/managed-keys")
+	// set ID to 'default'
+	d.SetId("default")
 
 	return managedKeysRead(ctx, d, meta)
 }
@@ -376,35 +409,55 @@ func readAWSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	awsKeyName := getKeyNameFromConfig(d, consts.FieldAWS)
-	awsKeyPath := getManagedKeysPath(kmsTypeAWS, awsKeyName)
-	resp, err := client.Logical().Read(awsKeyPath)
+	p := fmt.Sprintf("%s/%s", "sys/managed-keys", kmsTypeAWS)
+	resp, err := client.Logical().List(p)
 	if err != nil {
 		return err
 	}
 
+	if resp == nil {
+		return nil
+	}
+
 	data := map[string]interface{}{}
-	for k := range managedKeysAWSConfigSchema() {
-		if v, ok := resp.Data[k]; ok {
-			data[k] = v
-		}
+	s := &schema.Set{F: hashManagedKeys}
 
-		// TF can only have fields as lowercase
-		// but Vault returns uppercase field name 'UUID'
-		if k == consts.FieldUUID {
-			if v, ok := resp.Data["UUID"]; ok {
-				data[k] = v
+	if v, ok := resp.Data["keys"]; ok {
+		for _, name := range v.([]interface{}) {
+			path := getManagedKeysPath(kmsTypeAWS, name.(string))
+			resp, err := client.Logical().Read(path)
+			if err != nil {
+				return err
 			}
-		}
 
-		// set these from TF config since they are
-		// returned as "redacted"
-		if k == "access_key" || k == "secret_key" {
-			stateKey := fmt.Sprintf("%s.%d.%s", consts.FieldAWS, 0, k)
-			data[k] = d.Get(stateKey)
+			if resp == nil {
+				continue
+			}
+
+			for k := range managedKeysAWSConfigSchema() {
+				// TF can only have fields as lowercase
+				// but Vault returns uppercase field name 'UUID'
+				vaultKey := k
+				if k == consts.FieldUUID {
+					vaultKey = "UUID"
+				}
+
+				if v, ok := resp.Data[vaultKey]; ok {
+					// set these from TF config since they are
+					// returned as "redacted"
+					if k == "access_key" || k == "secret_key" {
+						stateKey := fmt.Sprintf("%s.%s.%s", consts.FieldAWS, name, k)
+						v = d.Get(stateKey)
+					}
+
+					data[k] = v
+				}
+			}
+			s.Add(data)
 		}
 	}
-	if err := d.Set(consts.FieldAWS, []map[string]interface{}{data}); err != nil {
+
+	if err := d.Set(consts.FieldAWS, s); err != nil {
 		return err
 	}
 
@@ -422,6 +475,10 @@ func readAzureManagedKeys(d *schema.ResourceData, meta interface{}) error {
 	resp, err := client.Logical().Read(azureKeyPath)
 	if err != nil {
 		return err
+	}
+
+	if resp == nil {
+		return nil
 	}
 
 	data := map[string]interface{}{}
@@ -454,6 +511,11 @@ func readPKCSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 	pkcsKeyName := getKeyNameFromConfig(d, consts.FieldPKCS)
 	pkcsKeyPath := getManagedKeysPath(kmsTypePKCS, pkcsKeyName)
 	resp, err := client.Logical().Read(pkcsKeyPath)
+
+	if resp == nil {
+		return nil
+	}
+
 	if err != nil {
 		return err
 	}
@@ -489,33 +551,58 @@ func readPKCSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 func managedKeysRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	diags := diag.Diagnostics{}
 
-	if _, ok := d.GetOk(consts.FieldAWS); ok {
-		err := readAWSManagedKeys(d, meta)
-		if err != nil {
-			diags = append(diags, diag.Diagnostic{
-				Severity: diag.Error,
-				Summary:  fmt.Sprintf("Failed to read AWS Managed Keys, err=%s", err),
-			})
-		}
+	err := readAWSManagedKeys(d, meta)
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("Failed to read AWS Managed Keys, err=%s", err),
+		})
 	}
 
-	if _, ok := d.GetOk(consts.FieldPKCS); ok {
-		err := readPKCSManagedKeys(d, meta)
-		if err != nil {
-			diags = append(diags, diag.Diagnostic{
-				Severity: diag.Error,
-				Summary:  fmt.Sprintf("Failed to read PKCS Managed Keys, err=%s", err),
-			})
-		}
+	err = readPKCSManagedKeys(d, meta)
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("Failed to read PKCS Managed Keys, err=%s", err),
+		})
 	}
 
-	if _, ok := d.GetOk(consts.FieldAzure); ok {
-		err := readAzureManagedKeys(d, meta)
-		if err != nil {
-			diags = append(diags, diag.Diagnostic{
-				Severity: diag.Error,
-				Summary:  fmt.Sprintf("Failed to read Azure Managed Keys, err=%s", err),
-			})
+	//err = readAzureManagedKeys(d, meta)
+	//if err != nil {
+	//	diags = append(diags, diag.Diagnostic{
+	//		Severity: diag.Error,
+	//		Summary:  fmt.Sprintf("Failed to read Azure Managed Keys, err=%s", err),
+	//	})
+	//}
+
+	return diags
+}
+
+func deleteManagedKeyType(d *schema.ResourceData, meta interface{}, keyType string) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
+	p := fmt.Sprintf("%s/%s", "sys/managed-keys", keyType)
+	resp, err := client.Logical().List(p)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if resp == nil {
+		return nil
+	}
+
+	if v, ok := resp.Data["keys"]; ok {
+		for _, name := range v.([]interface{}) {
+			path := getManagedKeysPath(keyType, name.(string))
+			log.Printf("[DEBUG] Deleting managed key %s", path)
+			_, err := client.Logical().Delete(path)
+			if err != nil {
+				return diag.Errorf("error deleting managed key %s", path)
+			}
+			log.Printf("[DEBUG] Deleted managed key %q", path)
 		}
 	}
 
@@ -523,45 +610,22 @@ func managedKeysRead(_ context.Context, d *schema.ResourceData, meta interface{}
 }
 
 func managedKeysDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return diag.FromErr(e)
-	}
-
 	if _, ok := d.GetOk(consts.FieldAWS); ok {
-		awsKeyName := getKeyNameFromConfig(d, consts.FieldAWS)
-		path := getManagedKeysPath(kmsTypeAWS, awsKeyName)
-
-		log.Printf("[DEBUG] Deleting managed key %s", path)
-		_, err := client.Logical().Delete(path)
-		if err != nil {
-			return diag.Errorf("error deleting managed key %s", path)
+		if diags := deleteManagedKeyType(d, meta, kmsTypeAWS); diags != nil {
+			return diags
 		}
-		log.Printf("[DEBUG] Deleted managed key %q", path)
-	}
-
-	if _, ok := d.GetOk(consts.FieldAzure); ok {
-		azureKeyName := getKeyNameFromConfig(d, consts.FieldAzure)
-		path := getManagedKeysPath(kmsTypeAzure, azureKeyName)
-
-		log.Printf("[DEBUG] Deleting managed key %s", path)
-		_, err := client.Logical().Delete(path)
-		if err != nil {
-			return diag.Errorf("error deleting managed key %s", path)
-		}
-		log.Printf("[DEBUG] Deleted managed key %q", path)
 	}
 
 	if _, ok := d.GetOk(consts.FieldPKCS); ok {
-		pkcsKeyName := getKeyNameFromConfig(d, consts.FieldPKCS)
-		path := getManagedKeysPath(kmsTypePKCS, pkcsKeyName)
-
-		log.Printf("[DEBUG] Deleting managed key %s", path)
-		_, err := client.Logical().Delete(path)
-		if err != nil {
-			return diag.Errorf("error deleting managed key %s", path)
+		if diags := deleteManagedKeyType(d, meta, kmsTypePKCS); diags != nil {
+			return diags
 		}
-		log.Printf("[DEBUG] Deleted managed key %q", path)
+	}
+
+	if _, ok := d.GetOk(consts.FieldAzure); ok {
+		if diags := deleteManagedKeyType(d, meta, kmsTypeAzure); diags != nil {
+			return diags
+		}
 	}
 
 	return nil
