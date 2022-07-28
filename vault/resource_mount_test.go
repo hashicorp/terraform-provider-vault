@@ -234,6 +234,9 @@ func TestResourceMount_ExternalEntropyAccess(t *testing.T) {
 }
 
 func TestResourceMountMangedKeys(t *testing.T) {
+	// Remove once we are running Ent HSM binaries in CI
+	testutil.SkipTestEnvUnset(t, "TF_ACC_ENT_HSM")
+
 	path := acctest.RandomWithPrefix("tf-test-pki")
 	keyName := acctest.RandomWithPrefix("kms-key")
 
@@ -272,9 +275,9 @@ func TestResourceMountMangedKeys(t *testing.T) {
 	})
 }
 
-func testResourceMount_managedKeysConfig(keyName, path string, isUpdate bool) string {
+func testResourceMount_managedKeysConfig(name, path string, isUpdate bool) string {
 	ret := fmt.Sprintf(`
-resource "vault_managed_keys" "test_key_1" {
+resource "vault_managed_keys" "keys" {
   aws {
     name       = "%s"
     access_key = "ASIAKBASDADA09090"
@@ -283,9 +286,7 @@ resource "vault_managed_keys" "test_key_1" {
     key_type   = "RSA"
     kms_key    = "alias/test_identifier_string"
   }
-}
 
-resource "vault_managed_keys" "test_key_2" {
   aws {
     name       = "%s-2"
     access_key = "ASIAKBASDADA09090"
@@ -295,7 +296,7 @@ resource "vault_managed_keys" "test_key_2" {
     kms_key    = "alias/test_identifier_string"
   }
 }
-`, keyName, keyName)
+`, name, name)
 
 	if !isUpdate {
 		ret += fmt.Sprintf(`
@@ -305,7 +306,7 @@ resource "vault_mount" "test" {
   description               = "Example mount for testing managed keys"
   default_lease_ttl_seconds = 3600
   max_lease_ttl_seconds     = 36000
-  allowed_managed_keys      = [vault_managed_keys.test_key_1.aws.0.name]
+  allowed_managed_keys      = [tolist(vault_managed_keys.keys.aws)[0].name]
 }
 `, path)
 	} else {
@@ -316,7 +317,7 @@ resource "vault_mount" "test" {
   description               = "Updated desc - Example mount for testing managed keys"
   default_lease_ttl_seconds = 7200
   max_lease_ttl_seconds     = 86400
-  allowed_managed_keys      = [vault_managed_keys.test_key_1.aws.0.name, vault_managed_keys.test_key_2.aws.0.name]
+  allowed_managed_keys      = [tolist(vault_managed_keys.keys.aws)[0].name, tolist(vault_managed_keys.keys.aws)[1].name]
 }
 `, path)
 	}
