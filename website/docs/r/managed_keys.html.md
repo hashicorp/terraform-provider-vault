@@ -15,7 +15,7 @@ A resource that configures [Managed Keys](https://www.vaultproject.io/docs/enter
 ## Example Usage
 
 ```hcl
-resource "vault_managed_keys" "my_keys" {
+resource "vault_managed_keys" "keys" {
 
   aws {
     name       = "aws-key"
@@ -30,10 +30,10 @@ resource "vault_managed_keys" "my_keys" {
 resource "vault_mount" "pki" {
   path                      = "pki"
   type                      = "pki"
-  description               = "Example mount for testing managed keys"
+  description               = "Example mount for managed keys"
   default_lease_ttl_seconds = 3600
   max_lease_ttl_seconds     = 36000
-  allowed_managed_keys      = [vault_managed_keys.my_keys.aws.0.name]
+  allowed_managed_keys      = [tolist(vault_managed_keys.keys.aws)[0].name]
 }
 ```
 
