@@ -363,35 +363,37 @@ func writeManagedKeysData(d *schema.ResourceData, meta interface{}, providerType
 		keyType = kmsTypeAzure
 	}
 
-	if mKeysBlocks, ok := d.GetOk(providerType); ok {
-		set := map[string]bool{}
+	oldKeySet := map[string]bool{}
+	oldBlocks, newBlocks := d.GetChange(providerType)
 
-		// populate set of blocks
-		for _, block := range mKeysBlocks.(*schema.Set).List() {
-			m := block.(map[string]interface{})
-			name := m[consts.FieldName].(string)
-			set[name] = true
+	// populate the set of old keys
+	for _, block := range oldBlocks.(*schema.Set).List() {
+		m := block.(map[string]interface{})
+		name := m[consts.FieldName].(string)
+		oldKeySet[name] = true
+	}
+
+	newKeySet := map[string]bool{}
+	for _, block := range newBlocks.(*schema.Set).List() {
+		keyName, data := getManagedKeysConfigData(block.(map[string]interface{}), handlers[keyType]())
+		path := getManagedKeysPath(keyType, keyName)
+
+		log.Printf("[DEBUG] Writing data to Vault at %s", path)
+		if _, err := client.Logical().Write(path, data); err != nil {
+			return diag.Errorf("error writing managed key %q, err=%s", path, err)
 		}
 
-		blocksWritten := map[string]bool{}
-		for _, block := range mKeysBlocks.(*schema.Set).List() {
-			keyName, data := getManagedKeysConfigData(block.(map[string]interface{}), handlers[keyType]())
-			path := getManagedKeysPath(keyType, keyName)
+		// populate the set of new keys
+		newKeySet[keyName] = true
+	}
 
-			log.Printf("[DEBUG] Writing data to Vault at %s", path)
-			if _, err := client.Logical().Write(path, data); err != nil {
-				return diag.Errorf("error writing managed key %q, err=%s", path, err)
-			}
-
-			blocksWritten[keyName] = true
-		}
-
-		for k := range set {
-			if !blocksWritten[k] {
-				// Delete single key type
-				if diags := deleteSingleManagedKey(d, meta, keyType, k); diags != nil {
-					return diags
-				}
+	// Flush out all unused keys
+	// This also handles the case of an update on 'name'
+	for k := range oldKeySet {
+		if !newKeySet[k] {
+			// Delete single key type
+			if diags := deleteSingleManagedKey(d, meta, keyType, k); diags != nil {
+				return diags
 			}
 		}
 	}

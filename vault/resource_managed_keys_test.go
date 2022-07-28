@@ -24,7 +24,7 @@ func TestManagedKeys(t *testing.T) {
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testManagedKeysConfig(name0, name1),
+				Config: testManagedKeysConfig_basic(name0, name1),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "aws.#", "2"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "aws.*",
@@ -49,6 +49,25 @@ func TestManagedKeys(t *testing.T) {
 					),
 				),
 			},
+			// This test removes one of the managed keys from the set
+			// and also updates the name for the other remaining key
+			// Tests: ForceNew on Name + Deletion of removed keys
+			{
+				Config: testManagedKeysConfig_updated(name0),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "aws.#", "1"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "aws.*",
+						map[string]string{
+							consts.FieldName:         name0,
+							consts.FieldKeyBits:      "4096",
+							consts.FieldKeyType:      "RSA",
+							consts.FieldKMSKey:       "alias/test_identifier_string_2",
+							consts.FieldAWSAccessKey: "ASIAKBASDADA09090",
+							consts.FieldAWSSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
+						},
+					),
+				),
+			},
 			{
 				ResourceName:      resourceName,
 				ImportState:       true,
@@ -62,7 +81,7 @@ func TestManagedKeys(t *testing.T) {
 	})
 }
 
-func testManagedKeysConfig(name0, name1 string) string {
+func testManagedKeysConfig_basic(name0, name1 string) string {
 	return fmt.Sprintf(`
 resource "vault_managed_keys" "test" {
   aws {
@@ -84,4 +103,19 @@ resource "vault_managed_keys" "test" {
   }
 }
 `, name0, name1)
+}
+
+func testManagedKeysConfig_updated(name string) string {
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  aws {
+    name       = "%s"
+    access_key = "ASIAKBASDADA09090"
+    secret_key = "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz"
+    key_bits   = "4096"
+    key_type   = "RSA"
+    kms_key    = "alias/test_identifier_string_2"
+  }
+}
+`, name)
 }
