@@ -104,6 +104,9 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
+	// Remove once we are running Ent HSM binaries in CI
+	testutil.SkipTestEnvUnset(t, "TF_ACC_ENT_HSM")
+
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -183,14 +186,14 @@ resource "vault_mount" "test" {
   description               = "test"
   default_lease_ttl_seconds = "86400"
   max_lease_ttl_seconds     = "86400"
-  allowed_managed_keys      = [vault_managed_keys.test.aws.0.name]
+  allowed_managed_keys      = [tolist(vault_managed_keys.test.aws)[0].name]
 }
 
 resource "vault_pki_secret_backend_root_cert" "test" {
-  backend          = vault_mount.pki.path
+  backend          = vault_mount.test.path
   type             = "kms"
   common_name      = "test Root CA"
-  managed_key_id = vault_managed_keys.keys.aws.0.uuid
+  managed_key_id = tolist(vault_managed_keys.test.aws)[0].uuid
 }
 `, managedKeyName, accessKey, secretKey, path)
 
