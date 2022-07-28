@@ -184,7 +184,7 @@ func GetTestNomadCreds(t *testing.T) (string, string) {
 }
 
 func GetTestConsulAddr(t *testing.T) string {
-	v := SkipTestEnvUnset(t, "TF_CONSUL_ADDR")
+	v := SkipTestEnvUnset(t, "CONSUL_ADDR")
 	return v[0]
 }
 
