@@ -82,6 +82,11 @@ jobs:
           --health-interval 1s
           --health-timeout 5s
           --health-retries 60
+      consul:
+        image: docker.mirror.hashicorp.services/consul:latest
+        ports:
+        - 8500:8500
+        - 8600:8600
     steps:
       - uses: actions/checkout@v3
       - name: Acceptance Tests
@@ -98,6 +103,7 @@ jobs:
           COUCHBASE_HOST: couchbase
           COUCHBASE_USERNAME: Administrator
           COUCHBASE_PASSWORD: password
+          TF_CONSUL_ADDR: "http://127.0.0.1:8500"
         run: |
           export TF_VAULT_VERSION=$(echo ${{ matrix.image }} | \
             awk -F: '{match($NF, /^([0-9]+\.[0-9]+\.[0-9]+)/); printf("%s", substr($NF, RSTART, RLENGTH))}')

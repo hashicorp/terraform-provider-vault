@@ -183,6 +183,11 @@ func GetTestNomadCreds(t *testing.T) (string, string) {
 	return v[0], v[1]
 }
 
+func GetTestConsulAddr(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "TF_CONSUL_ADDR")
+	return v[0]
+}
+
 // Returns true if TF_VAULT_VERSION is greater than or equal to the given Vault version
 func CheckTestVaultVersion(t *testing.T, cutoff string) bool {
 	v := SkipTestEnvUnset(t, "TF_VAULT_VERSION")

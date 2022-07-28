@@ -11,7 +11,9 @@ import (
 
 func TestAccConsulSecretBackend_import(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-consul")
+	resourcePath := "vault_consul_secret_backend.test"
 	token := "aea34d3f-17e4-4387-801c-5e41be678e46"
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
@@ -20,17 +22,17 @@ func TestAccConsulSecretBackend_import(t *testing.T) {
 			{
 				Config: testConsulSecretBackend_initialConfig(path, token),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "path", path),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "description", "test description"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "default_lease_ttl_seconds", "3600"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "max_lease_ttl_seconds", "86400"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "address", "127.0.0.1:8500"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "token", token),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "scheme", "http"),
+					resource.TestCheckResourceAttr(resourcePath, "path", path),
+					resource.TestCheckResourceAttr(resourcePath, "description", "test description"),
+					resource.TestCheckResourceAttr(resourcePath, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourcePath, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourcePath, "address", "127.0.0.1:8500"),
+					resource.TestCheckResourceAttr(resourcePath, "token", token),
+					resource.TestCheckResourceAttr(resourcePath, "scheme", "http"),
 				),
 			},
 			{
-				ResourceName:      "vault_consul_secret_backend.test",
+				ResourceName:      resourcePath,
 				ImportState:       true,
 				ImportStateVerify: true,
 				// the API can't serve these fields, so ignore them
