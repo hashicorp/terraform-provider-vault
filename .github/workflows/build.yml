@@ -84,6 +84,8 @@ jobs:
           --health-retries 60
       consul:
         image: docker.mirror.hashicorp.services/consul:latest
+        env:
+          CONSUL_LOCAL_CONFIG: "{\"acl\":{\"enabled\":true}}"
         ports:
         - 8500:8500
         - 8600:8600
