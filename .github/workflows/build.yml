@@ -82,6 +82,10 @@ jobs:
           --health-interval 1s
           --health-timeout 5s
           --health-retries 60
+      openldap:
+        image: docker.io/bitnami/openldap:latest
+        ports:
+          - 1389:1389
     steps:
       - uses: actions/checkout@v3
       - name: Acceptance Tests
@@ -98,6 +102,9 @@ jobs:
           COUCHBASE_HOST: couchbase
           COUCHBASE_USERNAME: Administrator
           COUCHBASE_PASSWORD: password
+          AD_URL: "ldap://openldap:1389"
+          AD_BINDDN: "cn=admin,dc=example,dc=com"
+          AD_BINDPASS: "adminpassword"
         run: |
           export TF_VAULT_VERSION=$(echo ${{ matrix.image }} | \
             awk -F: '{match($NF, /^([0-9]+\.[0-9]+\.[0-9]+)/); printf("%s", substr($NF, RSTART, RLENGTH))}')
