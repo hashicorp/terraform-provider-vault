@@ -65,11 +65,15 @@ func hashManagedKeys(v interface{}) int {
 	var result int
 	if m, ok := v.(map[string]interface{}); ok {
 		if v, ok := m[consts.FieldName]; ok {
-			result = helper.HashCodeString(v.(string))
+			result = getHashFromName(v.(string))
 		}
 	}
 
 	return result
+}
+
+func getHashFromName(name string) int {
+	return helper.HashCodeString(name)
 }
 
 func getCommonManagedKeysSchema() schemaMap {
@@ -117,6 +121,10 @@ func getCommonManagedKeysSchema() schemaMap {
 
 func setCommonManagedKeysSchema(s schemaMap) schemaMap {
 	for k, v := range getCommonManagedKeysSchema() {
+		if _, ok := s[k]; ok {
+			panic(fmt.Sprintf("cannot add schema field %q,  already exists in the Schema map", k))
+		}
+
 		s[k] = v
 	}
 	return s
@@ -355,6 +363,9 @@ func writeManagedKeysData(d *schema.ResourceData, meta interface{}, providerType
 
 	case consts.FieldAzure:
 		keyType = kmsTypeAzure
+
+	default:
+		return diag.Errorf("received unexpected provider type %s", providerType)
 	}
 
 	oldKeySet := map[string]bool{}
@@ -423,8 +434,9 @@ func createUpdateManagedKeys(ctx context.Context, d *schema.ResourceData, meta i
 func getRedactedFields(d *schema.ResourceData, providerType, name string,
 	fields []string, m map[string]interface{},
 ) map[string]interface{} {
+	prefix := fmt.Sprintf("%s.%d.", providerType, getHashFromName(name))
 	for _, field := range fields {
-		k := fmt.Sprintf("%s.%d.%s", providerType, helper.HashCodeString(name), field)
+		k := prefix + field
 		if v, ok := d.GetOk(k); ok {
 			m[field] = v
 		}
@@ -434,7 +446,7 @@ func getRedactedFields(d *schema.ResourceData, providerType, name string,
 }
 
 func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
-	providerType string, sm map[string]interface{}, redacted []string) error {
+	providerType string, sm map[string]string, redactedFields []string) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -450,6 +462,9 @@ func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
 
 	case consts.FieldAzure:
 		keyType = kmsTypeAzure
+
+	default:
+		return fmt.Errorf("received unexpected provider type %s", providerType)
 	}
 
 	p := fmt.Sprintf("%s/%s", "sys/managed-keys", keyType)
@@ -488,7 +503,7 @@ func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
 				// Map TF schema fields to Vault API
 				vaultKey := k
 				if v, ok := sm[k]; ok {
-					vaultKey = v.(string)
+					vaultKey = v
 				}
 
 				if v, ok := resp.Data[vaultKey]; ok {
@@ -498,7 +513,7 @@ func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
 
 			// get these from TF config since they are
 			// returned as "redacted" from Vault
-			m = getRedactedFields(d, providerType, name.(string), redacted, m)
+			m = getRedactedFields(d, providerType, name.(string), redactedFields, m)
 
 			data = append(data, m)
 		}
@@ -515,7 +530,7 @@ func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
 
 func readAWSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 	redacted := []string{"access_key", "secret_key"}
-	sm := map[string]interface{}{
+	sm := map[string]string{
 		consts.FieldUUID: "UUID",
 	}
 	if err := readAndSetManagedKeys(d, meta, consts.FieldAWS, sm, redacted); err != nil {
@@ -527,7 +542,7 @@ func readAWSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 
 func readAzureManagedKeys(d *schema.ResourceData, meta interface{}) error {
 	var redacted []string
-	sm := map[string]interface{}{
+	sm := map[string]string{
 		consts.FieldUUID: "UUID",
 	}
 	if err := readAndSetManagedKeys(d, meta, consts.FieldAzure, sm, redacted); err != nil {
@@ -539,7 +554,7 @@ func readAzureManagedKeys(d *schema.ResourceData, meta interface{}) error {
 
 func readPKCSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 	redacted := []string{"pin"}
-	sm := map[string]interface{}{
+	sm := map[string]string{
 		consts.FieldUUID: "UUID",
 	}
 	if err := readAndSetManagedKeys(d, meta, consts.FieldPKCS, sm, redacted); err != nil {

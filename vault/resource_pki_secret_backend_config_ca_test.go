@@ -43,7 +43,6 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_secret_backend_config_ca" "test" {
-  depends_on       = ["vault_mount.test"]
   backend          = vault_mount.test.path
   pem_bundle       = <<EOT
 -----BEGIN RSA PRIVATE KEY-----

@@ -13,7 +13,7 @@ import (
 )
 
 func TestManagedKeys(t *testing.T) {
-	// Remove once we are running Ent HSM binaries in CI
+	// Remove once VAULT-7350 is resolved
 	testutil.SkipTestEnvUnset(t, "TF_ACC_ENT_HSM")
 
 	namePrefix := acctest.RandomWithPrefix("aws-keys")
