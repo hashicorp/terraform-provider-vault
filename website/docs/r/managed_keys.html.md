@@ -18,12 +18,21 @@ A resource that configures [Managed Keys](https://www.vaultproject.io/docs/enter
 resource "vault_managed_keys" "keys" {
 
   aws {
-    name       = "aws-key"
+    name       = "aws-key-1"
     access_key = var.aws_access_key
     secret_key = var.aws_secret_key
     key_bits   = "2048"
     key_type   = "RSA"
-    kms_key    = "alias/vault_aws_key"
+    kms_key    = "alias/vault_aws_key_1"
+  }
+
+  aws {
+    name       = "aws-key-2"
+    access_key = var.aws_access_key
+    secret_key = var.aws_secret_key
+    key_bits   = "4096"
+    key_type   = "RSA"
+    kms_key    = "alias/vault_aws_key_2"
   }
 }
 
@@ -33,7 +42,10 @@ resource "vault_mount" "pki" {
   description               = "Example mount for managed keys"
   default_lease_ttl_seconds = 3600
   max_lease_ttl_seconds     = 36000
-  allowed_managed_keys      = [tolist(vault_managed_keys.keys.aws)[0].name]
+  allowed_managed_keys      = [
+    tolist(vault_managed_keys.keys.aws)[0].name,
+    tolist(vault_managed_keys.keys.aws)[1].name
+  ]
 }
 ```
 
@@ -143,9 +155,9 @@ The following arguments are supported:
 
 ## Import
 
-Mounts can be imported using the `id`, e.g.
+Mounts can be imported using the `id` of `default`, e.g.
 
 ```
-$ terraform import vault_managed_keys.my_keys sys/managed-keys
+$ terraform import vault_managed_keys.keys default
 ```
 

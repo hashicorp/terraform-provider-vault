@@ -81,7 +81,7 @@ The following arguments are supported:
 
 * `external_entropy_access` - (Optional) Boolean flag that can be explicitly set to true to enable the secrets engine to access Vault's external entropy source
 
-* `allowed_managed_keys` - (Optional) List of managed key registry entry names that the mount in question is allowed to access
+* `allowed_managed_keys` - (Optional) Set of managed key registry entry names that the mount in question is allowed to access
 
 ## Attributes Reference
 

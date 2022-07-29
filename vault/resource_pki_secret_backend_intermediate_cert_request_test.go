@@ -74,6 +74,7 @@ resource "vault_mount" "test" {
   default_lease_ttl_seconds = 86400
   max_lease_ttl_seconds     = 86400
 }
+
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
   backend     = vault_mount.test.path
   type        = "internal"
