@@ -420,26 +420,21 @@ func createUpdateManagedKeys(ctx context.Context, d *schema.ResourceData, meta i
 	return readManagedKeys(ctx, d, meta)
 }
 
-func getRedactedFields(d *schema.ResourceData, providerType, name string, fields []string) map[string]interface{} {
-	m := map[string]interface{}{}
-
-	if mKeysBlocks, ok := d.GetOk(providerType); ok {
-		for _, block := range mKeysBlocks.(*schema.Set).List() {
-			data := block.(map[string]interface{})
-			if data[consts.FieldName] == name {
-				for _, field := range fields {
-					if v, ok := data[field]; ok {
-						m[field] = v
-					}
-				}
-			}
+func getRedactedFields(d *schema.ResourceData, providerType, name string,
+	fields []string, m map[string]interface{},
+) map[string]interface{} {
+	for _, field := range fields {
+		k := fmt.Sprintf("%s.%d.%s", providerType, helper.HashCodeString(name), field)
+		if v, ok := d.GetOk(k); ok {
+			m[field] = v
 		}
 	}
+
 	return m
 }
 
-func readAndSetManagedKeys(d *schema.ResourceData, meta interface{}, providerType string,
-	sm map[string]interface{}, redacted []string) error {
+func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
+	providerType string, sm map[string]interface{}, redacted []string) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -501,13 +496,9 @@ func readAndSetManagedKeys(d *schema.ResourceData, meta interface{}, providerTyp
 				}
 			}
 
-			// set these from TF config since they are
-			// returned as "redacted"
-			redactedData := getRedactedFields(d, providerType, name.(string), redacted)
-
-			for k, v := range redactedData {
-				m[k] = v
-			}
+			// get these from TF config since they are
+			// returned as "redacted" from Vault
+			m = getRedactedFields(d, providerType, name.(string), redacted, m)
 
 			data = append(data, m)
 		}
