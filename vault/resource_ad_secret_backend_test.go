@@ -40,13 +40,15 @@ func TestADSecretBackend(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, "bindpass", "description"),
-			{
-				Config: testADSecretBackendConflictsConfig(
-					resourceName, bindDN, bindPass, url, "length", 12),
-				ExpectError: regexp.MustCompile(`.*"length": conflicts with password_policy.*`),
+			// TODO: on vault-1.11+ length should conflict with password_policy
+			// We should re-enable this check when we have the adaptive version support.
+			//{
+			//	Config: testADSecretBackendConflictsConfig(
+			//		resourceName, bindDN, bindPass, url, "length", 12),
+			//	ExpectError: regexp.MustCompile(`.*"length": conflicts with password_policy.*`),
 
-				PlanOnly: true,
-			},
+			//	PlanOnly: true,
+			//},
 			{
 				Config: testADSecretBackendConflictsConfig(
 					resourceName, bindDN, bindPass, url, "formatter", "{{foo}}"),

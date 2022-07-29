@@ -118,12 +118,11 @@ func adSecretBackendResource() *schema.Resource {
 			Description: `The number of seconds after a Vault rotation where, if Active Directory shows a later rotation, it should be considered out-of-band.`,
 		},
 		"length": {
-			Type:          schema.TypeInt,
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    `Length is deprecated and password_policy should be used with Vault >= 1.5.`,
-			Description:   `The desired length of passwords that Vault generates.`,
-			ConflictsWith: []string{"password_policy"},
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Computed:    true,
+			Deprecated:  `Length is deprecated and password_policy should be used with Vault >= 1.5.`,
+			Description: `The desired length of passwords that Vault generates.`,
 		},
 		"local": {
 			Type:        schema.TypeBool,
