@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -17,25 +18,25 @@ func TestConsulSecretBackendRole(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-backend")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
-	resourcePath := "vault_consul_secret_backend_role.test"
+	resourceName := "vault_consul_secret_backend_role.test"
 	missingParametersError := "Use either a policy document, a list of policies, or a list of roles, depending on your Consul version"
 
 	createTestCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourcePath, "backend", backend),
-		resource.TestCheckResourceAttr(resourcePath, "name", name),
-		resource.TestCheckResourceAttr(resourcePath, "ttl", "0"),
-		resource.TestCheckResourceAttr(resourcePath, "consul_namespace", "consul-ns-0"),
-		resource.TestCheckResourceAttr(resourcePath, "partition", "partition-0"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "0"),
+		resource.TestCheckResourceAttr(resourceName, "consul_namespace", "consul-ns-0"),
+		resource.TestCheckResourceAttr(resourceName, "partition", "partition-0"),
 	}
 
 	updateTestCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourcePath, "backend", backend),
-		resource.TestCheckResourceAttr(resourcePath, "name", name),
-		resource.TestCheckResourceAttr(resourcePath, "ttl", "120"),
-		resource.TestCheckResourceAttr(resourcePath, "max_ttl", "240"),
-		resource.TestCheckResourceAttr(resourcePath, "local", "true"),
-		resource.TestCheckResourceAttr(resourcePath, "consul_namespace", "consul-ns-1"),
-		resource.TestCheckResourceAttr(resourcePath, "partition", "partition-1"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "120"),
+		resource.TestCheckResourceAttr(resourceName, "max_ttl", "240"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "true"),
+		resource.TestCheckResourceAttr(resourceName, "consul_namespace", "consul-ns-1"),
+		resource.TestCheckResourceAttr(resourceName, "partition", "partition-1"),
 	}
 
 	testNewParameters := testutil.CheckTestVaultVersion(t, "1.11")
@@ -43,42 +44,42 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		missingParametersError = "Use either a policy document, a list of policies or roles, or a set of service or node identities, depending on your Consul version"
 
 		createTestCheckFuncs = append(createTestCheckFuncs,
-			resource.TestCheckResourceAttr(resourcePath, "policies.#", "0"),
-			resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "1"),
-			resource.TestCheckTypeSetElemAttr(resourcePath, "consul_policies.*", "foo"),
-			resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "1"),
-			resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
-			resource.TestCheckResourceAttr(resourcePath, "service_identities.#", "1"),
-			resource.TestCheckTypeSetElemAttr(resourcePath, "service_identities.*", "service-0:dc1"),
-			resource.TestCheckResourceAttr(resourcePath, "node_identities.#", "1"),
-			resource.TestCheckTypeSetElemAttr(resourcePath, "node_identities.*", "server-0:dc1"))
+			resource.TestCheckResourceAttr(resourceName, "policies.#", "0"),
+			resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "1"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "foo"),
+			resource.TestCheckResourceAttr(resourceName, "consul_roles.#", "1"),
+			resource.TestCheckResourceAttr(resourceName, "consul_roles.0", "role-0"),
+			resource.TestCheckResourceAttr(resourceName, "service_identities.#", "1"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "service_identities.*", "service-0:dc1"),
+			resource.TestCheckResourceAttr(resourceName, "node_identities.#", "1"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "server-0:dc1"))
 
 		updateTestCheckFuncs = append(updateTestCheckFuncs,
-			resource.TestCheckResourceAttr(resourcePath, "policies.#", "0"),
-			resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "2"),
-			resource.TestCheckTypeSetElemAttr(resourcePath, "consul_policies.*", "foo"),
-			resource.TestCheckTypeSetElemAttr(resourcePath, "consul_policies.*", "bar"),
-			resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "3"),
-			resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
-			resource.TestCheckResourceAttr(resourcePath, "consul_roles.1", "role-1"),
-			resource.TestCheckResourceAttr(resourcePath, "consul_roles.2", "role-2"),
-			resource.TestCheckResourceAttr(resourcePath, "service_identities.#", "2"),
-			resource.TestCheckTypeSetElemAttr(resourcePath, "service_identities.*", "service-0:dc1"),
-			resource.TestCheckTypeSetElemAttr(resourcePath, "service_identities.*", "service-1"),
-			resource.TestCheckResourceAttr(resourcePath, "node_identities.#", "2"),
-			resource.TestCheckTypeSetElemAttr(resourcePath, "node_identities.*", "server-0:dc1"),
-			resource.TestCheckTypeSetElemAttr(resourcePath, "node_identities.*", "client-0:dc1"))
+			resource.TestCheckResourceAttr(resourceName, "policies.#", "0"),
+			resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "2"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "foo"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "bar"),
+			resource.TestCheckResourceAttr(resourceName, "consul_roles.#", "3"),
+			resource.TestCheckResourceAttr(resourceName, "consul_roles.0", "role-0"),
+			resource.TestCheckResourceAttr(resourceName, "consul_roles.1", "role-1"),
+			resource.TestCheckResourceAttr(resourceName, "consul_roles.2", "role-2"),
+			resource.TestCheckResourceAttr(resourceName, "service_identities.#", "2"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "service_identities.*", "service-0:dc1"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "service_identities.*", "service-1"),
+			resource.TestCheckResourceAttr(resourceName, "node_identities.#", "2"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "server-0:dc1"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "client-0:dc1"))
 	} else {
 		createTestCheckFuncs = append(createTestCheckFuncs,
-			resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "0"),
-			resource.TestCheckResourceAttr(resourcePath, "policies.#", "1"),
-			resource.TestCheckResourceAttr(resourcePath, "policies.0", "boo"))
+			resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"),
+			resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
+			resource.TestCheckResourceAttr(resourceName, "policies.0", "boo"))
 
 		updateTestCheckFuncs = append(updateTestCheckFuncs,
-			resource.TestCheckResourceAttr(resourcePath, "consul_policies.#", "0"),
-			resource.TestCheckResourceAttr(resourcePath, "policies.#", "2"),
-			resource.TestCheckResourceAttr(resourcePath, "policies.0", "boo"),
-			resource.TestCheckResourceAttr(resourcePath, "policies.1", "far"))
+			resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"),
+			resource.TestCheckResourceAttr(resourceName, "policies.#", "2"),
+			resource.TestCheckResourceAttr(resourceName, "policies.0", "boo"),
+			resource.TestCheckResourceAttr(resourceName, "policies.1", "far"))
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -111,7 +112,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 				Check:  resource.ComposeTestCheckFunc(updateTestCheckFuncs...),
 			},
 			{
-				ResourceName:      resourcePath,
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
