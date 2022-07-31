@@ -123,4 +123,5 @@ resource "vault_namespace" "example2" {
 
 ## Tutorials
 
-Refer to the [Codify Management of Vault Enterprise Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-enterprise) tutorial for additional examples using Vault namespaces.  For HCP Vault use [Codify Management of HCP Vault](https://learn.hashicorp.com/tutorials/cloud/vault-codify-mgmt?in=vault/cloud-ops).
+Refer to the [Codify Management of Vault Enterprise Using Terraform](https://learn.hashicorp.com/tutorials/vault/codify-mgmt-enterprise) or the [Codify Management of HCP Vault](https://learn.hashicorp.com/tutorials/cloud/vault-codify-mgmt?in=vault/cloud-ops) tutorial for additional examples using Vault namespaces.
+
