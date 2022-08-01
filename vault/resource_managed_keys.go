@@ -19,6 +19,46 @@ const (
 	kmsTypeAzure = "azurekeyvault"
 )
 
+type managedKeysConfig struct {
+	providerType string
+	keyType      string
+	getSchema    func() schemaMap
+}
+
+var managedKeysAWSConfig = &managedKeysConfig{
+	providerType: consts.FieldAWS,
+	keyType:      kmsTypeAWS,
+	getSchema:    managedKeysAWSConfigSchema,
+}
+
+var managedKeysAzureConfig = &managedKeysConfig{
+	providerType: consts.FieldAzure,
+	keyType:      kmsTypeAzure,
+	getSchema:    managedKeysAzureConfigSchema,
+}
+
+var managedKeysPKCSConfig = &managedKeysConfig{
+	providerType: consts.FieldPKCS,
+	keyType:      kmsTypePKCS,
+	getSchema:    managedKeysPKCSConfigSchema,
+}
+
+var managedKeyProviders = []*managedKeysConfig{
+	managedKeysAWSConfig,
+	managedKeysAzureConfig,
+	managedKeysPKCSConfig,
+}
+
+func getManagedKeyConfig(providerType string) (*managedKeysConfig, error) {
+	for _, config := range managedKeyProviders {
+		if config.providerType == providerType {
+			return config, nil
+		}
+	}
+
+	return nil, fmt.Errorf("invalid provider type %s", providerType)
+}
+
 func managedKeysResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: createUpdateManagedKeys,
@@ -30,30 +70,30 @@ func managedKeysResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			consts.FieldPKCS: {
+			managedKeysPKCSConfig.providerType: {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Configuration block for PKCS Managed Keys",
 				Elem: &schema.Resource{
-					Schema: managedKeysPKCSConfigSchema(),
+					Schema: managedKeysPKCSConfig.getSchema(),
 				},
 				Set: hashManagedKeys,
 			},
-			consts.FieldAWS: {
+			managedKeysAWSConfig.providerType: {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Configuration block for AWS Managed Keys",
 				Elem: &schema.Resource{
-					Schema: managedKeysAWSConfigSchema(),
+					Schema: managedKeysAWSConfig.getSchema(),
 				},
 				Set: hashManagedKeys,
 			},
-			consts.FieldAzure: {
+			managedKeysAzureConfig.providerType: {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Configuration block for Azure Managed Keys",
 				Elem: &schema.Resource{
-					Schema: managedKeysAzureConfigSchema(),
+					Schema: managedKeysAzureConfig.getSchema(),
 				},
 				Set: hashManagedKeys,
 			},
@@ -345,13 +385,7 @@ func writeManagedKeysData(d *schema.ResourceData, meta interface{}, providerType
 		return diag.FromErr(e)
 	}
 
-	handlers := map[string]func() schemaMap{
-		kmsTypeAWS:   managedKeysAWSConfigSchema,
-		kmsTypePKCS:  managedKeysPKCSConfigSchema,
-		kmsTypeAzure: managedKeysAzureConfigSchema,
-	}
-
-	keyType, err := getKeyTypeFromProviderType(providerType)
+	config, err := getManagedKeyConfig(providerType)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -368,8 +402,8 @@ func writeManagedKeysData(d *schema.ResourceData, meta interface{}, providerType
 
 	newKeySet := map[string]bool{}
 	for _, block := range newBlocks.(*schema.Set).List() {
-		keyName, data := getManagedKeysConfigData(block.(map[string]interface{}), handlers[keyType]())
-		path := getManagedKeysPath(keyType, keyName)
+		keyName, data := getManagedKeysConfigData(block.(map[string]interface{}), config.getSchema())
+		path := getManagedKeysPath(config.keyType, keyName)
 
 		log.Printf("[DEBUG] Writing data to Vault at %s", path)
 		if _, err := client.Logical().Write(path, data); err != nil {
@@ -385,7 +419,7 @@ func writeManagedKeysData(d *schema.ResourceData, meta interface{}, providerType
 	for k := range oldKeySet {
 		if !newKeySet[k] {
 			// Delete single key type
-			if diags := deleteSingleManagedKey(d, meta, keyType, k); diags != nil {
+			if diags := deleteSingleManagedKey(d, meta, config.keyType, k); diags != nil {
 				return diags
 			}
 		}
@@ -431,25 +465,6 @@ func updateRedactedFields(d *schema.ResourceData, providerType, name string,
 	}
 }
 
-func getKeyTypeFromProviderType(providerType string) (string, error) {
-	var keyType string
-	switch providerType {
-	case consts.FieldAWS:
-		keyType = kmsTypeAWS
-
-	case consts.FieldPKCS:
-		keyType = kmsTypePKCS
-
-	case consts.FieldAzure:
-		keyType = kmsTypeAzure
-
-	default:
-		return "", fmt.Errorf("received unexpected provider type %s", providerType)
-	}
-
-	return keyType, nil
-}
-
 func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
 	providerType string, sm map[string]string, redactedFields []string) error {
 	client, e := provider.GetClient(d, meta)
@@ -457,12 +472,12 @@ func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
 		return e
 	}
 
-	keyType, err := getKeyTypeFromProviderType(providerType)
+	config, err := getManagedKeyConfig(providerType)
 	if err != nil {
 		return err
 	}
 
-	p := fmt.Sprintf("%s/%s", "sys/managed-keys", keyType)
+	p := fmt.Sprintf("%s/%s", "sys/managed-keys", config.keyType)
 	log.Printf("[DEBUG] Listing data from Vault at %s", p)
 	resp, err := client.Logical().List(p)
 	if err != nil {
@@ -473,17 +488,11 @@ func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
 		return nil
 	}
 
-	handlers := map[string]func() schemaMap{
-		kmsTypeAWS:   managedKeysAWSConfigSchema,
-		kmsTypePKCS:  managedKeysPKCSConfigSchema,
-		kmsTypeAzure: managedKeysAzureConfigSchema,
-	}
-
 	var data []interface{}
 	if v, ok := resp.Data["keys"]; ok {
 		for _, name := range v.([]interface{}) {
 			m := make(map[string]interface{})
-			path := getManagedKeysPath(keyType, name.(string))
+			path := getManagedKeysPath(config.keyType, name.(string))
 			log.Printf("[DEBUG] Reading from Vault at %s", path)
 			resp, err := client.Logical().Read(path)
 			if err != nil {
@@ -494,7 +503,7 @@ func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
 				continue
 			}
 
-			for k := range handlers[keyType]() {
+			for k := range config.getSchema() {
 				// Map TF schema fields to Vault API
 				vaultKey := k
 				if v, ok := sm[k]; ok {
