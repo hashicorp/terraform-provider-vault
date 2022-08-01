@@ -13,9 +13,6 @@ import (
 )
 
 func TestManagedKeys(t *testing.T) {
-	// Remove once VAULT-7350 is resolved
-	testutil.SkipTestEnvUnset(t, "TF_ACC_ENT_HSM")
-
 	namePrefix := acctest.RandomWithPrefix("aws-keys")
 	name0 := namePrefix + "-0"
 	name1 := namePrefix + "-1"
