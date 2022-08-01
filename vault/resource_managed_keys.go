@@ -72,9 +72,7 @@ func hashManagedKeys(v interface{}) int {
 	return result
 }
 
-func getHashFromName(name string) int {
-	return helper.HashCodeString(name)
-}
+var getHashFromName = helper.HashCodeString
 
 func getCommonManagedKeysSchema() schemaMap {
 	return schemaMap{
@@ -347,25 +345,15 @@ func writeManagedKeysData(d *schema.ResourceData, meta interface{}, providerType
 		return diag.FromErr(e)
 	}
 
-	var keyType string
 	handlers := map[string]func() schemaMap{
 		kmsTypeAWS:   managedKeysAWSConfigSchema,
 		kmsTypePKCS:  managedKeysPKCSConfigSchema,
 		kmsTypeAzure: managedKeysAzureConfigSchema,
 	}
 
-	switch providerType {
-	case consts.FieldAWS:
-		keyType = kmsTypeAWS
-
-	case consts.FieldPKCS:
-		keyType = kmsTypePKCS
-
-	case consts.FieldAzure:
-		keyType = kmsTypeAzure
-
-	default:
-		return diag.Errorf("received unexpected provider type %s", providerType)
+	keyType, err := getKeyTypeFromProviderType(providerType)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
 	oldKeySet := map[string]bool{}
@@ -431,9 +419,9 @@ func createUpdateManagedKeys(ctx context.Context, d *schema.ResourceData, meta i
 	return readManagedKeys(ctx, d, meta)
 }
 
-func getRedactedFields(d *schema.ResourceData, providerType, name string,
+func updateRedactedFields(d *schema.ResourceData, providerType, name string,
 	fields []string, m map[string]interface{},
-) map[string]interface{} {
+) {
 	prefix := fmt.Sprintf("%s.%d.", providerType, getHashFromName(name))
 	for _, field := range fields {
 		k := prefix + field
@@ -441,17 +429,9 @@ func getRedactedFields(d *schema.ResourceData, providerType, name string,
 			m[field] = v
 		}
 	}
-
-	return m
 }
 
-func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
-	providerType string, sm map[string]string, redactedFields []string) error {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return e
-	}
-
+func getKeyTypeFromProviderType(providerType string) (string, error) {
 	var keyType string
 	switch providerType {
 	case consts.FieldAWS:
@@ -464,7 +444,22 @@ func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
 		keyType = kmsTypeAzure
 
 	default:
-		return fmt.Errorf("received unexpected provider type %s", providerType)
+		return "", fmt.Errorf("received unexpected provider type %s", providerType)
+	}
+
+	return keyType, nil
+}
+
+func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
+	providerType string, sm map[string]string, redactedFields []string) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	keyType, err := getKeyTypeFromProviderType(providerType)
+	if err != nil {
+		return err
 	}
 
 	p := fmt.Sprintf("%s/%s", "sys/managed-keys", keyType)
@@ -513,7 +508,7 @@ func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
 
 			// get these from TF config since they are
 			// returned as "redacted" from Vault
-			m = getRedactedFields(d, providerType, name.(string), redactedFields, m)
+			updateRedactedFields(d, providerType, name.(string), redactedFields, m)
 
 			data = append(data, m)
 		}
@@ -530,10 +525,8 @@ func readAndSetManagedKeys(d *schema.ResourceData, meta interface{},
 
 func readAWSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 	redacted := []string{"access_key", "secret_key"}
-	sm := map[string]string{
-		consts.FieldUUID: "UUID",
-	}
-	if err := readAndSetManagedKeys(d, meta, consts.FieldAWS, sm, redacted); err != nil {
+	if err := readAndSetManagedKeys(d, meta, consts.FieldAWS,
+		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
 
@@ -542,10 +535,8 @@ func readAWSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 
 func readAzureManagedKeys(d *schema.ResourceData, meta interface{}) error {
 	var redacted []string
-	sm := map[string]string{
-		consts.FieldUUID: "UUID",
-	}
-	if err := readAndSetManagedKeys(d, meta, consts.FieldAzure, sm, redacted); err != nil {
+	if err := readAndSetManagedKeys(d, meta, consts.FieldAzure,
+		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
 
@@ -554,10 +545,8 @@ func readAzureManagedKeys(d *schema.ResourceData, meta interface{}) error {
 
 func readPKCSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 	redacted := []string{"pin"}
-	sm := map[string]string{
-		consts.FieldUUID: "UUID",
-	}
-	if err := readAndSetManagedKeys(d, meta, consts.FieldPKCS, sm, redacted); err != nil {
+	if err := readAndSetManagedKeys(d, meta, consts.FieldPKCS,
+		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
 
@@ -567,24 +556,21 @@ func readPKCSManagedKeys(d *schema.ResourceData, meta interface{}) error {
 func readManagedKeys(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	diags := diag.Diagnostics{}
 
-	err := readAWSManagedKeys(d, meta)
-	if err != nil {
+	if err := readAWSManagedKeys(d, meta); err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("Failed to read AWS Managed Keys, err=%s", err),
 		})
 	}
 
-	err = readPKCSManagedKeys(d, meta)
-	if err != nil {
+	if err := readPKCSManagedKeys(d, meta); err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("Failed to read PKCS Managed Keys, err=%s", err),
 		})
 	}
 
-	err = readAzureManagedKeys(d, meta)
-	if err != nil {
+	if err := readAzureManagedKeys(d, meta); err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("Failed to read Azure Managed Keys, err=%s", err),
