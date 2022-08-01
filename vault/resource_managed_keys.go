@@ -122,7 +122,7 @@ func getCommonManagedKeysSchema() schemaMap {
 func setCommonManagedKeysSchema(s schemaMap) schemaMap {
 	for k, v := range getCommonManagedKeysSchema() {
 		if _, ok := s[k]; ok {
-			panic(fmt.Sprintf("cannot add schema field %q,  already exists in the Schema map", k))
+			panic(fmt.Sprintf("cannot add schema field %q, already exists in the Schema map", k))
 		}
 
 		s[k] = v
