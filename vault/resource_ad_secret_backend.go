@@ -84,11 +84,12 @@ func adSecretBackendResource() *schema.Resource {
 			Description: `Use anonymous bind to discover the bind DN of a user.`,
 		},
 		"formatter": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Computed:    true,
-			Deprecated:  `Formatter is deprecated and password_policy should be used with Vault >= 1.5.`,
-			Description: `Text to insert the password into, ex. "customPrefix{{PASSWORD}}customSuffix".`,
+			Type:          schema.TypeString,
+			Optional:      true,
+			Computed:      true,
+			Deprecated:    `Formatter is deprecated and password_policy should be used with Vault >= 1.5.`,
+			Description:   `Text to insert the password into, ex. "customPrefix{{PASSWORD}}customSuffix".`,
+			ConflictsWith: []string{"password_policy"},
 		},
 		"groupattr": {
 			Type:        schema.TypeString,

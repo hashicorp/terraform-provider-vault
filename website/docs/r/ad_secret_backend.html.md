@@ -86,6 +86,7 @@ Defaults to `false`.
 shows a later rotation, it should be considered out-of-band
 
 * `length` - (Optional) **Deprecated** use `password_policy`. The desired length of passwords that Vault generates.
+  *Mutually exclusive with `password_policy` on vault-1.11+*
 
 * `local` - (Optional) Mark the secrets engine as local-only. Local engines are not replicated or removed by
 replication.Tolerance duration to use when checking the last rotation time.

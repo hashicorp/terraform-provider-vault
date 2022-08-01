@@ -392,7 +392,7 @@ func (v *VaultStateTest) String() string {
 }
 
 // TransformVaultValue function to be used for a value from vault into a form that can be ccmpared to a value from
-// from the TF state.
+// the TF state.
 type TransformVaultValue func(st *VaultStateTest, resp *api.Secret) (interface{}, error)
 
 func SplitVaultValueString(st *VaultStateTest, resp *api.Secret) (interface{}, error) {
@@ -647,5 +647,17 @@ func CheckJSONData(resourceName, attr, expected string) resource.TestCheckFunc {
 		}
 
 		return nil
+	}
+}
+
+// GetImportTestStep for resource name. Optionally include field names that should be ignored during the import
+// verification, typically ignore fields should only be provided for values that are not returned from the
+// provisioning API.
+func GetImportTestStep(resourceName string, skipVerify bool, ignoreFields ...string) resource.TestStep {
+	return resource.TestStep{
+		ResourceName:            resourceName,
+		ImportState:             true,
+		ImportStateVerify:       !skipVerify,
+		ImportStateVerifyIgnore: ignoreFields,
 	}
 }
