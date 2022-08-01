@@ -234,9 +234,6 @@ func TestResourceMount_ExternalEntropyAccess(t *testing.T) {
 }
 
 func TestResourceMountMangedKeys(t *testing.T) {
-	// Remove once VAULT-7350 is resolved
-	testutil.SkipTestEnvUnset(t, "TF_ACC_ENT_HSM")
-
 	path := acctest.RandomWithPrefix("tf-test-pki")
 	keyName := acctest.RandomWithPrefix("kms-key")
 

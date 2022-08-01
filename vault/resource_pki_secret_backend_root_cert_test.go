@@ -104,9 +104,6 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
-	// Remove once VAULT-7350 is resolved
-	testutil.SkipTestEnvUnset(t, "TF_ACC_ENT_HSM")
-
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
