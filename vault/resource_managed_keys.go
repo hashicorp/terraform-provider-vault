@@ -293,7 +293,7 @@ func managedKeysAWSConfigSchema() schemaMap {
 		consts.FieldRegion: {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Default:     "us-east-1",
+			Computed:    true,
 			Description: "The AWS region where the keys are stored (or will be stored)",
 		},
 	}
@@ -327,7 +327,7 @@ func managedKeysAzureConfigSchema() schemaMap {
 		consts.FieldEnvironment: {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Default:     "AZUREPUBLICCLOUD",
+			Computed:    true,
 			Description: "The Azure Cloud environment API endpoints to use",
 		},
 		consts.FieldVaultName: {
@@ -343,7 +343,7 @@ func managedKeysAzureConfigSchema() schemaMap {
 		consts.FieldResource: {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Default:     "vault.azure.net",
+			Computed:    true,
 			Description: "The Azure Key Vault resource's DNS Suffix to connect to",
 		},
 		consts.FieldKeyBits: {
