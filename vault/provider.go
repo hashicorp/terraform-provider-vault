@@ -793,7 +793,7 @@ var (
 			PathInventory: []string{"/kubernetes/roles/{name}"},
 		},
 		"vault_managed_keys": {
-			Resource:      updateSchemaResource(managedKeysResource()),
+			Resource:      UpdateSchemaResource(managedKeysResource()),
 			PathInventory: []string{"/sys/managed-keys/{type}/{name}"},
 		},
 	}
