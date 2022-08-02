@@ -249,8 +249,6 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 
 	var ns string
 	switch v := i.(type) {
-	case string:
-		ns = v
 	case *schema.ResourceData:
 		if v, ok := v.GetOk(consts.FieldNamespace); ok {
 			ns = v.(string)
