@@ -38,7 +38,7 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
    *Available only for Vault Enterprise*.
 
-* `token` - (Required) The Consul management token this backend should use to issue new tokens.
+* `token` - (Optional) The Consul management token this backend should use to issue new tokens. If unspecified, Vault will attempt to perform an ACL Bootstrap automatically on the Consul node.
 
 ~> **Important** Because Vault does not support reading the configured
 token back from the API, Terraform cannot detect and correct drift
