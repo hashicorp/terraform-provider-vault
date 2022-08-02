@@ -330,6 +330,7 @@ func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error
 	d.Set("options", mount.Options)
 	d.Set("seal_wrap", mount.SealWrap)
 	d.Set("external_entropy_access", mount.ExternalEntropyAccess)
+	d.Set("allowed_managed_keys", mount.Config.AllowedManagedKeys)
 
 	return nil
 }
