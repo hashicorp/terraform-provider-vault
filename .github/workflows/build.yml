@@ -90,7 +90,7 @@ jobs:
         - 8500:8500
         - 8600:8600
         options: >-
-          --health-cmd "curl 'http://127.0.0.1:8500/v1/health/node/server-1'"
+          --health-cmd "curl -f 'http://127.0.0.1:8500/v1/health/node/server-1'"
           --health-interval 1s
           --health-timeout 5s
           --health-retries 5
