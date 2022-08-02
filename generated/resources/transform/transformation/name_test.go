@@ -17,8 +17,8 @@ import (
 
 var nameTestProvider = func() *schema.Provider {
 	p := schema.NewProvider(vault.Provider())
-	p.RegisterResource("vault_mount", vault.MountResource())
-	p.RegisterResource("vault_transform_transformation_name", NameResource())
+	p.RegisterResource("vault_mount", vault.UpdateSchemaResource(vault.MountResource()))
+	p.RegisterResource("vault_transform_transformation_name", vault.UpdateSchemaResource(NameResource()))
 	return p
 }()
 
@@ -53,8 +53,8 @@ func TestTransformationName(t *testing.T) {
 						return fmt.Errorf("expected 1 state but received %+v", states)
 					}
 					state := states[0]
-					if state.Attributes["%"] != "9" {
-						t.Fatalf("expected 9 attributes but received %d", len(state.Attributes))
+					if state.Attributes["%"] != "10" {
+						t.Fatalf("expected 10 attributes but received %s", state.Attributes["%"])
 					}
 					if state.Attributes["templates.#"] != "1" {
 						t.Fatalf("expected %q, received %q", "1", state.Attributes["templates.#"])

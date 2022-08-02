@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sync"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -46,6 +47,10 @@ import (
 // each run. In case of weird behavior, restart the Vault dev server to
 // start over with a fresh Vault. (Remember to reset VAULT_TOKEN.)
 
+const providerName = "vault"
+
+var testInitOnce = sync.Once{}
+
 func TestProvider(t *testing.T) {
 	if err := Provider().InternalValidate(); err != nil {
 		t.Fatalf("err: %s", err)
@@ -58,10 +63,36 @@ var (
 )
 
 func init() {
-	testProvider = Provider()
-	testProviders = map[string]*schema.Provider{
-		"vault": testProvider,
-	}
+	initTestProvider()
+}
+
+func initTestProvider() {
+	testInitOnce.Do(
+		func() {
+			if testProvider == nil {
+				testProvider = Provider()
+				testProviders = map[string]*schema.Provider{
+					providerName: testProvider,
+				}
+				rs := &schema.Resource{
+					Schema: testProvider.Schema,
+				}
+
+				m, err := testProvider.ConfigureFunc(rs.TestResourceData())
+				if err != nil {
+					panic(err)
+				}
+				testProvider.SetMeta(m)
+			}
+		},
+	)
+}
+
+var providerFactories = map[string]func() (*schema.Provider, error){
+	providerName: func() (*schema.Provider, error) {
+		initTestProvider()
+		return testProvider, nil
+	},
 }
 
 // A basic token helper script.
