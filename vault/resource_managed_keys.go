@@ -522,6 +522,10 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 	if v, ok := resp.Data["keys"]; ok {
 		for _, name := range v.([]interface{}) {
 			m := make(map[string]interface{})
+			// set fields from TF config
+			// these values are returned as "redacted" from Vault
+			updateRedactedFields(d, providerType, name.(string), redactedFields, m)
+
 			path := getManagedKeysPath(config.keyType, name.(string))
 			log.Printf("[DEBUG] Reading from Vault at %s", path)
 			resp, err := client.Logical().Read(path)
@@ -541,13 +545,13 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 				}
 
 				if v, ok := resp.Data[vaultKey]; ok {
+					if _, ok := m[k]; ok {
+						continue
+					}
+
 					m[k] = v
 				}
 			}
-
-			// get these from TF config since they are
-			// returned as "redacted" from Vault
-			updateRedactedFields(d, providerType, name.(string), redactedFields, m)
 
 			data = append(data, m)
 		}
