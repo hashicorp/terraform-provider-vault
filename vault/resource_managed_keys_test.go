@@ -2,13 +2,14 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
-
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -24,6 +25,42 @@ func TestManagedKeys(t *testing.T) {
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
+				// set up any random config to populate testProvider
+				Config: kvV2MountConfig("kv"),
+			},
+			{
+				PreConfig: func() {
+					// Create a managed key in Vault
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+
+					data := map[string]interface{}{
+						"access_key": "ASIAKBASDADA09090",
+						"secret_key": "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
+						"key_bits":   "2048",
+						"key_type":   "RSA",
+						"kms_key":    "alias/test_identifier_string",
+					}
+
+					p := fmt.Sprintf("sys/managed-keys/awskms/%s", name0)
+					_, err := client.Logical().Write(p, data)
+					if err != nil {
+						t.Fatalf("could not create managed key to Vault")
+					}
+				},
+				Config:      testManagedKeysConfig_basic(name0, name1),
+				ExpectError: regexp.MustCompile("managed keys already exist in Vault; use 'terraform import' instead"),
+			},
+			{
+				PreConfig: func() {
+					// Delete previously configured managed key from Vault
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+
+					p := fmt.Sprintf("sys/managed-keys/awskms/%s", name0)
+					_, err := client.Logical().Delete(p)
+					if err != nil {
+						t.Fatalf("could not delete managed key")
+					}
+				},
 				Config: testManagedKeysConfig_basic(name0, name1),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "aws.#", "2"),

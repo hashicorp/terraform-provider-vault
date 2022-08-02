@@ -413,7 +413,7 @@ func writeManagedKeysData(d *schema.ResourceData, client *api.Client, providerTy
 			}
 
 			if v, ok := resp.Data["keys"]; ok {
-				if len(v.([]string)) > 0 {
+				if len(v.([]interface{})) > 0 {
 					return diag.FromErr(fmt.Errorf("managed keys already exist in Vault; use 'terraform import' instead"))
 				}
 			}
