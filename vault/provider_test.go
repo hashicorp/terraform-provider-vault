@@ -49,6 +49,8 @@ import (
 
 const providerName = "vault"
 
+var testInitOnce = sync.Once{}
+
 func TestProvider(t *testing.T) {
 	if err := Provider().InternalValidate(); err != nil {
 		t.Fatalf("err: %s", err)
@@ -65,14 +67,22 @@ func init() {
 }
 
 func initTestProvider() {
-	o := sync.Once{}
-	o.Do(
+	testInitOnce.Do(
 		func() {
 			if testProvider == nil {
 				testProvider = Provider()
 				testProviders = map[string]*schema.Provider{
 					providerName: testProvider,
 				}
+				rs := &schema.Resource{
+					Schema: testProvider.Schema,
+				}
+
+				m, err := testProvider.ConfigureFunc(rs.TestResourceData())
+				if err != nil {
+					panic(err)
+				}
+				testProvider.SetMeta(m)
 			}
 		},
 	)
