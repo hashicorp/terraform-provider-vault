@@ -27,29 +27,31 @@ type managedKeysConfig struct {
 	getSchema    func() schemaMap
 }
 
-var managedKeysAWSConfig = &managedKeysConfig{
-	providerType: consts.FieldAWS,
-	keyType:      kmsTypeAWS,
-	getSchema:    managedKeysAWSConfigSchema,
-}
+var (
+	managedKeysAWSConfig = &managedKeysConfig{
+		providerType: consts.FieldAWS,
+		keyType:      kmsTypeAWS,
+		getSchema:    managedKeysAWSConfigSchema,
+	}
 
-var managedKeysAzureConfig = &managedKeysConfig{
-	providerType: consts.FieldAzure,
-	keyType:      kmsTypeAzure,
-	getSchema:    managedKeysAzureConfigSchema,
-}
+	managedKeysAzureConfig = &managedKeysConfig{
+		providerType: consts.FieldAzure,
+		keyType:      kmsTypeAzure,
+		getSchema:    managedKeysAzureConfigSchema,
+	}
 
-var managedKeysPKCSConfig = &managedKeysConfig{
-	providerType: consts.FieldPKCS,
-	keyType:      kmsTypePKCS,
-	getSchema:    managedKeysPKCSConfigSchema,
-}
+	managedKeysPKCSConfig = &managedKeysConfig{
+		providerType: consts.FieldPKCS,
+		keyType:      kmsTypePKCS,
+		getSchema:    managedKeysPKCSConfigSchema,
+	}
 
-var managedKeyProviders = []*managedKeysConfig{
-	managedKeysAWSConfig,
-	managedKeysAzureConfig,
-	managedKeysPKCSConfig,
-}
+	managedKeyProviders = []*managedKeysConfig{
+		managedKeysAWSConfig,
+		managedKeysAzureConfig,
+		managedKeysPKCSConfig,
+	}
+)
 
 func getManagedKeyConfig(providerType string) (*managedKeysConfig, error) {
 	for _, config := range managedKeyProviders {

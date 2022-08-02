@@ -31,18 +31,18 @@ func TestManagedKeys(t *testing.T) {
 			{
 				PreConfig: func() {
 					// Create a managed key in Vault
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client, err := provider.GetClient("", testProvider.Meta())
 
 					data := map[string]interface{}{
-						"access_key": "ASIAKBASDADA09090",
-						"secret_key": "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
-						"key_bits":   "2048",
-						"key_type":   "RSA",
-						"kms_key":    "alias/test_identifier_string",
+						consts.FieldAWSAccessKey: "ASIAKBASDADA09090",
+						consts.FieldAWSSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
+						consts.FieldKeyBits:      "2048",
+						consts.FieldKeyType:      "RSA",
+						consts.FieldKMSKey:       "alias/test_identifier_string",
 					}
 
-					p := fmt.Sprintf("sys/managed-keys/awskms/%s", name0)
-					_, err := client.Logical().Write(p, data)
+					p := getManagedKeysPath(kmsTypeAWS, name0)
+					_, err = client.Logical().Write(p, data)
 					if err != nil {
 						t.Fatalf("could not create managed key to Vault")
 					}
@@ -55,7 +55,7 @@ func TestManagedKeys(t *testing.T) {
 					// Delete previously configured managed key from Vault
 					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
-					p := fmt.Sprintf("sys/managed-keys/awskms/%s", name0)
+					p := getManagedKeysPath(kmsTypeAWS, name0)
 					_, err := client.Logical().Delete(p)
 					if err != nil {
 						t.Fatalf("could not delete managed key")
