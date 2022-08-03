@@ -58,7 +58,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace of the target resource.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
   *Available only for Vault Enterprise*.
 
 * `name` - (Required) The name of the OIDC Provider in Vault.
@@ -93,4 +93,3 @@ In addition to the arguments above, the following attributes are exported:
 * `subject_types_supported` - The subject types supported by the provider.
 
 * `token_endpoint_auth_methods_supported` - The token endpoint auth methods supported by the provider.
-

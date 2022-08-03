@@ -33,7 +33,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
    *Available only for Vault Enterprise*.
 
 * `access_key` - (Optional) The AWS Access Key ID this backend should use to
@@ -98,4 +98,3 @@ $ terraform import vault_aws_secret_backend.aws aws
 ## Tutorials
 
 Refer to the [Inject Secrets into Terraform Using the Vault Provider](https://learn.hashicorp.com/tutorials/terraform/secrets-vault) tutorial for a step-by-step usage example.
-
