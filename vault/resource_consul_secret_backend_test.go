@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	consulhelper "github.com/hashicorp/vault/helper/testhelpers/consul"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -113,7 +114,11 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-backend")
 	resourceName := "vault_consul_secret_backend.test"
 	resourceRoleName := "vault_consul_secret_backend_role.test"
-	consulAddr := testutil.GetTestConsulAddr(t)
+
+	cleanup, consulConfig := consulhelper.PrepareTestContainer(t, "1.12.3", false, false)
+	t.Cleanup(cleanup)
+	consulAddr := consulConfig.Address()
+
 	if testutil.CheckTestVaultVersion(t, "1.11") {
 		resource.Test(t, resource.TestCase{
 			Providers:    testProviders,
