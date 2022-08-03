@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -117,14 +116,9 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 	resourceRoleName := "vault_consul_secret_backend_role.test"
 
 	if testutil.CheckTestVaultVersion(t, "1.11") {
-		var consulAddr string
-		if envAddr := os.Getenv("CONSUL_ADDR"); envAddr != "" {
-			consulAddr = envAddr
-		} else {
-			cleanup, consulConfig := consulhelper.PrepareTestContainer(t, "1.12.3", false, false)
-			t.Cleanup(cleanup)
-			consulAddr = consulConfig.Address()
-		}
+		cleanup, consulConfig := consulhelper.PrepareTestContainer(t, "1.12.3", false, false)
+		t.Cleanup(cleanup)
+		consulAddr := consulConfig.Address()
 
 		resource.Test(t, resource.TestCase{
 			Providers:    testProviders,

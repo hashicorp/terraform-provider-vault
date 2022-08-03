@@ -110,7 +110,7 @@ jobs:
           COUCHBASE_HOST: couchbase
           COUCHBASE_USERNAME: Administrator
           COUCHBASE_PASSWORD: password
-          CONSUL_ADDR: "http://consul:8500"
+          CONSUL_HTTP_ADDR: "http://consul:8500"
         run: |
           export TF_VAULT_VERSION=$(echo ${{ matrix.image }} | \
             awk -F: '{match($NF, /^([0-9]+\.[0-9]+\.[0-9]+)/); printf("%s", substr($NF, RSTART, RLENGTH))}')
