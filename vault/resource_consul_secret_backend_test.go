@@ -121,7 +121,7 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 		if envAddr := os.Getenv("CONSUL_ADDR"); envAddr != "" {
 			consulAddr = envAddr
 		} else {
-			cleanup, consulConfig := consulhelper.PrepareTestContainer(t, "latest", false, false)
+			cleanup, consulConfig := consulhelper.PrepareTestContainer(t, "1.12.3", false, false)
 			t.Cleanup(cleanup)
 			consulAddr = consulConfig.Address()
 		}
