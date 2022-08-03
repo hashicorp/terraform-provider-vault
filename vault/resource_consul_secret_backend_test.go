@@ -116,41 +116,43 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 	resourceName := "vault_consul_secret_backend.test"
 	resourceRoleName := "vault_consul_secret_backend_role.test"
 
-	if testutil.CheckTestVaultVersion(t, "1.11") {
-		cleanup, consulConfig := consulhelper.PrepareTestContainer(t, "1.12.3", false, false)
-		t.Cleanup(cleanup)
-		consulAddr := consulConfig.Address()
-
-		resource.Test(t, resource.TestCase{
-			Providers:    testProviders,
-			PreCheck:     func() { testutil.TestAccPreCheck(t) },
-			CheckDestroy: testAccConsulSecretBackendCheckDestroy,
-			Steps: []resource.TestStep{
-				{
-					Config: testConsulSecretBackend_bootstrapConfig(backend, consulAddr),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
-						resource.TestCheckResourceAttr(resourceName, "address", consulAddr),
-					),
-				},
-				{
-					Config: testConsulSecretBackend_checkBootstrapConfig(backend, consulAddr),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(resourceRoleName, consts.FieldName, "management"),
-						resource.TestCheckResourceAttr(resourceRoleName, consts.FieldBackend, backend),
-						resource.TestCheckResourceAttr(resourceRoleName, "consul_policies.#", "1"),
-						resource.TestCheckTypeSetElemAttr(resourceRoleName, "consul_policies.*", "global-management"),
-					),
-				},
-				testutil.GetImportTestStep(resourceName, false),
-				{
-					Config:      testConsulSecretBackend_bootstrapConfig(backend+"-new", consulAddr),
-					ExpectError: regexp.MustCompile(`Token not provided and failed to bootstrap ACLs`),
-				},
-				testutil.GetImportTestStep(resourceName, false),
-			},
-		})
+	if !testutil.CheckTestVaultVersion(t, "1.11") {
+		t.Skipf("test requires Vault 1.11 or newer")
 	}
+
+	cleanup, consulConfig := consulhelper.PrepareTestContainer(t, "1.12.3", false, false)
+	t.Cleanup(cleanup)
+	consulAddr := consulConfig.Address()
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testAccConsulSecretBackendCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testConsulSecretBackend_bootstrapConfig(backend, consulAddr),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
+					resource.TestCheckResourceAttr(resourceName, "address", consulAddr),
+				),
+			},
+			{
+				Config: testConsulSecretBackend_checkBootstrapConfig(backend, consulAddr),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceRoleName, consts.FieldName, "management"),
+					resource.TestCheckResourceAttr(resourceRoleName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceRoleName, "consul_policies.#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceRoleName, "consul_policies.*", "global-management"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false),
+			{
+				Config:      testConsulSecretBackend_bootstrapConfig(backend+"-new", consulAddr),
+				ExpectError: regexp.MustCompile(`Token not provided and failed to bootstrap ACLs`),
+			},
+			testutil.GetImportTestStep(resourceName, false),
+		},
+	})
 }
 
 func testAccConsulSecretBackendCheckDestroy(s *terraform.State) error {
