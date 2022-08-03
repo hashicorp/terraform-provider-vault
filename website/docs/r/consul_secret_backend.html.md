@@ -35,7 +35,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
    *Available only for Vault Enterprise*.
 
 * `token` - (Required) The Consul management token this backend should use to issue new tokens.
