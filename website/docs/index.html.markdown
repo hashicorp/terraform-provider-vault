@@ -337,6 +337,36 @@ namespace.
 In addition, all resources and data sources support specifying their own `namespace`. 
 All resource's `namespace` will be made relative to the `provider`'s configured namespace.
 
+### Importing namespaced resources
+
+Importing a namespaced resource is done by providing the `namespace` from 
+the `TERRAFORM_VAULT_NAMESPACE_IMPORT` environment variable.
+
+Given the following sample Terraform:
+
+```hcl
+provider vault{}
+
+resource "vault_mount" "secret" {
+  namespace = "namespace1"
+  path      = "secrets"
+  type      = "kv"
+  options = {
+    version = "2"
+  }
+}
+```
+
+One would run the following import command:
+
+```shell
+TERRAFORM_VAULT_NAMESPACE_IMPORT=namespace1 terraform import vault_mount.secret secrets
+```
+
+~> The import namespace will always be made relative to the `namespace` of the `provider{}` block.  
+The `TERRAFORM_VAULT_NAMESPACE_IMPORT` should only ever be set when importing a Vault resource.
+
+
 ### Simple namespace example
 ```hcl
 provider vault{}
@@ -424,7 +454,7 @@ root
 ### Nested Namespaces
 
 The example below relies on setting the `namespace` per resource from a single `provider{}` block. 
-See the [vault_namespace](r/namespace.html#nested-namespaces) documentation for a slightly less elaborate example.
+See the [vault_namespace](/docs/providers/vault/r/namespace.html#nested-namespaces) documentation for a slightly less elaborate example.
 
 ```hcl
 provider vault {}
