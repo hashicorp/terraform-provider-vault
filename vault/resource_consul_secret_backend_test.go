@@ -106,6 +106,7 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "client_key", "UPDATED-FAKE-CLIENT-CERT-KEY-MATERIAL"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, "token", "ca_cert", "client_cert", "client_key"),
 		},
 	})
 }
@@ -141,10 +142,12 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 						resource.TestCheckTypeSetElemAttr(resourceRoleName, "consul_policies.*", "global-management"),
 					),
 				},
+				testutil.GetImportTestStep(resourceName, false),
 				{
-					Config:      testConsulSecretBackend_bootstrapConfig("tf-test-new-backend", consulAddr),
+					Config:      testConsulSecretBackend_bootstrapConfig(backend+"-new", consulAddr),
 					ExpectError: regexp.MustCompile(`Token not provided and failed to bootstrap ACLs`),
 				},
+				testutil.GetImportTestStep(resourceName, false),
 			},
 		})
 	}

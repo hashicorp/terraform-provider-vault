@@ -111,11 +111,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 				Config: testConsulSecretBackendRole_updateConfig(backend, name, token, !testNewParameters, testNewParameters),
 				Check:  resource.ComposeTestCheckFunc(updateTestCheckFuncs...),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			testutil.GetImportTestStep(resourceName, false),
 		},
 	})
 }
