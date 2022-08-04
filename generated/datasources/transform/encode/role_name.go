@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
 const roleNameEndpoint = "/transform/encode/{role_name}"
