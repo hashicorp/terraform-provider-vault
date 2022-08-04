@@ -319,7 +319,7 @@ resource "vault_mount" "test" {
   description               = "Updated desc - Example mount for testing managed keys"
   default_lease_ttl_seconds = 7200
   max_lease_ttl_seconds     = 86400
-  allowed_managed_keys      = [tolist(vault_managed_keys.keys.aws)[0].name, tolist(vault_managed_keys.keys.aws)[1].name]
+  allowed_managed_keys      = vault_managed_keys.keys.aws[*].name
 }
 `, path)
 	}
