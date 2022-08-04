@@ -268,6 +268,11 @@ func TestResourceMountMangedKeys(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_managed_keys.1", fmt.Sprintf("%s-2", keyName)),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }

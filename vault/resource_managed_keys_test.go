@@ -21,13 +21,9 @@ func TestManagedKeys(t *testing.T) {
 	resourceName := "vault_managed_keys.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestEntPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
-			{
-				// set up any random config to populate testProvider
-				Config: kvV2MountConfig("kv"),
-			},
 			{
 				PreConfig: func() {
 					// Create a managed key in Vault
@@ -105,13 +101,53 @@ func TestManagedKeys(t *testing.T) {
 					),
 				),
 			},
+			// test out-of-band changes and UUID update
+			{
+				PreConfig: func() {
+					// Delete previously configured managed key from Vault
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+
+					p := getManagedKeysPath(kmsTypeAWS, name0)
+					_, err := client.Logical().Delete(p)
+					if err != nil {
+						t.Fatalf("could not delete managed key")
+					}
+
+					// Recreate w/ same name; forces UUID update out-of-band
+					data := map[string]interface{}{
+						consts.FieldAWSAccessKey: "ASIAKBASDADA09090",
+						consts.FieldAWSSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
+						consts.FieldKeyBits:      "4096",
+						consts.FieldKeyType:      "RSA",
+						consts.FieldKMSKey:       "alias/test_identifier_string_2",
+					}
+
+					_, err = client.Logical().Write(p, data)
+					if err != nil {
+						t.Fatalf("could not create managed key to Vault")
+					}
+				},
+				Config: testManagedKeysConfig_updated(name0),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "aws.#", "1"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "aws.*",
+						map[string]string{
+							consts.FieldName:         name0,
+							consts.FieldKeyBits:      "4096",
+							consts.FieldKeyType:      "RSA",
+							consts.FieldKMSKey:       "alias/test_identifier_string_2",
+							consts.FieldAWSAccessKey: "ASIAKBASDADA09090",
+							consts.FieldAWSSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
+						},
+					),
+				),
+			},
 			{
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
-					"aws.0.access_key", "aws.1.access_key",
-					"aws.0.secret_key", "aws.1.secret_key",
+					"aws.0.access_key", "aws.0.secret_key",
 				},
 			},
 		},

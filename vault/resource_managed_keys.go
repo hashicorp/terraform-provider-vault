@@ -22,28 +22,28 @@ const (
 )
 
 type managedKeysConfig struct {
-	providerType string
-	keyType      string
-	getSchema    func() schemaMap
+	providerType  string
+	keyType       string
+	getSchemaFunc func() schemaMap
 }
 
 var (
 	managedKeysAWSConfig = &managedKeysConfig{
-		providerType: consts.FieldAWS,
-		keyType:      kmsTypeAWS,
-		getSchema:    managedKeysAWSConfigSchema,
+		providerType:  consts.FieldAWS,
+		keyType:       kmsTypeAWS,
+		getSchemaFunc: managedKeysAWSConfigSchema,
 	}
 
 	managedKeysAzureConfig = &managedKeysConfig{
-		providerType: consts.FieldAzure,
-		keyType:      kmsTypeAzure,
-		getSchema:    managedKeysAzureConfigSchema,
+		providerType:  consts.FieldAzure,
+		keyType:       kmsTypeAzure,
+		getSchemaFunc: managedKeysAzureConfigSchema,
 	}
 
 	managedKeysPKCSConfig = &managedKeysConfig{
-		providerType: consts.FieldPKCS,
-		keyType:      kmsTypePKCS,
-		getSchema:    managedKeysPKCSConfigSchema,
+		providerType:  consts.FieldPKCS,
+		keyType:       kmsTypePKCS,
+		getSchemaFunc: managedKeysPKCSConfigSchema,
 	}
 
 	managedKeyProviders = []*managedKeysConfig{
@@ -79,7 +79,7 @@ func managedKeysResource() *schema.Resource {
 				Optional:    true,
 				Description: "Configuration block for PKCS Managed Keys",
 				Elem: &schema.Resource{
-					Schema: managedKeysPKCSConfig.getSchema(),
+					Schema: managedKeysPKCSConfig.getSchemaFunc(),
 				},
 				Set: hashManagedKeys,
 			},
@@ -88,7 +88,7 @@ func managedKeysResource() *schema.Resource {
 				Optional:    true,
 				Description: "Configuration block for AWS Managed Keys",
 				Elem: &schema.Resource{
-					Schema: managedKeysAWSConfig.getSchema(),
+					Schema: managedKeysAWSConfig.getSchemaFunc(),
 				},
 				Set: hashManagedKeys,
 			},
@@ -97,7 +97,7 @@ func managedKeysResource() *schema.Resource {
 				Optional:    true,
 				Description: "Configuration block for Azure Managed Keys",
 				Elem: &schema.Resource{
-					Schema: managedKeysAzureConfig.getSchema(),
+					Schema: managedKeysAzureConfig.getSchemaFunc(),
 				},
 				Set: hashManagedKeys,
 			},
@@ -379,20 +379,36 @@ func getManagedKeysConfigData(config map[string]interface{}, sm schemaMap) (stri
 	return name, data
 }
 
-func getManagedKeysPath(keyType, name string) string {
-	return fmt.Sprintf("sys/managed-keys/%s/%s", keyType, name)
+func getManagedKeysPathPrefix(keyType string) string {
+	return fmt.Sprintf("sys/managed-keys/%s", keyType)
 }
 
-func handleManagedKeyError(d *schema.ResourceData, providerType string, err error) error {
-	if strings.Contains(err.Error(), "unsupported managed key type") {
-		if _, ok := d.GetOk(providerType); ok {
-			return fmt.Errorf("managed key type %s is not supported by this version of Vault", providerType)
-		}
+func getManagedKeysPath(keyType, name string) string {
+	return fmt.Sprintf("%s/%s", getManagedKeysPathPrefix(keyType), name)
+}
 
-		return nil
+func isUnsupportedKeyTypeError(err error) bool {
+	return strings.Contains(err.Error(), "unsupported managed key type")
+}
+
+func isProviderSupportRequired(d *schema.ResourceData, providerType string) bool {
+	// is provider required
+	_, ok := d.GetOk(providerType)
+	return ok
+}
+
+func handleKeyProviderRequired(d *schema.ResourceData, providerType string, err error) error {
+	isUnsupported := isUnsupportedKeyTypeError(err)
+	if isUnsupported && isProviderSupportRequired(d, providerType) {
+		return fmt.Errorf("managed key type %s is not supported by this version of Vault, err=%s",
+			providerType, err)
 	}
 
-	return err
+	if !isUnsupported {
+		return err
+	}
+
+	return nil
 }
 
 func writeManagedKeysData(d *schema.ResourceData, client *api.Client, providerType string) diag.Diagnostics {
@@ -404,10 +420,12 @@ func writeManagedKeysData(d *schema.ResourceData, client *api.Client, providerTy
 	// confirm that managed keys are not already configured
 	if d.IsNewResource() {
 		for _, c := range managedKeyProviders {
-			p := fmt.Sprintf("%s/%s", "sys/managed-keys", c.keyType)
+			p := getManagedKeysPathPrefix(c.keyType)
 			resp, err := client.Logical().List(p)
 			if err != nil {
-				return diag.FromErr(handleManagedKeyError(d, c.providerType, err))
+				if err := handleKeyProviderRequired(d, c.providerType, err); err != nil {
+					return diag.FromErr(err)
+				}
 			}
 
 			if resp == nil {
@@ -434,7 +452,7 @@ func writeManagedKeysData(d *schema.ResourceData, client *api.Client, providerTy
 
 	newKeySet := map[string]bool{}
 	for _, block := range newBlocks.(*schema.Set).List() {
-		keyName, data := getManagedKeysConfigData(block.(map[string]interface{}), config.getSchema())
+		keyName, data := getManagedKeysConfigData(block.(map[string]interface{}), config.getSchemaFunc())
 		path := getManagedKeysPath(config.keyType, keyName)
 
 		log.Printf("[DEBUG] Writing data to Vault at %s", path)
@@ -503,17 +521,20 @@ func updateRedactedFields(d *schema.ResourceData, providerType, name string,
 }
 
 func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerType string,
-	sm map[string]string, redactedFields []string) error {
+	sm map[string]string, redactedFields []string,
+) error {
 	config, err := getManagedKeyConfig(providerType)
 	if err != nil {
 		return err
 	}
 
-	p := fmt.Sprintf("%s/%s", "sys/managed-keys", config.keyType)
+	p := getManagedKeysPathPrefix(config.keyType)
 	log.Printf("[DEBUG] Listing data from Vault at %s", p)
 	resp, err := client.Logical().List(p)
 	if err != nil {
-		return handleManagedKeyError(d, providerType, err)
+		if err := handleKeyProviderRequired(d, providerType, err); err != nil {
+			return err
+		}
 	}
 
 	if resp == nil {
@@ -539,7 +560,7 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 				continue
 			}
 
-			for k := range config.getSchema() {
+			for k := range config.getSchemaFunc() {
 				// Map TF schema fields to Vault API
 				vaultKey := k
 				if v, ok := sm[k]; ok {
