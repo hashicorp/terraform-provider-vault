@@ -249,7 +249,7 @@ func TestFindAliases(t *testing.T) {
 						},
 					},
 				},
-				wantErrOnRead: true,
+				wantErrOnRead: readWrapper(true),
 			},
 			want:    nil,
 			wantErr: true,
@@ -460,7 +460,7 @@ func TestLookupEntityAlias(t *testing.T) {
 			},
 			findHandler: &testLookupEntityAliasHandler{
 				entities:      defaultEntities,
-				wantErrOnRead: true,
+				wantErrOnRead: readWrapper(true),
 			},
 			want:    nil,
 			wantErr: true,

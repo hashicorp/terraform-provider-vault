@@ -13,7 +13,7 @@ func identityGroupMemberEntityIdsResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityGroupMemberEntityIdsUpdate,
 		Update: identityGroupMemberEntityIdsUpdate,
-		Read:   identityGroupMemberEntityIdsRead,
+		Read:   ReadWrapper(identityGroupMemberEntityIdsRead),
 		Delete: identityGroupMemberEntityIdsDelete,
 
 		Schema: map[string]*schema.Schema{

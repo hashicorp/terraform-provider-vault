@@ -11,7 +11,7 @@ import (
 
 func nomadAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: readNomadCredsResource,
+		Read: ReadWrapper(readNomadCredsResource),
 		Schema: map[string]*schema.Schema{
 			"backend": {
 				Type:        schema.TypeString,

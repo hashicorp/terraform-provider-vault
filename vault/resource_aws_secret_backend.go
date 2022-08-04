@@ -15,7 +15,7 @@ import (
 func awsSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsSecretBackendCreate,
-		Read:   awsSecretBackendRead,
+		Read:   ReadWrapper(awsSecretBackendRead),
 		Update: awsSecretBackendUpdate,
 		Delete: awsSecretBackendDelete,
 		Exists: awsSecretBackendExists,

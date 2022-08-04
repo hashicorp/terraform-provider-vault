@@ -18,7 +18,7 @@ const roleNameEndpoint = "/transform/decode/{role_name}"
 
 func RoleNameDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: readRoleNameResource,
+		Read: vault.ReadWrapper(readRoleNameResource),
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,

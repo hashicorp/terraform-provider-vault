@@ -14,7 +14,7 @@ import (
 func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 	return &schema.Resource{
 		Create: pkiSecretBackendIntermediateCertRequestCreate,
-		Read:   pkiSecretBackendIntermediateCertRequestRead,
+		Read:   ReadWrapper(pkiSecretBackendIntermediateCertRequestRead),
 		Delete: pkiSecretBackendIntermediateCertRequestDelete,
 
 		Schema: map[string]*schema.Schema{

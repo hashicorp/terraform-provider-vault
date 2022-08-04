@@ -12,7 +12,7 @@ import (
 
 func kubernetesAuthBackendConfigDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: kubernetesAuthBackendConfigDataSourceRead,
+		Read: ReadWrapper(kubernetesAuthBackendConfigDataSourceRead),
 		Schema: map[string]*schema.Schema{
 			"backend": {
 				Type:        schema.TypeString,

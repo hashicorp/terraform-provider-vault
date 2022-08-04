@@ -26,7 +26,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 		Update: func(data *schema.ResourceData, i interface{}) error {
 			return nil
 		},
-		Read: pkiSecretBackendCertRead,
+		Read: ReadWrapper(pkiSecretBackendCertRead),
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,

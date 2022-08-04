@@ -15,7 +15,7 @@ const identityOIDCPublicKeysPathSuffix = "/.well-known/keys"
 
 func identityOIDCPublicKeysDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: readOIDCPublicKeysResource,
+		Read: ReadWrapper(readOIDCPublicKeysResource),
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,

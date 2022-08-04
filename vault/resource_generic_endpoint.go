@@ -18,7 +18,7 @@ func genericEndpointResource(name string) *schema.Resource {
 		Create: genericEndpointResourceWrite,
 		Update: genericEndpointResourceWrite,
 		Delete: genericEndpointResourceDelete,
-		Read:   genericEndpointResourceRead,
+		Read:   ReadWrapper(genericEndpointResourceRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

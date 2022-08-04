@@ -14,7 +14,7 @@ import (
 func terraformCloudSecretCredsResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createTerraformCloudSecretCredsResource,
-		Read:   readTerraformCloudSecretCredsResource,
+		Read:   ReadWrapper(readTerraformCloudSecretCredsResource),
 		Update: updateTerraformCloudSecretCredsResource,
 		Delete: deleteTerraformCloudSecretCredsResource,
 		Schema: map[string]*schema.Schema{

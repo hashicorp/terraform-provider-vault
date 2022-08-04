@@ -14,7 +14,7 @@ import (
 func azureSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: azureSecretBackendCreate,
-		Read:   azureSecretBackendRead,
+		Read:   ReadWrapper(azureSecretBackendRead),
 		Update: azureSecretBackendUpdate,
 		Delete: azureSecretBackendDelete,
 		Exists: azureSecretBackendExists,

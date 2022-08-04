@@ -23,7 +23,7 @@ func oktaAuthBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: oktaAuthBackendWrite,
 		Delete: oktaAuthBackendDelete,
-		Read:   oktaAuthBackendRead,
+		Read:   ReadWrapper(oktaAuthBackendRead),
 		Update: oktaAuthBackendUpdate,
 		Exists: oktaAuthBackendExists,
 		Importer: &schema.ResourceImporter{

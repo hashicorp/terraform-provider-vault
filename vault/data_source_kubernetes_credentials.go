@@ -19,7 +19,7 @@ const (
 
 func kubernetesServiceAccountTokenDataSource() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: readKubernetesServiceAccountToken,
+		ReadContext: ReadContextWrapper(readKubernetesServiceAccountToken),
 		Schema: map[string]*schema.Schema{
 			consts.FieldBackend: {
 				Type: schema.TypeString,

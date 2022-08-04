@@ -13,7 +13,7 @@ import (
 func pkiSecretBackendConfigCAResource() *schema.Resource {
 	return &schema.Resource{
 		Create: pkiSecretBackendConfigCACreate,
-		Read:   pkiSecretBackendConfigCARead,
+		Read:   ReadWrapper(pkiSecretBackendConfigCARead),
 		Delete: pkiSecretBackendConfigCADelete,
 
 		Schema: map[string]*schema.Schema{

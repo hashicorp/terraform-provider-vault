@@ -42,7 +42,7 @@ func NameResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createNameResource,
 		Update: updateNameResource,
-		Read:   readNameResource,
+		Read:   vault.ReadWrapper(readNameResource),
 		Exists: resourceNameExists,
 		Delete: deleteNameResource,
 		Importer: &schema.ResourceImporter{
