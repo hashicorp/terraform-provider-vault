@@ -21,7 +21,7 @@ func gcpAuthBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: gcpAuthBackendWrite,
 		Update: gcpAuthBackendUpdate,
-		Read:   gcpAuthBackendRead,
+		Read:   ReadWrapper(gcpAuthBackendRead),
 		Delete: gcpAuthBackendDelete,
 		Exists: gcpAuthBackendExists,
 		Importer: &schema.ResourceImporter{

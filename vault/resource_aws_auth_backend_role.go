@@ -161,7 +161,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CustomizeDiff: resourceVaultAwsAuthBackendRoleCustomizeDiff,
 		CreateContext: awsAuthBackendRoleCreate,
-		ReadContext:   awsAuthBackendRoleRead,
+		ReadContext:   ReadContextWrapper(awsAuthBackendRoleRead),
 		UpdateContext: awsAuthBackendRoleUpdate,
 		DeleteContext: awsAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{

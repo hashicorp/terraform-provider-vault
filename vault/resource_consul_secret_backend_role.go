@@ -20,7 +20,7 @@ var (
 func consulSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: consulSecretBackendRoleWrite,
-		Read:   consulSecretBackendRoleRead,
+		Read:   ReadWrapper(consulSecretBackendRoleRead),
 		Update: consulSecretBackendRoleWrite,
 		Delete: consulSecretBackendRoleDelete,
 		Exists: consulSecretBackendRoleExists,

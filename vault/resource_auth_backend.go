@@ -17,7 +17,7 @@ func AuthBackendResource() *schema.Resource {
 
 		Create: authBackendWrite,
 		Delete: authBackendDelete,
-		Read:   authBackendRead,
+		Read:   ReadWrapper(authBackendRead),
 		Update: authBackendUpdate,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

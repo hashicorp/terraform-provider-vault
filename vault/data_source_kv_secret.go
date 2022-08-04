@@ -14,7 +14,7 @@ import (
 
 func kvSecretDataSource() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: kvSecretDataSourceRead,
+		ReadContext: ReadContextWrapper(kvSecretDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {

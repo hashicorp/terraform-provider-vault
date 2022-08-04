@@ -16,7 +16,7 @@ func identityGroupAliasResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityGroupAliasCreate,
 		Update: identityGroupAliasUpdate,
-		Read:   identityGroupAliasRead,
+		Read:   ReadWrapper(identityGroupAliasRead),
 		Delete: identityGroupAliasDelete,
 		Exists: identityGroupAliasExists,
 		Importer: &schema.ResourceImporter{

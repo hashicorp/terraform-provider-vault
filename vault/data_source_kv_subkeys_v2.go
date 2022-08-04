@@ -15,7 +15,7 @@ import (
 
 func kvSecretSubkeysV2DataSource() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: kvSecretSubkeysDataSourceRead,
+		ReadContext: ReadContextWrapper(kvSecretSubkeysDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldMount: {

@@ -14,7 +14,7 @@ import (
 func auditResource() *schema.Resource {
 	return &schema.Resource{
 		Create: auditWrite,
-		Read:   auditRead,
+		Read:   ReadWrapper(auditRead),
 		Delete: auditDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

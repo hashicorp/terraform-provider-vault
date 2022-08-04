@@ -16,7 +16,7 @@ var awsAuthBackendIdentityWhitelistBackendFromPathRegex = regexp.MustCompile("^a
 func awsAuthBackendIdentityWhitelistResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendIdentityWhitelistWrite,
-		Read:   awsAuthBackendIdentityWhitelistRead,
+		Read:   ReadWrapper(awsAuthBackendIdentityWhitelistRead),
 		Update: awsAuthBackendIdentityWhitelistWrite,
 		Delete: awsAuthBackendIdentityWhitelistDelete,
 		Exists: awsAuthBackendIdentityWhitelistExists,

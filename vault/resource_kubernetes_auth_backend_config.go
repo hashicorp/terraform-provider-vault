@@ -16,7 +16,7 @@ var kubernetesAuthBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/co
 func kubernetesAuthBackendConfigResource() *schema.Resource {
 	return &schema.Resource{
 		Create: kubernetesAuthBackendConfigCreate,
-		Read:   kubernetesAuthBackendConfigRead,
+		Read:   ReadWrapper(kubernetesAuthBackendConfigRead),
 		Update: kubernetesAuthBackendConfigUpdate,
 		Delete: kubernetesAuthBackendConfigDelete,
 		Exists: kubernetesAuthBackendConfigExists,

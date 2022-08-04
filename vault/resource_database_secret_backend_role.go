@@ -20,7 +20,7 @@ var (
 func databaseSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: databaseSecretBackendRoleWrite,
-		Read:   databaseSecretBackendRoleRead,
+		Read:   ReadWrapper(databaseSecretBackendRoleRead),
 		Update: databaseSecretBackendRoleWrite,
 		Delete: databaseSecretBackendRoleDelete,
 		Exists: databaseSecretBackendRoleExists,

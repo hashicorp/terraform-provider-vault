@@ -120,7 +120,7 @@ func MountResource() *schema.Resource {
 		Create: mountWrite,
 		Update: mountUpdate,
 		Delete: mountDelete,
-		Read:   mountRead,
+		Read:   ReadWrapper(mountRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

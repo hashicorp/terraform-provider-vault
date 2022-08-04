@@ -98,7 +98,7 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createNomadAccessConfigResource,
 		Update: updateNomadAccessConfigResource,
-		Read:   readNomadAccessConfigResource,
+		Read:   ReadWrapper(readNomadAccessConfigResource),
 		Delete: deleteNomadAccessConfigResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
