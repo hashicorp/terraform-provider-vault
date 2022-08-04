@@ -92,6 +92,12 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_CAPATH", ""),
 				Description: "Path to directory containing CA certificate files to validate the server's certificate.",
 			},
+			"ca_cert_bytes": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("VAULT_CACERT_BYTES", ""),
+				Description: "CA certificate PEM string to validate the server's certificate.",
+			},
 			"auth_login": {
 				Type:        schema.TypeList,
 				Optional:    true,

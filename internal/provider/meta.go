@@ -110,9 +110,15 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		clientAuthKey = clientAuth["key_file"].(string)
 	}
 
+	caCertBytes := []byte("")
+	if d.Get("ca_cert_bytes").(string) != "" {
+		caCertBytes = []byte(d.Get("ca_cert_bytes").(string))
+	}
+
 	err := clientConfig.ConfigureTLS(&api.TLSConfig{
 		CACert:        d.Get("ca_cert_file").(string),
 		CAPath:        d.Get("ca_cert_dir").(string),
+		CACertBytes:   caCertBytes,
 		Insecure:      d.Get("skip_tls_verify").(bool),
 		TLSServerName: d.Get("tls_server_name").(string),
 
