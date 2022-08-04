@@ -15,14 +15,14 @@ import (
 )
 
 func TestConsulSecretBackendRole(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-backend")
+	path := acctest.RandomWithPrefix("tf-test-consul")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
 	resourceName := "vault_consul_secret_backend_role.test"
 	missingParametersError := "Use either a policy document, a list of policies, or a list of roles, depending on your Consul version"
 
 	createTestCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "0"),
 		resource.TestCheckResourceAttr(resourceName, "consul_namespace", "consul-ns-0"),
@@ -30,7 +30,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 	}
 
 	updateTestCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "120"),
 		resource.TestCheckResourceAttr(resourceName, "max_ttl", "240"),
@@ -88,27 +88,28 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config:      testConsulSecretBackendRole_initialConfig(backend, name, token, false, false),
+				Config:      testConsulSecretBackendRole_initialConfig(path, name, token, false, false),
 				ExpectError: regexp.MustCompile(missingParametersError),
 			},
 			{
-				Config:      testConsulSecretBackendRole_initialConfig(backend, name, token, true, true),
+				Config:      testConsulSecretBackendRole_initialConfig(path, name, token, true, true),
 				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
 			},
 			{
-				Config: testConsulSecretBackendRole_initialConfig(backend, name, token, !testNewParameters, testNewParameters),
+				Config: testConsulSecretBackendRole_initialConfig(path, name, token, !testNewParameters, testNewParameters),
 				Check:  resource.ComposeTestCheckFunc(createTestCheckFuncs...),
 			},
+			testutil.GetImportTestStep(resourceName, false),
 			{
-				Config:      testConsulSecretBackendRole_updateConfig(backend, name, token, false, false),
+				Config:      testConsulSecretBackendRole_updateConfig(path, name, token, false, false),
 				ExpectError: regexp.MustCompile(missingParametersError),
 			},
 			{
-				Config:      testConsulSecretBackendRole_updateConfig(backend, name, token, true, true),
+				Config:      testConsulSecretBackendRole_updateConfig(path, name, token, true, true),
 				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
 			},
 			{
-				Config: testConsulSecretBackendRole_updateConfig(backend, name, token, !testNewParameters, testNewParameters),
+				Config: testConsulSecretBackendRole_updateConfig(path, name, token, !testNewParameters, testNewParameters),
 				Check:  resource.ComposeTestCheckFunc(updateTestCheckFuncs...),
 			},
 			testutil.GetImportTestStep(resourceName, false),
@@ -138,7 +139,7 @@ func testAccConsulSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testConsulSecretBackendRole_initialConfig(backend, name, token string, withPolicies, isAboveVersionThreshold bool) string {
+func testConsulSecretBackendRole_initialConfig(path, name, token string, withPolicies, isAboveVersionThreshold bool) string {
 	config := fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -154,7 +155,7 @@ resource "vault_consul_secret_backend_role" "test" {
   name = "%s"
   consul_namespace = "consul-ns-0"
   partition = "partition-0"
-`, backend, token, name)
+`, path, token, name)
 
 	if withPolicies {
 		config += `
@@ -193,7 +194,7 @@ node_identities = [
 	return config + "}"
 }
 
-func testConsulSecretBackendRole_updateConfig(backend, name, token string, withPolicies, isAboveVersionThreshold bool) string {
+func testConsulSecretBackendRole_updateConfig(path, name, token string, withPolicies, isAboveVersionThreshold bool) string {
 	config := fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -213,7 +214,7 @@ resource "vault_consul_secret_backend_role" "test" {
   max_ttl = 240
   local = true
   token_type = "client"
-`, backend, token, name)
+`, path, token, name)
 
 	if withPolicies {
 		config += `
