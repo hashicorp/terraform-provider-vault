@@ -14,7 +14,7 @@ import (
 func terraformCloudSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: terraformCloudSecretBackendCreate,
-		Read:   terraformCloudSecretBackendRead,
+		Read:   ReadWrapper(terraformCloudSecretBackendRead),
 		Update: terraformCloudSecretBackendUpdate,
 		Delete: terraformCloudSecretBackendDelete,
 		Exists: terraformCloudSecretBackendExists,

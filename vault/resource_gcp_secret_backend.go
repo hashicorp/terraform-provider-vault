@@ -14,7 +14,7 @@ import (
 func gcpSecretBackendResource(name string) *schema.Resource {
 	return &schema.Resource{
 		Create: gcpSecretBackendCreate,
-		Read:   gcpSecretBackendRead,
+		Read:   ReadWrapper(gcpSecretBackendRead),
 		Update: gcpSecretBackendUpdate,
 		Delete: gcpSecretBackendDelete,
 		Exists: gcpSecretBackendExists,

@@ -23,7 +23,7 @@ func ldapAuthBackendUserResource() *schema.Resource {
 
 		Create: ldapAuthBackendUserResourceWrite,
 		Update: ldapAuthBackendUserResourceWrite,
-		Read:   ldapAuthBackendUserResourceRead,
+		Read:   ReadWrapper(ldapAuthBackendUserResourceRead),
 		Delete: ldapAuthBackendUserResourceDelete,
 		Exists: ldapAuthBackendUserResourceExists,
 		Importer: &schema.ResourceImporter{

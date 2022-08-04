@@ -11,7 +11,7 @@ func egpPolicyResource() *schema.Resource {
 		Create: egpPolicyWrite,
 		Update: egpPolicyWrite,
 		Delete: egpPolicyDelete,
-		Read:   egpPolicyRead,
+		Read:   ReadWrapper(egpPolicyRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

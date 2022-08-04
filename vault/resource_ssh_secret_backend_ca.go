@@ -14,7 +14,7 @@ import (
 func sshSecretBackendCAResource() *schema.Resource {
 	return &schema.Resource{
 		Create: sshSecretBackendCACreate,
-		Read:   sshSecretBackendCARead,
+		Read:   ReadWrapper(sshSecretBackendCARead),
 		Delete: sshSecretBackendCADelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

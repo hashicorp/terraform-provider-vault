@@ -16,7 +16,7 @@ var awsAuthBackendRoleTagBlacklistBackendFromPathRegex = regexp.MustCompile("^au
 func awsAuthBackendRoleTagBlacklistResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendRoleTagBlacklistWrite,
-		Read:   awsAuthBackendRoleTagBlacklistRead,
+		Read:   ReadWrapper(awsAuthBackendRoleTagBlacklistRead),
 		Update: awsAuthBackendRoleTagBlacklistWrite,
 		Delete: awsAuthBackendRoleTagBlacklistDelete,
 		Exists: awsAuthBackendRoleTagBlacklistExists,

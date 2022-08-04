@@ -21,6 +21,8 @@ import (
 	"github.com/mitchellh/go-homedir"
 
 	goversion "github.com/hashicorp/go-version"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 const (
@@ -659,5 +661,18 @@ func GetImportTestStep(resourceName string, skipVerify bool, ignoreFields ...str
 		ImportState:             true,
 		ImportStateVerify:       !skipVerify,
 		ImportStateVerifyIgnore: ignoreFields,
+	}
+}
+
+// GetNamespaceImportStateCheck checks that the namespace was properly imported into the state.
+func GetNamespaceImportStateCheck(ns string) resource.ImportStateCheckFunc {
+	return func(states []*terraform.InstanceState) error {
+		for _, s := range states {
+			if actual := s.Attributes[consts.FieldNamespace]; actual != ns {
+				return fmt.Errorf("expected %q for %s, actual %q",
+					ns, consts.FieldNamespace, actual)
+			}
+		}
+		return nil
 	}
 }

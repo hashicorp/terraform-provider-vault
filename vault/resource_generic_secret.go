@@ -20,7 +20,7 @@ func genericSecretResource(name string) *schema.Resource {
 		Create: genericSecretResourceWrite,
 		Update: genericSecretResourceWrite,
 		Delete: genericSecretResourceDelete,
-		Read:   genericSecretResourceRead,
+		Read:   ReadWrapper(genericSecretResourceRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

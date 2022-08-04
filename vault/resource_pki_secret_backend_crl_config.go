@@ -13,7 +13,7 @@ import (
 func pkiSecretBackendCrlConfigResource() *schema.Resource {
 	return &schema.Resource{
 		Create: pkiSecretBackendCrlConfigCreate,
-		Read:   pkiSecretBackendCrlConfigRead,
+		Read:   ReadWrapper(pkiSecretBackendCrlConfigRead),
 		Update: pkiSecretBackendCrlConfigUpdate,
 		Delete: pkiSecretBackendCrlConfigDelete,
 

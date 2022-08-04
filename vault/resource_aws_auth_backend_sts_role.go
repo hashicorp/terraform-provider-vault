@@ -19,7 +19,7 @@ var (
 func awsAuthBackendSTSRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendSTSRoleCreate,
-		Read:   awsAuthBackendSTSRoleRead,
+		Read:   ReadWrapper(awsAuthBackendSTSRoleRead),
 		Update: awsAuthBackendSTSRoleUpdate,
 		Delete: awsAuthBackendSTSRoleDelete,
 		Exists: awsAuthBackendSTSRoleExists,

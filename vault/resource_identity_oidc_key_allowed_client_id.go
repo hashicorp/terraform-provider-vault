@@ -13,7 +13,7 @@ import (
 func identityOidcKeyAllowedClientId() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOidcKeyAllowedClientIdWrite,
-		Read:   identityOidcKeyAllowedClientIdRead,
+		Read:   ReadWrapper(identityOidcKeyAllowedClientIdRead),
 		Delete: identityOidcKeyAllowedClientIdDelete,
 
 		Schema: map[string]*schema.Schema{

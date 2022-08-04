@@ -212,7 +212,7 @@ func adSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createConfigResource,
 		Update: updateConfigResource,
-		Read:   readConfigResource,
+		Read:   ReadWrapper(readConfigResource),
 		Delete: deleteConfigResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

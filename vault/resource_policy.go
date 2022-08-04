@@ -14,7 +14,7 @@ func policyResource() *schema.Resource {
 		Create: policyWrite,
 		Update: policyWrite,
 		Delete: policyDelete,
-		Read:   policyRead,
+		Read:   ReadWrapper(policyRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

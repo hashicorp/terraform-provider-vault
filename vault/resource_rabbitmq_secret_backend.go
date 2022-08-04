@@ -15,7 +15,7 @@ import (
 func rabbitMQSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: rabbitMQSecretBackendCreate,
-		Read:   rabbitMQSecretBackendRead,
+		Read:   ReadWrapper(rabbitMQSecretBackendRead),
 		Update: rabbitMQSecretBackendUpdate,
 		Delete: rabbitMQSecretBackendDelete,
 		Exists: rabbitMQSecretBackendExists,

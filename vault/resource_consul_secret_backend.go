@@ -14,7 +14,7 @@ import (
 func consulSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: consulSecretBackendCreate,
-		Read:   consulSecretBackendRead,
+		Read:   ReadWrapper(consulSecretBackendRead),
 		Update: consulSecretBackendUpdate,
 		Delete: consulSecretBackendDelete,
 		Exists: consulSecretBackendExists,

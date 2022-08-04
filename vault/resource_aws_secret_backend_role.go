@@ -15,7 +15,7 @@ import (
 func awsSecretBackendRoleResource(name string) *schema.Resource {
 	return &schema.Resource{
 		Create: awsSecretBackendRoleWrite,
-		Read:   awsSecretBackendRoleRead,
+		Read:   ReadWrapper(awsSecretBackendRoleRead),
 		Update: awsSecretBackendRoleWrite,
 		Delete: awsSecretBackendRoleDelete,
 		Exists: awsSecretBackendRoleExists,

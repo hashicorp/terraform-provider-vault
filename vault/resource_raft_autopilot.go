@@ -63,7 +63,7 @@ func raftAutopilotConfigResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createOrUpdateAutopilotConfigResource,
 		Update: createOrUpdateAutopilotConfigResource,
-		Read:   readAutopilotConfigResource,
+		Read:   ReadWrapper(readAutopilotConfigResource),
 		Delete: deleteAutopilotConfigResource,
 		Schema: fields,
 	}

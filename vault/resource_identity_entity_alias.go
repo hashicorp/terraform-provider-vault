@@ -19,7 +19,7 @@ func identityEntityAliasResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: identityEntityAliasCreate,
 		UpdateContext: identityEntityAliasUpdate,
-		ReadContext:   identityEntityAliasRead,
+		ReadContext:   ReadContextWrapper(identityEntityAliasRead),
 		DeleteContext: identityEntityAliasDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

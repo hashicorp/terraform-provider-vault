@@ -58,7 +58,7 @@ func adSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createRoleResource,
 		Update: updateRoleResource,
-		Read:   readRoleResource,
+		Read:   ReadWrapper(readRoleResource),
 		Delete: deleteRoleResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

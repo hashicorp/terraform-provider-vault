@@ -13,7 +13,7 @@ import (
 func githubTeamResource() *schema.Resource {
 	return &schema.Resource{
 		Create: githubTeamCreate,
-		Read:   githubTeamRead,
+		Read:   ReadWrapper(githubTeamRead),
 		Update: githubTeamUpdate,
 		Delete: githubTeamDelete,
 		Importer: &schema.ResourceImporter{

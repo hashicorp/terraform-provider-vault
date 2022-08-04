@@ -14,7 +14,7 @@ import (
 func awsAuthBackendClientResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendWrite,
-		Read:   awsAuthBackendRead,
+		Read:   ReadWrapper(awsAuthBackendRead),
 		Update: awsAuthBackendWrite,
 		Delete: awsAuthBackendDelete,
 		Exists: awsAuthBackendExists,

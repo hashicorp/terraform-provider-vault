@@ -16,7 +16,7 @@ func mfaDuoResource() *schema.Resource {
 		Create: mfaDuoWrite,
 		Update: mfaDuoWrite,
 		Delete: mfaDuoDelete,
-		Read:   mfaDuoRead,
+		Read:   ReadWrapper(mfaDuoRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

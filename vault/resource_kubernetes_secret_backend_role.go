@@ -13,9 +13,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-var (
-	kubernetesSecretBackendFromPathRegex = regexp.MustCompile("^(.+)/roles/.+$")
-)
+var kubernetesSecretBackendFromPathRegex = regexp.MustCompile("^(.+)/roles/.+$")
 
 const (
 	fieldAllowedKubernetesNamespaces = "allowed_kubernetes_namespaces"
@@ -33,7 +31,7 @@ const (
 func kubernetesSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: kubernetesSecretBackendRoleCreateUpdate,
-		ReadContext:   kubernetesSecretBackendRoleRead,
+		ReadContext:   ReadContextWrapper(kubernetesSecretBackendRoleRead),
 		UpdateContext: kubernetesSecretBackendRoleCreateUpdate,
 		DeleteContext: kubernetesSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{

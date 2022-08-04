@@ -40,7 +40,7 @@ const (
 
 func awsAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: awsAccessCredentialsDataSourceRead,
+		Read: ReadWrapper(awsAccessCredentialsDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"backend": {

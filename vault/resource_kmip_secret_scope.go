@@ -16,7 +16,7 @@ var errKMIPScopeNotFound = errors.New("KMIP scope not found")
 func kmipSecretScopeResource() *schema.Resource {
 	return &schema.Resource{
 		Create: kmipSecretScopeCreate,
-		Read:   kmipSecretScopeRead,
+		Read:   ReadWrapper(kmipSecretScopeRead),
 		Update: kmipSecretScopeUpdate,
 		Delete: kmipSecretScopeDelete,
 		Importer: &schema.ResourceImporter{

@@ -11,7 +11,7 @@ import (
 
 func identityOIDCClientCredsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: readOIDCClientCredsResource,
+		Read: ReadWrapper(readOIDCClientCredsResource),
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,

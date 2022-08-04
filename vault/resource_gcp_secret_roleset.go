@@ -21,7 +21,7 @@ var (
 func gcpSecretRolesetResource() *schema.Resource {
 	return &schema.Resource{
 		Create: gcpSecretRolesetCreate,
-		Read:   gcpSecretRolesetRead,
+		Read:   ReadWrapper(gcpSecretRolesetRead),
 		Update: gcpSecretRolesetUpdate,
 		Delete: gcpSecretRolesetDelete,
 		Exists: gcpSecretRolesetExists,
