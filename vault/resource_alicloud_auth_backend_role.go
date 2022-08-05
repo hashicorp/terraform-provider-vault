@@ -42,7 +42,7 @@ func alicloudAuthBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: alicloudAuthBackendRoleCreate,
 		UpdateContext: alicloudAuthBackendRoleUpdate,
-		ReadContext:   alicloudAuthBackendRoleRead,
+		ReadContext:   ReadContextWrapper(alicloudAuthBackendRoleRead),
 		DeleteContext: alicloudAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,

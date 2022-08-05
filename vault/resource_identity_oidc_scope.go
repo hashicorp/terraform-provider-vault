@@ -16,7 +16,7 @@ func identityOIDCScopeResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOIDCScopeCreateUpdate,
 		Update: identityOIDCScopeCreateUpdate,
-		Read:   identityOIDCScopeRead,
+		Read:   ReadWrapper(identityOIDCScopeRead),
 		Delete: identityOIDCScopeDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

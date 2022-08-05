@@ -61,7 +61,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace of the target resource.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
   *Available only for Vault Enterprise*.
 
 * `path` - (Required) Full KV-V1 path where secrets will be listed.
@@ -75,4 +75,3 @@ Use of this resource requires the `read` capability on the given path.
 The following attributes are exported:
 
 * `names` - List of all secret names listed under the given path.
-

@@ -60,7 +60,7 @@ func githubAuthBackendResource() *schema.Resource {
 
 	return &schema.Resource{
 		Create: githubAuthBackendCreate,
-		Read:   githubAuthBackendRead,
+		Read:   ReadWrapper(githubAuthBackendRead),
 		Update: githubAuthBackendUpdate,
 		Delete: githubAuthBackendDelete,
 		Importer: &schema.ResourceImporter{

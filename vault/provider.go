@@ -1,9 +1,13 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"os"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -837,4 +841,42 @@ func UpdateSchemaResource(r *schema.Resource) *schema.Resource {
 	mustAddSchema(r, getNamespaceSchema())
 
 	return r
+}
+
+// ReadWrapper provides common read operations to the wrapped schema.ReadFunc.
+func ReadWrapper(f schema.ReadFunc) schema.ReadFunc {
+	return func(d *schema.ResourceData, i interface{}) error {
+		if err := importNamespace(d); err != nil {
+			return err
+		}
+
+		return f(d, i)
+	}
+}
+
+// ReadContextWrapper provides common read operations to the wrapped schema.ReadContextFunc.
+func ReadContextWrapper(f schema.ReadContextFunc) schema.ReadContextFunc {
+	return func(ctx context.Context, d *schema.ResourceData, i interface{}) diag.Diagnostics {
+		if err := importNamespace(d); err != nil {
+			return diag.FromErr(err)
+		}
+		return f(ctx, d, i)
+	}
+}
+
+func importNamespace(d *schema.ResourceData) error {
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		s := d.State()
+		if _, ok := s.Attributes[consts.FieldNamespace]; !ok {
+			log.Printf(`[INFO] Environment variable %s set, `+
+				`attempting TF state import "%s=%s"`,
+				consts.EnvVarVaultNamespaceImport, consts.FieldNamespace, ns)
+			if err := d.Set(consts.FieldNamespace, ns); err != nil {
+				return fmt.Errorf("failed to import %q, err=%w",
+					consts.EnvVarVaultNamespaceImport, err)
+			}
+		}
+	}
+
+	return nil
 }

@@ -12,7 +12,7 @@ import (
 
 func approleAuthBackendRoleIDDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: approleAuthBackendRoleIDRead,
+		Read: ReadWrapper(approleAuthBackendRoleIDRead),
 
 		Schema: map[string]*schema.Schema{
 			"role_name": {

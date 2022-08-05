@@ -15,7 +15,7 @@ func mfaTOTPResource() *schema.Resource {
 		Create: mfaTOTPWrite,
 		Update: mfaTOTPUpdate,
 		Delete: mfaTOTPDelete,
-		Read:   mfaTOTPRead,
+		Read:   ReadWrapper(mfaTOTPRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

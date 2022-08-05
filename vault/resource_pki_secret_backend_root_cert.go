@@ -26,7 +26,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 		Update: func(data *schema.ResourceData, i interface{}) error {
 			return nil
 		},
-		Read: pkiSecretBackendCertRead,
+		Read: ReadWrapper(pkiSecretBackendCertRead),
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
@@ -79,14 +79,14 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			"type": {
 				Type:         schema.TypeString,
 				Required:     true,
-				Description:  "Type of intermediate to create. Must be either \"exported\" or \"internal\".",
+				Description:  "Type of root to create. Must be either \"exported\" or \"internal\".",
 				ForceNew:     true,
 				ValidateFunc: validation.StringInSlice([]string{"exported", "internal", "kms"}, false),
 			},
 			"common_name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "CN of intermediate to create.",
+				Description: "CN of root to create.",
 				ForceNew:    true,
 			},
 			"alt_names": {

@@ -597,7 +597,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 
 	return &schema.Resource{
 		Create: databaseSecretBackendConnectionCreateOrUpdate,
-		Read:   databaseSecretBackendConnectionRead,
+		Read:   ReadWrapper(databaseSecretBackendConnectionRead),
 		Update: databaseSecretBackendConnectionCreateOrUpdate,
 		Delete: databaseSecretBackendConnectionDelete,
 		Exists: databaseSecretBackendConnectionExists,

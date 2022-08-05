@@ -1,3 +1,16 @@
+## 3.8.1 (August 04, 2022)
+IMPROVEMENTS:
+* docs: Fix broken provider.namespace links: ([#1562](https://github.com/hashicorp/terraform-provider-vault/pull/1562))
+* docs: Add Azure example for `r/raft_snapshot_agent_config`: ([#1534](https://github.com/hashicorp/terraform-provider-vault/pull/1534))
+* docs: Document namespaced resource import: ([#1561](https://github.com/hashicorp/terraform-provider-vault/pull/1561))
+* docs: Add more visible note that `d/aws_access_credentials` cannot be renewed: ([#1464](https://github.com/hashicorp/terraform-provider-vault/pull/1464))
+
+BUGS:
+* fix: Persist namespace to state on resource import: ([#1563](https://github.com/hashicorp/terraform-provider-vault/pull/1563))
+* fix: Update all transform resources with namespace support: ([#1558](https://github.com/hashicorp/terraform-provider-vault/pull/1558))
+* fix: Make password_policy conflict with the formatter field: ([#1557](https://github.com/hashicorp/terraform-provider-vault/pull/1557))
+* fix: Correct typo in `r/pki_secret_backend_root_cert` description: ([#1511](https://github.com/hashicorp/terraform-provider-vault/pull/1511))
+
 ## 3.8.0 (July 26, 2022)
 FEATURES:
 * Adds support for Kubernetes secrets engine:

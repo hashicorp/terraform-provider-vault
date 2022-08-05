@@ -16,7 +16,7 @@ import (
 func tokenResource() *schema.Resource {
 	return &schema.Resource{
 		Create: tokenCreate,
-		Read:   tokenRead,
+		Read:   ReadWrapper(tokenRead),
 		Update: tokenUpdate,
 		Delete: tokenDelete,
 		Exists: tokenExists,

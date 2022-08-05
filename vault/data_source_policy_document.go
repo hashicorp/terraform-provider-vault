@@ -41,7 +41,7 @@ var allowedCapabilities = []string{
 
 func policyDocumentDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: policyDocumentDataSourceRead,
+		Read: ReadWrapper(policyDocumentDataSourceRead),
 		Schema: map[string]*schema.Schema{
 			"rule": {
 				Type:        schema.TypeList,

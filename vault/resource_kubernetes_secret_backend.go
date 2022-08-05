@@ -22,7 +22,7 @@ const (
 func kubernetesSecretBackendResource() *schema.Resource {
 	resource := &schema.Resource{
 		CreateContext: kubernetesSecretBackendCreateUpdate,
-		ReadContext:   kubernetesSecretBackendRead,
+		ReadContext:   ReadContextWrapper(kubernetesSecretBackendRead),
 		UpdateContext: kubernetesSecretBackendCreateUpdate,
 		DeleteContext: kubernetesSecretBackendDelete,
 		Importer: &schema.ResourceImporter{

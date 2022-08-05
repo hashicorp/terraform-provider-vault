@@ -20,7 +20,7 @@ func identityEntityResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityEntityCreate,
 		Update: identityEntityUpdate,
-		Read:   identityEntityRead,
+		Read:   ReadWrapper(identityEntityRead),
 		Delete: identityEntityDelete,
 		Exists: identityEntityExists,
 		Importer: &schema.ResourceImporter{

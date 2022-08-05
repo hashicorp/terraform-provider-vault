@@ -21,7 +21,7 @@ var (
 func pkiSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: pkiSecretBackendRoleCreate,
-		Read:   pkiSecretBackendRoleRead,
+		Read:   ReadWrapper(pkiSecretBackendRoleRead),
 		Update: pkiSecretBackendRoleUpdate,
 		Delete: pkiSecretBackendRoleDelete,
 		Exists: pkiSecretBackendRoleExists,

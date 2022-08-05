@@ -103,7 +103,7 @@ func gcpAuthBackendRoleDataSource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
-		Read:   gcpAuthBackendRoleRead,
+		Read:   ReadWrapper(gcpAuthBackendRoleRead),
 		Schema: fields,
 	}
 }
