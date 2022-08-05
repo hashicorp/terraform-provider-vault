@@ -291,16 +291,18 @@ func identityGroupExists(d *schema.ResourceData, meta interface{}) (bool, error)
 	}
 
 	id := d.Id()
+
+	path := identityGroupIDPath(id)
 	key := id
 
+	// use the name if no ID is set
 	if len(id) == 0 {
-		return false, nil
-	} else {
 		key = d.Get("name").(string)
+		path = identityGroupNamePath(key)
 	}
 
 	log.Printf("[DEBUG] Checking if IdentityGroup %q exists", key)
-	resp, err := readIdentityGroup(client, id, true)
+	resp, err := client.Logical().Read(path)
 	if err != nil {
 		return true, fmt.Errorf("error checking if IdentityGroup %q exists: %s", key, err)
 	}
