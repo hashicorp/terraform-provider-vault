@@ -568,6 +568,20 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 				}
 
 				if v, ok := resp.Data[vaultKey]; ok {
+
+					// log an out-of-band change on UUID
+					if vaultKey == "UUID" {
+						stateKey := fmt.Sprintf("%s.%d.%s", providerType, getHashFromName(name.(string)), k)
+
+						if id, ok := d.GetOk(stateKey); ok && id.(string) != "" {
+							// check if UUID in TF state is different
+							if id.(string) != v.(string) {
+								log.Printf("[DEBUG] UUID in Vault %s is differnt from UUID in TF state %s; "+
+									"considered out-of-band", v.(string), id.(string))
+							}
+						}
+					}
+
 					if _, ok := m[k]; ok {
 						continue
 					}
