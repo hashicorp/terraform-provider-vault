@@ -8,7 +8,7 @@ description: |-
 
 # vault\_managed\_keys
 
-A resource that configures [Managed Keys](https://www.vaultproject.io/docs/enterprise/managed-keys) in Vault.
+A resource that manages the lifecycle of all [Managed Keys](https://www.vaultproject.io/docs/enterprise/managed-keys) in Vault.
 
 **Note** this feature is available only with Vault Enterprise.
 
@@ -48,6 +48,13 @@ resource "vault_mount" "pki" {
   ]
 }
 ```
+
+
+## Caveats
+
+This single resource handles the lifecycle of _all_ the managed keys that must be created in Vault.
+There can only be one such resource in the TF state, and if there are already provisioned managed
+keys in Vault, we recommend using `terraform import` instead.
 
 ## Argument Reference
 
@@ -99,6 +106,8 @@ The following arguments are supported:
 
 ### Azure Parameters
 
+**Note** this provider is available only with Vault Enterprise Plus (HSMs).
+
 * `name` - (Required) A unique lowercase name that serves as identifying the key.
 
 * `tenant_id` - (Required) The tenant id for the Azure Active Directory organization.
@@ -122,6 +131,8 @@ The following arguments are supported:
 
 
 ### PKCS Parameters
+
+**Note** this provider is available only with Vault Enterprise Plus (HSMs).
 
 * `name` - (Required) A unique lowercase name that serves as identifying the key.
 
