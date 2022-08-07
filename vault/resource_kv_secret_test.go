@@ -2,6 +2,8 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -27,6 +29,10 @@ func TestAccKVSecret(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
 				),
+			},
+			{
+				Config: testKVSecretConfigUpdate(mount, name),
+				Check:  testResourceKVSecret_updateCheck,
 			},
 			{
 				ResourceName:            resourceName,
@@ -68,4 +74,47 @@ resource "vault_kv_secret" "test" {
 }`, name)
 
 	return ret
+}
+
+func testKVSecretConfigUpdate(mount, name string) string {
+	ret := fmt.Sprintf(`
+%s
+
+`, kvV1MountConfig(mount))
+
+	ret += fmt.Sprintf(`
+resource "vault_kv_secret" "test" {
+  path = "${vault_mount.kvv1.path}/%s"
+  data_json = jsonencode(
+    {
+      zip = "zoop",
+      foo = "bar"
+    }
+  )
+}`, name)
+
+	return ret
+}
+
+func testResourceKVSecret_updateCheck(s *terraform.State) error {
+	resourceState := s.Modules[0].Resources["vault_kv_secret.test"]
+	state := resourceState.Primary
+
+	path := state.ID
+
+	client, err := provider.GetClient(state, testProvider.Meta())
+	if err != nil {
+		return err
+	}
+
+	secret, err := client.Logical().Read(path)
+	if err != nil {
+		return fmt.Errorf("error reading back secret: %s", err)
+	}
+
+	if got, want := secret.Data["zip"], "zoop"; got != want {
+		return fmt.Errorf("'zip' data is %q; want %q", got, want)
+	}
+
+	return nil
 }
