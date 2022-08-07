@@ -65,11 +65,7 @@ func kvSecretWrite(ctx context.Context, d *schema.ResourceData, meta interface{}
 		return diag.Errorf("data_json syntax error: %s", err)
 	}
 
-	data := map[string]interface{}{
-		"data": secretData,
-	}
-
-	if _, err := client.Logical().Write(path, data); err != nil {
+	if _, err := client.Logical().Write(path, secretData); err != nil {
 		return diag.Errorf("error writing secret data to %q, err=%s", path, err)
 	}
 
@@ -103,12 +99,10 @@ func kvSecretRead(_ context.Context, d *schema.ResourceData, meta interface{}) d
 
 	log.Printf("[DEBUG] secret: %#v", secret)
 
-	data := secret.Data["data"]
+	data := secret.Data
 
-	if v, ok := data.(map[string]interface{}); ok {
-		if err := d.Set(consts.FieldData, serializeDataMapToString(v)); err != nil {
-			return diag.FromErr(err)
-		}
+	if err := d.Set(consts.FieldData, serializeDataMapToString(data)); err != nil {
+		return diag.FromErr(err)
 	}
 
 	return nil
