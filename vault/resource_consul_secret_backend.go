@@ -305,7 +305,7 @@ func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceD
 
 	// If the user sets bootstrap to false but doesn't provide a token, disallow it
 	if newToken == "" && !newBootstrap {
-		return fmt.Errorf("field `bootstrap` must be set to true when `token` is unspecified for Consul bootstrapping")
+		return fmt.Errorf("field `bootstrap` must be set to true when `token` is unspecified")
 	}
 
 	// If the user sets bootstrap to true but also provides a token, disallow it
