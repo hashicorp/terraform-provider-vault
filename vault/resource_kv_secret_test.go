@@ -23,7 +23,7 @@ func TestAccKVSecret(t *testing.T) {
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKVSecretConfig(mount, name),
+				Config: testKVSecretConfig_basic(mount, name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
@@ -31,7 +31,7 @@ func TestAccKVSecret(t *testing.T) {
 				),
 			},
 			{
-				Config: testKVSecretConfigUpdate(mount, name),
+				Config: testKVSecretConfig_updated(mount, name),
 				Check:  testResourceKVSecret_updateCheck,
 			},
 			{
@@ -56,7 +56,7 @@ resource "vault_mount" "kvv1" {
 	return ret
 }
 
-func testKVSecretConfig(mount, name string) string {
+func testKVSecretConfig_basic(mount, name string) string {
 	ret := fmt.Sprintf(`
 %s
 
@@ -76,7 +76,7 @@ resource "vault_kv_secret" "test" {
 	return ret
 }
 
-func testKVSecretConfigUpdate(mount, name string) string {
+func testKVSecretConfig_updated(mount, name string) string {
 	ret := fmt.Sprintf(`
 %s
 
