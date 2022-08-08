@@ -303,36 +303,38 @@ func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceD
 	oldBootstrap := ob.(bool)
 	newBootstrap := nb.(bool)
 
-	// If the user already has a bootstrap resource created, but tries updating the resource to add
-	// a token, disallow it
+	// Disallow the following bad states on existing resource updates
 	if oldBootstrap && oldToken == "" {
+		// If the user already has a bootstrap resource created, but tries adding a token
 		if newToken != "" {
 			return fmt.Errorf("cannot change field `token` on a Consul secret backend resource with bootstrap")
 		}
 
+		// If the user already has a bootstrap resource created, but tries setting bootstrap to false
 		if !newBootstrap {
 			return fmt.Errorf("cannot change field `bootstrap` on a Consul secret backend resource with bootstrap")
 		}
 	}
 
-	// If the user already has a non-bootstrap resource, but tries updating the resource to remove
-	// the token and set bootstrap to true, disallow it
 	if !oldBootstrap && oldToken != "" {
+		// If the user already has a non-bootstrap resource, but tries removing the token
 		if newToken == "" {
 			return fmt.Errorf("cannot remove field `token` on a Consul secret backend resource without bootstrap")
 		}
 
+		// If the user already has a non-bootstrap resource, but tries setting bootstrap to true
 		if newBootstrap {
 			return fmt.Errorf("cannot change field `bootstrap` on a Consul secret backend resource without bootstrap")
 		}
 	}
 
-	// If the user sets bootstrap to false but doesn't provide a token, disallow it
+	// Disallow the following bad states on new resources
+	// If the user sets bootstrap to false but doesn't provide a token
 	if newToken == "" && !newBootstrap {
 		return fmt.Errorf("field `bootstrap` must be set to true when `token` is unspecified")
 	}
 
-	// If the user sets bootstrap to true but also provides a token, disallow it
+	// If the user sets bootstrap to true and also provides a token
 	if newToken != "" && newBootstrap {
 		return fmt.Errorf("field `bootstrap` must be set to false when `token` is specified")
 	}
