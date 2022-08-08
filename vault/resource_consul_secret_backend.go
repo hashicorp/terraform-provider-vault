@@ -313,10 +313,16 @@ func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceD
 		return fmt.Errorf("field `bootstrap` must be set to false when `token` is specified")
 	}
 
-	// If the user already has a bootstrap resource, but tries updating the resource to add a token,
-	// disallow it
+	// If the user already has a bootstrap resource created, but tries updating the resource to add
+	// a token, disallow it
 	if oldBootstrap && oldToken == "" && newToken != "" {
 		return fmt.Errorf("cannot change field `token` on a Consul backend resource with bootstrap")
+	}
+
+	// If the user already has a non-bootstrap resource, but tries updating the resource to remove
+	// the token and set bootstrap to true, disallow it
+	if !oldBootstrap && oldToken != "" && newBootstrap {
+		return fmt.Errorf("cannot change field `bootstrap` on a Consul backend resource without bootstrap")
 	}
 
 	return nil
