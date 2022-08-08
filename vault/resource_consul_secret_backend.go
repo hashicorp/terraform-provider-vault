@@ -69,7 +69,7 @@ func consulSecretBackendResource() *schema.Resource {
 			"token": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Specifies the Consul ACL token to use. This must be a management type token.",
+				Description: "Specifies the Consul token to use when managing or issuing new tokens.",
 				Sensitive:   true,
 			},
 			"bootstrap": {
