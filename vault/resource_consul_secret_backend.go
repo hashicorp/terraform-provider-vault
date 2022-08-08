@@ -303,6 +303,30 @@ func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceD
 	oldBootstrap := ob.(bool)
 	newBootstrap := nb.(bool)
 
+	// If the user already has a bootstrap resource created, but tries updating the resource to add
+	// a token, disallow it
+	if oldBootstrap && oldToken == "" {
+		if newToken != "" {
+			return fmt.Errorf("cannot change field `token` on a Consul secret backend resource with bootstrap")
+		}
+
+		if !newBootstrap {
+			return fmt.Errorf("cannot change field `bootstrap` on a Consul secret backend resource with bootstrap")
+		}
+	}
+
+	// If the user already has a non-bootstrap resource, but tries updating the resource to remove
+	// the token and set bootstrap to true, disallow it
+	if !oldBootstrap && oldToken != "" {
+		if newToken == "" {
+			return fmt.Errorf("cannot remove field `token` on a Consul secret backend resource without bootstrap")
+		}
+
+		if newBootstrap {
+			return fmt.Errorf("cannot change field `bootstrap` on a Consul secret backend resource without bootstrap")
+		}
+	}
+
 	// If the user sets bootstrap to false but doesn't provide a token, disallow it
 	if newToken == "" && !newBootstrap {
 		return fmt.Errorf("field `bootstrap` must be set to true when `token` is unspecified")
@@ -311,18 +335,6 @@ func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceD
 	// If the user sets bootstrap to true but also provides a token, disallow it
 	if newToken != "" && newBootstrap {
 		return fmt.Errorf("field `bootstrap` must be set to false when `token` is specified")
-	}
-
-	// If the user already has a bootstrap resource created, but tries updating the resource to add
-	// a token, disallow it
-	if oldBootstrap && oldToken == "" && newToken != "" {
-		return fmt.Errorf("cannot change field `token` on a Consul backend resource with bootstrap")
-	}
-
-	// If the user already has a non-bootstrap resource, but tries updating the resource to remove
-	// the token and set bootstrap to true, disallow it
-	if !oldBootstrap && oldToken != "" && newBootstrap {
-		return fmt.Errorf("cannot change field `bootstrap` on a Consul backend resource without bootstrap")
 	}
 
 	return nil
