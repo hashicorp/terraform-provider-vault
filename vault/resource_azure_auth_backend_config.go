@@ -13,7 +13,7 @@ import (
 func azureAuthBackendConfigResource() *schema.Resource {
 	return &schema.Resource{
 		Create: azureAuthBackendWrite,
-		Read:   azureAuthBackendRead,
+		Read:   ReadWrapper(azureAuthBackendRead),
 		Update: azureAuthBackendWrite,
 		Delete: azureAuthBackendDelete,
 		Exists: azureAuthBackendExists,

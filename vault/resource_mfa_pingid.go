@@ -16,7 +16,7 @@ func mfaPingIDResource() *schema.Resource {
 		Create: mfaPingIDWrite,
 		Update: mfaPingIDUpdate,
 		Delete: mfaPingIDDelete,
-		Read:   mfaPingIDRead,
+		Read:   ReadWrapper(mfaPingIDRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -29,7 +29,7 @@ func mfaPingIDResource() *schema.Resource {
 				ForceNew:     true,
 				ValidateFunc: validateNoTrailingSlash,
 			},
-			"mount_accessor": {
+			consts.FieldMountAccessor: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -101,7 +101,7 @@ func mfaPingIDRequestData(d *schema.ResourceData) map[string]interface{} {
 	data := map[string]interface{}{}
 
 	fields := []string{
-		"name", "mount_accessor", "settings_file_base64",
+		"name", consts.FieldMountAccessor, "settings_file_base64",
 		"username_format",
 	}
 
@@ -146,7 +146,7 @@ func mfaPingIDRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading from Vault at %s, err=%w", path, err)
 	}
 
-	if err := d.Set("mount_accessor", d.Get("mount_accessor")); err != nil {
+	if err := d.Set(consts.FieldMountAccessor, d.Get(consts.FieldMountAccessor)); err != nil {
 		return err
 	}
 

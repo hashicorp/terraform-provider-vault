@@ -34,7 +34,7 @@ var (
 		"last_update_time",
 		"merged_from_canonical_ids",
 		"metadata",
-		"mount_accessor",
+		consts.FieldMountAccessor,
 		"mount_path",
 		"mount_type",
 		"name",
@@ -43,7 +43,7 @@ var (
 
 func identityGroupDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: identityGroupDataSourceRead,
+		Read: ReadWrapper(identityGroupDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"group_name": {

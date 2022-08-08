@@ -21,7 +21,7 @@ func jwtAuthBackendResource() *schema.Resource {
 		},
 		Create: jwtAuthBackendWrite,
 		Delete: jwtAuthBackendDelete,
-		Read:   jwtAuthBackendRead,
+		Read:   ReadWrapper(jwtAuthBackendRead),
 		Update: jwtAuthBackendUpdate,
 
 		CustomizeDiff: jwtCustomizeDiff,
@@ -48,7 +48,6 @@ func jwtAuthBackendResource() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Required:    false,
-				ForceNew:    true,
 				Optional:    true,
 				Description: "The description of the auth backend",
 			},

@@ -14,7 +14,7 @@ func identityGroupPoliciesResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityGroupPoliciesUpdate,
 		Update: identityGroupPoliciesUpdate,
-		Read:   identityGroupPoliciesRead,
+		Read:   ReadWrapper(identityGroupPoliciesRead),
 		Delete: identityGroupPoliciesDelete,
 
 		Schema: map[string]*schema.Schema{

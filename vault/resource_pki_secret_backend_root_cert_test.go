@@ -40,9 +40,9 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
@@ -55,7 +55,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 			{
 				// test unmounted backend
 				PreConfig: func() {
-					client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client, err := provider.GetClient("", testProvider.Meta())
 					if err != nil {
 						t.Fatal(err)
 					}

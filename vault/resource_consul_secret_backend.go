@@ -14,7 +14,7 @@ import (
 func consulSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: consulSecretBackendCreate,
-		Read:   consulSecretBackendRead,
+		Read:   ReadWrapper(consulSecretBackendRead),
 		Update: consulSecretBackendUpdate,
 		Delete: consulSecretBackendDelete,
 		Exists: consulSecretBackendExists,
@@ -39,7 +39,6 @@ func consulSecretBackendResource() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
 			"default_lease_ttl_seconds": {
@@ -67,7 +66,7 @@ func consulSecretBackendResource() *schema.Resource {
 			},
 			"token": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Specifies the Consul ACL token to use. This must be a management type token.",
 				Sensitive:   true,
 			},
@@ -143,12 +142,15 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Writing Consul configuration to %q", configPath)
 	data := map[string]interface{}{
 		"address":     address,
-		"token":       token,
 		"scheme":      scheme,
 		"ca_cert":     ca_cert,
 		"client_cert": client_cert,
 		"client_key":  client_key,
 	}
+	if token != "" {
+		data["token"] = token
+	}
+
 	if _, err := client.Logical().Write(configPath, data); err != nil {
 		return fmt.Errorf("Error writing Consul configuration for %q: %s", path, err)
 	}

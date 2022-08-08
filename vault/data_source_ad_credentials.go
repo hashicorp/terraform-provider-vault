@@ -11,7 +11,7 @@ import (
 
 func adAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: readCredsResource,
+		Read: ReadWrapper(readCredsResource),
 		Schema: map[string]*schema.Schema{
 			"backend": {
 				Type:        schema.TypeString,

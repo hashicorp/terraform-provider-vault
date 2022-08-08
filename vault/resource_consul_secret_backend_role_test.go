@@ -9,44 +9,77 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestConsulSecretBackendRole(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-backend")
+	path := acctest.RandomWithPrefix("tf-test-consul")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
+	resourceName := "vault_consul_secret_backend_role.test"
+	missingParametersError := "Use either a policy document, a list of policies, or a list of roles, depending on your Consul version"
 
-	resourcePath := "vault_consul_secret_backend_role.test"
 	createTestCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourcePath, "backend", backend),
-		resource.TestCheckResourceAttr(resourcePath, "name", name),
-		resource.TestCheckResourceAttr(resourcePath, "ttl", "0"),
-		resource.TestCheckResourceAttr(resourcePath, "policies.#", "1"),
-		resource.TestCheckResourceAttr(resourcePath, "policies.0", "foo"),
-		resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "1"),
-		resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
-		resource.TestCheckResourceAttr(resourcePath, "consul_namespace", "consul-ns-0"),
-		resource.TestCheckResourceAttr(resourcePath, "partition", "partition-0"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "0"),
+		resource.TestCheckResourceAttr(resourceName, "consul_namespace", "consul-ns-0"),
+		resource.TestCheckResourceAttr(resourceName, "partition", "partition-0"),
 	}
 
 	updateTestCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourcePath, "backend", backend),
-		resource.TestCheckResourceAttr(resourcePath, "name", name),
-		resource.TestCheckResourceAttr(resourcePath, "ttl", "120"),
-		resource.TestCheckResourceAttr(resourcePath, "max_ttl", "240"),
-		resource.TestCheckResourceAttr(resourcePath, "local", "true"),
-		resource.TestCheckResourceAttr(resourcePath, "token_type", "client"),
-		resource.TestCheckResourceAttr(resourcePath, "policies.#", "2"),
-		resource.TestCheckResourceAttr(resourcePath, "policies.0", "foo"),
-		resource.TestCheckResourceAttr(resourcePath, "policies.1", "bar"),
-		resource.TestCheckResourceAttr(resourcePath, "consul_roles.#", "3"),
-		resource.TestCheckResourceAttr(resourcePath, "consul_roles.0", "role-0"),
-		resource.TestCheckResourceAttr(resourcePath, "consul_roles.1", "role-1"),
-		resource.TestCheckResourceAttr(resourcePath, "consul_roles.2", "role-2"),
-		resource.TestCheckResourceAttr(resourcePath, "consul_namespace", "consul-ns-1"),
-		resource.TestCheckResourceAttr(resourcePath, "partition", "partition-1"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "120"),
+		resource.TestCheckResourceAttr(resourceName, "max_ttl", "240"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "true"),
+		resource.TestCheckResourceAttr(resourceName, "consul_namespace", "consul-ns-1"),
+		resource.TestCheckResourceAttr(resourceName, "partition", "partition-1"),
+	}
+
+	testNewParameters := testutil.CheckTestVaultVersion(t, "1.11")
+	if testNewParameters {
+		missingParametersError = "Use either a policy document, a list of policies or roles, or a set of service or node identities, depending on your Consul version"
+
+		createTestCheckFuncs = append(createTestCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName, "policies.#", "0"),
+			resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "1"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "foo"),
+			resource.TestCheckResourceAttr(resourceName, "consul_roles.#", "1"),
+			resource.TestCheckResourceAttr(resourceName, "consul_roles.0", "role-0"),
+			resource.TestCheckResourceAttr(resourceName, "service_identities.#", "1"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "service_identities.*", "service-0:dc1"),
+			resource.TestCheckResourceAttr(resourceName, "node_identities.#", "1"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "server-0:dc1"))
+
+		updateTestCheckFuncs = append(updateTestCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName, "policies.#", "0"),
+			resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "2"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "foo"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "bar"),
+			resource.TestCheckResourceAttr(resourceName, "consul_roles.#", "3"),
+			resource.TestCheckResourceAttr(resourceName, "consul_roles.0", "role-0"),
+			resource.TestCheckResourceAttr(resourceName, "consul_roles.1", "role-1"),
+			resource.TestCheckResourceAttr(resourceName, "consul_roles.2", "role-2"),
+			resource.TestCheckResourceAttr(resourceName, "service_identities.#", "2"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "service_identities.*", "service-0:dc1"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "service_identities.*", "service-1"),
+			resource.TestCheckResourceAttr(resourceName, "node_identities.#", "2"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "server-0:dc1"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "client-0:dc1"))
+	} else {
+		createTestCheckFuncs = append(createTestCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"),
+			resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
+			resource.TestCheckResourceAttr(resourceName, "policies.0", "boo"))
+
+		updateTestCheckFuncs = append(updateTestCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"),
+			resource.TestCheckResourceAttr(resourceName, "policies.#", "2"),
+			resource.TestCheckResourceAttr(resourceName, "policies.0", "boo"),
+			resource.TestCheckResourceAttr(resourceName, "policies.1", "far"))
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -55,21 +88,31 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config:      testConsulSecretBackendRole_initialConfig(backend, name, token, false, false),
-				ExpectError: regexp.MustCompile(`policies or consul_roles must be set`),
+				Config:      testConsulSecretBackendRole_initialConfig(path, name, token, false, false),
+				ExpectError: regexp.MustCompile(missingParametersError),
 			},
 			{
-				Config: testConsulSecretBackendRole_initialConfig(backend, name, token, true, true),
+				Config:      testConsulSecretBackendRole_initialConfig(path, name, token, true, true),
+				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
+			},
+			{
+				Config: testConsulSecretBackendRole_initialConfig(path, name, token, !testNewParameters, testNewParameters),
 				Check:  resource.ComposeTestCheckFunc(createTestCheckFuncs...),
 			},
+			testutil.GetImportTestStep(resourceName, false),
 			{
-				Config:      testConsulSecretBackendRole_updateConfig(backend, name, token, false, false),
-				ExpectError: regexp.MustCompile(`policies or consul_roles must be set`),
+				Config:      testConsulSecretBackendRole_updateConfig(path, name, token, false, false),
+				ExpectError: regexp.MustCompile(missingParametersError),
 			},
 			{
-				Config: testConsulSecretBackendRole_updateConfig(backend, name, token, true, true),
+				Config:      testConsulSecretBackendRole_updateConfig(path, name, token, true, true),
+				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
+			},
+			{
+				Config: testConsulSecretBackendRole_updateConfig(path, name, token, !testNewParameters, testNewParameters),
 				Check:  resource.ComposeTestCheckFunc(updateTestCheckFuncs...),
 			},
+			testutil.GetImportTestStep(resourceName, false),
 		},
 	})
 }
@@ -96,7 +139,7 @@ func testAccConsulSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testConsulSecretBackendRole_initialConfig(backend, name, token string, withPolicies, withRoles bool) string {
+func testConsulSecretBackendRole_initialConfig(path, name, token string, withPolicies, isAboveVersionThreshold bool) string {
 	config := fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -112,30 +155,46 @@ resource "vault_consul_secret_backend_role" "test" {
   name = "%s"
   consul_namespace = "consul-ns-0"
   partition = "partition-0"
-`, backend, token, name)
+`, path, token, name)
 
 	if withPolicies {
 		config += `
   policies = [
-    "foo"
+    "boo",
   ]
 `
 	}
 
-	if withRoles {
+	if isAboveVersionThreshold {
 		config += `
-  consul_roles = [
-    "role-0",
-    # canary to ensure roles is a Set
-    "role-0",
-  ]
+consul_policies = [
+	"foo",
+]
+
+consul_roles = [
+	"role-0",
+	# canary to ensure roles is a Set
+	"role-0",
+]
+
+service_identities = [
+	"service-0:dc1",
+	# canary to ensure service identities is a Set
+	"service-0:dc1",
+]
+
+node_identities = [
+	"server-0:dc1",
+	# canary to ensure node identities is a Set
+	"server-0:dc1",
+]
 `
 	}
 
 	return config + "}"
 }
 
-func testConsulSecretBackendRole_updateConfig(backend, name, token string, withPolicies, withRoles bool) string {
+func testConsulSecretBackendRole_updateConfig(path, name, token string, withPolicies, isAboveVersionThreshold bool) string {
 	config := fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -155,25 +214,45 @@ resource "vault_consul_secret_backend_role" "test" {
   max_ttl = 240
   local = true
   token_type = "client"
-`, backend, token, name)
+`, path, token, name)
 
 	if withPolicies {
 		config += `
   policies = [
-    "foo",
-    "bar",
+    "boo",
+	 "far",
   ]
 `
 	}
-	if withRoles {
+
+	if isAboveVersionThreshold {
 		config += `
-  consul_roles = [
-    "role-0",
-    "role-1",
-    "role-2",
-    # canary to ensure roles is a Set
-    "role-2",
-  ]
+consul_policies = [
+	"foo",
+	"bar",
+]
+
+consul_roles = [
+	"role-0",
+	"role-1",
+	"role-2",
+	# canary to ensure roles is a Set
+	"role-2",
+]
+
+service_identities = [
+	"service-0:dc1",
+	"service-1",
+	# canary to ensure service identities is a Set
+	"service-1",
+]
+
+node_identities = [
+	"server-0:dc1",
+	"client-0:dc1",
+	# canary to ensure node identities is a Set
+	"client-0:dc1",
+]
 `
 	}
 

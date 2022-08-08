@@ -14,7 +14,7 @@ import (
 func gcpSecretBackendResource(name string) *schema.Resource {
 	return &schema.Resource{
 		Create: gcpSecretBackendCreate,
-		Read:   gcpSecretBackendRead,
+		Read:   ReadWrapper(gcpSecretBackendRead),
 		Update: gcpSecretBackendUpdate,
 		Delete: gcpSecretBackendDelete,
 		Exists: gcpSecretBackendExists,
@@ -55,7 +55,6 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
 			"default_lease_ttl_seconds": {

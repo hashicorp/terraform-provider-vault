@@ -16,11 +16,7 @@ for more information.
 ```hcl
 resource "vault_identity_oidc_scope" "groups" {
   name        = "groups"
-  template    = jsonencode(
-  {
-    groups = "{{identity.entity.groups.names}}",
-  }
-  )
+  template    = "{\"groups\":{{identity.entity.groups.names}}}"
   description = "Vault OIDC Groups Scope"
 }
 ```
@@ -31,7 +27,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
    *Available only for Vault Enterprise*.
 
 * `name` - (Required) The name of the scope. The `openid` scope name is reserved.

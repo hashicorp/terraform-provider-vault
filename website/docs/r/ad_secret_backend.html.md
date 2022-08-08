@@ -37,7 +37,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
    *Available only for Vault Enterprise*.
 
 * `backend` - (Optional) The unique path this backend should be mounted at. Must
@@ -86,6 +86,7 @@ Defaults to `false`.
 shows a later rotation, it should be considered out-of-band
 
 * `length` - (Optional) **Deprecated** use `password_policy`. The desired length of passwords that Vault generates.
+  *Mutually exclusive with `password_policy` on vault-1.11+*
 
 * `local` - (Optional) Mark the secrets engine as local-only. Local engines are not replicated or removed by
 replication.Tolerance duration to use when checking the last rotation time.

@@ -14,7 +14,7 @@ import (
 func terraformCloudSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: terraformCloudSecretBackendCreate,
-		Read:   terraformCloudSecretBackendRead,
+		Read:   ReadWrapper(terraformCloudSecretBackendRead),
 		Update: terraformCloudSecretBackendUpdate,
 		Delete: terraformCloudSecretBackendDelete,
 		Exists: terraformCloudSecretBackendExists,
@@ -57,7 +57,6 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
 			"default_lease_ttl_seconds": {

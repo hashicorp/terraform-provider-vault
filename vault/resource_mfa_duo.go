@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -15,7 +16,7 @@ func mfaDuoResource() *schema.Resource {
 		Create: mfaDuoWrite,
 		Update: mfaDuoWrite,
 		Delete: mfaDuoDelete,
-		Read:   mfaDuoRead,
+		Read:   ReadWrapper(mfaDuoRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -27,7 +28,7 @@ func mfaDuoResource() *schema.Resource {
 				Description:  "Name of the MFA method.",
 				ValidateFunc: validateNoTrailingSlash,
 			},
-			"mount_accessor": {
+			consts.FieldMountAccessor: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The mount to tie this method to for use in automatic mappings. The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.",
@@ -119,7 +120,7 @@ func mfaDuoRead(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Read MFA Duo config %q", mfaDuoPath(name))
 
-	d.Set("mount_accessor", resp.Data["mount_accessor"])
+	d.Set(consts.FieldMountAccessor, resp.Data[consts.FieldMountAccessor])
 	d.Set("username_format", resp.Data["username_format"])
 	d.Set("api_hostname", resp.Data["api_hostname"])
 
@@ -136,8 +137,8 @@ func mfaDuoRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaDuoUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
-	if v, ok := d.GetOk("mount_accessor"); ok {
-		data["mount_accessor"] = v.(string)
+	if v, ok := d.GetOk(consts.FieldMountAccessor); ok {
+		data[consts.FieldMountAccessor] = v.(string)
 	}
 
 	if v, ok := d.GetOk("username_format"); ok {

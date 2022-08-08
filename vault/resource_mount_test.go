@@ -15,11 +15,12 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-type mountConfig struct {
-	path      string
-	mountType string
-	version   string
-	seal_wrap bool
+type testMountConfig struct {
+	path        string
+	mountType   string
+	version     string
+	sealWrap    bool
+	description string
 }
 
 func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
@@ -51,10 +52,18 @@ func TestZeroTTLDoesNotCauseUpdate(t *testing.T) {
 
 func TestResourceMount(t *testing.T) {
 	path := "example-" + acctest.RandString(10)
-	cfg := mountConfig{
-		path:      path,
-		mountType: "kv",
-		version:   "1",
+	cfg := testMountConfig{
+		path:        path,
+		mountType:   "kv",
+		version:     "1",
+		description: "initial",
+	}
+
+	cfg2 := testMountConfig{
+		path:        path,
+		mountType:   "kv",
+		version:     "1",
+		description: "updated",
 	}
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
@@ -63,6 +72,10 @@ func TestResourceMount(t *testing.T) {
 			{
 				Config: testResourceMount_initialConfig(cfg),
 				Check:  testResourceMount_initialCheck(cfg),
+			},
+			{
+				Config: testResourceMount_initialConfig(cfg2),
+				Check:  testResourceMount_initialCheck(cfg2),
 			},
 			{
 				Config: testResourceMount_updateConfig,
@@ -165,6 +178,13 @@ func TestResourceMount_KVV2(t *testing.T) {
 				default_lease_ttl_seconds = 3600
 				max_lease_ttl_seconds = 36000
 			}`, path)
+
+	config := testMountConfig{
+		path:        path,
+		mountType:   "kv",
+		version:     "2",
+		description: "Example mount for testing",
+	}
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
@@ -173,11 +193,7 @@ func TestResourceMount_KVV2(t *testing.T) {
 				Config: kvv2Cfg,
 
 				// Vault will store this and report it back as "kv", version 2
-				Check: testResourceMount_initialCheck(mountConfig{
-					path:      path,
-					mountType: "kv",
-					version:   "2",
-				}),
+				Check: testResourceMount_initialCheck(config),
 			},
 			{
 				PlanOnly: true,
@@ -217,22 +233,22 @@ func TestResourceMount_ExternalEntropyAccess(t *testing.T) {
 	})
 }
 
-func testResourceMount_initialConfig(cfg mountConfig) string {
+func testResourceMount_initialConfig(cfg testMountConfig) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
-	path = "%s"
-	type = "%s"
-	description = "Example mount for testing"
-	default_lease_ttl_seconds = 3600
-	max_lease_ttl_seconds = 36000
-	options = {
-		version = "1"
-	}
+  path                      = "%s"
+  type                      = "%s"
+  description               = "%s"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds     = 36000
+  options = {
+    version = "1"
+  }
 }
-`, cfg.path, cfg.mountType)
+`, cfg.path, cfg.mountType, cfg.description)
 }
 
-func testResourceMount_initialCheck(cfg mountConfig) resource.TestCheckFunc {
+func testResourceMount_initialCheck(cfg testMountConfig) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_mount.test"]
 		if resourceState == nil {
@@ -259,7 +275,7 @@ func testResourceMount_initialCheck(cfg mountConfig) resource.TestCheckFunc {
 			return fmt.Errorf("error reading back mount %q: %s", path, err)
 		}
 
-		if wanted := "Example mount for testing"; mount.Description != wanted {
+		if wanted := cfg.description; mount.Description != wanted {
 			return fmt.Errorf("description is %v; wanted %v", mount.Description, wanted)
 		}
 
@@ -485,19 +501,17 @@ func testResourceMount_InitialCheckSealWrap(expectedPath string) resource.TestCh
 }
 
 var testResourceMount_UpdateConfigSealWrap = `
-
 resource "vault_mount" "test" {
-	path = "remountingExample"
-	type = "kv"
-	description = "Example mount for testing"
-	default_lease_ttl_seconds = 7200
-	max_lease_ttl_seconds = 72000
-	options = {
-		version = "1"
-	}
-	seal_wrap = false
+  path                      = "remountingExample"
+  type                      = "kv"
+  description               = "Example mount for testing"
+  default_lease_ttl_seconds = 7200
+  max_lease_ttl_seconds     = 72000
+  options = {
+    version = "1"
+  }
+  seal_wrap = false
 }
-
 `
 
 func testResourceMount_UpdateCheckSealWrap(s *terraform.State) error {

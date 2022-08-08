@@ -50,7 +50,7 @@ var kmipRoleAPIBooleanFields = []string{
 func kmipSecretRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: kmipSecretRoleCreate,
-		Read:   kmipSecretRoleRead,
+		Read:   ReadWrapper(kmipSecretRoleRead),
 		Update: kmipSecretRoleUpdate,
 		Delete: kmipSecretRoleDelete,
 		Importer: &schema.ResourceImporter{

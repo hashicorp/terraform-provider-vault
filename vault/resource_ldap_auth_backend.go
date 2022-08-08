@@ -169,7 +169,7 @@ func ldapAuthBackendResource() *schema.Resource {
 
 		CreateContext: ldapAuthBackendWrite,
 		UpdateContext: ldapAuthBackendUpdate,
-		ReadContext:   ldapAuthBackendRead,
+		ReadContext:   ReadContextWrapper(ldapAuthBackendRead),
 		DeleteContext: ldapAuthBackendDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,

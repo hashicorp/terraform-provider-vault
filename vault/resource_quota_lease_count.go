@@ -18,7 +18,7 @@ func quotaLeaseCountPath(name string) string {
 func quotaLeaseCountResource() *schema.Resource {
 	return &schema.Resource{
 		Create: quotaLeaseCountCreate,
-		Read:   quotaLeaseCountRead,
+		Read:   ReadWrapper(quotaLeaseCountRead),
 		Update: quotaLeaseCountUpdate,
 		Delete: quotaLeaseCountDelete,
 		Exists: quotaLeaseCountExists,

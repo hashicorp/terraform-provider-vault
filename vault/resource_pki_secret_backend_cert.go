@@ -17,7 +17,7 @@ import (
 func pkiSecretBackendCertResource() *schema.Resource {
 	return &schema.Resource{
 		Create:        pkiSecretBackendCertCreate,
-		Read:          pkiSecretBackendCertRead,
+		Read:          ReadWrapper(pkiSecretBackendCertRead),
 		Update:        pkiSecretBackendCertUpdate,
 		Delete:        pkiSecretBackendCertDelete,
 		CustomizeDiff: pkiCertAutoRenewCustomizeDiff,

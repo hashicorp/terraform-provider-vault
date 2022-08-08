@@ -223,6 +223,19 @@ func TestGetClient(t *testing.T) {
 		ifaceFunc func(t *testing.T, set bool, ns string) interface{}
 	}{
 		{
+			name:  "string",
+			ifcNS: "ns1-string",
+			meta: &ProviderMeta{
+				client:       rootClient,
+				resourceData: nil,
+			},
+			ifaceFunc: func(t *testing.T, set bool, ns string) interface{} {
+				return "ns1-string"
+			},
+			want:    "ns1-string",
+			setAttr: true,
+		},
+		{
 			name:  "rsc-data",
 			ifcNS: "ns1-rsc-data",
 			meta: &ProviderMeta{

@@ -14,7 +14,7 @@ import (
 func azureSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: azureSecretBackendRoleCreate,
-		Read:   azureSecretBackendRoleRead,
+		Read:   ReadWrapper(azureSecretBackendRoleRead),
 		Update: azureSecretBackendRoleCreate,
 		Delete: azureSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
@@ -42,7 +42,6 @@ func azureSecretBackendRoleResource() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
 			"azure_roles": {

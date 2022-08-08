@@ -62,7 +62,7 @@ func adSecretBackendLibraryResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createLibraryResource,
 		Update: updateLibraryResource,
-		Read:   readLibraryResource,
+		Read:   ReadWrapper(readLibraryResource),
 		Delete: deleteLibraryResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

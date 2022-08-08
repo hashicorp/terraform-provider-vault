@@ -14,7 +14,7 @@ func transitSecretBackendCacheConfig() *schema.Resource {
 	return &schema.Resource{
 		Create: transitSecretBackendCacheConfigUpdate,
 		Update: transitSecretBackendCacheConfigUpdate,
-		Read:   transitSecretBackendCacheConfigRead,
+		Read:   ReadWrapper(transitSecretBackendCacheConfigRead),
 		Delete: transitSecretBackendCacheConfigDelete,
 
 		Schema: map[string]*schema.Schema{

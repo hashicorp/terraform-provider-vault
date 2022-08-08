@@ -15,7 +15,7 @@ import (
 func rabbitMQSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: rabbitMQSecretBackendCreate,
-		Read:   rabbitMQSecretBackendRead,
+		Read:   ReadWrapper(rabbitMQSecretBackendRead),
 		Update: rabbitMQSecretBackendUpdate,
 		Delete: rabbitMQSecretBackendDelete,
 		Exists: rabbitMQSecretBackendExists,
@@ -38,7 +38,6 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
 			"default_lease_ttl_seconds": {
@@ -57,20 +56,17 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 			"connection_uri": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
 				Description: "Specifies the RabbitMQ connection URI.",
 			},
 			"username": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
 				Sensitive:   true,
 				Description: "Specifies the RabbitMQ management administrator username",
 			},
 			"password": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
 				Sensitive:   true,
 				Description: "Specifies the RabbitMQ management administrator password",
 			},
@@ -78,7 +74,6 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     true,
-				ForceNew:    true,
 				Description: "Specifies whether to verify connection URI, username, and password.",
 			},
 			"password_policy": {
@@ -197,7 +192,7 @@ func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 		log.Printf("[DEBUG] Updated lease TTLs for %q", path)
 	}
 	if d.HasChanges("connection_uri", "username", "password", "verify_connection", "username_template", "password_policy") {
-		log.Printf("[DEBUG] Updating connecion credentials at %q", path+"/config/connection")
+		log.Printf("[DEBUG] Updating connection credentials at %q", path+"/config/connection")
 		data := map[string]interface{}{
 			"connection_uri":    d.Get("connection_uri").(string),
 			"username":          d.Get("username").(string),

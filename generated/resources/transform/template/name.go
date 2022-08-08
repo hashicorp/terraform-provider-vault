@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
 const (
@@ -85,7 +86,7 @@ Only applicable to FPE transformations.`,
 	return &schema.Resource{
 		Create: createNameResource,
 		Update: updateNameResource,
-		Read:   readNameResource,
+		Read:   vault.ReadWrapper(readNameResource),
 		Exists: resourceNameExists,
 		Delete: deleteNameResource,
 		Importer: &schema.ResourceImporter{

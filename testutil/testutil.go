@@ -19,6 +19,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/go-homedir"
+
+	goversion "github.com/hashicorp/go-version"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 const (
@@ -179,6 +183,21 @@ func GetTestADCreds(t *testing.T) (string, string, string) {
 func GetTestNomadCreds(t *testing.T) (string, string) {
 	v := SkipTestEnvUnset(t, "NOMAD_ADDR", "NOMAD_TOKEN")
 	return v[0], v[1]
+}
+
+// Returns true if TF_VAULT_VERSION is greater than or equal to the given Vault version
+func CheckTestVaultVersion(t *testing.T, cutoff string) bool {
+	v := SkipTestEnvUnset(t, "TF_VAULT_VERSION")
+
+	cutoffVersion, _ := goversion.NewVersion(cutoff)
+	envVersion, err := goversion.NewVersion(v[0])
+	if err != nil {
+		t.Fatalf("error parsing vault version from TF_VAULT_VERSION environment variable: %v", err)
+	} else {
+		return envVersion.GreaterThanOrEqual(cutoffVersion)
+	}
+
+	return false
 }
 
 func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {
@@ -375,7 +394,7 @@ func (v *VaultStateTest) String() string {
 }
 
 // TransformVaultValue function to be used for a value from vault into a form that can be ccmpared to a value from
-// from the TF state.
+// the TF state.
 type TransformVaultValue func(st *VaultStateTest, resp *api.Secret) (interface{}, error)
 
 func SplitVaultValueString(st *VaultStateTest, resp *api.Secret) (interface{}, error) {
@@ -629,6 +648,31 @@ func CheckJSONData(resourceName, attr, expected string) resource.TestCheckFunc {
 			return fmt.Errorf("expected %#v, got %#v for resource attr %s.%s", e, a, resourceName, attr)
 		}
 
+		return nil
+	}
+}
+
+// GetImportTestStep for resource name. Optionally include field names that should be ignored during the import
+// verification, typically ignore fields should only be provided for values that are not returned from the
+// provisioning API.
+func GetImportTestStep(resourceName string, skipVerify bool, ignoreFields ...string) resource.TestStep {
+	return resource.TestStep{
+		ResourceName:            resourceName,
+		ImportState:             true,
+		ImportStateVerify:       !skipVerify,
+		ImportStateVerifyIgnore: ignoreFields,
+	}
+}
+
+// GetNamespaceImportStateCheck checks that the namespace was properly imported into the state.
+func GetNamespaceImportStateCheck(ns string) resource.ImportStateCheckFunc {
+	return func(states []*terraform.InstanceState) error {
+		for _, s := range states {
+			if actual := s.Attributes[consts.FieldNamespace]; actual != ns {
+				return fmt.Errorf("expected %q for %s, actual %q",
+					ns, consts.FieldNamespace, actual)
+			}
+		}
 		return nil
 	}
 }

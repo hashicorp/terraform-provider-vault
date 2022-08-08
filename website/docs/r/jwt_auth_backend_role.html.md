@@ -60,7 +60,7 @@ The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
    *Available only for Vault Enterprise*.
 
 * `role_name` - (Required) The name of the role.
@@ -73,6 +73,11 @@ The following arguments are supported:
 * `user_claim` - (Required) The claim to use to uniquely identify
   the user; this will be used as the name for the Identity entity alias created
   due to a successful login.
+
+* `user_claim_json_pointer` - (Optional) Specifies if the `user_claim` value uses
+  [JSON pointer](https://www.vaultproject.io/docs/auth/jwt#claim-specifications-and-json-pointer) 
+  syntax for referencing claims. By default, the `user_claim` value will not use JSON pointer.
+  Requires Vault 1.11+.
 
 * `bound_subject` - (Optional) If set, requires that the `sub` claim matches
   this value.
@@ -117,6 +122,9 @@ The following arguments are supported:
 * `verbose_oidc_logging` - (Optional) Log received OIDC tokens and claims when debug-level
   logging is active. Not recommended in production since sensitive information may be present
   in OIDC responses.
+
+* `max_age` - (Optional) Specifies the allowable elapsed time in seconds since the last time 
+  the user was actively authenticated with the OIDC provider.
 
 ### Common Token Arguments
 

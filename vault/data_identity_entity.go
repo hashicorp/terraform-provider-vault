@@ -6,10 +6,11 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -33,7 +34,7 @@ var (
 		"last_update_time",
 		"merged_from_canonical_ids",
 		"metadata",
-		"mount_accessor",
+		consts.FieldMountAccessor,
 		"mount_path",
 		"mount_type",
 		"name",
@@ -67,7 +68,7 @@ var (
 			Type:     schema.TypeMap,
 			Computed: true,
 		},
-		"mount_accessor": {
+		consts.FieldMountAccessor: {
 			Type:     schema.TypeString,
 			Computed: true,
 		},
@@ -88,7 +89,7 @@ var (
 
 func identityEntityDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: identityEntityDataSourceRead,
+		Read: ReadWrapper(identityEntityDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"entity_name": {

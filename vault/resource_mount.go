@@ -32,7 +32,6 @@ func getMountSchema(excludes ...string) schemaMap {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Required:    false,
-			ForceNew:    false,
 			Description: "Human-friendly description of the mount",
 		},
 		"default_lease_ttl_seconds": {
@@ -121,7 +120,7 @@ func MountResource() *schema.Resource {
 		Create: mountWrite,
 		Update: mountUpdate,
 		Delete: mountDelete,
-		Read:   mountRead,
+		Read:   ReadWrapper(mountRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -176,6 +175,10 @@ func createMount(d *schema.ResourceData, client *api.Client, path string, mountT
 }
 
 func mountUpdate(d *schema.ResourceData, meta interface{}) error {
+	return updateMount(d, meta, false)
+}
+
+func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return err
@@ -232,7 +235,7 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 		break
 	}
 
-	return mountRead(d, meta)
+	return readMount(d, meta, excludeType)
 }
 
 func mountDelete(d *schema.ResourceData, meta interface{}) error {

@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -15,8 +16,11 @@ func identityOIDCScopeResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOIDCScopeCreateUpdate,
 		Update: identityOIDCScopeCreateUpdate,
-		Read:   identityOIDCScopeRead,
+		Read:   ReadWrapper(identityOIDCScopeRead),
 		Delete: identityOIDCScopeDelete,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -26,10 +30,9 @@ func identityOIDCScopeResource() *schema.Resource {
 				Required:    true,
 			},
 			"template": {
-				Type:         schema.TypeString,
-				Description:  "The template string for the scope. This may be provided as escaped JSON or base64 encoded JSON.",
-				Optional:     true,
-				ValidateFunc: ValidateDataJSONFunc("vault_identity_oidc_scope"),
+				Type:        schema.TypeString,
+				Description: "The template string for the scope. This may be provided as escaped JSON or base64 encoded JSON.",
+				Optional:    true,
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -105,6 +108,11 @@ func identityOIDCScopeRead(d *schema.ResourceData, meta interface{}) error {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return fmt.Errorf("error setting state key %q on OIDC Scope %q, err=%w", k, path, err)
 		}
+	}
+
+	name := strings.Trim(strings.TrimPrefix(path, identityOIDCScopePathPrefix), "/")
+	if err := d.Set("name", name); err != nil {
+		return fmt.Errorf("error setting state key %q on OIDC Scope %q, err=%w", "name", path, err)
 	}
 
 	return nil

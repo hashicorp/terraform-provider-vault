@@ -19,7 +19,7 @@ var (
 func gcpSecretStaticAccountResource() *schema.Resource {
 	return &schema.Resource{
 		Create: gcpSecretStaticAccountCreate,
-		Read:   gcpSecretStaticAccountRead,
+		Read:   ReadWrapper(gcpSecretStaticAccountRead),
 		Update: gcpSecretStaticAccountUpdate,
 		Delete: gcpSecretStaticAccountDelete,
 		Exists: gcpSecretStaticAccountExists,

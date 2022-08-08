@@ -15,7 +15,7 @@ const identityOIDCOpenIDConfigPathSuffix = "/.well-known/openid-configuration"
 
 func identityOIDCOpenIDConfigDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: readOIDCOpenIDConfigResource,
+		Read: ReadWrapper(readOIDCOpenIDConfigResource),
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,

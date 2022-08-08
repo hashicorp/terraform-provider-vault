@@ -25,7 +25,7 @@ func namespaceResource() *schema.Resource {
 		Create: namespaceCreate,
 		Update: namespaceCreate,
 		Delete: namespaceDelete,
-		Read:   namespaceRead,
+		Read:   ReadWrapper(namespaceRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

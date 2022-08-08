@@ -67,8 +67,9 @@ func TestResourceGenericSecretNS(t *testing.T) {
 				PreConfig: func() {
 					t.Setenv(consts.EnvVarVaultNamespaceImport, ns)
 				},
-				ImportState:  true,
-				ResourceName: resourceName,
+				ImportState:      true,
+				ResourceName:     resourceName,
+				ImportStateCheck: testutil.GetNamespaceImportStateCheck(ns),
 			},
 			{
 				// needed for the import step above :(

@@ -273,8 +273,8 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 
 // GetClient is meant to be called from a schema.Resource function.
 // It ensures that the returned api.Client's matches the resource's configured
-// namespace. The value for the namespace is resolved from *schema.ResourceData,
-// *schema.ResourceDiff, or *terraform.InstanceState.
+// namespace. The value for the namespace is resolved from any of string,
+// *schema.ResourceData, *schema.ResourceDiff, or *terraform.InstanceState.
 func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	var p *ProviderMeta
 	switch v := meta.(type) {
@@ -286,6 +286,8 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 
 	var ns string
 	switch v := i.(type) {
+	case string:
+		ns = v
 	case *schema.ResourceData:
 		if v, ok := v.GetOk(consts.FieldNamespace); ok {
 			ns = v.(string)

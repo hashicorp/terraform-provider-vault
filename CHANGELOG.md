@@ -1,3 +1,49 @@
+## 3.8.1 (August 04, 2022)
+IMPROVEMENTS:
+* docs: Fix broken provider.namespace links: ([#1562](https://github.com/hashicorp/terraform-provider-vault/pull/1562))
+* docs: Add Azure example for `r/raft_snapshot_agent_config`: ([#1534](https://github.com/hashicorp/terraform-provider-vault/pull/1534))
+* docs: Document namespaced resource import: ([#1561](https://github.com/hashicorp/terraform-provider-vault/pull/1561))
+* docs: Add more visible note that `d/aws_access_credentials` cannot be renewed: ([#1464](https://github.com/hashicorp/terraform-provider-vault/pull/1464))
+
+BUGS:
+* fix: Persist namespace to state on resource import: ([#1563](https://github.com/hashicorp/terraform-provider-vault/pull/1563))
+* fix: Update all transform resources with namespace support: ([#1558](https://github.com/hashicorp/terraform-provider-vault/pull/1558))
+* fix: Make password_policy conflict with the formatter field: ([#1557](https://github.com/hashicorp/terraform-provider-vault/pull/1557))
+* fix: Correct typo in `r/pki_secret_backend_root_cert` description: ([#1511](https://github.com/hashicorp/terraform-provider-vault/pull/1511))
+
+## 3.8.0 (July 26, 2022)
+FEATURES:
+* Adds support for Kubernetes secrets engine:
+  ([#1515](https://github.com/hashicorp/terraform-provider-vault/pull/1515))
+* PKI: Add support for CPS URL in custom policy identifiers:
+  ([#1495](https://github.com/hashicorp/terraform-provider-vault/pull/1495))
+
+IMPROVEMENTS:
+* Fix Import for OIDC Scope resource:
+  ([#1548](https://github.com/hashicorp/terraform-provider-vault/pull/1548))
+* Update entity alias creation to use entity lookup api: 
+  ([#1517](https://github.com/hashicorp/terraform-provider-vault/pull/1517))
+  ([#1552](https://github.com/hashicorp/terraform-provider-vault/pull/1552))
+* Add support for Consul secrets engine enhancements: 
+  ([#1518](https://github.com/hashicorp/terraform-provider-vault/pull/1518))
+* auth/gcp: adds `custom_endpoint` parameter to backend config: 
+  ([#1482](https://github.com/hashicorp/terraform-provider-vault/pull/1482))
+* auth/jwt: adds `user_claim_json_pointer` and `max_age` to roles:
+  ([#1478](https://github.com/hashicorp/terraform-provider-vault/pull/1478))
+
+BUGS:
+* Support updating backend descriptions: 
+ ([#1550](https://github.com/hashicorp/terraform-provider-vault/pull/1550))
+ ([#1543](https://github.com/hashicorp/terraform-provider-vault/pull/1543))
+* Properly set the `base64_pem` in Vault for Couchbase:
+ ([#1545](https://github.com/hashicorp/terraform-provider-vault/pull/1545))
+* Fix bug where some rabbitmq config changes trigger erroneous mount recreation:
+ ([#1542](https://github.com/hashicorp/terraform-provider-vault/pull/1542))
+* Update `*kv_secrets*` resources to support namespaces: 
+ ([#1529](https://github.com/hashicorp/terraform-provider-vault/pull/1529))
+* Do not validate JSON on OIDC scope template:
+ ([#1547](https://github.com/hashicorp/terraform-provider-vault/pull/1547))
+
 ## 3.7.0 (June 15, 2022)
 FEATURES: 
 * Support setting `namespace` by resource
