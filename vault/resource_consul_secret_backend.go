@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -13,11 +14,12 @@ import (
 
 func consulSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
-		Create: consulSecretBackendCreate,
-		Read:   ReadWrapper(consulSecretBackendRead),
-		Update: consulSecretBackendUpdate,
-		Delete: consulSecretBackendDelete,
-		Exists: consulSecretBackendExists,
+		Create:        consulSecretBackendCreate,
+		Read:          consulSecretBackendRead,
+		Update:        consulSecretBackendUpdate,
+		Delete:        consulSecretBackendDelete,
+		Exists:        consulSecretBackendExists,
+		CustomizeDiff: consulSecretsBackendCustomizeDiff,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -293,4 +295,29 @@ func consulSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, 
 
 func consulSecretBackendConfigPath(backend string) string {
 	return strings.Trim(backend, "/") + "/config/access"
+}
+
+func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+	oldToken, newToken := diff.GetChange("token")
+	ob, nb := diff.GetChange("bootstrap")
+	oldBootstrap := ob.(bool)
+	newBootstrap := nb.(bool)
+
+	// If the user sets bootstrap to false but doesn't provide a token, disallow it
+	if newToken == "" && !newBootstrap {
+		return fmt.Errorf("field `bootstrap` must be set to true when `token` is unspecified for Consul bootstrapping")
+	}
+
+	// If the user sets bootstrap to true but also provides a token, disallow it
+	if newToken != "" && newBootstrap {
+		return fmt.Errorf("field `bootstrap` must be set to false when `token` is specified")
+	}
+
+	// If the user already has a bootstrap resource, but tries updating the resource to add a token,
+	// disallow it
+	if oldBootstrap && oldToken == "" && newToken != "" {
+		return fmt.Errorf("cannot change field `token` on a Consul backend resource with bootstrap")
+	}
+
+	return nil
 }
