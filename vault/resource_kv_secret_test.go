@@ -28,11 +28,8 @@ func TestAccKVSecret(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
+					testResourceKVSecret_apiAcessCheck,
 				),
-			},
-			{
-				Config: testKVSecretConfig_basic(mount, name),
-				Check:  testResourceKVSecret_apiAcessCheck,
 			},
 			{
 				Config: testKVSecretConfig_updated(mount, name),
@@ -120,7 +117,7 @@ func testResourceKVSecret_apiAcessCheck(s *terraform.State) error {
 		return fmt.Errorf("error reading back secret: %s", err)
 	}
 
-	if got, want := secret.Data["zip"], "zoo"; got != want {
+	if got, want := secret.Data["zip"], "zap"; got != want {
 		return fmt.Errorf("'zip' data is %q; want %q", got, want)
 	}
 
