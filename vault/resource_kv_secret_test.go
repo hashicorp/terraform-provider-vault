@@ -123,7 +123,6 @@ func testResourceKVSecret_apiAcessCheck(s *terraform.State, want string) error {
 	}
 
 	return nil
-
 }
 
 func testResourceKVSecret_basic_apiAcessCheck(s *terraform.State) error {
