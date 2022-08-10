@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -134,8 +136,16 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 		data[k] = d.Get(k)
 	}
 
-	if _, err := client.Logical().Write(path, data); err != nil {
-		return diag.Errorf("error writing secret data to %s, err=%s", path, err)
+	log.Printf("[DEBUG] creating KVV2 secret %s", path)
+	if err := backoff.RetryNotify(func() error {
+		_, err := client.Logical().Write(path, data)
+		return err
+	}, backoff.WithMaxRetries(
+		backoff.NewConstantBackOff(time.Millisecond*500), 10),
+		func(err error, duration time.Duration) {
+			log.Printf("[WARN] create KVV2 %q failed, retrying in %s", path, duration)
+		}); err != nil {
+		return diag.Errorf("error creating KVV2 secret: %s", err)
 	}
 
 	d.SetId(path)

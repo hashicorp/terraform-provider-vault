@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -146,9 +148,15 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	log.Printf("[DEBUG] Writing generic Vault secret to %s", path)
-	_, err = client.Logical().Write(path, data)
-	if err != nil {
-		return fmt.Errorf("error writing to Vault: %s", err)
+	if err := backoff.RetryNotify(func() error {
+		_, err := client.Logical().Write(path, data)
+		return err
+	}, backoff.WithMaxRetries(
+		backoff.NewConstantBackOff(time.Millisecond*500), 10),
+		func(err error, duration time.Duration) {
+			log.Printf("[WARN] create generic secret %q failed, retrying in %s", path, duration)
+		}); err != nil {
+		return fmt.Errorf("error creating generic secret: %s", err)
 	}
 
 	d.SetId(originalPath)
