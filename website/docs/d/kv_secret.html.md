@@ -65,10 +65,13 @@ Use of this resource requires the `read` capability on the given path.
 
 The following attributes are exported:
 
-* `data_json` - A mapping whose keys are the top-level data keys returned from
+* `data` - A mapping whose keys are the top-level data keys returned from
   Vault and whose values are the corresponding values. This map can only
   represent string data, so any non-string values returned from Vault are
   serialized as JSON.
+
+* `data_json` - String containing a JSON-encoded object that that is
+  read as the secret data at the given path.
 
 * `lease_id` - The lease identifier assigned by Vault, if any.
 
