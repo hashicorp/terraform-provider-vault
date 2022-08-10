@@ -28,7 +28,7 @@ func TestAccKVSecret(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
-					testResourceKVSecret_apiAcessCheck("zap"),
+					testResourceKVSecret_apiAccessCheck("zap"),
 				),
 			},
 			{
@@ -37,7 +37,7 @@ func TestAccKVSecret(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zoop"),
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
-					testResourceKVSecret_apiAcessCheck("zoop"),
+					testResourceKVSecret_apiAccessCheck("zoop"),
 				),
 			},
 			{
@@ -102,7 +102,7 @@ resource "vault_kv_secret" "test" {
 	return ret
 }
 
-func testResourceKVSecret_apiAcessCheck(want string) resource.TestCheckFunc {
+func testResourceKVSecret_apiAccessCheck(want string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_kv_secret.test"]
 		state := resourceState.Primary
