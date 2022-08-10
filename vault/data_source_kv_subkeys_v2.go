@@ -59,6 +59,12 @@ func kvSecretSubkeysV2DataSource() *schema.Resource {
 				// cleanly support nested values
 				Description: "Subkeys for the KV-V2 secret read from Vault.",
 			},
+			consts.FieldData: {
+				Type:        schema.TypeMap,
+				Computed:    true,
+				Description: "Subkeys stored as a map of strings.",
+				Sensitive:   true,
+			},
 		},
 	}
 }
@@ -101,6 +107,10 @@ func kvSecretSubkeysDataSourceRead(_ context.Context, d *schema.ResourceData, me
 			return diag.Errorf("error marshaling JSON for %q: %s", path, err)
 		}
 		if err := d.Set(consts.FieldDataJSON, string(jsonData)); err != nil {
+			return diag.FromErr(err)
+		}
+
+		if err := d.Set(consts.FieldData, serializeDataMapToString(data.(map[string]interface{}))); err != nil {
 			return diag.FromErr(err)
 		}
 	}
