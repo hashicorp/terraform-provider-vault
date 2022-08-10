@@ -76,7 +76,8 @@ func kvSecretDataSourceRead(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.Errorf("no secret found at %q", path)
 	}
 
-	jsonData, err := json.Marshal(secret.Data)
+	data := secret.Data
+	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return diag.Errorf("error marshaling JSON for %q: %s", path, err)
 	}
