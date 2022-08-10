@@ -2,6 +2,8 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -21,11 +23,21 @@ func TestAccKVSecret(t *testing.T) {
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testKVSecretConfig(mount, name),
+				Config: testKVSecretConfig_basic(mount, name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
+					testResourceKVSecret_apiAccessCheck("zap"),
+				),
+			},
+			{
+				Config: testKVSecretConfig_updated(mount, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/%s", mount, name)),
+					resource.TestCheckResourceAttr(resourceName, "data.zip", "zoop"),
+					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
+					testResourceKVSecret_apiAccessCheck("zoop"),
 				),
 			},
 			{
@@ -50,7 +62,7 @@ resource "vault_mount" "kvv1" {
 	return ret
 }
 
-func testKVSecretConfig(mount, name string) string {
+func testKVSecretConfig_basic(mount, name string) string {
 	ret := fmt.Sprintf(`
 %s
 
@@ -68,4 +80,49 @@ resource "vault_kv_secret" "test" {
 }`, name)
 
 	return ret
+}
+
+func testKVSecretConfig_updated(mount, name string) string {
+	ret := fmt.Sprintf(`
+%s
+
+`, kvV1MountConfig(mount))
+
+	ret += fmt.Sprintf(`
+resource "vault_kv_secret" "test" {
+  path = "${vault_mount.kvv1.path}/%s"
+  data_json = jsonencode(
+    {
+      zip = "zoop",
+      foo = "bar"
+    }
+  )
+}`, name)
+
+	return ret
+}
+
+func testResourceKVSecret_apiAccessCheck(want string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState := s.Modules[0].Resources["vault_kv_secret.test"]
+		state := resourceState.Primary
+
+		path := state.ID
+
+		client, err := provider.GetClient(state, testProvider.Meta())
+		if err != nil {
+			return err
+		}
+
+		secret, err := client.Logical().Read(path)
+		if err != nil {
+			return fmt.Errorf("error reading back secret: %s", err)
+		}
+
+		if got := secret.Data["zip"]; got != want {
+			return fmt.Errorf("'zip' data is %q; want %q", got, want)
+		}
+
+		return nil
+	}
 }
