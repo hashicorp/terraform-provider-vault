@@ -78,10 +78,13 @@ The following attributes are exported:
 
 * `path` - Full path where the KVV2 secret is written.
 
-* `data_json` - A mapping whose keys are the top-level data keys returned from
+* `data` - A mapping whose keys are the top-level data keys returned from
   Vault and whose values are the corresponding values. This map can only
   represent string data, so any non-string values returned from Vault are
   serialized as JSON.
+
+* `data_json` - JSON-encoded string that that is
+  read as the secret data at the given path.
 
 * `created_time` - Time at which secret was created.
 

@@ -48,7 +48,14 @@ func kvSecretV2DataSource() *schema.Resource {
 			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Map of strings read from Vault",
+				Description: "JSON-encoded secret data read from Vault.",
+				Sensitive:   true,
+			},
+
+			consts.FieldData: {
+				Type:        schema.TypeMap,
+				Computed:    true,
+				Description: "Map of strings read from Vault.",
 				Sensitive:   true,
 			},
 
@@ -118,6 +125,10 @@ func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta in
 	}
 
 	if err := d.Set(consts.FieldDataJSON, string(jsonData)); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldData, serializeDataMapToString(data.(map[string]interface{}))); err != nil {
 		return diag.FromErr(err)
 	}
 

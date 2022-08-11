@@ -27,6 +27,11 @@ func TestDataSourceKVSecret(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLeaseRenewable, "false"),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "4"),
+					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
+					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "data.test", "false"),
+					resource.TestCheckResourceAttr(resourceName, "data.baz", "{\"riff\":\"raff\"}"),
 					testutil.CheckJSONData(resourceName, consts.FieldDataJSON, expectedSubkeys),
 				),
 			},
@@ -35,6 +40,11 @@ func TestDataSourceKVSecret(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/%s-updated", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLeaseRenewable, "false"),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "4"),
+					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
+					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "data.test", "false"),
+					resource.TestCheckResourceAttr(resourceName, "data.baz", "{\"riff\":\"raff\"}"),
 					testutil.CheckJSONData(resourceName, consts.FieldDataJSON, expectedSubkeys),
 				),
 			},

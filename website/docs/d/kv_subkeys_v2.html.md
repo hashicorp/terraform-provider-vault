@@ -83,4 +83,6 @@ The following attributes are exported:
 
 * `path` - Full path where the KV-V2 secrets are listed.
 
-* `data_json` - Subkeys for the KV-V2 secret read from Vault..
+* `data_json` - Subkeys for the KV-V2 secret read from Vault.
+
+* `data` - Subkeys for the KV-V2 secret stored as a serialized map of strings.

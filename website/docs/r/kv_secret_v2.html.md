@@ -66,7 +66,7 @@ The following arguments are supported:
 * `delete_all_versions` - (Optional) If set to true, permanently deletes all
   versions for the specified key.
 
-* `data_json` - (Required) String containing a JSON-encoded object that will be
+* `data_json` - (Required) JSON-encoded string that will be
   written as the secret data at the given path.
 
 ## Required Vault Capabilities
