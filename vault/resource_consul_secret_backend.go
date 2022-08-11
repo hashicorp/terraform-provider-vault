@@ -75,7 +75,7 @@ func consulSecretBackendResource() *schema.Resource {
 			"bootstrap": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Denotes a backend resource that is used to bootstrap the Consul ACL system.",
+				Description: "Denotes a backend resource that is used to bootstrap the Consul ACL system. Only one resource may be used to bootstrap.",
 				Default:     false,
 			},
 			"ca_cert": {
@@ -303,12 +303,12 @@ func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceD
 
 	// If the user sets bootstrap to false but doesn't provide a token, disallow it.
 	if newToken == "" && !newBootstrap {
-		return fmt.Errorf("field `bootstrap` must be set to true when `token` is unspecified")
+		return fmt.Errorf("field 'bootstrap' must be set to true when 'token' is unspecified")
 	}
 
 	// If the user sets bootstrap to true and also provides a token, disallow it.
 	if newToken != "" && newBootstrap {
-		return fmt.Errorf("field `bootstrap` must be set to false when `token` is specified")
+		return fmt.Errorf("field 'bootstrap' must be set to false when 'token' is specified")
 	}
 
 	return nil

@@ -139,15 +139,15 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 		CheckDestroy: testAccConsulSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config:      testConsulSecretBackend_bootstrapConfig(path, consulAddr, "", "false"),
-				ExpectError: regexp.MustCompile("field `bootstrap` must be set to true when `token` is unspecified"),
+				Config:      testConsulSecretBackend_bootstrapConfig(path, consulAddr, "", false),
+				ExpectError: regexp.MustCompile("field 'bootstrap' must be set to true when 'token' is unspecified"),
 			},
 			{
-				Config:      testConsulSecretBackend_bootstrapConfig(path, consulAddr, "token", "true"),
-				ExpectError: regexp.MustCompile("field `bootstrap` must be set to false when `token` is specified"),
+				Config:      testConsulSecretBackend_bootstrapConfig(path, consulAddr, "token", true),
+				ExpectError: regexp.MustCompile("field 'bootstrap' must be set to false when 'token' is specified"),
 			},
 			{
-				Config: testConsulSecretBackend_bootstrapConfig(path, consulAddr, "", "true"),
+				Config: testConsulSecretBackend_bootstrapConfig(path, consulAddr, "", true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "address", consulAddr),
@@ -166,7 +166,7 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 			},
 			testutil.GetImportTestStep(resourceName, false, "token", "bootstrap"),
 			{
-				Config:      testConsulSecretBackend_bootstrapConfig(path+"-new", consulAddr, "", "true"),
+				Config:      testConsulSecretBackend_bootstrapConfig(path+"-new", consulAddr, "", true),
 				ExpectError: regexp.MustCompile(`Token not provided and failed to bootstrap ACLs`),
 			},
 		},
@@ -225,14 +225,14 @@ resource "vault_consul_secret_backend" "test" {
 }`, path, token)
 }
 
-func testConsulSecretBackend_bootstrapConfig(path, addr, token, bootstrap string) string {
+func testConsulSecretBackend_bootstrapConfig(path, addr, token string, bootstrap bool) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
   description = "test description"
   address = "%s"
   token = "%s"
-  bootstrap = "%s"
+  bootstrap = %t
 }
 `, path, addr, token, bootstrap)
 }
@@ -254,7 +254,7 @@ resource "vault_consul_secret_backend" "test" {
   path = "%s"
   description = "test description"
   address = "%s"
-  bootstrap = "true"
+  bootstrap = true
 }
 
 resource "vault_consul_secret_backend_role" "test" {
