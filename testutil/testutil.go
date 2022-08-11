@@ -39,7 +39,7 @@ func TestEntPreCheck(t *testing.T) {
 }
 
 func SkipTestAcc(t *testing.T) {
-	SkipTestEnvUnset(t, resource.TestEnvVar)
+	SkipTestEnvUnset(t, resource.EnvTfAcc)
 }
 
 func SkipTestAccEnt(t *testing.T) {
