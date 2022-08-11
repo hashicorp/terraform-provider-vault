@@ -70,7 +70,7 @@ The following attributes are exported:
   represent string data, so any non-string values returned from Vault are
   serialized as JSON.
 
-* `data_json` - String containing a JSON-encoded object that that is
+* `data_json` - JSON-encoded string that that is
   read as the secret data at the given path.
 
 * `lease_id` - The lease identifier assigned by Vault, if any.

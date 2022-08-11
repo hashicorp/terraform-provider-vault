@@ -45,7 +45,7 @@ The following arguments are supported:
 
 * `path` - (Required) Full path of the KV-V1 secret.
 
-* `data_json` - (Required) String containing a JSON-encoded object that will be
+* `data_json` - (Required) JSON-encoded string that will be
   written as the secret data at the given path.
 
 ## Required Vault Capabilities
