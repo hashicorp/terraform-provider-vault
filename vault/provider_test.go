@@ -69,6 +69,11 @@ func init() {
 func initTestProvider() {
 	testInitOnce.Do(
 		func() {
+			// only required when running acceptance tests
+			if os.Getenv(resource.EnvTfAcc) == "" {
+				return
+			}
+
 			if testProvider == nil {
 				testProvider = Provider()
 				testProviders = map[string]*schema.Provider{
