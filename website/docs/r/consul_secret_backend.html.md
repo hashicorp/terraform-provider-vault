@@ -57,9 +57,9 @@ and correct drift on `token`. Changing the value, however, _will_ overwrite the 
 
 * `bootstrap` - (Optional) Denotes that the resource is used to bootstrap the Consul ACL system.
 
-~> **Important** When `bootstrap` is true, the token is silently stored. If the resource is destroyed or the token
-overwritten, the bootstrap token will be lost and an [ACL system reset would be needed to recover.](https://learn.hashicorp.com/tutorials/consul/access-control-troubleshoot#reset-the-acl-system)
-Using resources in this manner should be considered an advanced feature and is not recommended.
+~> **Important** When `bootstrap` is true, Vault will attempt to bootstrap the Consul server. The token returned from
+this operation will only ever be known to Vault. If the resource is ever destroyed, the bootstrap token will be lost
+and a [Consul reset may be required.](https://learn.hashicorp.com/tutorials/consul/access-control-troubleshoot#reset-the-acl-system)
 
 * `path` - (Optional) The unique location this backend should be mounted at. Must not begin or end with a `/`. Defaults
 to `consul`.
