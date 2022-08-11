@@ -147,15 +147,19 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 
 	}
 
-	log.Printf("[DEBUG] Writing generic Vault secret to %s", path)
-	if err := backoff.RetryNotify(func() error {
-		_, err := client.Logical().Write(path, data)
-		return err
-	}, backoff.WithMaxRetries(
-		backoff.NewConstantBackOff(time.Millisecond*500), 10),
-		func(err error, duration time.Duration) {
-			log.Printf("[WARN] create generic secret %q failed, retrying in %s", path, duration)
-		}); err != nil {
+	writeData := func() error {
+		if _, err := client.Logical().Write(path, data); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	bo := backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Millisecond*500), 10)
+
+	log.Printf("[DEBUG] Writing generic Vault secret to  %s", path)
+	if err := backoff.RetryNotify(writeData, bo, func(err error, duration time.Duration) {
+		log.Printf("[WARN] create generic secret %q failed, retrying in %s", path, duration)
+	}); err != nil {
 		return fmt.Errorf("error creating generic secret: %s", err)
 	}
 
