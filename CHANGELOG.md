@@ -7,6 +7,12 @@ IMPROVEMENTS:
 BUGS:
 * fix: remove unnecessary nesting of secret data for KV-V1 secrets: ([#1570](https://github.com/hashicorp/terraform-provider-vault/pull/1570))
 
+BACKWARDS INCOMPATIBILITIES / NOTES:
+* `vault_kv_secret` no longer writes or reads secrets in Vault under a nested `data` object.
+  Secrets configured in Vault using previous versions of the provider must be reconfigured
+  using `terraform apply`. Not doing so will cause data read operations to fail due to a mismatch
+  in the expected structure of the secret.
+
 ## 3.8.1 (August 04, 2022)
 IMPROVEMENTS:
 * docs: Fix broken provider.namespace links: ([#1562](https://github.com/hashicorp/terraform-provider-vault/pull/1562))
