@@ -15,7 +15,7 @@ import (
 func consulSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create:        consulSecretBackendCreate,
-		Read:          consulSecretBackendRead,
+		Read:          ReadWrapper(consulSecretBackendRead),
 		Update:        consulSecretBackendUpdate,
 		Delete:        consulSecretBackendDelete,
 		Exists:        consulSecretBackendExists,
@@ -75,7 +75,7 @@ func consulSecretBackendResource() *schema.Resource {
 			"bootstrap": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Denotes a backend resource that was used to bootstrap the Consul ACL system.",
+				Description: "Denotes a backend resource that is used to bootstrap the Consul ACL system.",
 				Default:     false,
 			},
 			"ca_cert": {
@@ -165,7 +165,7 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Wrote Consul configuration to %q", configPath)
 	d.Partial(false)
 
-	return nil
+	return consulSecretBackendRead(d, meta)
 }
 
 func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
@@ -298,43 +298,15 @@ func consulSecretBackendConfigPath(backend string) string {
 }
 
 func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
-	oldToken, newToken := diff.GetChange("token")
-	ob, nb := diff.GetChange("bootstrap")
-	oldBootstrap := ob.(bool)
-	newBootstrap := nb.(bool)
+	newToken := diff.Get("token").(string)
+	newBootstrap := diff.Get("bootstrap").(bool)
 
-	// Disallow the following bad states on existing resource updates
-	if oldBootstrap && oldToken == "" {
-		// If the user already has a bootstrap resource created, but tries adding a token
-		if newToken != "" {
-			return fmt.Errorf("cannot change field `token` on a Consul secret backend resource with bootstrap")
-		}
-
-		// If the user already has a bootstrap resource created, but tries setting bootstrap to false
-		if !newBootstrap {
-			return fmt.Errorf("cannot change field `bootstrap` on a Consul secret backend resource with bootstrap")
-		}
-	}
-
-	if !oldBootstrap && oldToken != "" {
-		// If the user already has a non-bootstrap resource, but tries removing the token
-		if newToken == "" {
-			return fmt.Errorf("cannot remove field `token` on a Consul secret backend resource without bootstrap")
-		}
-
-		// If the user already has a non-bootstrap resource, but tries setting bootstrap to true
-		if newBootstrap {
-			return fmt.Errorf("cannot change field `bootstrap` on a Consul secret backend resource without bootstrap")
-		}
-	}
-
-	// Disallow the following bad states on new resources
-	// If the user sets bootstrap to false but doesn't provide a token
+	// If the user sets bootstrap to false but doesn't provide a token, disallow it.
 	if newToken == "" && !newBootstrap {
 		return fmt.Errorf("field `bootstrap` must be set to true when `token` is unspecified")
 	}
 
-	// If the user sets bootstrap to true and also provides a token
+	// If the user sets bootstrap to true and also provides a token, disallow it.
 	if newToken != "" && newBootstrap {
 		return fmt.Errorf("field `bootstrap` must be set to false when `token` is specified")
 	}
