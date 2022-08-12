@@ -54,7 +54,7 @@ func TestManagedKeys(t *testing.T) {
 					p := getManagedKeysPath(kmsTypeAWS, name0)
 					_, err := client.Logical().Delete(p)
 					if err != nil {
-						t.Fatalf("could not delete managed key")
+						t.Fatalf("manual cleanup required, failed to delete Vault managed key %q, err=%s", path, err)
 					}
 				},
 				Config: testManagedKeysConfig_basic(name0, name1),
