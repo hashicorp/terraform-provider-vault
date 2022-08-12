@@ -40,7 +40,7 @@ func TestManagedKeys(t *testing.T) {
 					p := getManagedKeysPath(kmsTypeAWS, name0)
 					_, err = client.Logical().Write(p, data)
 					if err != nil {
-						t.Fatalf("could not create managed key to Vault")
+						t.Fatalf("failed to create Vault managed key %q, err=%s", p, err)
 					}
 				},
 				Config:      testManagedKeysConfig_basic(name0, name1),
