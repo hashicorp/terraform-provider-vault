@@ -81,7 +81,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				Required:     true,
 				Description:  "Type of root to create. Must be either \"exported\" or \"internal\".",
 				ForceNew:     true,
-				ValidateFunc: validation.StringInSlice([]string{"exported", "internal"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"exported", "internal", "kms"}, false),
 			},
 			"common_name": {
 				Type:        schema.TypeString,
@@ -247,6 +247,22 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				Computed:    true,
 				Description: "The certificate's serial number, hex formatted.",
 			},
+			"managed_key_name": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				Description:   "The name of the previously configured managed key.",
+				ForceNew:      true,
+				ConflictsWith: []string{"managed_key_id"},
+			},
+			"managed_key_id": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				Description:   "The ID of the previously configured managed key.",
+				ForceNew:      true,
+				ConflictsWith: []string{"managed_key_name"},
+			},
 		},
 	}
 }
@@ -297,8 +313,6 @@ func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) er
 		"ttl":                  d.Get("ttl").(string),
 		"format":               d.Get("format").(string),
 		"private_key_format":   d.Get("private_key_format").(string),
-		"key_type":             d.Get("key_type").(string),
-		"key_bits":             d.Get("key_bits").(int),
 		"max_path_length":      d.Get("max_path_length").(int),
 		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
 		"ou":                   d.Get("ou").(string),
@@ -308,6 +322,13 @@ func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) er
 		"province":             d.Get("province").(string),
 		"street_address":       d.Get("street_address").(string),
 		"postal_code":          d.Get("postal_code").(string),
+		"managed_key_name":     d.Get("managed_key_name").(string),
+		"managed_key_id":       d.Get("managed_key_id").(string),
+	}
+
+	if rootType != "kms" {
+		data["key_type"] = d.Get("key_type").(string)
+		data["key_bits"] = d.Get("key_bits").(int)
 	}
 
 	if len(altNames) > 0 {

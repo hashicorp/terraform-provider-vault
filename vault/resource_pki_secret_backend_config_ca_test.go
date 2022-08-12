@@ -15,6 +15,8 @@ import (
 func TestPkiSecretBackendConfigCA_basic(t *testing.T) {
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
+	resourceName := "vault_pki_secret_backend_config_ca.test"
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -23,7 +25,7 @@ func TestPkiSecretBackendConfigCA_basic(t *testing.T) {
 			{
 				Config: testPkiSecretBackendConfigCAConfig_basic(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_config_ca.test", "backend", path),
+					resource.TestCheckResourceAttr(resourceName, "backend", path),
 				),
 			},
 		},
@@ -41,9 +43,8 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_secret_backend_config_ca" "test" {
-  depends_on = [ "vault_mount.test" ]
-  backend = vault_mount.test.path
-  pem_bundle = <<EOT
+  backend          = vault_mount.test.path
+  pem_bundle       = <<EOT
 -----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAwvEHeJCXnFgi88rE1dTX6FHdBPK0wSjedh0ywVnCZxLWbBv/
 5PytjTcCPdrfW7g2sfbPwOge/WF3X2KeYSP8SxZA0czmz6QDspeG921JkZWtyp5o
