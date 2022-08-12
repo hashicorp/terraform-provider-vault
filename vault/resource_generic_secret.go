@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -149,7 +151,11 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 
 	writeData := func() error {
 		if _, err := client.Logical().Write(path, data); err != nil {
-			return err
+			if respErr, ok := err.(*api.ResponseError); ok && (respErr.StatusCode == http.StatusBadRequest) {
+				return err
+			} else {
+				return backoff.Permanent(err)
+			}
 		}
 		return nil
 	}
