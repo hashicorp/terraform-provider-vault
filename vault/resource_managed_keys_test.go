@@ -54,7 +54,7 @@ func TestManagedKeys(t *testing.T) {
 					p := getManagedKeysPath(kmsTypeAWS, name0)
 					_, err := client.Logical().Delete(p)
 					if err != nil {
-						t.Fatalf("manual cleanup required, failed to delete Vault managed key %q, err=%s", path, err)
+						t.Fatalf("manual cleanup required, failed to delete Vault managed key %q, err=%s", p, err)
 					}
 				},
 				Config: testManagedKeysConfig_basic(name0, name1),
@@ -84,7 +84,8 @@ func TestManagedKeys(t *testing.T) {
 			},
 			// This test removes one of the managed keys from the set
 			// and also updates the name for the other remaining key
-			// Tests: ForceNew on Name + Deletion of removed keys
+			// Tests: new managed key is created on Name change
+			// + Deletion of previously named keys
 			{
 				Config: testManagedKeysConfig_updated(name0),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -110,7 +111,7 @@ func TestManagedKeys(t *testing.T) {
 					p := getManagedKeysPath(kmsTypeAWS, name0)
 					_, err := client.Logical().Delete(p)
 					if err != nil {
-						t.Fatalf("could not delete managed key")
+						t.Fatalf("manual cleanup required, failed to delete Vault managed key %q, err=%s", p, err)
 					}
 
 					// Recreate w/ same name; forces UUID update out-of-band
@@ -124,7 +125,7 @@ func TestManagedKeys(t *testing.T) {
 
 					_, err = client.Logical().Write(p, data)
 					if err != nil {
-						t.Fatalf("could not create managed key to Vault")
+						t.Fatalf("failed to create Vault managed key %q, err=%s", p, err)
 					}
 				},
 				Config: testManagedKeysConfig_updated(name0),

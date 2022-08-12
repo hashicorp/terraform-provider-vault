@@ -22,28 +22,28 @@ const (
 )
 
 type managedKeysConfig struct {
-	providerType  string
-	keyType       string
-	getSchemaFunc func() schemaMap
+	providerType string
+	keyType      string
+	schemaFunc   func() schemaMap
 }
 
 var (
 	managedKeysAWSConfig = &managedKeysConfig{
-		providerType:  consts.FieldAWS,
-		keyType:       kmsTypeAWS,
-		getSchemaFunc: managedKeysAWSConfigSchema,
+		providerType: consts.FieldAWS,
+		keyType:      kmsTypeAWS,
+		schemaFunc:   managedKeysAWSConfigSchema,
 	}
 
 	managedKeysAzureConfig = &managedKeysConfig{
-		providerType:  consts.FieldAzure,
-		keyType:       kmsTypeAzure,
-		getSchemaFunc: managedKeysAzureConfigSchema,
+		providerType: consts.FieldAzure,
+		keyType:      kmsTypeAzure,
+		schemaFunc:   managedKeysAzureConfigSchema,
 	}
 
 	managedKeysPKCSConfig = &managedKeysConfig{
-		providerType:  consts.FieldPKCS,
-		keyType:       kmsTypePKCS,
-		getSchemaFunc: managedKeysPKCSConfigSchema,
+		providerType: consts.FieldPKCS,
+		keyType:      kmsTypePKCS,
+		schemaFunc:   managedKeysPKCSConfigSchema,
 	}
 
 	managedKeyProviders = []*managedKeysConfig{
@@ -79,7 +79,7 @@ func managedKeysResource() *schema.Resource {
 				Optional:    true,
 				Description: "Configuration block for PKCS Managed Keys",
 				Elem: &schema.Resource{
-					Schema: managedKeysPKCSConfig.getSchemaFunc(),
+					Schema: managedKeysPKCSConfig.schemaFunc(),
 				},
 				Set: hashManagedKeys,
 			},
@@ -88,7 +88,7 @@ func managedKeysResource() *schema.Resource {
 				Optional:    true,
 				Description: "Configuration block for AWS Managed Keys",
 				Elem: &schema.Resource{
-					Schema: managedKeysAWSConfig.getSchemaFunc(),
+					Schema: managedKeysAWSConfig.schemaFunc(),
 				},
 				Set: hashManagedKeys,
 			},
@@ -97,7 +97,7 @@ func managedKeysResource() *schema.Resource {
 				Optional:    true,
 				Description: "Configuration block for Azure Managed Keys",
 				Elem: &schema.Resource{
-					Schema: managedKeysAzureConfig.getSchemaFunc(),
+					Schema: managedKeysAzureConfig.schemaFunc(),
 				},
 				Set: hashManagedKeys,
 			},
@@ -452,7 +452,7 @@ func writeManagedKeysData(d *schema.ResourceData, client *api.Client, providerTy
 
 	newKeySet := map[string]bool{}
 	for _, block := range newBlocks.(*schema.Set).List() {
-		keyName, data := getManagedKeysConfigData(block.(map[string]interface{}), config.getSchemaFunc())
+		keyName, data := getManagedKeysConfigData(block.(map[string]interface{}), config.schemaFunc())
 		path := getManagedKeysPath(config.keyType, keyName)
 
 		log.Printf("[DEBUG] Writing data to Vault at %s", path)
@@ -560,7 +560,7 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 				continue
 			}
 
-			for k := range config.getSchemaFunc() {
+			for k := range config.schemaFunc() {
 				// Map TF schema fields to Vault API
 				vaultKey := k
 				if v, ok := sm[k]; ok {
@@ -568,7 +568,6 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 				}
 
 				if v, ok := resp.Data[vaultKey]; ok {
-
 					// log an out-of-band change on UUID
 					if vaultKey == "UUID" {
 						stateKey := fmt.Sprintf("%s.%d.%s", providerType, getHashFromName(name.(string)), k)
@@ -577,6 +576,7 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 							// check if UUID in TF state is different
 							if id.(string) != v.(string) {
 								log.Printf("[DEBUG] Out-of-band change detected for %q,  vault has %s, was %s for path=%q", stateKey, v, id, path)
+							}
 						}
 					}
 
