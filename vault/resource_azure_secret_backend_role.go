@@ -1,8 +1,10 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"strings"
 
@@ -13,10 +15,10 @@ import (
 
 func azureSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
-		Create: azureSecretBackendRoleCreate,
-		Read:   ReadWrapper(azureSecretBackendRoleRead),
-		Update: azureSecretBackendRoleCreate,
-		Delete: azureSecretBackendRoleDelete,
+		CreateContext: azureSecretBackendRoleCreate,
+		ReadContext:   ReadContextWrapper(azureSecretBackendRoleRead),
+		UpdateContext: azureSecretBackendRoleCreate,
+		DeleteContext: azureSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -52,11 +54,13 @@ func azureSecretBackendRoleResource() *schema.Resource {
 						"role_id": {
 							Type:     schema.TypeString,
 							Computed: true,
+							Optional: true,
 						},
 
 						"role_name": {
 							Type:     schema.TypeString,
-							Required: true,
+							Computed: true,
+							Optional: true,
 						},
 
 						"scope": {
@@ -102,15 +106,23 @@ func azureSecretBackendRoleResource() *schema.Resource {
 	}
 }
 
-func azureSecretBackendRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}) error {
+func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceData, data map[string]interface{}) diag.Diagnostics {
 	if v, ok := d.GetOk("azure_roles"); ok {
 		rawAzureList := v.(*schema.Set).List()
+
+		for _, element := range rawAzureList {
+			role := element.(map[string]interface{})
+
+			if (role["role_id"] == "") == (role["role_name"] == "") {
+				return diag.Errorf("must specify at most one of 'role_name' or 'role_id'")
+			}
+		}
 
 		// Vaults API requires we send the policy as an escaped string
 		// So we marshall and then change into a string
 		jsonAzureList, err := json.Marshal(rawAzureList)
 		if err != nil {
-			return fmt.Errorf("error marshaling JSON for azure_roles %q: %s", rawAzureList, err)
+			return diag.FromErr(fmt.Errorf("error marshaling JSON for azure_roles %q: %s", rawAzureList, err))
 		}
 		jsonAzureListString := string(jsonAzureList)
 
@@ -125,7 +137,7 @@ func azureSecretBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 		// So we marshall and then change into a string
 		jsonAzureList, err := json.Marshal(rawAzureList)
 		if err != nil {
-			return fmt.Errorf("error marshaling JSON for azure_groups %q: %s", rawAzureList, err)
+			return diag.FromErr(fmt.Errorf("error marshaling JSON for azure_groups %q: %s", rawAzureList, err))
 		}
 
 		jsonAzureListString := string(jsonAzureList)
@@ -149,10 +161,10 @@ func azureSecretBackendRoleUpdateFields(d *schema.ResourceData, data map[string]
 	return nil
 }
 
-func azureSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return e
+func azureSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, err := provider.GetClient(d, meta)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
 	backend := d.Get("backend").(string)
@@ -161,9 +173,8 @@ func azureSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 	path := azureSecretRoleResourcePath(backend, role)
 
 	data := map[string]interface{}{}
-	err := azureSecretBackendRoleUpdateFields(d, data)
-	if err != nil {
-		return err
+	if diags := azureSecretBackendRoleUpdateFields(ctx, d, data); diags != nil {
+		return diags
 	}
 
 	log.Printf("[DEBUG] Writing role %q to Azure Secret backend", path)
@@ -171,17 +182,17 @@ func azureSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) erro
 	_, err = client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing Azure Secret role %q: %s", path, err)
+		return diag.FromErr(fmt.Errorf("error writing Azure Secret role %q: %s", path, err))
 	}
 	log.Printf("[DEBUG] Wrote role %q to Azure Secret backend", path)
 
-	return azureSecretBackendRoleRead(d, meta)
+	return azureSecretBackendRoleRead(ctx, d, meta)
 }
 
-func azureSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return e
+func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, err := provider.GetClient(d, meta)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
 	path := d.Id()
@@ -189,7 +200,7 @@ func azureSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 	log.Printf("[DEBUG] Reading Azure Secret role %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("Error reading Azure Secret role %q: %s", path, err)
+		return diag.FromErr(fmt.Errorf("error reading Azure Secret role %q: %s", path, err))
 	}
 	log.Printf("[DEBUG] Read Azure Secret role %q", path)
 
@@ -206,7 +217,7 @@ func azureSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 	} {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
-				return fmt.Errorf("error reading %s for Azure Secret role Backend Role %q: %q", k, path, err)
+				return diag.FromErr(fmt.Errorf("error reading %s for Azure Secret role Backend Role %q: %q", k, path, err))
 			}
 		}
 	}
@@ -214,30 +225,36 @@ func azureSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error 
 	if v, ok := resp.Data["azure_roles"]; ok {
 		log.Printf("[DEBUG] Role Data from Azure: %s", v)
 
-		d.Set("azure_roles", resp.Data["azure_roles"])
+		err := d.Set("azure_roles", resp.Data["azure_roles"])
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("error setting Azure roles: %s", err))
+		}
 	}
 
 	if v, ok := resp.Data["azure_groups"]; ok {
 		log.Printf("[DEBUG] Group Data from Azure: %s", v)
 
-		d.Set("azure_groups", resp.Data["azure_groups"])
+		err := d.Set("azure_groups", resp.Data["azure_groups"])
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("error setting Azure groups: %s", err))
+		}
 	}
 
 	return nil
 }
 
-func azureSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return e
+func azureSecretBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, err := provider.GetClient(d, meta)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting Azure Secret role %q", path)
-	_, err := client.Logical().Delete(path)
+	_, err = client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("Error deleting Azure Secret role %q", path)
+		return diag.FromErr(fmt.Errorf("Error deleting Azure Secret role %q", path))
 	}
 	log.Printf("[DEBUG] Deleted Azure Secret role %q", path)
 
