@@ -66,7 +66,10 @@ func azureAuthBackendConfigResource() *schema.Resource {
 }
 
 func azureAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	config := meta.(*provider.ProviderMeta).GetClient()
+	config, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	// if backend comes from the config, it won't have the StateFunc
 	// applied yet, so we need to apply it again.
@@ -100,8 +103,10 @@ func azureAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	config := meta.(*provider.ProviderMeta).GetClient()
-
+	config, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	log.Printf("[DEBUG] Reading Azure auth backend config")
 	secret, err := config.Logical().Read(d.Id())
 	if err != nil {
@@ -130,8 +135,10 @@ func azureAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	config := meta.(*provider.ProviderMeta).GetClient()
-
+	config, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	log.Printf("[DEBUG] Deleting Azure auth backend config from %q", d.Id())
 	_, err := config.Logical().Delete(d.Id())
 	if err != nil {
@@ -143,8 +150,10 @@ func azureAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	config := meta.(*provider.ProviderMeta).GetClient()
-
+	config, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 	log.Printf("[DEBUG] Checking if Azure auth backend is configured at %q", d.Id())
 	secret, err := config.Logical().Read(d.Id())
 	if err != nil {
