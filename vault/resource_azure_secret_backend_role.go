@@ -173,8 +173,7 @@ func azureSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, m
 	path := azureSecretRoleResourcePath(backend, role)
 
 	data := map[string]interface{}{}
-	diags := azureSecretBackendRoleUpdateFields(ctx, d, data)
-	if diags.HasError() {
+	if diags := azureSecretBackendRoleUpdateFields(ctx, d, data); diags != nil {
 		return diags
 	}
 
