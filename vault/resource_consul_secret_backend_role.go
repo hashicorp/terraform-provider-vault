@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -18,7 +20,7 @@ var (
 func consulSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: consulSecretBackendRoleWrite,
-		Read:   consulSecretBackendRoleRead,
+		Read:   ReadWrapper(consulSecretBackendRoleRead),
 		Update: consulSecretBackendRoleWrite,
 		Delete: consulSecretBackendRoleDelete,
 		Exists: consulSecretBackendRoleExists,
@@ -46,11 +48,39 @@ func consulSecretBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				ConflictsWith: []string{"consul_policies"},
+			},
+			"consul_policies": {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Description: "List of Consul policies to associate with this role",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				ConflictsWith: []string{"policies"},
 			},
 			"consul_roles": {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: `Set of Consul roles to attach to the token. Applicable for Vault 1.10+ with Consul 1.5+`,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"service_identities": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Description: `Set of Consul service identities to attach to
+				the token. Applicable for Vault 1.11+ with Consul 1.5+`,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"node_identities": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Description: `Set of Consul node identities to attach to
+				the token. Applicable for Vault 1.11+ with Consul 1.8+`,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -86,6 +116,7 @@ func consulSecretBackendRoleResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies the type of token to create when using this role. Valid values are \"client\" or \"management\".",
 				Default:     "client",
+				Deprecated:  "Consul 1.11 and later removed the legacy ACL system which supported this field.",
 			},
 			"local": {
 				Type:        schema.TypeBool,
@@ -100,7 +131,7 @@ func consulSecretBackendRoleResource() *schema.Resource {
 func consulSecretBackendRoleGetBackend(d *schema.ResourceData) string {
 	if v, ok := d.GetOk("backend"); ok {
 		return v.(string)
-	} else if v, ok := d.GetOk("path"); ok {
+	} else if v, ok := d.GetOk(consts.FieldPath); ok {
 		return v.(string)
 	} else {
 		return ""
@@ -108,7 +139,10 @@ func consulSecretBackendRoleGetBackend(d *schema.ResourceData) string {
 }
 
 func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 
@@ -119,16 +153,23 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 
 	path := consulSecretBackendRolePath(backend, name)
 
-	policies := d.Get("policies").([]interface{})
-	roles := d.Get("consul_roles").(*schema.Set).List()
-
-	if len(policies) == 0 && len(roles) == 0 {
-		return fmt.Errorf("policies or consul_roles must be set")
+	var policies []interface{}
+	if v, ok := d.GetOk("policies"); ok {
+		policies = v.([]interface{})
+	} else if v, ok := d.GetOk("consul_policies"); ok {
+		policies = v.(*schema.Set).List()
 	}
 
+	roles := d.Get("consul_roles").(*schema.Set).List()
+	serviceIdentities := d.Get("service_identities").(*schema.Set).List()
+	nodeIdentities := d.Get("node_identities").(*schema.Set).List()
+
 	data := map[string]interface{}{
-		"policies":     policies,
-		"consul_roles": roles,
+		"policies":           policies,
+		"consul_policies":    policies,
+		"consul_roles":       roles,
+		"service_identities": serviceIdentities,
+		"node_identities":    nodeIdentities,
 	}
 
 	params := []string{
@@ -156,7 +197,10 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 }
 
 func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	upgradeOldID(d)
 
@@ -191,8 +235,8 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 	var pathKey string
-	if _, ok := d.GetOk("path"); ok {
-		pathKey = "path"
+	if _, ok := d.GetOk(consts.FieldPath); ok {
+		pathKey = consts.FieldPath
 	} else {
 		pathKey = "backend"
 	}
@@ -202,14 +246,28 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 
 	// map request params to schema fields
 	params := map[string]string{
-		"policies":         "policies",
-		"max_ttl":          "max_ttl",
-		"ttl":              "ttl",
-		"token_type":       "token_type",
-		"local":            "local",
-		"consul_roles":     "consul_roles",
-		"consul_namespace": "consul_namespace",
-		"partition":        "partition",
+		"max_ttl":            "max_ttl",
+		"ttl":                "ttl",
+		"token_type":         "token_type",
+		"local":              "local",
+		"consul_roles":       "consul_roles",
+		"consul_namespace":   "consul_namespace",
+		"partition":          "partition",
+		"service_identities": "service_identities",
+		"node_identities":    "node_identities",
+	}
+
+	_, hasLegacyPolicies := data["policies"]
+	if hasLegacyPolicies {
+		params["policies"] = "policies"
+		if _, ok := d.GetOk("consul_policies"); ok {
+			params["policies"] = "consul_policies"
+		}
+	} else {
+		params["consul_policies"] = "consul_policies"
+		if _, ok := d.GetOk("policies"); ok {
+			params["consul_policies"] = "policies"
+		}
 	}
 
 	for k, v := range params {
@@ -218,6 +276,9 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 			switch k {
 			// TODO case this by Vault version (vault-1.10+ request params)
 			case "consul_roles", "consul_namespace", "partition":
+				continue
+			// TODO case this by Vault version (vault-1.11+ request params)
+			case "service_identities", "node_identities":
 				continue
 			}
 		}
@@ -230,7 +291,10 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 }
 
 func consulSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -244,7 +308,10 @@ func consulSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) err
 }
 
 func consulSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	upgradeOldID(d)
 

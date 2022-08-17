@@ -1,9 +1,7 @@
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -11,8 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -353,11 +351,14 @@ func (r *memberEntityTester) CheckMemberEntities(resourceName string) resource.T
 }
 
 func testAccCheckidentityGroupMemberEntityIdsDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_group_member_entity_ids" {
 			continue
+		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
 		}
 
 		if _, err := readIdentityGroup(client, rs.Primary.ID, false); err != nil {
@@ -390,112 +391,16 @@ func testAccCheckidentityGroupMemberEntityIdsDestroy(s *terraform.State) error {
 	return nil
 }
 
-// vaultStateTest
-type vaultStateTest struct {
-	// rs fully qualified resource name
-	rs        string
-	stateAttr string
-	vaultAttr string
-	// isSubset check when checking equality of []interface{} state value
-	isSubset bool
-}
-
-func assertVaultState(tfs *terraform.State, path string, stateTests ...*vaultStateTest) error {
-	client := testProvider.Meta().(*api.Client)
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return fmt.Errorf("%q doesn't exist", path)
-	}
-
-	for _, st := range stateTests {
-		rs := tfs.Modules[0].Resources[st.rs]
-		if rs == nil || (rs != nil && rs.Primary == nil) {
-			return fmt.Errorf("resource not found in state")
-		}
-		attrs := rs.Primary.Attributes
-
-		s := attrs[st.stateAttr]
-		v := resp.Data[st.vaultAttr]
-		if v == nil && s == "" {
-			continue
-		}
-
-		errFmt := fmt.Sprintf("expected %s (%%s in state) of %q to be %%#v, got %%#v",
-			st.vaultAttr, path)
-
-		switch v := v.(type) {
-		case json.Number:
-			actual, err := v.Int64()
-			if err != nil {
-				return fmt.Errorf("expected API field %s to be an int, was %T", st.vaultAttr, v)
-			}
-			expected, err := strconv.ParseInt(s, 10, 64)
-			if err != nil {
-				return fmt.Errorf("expected state field %s to be a %T, was %T", st.stateAttr, v, s)
-			}
-			if actual != expected {
-				return fmt.Errorf(errFmt, st.stateAttr, expected, actual)
-			}
-		case bool:
-			actual := v
-			if s != "" {
-				expected, err := strconv.ParseBool(s)
-				if err != nil {
-					return fmt.Errorf("expected state field %s to be a %T, was %T", st.stateAttr, v, s)
-				}
-				if actual != expected {
-					return fmt.Errorf(errFmt, st.stateAttr, expected, actual)
-				}
-			}
-		case []interface{}:
-			actual := v
-			l := len(v)
-			expected := []interface{}{}
-			for i := 0; i < l; i++ {
-				if v, ok := attrs[fmt.Sprintf("%s.%d", st.stateAttr, i)]; ok {
-					expected = append(expected, v)
-				}
-			}
-
-			if st.isSubset {
-				if len(expected) > len(actual) {
-					return fmt.Errorf(errFmt, st.stateAttr, expected, actual)
-				}
-
-				var count int
-				for _, v := range expected {
-					for _, a := range actual {
-						if reflect.DeepEqual(v, a) {
-							count++
-						}
-					}
-				}
-				if len(expected) != count {
-					return fmt.Errorf(errFmt, st.stateAttr, expected, actual)
-				}
-			} else {
-				if !reflect.DeepEqual(expected, actual) {
-					return fmt.Errorf(errFmt, st.stateAttr, expected, actual)
-				}
-			}
-
-		case string:
-			if v != s {
-				return fmt.Errorf(errFmt, st.stateAttr, s, v)
-			}
-		default:
-			return fmt.Errorf("unsupported type %T", v)
-		}
-	}
-
-	return nil
-}
-
 func testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		rs := s.Modules[0].Resources[resourceName]
-		if rs == nil || (rs != nil && rs.Primary == nil) {
-			return fmt.Errorf("resource %q not found in state", resourceName)
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
+		if err != nil {
+			return err
 		}
 
 		var isSubset bool
@@ -510,20 +415,20 @@ func testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceName string) resource
 
 		id := rs.Primary.ID
 		path := identityGroupIDPath(id)
-		tAttrs := []*vaultStateTest{
+		tAttrs := []*testutil.VaultStateTest{
 			{
-				rs:        resourceName,
-				stateAttr: "group_id",
-				vaultAttr: "id",
+				ResourceName: resourceName,
+				StateAttr:    "group_id",
+				VaultAttr:    "id",
 			},
 			{
-				rs:        resourceName,
-				stateAttr: "member_entity_ids",
-				vaultAttr: "member_entity_ids",
-				isSubset:  isSubset,
+				ResourceName: resourceName,
+				StateAttr:    "member_entity_ids",
+				VaultAttr:    "member_entity_ids",
+				IsSubset:     isSubset,
 			},
 		}
-		return assertVaultState(s, path, tAttrs...)
+		return testutil.AssertVaultState(client, s, path, tAttrs...)
 	}
 }
 

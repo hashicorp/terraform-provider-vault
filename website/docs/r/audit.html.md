@@ -40,6 +40,11 @@ resource "vault_audit" "test" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `type` - (Required) Type of the audit device, such as 'file'.
 
 * `path` - (optional) The path to mount the audit device. This defaults to the type.

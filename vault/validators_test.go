@@ -1,40 +1,36 @@
 package vault
 
 import (
-	"regexp"
+	"fmt"
+	"reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
-func TestValidateNoTrailingSlash(t *testing.T) {
+func Test_validateNoTrailingSlash(t *testing.T) {
 	testCases := []struct {
 		val         string
-		expectedErr *regexp.Regexp
+		expectedErr []error
 	}{
 		{
 			val: "foo",
 		},
 		{
-			val:         "foo/",
-			expectedErr: regexp.MustCompile(`cannot write to a path ending in '/'`),
+			val: "foo/",
+			expectedErr: []error{
+				fmt.Errorf(`invalid value "foo/" for "test_property", contains leading/trailing "/"`),
+			},
 		},
 		{
 			val: "foo/bar",
 		},
 		{
-			val:         "foo/bar/",
-			expectedErr: regexp.MustCompile(`cannot write to a path ending in '/'`),
+			val: "foo/bar/",
+			expectedErr: []error{
+				fmt.Errorf(`invalid value "foo/bar/" for "test_property", contains leading/trailing "/"`),
+			},
 		},
-	}
-
-	matchErr := func(errs []error, r *regexp.Regexp) bool {
-		// err must match one provided
-		for _, err := range errs {
-			if r.MatchString(err.Error()) {
-				return true
-			}
-		}
-
-		return false
 	}
 
 	for i, tc := range testCases {
@@ -48,61 +44,78 @@ func TestValidateNoTrailingSlash(t *testing.T) {
 			t.Fatalf("expected test case %d to produce no errors, got %v", i, errs)
 		}
 
-		if !matchErr(errs, tc.expectedErr) {
+		if !reflect.DeepEqual(errs, tc.expectedErr) {
 			t.Fatalf("expected test case %d to produce error matching \"%s\", got %v", i, tc.expectedErr, errs)
 		}
 	}
 }
 
-func TestValidateNoTrailingLeadingSlashes(t *testing.T) {
-	testCases := []struct {
-		val         string
-		expectedErr *regexp.Regexp
+func Test_validateNoLeadingTrailingSlashes(t *testing.T) {
+	type args struct {
+		i interface{}
+		k string
+	}
+	tests := []struct {
+		name     string
+		args     args
+		wantErr  bool
+		want     []string
+		wantErrs []error
 	}{
 		{
-			val: "foo",
+			name: "valid",
+			args: args{
+				i: "foo",
+				k: "bar",
+			},
 		},
 		{
-			val:         "foo/",
-			expectedErr: regexp.MustCompile(`cannot write to a path ending in '/'`),
+			name: "invalid-leading",
+			args: args{
+				i: "/foo",
+				k: "bar",
+			},
+			wantErr: true,
 		},
 		{
-			val: "foo/bar",
+			name: "invalid-trailing",
+			args: args{
+				i: "foo/",
+				k: "bar",
+			},
+			wantErr: true,
 		},
 		{
-			val:         "/foo/bar",
-			expectedErr: regexp.MustCompile(`cannot write to a path starting in '/'`),
-		},
-		{
-			val:         "/foo/bar/",
-			expectedErr: regexp.MustCompile(`cannot write to a path ending in '/'`),
+			name: "invalid-both",
+			args: args{
+				i: "/foo/",
+				k: "bar",
+			},
+			wantErr: true,
 		},
 	}
-
-	matchErr := func(errs []error, r *regexp.Regexp) bool {
-		// err must match one provided
-		for _, err := range errs {
-			if r.MatchString(err.Error()) {
-				return true
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, actualErrs := validateNoLeadingTrailingSlashes(tt.args.i, tt.args.k)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("validateNoLeadingTrailingSlashes() got = %v, want %v", got, tt.want)
 			}
-		}
 
-		return false
-	}
+			var expectedErrs []error
+			if tt.wantErr {
+				expectedErrs = []error{
+					fmt.Errorf(`invalid value %q for %q, contains leading/trailing %q`,
+						tt.args.i, tt.args.k, consts.PathDelim),
+				}
+			}
 
-	for i, tc := range testCases {
-		_, errs := validateNoTrailingLeadingSlashes(tc.val, "test_property")
+			if tt.wantErr && actualErrs == nil {
+				t.Fatalf("expected errors %#v, actual %#v", expectedErrs, actualErrs)
+			}
 
-		if len(errs) == 0 && tc.expectedErr == nil {
-			continue
-		}
-
-		if len(errs) != 0 && tc.expectedErr == nil {
-			t.Fatalf("expected test case %d to produce no errors, got %v", i, errs)
-		}
-
-		if !matchErr(errs, tc.expectedErr) {
-			t.Fatalf("expected test case %d to produce error matching \"%s\", got %v", i, tc.expectedErr, errs)
-		}
+			if !reflect.DeepEqual(actualErrs, expectedErrs) {
+				t.Errorf("validateNoLeadingTrailingSlashes() actualErrs = %v, want %v", actualErrs, expectedErrs)
+			}
+		})
 	}
 }

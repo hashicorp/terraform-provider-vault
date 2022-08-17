@@ -6,7 +6,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func mfaDuoResource() *schema.Resource {
@@ -14,7 +16,7 @@ func mfaDuoResource() *schema.Resource {
 		Create: mfaDuoWrite,
 		Update: mfaDuoWrite,
 		Delete: mfaDuoDelete,
-		Read:   mfaDuoRead,
+		Read:   ReadWrapper(mfaDuoRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -26,7 +28,7 @@ func mfaDuoResource() *schema.Resource {
 				Description:  "Name of the MFA method.",
 				ValidateFunc: validateNoTrailingSlash,
 			},
-			"mount_accessor": {
+			consts.FieldMountAccessor: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The mount to tie this method to for use in automatic mappings. The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.",
@@ -63,7 +65,10 @@ func mfaDuoResource() *schema.Resource {
 }
 
 func mfaDuoWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 
@@ -75,7 +80,6 @@ func mfaDuoWrite(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Creating mfaDuo %s in Vault", name)
 	_, err := client.Logical().Write(mfaDuoPath(name), data)
-
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -84,14 +88,16 @@ func mfaDuoWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaDuoDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 
 	log.Printf("[DEBUG] Deleting mfaDuo %s from Vault", mfaDuoPath(name))
 
 	_, err := client.Logical().Delete(mfaDuoPath(name))
-
 	if err != nil {
 		return fmt.Errorf("error deleting from Vault: %s", err)
 	}
@@ -100,19 +106,21 @@ func mfaDuoDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaDuoRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 
 	resp, err := client.Logical().Read(mfaDuoPath(name))
-
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
 	log.Printf("[DEBUG] Read MFA Duo config %q", mfaDuoPath(name))
 
-	d.Set("mount_accessor", resp.Data["mount_accessor"])
+	d.Set(consts.FieldMountAccessor, resp.Data[consts.FieldMountAccessor])
 	d.Set("username_format", resp.Data["username_format"])
 	d.Set("api_hostname", resp.Data["api_hostname"])
 
@@ -129,8 +137,8 @@ func mfaDuoRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaDuoUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
-	if v, ok := d.GetOk("mount_accessor"); ok {
-		data["mount_accessor"] = v.(string)
+	if v, ok := d.GetOk(consts.FieldMountAccessor); ok {
+		data[consts.FieldMountAccessor] = v.(string)
 	}
 
 	if v, ok := d.GetOk("username_format"); ok {
@@ -152,7 +160,6 @@ func mfaDuoUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
 	if v, ok := d.GetOk("push_info"); ok {
 		data["push_info"] = v.(string)
 	}
-
 }
 
 func mfaDuoPath(name string) string {

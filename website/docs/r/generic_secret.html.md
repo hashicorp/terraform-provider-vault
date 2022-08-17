@@ -45,6 +45,11 @@ EOT
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `path` - (Required) The full logical path at which to write the given data.
   To write data into the "generic" secret backend mounted in Vault by default,
   this should be prefixed with `secret/`. Writing to other backends with this

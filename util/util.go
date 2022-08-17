@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 func JsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
@@ -42,7 +44,16 @@ func ToStringArray(input []interface{}) []string {
 }
 
 func Is404(err error) bool {
-	return strings.Contains(err.Error(), "Code: 404")
+	return ErrorContainsHTTPCode(err, http.StatusNotFound)
+}
+
+func ErrorContainsHTTPCode(err error, codes ...int) bool {
+	for _, code := range codes {
+		if strings.Contains(err.Error(), fmt.Sprintf("Code: %d", code)) {
+			return true
+		}
+	}
+	return false
 }
 
 func CalculateConflictsWith(self string, group []string) []string {
@@ -295,4 +306,48 @@ func SetResourceData(d *schema.ResourceData, data map[string]interface{}) error 
 	}
 
 	return nil
+}
+
+// NormalizeMountPath to be in a form valid for accessing values from api.MountOutput
+func NormalizeMountPath(path string) string {
+	return TrimSlashes(path) + consts.PathDelim
+}
+
+// TrimSlashes from path.
+func TrimSlashes(path string) string {
+	return strings.Trim(path, consts.PathDelim)
+}
+
+// CheckMountEnabled in Vault, path must contain a trailing '/',
+func CheckMountEnabled(client *api.Client, path string) (bool, error) {
+	mounts, err := client.Sys().ListMounts()
+	if err != nil {
+		return false, err
+	}
+
+	_, ok := mounts[NormalizeMountPath(path)]
+
+	return ok, nil
+}
+
+// GetAPIRequestData to pass to Vault from schema.ResourceData.
+// The fieldMap specifies the schema field to its vault constituent.
+// If the vault field is empty, then two fields are mapped 1:1.
+func GetAPIRequestData(d *schema.ResourceData, fieldMap map[string]string) map[string]interface{} {
+	data := make(map[string]interface{})
+	for k1, k2 := range fieldMap {
+		if k2 == "" {
+			k2 = k1
+		}
+
+		sv := d.Get(k1)
+		switch v := sv.(type) {
+		case *schema.Set:
+			data[k2] = v.List()
+		default:
+			data[k2] = sv
+		}
+	}
+
+	return data
 }

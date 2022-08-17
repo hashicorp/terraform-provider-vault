@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -18,7 +19,7 @@ var approleAuthBackendRoleSecretIDIDRegex = regexp.MustCompile("^backend=(.+)::r
 func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 	return &schema.Resource{
 		Create: approleAuthBackendRoleSecretIDCreate,
-		Read:   approleAuthBackendRoleSecretIDRead,
+		Read:   ReadWrapper(approleAuthBackendRoleSecretIDRead),
 		Delete: approleAuthBackendRoleSecretIDDelete,
 		Exists: approleAuthBackendRoleSecretIDExists,
 
@@ -49,7 +50,7 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 				ForceNew: true,
 			},
 
-			"metadata": {
+			consts.FieldMetadata: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "JSON-encoded secret data to write.",
@@ -117,7 +118,10 @@ func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 }
 
 func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role_name").(string)
@@ -142,7 +146,7 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 	if len(cidrs) > 0 {
 		data["cidr_list"] = strings.Join(cidrs, ",")
 	}
-	if v, ok := d.GetOk("metadata"); ok {
+	if v, ok := d.GetOk(consts.FieldMetadata); ok {
 		name := "vault_approle_auth_backend_role_secret_id"
 		result, err := normalizeDataJSON(v.(string))
 		if err != nil {
@@ -197,7 +201,11 @@ func approleAuthBackendRoleSecretIDCreate(d *schema.ResourceData, meta interface
 }
 
 func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)
@@ -269,14 +277,18 @@ func approleAuthBackendRoleSecretIDRead(d *schema.ResourceData, meta interface{}
 	if err != nil {
 		return fmt.Errorf("error setting cidr_list in state: %s", err)
 	}
-	d.Set("metadata", string(metadata))
+	d.Set(consts.FieldMetadata, string(metadata))
 	d.Set("accessor", accessor)
 
 	return nil
 }
 
 func approleAuthBackendRoleSecretIDDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)
 	if err != nil {
@@ -306,7 +318,11 @@ func approleAuthBackendRoleSecretIDDelete(d *schema.ResourceData, meta interface
 }
 
 func approleAuthBackendRoleSecretIDExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	id := d.Id()
 
 	backend, role, accessor, wrapped, err := approleAuthBackendRoleSecretIDParseID(id)

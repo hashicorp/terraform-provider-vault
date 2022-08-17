@@ -7,12 +7,14 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func azureSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
 		Create: azureSecretBackendCreate,
-		Read:   azureSecretBackendRead,
+		Read:   ReadWrapper(azureSecretBackendRead),
 		Update: azureSecretBackendUpdate,
 		Delete: azureSecretBackendDelete,
 		Exists: azureSecretBackendExists,
@@ -84,7 +86,10 @@ func azureSecretBackendResource() *schema.Resource {
 }
 
 func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 	description := d.Get("description").(string)
@@ -116,7 +121,10 @@ func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -172,7 +180,10 @@ func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -189,7 +200,10 @@ func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -203,7 +217,11 @@ func azureSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if Azure backend exists at %q", path)
 	mounts, err := client.Sys().ListMounts()

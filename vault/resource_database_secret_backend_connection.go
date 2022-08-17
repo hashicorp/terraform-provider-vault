@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -195,6 +196,42 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Required:    true,
 						Description: "The password to be used in the connection URL",
 						Sensitive:   true,
+					},
+					"ca_cert": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "The path to a PEM-encoded CA cert file to use to verify the Elasticsearch server's identity",
+					},
+					"ca_path": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "The path to a directory of PEM-encoded CA cert files to use to verify the Elasticsearch server's identity",
+					},
+					"client_cert": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "The path to the certificate for the Elasticsearch client to present for communication",
+					},
+					"client_key": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "The path to the key for the Elasticsearch client to use for communication",
+					},
+					"tls_server_name": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "This, if set, is used to set the SNI host when connecting via TLS",
+					},
+					"insecure": {
+						Type:        schema.TypeBool,
+						Optional:    true,
+						Default:     false,
+						Description: "Whether to disable certificate verification",
+					},
+					"username_template": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Template describing how dynamic usernames are generated.",
 					},
 				},
 			},
@@ -446,6 +483,7 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Description: "Connection parameters for the hana-database-plugin plugin.",
 			Elem: connectionStringResource(&connectionStringConfig{
 				excludeUsernameTemplate: true,
+				includeDisableEscaping:  true,
 				includeUserPass:         true,
 			}),
 			MaxItems:      1,
@@ -502,7 +540,8 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Optional:    true,
 			Description: "Connection parameters for the postgresql-database-plugin plugin.",
 			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
+				includeUserPass:        true,
+				includeDisableEscaping: true,
 			}),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.Name(), dbEngineTypes),
@@ -522,7 +561,8 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Optional:    true,
 			Description: "Connection parameters for the redshift-database-plugin plugin.",
 			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
+				includeUserPass:        true,
+				includeDisableEscaping: true,
 			}),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineRedshift.Name(), dbEngineTypes),
@@ -557,7 +597,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 
 	return &schema.Resource{
 		Create: databaseSecretBackendConnectionCreateOrUpdate,
-		Read:   databaseSecretBackendConnectionRead,
+		Read:   ReadWrapper(databaseSecretBackendConnectionRead),
 		Update: databaseSecretBackendConnectionCreateOrUpdate,
 		Delete: databaseSecretBackendConnectionDelete,
 		Exists: databaseSecretBackendConnectionExists,
@@ -930,6 +970,27 @@ func getElasticsearchConnectionDetailsFromResponse(d *schema.ResourceData, prefi
 		// keep the password we have in state/config if the API doesn't return one
 		result["password"] = v.(string)
 	}
+	if v, ok := data["ca_cert"]; ok {
+		result["ca_cert"] = v.(string)
+	}
+	if v, ok := data["ca_path"]; ok {
+		result["ca_path"] = v.(string)
+	}
+	if v, ok := data["client_cert"]; ok {
+		result["client_cert"] = v.(string)
+	}
+	if v, ok := data["client_key"]; ok {
+		result["client_key"] = v.(string)
+	}
+	if v, ok := data["tls_server_name"]; ok {
+		result["tls_server_name"] = v.(string)
+	}
+	if v, ok := data["insecure"]; ok {
+		result["insecure"] = v.(bool)
+	}
+	if v, ok := data["username_template"]; ok {
+		result["username_template"] = v.(string)
+	}
 
 	return result
 }
@@ -960,11 +1021,10 @@ func getCouchbaseConnectionDetailsFromResponse(d *schema.ResourceData, prefix st
 	if v, ok := data["insecure_tls"]; ok {
 		result["insecure_tls"] = v.(bool)
 	}
-	if v, ok := data["base64_pem"]; ok {
-		result["base64_pem"] = v.(string)
-	} else if v, ok := d.GetOk(prefix + "base64_pem"); ok {
-		result["base64_pem"] = v.(string)
-	}
+
+	// base64_pem maps to base64pem in Vault
+	result["base64_pem"] = data["base64pem"]
+
 	if v, ok := data["bucket_name"]; ok {
 		result["bucket_name"] = v.(string)
 	}
@@ -1129,6 +1189,34 @@ func setElasticsearchDatabaseConnectionData(d *schema.ResourceData, prefix strin
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
 	}
+
+	if v, ok := d.GetOk(prefix + "ca_cert"); ok {
+		data["ca_cert"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "ca_path"); ok {
+		data["ca_path"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "client_cert"); ok {
+		data["client_cert"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "client_key"); ok {
+		data["client_key"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "tls_server_name"); ok {
+		data["tls_server_name"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "insecure"); ok {
+		data["insecure"] = v.(bool)
+	}
+
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		data["username_template"] = v.(string)
+	}
 }
 
 func setCouchbaseDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
@@ -1140,10 +1228,10 @@ func setCouchbaseDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 		data["hosts"] = strings.Join(hosts, ",")
 	}
 	if v, ok := d.GetOk(prefix + "username"); ok {
-		data["username"] = v.(string)
+		data["username"] = v
 	}
 	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
+		data["password"] = v
 	}
 	if v, ok := d.GetOkExists(prefix + "tls"); ok {
 		data["tls"] = v.(bool)
@@ -1151,14 +1239,15 @@ func setCouchbaseDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	if v, ok := d.GetOkExists(prefix + "insecure_tls"); ok {
 		data["insecure_tls"] = v.(bool)
 	}
-	if v, ok := d.GetOkExists(prefix + "base64_pem"); ok {
-		data["base64_pem"] = v.(string)
+	if v, ok := d.GetOk(prefix + "base64_pem"); ok {
+		// base64_pem maps to base64pem in Vault
+		data["base64pem"] = v
 	}
-	if v, ok := d.GetOkExists(prefix + "bucket_name"); ok {
-		data["bucket_name"] = v.(string)
+	if v, ok := d.GetOk(prefix + "bucket_name"); ok {
+		data["bucket_name"] = v
 	}
-	if v, ok := d.GetOkExists(prefix + "username_template"); ok {
-		data["username_template"] = v.(int)
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		data["username_template"] = v
 	}
 }
 
@@ -1216,7 +1305,10 @@ func setDatabaseConnectionDataWithDisableEscaping(d *schema.ResourceData, prefix
 func databaseSecretBackendConnectionCreateOrUpdate(
 	d *schema.ResourceData, meta interface{},
 ) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	engine, err := getDBEngine(d)
 	if err != nil {
@@ -1323,7 +1415,10 @@ func getSortedPluginPrefixes() ([]string, error) {
 }
 
 func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -1415,7 +1510,8 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret,
 }
 
 func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
-	resp *api.Secret) (map[string]interface{}, error) {
+	resp *api.Secret,
+) (map[string]interface{}, error) {
 	var result map[string]interface{}
 
 	prefix := engine.ResourcePrefix(idx)
@@ -1435,7 +1531,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineMongoDB:
 		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	case dbEngineMongoDBAtlas:
-		result = getConnectionDetailsMongoDBAtlas(d, resp)
+		result = getConnectionDetailsMongoDBAtlas(d, prefix, resp)
 	case dbEngineMSSQL:
 		values, err := getMSSQLConnectionDetailsFromResponse(d, prefix, resp)
 		if err != nil {
@@ -1527,27 +1623,28 @@ func getConnectionDetailsCassandra(d *schema.ResourceData, prefix string, resp *
 	return nil, nil
 }
 
-func getConnectionDetailsMongoDBAtlas(_ *schema.ResourceData, resp *api.Secret) map[string]interface{} {
-	details := resp.Data["connection_details"]
-	data, ok := details.(map[string]interface{})
-	result := map[string]interface{}{}
-	if ok {
-
-		if v, ok := data["public_key"]; ok {
-			result["public_key"] = v.(string)
-		}
-		if v, ok := data["private_key"]; ok {
-			result["private_key"] = v.(string)
-		}
-		if v, ok := data["project_id"]; ok {
-			result["project_id"] = v.(string)
+func getConnectionDetailsMongoDBAtlas(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+	result := map[string]interface{}{
+		// the private key is a secret that is never revealed by Vault
+		"private_key": d.Get(prefix + "private_key"),
+	}
+	if details, ok := resp.Data["connection_details"]; ok {
+		if data, ok := details.(map[string]interface{}); ok {
+			for _, k := range []string{"public_key", "project_id"} {
+				result[k] = data[k]
+			}
 		}
 	}
+
 	return result
 }
 
 func databaseSecretBackendConnectionDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Removing database connection config %q", path)
@@ -1561,7 +1658,10 @@ func databaseSecretBackendConnectionDelete(d *schema.ResourceData, meta interfac
 }
 
 func databaseSecretBackendConnectionExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 

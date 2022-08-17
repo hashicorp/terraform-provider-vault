@@ -9,8 +9,10 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
 const nameEndpoint = "/transform/transformation/{name}"
@@ -69,7 +71,7 @@ func NameResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createNameResource,
 		Update: updateNameResource,
-		Read:   readNameResource,
+		Read:   vault.ReadWrapper(readNameResource),
 		Exists: resourceNameExists,
 		Delete: deleteNameResource,
 		Importer: &schema.ResourceImporter{
@@ -78,8 +80,12 @@ func NameResource() *schema.Resource {
 		Schema: fields,
 	}
 }
+
 func createNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Get("path").(string)
 	vaultPath := util.ParsePath(path, nameEndpoint, d)
 	log.Printf("[DEBUG] Creating %q", vaultPath)
@@ -112,7 +118,10 @@ func createNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Reading %q", vaultPath)
 
@@ -169,7 +178,10 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Updating %q", vaultPath)
 
@@ -197,7 +209,10 @@ func updateNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Deleting %q", vaultPath)
 
@@ -213,7 +228,10 @@ func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceNameExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", vaultPath)
 

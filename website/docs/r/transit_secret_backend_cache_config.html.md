@@ -31,6 +31,11 @@ resource "vault_transit_secret_cache_config" "cfg" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `backend` - (Required) The path the transit secret backend is mounted at, with no leading or trailing `/`s.
 
 * `size` - (Required) The number of cache entries. 0 means unlimited.

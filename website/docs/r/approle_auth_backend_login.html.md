@@ -41,6 +41,11 @@ resource "vault_approle_auth_backend_login" "login" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `role_id` - (Required) The ID of the role to log in with.
 
 * `secret_id` - (Optional) The secret ID of the role to log in with. Required

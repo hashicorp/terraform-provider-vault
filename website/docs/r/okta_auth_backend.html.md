@@ -35,6 +35,11 @@ resource "vault_okta_auth_backend" "example" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `path` - (Required) Path to mount the Okta auth backend
 
 * `description` - (Optional) The description of the auth backend

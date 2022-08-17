@@ -7,10 +7,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -37,39 +37,41 @@ func TestAccDatabaseSecretsMount_mssql(t *testing.T) {
 		"mssql.0.password",
 		"mssql.0.connection_url",
 	}
-	resourcePath := "vault_database_secrets_mount.db"
+	resourceType := "vault_database_secrets_mount"
+	resourceName := resourceType + ".db"
 
 	username := parsedURL.User.Username()
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccDatabaseSecretsMountCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeDatabase, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretsMount_mssql(name, backend, pluginName, parsedURL),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourcePath, "mssql.#", "1"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.#", "2"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.0", "dev"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.1", "prod"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.connection_url", connURL),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_open_connections", "2"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_idle_connections", "0"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_connection_lifetime", "0"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.username", username),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.name", name),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.contained_db", "false"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.username", username),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.contained_db", "false"),
 				),
 			},
 			{
-				ResourceName:            resourcePath,
+				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: importIgnoreKeys,
 			},
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*api.Client)
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+
 					resp, err := client.Logical().Read(fmt.Sprintf("%s/creds/%s", backend, "dev"))
 					if err != nil {
 						t.Fatal(err)
@@ -80,21 +82,21 @@ func TestAccDatabaseSecretsMount_mssql(t *testing.T) {
 				},
 				Config: testAccDatabaseSecretsMount_mssql(name2, backend, pluginName, parsedURL),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourcePath, "mssql.#", "1"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.#", "2"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.0", "dev"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.1", "prod"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.connection_url", connURL),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_open_connections", "2"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_idle_connections", "0"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_connection_lifetime", "0"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.username", username),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.name", name2),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.contained_db", "false"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.username", username),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.name", name2),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.contained_db", "false"),
 				),
 			},
 			{
-				ResourceName:            resourcePath,
+				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: importIgnoreKeys,
@@ -138,38 +140,39 @@ func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
 		"mssql.1.connection_url",
 	}
 
-	resourcePath := "vault_database_secrets_mount.db"
+	resourceType := "vault_database_secrets_mount"
+	resourceName := resourceType + ".db"
 	username := parsedURL.User.Username()
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccDatabaseSecretsMountCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeDatabase, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretsMount_mssql_dual(name, name2, backend, pluginName, parsedURL, parsedURL2),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourcePath, "mssql.#", "2"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.#", "1"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.0", "dev1"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.connection_url", connURL),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_open_connections", "2"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_idle_connections", "0"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_connection_lifetime", "0"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.username", username),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.contained_db", "false"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.allowed_roles.#", "1"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.allowed_roles.0", "dev2"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.connection_url", connURL2),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.max_open_connections", "2"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.max_idle_connections", "0"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.max_connection_lifetime", "0"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.username", username),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.contained_db", "false"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.allowed_roles.0", "dev1"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.username", username),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.contained_db", "false"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.allowed_roles.0", "dev2"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.connection_url", connURL2),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.username", username),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.contained_db", "false"),
 				),
 			},
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*api.Client)
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 					for _, role := range []string{"dev1", "dev2"} {
 						resp, err := client.Logical().Read(fmt.Sprintf("%s/creds/%s", backend, role))
@@ -183,27 +186,27 @@ func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
 				},
 				Config: testAccDatabaseSecretsMount_mssql_dual(name, name2, backend, pluginName, parsedURL, parsedURL2),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourcePath, "mssql.#", "2"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.#", "1"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.0", "dev1"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.connection_url", connURL),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_open_connections", "2"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_idle_connections", "0"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_connection_lifetime", "0"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.username", username),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.contained_db", "false"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.allowed_roles.#", "1"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.allowed_roles.0", "dev2"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.connection_url", connURL2),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.max_open_connections", "2"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.max_idle_connections", "0"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.max_connection_lifetime", "0"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.username", username),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.1.contained_db", "false"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.allowed_roles.0", "dev1"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.username", username),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.contained_db", "false"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.allowed_roles.0", "dev2"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.connection_url", connURL2),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.username", username),
+					resource.TestCheckResourceAttr(resourceName, "mssql.1.contained_db", "false"),
 				),
 			},
 			{
-				ResourceName:            resourcePath,
+				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: importIgnoreKeys,
@@ -211,16 +214,16 @@ func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
 			{
 				Config: testAccDatabaseSecretsMount_mssql(name, backend, pluginName, parsedURL),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourcePath, "mssql.#", "1"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.#", "2"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.0", "dev"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.allowed_roles.1", "prod"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.connection_url", connURL),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_open_connections", "2"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_idle_connections", "0"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.max_connection_lifetime", "0"),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.username", username),
-					resource.TestCheckResourceAttr(resourcePath, "mssql.0.contained_db", "false"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.allowed_roles.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.allowed_roles.0", "dev"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.allowed_roles.1", "prod"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.connection_url", connURL),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_open_connections", "2"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_idle_connections", "0"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.max_connection_lifetime", "0"),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.username", username),
+					resource.TestCheckResourceAttr(resourceName, "mssql.0.contained_db", "false"),
 				),
 			},
 		},
@@ -318,22 +321,4 @@ resource "vault_database_secret_backend_role" "test2" {
 		name2, parsedURL2.String(), parsedURL2.User.Username(), password2))
 
 	return result
-}
-
-func testAccDatabaseSecretsMountCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_database_secrets_mount" {
-			continue
-		}
-		secret, err := client.Logical().Read(rs.Primary.ID)
-		if err != nil {
-			return err
-		}
-		if secret != nil {
-			return fmt.Errorf("mount %q still exists", rs.Primary.ID)
-		}
-	}
-	return nil
 }

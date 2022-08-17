@@ -8,8 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -47,17 +47,21 @@ func TestGCPSecretBackend(t *testing.T) {
 }
 
 func testAccGCPSecretBackendCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return err
-	}
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_gcp_secret_backend" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		mounts, err := client.Sys().ListMounts()
+		if err != nil {
+			return err
+		}
+
 		for path, mount := range mounts {
 			path = strings.Trim(path, "/")
 			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")

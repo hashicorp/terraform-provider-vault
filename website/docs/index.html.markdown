@@ -142,6 +142,9 @@ variables in order to keep credential information out of the configuration.
   that Terraform can be tricked into writing secrets to a server controlled
   by an intruder. May be set via the `VAULT_SKIP_VERIFY` environment variable.
 
+* `tls_server_name` - (Optional) Name to use as the SNI host when connecting
+  via TLS. May be set via the `VAULT_TLS_SERVER_NAME` environment variable.
+
 * `skip_child_token` - (Optional) Set this to `true` to disable
   creation of an intermediate ephemeral Vault token for Terraform to
   use. Enabling this is strongly discouraged since it increases
@@ -175,7 +178,9 @@ variables in order to keep credential information out of the configuration.
   for more information.*
 
 * `namespace` - (Optional) Set the namespace to use. May be set via the
-  `VAULT_NAMESPACE` environment variable. *Available only for Vault Enterprise*.
+  `VAULT_NAMESPACE` environment variable.
+  See [namespaces](https://www.vaultproject.io/docs/enterprise/namespaces) for more info.
+  *Available only for Vault Enterprise*.
 
 * `headers` - (Optional) A configuration block, described below, that provides headers
 to be sent along with all requests to the Vault server.  This block can be specified
@@ -189,7 +194,7 @@ The `auth_login` configuration block accepts the following arguments:
 
 * `namespace` - (Optional) The path to the namespace that has the mounted auth method.
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
-  *Available only for Vault Enterprise*
+  *Available only for Vault Enterprise*.
 
 * `method` - (Optional) When configured, will enable auth method specific operations.
   For example, when set to `aws`, the provider will automatically sign login requests
@@ -218,9 +223,9 @@ The `headers` configuration block accepts the following arguments:
 Terraform supports various logging options by default.
 These are documented [here](https://www.terraform.io/docs/internals/debugging.html).
 
-~> The environment variables below can be configured to provide extended log output and require log level `DEBUG`
-or higher. It's important to note that any extended log output may **reveal secrets**, so please exercise caution
-when enabling any of the following:
+~> The environment variables below can be configured to provide extended log output. The Terraform log level must 
+be set to `DEBUG` or higher. It's important to note that any extended log output 
+may **reveal secrets**, so please exercise caution when enabling any of the following:
 
 * `TERRAFORM_VAULT_LOG_BODY` - when set to `true` both the request and response body will be logged.
 
@@ -328,13 +333,77 @@ The Vault provider supports managing [Namespaces][namespaces] (a feature of
 Vault Enterprise), as well as creating resources in those namespaces by
 utilizing [Provider Aliasing][aliasing]. The `namespace` option in the [provider
 block][provider-block] enables the management of  resources in the specified
-namespace.
+namespace. 
+In addition, all resources and data sources support specifying their own `namespace`. 
+All resource's `namespace` will be made relative to the `provider`'s configured namespace.
+
+### Importing namespaced resources
+
+Importing a namespaced resource is done by providing the `namespace` from 
+the `TERRAFORM_VAULT_NAMESPACE_IMPORT` environment variable.
+
+Given the following sample Terraform:
+
+```hcl
+provider vault{}
+
+resource "vault_mount" "secret" {
+  namespace = "namespace1"
+  path      = "secrets"
+  type      = "kv"
+  options = {
+    version = "2"
+  }
+}
+```
+
+One would run the following import command:
+
+```shell
+TERRAFORM_VAULT_NAMESPACE_IMPORT=namespace1 terraform import vault_mount.secret secrets
+```
+
+~> The import namespace will always be made relative to the `namespace` of the `provider{}` block.  
+The `TERRAFORM_VAULT_NAMESPACE_IMPORT` should only ever be set when importing a Vault resource.
+
+
+### Simple namespace example
+```hcl
+provider vault{}
+
+resource "vault_namespace" "secret" {
+  path = "secret_ns"
+}
+
+resource "vault_mount" "secret" {
+  namespace = vault_namespace.secret.path
+  path      = "secrets"
+  type      = "kv"
+  options = {
+    version = "1"
+  }
+}
+
+resource "vault_generic_secret" "secret" {
+  namespace = vault_mount.secret.namespace
+  path      = "${vault_mount.secret.path}/secret"
+  data_json = jsonencode(
+    {
+      "ns" = "secret"
+    }
+  )
+}
+```
 
 ### Using Provider Aliases
 
-The below configuration is a simple example of using the provider block's
+~> It is advisable to set the `namespace` on individual resources and data sources,
+rather than having to manage multiple `provider` aliases.
+See [vault_namespace](r/namespace.html) for more information.
+
+The configuration below is a simple example of using the provider block's
 `namespace` attribute to configure an aliased provider and create a resource
-within that namespace.
+within that namespace. 
 
 ```hcl
 # main provider block with no namespace
@@ -384,22 +453,22 @@ root
 
 ### Nested Namespaces
 
-A more complex example of nested namespaces is show below. Each provider blocks
-uses interpolation of the `ID` of namespace it belongs in to ensure the namespace
-exists before that provider gets configured:
-
+The example below relies on setting the `namespace` per resource from a single `provider{}` block. 
+See the [vault_namespace](/docs/providers/vault/r/namespace.html#nested-namespaces) documentation for a slightly less elaborate example.
 
 ```hcl
-# main provider block with no namespace
 provider vault {}
 
-resource "vault_namespace" "everyone" {
-  path = "everyone"
+variable "everyone_ns" {
+  default = "everyone"
 }
 
-provider vault {
-  alias     = "everyone"
-  namespace = trimsuffix(vault_namespace.everyone.id, "/")
+variable "engineering_ns" {
+  default = "engineering"
+}
+
+variable "vault_team_ns" {
+  default = "vault-team"
 }
 
 data "vault_policy_document" "public_secrets" {
@@ -410,27 +479,6 @@ data "vault_policy_document" "public_secrets" {
   }
 }
 
-resource "vault_policy" "everyone" {
-  provider = vault.everyone
-  name     = "vault_everyone_policy"
-  policy   = data.vault_policy_document.vault_team_secrets.hcl
-}
-
-resource "vault_namespace" "engineering" {
-  provider = vault.everyone
-  path     = "engineering"
-}
-
-provider vault {
-  alias = "engineering"
-  namespace = trimsuffix(vault_namespace.engineering.id, "/")
-}
-
-resource "vault_namespace" "vault-team" {
-  provider = vault.engineering
-  path     = "vault-team"
-}
-
 data "vault_policy_document" "vault_team_secrets" {
   rule {
     path         = "secret/*"
@@ -439,13 +487,29 @@ data "vault_policy_document" "vault_team_secrets" {
   }
 }
 
-provider vault {
-  alias = "vault-team"
-  namespace = trimsuffix(vault_namespace.vault-team.id, "/")
+resource "vault_namespace" "everyone" {
+  path = var.everyone_ns
+}
+
+resource "vault_namespace" "engineering" {
+  namespace = vault_namespace.everyone.path
+  path      = var.engineering_ns
+}
+
+resource "vault_namespace" "vault_team" {
+  namespace = vault_namespace.engineering.path_fq
+  path      = var.vault_team_ns
+}
+
+
+resource "vault_policy" "everyone" {
+  namespace = vault_namespace.everyone.path
+  name     = "vault_everyone_policy"
+  policy   = data.vault_policy_document.vault_team_secrets.hcl
 }
 
 resource "vault_policy" "vault_team" {
-  provider = vault.vault-team
+  namespace = vault_namespace.vault_team.path_fq
   name     = "vault_team_policy"
   policy   = data.vault_policy_document.vault_team_secrets.hcl
 }
@@ -487,8 +551,6 @@ vault-team/
 
 $ vault namespace list -namespace=everyone/engineering/vault-team
 No namespaces found
-
-$ vault namespace list -namespace=everyone/engineering/vault-team
 
 $ vault policy list -namespace=everyone/engineering/vault-team
 default

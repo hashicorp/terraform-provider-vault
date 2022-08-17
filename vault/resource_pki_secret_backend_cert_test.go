@@ -15,182 +15,139 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 type testPKICertStore struct {
-	cert          string
-	expectRevoked bool
+	cert             string
+	serialNumber     string
+	expiration       int64
+	expirationWindow int64
+	expectRevoked    bool
 }
 
 func TestPkiSecretBackendCert_basic(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 
-	var store testPKICertStore
+	store := &testPKICertStore{}
 
 	resourceName := "vault_pki_secret_backend_cert.test"
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", intermediatePath),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
+		resource.TestCheckResourceAttr(resourceName, "ttl", "720h"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
+	}
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendCertDestroy,
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", intermediatePath),
-					resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "720h"),
-					resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
-					testCapturePKICert(resourceName, &store),
+					append(checks,
+						resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
+						testCapturePKICert(resourceName, store),
+						testPKICertRevocation(intermediatePath, store),
+					)...,
+				),
+			},
+			{
+				// revoke the cert, expect a new one is re-issued
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, true),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks,
+						resource.TestCheckResourceAttr(resourceName, "revoke", "true"),
+						testPKICertRevocation(intermediatePath, store),
+						testCapturePKICert(resourceName, store),
+					)...,
 				),
 			},
 			{
 				// remove the cert to test revocation flow (expect no revocation)
 				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, false, false),
 				Check: resource.ComposeTestCheckFunc(
-					testPKICertRevocation(intermediatePath, &store),
+					testPKICertRevocation(intermediatePath, store),
 				),
 			},
 		},
 	})
-}
-
-func TestPkiSecretBackendCert_revoke(t *testing.T) {
-	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
-	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
-
-	var store testPKICertStore
-
-	resourceName := "vault_pki_secret_backend_cert.test"
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendCertDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, true),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", intermediatePath),
-					resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "720h"),
-					resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "revoke", "true"),
-					testCapturePKICert(resourceName, &store),
-				),
-			},
-			{
-				// remove the cert to test revocation flow (expect revocation)
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, false, false),
-				Check: resource.ComposeTestCheckFunc(
-					testPKICertRevocation(intermediatePath, &store),
-				),
-			},
-		},
-	})
-}
-
-func testPkiSecretBackendCertDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return err
-	}
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_mount" {
-			continue
-		}
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "pki" && path == rsPath {
-				return fmt.Errorf("Mount %q still exists", path)
-			}
-		}
-	}
-	return nil
 }
 
 func testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath string, withCert, revoke bool) string {
 	fragments := []string{
 		fmt.Sprintf(`
 resource "vault_mount" "test-root" {
-  path = "%s"
-  type = "pki"
-  description = "test root"
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test root"
   default_lease_ttl_seconds = "8640000"
-  max_lease_ttl_seconds = "8640000"
+  max_lease_ttl_seconds     = "8640000"
 }
 
 resource "vault_mount" "test-intermediate" {
-  depends_on = [ "vault_mount.test-root" ]
-  path = "%s"
-  type = "pki"
-  description = "test intermediate"
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test intermediate"
   default_lease_ttl_seconds = "86400"
-  max_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
 }
 
 resource "vault_pki_secret_backend_root_cert" "test" {
-  depends_on = [ "vault_mount.test-intermediate" ]
-  backend = vault_mount.test-root.path
-  type = "internal"
-  common_name = "my.domain"
-  ttl = "86400"
-  format = "pem"
+  backend            = vault_mount.test-root.path
+  type               = "internal"
+  common_name        = "my.domain"
+  ttl                = "86400"
+  format             = "pem"
   private_key_format = "der"
-  key_type = "rsa"
-  key_bits = 4096
-  ou = "test"
-  organization = "test"
-  country = "test"
-  locality = "test"
-  province = "test"
+  key_type           = "rsa"
+  key_bits           = 4096
+  ou                 = "test"
+  organization       = "test"
+  country            = "test"
+  locality           = "test"
+  province           = "test"
 }
 
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
-  depends_on = [ "vault_pki_secret_backend_root_cert.test" ]
-  backend = vault_mount.test-intermediate.path
-  type = "internal"
+  backend     = vault_mount.test-intermediate.path
+  type        = vault_pki_secret_backend_root_cert.test.type
   common_name = "test.my.domain"
 }
 
 resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
-  depends_on = [ "vault_pki_secret_backend_intermediate_cert_request.test" ]
-  backend = vault_mount.test-root.path
-  csr = vault_pki_secret_backend_intermediate_cert_request.test.csr
-  common_name = "test.my.domain"
+  backend               = vault_mount.test-root.path
+  csr                   = vault_pki_secret_backend_intermediate_cert_request.test.csr
+  common_name           = "test.my.domain"
   permitted_dns_domains = [".test.my.domain"]
-  ou = "test"
-  organization = "test"
-  country = "test"
-  locality = "test"
-  province = "test"
+  ou                    = "test"
+  organization          = "test"
+  country               = "test"
+  locality              = "test"
+  province              = "test"
 }
 
 resource "vault_pki_secret_backend_intermediate_set_signed" "test" {
-  depends_on = [ "vault_pki_secret_backend_root_sign_intermediate.test" ]
-  backend = vault_mount.test-intermediate.path
+  backend     = vault_mount.test-intermediate.path
   certificate = vault_pki_secret_backend_root_sign_intermediate.test.certificate
 }
 
 resource "vault_pki_secret_backend_role" "test" {
-  depends_on = [ "vault_pki_secret_backend_intermediate_set_signed.test" ]
-  backend = vault_mount.test-intermediate.path
-  name = "test"
+  backend          = vault_pki_secret_backend_intermediate_set_signed.test.backend
+  name             = "test"
   allowed_domains  = ["test.my.domain"]
   allow_subdomains = true
   allowed_uri_sans = ["spiffe://test.my.domain"]
-  max_ttl = "3600"
-  key_usage = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
+  max_ttl          = "3600"
+  key_usage        = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
 }
 `, rootPath, intermediatePath),
 	}
@@ -198,8 +155,7 @@ resource "vault_pki_secret_backend_role" "test" {
 	if withCert {
 		fragments = append(fragments, fmt.Sprintf(`
 resource "vault_pki_secret_backend_cert" "test" {
-  depends_on            = ["vault_pki_secret_backend_role.test"]
-  backend               = vault_mount.test-intermediate.path
+  backend               = vault_pki_secret_backend_role.test.backend
   name                  = vault_pki_secret_backend_role.test.name
   common_name           = "cert.test.my.domain"
   uri_sans              = ["spiffe://test.my.domain"]
@@ -214,149 +170,166 @@ resource "vault_pki_secret_backend_cert" "test" {
 }
 
 func TestPkiSecretBackendCert_renew(t *testing.T) {
-	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	path := "pki-root-" + strconv.Itoa(acctest.RandInt())
+
+	store := &testPKICertStore{}
 
 	resourceName := "vault_pki_secret_backend_cert.test"
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", path),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
+		resource.TestCheckResourceAttr(resourceName, "ttl", "1h"),
+		resource.TestCheckResourceAttr(resourceName, "min_seconds_remaining", "3595"),
+		resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
+		resource.TestCheckResourceAttrSet(resourceName, "expiration"),
+		resource.TestCheckResourceAttrSet(resourceName, "serial_number"),
+	}
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendCertDestroy,
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendCertConfig_renew(rootPath),
+				Config: testPkiSecretBackendCertConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", rootPath),
-					resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "1h"),
-					resource.TestCheckResourceAttr(resourceName, "min_seconds_remaining", "3595"),
-					resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
-					resource.TestCheckResourceAttrSet(resourceName, "expiration"),
+					append(checks,
+						testCapturePKICert(resourceName, store),
+					)...,
 				),
 			},
 			{
-				Config:   testPkiSecretBackendCertConfig_renew(rootPath),
-				PlanOnly: true,
-			},
-			{
-				Config: testPkiSecretBackendCertConfig_renew(rootPath),
+				// test renewal based on cert expiry
+				PreConfig: testWaitCertExpiry(store),
+				Config:    testPkiSecretBackendCertConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
-					testPkiSecretBackendCertWaitUntilRenewal(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "backend", rootPath),
-					resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "1h"),
-					resource.TestCheckResourceAttr(resourceName, "min_seconds_remaining", "3595"),
-					resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
-					resource.TestCheckResourceAttrSet(resourceName, "expiration"),
+					append(checks,
+						testPKICertReIssued(resourceName, store),
+						testCapturePKICert(resourceName, store),
+					)...,
 				),
-				ExpectNonEmptyPlan: true,
 			},
 			{
-				Config: testPkiSecretBackendCertConfig_renew(rootPath),
+				// test unmounted backend
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+
+					if err := client.Sys().Unmount(path); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testPkiSecretBackendCertConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", rootPath),
-					resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "1h"),
-					resource.TestCheckResourceAttr(resourceName, "min_seconds_remaining", "3595"),
-					resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
-					resource.TestCheckResourceAttrSet(resourceName, "expiration"),
+					append(checks,
+						testPKICertReIssued(resourceName, store),
+					)...,
 				),
 			},
 		},
 	})
 }
 
-func testPkiSecretBackendCertConfig_renew(rootPath string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "test-root" {
-  path = "%s"
-  type = "pki"
-  description = "test root"
-  default_lease_ttl_seconds = "8640000"
-  max_lease_ttl_seconds = "8640000"
-}
-
-resource "vault_pki_secret_backend_root_cert" "test" {
-  depends_on = [ "vault_mount.test-root" ]
-  backend = vault_mount.test-root.path
-  type = "internal"
-  common_name = "my.domain"
-  ttl = "86400"
-  format = "pem"
-  private_key_format = "der"
-  key_type = "rsa"
-  key_bits = 4096
-  ou = "test"
-  organization = "test"
-  country = "test"
-  locality = "test"
-  province = "test"
-}
-
-resource "vault_pki_secret_backend_role" "test" {
-  depends_on = [ "vault_pki_secret_backend_root_cert.test" ]
-  backend = vault_mount.test-root.path
-  name = "test"
-  allowed_domains  = ["test.my.domain"]
-  allow_subdomains = true
-  max_ttl = "3600"
-  key_usage = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
-}
-
-resource "vault_pki_secret_backend_cert" "test" {
-  depends_on = [ "vault_pki_secret_backend_role.test" ]
-  backend = vault_mount.test-root.path
-  name = vault_pki_secret_backend_role.test.name
-  common_name = "cert.test.my.domain"
-  ttl = "1h"
-  auto_renew = true
-  min_seconds_remaining = "3595"
-}`, rootPath)
-}
-
-func testPkiSecretBackendCertWaitUntilRenewal(n string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
-		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+func testWaitCertExpiry(store *testPKICertStore) func() {
+	return func() {
+		delay := (store.expiration - store.expirationWindow) - time.Now().Unix()
+		if delay > 0 {
+			time.Sleep(time.Duration(delay) * time.Second)
 		}
-
-		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
-		}
-
-		expiration, err := strconv.Atoi(rs.Primary.Attributes["expiration"])
-		if err != nil {
-			return fmt.Errorf("Invalid expiration value: %s", err)
-		}
-
-		minSecondsRemain, err := strconv.Atoi(rs.Primary.Attributes["min_seconds_remaining"])
-		if err != nil {
-			return fmt.Errorf("Invalid min_seconds_remaining value: %s", err)
-		}
-
-		secondsUntilRenewal := (expiration - (int(time.Now().Unix()) + minSecondsRemain))
-		time.Sleep(time.Duration(secondsUntilRenewal+1) * time.Second)
-
-		return nil
 	}
 }
 
-func testCapturePKICert(resourcePath string, store *testPKICertStore) resource.TestCheckFunc {
+func testPkiSecretBackendCertConfig_renew(rootPath string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test-root" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test root"
+  default_lease_ttl_seconds = "8640000"
+  max_lease_ttl_seconds     = "8640000"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend            = vault_mount.test-root.path
+  type               = "internal"
+  common_name        = "my.domain"
+  ttl                = "86400"
+  format             = "pem"
+  private_key_format = "der"
+  key_type           = "rsa"
+  key_bits           = 4096
+  ou                 = "test"
+  organization       = "test"
+  country            = "test"
+  locality           = "test"
+  province           = "test"
+}
+
+resource "vault_pki_secret_backend_role" "test" {
+  backend          = vault_pki_secret_backend_root_cert.test.backend
+  name             = "test"
+  allowed_domains  = ["test.my.domain"]
+  allow_subdomains = true
+  max_ttl          = "3600"
+  key_usage        = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
+}
+
+resource "vault_pki_secret_backend_cert" "test" {
+  backend               = vault_pki_secret_backend_role.test.backend
+  name                  = vault_pki_secret_backend_role.test.name
+  common_name           = "cert.test.my.domain"
+  ttl                   = "1h"
+  auto_renew            = true
+  min_seconds_remaining = "3595"
+}
+`, rootPath)
+}
+
+func testCapturePKICert(resourceName string, store *testPKICertStore) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		for _, rs := range s.RootModule().Resources {
-			if rs.Type != "vault_pki_secret_backend_cert" {
-				continue
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		cert, ok := rs.Primary.Attributes["certificate"]
+		if !ok {
+			return fmt.Errorf("certificate not found in state")
+		}
+		store.cert = cert
+
+		sn, ok := rs.Primary.Attributes["serial_number"]
+		if !ok {
+			return fmt.Errorf("serial_number not found in state")
+		}
+		store.serialNumber = sn
+
+		if v, ok := rs.Primary.Attributes["expiration"]; ok {
+			e, err := strconv.Atoi(v)
+			if err != nil {
+				return err
 			}
 
-			store.cert = rs.Primary.Attributes["certificate"]
-			v, err := strconv.ParseBool(rs.Primary.Attributes["revoke"])
+			store.expiration = int64(e)
+		}
+
+		if v, ok := rs.Primary.Attributes["min_seconds_remaining"]; ok {
+			e, err := strconv.Atoi(v)
+			if err != nil {
+				return err
+			}
+
+			store.expirationWindow = int64(e)
+		}
+
+		if val, ok := rs.Primary.Attributes["revoke"]; ok {
+			v, err := strconv.ParseBool(val)
 			if err != nil {
 				return err
 			}
 			store.expectRevoked = v
-			return nil
 		}
-		return fmt.Errorf("certificate not found in state")
+
+		return nil
 	}
 }
 
@@ -366,7 +339,7 @@ func testPKICertRevocation(path string, store *testPKICertStore) resource.TestCh
 			return fmt.Errorf("certificate in %#v is empty", store)
 		}
 
-		addr := testProvider.Meta().(*api.Client).Address()
+		addr := testProvider.Meta().(*provider.ProviderMeta).GetClient().Address()
 		url := fmt.Sprintf("%s/v1/%s/crl", addr, path)
 		c := cleanhttp.DefaultClient()
 		resp, err := c.Get(url)
@@ -409,6 +382,24 @@ func testPKICertRevocation(path string, store *testPKICertStore) resource.TestCh
 		if store.expectRevoked {
 			return fmt.Errorf("cert not revoked, serial number %v, revocations %#v",
 				cert.SerialNumber, crl.TBSCertList.RevokedCertificates)
+		}
+
+		return nil
+	}
+}
+
+func testPKICertReIssued(resourceName string, store *testPKICertStore) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+		if store.serialNumber == "" {
+			return fmt.Errorf("serial_number must be set on test store %#v", store)
+		}
+
+		if store.serialNumber == rs.Primary.Attributes["serial_number"] {
+			return fmt.Errorf("expected certificate not re-issued, serial_number was not changed")
 		}
 
 		return nil

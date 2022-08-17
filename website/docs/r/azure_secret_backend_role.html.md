@@ -54,6 +54,11 @@ resource "vault_azure_secret_backend_role" "existing_object_id" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `role` - (Required) Name of the Azure role
 * `backend` - Path to the mounted Azure auth backend
 * `azure_groups` - List of Azure groups to be assigned to the generated service principal.

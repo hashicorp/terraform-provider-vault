@@ -97,6 +97,8 @@ The following arguments are supported for the Vault `mount`:
 
 * `external_entropy_access` - (Optional) Boolean flag that can be explicitly set to true to enable the secrets engine to access Vault's external entropy source
 
+* `allowed_managed_keys` - (Optional) Set of managed key registry entry names that the mount in question is allowed to access
+
 The following arguments are common to all database engines:
 
 * `plugin_name` - (Optional) Specifies the name of the plugin to use.
@@ -214,6 +216,21 @@ Supported list of database secrets engines that can be configured:
 * `username` - (Required) The username to be used in the connection.
 
 * `password` - (Required) The password to be used in the connection.
+ 
+* `ca_cert` - (Optional) The path to a PEM-encoded CA cert file to use to verify the Elasticsearch server's identity.
+
+* `ca_path` - (Optional) The path to a directory of PEM-encoded CA cert files to use to verify the Elasticsearch server's identity.
+
+* `client_cert` - (Optional) The path to the certificate for the Elasticsearch client to present for communication.
+
+* `client_key` - (Optional) The path to the key for the Elasticsearch client to use for communication.
+
+* `tls_server_name` - (Optional) This, if set, is used to set the SNI host when connecting via TLS.
+
+* `insecure` - (Optional) Whether to disable certificate verification.
+
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.  
+  See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating) for more details.
 
 ### InfluxDB Configuration Options
 
@@ -243,18 +260,15 @@ Supported list of database secrets engines that can be configured:
 
 ### MongoDB Configuration Options
 
-* `connection_url` - (Required) A URL containing connection information. See
-  the [Vault
-  docs](https://www.vaultproject.io/api-docs/secret/databases/mongodb.html#sample-payload)
-  for an example.
+* `connection_url` - (Required) A URL containing connection information.  
+  See [Vault docs](https://www.vaultproject.io/api-docs/secret/databases/mongodb.html#sample-payload)
 
 * `username` - (Optional) The root credential username used in the connection URL.
 
 * `password` - (Optional) The root credential password used in the connection URL.
 
-* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
-See the [Vault
-  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.  
+  See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
 ### MongoDB Atlas Configuration Options
 
@@ -266,10 +280,8 @@ See the [Vault
 
 ### SAP HanaDB Configuration Options
 
-* `connection_url` - (Required) A URL containing connection information. See
-  the [Vault
-  docs](https://www.vaultproject.io/api-docs/secret/databases/hanadb.html#sample-payload)
-  for an example.
+* `connection_url` - (Required) A URL containing connection information.  
+  See [Vault docs](https://www.vaultproject.io/api-docs/secret/databases/hanadb.html#sample-payload)
 
 * `max_open_connections` - (Optional) The maximum number of open connections to
   use.
@@ -288,10 +300,8 @@ See the [Vault
 
 ### MSSQL Configuration Options
 
-* `connection_url` - (Required) A URL containing connection information. See
-  the [Vault
-  docs](https://www.vaultproject.io/api-docs/secret/databases/mssql.html#sample-payload)
-  for an example.
+* `connection_url` - (Required) A URL containing connection information.  
+  See [Vault docs](https://www.vaultproject.io/api-docs/secret/databases/mssql.html#sample-payload)
 
 * `max_open_connections` - (Optional) The maximum number of open connections to
   use.
@@ -302,9 +312,8 @@ See the [Vault
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
-* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
-See the [Vault
-  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.  
+   See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
 * `username` - (Optional) The root credential username used in the connection URL.
 
@@ -313,16 +322,13 @@ See the [Vault
 * `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
 * `contained_db` - (Optional bool: false) For Vault v1.9+. Set to true when the target is a
-  Contained Database, e.g. AzureSQL.
-  See the [Vault
-  docs](https://www.vaultproject.io/api/secret/databases/mssql#contained_db)
+  Contained Database, e.g. AzureSQL.  
+  See [Vault docs](https://www.vaultproject.io/api/secret/databases/mssql#contained_db)
 
 ### MySQL Configuration Options
 
-* `connection_url` - (Required) A URL containing connection information. See
-  the [Vault
-  docs](https://www.vaultproject.io/api-docs/secret/databases/mysql-maria.html#sample-payload)
-  for an example.
+* `connection_url` - (Required) A URL containing connection information.  
+  See [Vault docs](https://www.vaultproject.io/api-docs/secret/databases/mysql-maria.html#sample-payload)
 
 * `max_open_connections` - (Optional) The maximum number of open connections to
   use.
@@ -341,16 +347,13 @@ See the [Vault
 
 * `tls_ca` - (Optional) x509 CA file for validating the certificate presented by the MySQL server. Must be PEM encoded.
 
-* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
-See the [Vault
-  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.  
+   See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
 ### Oracle Configuration Options
 
-* `connection_url` - (Required) A URL containing connection information. See
-  the [Vault
-  docs](https://www.vaultproject.io/api-docs/secret/databases/oracle.html#sample-payload)
-  for an example.
+* `connection_url` - (Required) A URL containing connection information.  
+  See [Vault docs](https://www.vaultproject.io/api-docs/secret/databases/oracle.html#sample-payload)
 
 * `max_open_connections` - (Optional) The maximum number of open connections to
   use.
@@ -365,16 +368,13 @@ See the [Vault
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.
 
-* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
-  See the [Vault
-  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+* `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.  
+  See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
 ### PostgreSQL Configuration Options
 
-* `connection_url` - (Required) A URL containing connection information. See
-  the [Vault
-  docs](https://www.vaultproject.io/api-docs/secret/databases/postgresql.html#sample-payload)
-  for an example.
+* `connection_url` - (Required) A URL containing connection information.  
+  See [Vault docs](https://www.vaultproject.io/api-docs/secret/databases/postgresql.html#sample-payload)
 
 * `max_open_connections` - (Optional) The maximum number of open connections to
   use.
@@ -392,15 +392,12 @@ See the [Vault
 * `disable_escaping` - (Optional) Disable special character escaping in username and password.
 
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
-See the [Vault
-  docs](https://www.vaultproject.io/docs/concepts/username-templating)
+  See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating)
 
 ### AWS Redshift Configuration Options
 
-* `connection_url` - (Required) Specifies the Redshift DSN. See
-  the [Vault
-  docs](https://www.vaultproject.io/api-docs/secret/databases/redshift#sample-payload)
-  for an example.
+* `connection_url` - (Required) Specifies the Redshift DSN. 
+  See [Vault docs](https://www.vaultproject.io/api-docs/secret/databases/redshift#sample-payload)
 
 * `max_open_connections` - (Optional) The maximum number of open connections to
   the database.
@@ -421,10 +418,8 @@ See the [Vault
 
 ### Snowflake Configuration Options
 
-* `connection_url` - (Required) A URL containing connection information. See
-  the [Vault
-  docs](https://www.vaultproject.io/api-docs/secret/databases/snowflake#sample-payload)
-  for an example.
+* `connection_url` - (Required) A URL containing connection information.  
+  See [Vault docs](https://www.vaultproject.io/api-docs/secret/databases/snowflake#sample-payload)
 
 * `max_open_connections` - (Optional) The maximum number of open connections to
   use.

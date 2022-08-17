@@ -6,7 +6,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func mfaPingIDResource() *schema.Resource {
@@ -14,7 +16,7 @@ func mfaPingIDResource() *schema.Resource {
 		Create: mfaPingIDWrite,
 		Update: mfaPingIDUpdate,
 		Delete: mfaPingIDDelete,
-		Read:   mfaPingIDRead,
+		Read:   ReadWrapper(mfaPingIDRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -27,7 +29,7 @@ func mfaPingIDResource() *schema.Resource {
 				ForceNew:     true,
 				ValidateFunc: validateNoTrailingSlash,
 			},
-			"mount_accessor": {
+			consts.FieldMountAccessor: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -72,7 +74,7 @@ func mfaPingIDResource() *schema.Resource {
 				Optional:    true,
 				Description: "ID computed by Vault.",
 			},
-			"namespace_id": {
+			consts.FieldNamespaceID: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Namespace ID computed by Vault.",
@@ -99,7 +101,7 @@ func mfaPingIDRequestData(d *schema.ResourceData) map[string]interface{} {
 	data := map[string]interface{}{}
 
 	fields := []string{
-		"name", "mount_accessor", "settings_file_base64",
+		"name", consts.FieldMountAccessor, "settings_file_base64",
 		"username_format",
 	}
 
@@ -113,7 +115,10 @@ func mfaPingIDRequestData(d *schema.ResourceData) map[string]interface{} {
 }
 
 func mfaPingIDWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Get("name").(string)
 	path := mfaPingIDPath(name)
 
@@ -129,7 +134,10 @@ func mfaPingIDWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaPingIDRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := mfaPingIDPath(d.Id())
 
 	log.Printf("[DEBUG] Reading MFA PingID config %q", path)
@@ -138,7 +146,7 @@ func mfaPingIDRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading from Vault at %s, err=%w", path, err)
 	}
 
-	if err := d.Set("mount_accessor", d.Get("mount_accessor")); err != nil {
+	if err := d.Set(consts.FieldMountAccessor, d.Get(consts.FieldMountAccessor)); err != nil {
 		return err
 	}
 
@@ -153,7 +161,7 @@ func mfaPingIDRead(d *schema.ResourceData, meta interface{}) error {
 	fields := []string{
 		"name", "idp_url", "admin_url",
 		"authenticator_url", "org_alias", "type",
-		"use_signature", "id", "namespace_id",
+		"use_signature", "id", consts.FieldNamespaceID,
 	}
 
 	for _, k := range fields {
@@ -170,7 +178,10 @@ func mfaPingIDUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaPingIDDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := mfaPingIDPath(d.Id())
 
 	log.Printf("[DEBUG] Deleting mfaPingID %s from Vault", path)

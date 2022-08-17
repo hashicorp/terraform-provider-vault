@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func jwtAuthBackendResource() *schema.Resource {
@@ -19,13 +21,12 @@ func jwtAuthBackendResource() *schema.Resource {
 		},
 		Create: jwtAuthBackendWrite,
 		Delete: jwtAuthBackendDelete,
-		Read:   jwtAuthBackendRead,
+		Read:   ReadWrapper(jwtAuthBackendRead),
 		Update: jwtAuthBackendUpdate,
 
 		CustomizeDiff: jwtCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
-
 			"path": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -47,7 +48,6 @@ func jwtAuthBackendResource() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Required:    false,
-				ForceNew:    true,
 				Optional:    true,
 				Description: "The description of the auth backend",
 			},
@@ -187,28 +187,29 @@ func jwtCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{
 	return errors.New("exactly one of oidc_discovery_url, jwks_url or jwt_validation_pubkeys should be provided")
 }
 
-var (
-	// TODO: build this from the Resource Schema?
-	matchingJwtMountConfigOptions = []string{
-		"oidc_discovery_url",
-		"oidc_discovery_ca_pem",
-		"oidc_client_id",
-		"oidc_client_secret",
-		"oidc_response_mode",
-		"oidc_response_types",
-		"jwks_url",
-		"jwks_ca_pem",
-		"jwt_validation_pubkeys",
-		"bound_issuer",
-		"jwt_supported_algs",
-		"default_role",
-		"provider_config",
-		"namespace_in_state",
-	}
-)
+// TODO: build this from the Resource Schema?
+var matchingJwtMountConfigOptions = []string{
+	"oidc_discovery_url",
+	"oidc_discovery_ca_pem",
+	"oidc_client_id",
+	"oidc_client_secret",
+	"oidc_response_mode",
+	"oidc_response_types",
+	"jwks_url",
+	"jwks_ca_pem",
+	"jwt_validation_pubkeys",
+	"bound_issuer",
+	"jwt_supported_algs",
+	"default_role",
+	"provider_config",
+	"namespace_in_state",
+}
 
 func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	authType := d.Get("type").(string)
 	path := getJwtPath(d)
@@ -221,7 +222,6 @@ func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Writing auth %s to Vault", authType)
 
 	err := client.Sys().EnableAuthWithOptions(path, options)
-
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -232,14 +232,16 @@ func jwtAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func jwtAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := getJwtPath(d)
 
 	log.Printf("[DEBUG] Deleting auth %s from Vault", path)
 
 	err := client.Sys().DisableAuth(path)
-
 	if err != nil {
 		return fmt.Errorf("error disabling auth from Vault: %s", err)
 	}
@@ -248,7 +250,10 @@ func jwtAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := getJwtPath(d)
 	log.Printf("[DEBUG] Reading auth %s from Vault", path)
@@ -263,7 +268,6 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("path", path)
 
 	mount, err := getAuthMountIfPresent(client, path)
-
 	if err != nil {
 		return fmt.Errorf("unable to check auth backends in Vault for path %s: %s", path, err)
 	}
@@ -275,7 +279,6 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	config, err := client.Logical().Read(jwtConfigEndpoint(path))
-
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
@@ -317,7 +320,6 @@ func jwtAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return nil
-
 }
 
 func convertProviderConfigValues(input map[string]interface{}) (map[string]interface{}, error) {
@@ -345,7 +347,10 @@ func convertProviderConfigValues(input map[string]interface{}) (map[string]inter
 }
 
 func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := getJwtPath(d)
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)

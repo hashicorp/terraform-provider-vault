@@ -1,21 +1,25 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func consulSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
-		Create: consulSecretBackendCreate,
-		Read:   consulSecretBackendRead,
-		Update: consulSecretBackendUpdate,
-		Delete: consulSecretBackendDelete,
-		Exists: consulSecretBackendExists,
+		Create:        consulSecretBackendCreate,
+		Read:          ReadWrapper(consulSecretBackendRead),
+		Update:        consulSecretBackendUpdate,
+		Delete:        consulSecretBackendDelete,
+		Exists:        consulSecretBackendExists,
+		CustomizeDiff: consulSecretsBackendCustomizeDiff,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -37,7 +41,6 @@ func consulSecretBackendResource() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
 			"default_lease_ttl_seconds": {
@@ -65,9 +68,15 @@ func consulSecretBackendResource() *schema.Resource {
 			},
 			"token": {
 				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Specifies the Consul ACL token to use. This must be a management type token.",
+				Optional:    true,
+				Description: "Specifies the Consul token to use when managing or issuing new tokens.",
 				Sensitive:   true,
+			},
+			"bootstrap": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Denotes a backend resource that is used to bootstrap the Consul ACL system. Only one resource may be used to bootstrap.",
+				Default:     false,
 			},
 			"ca_cert": {
 				Type:        schema.TypeString,
@@ -102,7 +111,10 @@ func consulSecretBackendResource() *schema.Resource {
 }
 
 func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 	address := d.Get("address").(string)
@@ -138,23 +150,29 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Writing Consul configuration to %q", configPath)
 	data := map[string]interface{}{
 		"address":     address,
-		"token":       token,
 		"scheme":      scheme,
 		"ca_cert":     ca_cert,
 		"client_cert": client_cert,
 		"client_key":  client_key,
 	}
+	if token != "" {
+		data["token"] = token
+	}
+
 	if _, err := client.Logical().Write(configPath, data); err != nil {
 		return fmt.Errorf("Error writing Consul configuration for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote Consul configuration to %q", configPath)
 	d.Partial(false)
 
-	return nil
+	return consulSecretBackendRead(d, meta)
 }
 
 func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	configPath := consulSecretBackendConfigPath(path)
@@ -188,8 +206,6 @@ func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
-	log.Printf("[DEBUG] secret: %#v", secret)
-
 	// token, sadly, we can't read out
 	// the API doesn't support it
 	// So... if it drifts, it drift.
@@ -200,7 +216,10 @@ func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	configPath := consulSecretBackendConfigPath(path)
@@ -240,7 +259,10 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func consulSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -254,7 +276,10 @@ func consulSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func consulSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 
@@ -270,4 +295,21 @@ func consulSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, 
 
 func consulSecretBackendConfigPath(backend string) string {
 	return strings.Trim(backend, "/") + "/config/access"
+}
+
+func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+	newToken := diff.Get("token").(string)
+	newBootstrap := diff.Get("bootstrap").(bool)
+
+	// If the user sets bootstrap to false but doesn't provide a token, disallow it.
+	if newToken == "" && !newBootstrap {
+		return fmt.Errorf("field 'bootstrap' must be set to true when 'token' is unspecified")
+	}
+
+	// If the user sets bootstrap to true and also provides a token, disallow it.
+	if newToken != "" && newBootstrap {
+		return fmt.Errorf("field 'bootstrap' must be set to false when 'token' is specified")
+	}
+
+	return nil
 }

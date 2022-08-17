@@ -5,7 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const identityOIDCProviderPathPrefix = "identity/oidc/provider"
@@ -14,7 +15,7 @@ func identityOIDCProviderResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOIDCProviderCreateUpdate,
 		Update: identityOIDCProviderCreateUpdate,
-		Read:   identityOIDCProviderRead,
+		Read:   ReadWrapper(identityOIDCProviderRead),
 		Delete: identityOIDCProviderDelete,
 
 		Schema: map[string]*schema.Schema{
@@ -98,7 +99,10 @@ func getOIDCProviderPath(name string) string {
 }
 
 func identityOIDCProviderCreateUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Get("name").(string)
 	path := getOIDCProviderPath(name)
 
@@ -125,7 +129,10 @@ func identityOIDCProviderCreateUpdate(d *schema.ResourceData, meta interface{}) 
 }
 
 func identityOIDCProviderRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading OIDC Provider for %s", path)
@@ -152,7 +159,10 @@ func identityOIDCProviderRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityOIDCProviderDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting OIDC Provider %s", path)

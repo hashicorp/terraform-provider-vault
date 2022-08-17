@@ -1,7 +1,9 @@
-TEST?=$$(go list ./...)
-GOFMT_FILES?=$$(find . -name '*.go')
-WEBSITE_REPO=github.com/hashicorp/terraform-website
-PKG_NAME=vault
+TEST ?= $$(go list ./...)
+GOFMT_FILES ?= $$(find . -name '*.go')
+WEBSITE_REPO = github.com/hashicorp/terraform-website
+PKG_NAME = vault
+TF_ACC_TERRAFORM_VERSION ?= 1.2.2
+TESTARGS ?= -test.v
 
 default: build
 
@@ -12,7 +14,7 @@ test: fmtcheck
 	TF_ACC= go test $(TESTARGS) -timeout 10m -parallel=4 ./...
 
 testacc: fmtcheck
-	TF_ACC=1 go test -v $(TESTARGS) -timeout 30m ./...
+	TF_ACC=1 go test $(TESTARGS) -timeout 30m ./...
 
 testacc-ent:
 	make testacc TF_ACC_ENTERPRISE=1

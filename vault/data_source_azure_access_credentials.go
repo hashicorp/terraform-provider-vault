@@ -14,11 +14,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func azureAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: azureAccessCredentialsDataSourceRead,
+		Read: ReadWrapper(azureAccessCredentialsDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -65,12 +68,12 @@ func azureAccessCredentialsDataSource() *schema.Resource {
 				Computed:    true,
 				Description: "The client secret for credentials to query the Azure APIs.",
 			},
-			"lease_id": {
+			consts.FieldLeaseID: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Lease identifier assigned by vault.",
 			},
-			"lease_duration": {
+			consts.FieldLeaseDuration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "Lease duration in seconds relative to the time in lease_start_time.",
@@ -80,7 +83,7 @@ func azureAccessCredentialsDataSource() *schema.Resource {
 				Computed:    true,
 				Description: "Time at which the lease was read, using the clock of the system where Terraform was running",
 			},
-			"lease_renewable": {
+			consts.FieldLeaseRenewable: {
 				Type:        schema.TypeBool,
 				Computed:    true,
 				Description: "True if the duration of this lease can be extended through renewal.",
@@ -109,7 +112,10 @@ Some possible values: AzurePublicCloud, AzureGovernmentCloud`,
 }
 
 func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -132,10 +138,10 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	d.SetId(secret.LeaseID)
 	_ = d.Set("client_id", secret.Data["client_id"])
 	_ = d.Set("client_secret", secret.Data["client_secret"])
-	_ = d.Set("lease_id", secret.LeaseID)
-	_ = d.Set("lease_duration", secret.LeaseDuration)
+	_ = d.Set(consts.FieldLeaseID, secret.LeaseID)
+	_ = d.Set(consts.FieldLeaseDuration, secret.LeaseDuration)
 	_ = d.Set("lease_start_time", time.Now().Format(time.RFC3339))
-	_ = d.Set("lease_renewable", secret.Renewable)
+	_ = d.Set(consts.FieldLeaseRenewable, secret.Renewable)
 
 	// If we're not supposed to validate creds, or we don't have enough
 	// information to do it, there's nothing further to do here.
@@ -204,21 +210,21 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 	}
 
 	clientOptions := &arm.ClientOptions{}
-	var e string
+	var environment string
 	if v, ok := d.GetOk("environment"); ok {
-		e = v.(string)
+		environment = v.(string)
 	} else {
 		data, err := getConfigData()
 		if err != nil {
 			return err
 		}
 		if v, ok := data["environment"]; ok && v.(string) != "" {
-			e = v.(string)
+			environment = v.(string)
 		}
 	}
 
-	if e != "" {
-		env, err := azure.EnvironmentFromName(e)
+	if environment != "" {
+		env, err := azure.EnvironmentFromName(environment)
 		if err != nil {
 			return err
 		}

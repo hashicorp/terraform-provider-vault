@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 type schemaMap map[string]*schema.Schema
@@ -30,7 +32,6 @@ func getMountSchema(excludes ...string) schemaMap {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Required:    false,
-			ForceNew:    false,
 			Description: "Human-friendly description of the mount",
 		},
 		"default_lease_ttl_seconds": {
@@ -107,6 +108,14 @@ func getMountSchema(excludes ...string) schemaMap {
 			ForceNew:    true,
 			Description: "Enable the secrets engine to access Vault's external entropy source",
 		},
+
+		"allowed_managed_keys": {
+			Type:        schema.TypeSet,
+			Optional:    true,
+			ForceNew:    true,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Description: "List of managed key registry entry names that the mount in question is allowed to access",
+		},
 	}
 	for _, v := range excludes {
 		delete(s, v)
@@ -119,7 +128,7 @@ func MountResource() *schema.Resource {
 		Create: mountWrite,
 		Update: mountUpdate,
 		Delete: mountDelete,
-		Read:   mountRead,
+		Read:   ReadWrapper(mountRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -128,7 +137,10 @@ func MountResource() *schema.Resource {
 }
 
 func mountWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, err := provider.GetClient(d, meta)
+	if err != nil {
+		return err
+	}
 
 	path := d.Get("path").(string)
 	if err := createMount(d, client, path, d.Get("type").(string)); err != nil {
@@ -161,6 +173,10 @@ func createMount(d *schema.ResourceData, client *api.Client, path string, mountT
 		input.Config.AuditNonHMACResponseKeys = expandStringSlice(v.([]interface{}))
 	}
 
+	if v, ok := d.GetOk("allowed_managed_keys"); ok {
+		input.Config.AllowedManagedKeys = expandStringSlice(v.(*schema.Set).List())
+	}
+
 	log.Printf("[DEBUG] Creating mount %s in Vault", path)
 
 	if err := client.Sys().Mount(path, input); err != nil {
@@ -171,7 +187,14 @@ func createMount(d *schema.ResourceData, client *api.Client, path string, mountT
 }
 
 func mountUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	return updateMount(d, meta, false)
+}
+
+func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {
+	client, err := provider.GetClient(d, meta)
+	if err != nil {
+		return err
+	}
 
 	config := api.MountConfigInput{
 		DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
@@ -208,6 +231,10 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 		path = newPath
 	}
 
+	if d.HasChange("allowed_managed_keys") {
+		config.AllowedManagedKeys = expandStringSlice(d.Get("allowed_managed_keys").(*schema.Set).List())
+	}
+
 	log.Printf("[DEBUG] Updating mount %s in Vault", path)
 
 	// TODO: remove this work-around once VAULT-5521 is fixed
@@ -224,11 +251,14 @@ func mountUpdate(d *schema.ResourceData, meta interface{}) error {
 		break
 	}
 
-	return mountRead(d, meta)
+	return readMount(d, meta, excludeType)
 }
 
 func mountDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, err := provider.GetClient(d, meta)
+	if err != nil {
+		return err
+	}
 
 	path := d.Id()
 
@@ -246,7 +276,10 @@ func mountRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -297,6 +330,7 @@ func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error
 	d.Set("options", mount.Options)
 	d.Set("seal_wrap", mount.SealWrap)
 	d.Set("external_entropy_access", mount.ExternalEntropyAccess)
+	d.Set("allowed_managed_keys", mount.Config.AllowedManagedKeys)
 
 	return nil
 }

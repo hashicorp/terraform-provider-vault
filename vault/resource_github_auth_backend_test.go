@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -38,7 +40,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
 					resource.TestCheckResourceAttr(resName, "id", path),
-					resource.TestCheckResourceAttr(resName, "path", path),
+					resource.TestCheckResourceAttr(resName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resName, "organization", testGHOrg),
 					// expect computed value for organization_id
 					resource.TestCheckResourceAttr(resName, "organization_id", strconv.Itoa(orgMeta.ID)),
@@ -52,7 +54,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
 					resource.TestCheckResourceAttr(resName, "id", path),
-					resource.TestCheckResourceAttr(resName, "path", path),
+					resource.TestCheckResourceAttr(resName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resName, "organization", "unknown"),
 					resource.TestCheckResourceAttr(resName, "organization_id", "2999"),
 					resource.TestCheckResourceAttr(resName, "token_ttl", "2400"),
@@ -83,7 +85,7 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
 					resource.TestCheckResourceAttr(resName, "id", backend),
-					resource.TestCheckResourceAttr(resName, "path", backend),
+					resource.TestCheckResourceAttr(resName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resName, "organization", testGHOrg),
 					resource.TestCheckResourceAttr(resName, "organization_id", strconv.Itoa(orgMeta.ID)),
 					resource.TestCheckResourceAttr(resName, "tune.0.default_lease_ttl", "10m"),
@@ -109,7 +111,7 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
 					resource.TestCheckResourceAttr(resName, "id", backend),
-					resource.TestCheckResourceAttr(resName, "path", backend),
+					resource.TestCheckResourceAttr(resName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resName, "organization", testGHOrg),
 					resource.TestCheckResourceAttr(resName, "organization_id", strconv.Itoa(orgMeta.ID)),
 					resource.TestCheckResourceAttr(resName, "tune.0.default_lease_ttl", "50m"),
@@ -150,7 +152,7 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 				Config: testAccGithubAuthBackendConfig_description(path, testGHOrg, "Github Auth Mount"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
-					resource.TestCheckResourceAttr(resName, "path", path),
+					resource.TestCheckResourceAttr(resName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resName, "organization", testGHOrg),
 					resource.TestCheckResourceAttr(resName, "organization_id", strconv.Itoa(orgMeta.ID)),
 					resource.TestCheckResourceAttr(resName, "description", "Github Auth Mount"),
@@ -160,7 +162,7 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 				Config: testAccGithubAuthBackendConfig_description(path, testGHOrg, "Github Auth Mount Updated"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resName, &resAuth),
-					resource.TestCheckResourceAttr(resName, "path", path),
+					resource.TestCheckResourceAttr(resName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resName, "organization", orgMeta.Login),
 					resource.TestCheckResourceAttr(resName, "organization_id", strconv.Itoa(orgMeta.ID)),
 					resource.TestCheckResourceAttr(resName, "description", "Github Auth Mount Updated"),
@@ -193,8 +195,7 @@ func TestAccGithubAuthBackend_importTuning(t *testing.T) {
 
 func testAccCheckAuthMountExists(n string, out *api.AuthMount) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
-		return authMountExistsHelper(n, s, client, out)
+		return authMountExistsHelper(n, s, out)
 	}
 }
 
@@ -203,18 +204,22 @@ func testAccCheckGithubAuthMountDestroy(s *terraform.State) error {
 }
 
 func testAccCheckAuthMountDestroy(s *terraform.State, resType string) error {
-	client := testProvider.Meta().(*api.Client)
-	return authMountDestroyHelper(s, client, resType)
+	return authMountDestroyHelper(s, resType)
 }
 
-func authMountExistsHelper(n string, s *terraform.State, client *api.Client, out *api.AuthMount) error {
-	rs, ok := s.RootModule().Resources[n]
+func authMountExistsHelper(resourceName string, s *terraform.State, out *api.AuthMount) error {
+	rs, ok := s.RootModule().Resources[resourceName]
 	if !ok {
-		return fmt.Errorf("Not found: %s", n)
+		return fmt.Errorf("Not found: %s", resourceName)
 	}
 
 	if rs.Primary.ID == "" {
-		return fmt.Errorf("No id for %s is set", n)
+		return fmt.Errorf("No id for %s is set", resourceName)
+	}
+
+	client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+	if e != nil {
+		return e
 	}
 
 	auths, err := client.Sys().ListAuth()
@@ -226,16 +231,21 @@ func authMountExistsHelper(n string, s *terraform.State, client *api.Client, out
 	if resp == nil {
 		return fmt.Errorf("auth mount %s not present", rs.Primary.ID)
 	}
-	log.Printf("[INFO] Auth mount resource '%v' confirmed to exist at path: %v", n, rs.Primary.ID)
+	log.Printf("[INFO] Auth mount resource '%v' confirmed to exist at path: %v", resourceName, rs.Primary.ID)
 	*out = *resp
 
 	return nil
 }
 
-func authMountDestroyHelper(s *terraform.State, client *api.Client, resType string) error {
-	for _, r := range s.RootModule().Resources {
-		if r.Type != resType {
+func authMountDestroyHelper(s *terraform.State, resType string) error {
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != resType {
 			continue
+		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
 		}
 
 		auths, err := client.Sys().ListAuth()
@@ -243,9 +253,9 @@ func authMountDestroyHelper(s *terraform.State, client *api.Client, resType stri
 			return fmt.Errorf("error reading from Vault: %s", err)
 		}
 
-		resp := auths[strings.Trim(r.Primary.ID, "/")+"/"]
+		resp := auths[strings.Trim(rs.Primary.ID, "/")+"/"]
 		if resp == nil {
-			log.Printf("[INFO] Auth mount resource confirmed to be destroyed from path: %v", r.Primary.ID)
+			log.Printf("[INFO] Auth mount resource confirmed to be destroyed from path: %v", rs.Primary.ID)
 			return nil
 		}
 	}

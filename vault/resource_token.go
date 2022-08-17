@@ -8,12 +8,15 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func tokenResource() *schema.Resource {
 	return &schema.Resource{
 		Create: tokenCreate,
-		Read:   tokenRead,
+		Read:   ReadWrapper(tokenRead),
 		Update: tokenUpdate,
 		Delete: tokenDelete,
 		Exists: tokenExists,
@@ -115,7 +118,7 @@ func tokenResource() *schema.Resource {
 				Optional:    true,
 				Description: "The renew increment.",
 			},
-			"lease_duration": {
+			consts.FieldLeaseDuration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "The token lease duration.",
@@ -143,12 +146,25 @@ func tokenResource() *schema.Resource {
 				Description: "The client wrapping accessor.",
 				Sensitive:   true,
 			},
+			consts.FieldMetadata: {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Metadata to be associated with the token.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
 
 func tokenCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	var err error
 	var wrapped bool
 
@@ -199,6 +215,14 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		createRequest.Renewable = &renewable
 	}
 
+	if v, ok := d.GetOk("metadata"); ok {
+		d := make(map[string]string)
+		for k, val := range v.(map[string]interface{}) {
+			d[k] = val.(string)
+		}
+		createRequest.Metadata = d
+	}
+
 	if v, ok := d.GetOk("wrapping_ttl"); ok {
 		wrappingTTL := v.(string)
 
@@ -243,6 +267,7 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		} else {
 			accessor = resp.Auth.Accessor
 		}
+
 		log.Printf("[DEBUG] Created token accessor %q", accessor)
 	}
 
@@ -259,7 +284,10 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	id := d.Get("client_token").(string)
 	accessor := d.Id()
@@ -310,7 +338,9 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error parsing expire_time: %s", err)
 	}
-	d.Set("lease_duration", int(expireTime.Sub(issueTime).Seconds()))
+	d.Set(consts.FieldLeaseDuration, int(expireTime.Sub(issueTime).Seconds()))
+
+	d.Set("metadata", resp.Data["meta"])
 
 	if d.Get("renewable").(bool) && tokenCheckLease(d) {
 		if id == "" {
@@ -320,7 +350,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 		log.Printf("[DEBUG] Lease for token accessor %q expiring soon, renewing", accessor)
 
-		increment := d.Get("lease_duration").(int)
+		increment := d.Get(consts.FieldLeaseDuration).(int)
 
 		if v, ok := d.GetOk("renew_increment"); ok {
 			increment = v.(int)
@@ -335,7 +365,7 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 		log.Printf("[DEBUG] Lease for token accessor %q renewed, new lease duration %d", id, renewed.Auth.LeaseDuration)
 
-		d.Set("lease_duration", renewed.Data["lease_duration"])
+		d.Set(consts.FieldLeaseDuration, renewed.Data["lease_duration"])
 		d.Set("lease_started", time.Now().Format(time.RFC3339))
 		d.Set("client_token", renewed.Auth.ClientToken)
 
@@ -350,7 +380,10 @@ func tokenUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	token := d.Id()
 
@@ -365,7 +398,11 @@ func tokenDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	accessor := d.Id()
 
 	log.Printf("[DEBUG] Checking if token accessor %q exists", accessor)
@@ -393,7 +430,7 @@ func tokenCheckLease(d *schema.ResourceData) bool {
 		return false
 	}
 
-	leaseDuration := d.Get("lease_duration").(int)
+	leaseDuration := d.Get(consts.FieldLeaseDuration).(int)
 
 	expireTime := started.Add(time.Second * time.Duration(leaseDuration))
 	if expireTime.Before(time.Now()) {

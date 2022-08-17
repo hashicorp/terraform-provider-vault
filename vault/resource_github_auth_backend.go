@@ -8,12 +8,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func githubAuthBackendResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		"path": {
+		consts.FieldPath: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			ForceNew:    true,
@@ -58,7 +60,7 @@ func githubAuthBackendResource() *schema.Resource {
 
 	return &schema.Resource{
 		Create: githubAuthBackendCreate,
-		Read:   githubAuthBackendRead,
+		Read:   ReadWrapper(githubAuthBackendRead),
 		Update: githubAuthBackendUpdate,
 		Delete: githubAuthBackendDelete,
 		Importer: &schema.ResourceImporter{
@@ -69,10 +71,13 @@ func githubAuthBackendResource() *schema.Resource {
 }
 
 func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	var description string
 
-	client := meta.(*api.Client)
-	path := strings.Trim(d.Get("path").(string), "/")
+	path := strings.Trim(d.Get(consts.FieldPath).(string), "/")
 
 	if v, ok := d.GetOk("description"); ok {
 		description = v.(string)
@@ -95,8 +100,10 @@ func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
 
@@ -151,7 +158,11 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
 
@@ -201,5 +212,5 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	return authMountDisable(meta.(*api.Client), d.Id())
+	return authMountDisable(meta.(*provider.ProviderMeta).GetClient(), d.Id())
 }

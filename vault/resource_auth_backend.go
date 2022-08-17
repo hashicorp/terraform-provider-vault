@@ -6,6 +6,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func AuthBackendResource() *schema.Resource {
@@ -14,7 +17,7 @@ func AuthBackendResource() *schema.Resource {
 
 		Create: authBackendWrite,
 		Delete: authBackendDelete,
-		Read:   authBackendRead,
+		Read:   ReadWrapper(authBackendRead),
 		Update: authBackendUpdate,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
@@ -29,13 +32,13 @@ func AuthBackendResource() *schema.Resource {
 				Description: "Name of the auth backend",
 			},
 
-			"path": {
+			consts.FieldPath: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
 				ForceNew:     true,
 				Description:  "path to mount the backend. This defaults to the type.",
-				ValidateFunc: validateNoTrailingSlash,
+				ValidateFunc: validateNoLeadingTrailingSlashes,
 				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 					return old+"/" == new || new+"/" == old
 				},
@@ -43,7 +46,6 @@ func AuthBackendResource() *schema.Resource {
 
 			"description": {
 				Type:        schema.TypeString,
-				ForceNew:    true,
 				Optional:    true,
 				Description: "The description of the auth backend",
 			},
@@ -67,10 +69,13 @@ func AuthBackendResource() *schema.Resource {
 }
 
 func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	mountType := d.Get("type").(string)
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 
 	if path == "" {
 		path = mountType
@@ -93,7 +98,10 @@ func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func authBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -107,7 +115,10 @@ func authBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func authBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -124,7 +135,7 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 	if err := d.Set("type", mount.Type); err != nil {
 		return err
 	}
-	if err := d.Set("path", path); err != nil {
+	if err := d.Set(consts.FieldPath, path); err != nil {
 		return err
 	}
 	if err := d.Set("description", mount.Description); err != nil {
@@ -141,24 +152,41 @@ func authBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func authBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
 
+	backendType := d.Get("type").(string)
+	var input api.MountConfigInput
+	var callTune bool
+
 	if d.HasChange("tune") {
 		log.Printf("[INFO] Auth '%q' tune configuration changed", path)
+
 		if raw, ok := d.GetOk("tune"); ok {
-			backendType := d.Get("type")
 			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, path)
 
-			err := authMountTune(client, "auth/"+path, raw)
-			if err != nil {
-				return nil
-			}
-
-			log.Printf("[INFO] Written %s auth tune to '%q'", backendType, path)
+			input = expandAuthMethodTune(raw.(*schema.Set).List())
 		}
+		callTune = true
+	}
+
+	if d.HasChange("description") && !d.IsNewResource() {
+		desc := d.Get("description").(string)
+		input.Description = &desc
+		callTune = true
+	}
+
+	if callTune {
+		if err := tuneMount(client, "auth/"+path, input); err != nil {
+			return err
+		}
+
+		log.Printf("[INFO] Written %s auth tune to '%q'", backendType, path)
 	}
 
 	return authBackendRead(d, meta)

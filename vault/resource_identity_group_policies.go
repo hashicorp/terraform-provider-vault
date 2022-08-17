@@ -5,8 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -14,7 +14,7 @@ func identityGroupPoliciesResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityGroupPoliciesUpdate,
 		Update: identityGroupPoliciesUpdate,
-		Read:   identityGroupPoliciesRead,
+		Read:   ReadWrapper(identityGroupPoliciesRead),
 		Delete: identityGroupPoliciesDelete,
 
 		Schema: map[string]*schema.Schema{
@@ -50,7 +50,11 @@ func identityGroupPoliciesResource() *schema.Resource {
 }
 
 func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Get("group_id").(string)
 
 	log.Printf("[DEBUG] Updating IdentityGroupPolicies %q", id)
@@ -94,7 +98,11 @@ func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error
 }
 
 func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Read IdentityGroupPolicies %s", id)
@@ -143,7 +151,11 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupPoliciesDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Get("group_id").(string)
 
 	log.Printf("[DEBUG] Deleting IdentityGroupPolicies %q", id)

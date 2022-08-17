@@ -1,16 +1,16 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
-	"encoding/json"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/internal/pki"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -21,7 +21,7 @@ var (
 func pkiSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: pkiSecretBackendRoleCreate,
-		Read:   pkiSecretBackendRoleRead,
+		Read:   ReadWrapper(pkiSecretBackendRoleRead),
 		Update: pkiSecretBackendRoleUpdate,
 		Delete: pkiSecretBackendRoleDelete,
 		Exists: pkiSecretBackendRoleExists,
@@ -44,21 +44,15 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 			},
 			"ttl": {
 				Type:        schema.TypeString,
-				Required:    false,
 				Optional:    true,
+				Computed:    true,
 				Description: "The TTL.",
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					return old == "0"
-				},
 			},
 			"max_ttl": {
 				Type:        schema.TypeString,
-				Required:    false,
 				Optional:    true,
+				Computed:    true,
 				Description: "The maximum TTL.",
-				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					return old == "0"
-				},
 			},
 			"allow_localhost": {
 				Type:        schema.TypeBool,
@@ -175,8 +169,8 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     false,
 				Optional:     true,
-				Description:  "The type of generated keys.",
-				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519"}, false),
+				Description:  "The generated key type.",
+				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519", "any"}, false),
 				Default:      "rsa",
 			},
 			"key_bits": {
@@ -188,8 +182,8 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 			},
 			"key_usage": {
 				Type:        schema.TypeList,
-				Required:    false,
 				Optional:    true,
+				Computed:    true,
 				Description: "Specify the allowed key usage constraint on issued certificates.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -289,12 +283,41 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Default:     true,
 			},
 			"policy_identifiers": {
-				Type:        schema.TypeList,
-				Required:    false,
-				Optional:    true,
-				Description: "Specify the list of allowed policies IODs.",
+				Type:          schema.TypeList,
+				Required:      false,
+				Optional:      true,
+				Description:   "Specify the list of allowed policies OIDs.",
+				ConflictsWith: []string{"policy_identifier"},
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
+				},
+			},
+			"policy_identifier": {
+				Type:          schema.TypeSet,
+				Optional:      true,
+				Description:   "Policy identifier block; can only be used with Vault 1.11+",
+				ConflictsWith: []string{"policy_identifiers"},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"oid": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Optional:    false,
+							Description: "OID",
+						},
+						"cps": {
+							Type:        schema.TypeString,
+							Required:    false,
+							Optional:    true,
+							Description: "Optional CPS URL",
+						},
+						"notice": {
+							Type:        schema.TypeString,
+							Required:    false,
+							Optional:    true,
+							Description: "Optional notice",
+						},
+					},
 				},
 			},
 			"basic_constraints_valid_for_non_ca": {
@@ -312,12 +335,24 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Description:  "Specifies the duration by which to backdate the NotBefore property.",
 				ValidateFunc: validateDuration,
 			},
+			"allowed_serial_numbers": {
+				Type:        schema.TypeList,
+				Required:    false,
+				Optional:    true,
+				Description: "Defines allowed Subject serial numbers.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
 
 func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -326,6 +361,10 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 
 	log.Printf("[DEBUG] Writing PKI secret backend role %q", path)
 
+	// TODO: selectively configure the engine by replacing all of the d.Get()
+	// calls with d.GetOk()
+	// The current approach is inconsistent with the majority of the other resources.
+	// It also sets a bad precedent for contributors.
 	iAllowedDomains := d.Get("allowed_domains").([]interface{})
 	allowedDomains := make([]string, 0, len(iAllowedDomains))
 	for _, iAllowedDomain := range iAllowedDomains {
@@ -344,10 +383,10 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 		extKeyUsage = append(extKeyUsage, iUsage.(string))
 	}
 
-	iPolicyIdentifiers := d.Get("policy_identifiers").([]interface{})
-	policyIdentifiers := make([]string, 0, len(iPolicyIdentifiers))
-	for _, iIdentifier := range iPolicyIdentifiers {
-		policyIdentifiers = append(policyIdentifiers, iIdentifier.(string))
+	iAllowedSerialNumbers := d.Get("allowed_serial_numbers").([]interface{})
+	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
+	for _, iSerialNumber := range iAllowedSerialNumbers {
+		allowedSerialNumbers = append(allowedSerialNumbers, iSerialNumber.(string))
 	}
 
 	data := map[string]interface{}{
@@ -397,8 +436,14 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 		data["ext_key_usage"] = extKeyUsage
 	}
 
-	if len(policyIdentifiers) > 0 {
+	if policyIdentifiers, ok := d.GetOk("policy_identifiers"); ok {
 		data["policy_identifiers"] = policyIdentifiers
+	} else if policyIdentifierBlocksRaw, ok := d.GetOk("policy_identifier"); ok {
+		data["policy_identifiers"] = pki.ReadPolicyIdentifierBlocks(policyIdentifierBlocksRaw.(*schema.Set))
+	}
+
+	if len(allowedSerialNumbers) > 0 {
+		data["allowed_serial_numbers"] = allowedSerialNumbers
 	}
 
 	log.Printf("[DEBUG] Creating role %s on PKI secret backend %q", name, backend)
@@ -413,7 +458,10 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 }
 
 func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	backend, err := pkiSecretBackendRoleBackendFromPath(path)
@@ -465,13 +513,25 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		extKeyUsage = append(extKeyUsage, iUsage.(string))
 	}
 
-	iPolicyIdentifiers := secret.Data["policy_identifiers"].([]interface{})
-	policyIdentifiers := make([]string, 0, len(iPolicyIdentifiers))
-	for _, iIdentifier := range iPolicyIdentifiers {
-		policyIdentifiers = append(policyIdentifiers, iIdentifier.(string))
+	var legacyPolicyIdentifiers []string = nil
+	var newPolicyIdentifiers *schema.Set = nil
+	if policyIdentifiersRaw, ok := secret.Data["policy_identifiers"]; ok {
+		if policyIdentifiersRawList, ok := policyIdentifiersRaw.([]interface{}); ok {
+			var err error
+			legacyPolicyIdentifiers, newPolicyIdentifiers, err = pki.MakePkiPolicyIdentifiersListOrSet(policyIdentifiersRawList)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	notBeforeDuration := flattenVaultDuration(secret.Data["not_before_duration"])
+
+	iAllowedSerialNumbers := secret.Data["allowed_serial_numbers"].([]interface{})
+	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
+	for _, iSerialNumber := range iAllowedSerialNumbers {
+		allowedSerialNumbers = append(allowedSerialNumbers, iSerialNumber.(string))
+	}
 
 	d.Set("backend", backend)
 	d.Set("name", name)
@@ -508,15 +568,23 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("generate_lease", secret.Data["generate_lease"])
 	d.Set("no_store", secret.Data["no_store"])
 	d.Set("require_cn", secret.Data["require_cn"])
-	d.Set("policy_identifiers", policyIdentifiers)
+	if len(legacyPolicyIdentifiers) > 0 {
+		d.Set("policy_identifiers", legacyPolicyIdentifiers)
+	} else {
+		d.Set("policy_identifier", newPolicyIdentifiers)
+	}
 	d.Set("basic_constraints_valid_for_non_ca", secret.Data["basic_constraints_valid_for_non_ca"])
 	d.Set("not_before_duration", notBeforeDuration)
+	d.Set("allowed_serial_numbers", allowedSerialNumbers)
 
 	return nil
 }
 
 func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Updating PKI secret backend role %q", path)
@@ -539,10 +607,10 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 		extKeyUsage = append(extKeyUsage, iUsage.(string))
 	}
 
-	iPolicyIdentifiers := d.Get("policy_identifiers").([]interface{})
-	policyIdentifiers := make([]string, 0, len(iPolicyIdentifiers))
-	for _, iIdentifier := range iPolicyIdentifiers {
-		policyIdentifiers = append(policyIdentifiers, iIdentifier.(string))
+	iAllowedSerialNumbers := d.Get("allowed_serial_numbers").([]interface{})
+	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
+	for _, iSerialNumber := range iAllowedSerialNumbers {
+		allowedSerialNumbers = append(allowedSerialNumbers, iSerialNumber.(string))
 	}
 
 	data := map[string]interface{}{
@@ -592,8 +660,14 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 		data["ext_key_usage"] = extKeyUsage
 	}
 
-	if len(policyIdentifiers) > 0 {
+	if policyIdentifiers, ok := d.GetOk("policy_identifiers"); ok {
 		data["policy_identifiers"] = policyIdentifiers
+	} else if policyIdentifierBlocksRaw, ok := d.GetOk("policy_identifier"); ok {
+		data["policy_identifiers"] = pki.ReadPolicyIdentifierBlocks(policyIdentifierBlocksRaw.(*schema.Set))
+	}
+
+	if len(allowedSerialNumbers) > 0 {
+		data["allowed_serial_numbers"] = allowedSerialNumbers
 	}
 
 	_, err := client.Logical().Write(path, data)
@@ -606,7 +680,10 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 }
 
 func pkiSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting role %q", path)
@@ -619,7 +696,10 @@ func pkiSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error 
 }
 
 func pkiSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if role %q exists", path)
