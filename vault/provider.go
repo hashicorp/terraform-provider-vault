@@ -878,8 +878,8 @@ func VersionCheckWrapper(f schema.CreateFunc, d *schema.ResourceDiff, meta inter
 		}
 
 		if !featureEnabled {
-			return fmt.Errorf("feature not enabled on current Vault version. min version required=%s"+
-				"Vault version=%s", minVersion, currentVersion)
+			return fmt.Errorf("feature not enabled on current Vault version. min version required=%s "+
+				"current vault version=%s", minVersion, currentVersion)
 		}
 
 		return f(d, meta)
