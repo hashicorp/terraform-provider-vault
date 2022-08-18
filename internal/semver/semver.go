@@ -66,9 +66,11 @@ func SemanticVersionComparison(minVersionString string, client *api.Client) (boo
 
 	comparison := currentVersion.GreaterThanOrEqual(minVersion)
 
-	if comparison {
-		return true, currentVersionString, nil
-	} else {
-		return false, currentVersionString, nil
-	}
+	return comparison, currentVersionString, nil
+
+	//if comparison {
+	//	return true, currentVersionString, nil
+	//} else {
+	//	return false, currentVersionString, nil
+	//}
 }
