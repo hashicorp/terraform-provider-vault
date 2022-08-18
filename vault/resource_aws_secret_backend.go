@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/semver"
 )
 
 func awsSecretBackendResource() *schema.Resource {
@@ -23,7 +24,7 @@ func awsSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		CustomizeDiff: adaptiveMigrationCustomizeDiff,
+		CustomizeDiff: mountMigrationCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
@@ -98,13 +99,17 @@ func awsSecretBackendResource() *schema.Resource {
 	}
 }
 
-func adaptiveMigrationCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+func mountMigrationCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, meta interface{}) error {
 	if diff.HasChange("path") {
 		o, _ := diff.GetChange("path")
 		// Mount Migration is only available for versions >= 1.10
 		if o != "" {
-			client := meta.(*api.Client)
-			remountEnabled, err := semVerComparison("1.10.0", client)
+			client, e := provider.GetClient(diff, meta)
+			if e != nil {
+				return e
+			}
+
+			remountEnabled, _, err := semver.SemanticVersionComparison(consts.VaultVersion10, client)
 			if err != nil {
 				return err
 			}
@@ -272,7 +277,7 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		err := client.Sys().Remount(path, newPath)
 		if err != nil {
-			return fmt.Errorf("error remounting to %q: %s", newPath, err)
+			return fmt.Errorf("error remounting to %q: %w", newPath, err)
 		}
 
 		path = newPath
