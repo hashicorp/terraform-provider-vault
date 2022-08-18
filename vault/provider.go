@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/semver"
 )
 
 const (
@@ -861,6 +862,48 @@ func ReadContextWrapper(f schema.ReadContextFunc) schema.ReadContextFunc {
 			return diag.FromErr(err)
 		}
 		return f(ctx, d, i)
+	}
+}
+
+func VersionCheckWrapper(f schema.CreateFunc, d *schema.ResourceDiff, meta interface{}, minVersion string) schema.CreateFunc {
+	return func(d *schema.ResourceData, meta interface{}) error {
+		client, e := provider.GetClient(d, meta)
+		if e != nil {
+			return e
+		}
+
+		featureEnabled, currentVersion, err := semver.SemanticVersionComparison(minVersion, client)
+		if err != nil {
+			return err
+		}
+
+		if !featureEnabled {
+			return fmt.Errorf("feature not enabled on current Vault version. min version required=%s"+
+				"Vault version=%s", minVersion, currentVersion)
+		}
+
+		return f(d, meta)
+	}
+}
+
+func VersionCheckContextWrapper(f schema.CreateContextFunc, minVersion string) schema.CreateContextFunc {
+	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+		client, e := provider.GetClient(d, meta)
+		if e != nil {
+			return diag.FromErr(e)
+		}
+
+		featureEnabled, currentVersion, err := semver.SemanticVersionComparison(minVersion, client)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		if !featureEnabled {
+			return diag.Errorf("feature not enabled on current Vault version. min version required=%s; "+
+				"current vault version=%s", minVersion, currentVersion)
+		}
+
+		return f(ctx, d, meta)
 	}
 }
 
