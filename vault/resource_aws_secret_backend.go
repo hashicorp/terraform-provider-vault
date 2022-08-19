@@ -100,29 +100,34 @@ func awsSecretBackendResource() *schema.Resource {
 }
 
 func mountMigrationCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
-	if diff.HasChange("path") {
-		o, _ := diff.GetChange("path")
-		// Mount Migration is only available for versions >= 1.10
-		if o != "" {
-			client, e := provider.GetClient(diff, meta)
-			if e != nil {
-				return e
-			}
+	if !diff.HasChange("path") {
+		return nil
+	}
 
-			remountEnabled, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion10)
-			if err != nil {
-				return err
-			}
+	o, _ := diff.GetChange("path")
+	if o == "" {
+		return nil
+	}
 
-			if !remountEnabled {
-				// Mount migration not available
-				// Destroy and recreate resource
-				if err := diff.ForceNew("path"); err != nil {
-					return err
-				}
-			}
+	// Mount Migration is only available for versions >= 1.10
+	client, e := provider.GetClient(diff, meta)
+	if e != nil {
+		return e
+	}
+
+	remountEnabled, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion10)
+	if err != nil {
+		return err
+	}
+
+	if !remountEnabled {
+		// Mount migration not available
+		// Destroy and recreate resource
+		if err := diff.ForceNew("path"); err != nil {
+			return err
 		}
 	}
+
 	return nil
 }
 
