@@ -27,6 +27,21 @@ func getTargetVaultVersion(ctx context.Context, client *api.Client) (string, err
 	return resp.Version, nil
 }
 
+// GreaterThanOrEqual receives a context, a Vault API client
+// and a minimum version that the Vault server version
+// should be above.
+//
+// It uses the go-version package
+// to perform a semantic version comparison, and
+// returns:
+//    - a boolean describing whether the Vault
+//      server version was above the minimum version
+//    - the current Vault server version as a string
+//    - errors captured during operation, if any
+//
+// This function can be used to perform semantic version comparisons
+// to conditionally enable features, or to resolve any diffs in the TF
+// state based on the Vault version.
 func GreaterThanOrEqual(ctx context.Context, client *api.Client, minVersionString string) (bool, string, error) {
 	currentVersionString, err := getTargetVaultVersion(ctx, client)
 	if err != nil {
