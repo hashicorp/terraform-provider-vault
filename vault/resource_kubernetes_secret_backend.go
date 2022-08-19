@@ -22,7 +22,7 @@ const (
 
 func kubernetesSecretBackendResource() *schema.Resource {
 	resource := &schema.Resource{
-		CreateContext: VersionCheckContextWrapper(kubernetesSecretBackendCreateUpdate, consts.VaultVersion11),
+		CreateContext: MinVersionCheckContextWrapper(kubernetesSecretBackendCreateUpdate, consts.VaultVersion11),
 		ReadContext:   ReadContextWrapper(kubernetesSecretBackendRead),
 		UpdateContext: kubernetesSecretBackendCreateUpdate,
 		DeleteContext: kubernetesSecretBackendDelete,

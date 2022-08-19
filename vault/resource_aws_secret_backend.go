@@ -99,7 +99,7 @@ func awsSecretBackendResource() *schema.Resource {
 	}
 }
 
-func mountMigrationCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+func mountMigrationCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
 	if diff.HasChange("path") {
 		o, _ := diff.GetChange("path")
 		// Mount Migration is only available for versions >= 1.10
@@ -109,7 +109,7 @@ func mountMigrationCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, m
 				return e
 			}
 
-			remountEnabled, _, err := semver.SemanticVersionComparison(consts.VaultVersion10, client)
+			remountEnabled, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion10)
 			if err != nil {
 				return err
 			}
