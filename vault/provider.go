@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/semver"
 )
 
 const (
@@ -861,6 +862,29 @@ func ReadContextWrapper(f schema.ReadContextFunc) schema.ReadContextFunc {
 			return diag.FromErr(err)
 		}
 		return f(ctx, d, i)
+	}
+}
+
+// MinVersionCheckWrapper performs a minimum version requirement check prior to the
+// wrapped schema.CreateContextFunc.
+func MinVersionCheckWrapper(f schema.CreateContextFunc, minVersion string) schema.CreateContextFunc {
+	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+		client, e := provider.GetClient(d, meta)
+		if e != nil {
+			return diag.FromErr(e)
+		}
+
+		featureEnabled, currentVersion, err := semver.GreaterThanOrEqual(ctx, client, minVersion)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		if !featureEnabled {
+			return diag.Errorf("feature not enabled on current Vault version. min version required=%s; "+
+				"current vault version=%s", minVersion, currentVersion)
+		}
+
+		return f(ctx, d, meta)
 	}
 }
 

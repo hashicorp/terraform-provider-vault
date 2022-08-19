@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/semver"
 )
 
 func awsSecretBackendResource() *schema.Resource {
@@ -22,12 +24,12 @@ func awsSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		CustomizeDiff: mountMigrationCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Default:     "aws",
 				Description: "Path to mount the backend at.",
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
@@ -95,6 +97,38 @@ func awsSecretBackendResource() *schema.Resource {
 			},
 		},
 	}
+}
+
+func mountMigrationCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+	if !diff.HasChange("path") {
+		return nil
+	}
+
+	o, _ := diff.GetChange("path")
+	if o == "" {
+		return nil
+	}
+
+	// Mount Migration is only available for versions >= 1.10
+	client, e := provider.GetClient(diff, meta)
+	if e != nil {
+		return e
+	}
+
+	remountEnabled, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion10)
+	if err != nil {
+		return err
+	}
+
+	if !remountEnabled {
+		// Mount migration not available
+		// Destroy and recreate resource
+		if err := diff.ForceNew("path"); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
@@ -241,6 +275,20 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 	d.Partial(true)
+
+	if d.HasChange("path") {
+		// semantic version check completed in CustomizeDiff
+		newPath := d.Get("path").(string)
+
+		err := client.Sys().Remount(path, newPath)
+		if err != nil {
+			return fmt.Errorf("error remounting to %q: %w", newPath, err)
+		}
+
+		path = newPath
+		d.SetId(path)
+	}
+
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		config := api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
