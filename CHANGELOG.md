@@ -1,3 +1,16 @@
+## 3.8.2 (August 11, 2022)
+IMPROVEMENTS:
+* Add bootstrap field to Consul backend resources: ([#1571](https://github.com/hashicorp/terraform-provider-vault/pull/1571))
+* Add `data` field to KV data sources: ([#1577](https://github.com/hashicorp/terraform-provider-vault/pull/1577))
+
+BUGS:
+* fix: remove unnecessary nesting of secret data for KV-V1 secrets: ([#1570](https://github.com/hashicorp/terraform-provider-vault/pull/1570))
+
+NOTES:
+* `vault_kv_secret` no longer stores secrets in Vault under a nested `data` object.
+  In versions 3.8.1 and below, the kv resource inadvertently nested the `value` under `data`.
+  To remedy this please update any consumers of this KV and run a `terraform apply` to properly set the value.
+
 ## 3.8.1 (August 04, 2022)
 IMPROVEMENTS:
 * docs: Fix broken provider.namespace links: ([#1562](https://github.com/hashicorp/terraform-provider-vault/pull/1562))

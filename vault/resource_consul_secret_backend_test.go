@@ -42,7 +42,8 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckNoResourceAttr(resourceName, "client_key"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, "token", "ca_cert", "client_cert", "client_key"),
+			testutil.GetImportTestStep(resourceName, false,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
 			{
 				Config: testConsulSecretBackend_initialConfigLocal(path, token),
 				Check: resource.ComposeTestCheckFunc(
@@ -59,7 +60,8 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckNoResourceAttr(resourceName, "client_key"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, "token", "ca_cert", "client_cert", "client_key"),
+			testutil.GetImportTestStep(resourceName, false,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
 			{
 				Config: testConsulSecretBackend_updateConfig(path, token),
 				Check: resource.ComposeTestCheckFunc(
@@ -76,7 +78,8 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckNoResourceAttr(resourceName, "client_key"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, "token", "ca_cert", "client_cert", "client_key"),
+			testutil.GetImportTestStep(resourceName, false,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
 			{
 				Config: testConsulSecretBackend_updateConfig_addCerts(path, token),
 				Check: resource.ComposeTestCheckFunc(
@@ -93,7 +96,8 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "client_key", "FAKE-CLIENT-CERT-KEY-MATERIAL"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, "token", "ca_cert", "client_cert", "client_key"),
+			testutil.GetImportTestStep(resourceName, false,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
 			{
 				Config: testConsulSecretBackend_updateConfig_updateCerts(path, token),
 				Check: resource.ComposeTestCheckFunc(
@@ -110,7 +114,8 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "client_key", "UPDATED-FAKE-CLIENT-CERT-KEY-MATERIAL"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, "token", "ca_cert", "client_cert", "client_key"),
+			testutil.GetImportTestStep(resourceName, false,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
 		},
 	})
 }
@@ -134,13 +139,22 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 		CheckDestroy: testAccConsulSecretBackendCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testConsulSecretBackend_bootstrapConfig(path, consulAddr),
+				Config:      testConsulSecretBackend_bootstrapConfig(path, consulAddr, "", false),
+				ExpectError: regexp.MustCompile("field 'bootstrap' must be set to true when 'token' is unspecified"),
+			},
+			{
+				Config:      testConsulSecretBackend_bootstrapConfig(path, consulAddr, "token", true),
+				ExpectError: regexp.MustCompile("field 'bootstrap' must be set to false when 'token' is specified"),
+			},
+			{
+				Config: testConsulSecretBackend_bootstrapConfig(path, consulAddr, "", true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "address", consulAddr),
+					resource.TestCheckResourceAttr(resourceName, "bootstrap", "true"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false),
+			testutil.GetImportTestStep(resourceName, false, "token", "bootstrap"),
 			{
 				Config: testConsulSecretBackend_bootstrapAddRole(path, consulAddr),
 				Check: resource.ComposeTestCheckFunc(
@@ -150,9 +164,9 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceRoleName, "consul_policies.*", "global-management"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false),
+			testutil.GetImportTestStep(resourceName, false, "token", "bootstrap"),
 			{
-				Config:      testConsulSecretBackend_bootstrapConfig(path+"-new", consulAddr),
+				Config:      testConsulSecretBackend_bootstrapConfig(path+"-new", consulAddr, "", true),
 				ExpectError: regexp.MustCompile(`Token not provided and failed to bootstrap ACLs`),
 			},
 		},
@@ -211,13 +225,16 @@ resource "vault_consul_secret_backend" "test" {
 }`, path, token)
 }
 
-func testConsulSecretBackend_bootstrapConfig(path, addr string) string {
+func testConsulSecretBackend_bootstrapConfig(path, addr, token string, bootstrap bool) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
   description = "test description"
   address = "%s"
-}`, path, addr)
+  token = "%s"
+  bootstrap = %t
+}
+`, path, addr, token, bootstrap)
 }
 
 func testConsulSecretBackend_updateConfig(path, token string) string {
@@ -237,6 +254,7 @@ resource "vault_consul_secret_backend" "test" {
   path = "%s"
   description = "test description"
   address = "%s"
+  bootstrap = true
 }
 
 resource "vault_consul_secret_backend_role" "test" {

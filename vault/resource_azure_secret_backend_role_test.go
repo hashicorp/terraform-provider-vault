@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -47,6 +48,10 @@ func TestAzureSecretBackendRole(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vault_azure_secret_backend_role.test_azure_groups", "azure_groups.0.object_id"),
 				),
 			},
+			{
+				Config:      testAzureSecretBackendRoleConfigError(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
+				ExpectError: regexp.MustCompile("must specify at most one of 'role_name' or 'role_id'"),
+			},
 		},
 	})
 }
@@ -76,6 +81,32 @@ func testAccAzureSecretBackendRoleCheckDestroy(s *terraform.State) error {
 		}
 	}
 	return nil
+}
+
+func testAzureSecretBackendRoleConfigError(subscriptionID string, tenantID string, clientID string, clientSecret string, path string, role string, resourceGroup string) string {
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "azure" {
+  subscription_id = "%s"
+  tenant_id       = "%s"
+  client_id       = "%s"
+  client_secret   = "%s"
+  path            = "%s"
+}
+
+resource "vault_azure_secret_backend_role" "test_azure_roles_error" {
+  backend     = vault_azure_secret_backend.azure.path
+  role        = "%[6]s-azure-roles"
+  ttl         = 300
+  max_ttl     = 600
+  description = "Test for Vault Provider"
+
+  azure_roles {
+    role_name = "Reader"
+    role_id   = "/subscriptions/%[1]s/providers/Microsoft.Authorization/roleDefinitions/%[5]s"
+    scope     = "/subscriptions/%[1]s/resourceGroups/%[7]s"
+  }
+}
+`, subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup)
 }
 
 func testAzureSecretBackendRoleInitialConfig(subscriptionID string, tenantID string, clientID string, clientSecret string, path string, role string, resourceGroup string) string {

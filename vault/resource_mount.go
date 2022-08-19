@@ -108,6 +108,14 @@ func getMountSchema(excludes ...string) schemaMap {
 			ForceNew:    true,
 			Description: "Enable the secrets engine to access Vault's external entropy source",
 		},
+
+		"allowed_managed_keys": {
+			Type:        schema.TypeSet,
+			Optional:    true,
+			ForceNew:    true,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Description: "List of managed key registry entry names that the mount in question is allowed to access",
+		},
 	}
 	for _, v := range excludes {
 		delete(s, v)
@@ -165,6 +173,10 @@ func createMount(d *schema.ResourceData, client *api.Client, path string, mountT
 		input.Config.AuditNonHMACResponseKeys = expandStringSlice(v.([]interface{}))
 	}
 
+	if v, ok := d.GetOk("allowed_managed_keys"); ok {
+		input.Config.AllowedManagedKeys = expandStringSlice(v.(*schema.Set).List())
+	}
+
 	log.Printf("[DEBUG] Creating mount %s in Vault", path)
 
 	if err := client.Sys().Mount(path, input); err != nil {
@@ -217,6 +229,10 @@ func updateMount(d *schema.ResourceData, meta interface{}, excludeType bool) err
 
 		d.SetId(newPath)
 		path = newPath
+	}
+
+	if d.HasChange("allowed_managed_keys") {
+		config.AllowedManagedKeys = expandStringSlice(d.Get("allowed_managed_keys").(*schema.Set).List())
 	}
 
 	log.Printf("[DEBUG] Updating mount %s in Vault", path)
@@ -314,6 +330,7 @@ func readMount(d *schema.ResourceData, meta interface{}, excludeType bool) error
 	d.Set("options", mount.Options)
 	d.Set("seal_wrap", mount.SealWrap)
 	d.Set("external_entropy_access", mount.ExternalEntropyAccess)
+	d.Set("allowed_managed_keys", mount.Config.AllowedManagedKeys)
 
 	return nil
 }

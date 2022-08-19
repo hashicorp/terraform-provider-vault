@@ -26,6 +26,12 @@ func kvSecretDataSource() *schema.Resource {
 			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Computed:    true,
+				Description: "JSON-encoded secret data read from Vault.",
+				Sensitive:   true,
+			},
+			consts.FieldData: {
+				Type:        schema.TypeMap,
+				Computed:    true,
 				Description: "Map of strings read from Vault.",
 				Sensitive:   true,
 			},
@@ -70,14 +76,16 @@ func kvSecretDataSourceRead(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.Errorf("no secret found at %q", path)
 	}
 
-	data := secret.Data["data"]
-
-	jsonData, err := json.Marshal(data)
+	jsonData, err := json.Marshal(secret.Data)
 	if err != nil {
 		return diag.Errorf("error marshaling JSON for %q: %s", path, err)
 	}
 
 	if err := d.Set(consts.FieldDataJSON, string(jsonData)); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldData, serializeDataMapToString(secret.Data)); err != nil {
 		return diag.FromErr(err)
 	}
 

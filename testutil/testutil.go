@@ -39,7 +39,7 @@ func TestEntPreCheck(t *testing.T) {
 }
 
 func SkipTestAcc(t *testing.T) {
-	SkipTestEnvUnset(t, resource.TestEnvVar)
+	SkipTestEnvUnset(t, resource.EnvTfAcc)
 }
 
 func SkipTestAccEnt(t *testing.T) {
@@ -448,9 +448,17 @@ func assertVaultState(resp *api.Secret, tfs *terraform.State, path string, tests
 			}
 		}
 
-		v, inVault := resp.Data[st.VaultAttr]
-		if v == nil && (s == "" || s == "0") {
-			continue
+		var v interface{}
+		var inVault bool
+		if st.VaultAttr == "" {
+			v = resp.Data
+			inVault = true
+		} else {
+			v, inVault = resp.Data[st.VaultAttr]
+			if v == nil && (s == "" || s == "0") {
+				continue
+			}
+
 		}
 
 		if !inVault && inState {
@@ -549,6 +557,28 @@ func assertVaultState(resp *api.Secret, tfs *terraform.State, path string, tests
 				if !reflect.DeepEqual(expected, actual) {
 					return fmt.Errorf(errFmt, st.StateAttr, expected, actual)
 				}
+			}
+		case map[string]interface{}:
+			expected := map[string]interface{}{}
+
+			prefix := fmt.Sprintf("%s.", st.StateAttr)
+			for attr := range attrs {
+				if strings.HasPrefix(attr, prefix) {
+					parts := strings.Split(attr, ".")
+					if len(parts) < 2 {
+						continue
+					}
+
+					switch parts[1] {
+					case "#", "%":
+						continue
+					}
+
+					expected[parts[1]] = attrs[attr]
+				}
+			}
+			if !reflect.DeepEqual(expected, v) {
+				return fmt.Errorf(errFmt, st.StateAttr, expected, v)
 			}
 		case []map[string]interface{}:
 			var expected []map[string]interface{}
