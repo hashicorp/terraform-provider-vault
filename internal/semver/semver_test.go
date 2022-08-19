@@ -1,6 +1,7 @@
 package semver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -37,7 +38,7 @@ func (t *testSemanticVersionHandler) handler() http.HandlerFunc {
 	}
 }
 
-func TestSemVerComparison(t *testing.T) {
+func TestGreaterThanOrEqual(t *testing.T) {
 	testCases := []struct {
 		name           string
 		minVersion     string
@@ -87,13 +88,15 @@ func TestSemVerComparison(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			isTFVersionGreater, _, err := SemanticVersionComparison(tt.minVersion, c)
+			ctx := context.Background()
+
+			isTFVersionGreater, _, err := GreaterThanOrEqual(ctx, c, tt.minVersion)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("SemanticVersionComparison() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GreaterThanOrEqual() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if isTFVersionGreater != tt.expected {
-				t.Errorf("SemanticVersionComparison() got = %v, want %v", isTFVersionGreater, tt.expected)
+				t.Errorf("GreaterThanOrEqual() got = %v, want %v", isTFVersionGreater, tt.expected)
 			}
 		})
 	}
