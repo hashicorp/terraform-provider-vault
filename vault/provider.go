@@ -865,7 +865,9 @@ func ReadContextWrapper(f schema.ReadContextFunc) schema.ReadContextFunc {
 	}
 }
 
-func MinVersionCheckContextWrapper(f schema.CreateContextFunc, minVersion string) schema.CreateContextFunc {
+// MinVersionCheckWrapper performs a minimum version requirement check prior to the
+// wrapped schema.CreateContextFunc.
+func MinVersionCheckWrapper(f schema.CreateContextFunc, minVersion string) schema.CreateContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		client, e := provider.GetClient(d, meta)
 		if e != nil {
