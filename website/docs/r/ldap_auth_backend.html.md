@@ -76,6 +76,8 @@ The following arguments are supported:
 
 * `use_token_groups` - (Optional) Use the Active Directory tokenGroups constructed attribute of the user to find the group memberships
 
+* `anonymous_group_search` - (Optional) Use anonymous binds when performing LDAP group searches (note: even when true, the initial credentials will still be used for the initial connection test)
+
 * `path` - (Optional) Path to mount the LDAP auth backend under
 
 * `description` - (Optional) Description for the LDAP auth backend mount
