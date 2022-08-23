@@ -9,6 +9,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
@@ -196,8 +199,17 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 			} else {
 				logger.SetLevel(hclog.Error)
 			}
-			if err := signAWSLogin(authLoginParameters, logger); err != nil {
-				return nil, fmt.Errorf("error signing AWS login request: %s", err)
+
+			// Figure out whenever the profile needs to be used.
+			sdkLoadConfig := os.Getenv("AWS_SDK_LOAD_CONFIG")
+			if sdkLoadConfig == "" {
+				if err := signAWSLogin(authLoginParameters, logger); err != nil {
+					return nil, fmt.Errorf("error signing AWS login request: %s", err)
+				}
+			} else {
+				if err := signAWSProfileLogin(authLoginParameters, logger); err != nil {
+					return nil, fmt.Errorf("error signing AWS profile login request: %s", err)
+				}
 			}
 		}
 
@@ -335,6 +347,44 @@ func setChildToken(d *schema.ResourceData, c *api.Client) error {
 	return nil
 }
 
+func signAWSProfileLogin(parameters map[string]interface{}, logger hclog.Logger) error {
+	// empty means it will find the current AWS region
+	paramRegion := ""
+	if val, ok := parameters["region"].(string); ok {
+		paramRegion = val
+	}
+
+	region, err := awsutil.GetRegion(paramRegion)
+	if err != nil {
+		return fmt.Errorf("failed to obtain the region %q: %w", paramRegion, err)
+	}
+
+	profile := os.Getenv("AWS_PROFILE")
+	if profile == "" {
+		if val, ok := parameters["profile"].(string); ok {
+			profile = val
+		}
+	}
+
+	session, err := session.NewSessionWithOptions(session.Options{
+		Profile: profile,
+		Config: aws.Config{
+			Region: aws.String(region),
+		},
+		SharedConfigState: session.SharedConfigEnable,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create Session for profile %q: %w", profile, err)
+	}
+
+	creds := session.Config.Credentials
+	if creds == nil {
+		return fmt.Errorf("failed to retrieve AWS credentials using profile %q", profile)
+	}
+
+	return generateLoginData(parameters, creds, logger)
+}
+
 func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error {
 	var accessKey, secretKey, securityToken string
 	if val, ok := parameters["aws_access_key_id"].(string); ok {
@@ -354,11 +404,16 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 		return fmt.Errorf("failed to retrieve AWS credentials: %s", err)
 	}
 
-	var headerValue, stsRegion string
+	return generateLoginData(parameters, creds, logger)
+}
+
+func generateLoginData(parameters map[string]interface{}, creds *credentials.Credentials, logger hclog.Logger) error {
+	var headerValue string
 	if val, ok := parameters["header_value"].(string); ok {
 		headerValue = val
 	}
 
+	stsRegion := awsutil.DefaultRegion
 	if val, ok := parameters["sts_region"].(string); ok {
 		stsRegion = val
 	}
