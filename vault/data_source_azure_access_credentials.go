@@ -105,7 +105,7 @@ func azureAccessCredentialsDataSource() *schema.Resource {
 				Optional: true,
 				Description: `The Azure environment to use during credential validation.
 Defaults to the environment configured in the Vault backend.
-Some possible values: AzureCloud, AzureUSGovernmentCloud`,
+Some possible values: AzurePublicCloud, AzureUSGovernmentCloud`,
 			},
 		},
 	}
@@ -230,7 +230,7 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 		}
 
 		switch env.Name {
-		case "AzureCloud":
+		case "AzurePublicCloud":
 			clientOptions.Endpoint = arm.AzurePublicCloud
 		case "AzureChinaCloud":
 			clientOptions.Endpoint = arm.AzureChina
