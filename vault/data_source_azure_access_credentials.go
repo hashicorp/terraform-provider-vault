@@ -231,7 +231,7 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 
 		switch env.Name {
 		case "AzureCloud":
-			clientOptions.Endpoint = arm.AzurePublic
+			clientOptions.Endpoint = arm.AzurePublicCloud
 		case "AzureChinaCloud":
 			clientOptions.Endpoint = arm.AzureChina
 		case "AzureUSGovernmentCloud":
