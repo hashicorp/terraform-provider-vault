@@ -156,7 +156,7 @@ func consulSecretBackendRoleWrite(ctx context.Context, d *schema.ResourceData, m
 	path := consulSecretBackendRolePath(backend, name)
 
 	// This loads either the consul_policies or policies field, depending on which the
-	// user provided, and then stores it under both keys in the data.
+	// user provided, and then stores it under the appropriate key in the data.
 	var policies []interface{}
 	if v, ok := d.GetOk("policies"); ok {
 		policies = v.([]interface{})
