@@ -10,9 +10,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-/// GCPBinding is used to generate the HCL binding format that GCP Secret Engine Requires
-/// `Resource` is the self-link of a GCP resource
-/// Roles is a list of IAM roles to be assigned to an entity for that resource.
+// / GCPBinding is used to generate the HCL binding format that GCP Secret Engine Requires
+// / `Resource` is the self-link of a GCP resource
+// / Roles is a list of IAM roles to be assigned to an entity for that resource.
 type GCPBinding struct {
 	Resource string
 	Roles    []string
