@@ -223,15 +223,14 @@ func docFilePath(tfTp tfType, endpoint string) (string, error) {
 // normalizeDocEndpoint changes the raw endpoint into the format we expect for
 // using in generated documentation structure on registry.terraform.io.
 // Example:
+//  endpoint: /transform/alphabet/{name}
+//  normalized: transform_alphabet
 //
-//	endpoint: /transform/alphabet/{name}
-//	normalized: transform_alphabet
+//  endpoint: /transform/decode/{role_name}
+//  normalized: transform_decode
 //
-//	endpoint: /transform/decode/{role_name}
-//	normalized: transform_decode
-//
-//	endpoint: /transform/encode/{role_name}
-//	normalized: transform_encode
+//  endpoint: /transform/encode/{role_name}
+//  normalized: transform_encode
 func normalizeDocEndpoint(endpoint string) string {
 	endpoint = stripCurlyBraces(endpoint)
 	endpoint = strings.TrimRight(endpoint, "name")
