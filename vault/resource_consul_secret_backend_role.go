@@ -174,12 +174,12 @@ func consulSecretBackendRoleWrite(ctx context.Context, d *schema.ResourceData, m
 		"node_identities":    nodeIdentities,
 	}
 
-	useAPIVer2, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion11)
+	useAPIVer1, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion11)
 	if err != nil {
-		return diag.FromErr(err)
+		return diag.Errorf("Failed to read Vault client version: %s", err)
 	}
 
-	if useAPIVer2 {
+	if useAPIVer1 {
 		data["consul_policies"] = policies
 	} else {
 		data["policies"] = policies
@@ -271,20 +271,20 @@ func consulSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	// Check whether Vault will return consul_policies or policies based on its version.
-	useAPIVer2, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion11)
+	useAPIVer1, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion11)
 	if err != nil {
-		return diag.FromErr(err)
+		return diag.Errorf("Failed to read Vault client version: %s", err)
 	}
 
 	// Return either policies or consul_policies depending on the following criteria:
 	// * Vault version < 1.11: Always use policies
 	// * Vault version >= 1.11: Default consul_policies; use policies if the user specified it
 	policiesField := "consul_policies"
-	if _, ok := d.GetOk("policies"); ok || !useAPIVer2 {
+	if _, ok := d.GetOk("policies"); ok || !useAPIVer1 {
 		policiesField = "policies"
 	}
 
-	if useAPIVer2 {
+	if useAPIVer1 {
 		params["consul_policies"] = policiesField
 	} else {
 		params["policies"] = policiesField
