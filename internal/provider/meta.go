@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -30,6 +31,7 @@ type ProviderMeta struct {
 	resourceData *schema.ResourceData
 	clientCache  map[string]*api.Client
 	m            sync.RWMutex
+	vaultVersion *version.Version
 }
 
 // GetClient returns the providers default Vault client.
@@ -74,6 +76,18 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 	p.clientCache[ns] = c
 
 	return c, nil
+}
+
+func (p *ProviderMeta) GreaterThanOrEqual(minVersion *version.Version) (bool, string, error) {
+	currentVersion := p.vaultVersion
+
+	comparison := currentVersion.GreaterThanOrEqual(minVersion)
+
+	return comparison, currentVersion.String(), nil
+}
+
+func (p *ProviderMeta) GetVaultVersion() *version.Version {
+	return p.vaultVersion
 }
 
 func (p *ProviderMeta) validate() error {
@@ -222,6 +236,17 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		}
 	}
 
+	// Set the Vault version to *ProviderMeta object
+	vaultVersionString, err := getTargetVaultVersion(client)
+	if err != nil {
+		return nil, err
+	}
+
+	vaultVersion, err := version.NewVersion(vaultVersionString)
+	if err != nil {
+		return nil, err
+	}
+
 	// Set the namespace to the requested namespace, if provided
 	namespace := d.Get(consts.FieldNamespace).(string)
 	if namespace != "" {
@@ -231,6 +256,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	return &ProviderMeta{
 		resourceData: d,
 		client:       client,
+		vaultVersion: vaultVersion,
 	}, nil
 }
 
@@ -279,6 +305,54 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	}
 
 	return p.GetClient(), nil
+}
+
+// GreaterThanOrEqual receives a minimum version
+// that the Vault server version should be above.
+//
+// It uses the go-version package
+// to perform a semantic version comparison, and
+// returns:
+//    - a boolean describing whether the Vault
+//      server version was above the minimum version
+//    - the current Vault server version as a string
+//    - errors captured during operation, if any
+//
+// This function can be used to perform semantic version comparisons
+// to conditionally enable features, or to resolve any diffs in the TF
+// state based on the Vault version.
+func GreaterThanOrEqual(meta interface{}, minVersion *version.Version) (bool, string, error) {
+	var p *ProviderMeta
+	switch v := meta.(type) {
+	case *ProviderMeta:
+		p = v
+	default:
+		return false, "", fmt.Errorf("meta argument must be a %T, not %T", p, meta)
+	}
+
+	comparison, versionString, err := p.GreaterThanOrEqual(minVersion)
+	if err != nil {
+		return false, "", err
+	}
+
+	return comparison, versionString, nil
+}
+
+func getTargetVaultVersion(client *api.Client) (string, error) {
+	resp, err := client.Sys().SealStatus()
+	if err != nil {
+		return "", err
+	}
+
+	if resp == nil {
+		return "", fmt.Errorf("expected response data, got nil response")
+	}
+
+	if resp.Version == "" {
+		return "", fmt.Errorf("key %q not found in response", consts.FieldVersion)
+	}
+
+	return resp.Version, nil
 }
 
 func setChildToken(d *schema.ResourceData, c *api.Client) error {

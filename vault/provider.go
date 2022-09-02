@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -14,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/internal/semver"
 )
 
 const (
@@ -869,12 +869,12 @@ func ReadContextWrapper(f schema.ReadContextFunc) schema.ReadContextFunc {
 // wrapped schema.CreateContextFunc.
 func MinVersionCheckWrapper(f schema.CreateContextFunc, minVersion string) schema.CreateContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-		client, e := provider.GetClient(d, meta)
+		mv, e := version.NewVersion(minVersion)
 		if e != nil {
 			return diag.FromErr(e)
 		}
 
-		featureEnabled, currentVersion, err := semver.GreaterThanOrEqual(ctx, client, minVersion)
+		featureEnabled, currentVersion, err := provider.GreaterThanOrEqual(meta, mv)
 		if err != nil {
 			return diag.FromErr(err)
 		}

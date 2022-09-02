@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
@@ -354,6 +355,96 @@ func TestGetClient(t *testing.T) {
 			actual := got.Headers().Get(vault_consts.NamespaceHeaderName)
 			if !reflect.DeepEqual(actual, tt.want) {
 				t.Errorf("GetClient() got = %v, want %v", actual, tt.want)
+			}
+		})
+	}
+}
+
+func TestGreaterThanOrEqual(t *testing.T) {
+	rootClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatalf("error initializing root client, err=%s", err)
+	}
+
+	VaultVersion10, err := version.NewVersion("1.10.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	VaultVersion11, err := version.NewVersion("1.11.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []struct {
+		name        string
+		minVersion  string
+		expected    bool
+		wantErr     bool
+		expectedErr string
+		meta        interface{}
+	}{
+		{
+			name:       "server-greater-than",
+			minVersion: "1.8.0",
+			expected:   true,
+			wantErr:    false,
+			meta: &ProviderMeta{
+				client:       rootClient,
+				vaultVersion: VaultVersion11,
+			},
+		},
+		{
+			name:       "server-less-than",
+			minVersion: "1.12.0",
+			expected:   false,
+			meta: &ProviderMeta{
+				client:       rootClient,
+				vaultVersion: VaultVersion11,
+			},
+			wantErr: false,
+		},
+		{
+			name:       "server-equal",
+			minVersion: "1.10.0",
+			expected:   true,
+			meta: &ProviderMeta{
+				client:       rootClient,
+				vaultVersion: VaultVersion10,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.meta != nil {
+				m := tt.meta.(*ProviderMeta)
+				m.resourceData = schema.TestResourceDataRaw(t,
+					map[string]*schema.Schema{
+						consts.FieldNamespace: {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+					map[string]interface{}{},
+				)
+				tt.meta = m
+			}
+
+			mv, err := version.NewVersion(tt.minVersion)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			isTFVersionGreater, _, err := tt.meta.(*ProviderMeta).GreaterThanOrEqual(mv)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GreaterThanOrEqual() got an error=%s, wantErr %v", err.Error(), tt.wantErr)
+				return
+			}
+
+			if isTFVersionGreater != tt.expected {
+				t.Errorf("GreaterThanOrEqual() got = %v, want %v", isTFVersionGreater, tt.expected)
 			}
 		})
 	}
