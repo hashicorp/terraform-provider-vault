@@ -280,14 +280,14 @@ func consulSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, me
 	// * Vault version < 1.11: Always use policies
 	// * Vault version >= 1.11: Default consul_policies; use policies if the user specified it
 	policiesField := "consul_policies"
-	if _, ok := d.GetOk("policies"); ok || !useAPIVer1 {
+	if !useAPIVer1 {
 		policiesField = "policies"
 	}
 
-	if _, ok := d.GetOk("consul_policies"); ok || useAPIVer1 {
-		params["consul_policies"] = policiesField
+	if _, ok := d.GetOk("policies"); ok {
+		params[policiesField] = "policies"
 	} else {
-		params["policies"] = policiesField
+		params[policiesField] = "consul_policies"
 	}
 
 	for k, v := range params {

@@ -28,7 +28,6 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "consul_namespace", "consul-ns-0"),
 		resource.TestCheckResourceAttr(resourceName, "partition", "partition-0"),
 	}
-
 	updateTestCheckFuncs := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
@@ -38,6 +37,8 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "consul_namespace", "consul-ns-1"),
 		resource.TestCheckResourceAttr(resourceName, "partition", "partition-1"),
 	}
+	var updateTestImportCheckFuncs []resource.TestCheckFunc
+	var ignoreFields []string
 
 	testNewParameters := testutil.CheckTestVaultVersion(t, "1.11")
 	if testNewParameters {
@@ -70,10 +71,17 @@ func TestConsulSecretBackendRole(t *testing.T) {
 			resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "server-0:dc1"),
 			resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "client-0:dc1"))
 	} else {
+		ignoreFields = append(ignoreFields, "policies", "consul_policies")
 		createTestCheckFuncs = append(createTestCheckFuncs,
 			resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"),
 			resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
 			resource.TestCheckResourceAttr(resourceName, "policies.0", "boo"))
+
+		updateTestImportCheckFuncs = append(updateTestCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName, "policies.#", "0"),
+			resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "2"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "foo"),
+			resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "bar"))
 
 		updateTestCheckFuncs = append(updateTestCheckFuncs,
 			resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"),
@@ -88,29 +96,34 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config:      testConsulSecretBackendRole_initialConfig(path, name, token, false, false),
+				Config:      testConsulSecretBackendRole_initialConfig(path, name, token, false, false, false),
 				ExpectError: regexp.MustCompile(missingParametersError),
 			},
 			{
-				Config:      testConsulSecretBackendRole_initialConfig(path, name, token, true, true),
+				Config:      testConsulSecretBackendRole_initialConfig(path, name, token, true, true, true),
 				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
 			},
 			{
-				Config: testConsulSecretBackendRole_initialConfig(path, name, token, !testNewParameters, testNewParameters),
+				Config: testConsulSecretBackendRole_initialConfig(path, name, token, !testNewParameters, testNewParameters, testNewParameters),
 				Check:  resource.ComposeTestCheckFunc(createTestCheckFuncs...),
 			},
-			testutil.GetImportTestStep(resourceName, false),
+			testutil.GetImportTestStep(resourceName, false, ignoreFields...),
 			{
-				Config:      testConsulSecretBackendRole_updateConfig(path, name, token, false, false),
+				Config:      testConsulSecretBackendRole_updateConfig(path, name, token, false, false, false),
 				ExpectError: regexp.MustCompile(missingParametersError),
 			},
 			{
-				Config:      testConsulSecretBackendRole_updateConfig(path, name, token, true, true),
+				Config:      testConsulSecretBackendRole_updateConfig(path, name, token, true, true, true),
 				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
 			},
 			{
-				Config: testConsulSecretBackendRole_updateConfig(path, name, token, !testNewParameters, testNewParameters),
+				Config: testConsulSecretBackendRole_updateConfig(path, name, token, !testNewParameters, testNewParameters, testNewParameters),
 				Check:  resource.ComposeTestCheckFunc(updateTestCheckFuncs...),
+			},
+			testutil.GetImportTestStep(resourceName, false, ignoreFields...),
+			{
+				Config: testConsulSecretBackendRole_updateConfig(path, name, token, false, true, false),
+				Check:  resource.ComposeTestCheckFunc(updateTestImportCheckFuncs...),
 			},
 			testutil.GetImportTestStep(resourceName, false),
 		},
@@ -139,7 +152,7 @@ func testAccConsulSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testConsulSecretBackendRole_initialConfig(path, name, token string, withPolicies, isAboveVersionThreshold bool) string {
+func testConsulSecretBackendRole_initialConfig(path, name, token string, usePolicies, useCPolicies, useNewFields bool) string {
 	config := fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -157,20 +170,24 @@ resource "vault_consul_secret_backend_role" "test" {
   partition = "partition-0"
 `, path, token, name)
 
-	if withPolicies {
+	if usePolicies {
 		config += `
-  policies = [
+policies = [
     "boo",
-  ]
+]
 `
 	}
 
-	if isAboveVersionThreshold {
+	if useCPolicies {
 		config += `
 consul_policies = [
 	"foo",
 ]
+`
+	}
 
+	if useNewFields {
+		config += `
 consul_roles = [
 	"role-0",
 	# canary to ensure roles is a Set
@@ -194,7 +211,7 @@ node_identities = [
 	return config + "}"
 }
 
-func testConsulSecretBackendRole_updateConfig(path, name, token string, withPolicies, isAboveVersionThreshold bool) string {
+func testConsulSecretBackendRole_updateConfig(path, name, token string, usePolicies, useCPolicies, useNewFields bool) string {
 	config := fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
   path = "%s"
@@ -216,22 +233,26 @@ resource "vault_consul_secret_backend_role" "test" {
   token_type = "client"
 `, path, token, name)
 
-	if withPolicies {
+	if usePolicies {
 		config += `
-  policies = [
+policies = [
     "boo",
 	 "far",
-  ]
+]
 `
 	}
 
-	if isAboveVersionThreshold {
+	if useCPolicies {
 		config += `
 consul_policies = [
 	"foo",
 	"bar",
 ]
+`
+	}
 
+	if useNewFields {
+		config += `
 consul_roles = [
 	"role-0",
 	"role-1",
