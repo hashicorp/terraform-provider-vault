@@ -284,7 +284,7 @@ func consulSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, me
 		policiesField = "policies"
 	}
 
-	if useAPIVer1 {
+	if _, ok := d.GetOk("consul_policies"); ok || useAPIVer1 {
 		params["consul_policies"] = policiesField
 	} else {
 		params["policies"] = policiesField
