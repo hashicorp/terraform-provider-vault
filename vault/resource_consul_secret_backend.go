@@ -142,18 +142,19 @@ func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting Consul backend at %q", path)
 
-	// If a token isn't provided and the Vault version is less than 1.11, fail before mounting the path in Vault.
-	bootstrapSupport, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion11)
+	// If a token isn't provided and the Vault version is less than 1.11, fail before
+	// mounting the path in Vault.
+	useAPIVer1, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion11)
 	if err != nil {
-		return diag.Errorf("Failed to read Vault client version: %s", err)
+		return diag.Errorf("failed to read Vault client version: %s", err)
 	}
-	if token == "" && !bootstrapSupport {
-		return diag.Errorf(`Error writing Consul configuration: no token provided and the Vault client
-version does not meet the minimum requirement for this feature (Vault 1.11+)`)
+	if token == "" && !useAPIVer1 {
+		return diag.Errorf(`error writing Consul configuration: no token provided and the 
+Vault client version does not meet the minimum requirement for this feature (Vault 1.11+)`)
 	}
 
 	if err := client.Sys().Mount(path, info); err != nil {
-		return diag.Errorf("Error mounting to %q: %s", path, err)
+		return diag.Errorf("error mounting to %q: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Mounted Consul backend at %q", path)
@@ -172,7 +173,7 @@ version does not meet the minimum requirement for this feature (Vault 1.11+)`)
 	}
 
 	if _, err := client.Logical().Write(configPath, data); err != nil {
-		return diag.Errorf("Error writing Consul configuration for %q: %s", path, err)
+		return diag.Errorf("error writing Consul configuration for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote Consul configuration to %q", configPath)
 	d.Partial(false)
@@ -193,7 +194,7 @@ func consulSecretBackendRead(_ context.Context, d *schema.ResourceData, meta int
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
-		return diag.Errorf("Error reading mount %q: %s", path, err)
+		return diag.Errorf("error reading mount %q: %s", path, err)
 	}
 
 	// path can have a trailing slash, but doesn't need to have one
@@ -246,7 +247,7 @@ func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta
 
 		log.Printf("[DEBUG] Updating lease TTLs for %q", path)
 		if err := client.Sys().TuneMount(path, config); err != nil {
-			return diag.Errorf("Error updating mount TTLs for %q: %s", path, err)
+			return diag.Errorf("error updating mount TTLs for %q: %s", path, err)
 		}
 
 	}
@@ -262,7 +263,7 @@ func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta
 			"client_key":  d.Get("client_key").(string),
 		}
 		if _, err := client.Logical().Write(configPath, data); err != nil {
-			return diag.Errorf("Error configuring Consul configuration for %q: %s", path, err)
+			return diag.Errorf("error configuring Consul configuration for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated Consul configuration at %q", configPath)
 	}
@@ -281,7 +282,7 @@ func consulSecretBackendDelete(_ context.Context, d *schema.ResourceData, meta i
 	log.Printf("[DEBUG] Unmounting Consul backend %q", path)
 	err := client.Sys().Unmount(path)
 	if err != nil {
-		return diag.Errorf("Error unmounting Consul backend from %q: %s", path, err)
+		return diag.Errorf("error unmounting Consul backend from %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Unmounted Consul backend %q", path)
 	return nil

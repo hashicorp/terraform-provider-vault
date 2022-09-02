@@ -150,7 +150,7 @@ func consulSecretBackendRoleWrite(ctx context.Context, d *schema.ResourceData, m
 
 	backend := consulSecretBackendRoleGetBackend(d)
 	if backend == "" {
-		return diag.Errorf("No backend specified for Consul secret backend role %s", name)
+		return diag.Errorf("no backend specified for Consul secret backend role %s", name)
 	}
 
 	path := consulSecretBackendRolePath(backend, name)
@@ -176,7 +176,7 @@ func consulSecretBackendRoleWrite(ctx context.Context, d *schema.ResourceData, m
 
 	useAPIVer1, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion11)
 	if err != nil {
-		return diag.Errorf("Failed to read Vault client version: %s", err)
+		return diag.Errorf("failed to read Vault client version: %s", err)
 	}
 
 	if useAPIVer1 {
@@ -273,7 +273,7 @@ func consulSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, me
 	// Check whether Vault will return consul_policies or policies based on its version.
 	useAPIVer1, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion11)
 	if err != nil {
-		return diag.Errorf("Failed to read Vault client version: %s", err)
+		return diag.Errorf("failed to read Vault client version: %s", err)
 	}
 
 	// Return either policies or consul_policies depending on the following criteria:
