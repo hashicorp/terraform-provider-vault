@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -28,7 +29,6 @@ func consulSecretBackendResource() *schema.Resource {
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Default:     "consul",
 				Description: "Unique name of the Vault Consul mount to configure",
 				StateFunc: func(s interface{}) string {
@@ -226,6 +226,19 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	d.Partial(true)
 
+	if d.HasChange(consts.FieldPath) {
+		// semantic version check completed in CustomizeDiff
+		newPath := d.Get(consts.FieldPath).(string)
+
+		err := client.Sys().Remount(path, newPath)
+		if err != nil {
+			return fmt.Errorf("error remounting to %q: %w", newPath, err)
+		}
+
+		path = newPath
+		d.SetId(path)
+	}
+
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		config := api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
@@ -297,7 +310,7 @@ func consulSecretBackendConfigPath(backend string) string {
 	return strings.Trim(backend, "/") + "/config/access"
 }
 
-func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+func consulSecretsBackendCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
 	newToken := diff.Get("token").(string)
 	newBootstrap := diff.Get("bootstrap").(bool)
 
@@ -311,5 +324,5 @@ func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceD
 		return fmt.Errorf("field 'bootstrap' must be set to false when 'token' is specified")
 	}
 
-	return nil
+	return mountMigrationCustomizeDiff_FieldPath(ctx, diff, meta)
 }

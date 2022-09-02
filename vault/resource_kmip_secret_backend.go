@@ -27,10 +27,11 @@ var kmipAPIFields = []string{
 
 func kmipSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
-		Create: kmipSecretBackendCreate,
-		Read:   ReadWrapper(kmipSecretBackendRead),
-		Update: kmipSecretBackendUpdate,
-		Delete: kmipSecretBackendDelete,
+		Create:        kmipSecretBackendCreate,
+		Read:          ReadWrapper(kmipSecretBackendRead),
+		Update:        kmipSecretBackendUpdate,
+		Delete:        kmipSecretBackendDelete,
+		CustomizeDiff: mountMigrationCustomizeDiff_FieldPath,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

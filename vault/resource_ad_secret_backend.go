@@ -1,10 +1,12 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 
@@ -17,7 +19,6 @@ func adSecretBackendResource() *schema.Resource {
 		"backend": {
 			Type:        schema.TypeString,
 			Default:     "ad",
-			ForceNew:    true,
 			Optional:    true,
 			Description: `The mount path for a backend, for example, the path given in "$ vault auth enable -path=my-ad ad".`,
 			StateFunc: func(v interface{}) string {
@@ -217,8 +218,13 @@ func adSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		Schema: fields,
+		CustomizeDiff: mountMigrationCustomizeDiff_FieldBackend,
+		Schema:        fields,
 	}
+}
+
+func mountMigrationCustomizeDiff_FieldBackend(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+	return mountMigrationHelper(ctx, diff, meta, consts.FieldBackend)
 }
 
 func createConfigResource(d *schema.ResourceData, meta interface{}) error {
@@ -529,6 +535,19 @@ func updateConfigResource(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
+	}
+
+	if d.HasChange(consts.FieldBackend) {
+		// semantic version check completed in CustomizeDiff
+		newPath := d.Get(consts.FieldBackend).(string)
+
+		err := client.Sys().Remount(backend, newPath)
+		if err != nil {
+			return fmt.Errorf("error remounting to %q: %w", newPath, err)
+		}
+
+		backend = newPath
+		d.SetId(backend)
 	}
 
 	defaultTTL := d.Get("default_lease_ttl_seconds").(int)

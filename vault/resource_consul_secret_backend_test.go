@@ -173,6 +173,45 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 	})
 }
 
+func TestConsulSecretBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-consul")
+	updatedPath := acctest.RandomWithPrefix("tf-test-consul-updated")
+	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
+
+	resourceName := "vault_consul_secret_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testConsulSecretBackend_initialConfig(path, token),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1:8500"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
+				),
+			},
+			{
+				Config: testConsulSecretBackend_initialConfig(updatedPath, token),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1:8500"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
+				),
+			},
+		},
+	})
+}
+
 func testAccConsulSecretBackendCheckDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_consul_secret_backend" {

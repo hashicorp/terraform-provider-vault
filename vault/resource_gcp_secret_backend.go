@@ -8,16 +8,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func gcpSecretBackendResource(name string) *schema.Resource {
 	return &schema.Resource{
-		Create: gcpSecretBackendCreate,
-		Read:   ReadWrapper(gcpSecretBackendRead),
-		Update: gcpSecretBackendUpdate,
-		Delete: gcpSecretBackendDelete,
-		Exists: gcpSecretBackendExists,
+		Create:        gcpSecretBackendCreate,
+		Read:          ReadWrapper(gcpSecretBackendRead),
+		Update:        gcpSecretBackendUpdate,
+		Delete:        gcpSecretBackendDelete,
+		Exists:        gcpSecretBackendExists,
+		CustomizeDiff: mountMigrationCustomizeDiff_FieldPath,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -26,7 +28,6 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Default:     "gcp",
 				Description: "Path to mount the backend at.",
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
@@ -171,6 +172,20 @@ func gcpSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 	d.Partial(true)
+
+	if d.HasChange(consts.FieldPath) {
+		// semantic version check completed in CustomizeDiff
+		newPath := d.Get(consts.FieldPath).(string)
+
+		err := client.Sys().Remount(path, newPath)
+		if err != nil {
+			return fmt.Errorf("error remounting to %q: %w", newPath, err)
+		}
+
+		path = newPath
+		d.SetId(path)
+	}
+
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		config := api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),

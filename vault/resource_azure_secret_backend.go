@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -21,11 +22,11 @@ func azureSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		CustomizeDiff: mountMigrationCustomizeDiff_FieldPath,
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Default:     "azure",
 				Description: "Path to mount the backend at.",
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
@@ -186,6 +187,19 @@ func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	path := d.Id()
+
+	if d.HasChange(consts.FieldPath) {
+		// semantic version check completed in CustomizeDiff
+		newPath := d.Get(consts.FieldPath).(string)
+
+		err := client.Sys().Remount(path, newPath)
+		if err != nil {
+			return fmt.Errorf("error remounting to %q: %w", newPath, err)
+		}
+
+		path = newPath
+		d.SetId(path)
+	}
 
 	data := azureSecretBackendRequestData(d)
 	if len(data) > 0 {

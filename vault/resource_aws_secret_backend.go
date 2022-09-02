@@ -6,12 +6,12 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/internal/semver"
 )
 
 func awsSecretBackendResource() *schema.Resource {
@@ -24,7 +24,7 @@ func awsSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		CustomizeDiff: mountMigrationCustomizeDiff,
+		CustomizeDiff: mountMigrationCustomizeDiff_FieldPath,
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
@@ -99,23 +99,26 @@ func awsSecretBackendResource() *schema.Resource {
 	}
 }
 
-func mountMigrationCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
-	if !diff.HasChange("path") {
+func mountMigrationCustomizeDiff_FieldPath(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+	return mountMigrationHelper(ctx, diff, meta, consts.FieldPath)
+}
+
+func mountMigrationHelper(_ context.Context, diff *schema.ResourceDiff, meta interface{}, mountField string) error {
+	if !diff.HasChange(mountField) {
 		return nil
 	}
 
-	o, _ := diff.GetChange("path")
+	o, _ := diff.GetChange(mountField)
 	if o == "" {
 		return nil
 	}
 
 	// Mount Migration is only available for versions >= 1.10
-	client, e := provider.GetClient(diff, meta)
-	if e != nil {
-		return e
+	minVersion, err := version.NewVersion(consts.VaultVersion10)
+	if err != nil {
+		return err
 	}
-
-	remountEnabled, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion10)
+	remountEnabled, _, err := provider.GreaterThanOrEqual(meta, minVersion)
 	if err != nil {
 		return err
 	}
@@ -123,7 +126,7 @@ func mountMigrationCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff,
 	if !remountEnabled {
 		// Mount migration not available
 		// Destroy and recreate resource
-		if err := diff.ForceNew("path"); err != nil {
+		if err := diff.ForceNew(mountField); err != nil {
 			return err
 		}
 	}
@@ -276,9 +279,9 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 	d.Partial(true)
 
-	if d.HasChange("path") {
+	if d.HasChange(consts.FieldPath) {
 		// semantic version check completed in CustomizeDiff
-		newPath := d.Get("path").(string)
+		newPath := d.Get(consts.FieldPath).(string)
 
 		err := client.Sys().Remount(path, newPath)
 		if err != nil {

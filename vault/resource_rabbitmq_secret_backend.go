@@ -14,11 +14,12 @@ import (
 
 func rabbitMQSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
-		Create: rabbitMQSecretBackendCreate,
-		Read:   ReadWrapper(rabbitMQSecretBackendRead),
-		Update: rabbitMQSecretBackendUpdate,
-		Delete: rabbitMQSecretBackendDelete,
-		Exists: rabbitMQSecretBackendExists,
+		Create:        rabbitMQSecretBackendCreate,
+		Read:          ReadWrapper(rabbitMQSecretBackendRead),
+		Update:        rabbitMQSecretBackendUpdate,
+		Delete:        rabbitMQSecretBackendDelete,
+		Exists:        rabbitMQSecretBackendExists,
+		CustomizeDiff: mountMigrationCustomizeDiff_FieldPath,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -28,7 +29,6 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "rabbitmq",
-				ForceNew:    true,
 				Description: "The path of the RabbitMQ Secret Backend where the connection should be configured",
 				// standardise on no beginning or trailing slashes
 				StateFunc: func(v interface{}) string {
@@ -179,6 +179,20 @@ func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 
 	path := d.Id()
 	d.Partial(true)
+
+	if d.HasChange(consts.FieldPath) {
+		// semantic version check completed in CustomizeDiff
+		newPath := d.Get(consts.FieldPath).(string)
+
+		err := client.Sys().Remount(path, newPath)
+		if err != nil {
+			return fmt.Errorf("error remounting to %q: %w", newPath, err)
+		}
+
+		path = newPath
+		d.SetId(path)
+	}
+
 	if d.HasChanges("default_lease_ttl_seconds", "max_lease_ttl_seconds") {
 		config := api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),

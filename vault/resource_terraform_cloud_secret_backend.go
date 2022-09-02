@@ -8,16 +8,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func terraformCloudSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
-		Create: terraformCloudSecretBackendCreate,
-		Read:   ReadWrapper(terraformCloudSecretBackendRead),
-		Update: terraformCloudSecretBackendUpdate,
-		Delete: terraformCloudSecretBackendDelete,
-		Exists: terraformCloudSecretBackendExists,
+		Create:        terraformCloudSecretBackendCreate,
+		Read:          ReadWrapper(terraformCloudSecretBackendRead),
+		Update:        terraformCloudSecretBackendUpdate,
+		Delete:        terraformCloudSecretBackendDelete,
+		Exists:        terraformCloudSecretBackendExists,
+		CustomizeDiff: mountMigrationCustomizeDiff_FieldBackend,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -26,7 +28,6 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 			"backend": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Default:     "terraform",
 				Description: "Unique name of the Vault Terraform Cloud mount to configure",
 				StateFunc: func(s interface{}) string {
@@ -185,6 +186,19 @@ func terraformCloudSecretBackendUpdate(d *schema.ResourceData, meta interface{})
 
 	backend := d.Id()
 	configPath := terraformCloudSecretBackendConfigPath(backend)
+
+	if d.HasChange(consts.FieldBackend) {
+		// semantic version check completed in CustomizeDiff
+		newPath := d.Get(consts.FieldBackend).(string)
+
+		err := client.Sys().Remount(backend, newPath)
+		if err != nil {
+			return fmt.Errorf("error remounting to %q: %w", newPath, err)
+		}
+
+		backend = newPath
+		d.SetId(backend)
+	}
 
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		defaultLeaseTTL := d.Get("default_lease_ttl_seconds")
