@@ -276,14 +276,16 @@ func consulSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, me
 		return diag.Errorf("failed to read Vault client version: %s", err)
 	}
 
-	// Return either policies or consul_policies depending on the following criteria:
-	// * Vault version < 1.11: Always use policies
-	// * Vault version >= 1.11: Default consul_policies; use policies if the user specified it
+	// Determine to set either policies or consul_policies depending on the Vault version:
+	// * Vault version < 1.11: Use policies
+	// * Vault version >= 1.11: Use consul_policies
 	policiesField := "consul_policies"
 	if !useAPIVer1 {
 		policiesField = "policies"
 	}
 
+	// If the user specified policies, store the result from Vault under that key.
+	// Otherwise, always store under the key consul_policies.
 	if _, ok := d.GetOk("policies"); ok {
 		params[policiesField] = "policies"
 	} else {

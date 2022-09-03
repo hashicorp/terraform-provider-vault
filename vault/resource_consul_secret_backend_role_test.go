@@ -38,6 +38,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "partition", "partition-1"),
 	}
 	var updateTestImportCheckFuncs []resource.TestCheckFunc
+
 	var ignoreFields []string
 
 	testNewParameters := testutil.CheckTestVaultVersion(t, "1.11")
