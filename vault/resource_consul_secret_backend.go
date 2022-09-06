@@ -324,5 +324,5 @@ func consulSecretsBackendCustomizeDiff(ctx context.Context, diff *schema.Resourc
 		return fmt.Errorf("field 'bootstrap' must be set to false when 'token' is specified")
 	}
 
-	return mountMigrationCustomizeDiff_FieldPath(ctx, diff, meta)
+	return mountMigrationCustomizeDiffFieldPath(ctx, diff, meta)
 }

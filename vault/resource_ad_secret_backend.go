@@ -218,12 +218,12 @@ func adSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		CustomizeDiff: mountMigrationCustomizeDiff_FieldBackend,
+		CustomizeDiff: mountMigrationCustomizeDiffFieldBackend,
 		Schema:        fields,
 	}
 }
 
-func mountMigrationCustomizeDiff_FieldBackend(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+func mountMigrationCustomizeDiffFieldBackend(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
 	return mountMigrationHelper(ctx, diff, meta, consts.FieldBackend)
 }
 
@@ -537,17 +537,9 @@ func updateConfigResource(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	if d.HasChange(consts.FieldBackend) {
-		// semantic version check completed in CustomizeDiff
-		newPath := d.Get(consts.FieldBackend).(string)
-
-		err := client.Sys().Remount(backend, newPath)
-		if err != nil {
-			return fmt.Errorf("error remounting to %q: %w", newPath, err)
-		}
-
-		backend = newPath
-		d.SetId(backend)
+	backend, err := remountToNewPath(d, client, consts.FieldBackend, backend)
+	if err != nil {
+		return err
 	}
 
 	defaultTTL := d.Get("default_lease_ttl_seconds").(int)

@@ -31,7 +31,7 @@ func kmipSecretBackendResource() *schema.Resource {
 		Read:          ReadWrapper(kmipSecretBackendRead),
 		Update:        kmipSecretBackendUpdate,
 		Delete:        kmipSecretBackendDelete,
-		CustomizeDiff: mountMigrationCustomizeDiff_FieldPath,
+		CustomizeDiff: mountMigrationCustomizeDiffFieldPath,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

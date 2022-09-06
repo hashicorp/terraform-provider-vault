@@ -24,7 +24,7 @@ func awsSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		CustomizeDiff: mountMigrationCustomizeDiff_FieldPath,
+		CustomizeDiff: mountMigrationCustomizeDiffFieldPath,
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
@@ -99,7 +99,7 @@ func awsSecretBackendResource() *schema.Resource {
 	}
 }
 
-func mountMigrationCustomizeDiff_FieldPath(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+func mountMigrationCustomizeDiffFieldPath(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
 	return mountMigrationHelper(ctx, diff, meta, consts.FieldPath)
 }
 
@@ -118,12 +118,9 @@ func mountMigrationHelper(_ context.Context, diff *schema.ResourceDiff, meta int
 	if err != nil {
 		return err
 	}
-	remountEnabled, _, err := provider.GreaterThanOrEqual(meta, minVersion)
-	if err != nil {
-		return err
-	}
+	remountSupported := provider.IsAPISupported(meta, minVersion)
 
-	if !remountEnabled {
+	if !remountSupported {
 		// Mount migration not available
 		// Destroy and recreate resource
 		if err := diff.ForceNew(mountField); err != nil {
@@ -132,6 +129,25 @@ func mountMigrationHelper(_ context.Context, diff *schema.ResourceDiff, meta int
 	}
 
 	return nil
+}
+
+func remountToNewPath(d *schema.ResourceData, client *api.Client, mountField, oldPath string) (string, error) {
+	var ret string
+	if d.HasChange(mountField) {
+		// since this function is only called within Update
+		// we know that remount is enabled
+		newPath := d.Get(mountField).(string)
+
+		err := client.Sys().Remount(oldPath, newPath)
+		if err != nil {
+			return ret, fmt.Errorf("error remounting to %q: %w", newPath, err)
+		}
+
+		d.SetId(newPath)
+		ret = newPath
+	}
+
+	return ret, nil
 }
 
 func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
@@ -279,17 +295,9 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 	d.Partial(true)
 
-	if d.HasChange(consts.FieldPath) {
-		// semantic version check completed in CustomizeDiff
-		newPath := d.Get(consts.FieldPath).(string)
-
-		err := client.Sys().Remount(path, newPath)
-		if err != nil {
-			return fmt.Errorf("error remounting to %q: %w", newPath, err)
-		}
-
-		path = newPath
-		d.SetId(path)
+	path, err := remountToNewPath(d, client, consts.FieldPath, path)
+	if err != nil {
+		return err
 	}
 
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {

@@ -78,12 +78,8 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 	return c, nil
 }
 
-func (p *ProviderMeta) GreaterThanOrEqual(minVersion *version.Version) (bool, string, error) {
-	currentVersion := p.vaultVersion
-
-	comparison := currentVersion.GreaterThanOrEqual(minVersion)
-
-	return comparison, currentVersion.String(), nil
+func (p *ProviderMeta) IsVaultVersionSupported(minVersion *version.Version) bool {
+	return p.vaultVersion.GreaterThanOrEqual(minVersion)
 }
 
 func (p *ProviderMeta) GetVaultVersion() *version.Version {
@@ -237,7 +233,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	// Set the Vault version to *ProviderMeta object
-	vaultVersionString, err := getTargetVaultVersion(client)
+	vaultVersionString, err := getVaultVersion(client)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +303,7 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	return p.GetClient(), nil
 }
 
-// GreaterThanOrEqual receives a minimum version
+// IsAPISupported receives a minimum version
 // that the Vault server version should be above.
 //
 // It uses the go-version package
@@ -315,30 +311,23 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 // returns:
 //    - a boolean describing whether the Vault
 //      server version was above the minimum version
-//    - the current Vault server version as a string
-//    - errors captured during operation, if any
 //
 // This function can be used to perform semantic version comparisons
 // to conditionally enable features, or to resolve any diffs in the TF
 // state based on the Vault version.
-func GreaterThanOrEqual(meta interface{}, minVersion *version.Version) (bool, string, error) {
+func IsAPISupported(meta interface{}, minVersion *version.Version) bool {
 	var p *ProviderMeta
 	switch v := meta.(type) {
 	case *ProviderMeta:
 		p = v
 	default:
-		return false, "", fmt.Errorf("meta argument must be a %T, not %T", p, meta)
+		return false
 	}
 
-	comparison, versionString, err := p.GreaterThanOrEqual(minVersion)
-	if err != nil {
-		return false, "", err
-	}
-
-	return comparison, versionString, nil
+	return p.IsVaultVersionSupported(minVersion)
 }
 
-func getTargetVaultVersion(client *api.Client) (string, error) {
+func getVaultVersion(client *api.Client) (string, error) {
 	resp, err := client.Sys().SealStatus()
 	if err != nil {
 		return "", err

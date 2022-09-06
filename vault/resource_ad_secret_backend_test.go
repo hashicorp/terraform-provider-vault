@@ -2,6 +2,8 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
+
 	//"regexp"
 	"strings"
 	"testing"
@@ -39,7 +41,7 @@ func TestADSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "userdn", "CN=Users,DC=corp,DC=example,DC=net"),
 				),
 			},
-			//testutil.GetImportTestStep(resourceName, false, "bindpass", "description"),
+			testutil.GetImportTestStep(resourceName, false, "bindpass", "description"),
 			// TODO: on vault-1.11+ length should conflict with password_policy
 			// We should re-enable this check when we have the adaptive version support.
 			//{
@@ -49,13 +51,13 @@ func TestADSecretBackend(t *testing.T) {
 
 			//	PlanOnly: true,
 			//},
-			//{
-			//	Config: testADSecretBackendConflictsConfig(
-			//		resourceName, bindDN, bindPass, url, "formatter", "{{foo}}"),
-			//	ExpectError: regexp.MustCompile(`.*"formatter": conflicts with password_policy.*`),
-			//
-			//	PlanOnly: true,
-			//},
+			{
+				Config: testADSecretBackendConflictsConfig(
+					resourceName, bindDN, bindPass, url, "formatter", "{{foo}}"),
+				ExpectError: regexp.MustCompile(`.*"formatter": conflicts with password_policy.*`),
+
+				PlanOnly: true,
+			},
 			{
 				Config: testADSecretBackend_updateConfig(backend, bindDN, bindPass, url),
 				Check: resource.ComposeTestCheckFunc(

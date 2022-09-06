@@ -19,7 +19,7 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 		Update:        terraformCloudSecretBackendUpdate,
 		Delete:        terraformCloudSecretBackendDelete,
 		Exists:        terraformCloudSecretBackendExists,
-		CustomizeDiff: mountMigrationCustomizeDiff_FieldBackend,
+		CustomizeDiff: mountMigrationCustomizeDiffFieldBackend,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

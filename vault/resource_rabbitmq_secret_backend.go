@@ -19,7 +19,7 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 		Update:        rabbitMQSecretBackendUpdate,
 		Delete:        rabbitMQSecretBackendDelete,
 		Exists:        rabbitMQSecretBackendExists,
-		CustomizeDiff: mountMigrationCustomizeDiff_FieldPath,
+		CustomizeDiff: mountMigrationCustomizeDiffFieldPath,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

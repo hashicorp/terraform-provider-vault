@@ -874,10 +874,9 @@ func MinVersionCheckWrapper(f schema.CreateContextFunc, minVersion string) schem
 			return diag.FromErr(e)
 		}
 
-		featureEnabled, currentVersion, err := provider.GreaterThanOrEqual(meta, mv)
-		if err != nil {
-			return diag.FromErr(err)
-		}
+		featureEnabled := provider.IsAPISupported(meta, mv)
+
+		currentVersion := meta.(*provider.ProviderMeta).GetVaultVersion().String()
 
 		if !featureEnabled {
 			return diag.Errorf("feature not enabled on current Vault version. min version required=%s; "+

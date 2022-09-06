@@ -377,18 +377,15 @@ func TestGreaterThanOrEqual(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name        string
-		minVersion  string
-		expected    bool
-		wantErr     bool
-		expectedErr string
-		meta        interface{}
+		name       string
+		minVersion string
+		expected   bool
+		meta       interface{}
 	}{
 		{
 			name:       "server-greater-than",
 			minVersion: "1.8.0",
 			expected:   true,
-			wantErr:    false,
 			meta: &ProviderMeta{
 				client:       rootClient,
 				vaultVersion: VaultVersion11,
@@ -402,7 +399,6 @@ func TestGreaterThanOrEqual(t *testing.T) {
 				client:       rootClient,
 				vaultVersion: VaultVersion11,
 			},
-			wantErr: false,
 		},
 		{
 			name:       "server-equal",
@@ -412,7 +408,6 @@ func TestGreaterThanOrEqual(t *testing.T) {
 				client:       rootClient,
 				vaultVersion: VaultVersion10,
 			},
-			wantErr: false,
 		},
 	}
 
@@ -437,14 +432,10 @@ func TestGreaterThanOrEqual(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			isTFVersionGreater, _, err := tt.meta.(*ProviderMeta).GreaterThanOrEqual(mv)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GreaterThanOrEqual() got an error=%s, wantErr %v", err.Error(), tt.wantErr)
-				return
-			}
+			isTFVersionGreater := tt.meta.(*ProviderMeta).IsVaultVersionSupported(mv)
 
 			if isTFVersionGreater != tt.expected {
-				t.Errorf("GreaterThanOrEqual() got = %v, want %v", isTFVersionGreater, tt.expected)
+				t.Errorf("IsAPISupported() got = %v, want %v", isTFVersionGreater, tt.expected)
 			}
 		})
 	}
