@@ -173,17 +173,9 @@ func gcpSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 	d.Partial(true)
 
-	if d.HasChange(consts.FieldPath) {
-		// semantic version check completed in CustomizeDiff
-		newPath := d.Get(consts.FieldPath).(string)
-
-		err := client.Sys().Remount(path, newPath)
-		if err != nil {
-			return fmt.Errorf("error remounting to %q: %w", newPath, err)
-		}
-
-		path = newPath
-		d.SetId(path)
+	path, err := remountToNewPath(d, client, consts.FieldPath, path)
+	if err != nil {
+		return err
 	}
 
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
