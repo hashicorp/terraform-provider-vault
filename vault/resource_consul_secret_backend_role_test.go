@@ -108,7 +108,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 				Config: testConsulSecretBackendRole_initialConfig(path, name, token, !testNewParameters, testNewParameters, testNewParameters),
 				Check:  resource.ComposeTestCheckFunc(createTestCheckFuncs...),
 			},
-			testutil.GetImportTestStep(resourceName, false, ignoreFields...),
+			testutil.GetImportTestStep(resourceName, false, nil, ignoreFields...),
 			{
 				Config:      testConsulSecretBackendRole_updateConfig(path, name, token, false, false, false),
 				ExpectError: regexp.MustCompile(missingParametersError),
@@ -121,12 +121,12 @@ func TestConsulSecretBackendRole(t *testing.T) {
 				Config: testConsulSecretBackendRole_updateConfig(path, name, token, !testNewParameters, testNewParameters, testNewParameters),
 				Check:  resource.ComposeTestCheckFunc(updateTestCheckFuncs...),
 			},
-			testutil.GetImportTestStep(resourceName, false, ignoreFields...),
+			testutil.GetImportTestStep(resourceName, false, nil, ignoreFields...),
 			{
 				Config: testConsulSecretBackendRole_updateConfig(path, name, token, false, true, false),
 				Check:  resource.ComposeTestCheckFunc(updateTestImportCheckFuncs...),
 			},
-			testutil.GetImportTestStep(resourceName, false),
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
