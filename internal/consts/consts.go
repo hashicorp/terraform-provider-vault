@@ -64,12 +64,32 @@ const (
 	FieldAnyMount                 = "any_mount"
 	FieldUUID                     = "uuid"
 	FieldMountAccessor            = "mount_accessor"
+	FieldUsername                 = "username"
+	FieldPassword                 = "password"
+	FieldPasswordFile             = "password_file"
+	FieldAuthLoginDefault         = "auth_login"
+	FieldAuthLoginUserpass        = "auth_login_userpass"
+	FieldAuthLoginAWS             = "auth_login_aws"
+	FieldIdentity                 = "identity"
+	FieldSignature                = "signature"
+	FieldPKCS7                    = "pkcs7"
+	FieldNonce                    = "nonce"
+	FieldIAMHttpRequestMethod     = "iam_http_request_method"
+	FieldIAMHttpRequestURL        = "iam_http_request_url"
+	FieldIAMHttpRequestBody       = "iam_http_request_body"
+	FieldIAMHttpRequestHeaders    = "iam_http_request_headers"
 
 	/*
 		common environment variables
 	*/
 	EnvVarVaultNamespaceImport = "TERRAFORM_VAULT_NAMESPACE_IMPORT"
 	EnvVarSkipChildToken       = "TERRAFORM_VAULT_SKIP_CHILD_TOKEN"
+	// EnvVarUsername to get the username for the userpass auth method
+	EnvVarUsername = "TERRAFORM_VAULT_USERNAME"
+	// EnvVarPassword to get the password for the userpass auth method
+	EnvVarPassword = "TERRAFORM_VAULT_PASSWORD"
+	// EnvVarPasswordFile to get the password for the userpass auth method
+	EnvVarPasswordFile = "TERRAFORM_VAULT_PASSWORD_FILE"
 
 	/*
 		common mount types
@@ -88,6 +108,12 @@ const (
 	VaultVersion11 = "1.11.0"
 	VaultVersion10 = "1.10.0"
 	VaultVersion9  = "1.9.0"
+
+	/*
+		Vault auth methods
+	*/
+	AuthMethodAWS      = "aws"
+	AuthMethodUserpass = "userpass"
 
 	/*
 		misc. path related constants

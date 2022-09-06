@@ -97,33 +97,29 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_CAPATH", ""),
 				Description: "Path to directory containing CA certificate files to validate the server's certificate.",
 			},
-			"auth_login": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "Login to vault with an existing auth method using auth/<mount>/login",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						consts.FieldPath: {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						consts.FieldNamespace: {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						consts.FieldParameters: {
-							Type:     schema.TypeMap,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						consts.FieldMethod: {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-					},
-				},
+			consts.FieldAuthLoginDefault: {
+				Type:          schema.TypeList,
+				Optional:      true,
+				MaxItems:      1,
+				ConflictsWith: []string{consts.FieldAuthLoginAWS, consts.FieldAuthLoginUserpass},
+				Description:   "Login to vault with an existing auth method using auth/<mount>/login",
+				Elem:          provider.SchemaLoginGeneric,
+			},
+			consts.FieldAuthLoginUserpass: {
+				Type:          schema.TypeList,
+				Optional:      true,
+				MaxItems:      1,
+				ConflictsWith: []string{consts.FieldAuthLoginDefault, consts.FieldAuthLoginAWS},
+				Description:   "Login to vault using the userpass method",
+				Elem:          provider.SchemaLoginUserpass,
+			},
+			consts.FieldAuthLoginAWS: {
+				Type:          schema.TypeList,
+				Optional:      true,
+				MaxItems:      1,
+				ConflictsWith: []string{consts.FieldAuthLoginDefault, consts.FieldAuthLoginUserpass},
+				Description:   "Login to vault using the AWS method",
+				Elem:          provider.SchemaLoginAWS,
 			},
 			"client_auth": {
 				Type:        schema.TypeList,
@@ -828,18 +824,8 @@ func getNamespaceSchema() map[string]*schema.Schema {
 	}
 }
 
-func mustAddSchema(r *schema.Resource, m map[string]*schema.Schema) {
-	for k, s := range m {
-		if _, ok := r.Schema[k]; ok {
-			panic(fmt.Sprintf("cannot add schema field %q,  already exists in the Schema map", k))
-		}
-
-		r.Schema[k] = s
-	}
-}
-
 func UpdateSchemaResource(r *schema.Resource) *schema.Resource {
-	mustAddSchema(r, getNamespaceSchema())
+	provider.MustAddSchema(r, getNamespaceSchema())
 
 	return r
 }
