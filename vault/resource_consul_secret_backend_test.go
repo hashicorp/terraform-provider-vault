@@ -42,7 +42,7 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckNoResourceAttr(resourceName, "client_key"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false,
+			testutil.GetImportTestStep(resourceName, false, nil,
 				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
 			{
 				Config: testConsulSecretBackend_initialConfigLocal(path, token),
@@ -60,7 +60,7 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckNoResourceAttr(resourceName, "client_key"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false,
+			testutil.GetImportTestStep(resourceName, false, nil,
 				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
 			{
 				Config: testConsulSecretBackend_updateConfig(path, token),
@@ -78,7 +78,7 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckNoResourceAttr(resourceName, "client_key"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false,
+			testutil.GetImportTestStep(resourceName, false, nil,
 				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
 			{
 				Config: testConsulSecretBackend_updateConfig_addCerts(path, token),
@@ -96,7 +96,7 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "client_key", "FAKE-CLIENT-CERT-KEY-MATERIAL"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false,
+			testutil.GetImportTestStep(resourceName, false, nil,
 				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
 			{
 				Config: testConsulSecretBackend_updateConfig_updateCerts(path, token),
@@ -114,7 +114,7 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "client_key", "UPDATED-FAKE-CLIENT-CERT-KEY-MATERIAL"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false,
+			testutil.GetImportTestStep(resourceName, false, nil,
 				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
 		},
 	})
@@ -154,7 +154,7 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "bootstrap", "true"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, "token", "bootstrap"),
+			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap"),
 			{
 				Config: testConsulSecretBackend_bootstrapAddRole(path, consulAddr),
 				Check: resource.ComposeTestCheckFunc(
@@ -164,7 +164,7 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceRoleName, "consul_policies.*", "global-management"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, "token", "bootstrap"),
+			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap"),
 			{
 				Config:      testConsulSecretBackend_bootstrapConfig(path+"-new", consulAddr, "", true),
 				ExpectError: regexp.MustCompile(`Token not provided and failed to bootstrap ACLs`),
