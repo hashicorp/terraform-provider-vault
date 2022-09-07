@@ -24,12 +24,26 @@ func TestConsulSecretBackendRole(t *testing.T) {
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
 	resourceName := "vault_consul_secret_backend_role.test"
 
-	createTestCheckFuncs := []resource.TestCheckFunc{
+	createTestCheckBase := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "0"),
 		resource.TestCheckResourceAttr(resourceName, "consul_namespace", "consul-ns-0"),
 		resource.TestCheckResourceAttr(resourceName, "partition", "partition-0"),
+	}
+	updateTestCheckBase := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "120"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "true"),
+		resource.TestCheckResourceAttr(resourceName, "max_ttl", "240"),
+		resource.TestCheckResourceAttr(resourceName, "consul_namespace", "consul-ns-1"),
+		resource.TestCheckResourceAttr(resourceName, "partition", "partition-1"),
+	}
+
+	// This first test covers the "base case" with all Consul ACL policy types
+	// that are supported by the provider.
+	createTestCheckFuncs := append(createTestCheckBase,
 		resource.TestCheckResourceAttr(resourceName, "policies.#", "0"),
 		resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "1"),
 		resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "foo"),
@@ -38,16 +52,9 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "service_identities.#", "1"),
 		resource.TestCheckTypeSetElemAttr(resourceName, "service_identities.*", "service-0:dc1"),
 		resource.TestCheckResourceAttr(resourceName, "node_identities.#", "1"),
-		resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "server-0:dc1"),
-	}
-	updateTestCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "120"),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "true"),
-		resource.TestCheckResourceAttr(resourceName, "max_ttl", "240"),
-		resource.TestCheckResourceAttr(resourceName, "consul_namespace", "consul-ns-1"),
-		resource.TestCheckResourceAttr(resourceName, "partition", "partition-1"),
+		resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "server-0:dc1"))
+
+	updateTestCheckFuncs := append(updateTestCheckBase,
 		resource.TestCheckResourceAttr(resourceName, "policies.#", "0"),
 		resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "2"),
 		resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "foo"),
@@ -61,8 +68,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		resource.TestCheckTypeSetElemAttr(resourceName, "service_identities.*", "service-1"),
 		resource.TestCheckResourceAttr(resourceName, "node_identities.#", "2"),
 		resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "server-0:dc1"),
-		resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "client-0:dc1"),
-	}
+		resource.TestCheckTypeSetElemAttr(resourceName, "node_identities.*", "client-0:dc1"))
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -102,22 +108,16 @@ func TestConsulSecretBackendRole(t *testing.T) {
 	// field in the provider with newer versions of Vault (versions 1.11 and above).
 	// Imported policies will always be in the new field consul_policies, so the import test ignores
 	// both fields but has a custom ImportStateCheck function for those values.
-	createImportTestCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+	createImportTestCheckFuncs := append(createTestCheckBase,
 		resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
 		resource.TestCheckResourceAttr(resourceName, "policies.0", "boo"),
-		resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"),
-	}
+		resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"))
 
-	updateImportTestCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+	updateImportTestCheckFuncs := append(updateTestCheckBase,
 		resource.TestCheckResourceAttr(resourceName, "policies.#", "2"),
 		resource.TestCheckResourceAttr(resourceName, "policies.0", "boo"),
 		resource.TestCheckResourceAttr(resourceName, "policies.1", "far"),
-		resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"),
-	}
+		resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"))
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -148,17 +148,14 @@ func TestConsulSecretBackendRole_Legacy(t *testing.T) {
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
 	resourceName := "vault_consul_secret_backend_role.test"
 
-	createTestCheckFuncs := []resource.TestCheckFunc{
+	createTestCheckBase := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "0"),
 		resource.TestCheckResourceAttr(resourceName, "consul_namespace", "consul-ns-0"),
 		resource.TestCheckResourceAttr(resourceName, "partition", "partition-0"),
-		resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"),
-		resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
-		resource.TestCheckResourceAttr(resourceName, "policies.0", "boo"),
 	}
-	updateTestCheckFuncs := []resource.TestCheckFunc{
+	updateTestCheckBase := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "120"),
@@ -166,14 +163,22 @@ func TestConsulSecretBackendRole_Legacy(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "max_ttl", "240"),
 		resource.TestCheckResourceAttr(resourceName, "consul_namespace", "consul-ns-1"),
 		resource.TestCheckResourceAttr(resourceName, "partition", "partition-1"),
+	}
+
+	// This test covers the "base case" with all Consul ACL policy types supported by Vault 1.10.
+	// Imported policies will always be in the new field consul_policies, so the import test ignores
+	// both fields but has a custom ImportStateCheck function for those values.
+	createTestCheckFuncs := append(createTestCheckBase,
+		resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"),
+		resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "policies.0", "boo"))
+
+	updateTestCheckFuncs := append(updateTestCheckBase,
 		resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "0"),
 		resource.TestCheckResourceAttr(resourceName, "policies.#", "2"),
 		resource.TestCheckResourceAttr(resourceName, "policies.0", "boo"),
-		resource.TestCheckResourceAttr(resourceName, "policies.1", "far"),
-	}
+		resource.TestCheckResourceAttr(resourceName, "policies.1", "far"))
 
-	// Imported policies will always be in the new field consul_policies, so the import test ignores
-	// both fields but has a custom ImportStateCheck function for those values.
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -210,22 +215,16 @@ func TestConsulSecretBackendRole_Legacy(t *testing.T) {
 
 	// This separate test is used to check the functionality when using the new consul_policies
 	// field in the provider with an older version of Vault (versions 1.10 and below).
-	createImportTestCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+	createImportTestCheckFuncs := append(createTestCheckBase,
 		resource.TestCheckResourceAttr(resourceName, "policies.#", "0"),
 		resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "1"),
-		resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "foo"),
-	}
+		resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "foo"))
 
-	updateImportTestCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+	updateImportTestCheckFuncs := append(updateTestCheckBase,
 		resource.TestCheckResourceAttr(resourceName, "policies.#", "0"),
 		resource.TestCheckResourceAttr(resourceName, "consul_policies.#", "2"),
 		resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "foo"),
-		resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "bar"),
-	}
+		resource.TestCheckTypeSetElemAttr(resourceName, "consul_policies.*", "bar"))
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
