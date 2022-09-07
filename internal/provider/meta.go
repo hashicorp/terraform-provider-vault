@@ -78,7 +78,7 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 	return c, nil
 }
 
-func (p *ProviderMeta) IsVaultVersionSupported(minVersion *version.Version) bool {
+func (p *ProviderMeta) IsAPISupported(minVersion *version.Version) bool {
 	return p.vaultVersion.GreaterThanOrEqual(minVersion)
 }
 
@@ -324,7 +324,7 @@ func IsAPISupported(meta interface{}, minVersion *version.Version) bool {
 		return false
 	}
 
-	return p.IsVaultVersionSupported(minVersion)
+	return p.IsAPISupported(minVersion)
 }
 
 func getVaultVersion(client *api.Client) (string, error) {

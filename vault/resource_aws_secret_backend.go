@@ -132,7 +132,7 @@ func mountMigrationHelper(_ context.Context, diff *schema.ResourceDiff, meta int
 }
 
 func remountToNewPath(d *schema.ResourceData, client *api.Client, mountField, oldPath string) (string, error) {
-	var ret string
+	ret := oldPath
 	if d.HasChange(mountField) {
 		// since this function is only called within Update
 		// we know that remount is enabled

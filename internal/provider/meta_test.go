@@ -360,7 +360,7 @@ func TestGetClient(t *testing.T) {
 	}
 }
 
-func TestGreaterThanOrEqual(t *testing.T) {
+func TestIsAPISupported(t *testing.T) {
 	rootClient, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		t.Fatalf("error initializing root client, err=%s", err)
@@ -432,7 +432,7 @@ func TestGreaterThanOrEqual(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			isTFVersionGreater := tt.meta.(*ProviderMeta).IsVaultVersionSupported(mv)
+			isTFVersionGreater := tt.meta.(*ProviderMeta).IsAPISupported(mv)
 
 			if isTFVersionGreater != tt.expected {
 				t.Errorf("IsAPISupported() got = %v, want %v", isTFVersionGreater, tt.expected)
