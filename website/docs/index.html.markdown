@@ -125,6 +125,10 @@ variables in order to keep credential information out of the configuration.
   the certificate presented by the Vault server. May be set via the
   `VAULT_CAPATH` environment variable.
 
+* `ca_cert_bytes` - (Optional) PEM-encoded string that will be used to validate
+  the certificate presented by the Vault server. May be set via the
+  `VAULT_CACERT_BYTES` environment variable.
+
 * `auth_login` - (Optional) A configuration block, described below, that
   attempts to authenticate using the `auth/<method>/login` path to
   acquire a token which Terraform will use. Terraform still issues itself
