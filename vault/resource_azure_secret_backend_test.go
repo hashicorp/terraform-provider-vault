@@ -95,6 +95,14 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"),
 				),
 			},
+			{
+				ResourceName:      "vault_azure_secret_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"client_secret",
+				},
+			},
 		},
 	})
 }

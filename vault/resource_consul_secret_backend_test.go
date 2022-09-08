@@ -208,6 +208,15 @@ func TestConsulSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
 				),
 			},
+			{
+				ResourceName:      "vault_consul_secret_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"bootstrap",
+					"token",
+				},
+			},
 		},
 	})
 }

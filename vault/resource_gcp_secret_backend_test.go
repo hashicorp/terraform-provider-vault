@@ -81,6 +81,14 @@ func TestGCPSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "local", "false"),
 				),
 			},
+			{
+				ResourceName:      "vault_gcp_secret_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"credentials",
+				},
+			},
 		},
 	})
 }

@@ -3,8 +3,6 @@ package vault
 import (
 	"fmt"
 	"regexp"
-
-	//"regexp"
 	"strings"
 	"testing"
 
@@ -114,6 +112,15 @@ func TestADSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "insecure_tls", "true"),
 					resource.TestCheckResourceAttr(resourceName, "userdn", "CN=Users,DC=corp,DC=example,DC=net"),
 				),
+			},
+			{
+				ResourceName:      "vault_ad_secret_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"bindpass",
+					"description",
+				},
 			},
 		},
 	})
