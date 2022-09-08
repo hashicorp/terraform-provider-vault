@@ -155,6 +155,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "min_seconds_remaining", "3595"),
 		resource.TestCheckResourceAttrSet(resourceName, "expiration"),
 		resource.TestCheckResourceAttrSet(resourceName, "serial"),
+		resource.TestCheckResourceAttrSet(resourceName, "renew_pending"),
 		testValidateCSR(resourceName),
 	}
 	resource.Test(t, resource.TestCase{

@@ -682,16 +682,23 @@ func CheckJSONData(resourceName, attr, expected string) resource.TestCheckFunc {
 	}
 }
 
-// GetImportTestStep for resource name. Optionally include field names that should be ignored during the import
-// verification, typically ignore fields should only be provided for values that are not returned from the
-// provisioning API.
-func GetImportTestStep(resourceName string, skipVerify bool, ignoreFields ...string) resource.TestStep {
-	return resource.TestStep{
+// GetImportTestStep for resource name. If a custom ImportStateCheck function is not desired, pass
+// a nil value. Optionally include field names that should be ignored during the import
+// verification, typically ignore fields should only be provided for values that are not returned
+// from the provisioning API.
+func GetImportTestStep(resourceName string, skipVerify bool, check resource.ImportStateCheckFunc, ignoreFields ...string) resource.TestStep {
+	ts := resource.TestStep{
 		ResourceName:            resourceName,
 		ImportState:             true,
 		ImportStateVerify:       !skipVerify,
 		ImportStateVerifyIgnore: ignoreFields,
 	}
+
+	if check != nil {
+		ts.ImportStateCheck = check
+	}
+
+	return ts
 }
 
 // GetNamespaceImportStateCheck checks that the namespace was properly imported into the state.

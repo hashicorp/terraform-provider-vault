@@ -3,6 +3,9 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/semver"
 	"log"
 	"strings"
 
@@ -15,14 +18,13 @@ import (
 
 func consulSecretBackendResource() *schema.Resource {
 	return &schema.Resource{
-		Create:        consulSecretBackendCreate,
-		Read:          ReadWrapper(consulSecretBackendRead),
-		Update:        consulSecretBackendUpdate,
-		Delete:        consulSecretBackendDelete,
-		Exists:        consulSecretBackendExists,
+		CreateContext: consulSecretBackendCreate,
+		ReadContext:   ReadContextWrapper(consulSecretBackendRead),
+		UpdateContext: consulSecretBackendUpdate,
+		DeleteContext: consulSecretBackendDelete,
 		CustomizeDiff: consulSecretsBackendCustomizeDiff,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -110,10 +112,10 @@ func consulSecretBackendResource() *schema.Resource {
 	}
 }
 
-func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
+func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Get("path").(string)
@@ -140,8 +142,19 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting Consul backend at %q", path)
 
+	// If a token isn't provided and the Vault version is less than 1.11, fail before
+	// mounting the path in Vault.
+	useAPIVer1, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion11)
+	if err != nil {
+		return diag.Errorf("failed to read Vault client version: %s", err)
+	}
+	if token == "" && !useAPIVer1 {
+		return diag.Errorf(`error writing Consul configuration: no token provided and the 
+Vault client version does not meet the minimum requirement for this feature (Vault 1.11+)`)
+	}
+
 	if err := client.Sys().Mount(path, info); err != nil {
-		return fmt.Errorf("Error mounting to %q: %s", path, err)
+		return diag.Errorf("error mounting to %q: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Mounted Consul backend at %q", path)
@@ -160,18 +173,18 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if _, err := client.Logical().Write(configPath, data); err != nil {
-		return fmt.Errorf("Error writing Consul configuration for %q: %s", path, err)
+		return diag.Errorf("error writing Consul configuration for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote Consul configuration to %q", configPath)
 	d.Partial(false)
 
-	return consulSecretBackendRead(d, meta)
+	return consulSecretBackendRead(ctx, d, meta)
 }
 
-func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
+func consulSecretBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -181,7 +194,7 @@ func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
-		return fmt.Errorf("Error reading mount %q: %s", path, err)
+		return diag.Errorf("error reading mount %q: %s", path, err)
 	}
 
 	// path can have a trailing slash, but doesn't need to have one
@@ -203,7 +216,7 @@ func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Reading %s from Vault", configPath)
 	secret, err := client.Logical().Read(configPath)
 	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+		return diag.Errorf("error reading from Vault: %s", err)
 	}
 
 	// token, sadly, we can't read out
@@ -215,10 +228,10 @@ func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -239,7 +252,7 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		log.Printf("[DEBUG] Updating lease TTLs for %q", path)
 		if err := client.Sys().TuneMount(path, config); err != nil {
-			return fmt.Errorf("Error updating mount TTLs for %q: %s", path, err)
+			return diag.Errorf("error updating mount TTLs for %q: %s", path, err)
 		}
 
 	}
@@ -255,18 +268,18 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			"client_key":  d.Get("client_key").(string),
 		}
 		if _, err := client.Logical().Write(configPath, data); err != nil {
-			return fmt.Errorf("Error configuring Consul configuration for %q: %s", path, err)
+			return diag.Errorf("error configuring Consul configuration for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated Consul configuration at %q", configPath)
 	}
 	d.Partial(false)
-	return consulSecretBackendRead(d, meta)
+	return consulSecretBackendRead(ctx, d, meta)
 }
 
-func consulSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
+func consulSecretBackendDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -274,28 +287,10 @@ func consulSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Unmounting Consul backend %q", path)
 	err := client.Sys().Unmount(path)
 	if err != nil {
-		return fmt.Errorf("Error unmounting Consul backend from %q: %s", path, err)
+		return diag.Errorf("error unmounting Consul backend from %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Unmounted Consul backend %q", path)
 	return nil
-}
-
-func consulSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-
-	log.Printf("[DEBUG] Checking if Consul backend exists at %q", path)
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return true, fmt.Errorf("Error retrieving list of mounts: %s", err)
-	}
-	log.Printf("[DEBUG] Checked if Consul backend exists at %q", path)
-	_, ok := mounts[strings.Trim(path, "/")+"/"]
-	return ok, nil
 }
 
 func consulSecretBackendConfigPath(backend string) string {

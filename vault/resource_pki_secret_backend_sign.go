@@ -152,7 +152,13 @@ func pkiSecretBackendSignResource() *schema.Resource {
 			"expiration": {
 				Type:        schema.TypeInt,
 				Computed:    true,
-				Description: "The certificate expiration.",
+				Description: "The certificate expiration as a Unix-style timestamp.",
+			},
+			"renew_pending": {
+				Type:     schema.TypeBool,
+				Computed: true,
+				Description: "Initially false, and then set to true during refresh once " +
+					"the expiration is less than min_seconds_remaining in the future.",
 			},
 		},
 	}
@@ -235,6 +241,10 @@ func pkiSecretBackendSignCreate(d *schema.ResourceData, meta interface{}) error 
 	d.Set("serial", resp.Data["serial_number"])
 	d.Set("serial_number", resp.Data["serial_number"])
 	d.Set("expiration", resp.Data["expiration"])
+
+	if err := pkiSecretBackendCertSynchronizeRenewPending(d); err != nil {
+		return err
+	}
 
 	d.SetId(fmt.Sprintf("%s/%s/%s", backend, name, commonName))
 
