@@ -188,7 +188,7 @@ func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 
-	path, err := remountToNewPath(d, client, consts.FieldPath, path)
+	path, err := remountToNewPath(d, client, consts.FieldPath, false)
 	if err != nil {
 		return err
 	}

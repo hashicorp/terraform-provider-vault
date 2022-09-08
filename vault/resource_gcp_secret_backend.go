@@ -173,7 +173,7 @@ func gcpSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 	d.Partial(true)
 
-	path, err := remountToNewPath(d, client, consts.FieldPath, path)
+	path, err := remountToNewPath(d, client, consts.FieldPath, false)
 	if err != nil {
 		return err
 	}

@@ -537,7 +537,7 @@ func updateConfigResource(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	backend, err := remountToNewPath(d, client, consts.FieldBackend, backend)
+	backend, err := remountToNewPath(d, client, consts.FieldBackend, false)
 	if err != nil {
 		return err
 	}

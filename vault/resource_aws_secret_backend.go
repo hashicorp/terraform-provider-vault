@@ -131,20 +131,28 @@ func mountMigrationHelper(_ context.Context, diff *schema.ResourceDiff, meta int
 	return nil
 }
 
-func remountToNewPath(d *schema.ResourceData, client *api.Client, mountField, oldPath string) (string, error) {
-	ret := oldPath
+func remountToNewPath(d *schema.ResourceData, client *api.Client, mountField string, isAuthMount bool) (string, error) {
+	ret := d.Get(mountField).(string)
+
 	if d.HasChange(mountField) {
 		// since this function is only called within Update
 		// we know that remount is enabled
-		newPath := d.Get(mountField).(string)
+		o, n := d.GetChange(mountField)
+		oldPath := o.(string)
+		newPath := n.(string)
+
+		if isAuthMount {
+			oldPath = "auth/" + oldPath
+			newPath = "auth/" + newPath
+		}
 
 		err := client.Sys().Remount(oldPath, newPath)
 		if err != nil {
-			return ret, fmt.Errorf("error remounting to %q: %w", newPath, err)
+			return "", fmt.Errorf("error remounting to %q: %w", newPath, err)
 		}
 
-		d.SetId(newPath)
-		ret = newPath
+		// ID for Auth backends only contains mount path
+		d.SetId(ret)
 	}
 
 	return ret, nil
@@ -295,7 +303,7 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 	d.Partial(true)
 
-	path, err := remountToNewPath(d, client, consts.FieldPath, path)
+	path, err := remountToNewPath(d, client, consts.FieldPath, false)
 	if err != nil {
 		return err
 	}

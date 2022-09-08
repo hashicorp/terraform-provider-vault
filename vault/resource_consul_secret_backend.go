@@ -226,7 +226,7 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	d.Partial(true)
 
-	path, err := remountToNewPath(d, client, consts.FieldPath, path)
+	path, err := remountToNewPath(d, client, consts.FieldPath, false)
 	if err != nil {
 		return err
 	}
