@@ -112,13 +112,6 @@ func (l *AuthLoginAWS) Schema() *schema.Resource {
 	return SchemaLoginAWS
 }
 
-func (l *AuthLoginAWS) MountPath() string {
-	if l.mount == "" {
-		return consts.AuthMethodUserpass
-	}
-	return l.mount
-}
-
 func (l *AuthLoginAWS) LoginPath() string {
 	// TODO: add params validation
 	return fmt.Sprintf("auth/%s/login", l.MountPath())

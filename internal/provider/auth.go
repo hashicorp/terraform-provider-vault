@@ -54,6 +54,17 @@ func (l *AuthLoginCommon) Namespace() string {
 	return ""
 }
 
+func (l *AuthLoginCommon) MountPath() string {
+	if l.mount == "" {
+		return l.Method()
+	}
+	return l.mount
+}
+
+func (l *AuthLoginCommon) Method() string {
+	return ""
+}
+
 func (l *AuthLoginCommon) copyParams() map[string]interface{} {
 	params := make(map[string]interface{}, len(l.params))
 	for k, v := range l.params {

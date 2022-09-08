@@ -52,13 +52,6 @@ func (l *AuthLoginUserpass) Login(client *api.Client) (*api.Secret, error) {
 	return l.login(client, l.LoginPath(), params)
 }
 
-func (l *AuthLoginUserpass) MountPath() string {
-	if l.mount == "" {
-		return consts.AuthMethodUserpass
-	}
-	return l.mount
-}
-
 func (l *AuthLoginUserpass) LoginPath() string {
 	return fmt.Sprintf("auth/%s/login/%s", l.MountPath(), l.params[consts.FieldUsername])
 }
