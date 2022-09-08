@@ -41,6 +41,16 @@ const (
 // The key of the mutex should be the path in Vault.
 var vaultMutexKV = helper.NewMutexKV()
 
+var (
+	VaultVersion110 *version.Version
+	VaultVersion111 *version.Version
+)
+
+func init() {
+	VaultVersion110 = version.Must(version.NewSemver(consts.VaultVersion10))
+	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion11))
+}
+
 func Provider() *schema.Provider {
 	dataSourcesMap, err := parse(DataSourceRegistry)
 	if err != nil {

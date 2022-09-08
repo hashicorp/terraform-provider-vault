@@ -3,11 +3,11 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-provider-vault/internal/semver"
 	"log"
 	"regexp"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -174,10 +174,7 @@ func consulSecretBackendRoleWrite(ctx context.Context, d *schema.ResourceData, m
 		"node_identities":    nodeIdentities,
 	}
 
-	useAPIVer1, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion11)
-	if err != nil {
-		return diag.Errorf("failed to read Vault client version: %s", err)
-	}
+	useAPIVer1 := provider.IsAPISupported(meta, VaultVersion111)
 
 	if useAPIVer1 {
 		data["consul_policies"] = policies
@@ -271,10 +268,7 @@ func consulSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	// Check whether Vault will return consul_policies or policies based on its version.
-	useAPIVer1, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion11)
-	if err != nil {
-		return diag.Errorf("failed to read Vault client version: %s", err)
-	}
+	useAPIVer1 := provider.IsAPISupported(meta, VaultVersion111)
 
 	// Determine to set either policies or consul_policies depending on the Vault version:
 	// * Vault version < 1.11: Use policies

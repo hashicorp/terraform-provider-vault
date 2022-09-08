@@ -3,16 +3,16 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/semver"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -144,10 +144,8 @@ func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta
 
 	// If a token isn't provided and the Vault version is less than 1.11, fail before
 	// mounting the path in Vault.
-	useAPIVer1, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion11)
-	if err != nil {
-		return diag.Errorf("failed to read Vault client version: %s", err)
-	}
+	useAPIVer1 := provider.IsAPISupported(meta, VaultVersion111)
+
 	if token == "" && !useAPIVer1 {
 		return diag.Errorf(`error writing Consul configuration: no token provided and the 
 Vault client version does not meet the minimum requirement for this feature (Vault 1.11+)`)
@@ -241,7 +239,7 @@ func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta
 
 	path, err := remountToNewPath(d, client, consts.FieldPath, false)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
