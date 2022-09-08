@@ -91,6 +91,42 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 	})
 }
 
+func TestLDAPAuthBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-auth-ldap")
+	updatedPath := acctest.RandomWithPrefix("tf-test-auth-ldap-updated")
+
+	resourceName := "vault_ldap_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_basic(updatedPath, "true", "true"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					testLDAPAuthBackendCheck_attrs(resourceName, updatedPath),
+				),
+			},
+			{
+				ResourceName:      "vault_ldap_auth_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"bindpass",
+				},
+			},
+		},
+	})
+}
+
 func testLDAPAuthBackendDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_ldap_auth_backend" {

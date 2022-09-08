@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -27,6 +28,7 @@ func gcpAuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		CustomizeDiff: mountMigrationCustomizeDiffFieldPath,
 		Schema: map[string]*schema.Schema{
 			"credentials": {
 				Type:         schema.TypeString,
@@ -62,7 +64,6 @@ func gcpAuthBackendResource() *schema.Resource {
 			"path": {
 				Type:     schema.TypeString,
 				Optional: true,
-				ForceNew: true,
 				Default:  gcpAuthDefaultPath,
 				StateFunc: func(v interface{}) string {
 					return strings.Trim(v.(string), "/")
@@ -185,6 +186,16 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	path := gcpAuthBackendConfigPath(d.Id())
+
+	if !d.IsNewResource() {
+		newMount, err := remountToNewPath(d, client, consts.FieldPath, true)
+		if err != nil {
+			return err
+		}
+
+		path = gcpAuthBackendConfigPath(newMount)
+	}
+
 	data := map[string]interface{}{}
 
 	if v, ok := d.GetOk("credentials"); ok {

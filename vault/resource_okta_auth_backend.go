@@ -29,11 +29,11 @@ func oktaAuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		CustomizeDiff: mountMigrationCustomizeDiffFieldPath,
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "path to mount the backend",
 				Default:     oktaAuthType,
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
@@ -398,6 +398,14 @@ func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	path := d.Id()
+
+	if !d.IsNewResource() {
+		path, e = remountToNewPath(d, client, consts.FieldPath, true)
+		if e != nil {
+			return e
+		}
+	}
+
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
 
 	configuration := map[string]interface{}{

@@ -18,7 +18,6 @@ func githubAuthBackendResource() *schema.Resource {
 		consts.FieldPath: {
 			Type:        schema.TypeString,
 			Optional:    true,
-			ForceNew:    true,
 			Description: "Path where the auth backend is mounted",
 			Default:     "github",
 			StateFunc: func(v interface{}) string {
@@ -66,7 +65,8 @@ func githubAuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		Schema: fields,
+		Schema:        fields,
+		CustomizeDiff: mountMigrationCustomizeDiffFieldPath,
 	}
 }
 
@@ -106,6 +106,16 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
+
+	if !d.IsNewResource() {
+		mount, err := remountToNewPath(d, client, consts.FieldPath, true)
+		if err != nil {
+			return err
+		}
+
+		path = "auth/" + mount
+		configPath = path + "/config"
+	}
 
 	data := map[string]interface{}{}
 

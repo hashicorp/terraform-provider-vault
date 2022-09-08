@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
@@ -116,6 +117,43 @@ func TestAccOktaAuthBackend_invalid_max_ttl(t *testing.T) {
 			{
 				Config:      testAccOktaAuthConfig_invalid_max_ttl(path, organization),
 				ExpectError: regexp.MustCompile(`Error: invalid value for "max_ttl", could not parse "invalid_max_ttl"`),
+			},
+		},
+	})
+}
+
+func TestOktaAuthBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-auth-okta")
+	updatedPath := acctest.RandomWithPrefix("tf-test-auth-okta-updated")
+
+	organization := "example"
+	resourceName := "vault_okta_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOktaAuthConfig_basic(path, organization),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					testAccOktaAuthBackend_InitialCheck,
+				),
+			},
+			{
+				Config: testAccOktaAuthConfig_basic(updatedPath, organization),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					testAccOktaAuthBackend_InitialCheck,
+				),
+			},
+			{
+				ResourceName:      "vault_okta_auth_backend.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"token",
+				},
 			},
 		},
 	})

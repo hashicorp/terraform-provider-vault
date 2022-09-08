@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -128,10 +129,9 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed: true,
 		},
 
-		"path": {
+		consts.FieldPath: {
 			Type:     schema.TypeString,
 			Optional: true,
-			ForceNew: true,
 			Default:  "ldap",
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
@@ -174,7 +174,8 @@ func ldapAuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		Schema: fields,
+		CustomizeDiff: mountMigrationCustomizeDiffFieldPath,
+		Schema:        fields,
 	}
 }
 
@@ -214,6 +215,16 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	}
 
 	path := ldapAuthBackendConfigPath(d.Id())
+
+	if !d.IsNewResource() {
+		newMount, err := remountToNewPath(d, client, consts.FieldPath, true)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		path = ldapAuthBackendConfigPath(newMount)
+	}
+
 	data := map[string]interface{}{}
 
 	if v, ok := d.GetOk("url"); ok {

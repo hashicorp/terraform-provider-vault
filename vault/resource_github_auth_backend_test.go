@@ -193,6 +193,56 @@ func TestAccGithubAuthBackend_importTuning(t *testing.T) {
 	})
 }
 
+func TestGithubAuthBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-gh")
+	updatedPath := acctest.RandomWithPrefix("tf-test-gh-updated")
+
+	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
+
+	resName := "vault_github_auth_backend.gh"
+	var resAuth api.AuthMount
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccGithubAuthBackendConfig_basic(path, testGHOrg),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAuthMountExists(resName, &resAuth),
+					resource.TestCheckResourceAttr(resName, "id", path),
+					resource.TestCheckResourceAttr(resName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resName, "organization", testGHOrg),
+					// expect computed value for organization_id
+					resource.TestCheckResourceAttr(resName, "organization_id", strconv.Itoa(orgMeta.ID)),
+					resource.TestCheckResourceAttr(resName, "token_ttl", "1200"),
+					resource.TestCheckResourceAttr(resName, "token_max_ttl", "3000"),
+					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuth.Accessor),
+				),
+			},
+			{
+				Config: testAccGithubAuthBackendConfig_basic(updatedPath, testGHOrg),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAuthMountExists(resName, &resAuth),
+					resource.TestCheckResourceAttr(resName, "id", updatedPath),
+					resource.TestCheckResourceAttr(resName, consts.FieldPath, updatedPath),
+					resource.TestCheckResourceAttr(resName, "organization", testGHOrg),
+					// expect computed value for organization_id
+					resource.TestCheckResourceAttr(resName, "organization_id", strconv.Itoa(orgMeta.ID)),
+					resource.TestCheckResourceAttr(resName, "token_ttl", "1200"),
+					resource.TestCheckResourceAttr(resName, "token_max_ttl", "3000"),
+					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuth.Accessor),
+				),
+			},
+			{
+				ResourceName:      resName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func testAccCheckAuthMountExists(n string, out *api.AuthMount) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		return authMountExistsHelper(n, s, out)

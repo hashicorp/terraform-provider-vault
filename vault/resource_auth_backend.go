@@ -22,7 +22,8 @@ func AuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		MigrateState: resourceAuthBackendMigrateState,
+		MigrateState:  resourceAuthBackendMigrateState,
+		CustomizeDiff: mountMigrationCustomizeDiffFieldPath,
 
 		Schema: map[string]*schema.Schema{
 			"type": {
@@ -36,7 +37,6 @@ func AuthBackendResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
-				ForceNew:     true,
 				Description:  "path to mount the backend. This defaults to the type.",
 				ValidateFunc: validateNoLeadingTrailingSlashes,
 				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
@@ -159,6 +159,13 @@ func authBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
+
+	if !d.IsNewResource() {
+		path, e = remountToNewPath(d, client, consts.FieldPath, true)
+		if e != nil {
+			return e
+		}
+	}
 
 	backendType := d.Get("type").(string)
 	var input api.MountConfigInput

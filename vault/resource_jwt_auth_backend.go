@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -27,10 +28,9 @@ func jwtAuthBackendResource() *schema.Resource {
 		CustomizeDiff: jwtCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				ForceNew:     true,
 				Description:  "path to mount the backend",
 				Default:      "jwt",
 				ValidateFunc: validateNoTrailingSlash,
@@ -166,7 +166,7 @@ func jwtAuthBackendResource() *schema.Resource {
 	}
 }
 
-func jwtCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	attributes := []string{
 		"oidc_discovery_url",
 		"jwks_url",
@@ -176,11 +176,12 @@ func jwtCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{
 
 	for _, attr := range attributes {
 		if !d.NewValueKnown(attr) {
-			return nil
+			// check whether mount migration is required
+			return mountMigrationCustomizeDiffFieldPath(ctx, d, meta)
 		}
 
 		if _, ok := d.GetOk(attr); ok {
-			return nil
+			return mountMigrationCustomizeDiffFieldPath(ctx, d, meta)
 		}
 	}
 
@@ -354,6 +355,13 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path := getJwtPath(d)
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
+
+	if !d.IsNewResource() {
+		path, e = remountToNewPath(d, client, consts.FieldPath, true)
+		if e != nil {
+			return e
+		}
+	}
 
 	configuration := map[string]interface{}{}
 	for _, configOption := range matchingJwtMountConfigOptions {
