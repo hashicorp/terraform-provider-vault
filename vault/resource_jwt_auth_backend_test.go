@@ -281,14 +281,7 @@ func TestJWTAuthBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "local", "false"),
 				),
 			},
-			{
-				ResourceName:      "vault_jwt_auth_backend.jwt",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"description",
-				},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "description"),
 		},
 	})
 }

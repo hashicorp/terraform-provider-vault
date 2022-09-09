@@ -113,15 +113,7 @@ func TestADSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "userdn", "CN=Users,DC=corp,DC=example,DC=net"),
 				),
 			},
-			{
-				ResourceName:      "vault_ad_secret_backend.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"bindpass",
-					"description",
-				},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "description"),
 		},
 	})
 }

@@ -123,16 +123,8 @@ func TestRabbitMQSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "password", password),
 				),
 			},
-			{
-				ResourceName:      "vault_rabbitmq_secret_backend.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"description",
-					"username",
-					"password",
-				},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "description", "username",
+				"password"),
 		},
 	})
 }

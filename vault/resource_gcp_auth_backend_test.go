@@ -152,14 +152,7 @@ func TestGCPAuthBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
 				),
 			},
-			{
-				ResourceName:      "vault_gcp_auth_backend.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"credentials",
-				},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "credentials"),
 		},
 	})
 }

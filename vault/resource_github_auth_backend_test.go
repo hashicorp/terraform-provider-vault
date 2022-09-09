@@ -234,11 +234,7 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuth.Accessor),
 				),
 			},
-			{
-				ResourceName:      resName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			testutil.GetImportTestStep(resName, false, nil),
 		},
 	})
 }

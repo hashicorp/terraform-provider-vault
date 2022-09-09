@@ -99,15 +99,7 @@ func TestNomadSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "ttl", "30"),
 				),
 			},
-			{
-				ResourceName:      "vault_nomad_secret_backend.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"description",
-					"token",
-				},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "description", "token"),
 		},
 	})
 }

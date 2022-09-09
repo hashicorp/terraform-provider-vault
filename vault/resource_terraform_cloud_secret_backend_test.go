@@ -88,15 +88,7 @@ func TestTerraformCloudSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "base_path", "/api/v2/"),
 				),
 			},
-			{
-				ResourceName:      "vault_terraform_cloud_secret_backend.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"description",
-					"token",
-				},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "description", "token"),
 		},
 	})
 }

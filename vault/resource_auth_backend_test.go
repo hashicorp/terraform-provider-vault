@@ -79,11 +79,7 @@ func TestAuthBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "type", "github"),
 				),
 			},
-			{
-				ResourceName:      "vault_auth_backend.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }

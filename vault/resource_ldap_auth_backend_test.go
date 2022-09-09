@@ -115,14 +115,7 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 					testLDAPAuthBackendCheck_attrs(resourceName, updatedPath),
 				),
 			},
-			{
-				ResourceName:      "vault_ldap_auth_backend.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"bindpass",
-				},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass"),
 		},
 	})
 }

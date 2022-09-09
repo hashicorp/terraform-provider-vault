@@ -147,14 +147,7 @@ func TestOktaAuthBackend_remount(t *testing.T) {
 					testAccOktaAuthBackend_InitialCheck,
 				),
 			},
-			{
-				ResourceName:      "vault_okta_auth_backend.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"token",
-				},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "token"),
 		},
 	})
 }
