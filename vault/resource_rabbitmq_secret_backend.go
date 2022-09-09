@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func rabbitMQSecretBackendResource() *schema.Resource {
@@ -180,7 +181,7 @@ func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 	path := d.Id()
 	d.Partial(true)
 
-	path, err := remountToNewPath(d, client, consts.FieldPath, false)
+	path, err := util.Remount(d, client, consts.FieldPath, false)
 	if err != nil {
 		return err
 	}

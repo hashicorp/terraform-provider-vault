@@ -400,7 +400,7 @@ func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 
 	if !d.IsNewResource() {
-		path, e = remountToNewPath(d, client, consts.FieldPath, true)
+		path, e = util.Remount(d, client, consts.FieldPath, true)
 		if e != nil {
 			return e
 		}

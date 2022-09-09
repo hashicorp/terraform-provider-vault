@@ -108,7 +108,7 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	configPath := path + "/config"
 
 	if !d.IsNewResource() {
-		mount, err := remountToNewPath(d, client, consts.FieldPath, true)
+		mount, err := util.Remount(d, client, consts.FieldPath, true)
 		if err != nil {
 			return err
 		}

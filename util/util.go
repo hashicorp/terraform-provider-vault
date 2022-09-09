@@ -351,3 +351,30 @@ func GetAPIRequestData(d *schema.ResourceData, fieldMap map[string]string) map[s
 
 	return data
 }
+
+func Remount(d *schema.ResourceData, client *api.Client, mountField string, isAuthMount bool) (string, error) {
+	ret := d.Get(mountField).(string)
+
+	if d.HasChange(mountField) {
+		// since this function is only called within Update
+		// we know that remount is enabled
+		o, n := d.GetChange(mountField)
+		oldPath := o.(string)
+		newPath := n.(string)
+
+		if isAuthMount {
+			oldPath = "auth/" + oldPath
+			newPath = "auth/" + newPath
+		}
+
+		err := client.Sys().Remount(oldPath, newPath)
+		if err != nil {
+			return "", fmt.Errorf("error remounting to %q: %w", newPath, err)
+		}
+
+		// ID for Auth backends only contains mount path
+		d.SetId(ret)
+	}
+
+	return ret, nil
+}

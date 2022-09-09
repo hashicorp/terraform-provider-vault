@@ -292,7 +292,7 @@ func updateNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) e
 	tune := api.MountConfigInput{}
 	data := map[string]interface{}{}
 
-	backend, err := remountToNewPath(d, client, consts.FieldBackend, false)
+	backend, err := util.Remount(d, client, consts.FieldBackend, false)
 	if err != nil {
 		return err
 	}

@@ -13,6 +13,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func jwtAuthBackendResource() *schema.Resource {
@@ -357,7 +358,7 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
 
 	if !d.IsNewResource() {
-		path, e = remountToNewPath(d, client, consts.FieldPath, true)
+		path, e = util.Remount(d, client, consts.FieldPath, true)
 		if e != nil {
 			return e
 		}

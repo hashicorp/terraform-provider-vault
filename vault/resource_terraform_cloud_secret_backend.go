@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func terraformCloudSecretBackendResource() *schema.Resource {
@@ -187,9 +188,9 @@ func terraformCloudSecretBackendUpdate(d *schema.ResourceData, meta interface{})
 	backend := d.Id()
 	configPath := terraformCloudSecretBackendConfigPath(backend)
 
-	backend, err := remountToNewPath(d, client, consts.FieldBackend, false)
-	if err != nil {
-		return err
+	backend, e = util.Remount(d, client, consts.FieldBackend, false)
+	if e != nil {
+		return e
 	}
 
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {

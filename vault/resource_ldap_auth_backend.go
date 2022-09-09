@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const ldapAuthType string = "ldap"
@@ -217,7 +218,7 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	path := ldapAuthBackendConfigPath(d.Id())
 
 	if !d.IsNewResource() {
-		newMount, err := remountToNewPath(d, client, consts.FieldPath, true)
+		newMount, err := util.Remount(d, client, consts.FieldPath, true)
 		if err != nil {
 			return diag.FromErr(err)
 		}

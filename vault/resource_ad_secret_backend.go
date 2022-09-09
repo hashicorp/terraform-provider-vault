@@ -537,9 +537,9 @@ func updateConfigResource(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	backend, err := remountToNewPath(d, client, consts.FieldBackend, false)
-	if err != nil {
-		return err
+	backend, e = util.Remount(d, client, consts.FieldBackend, false)
+	if e != nil {
+		return e
 	}
 
 	defaultTTL := d.Get("default_lease_ttl_seconds").(int)

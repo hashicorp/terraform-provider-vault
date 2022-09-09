@@ -78,10 +78,18 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 	return c, nil
 }
 
+// IsAPISupported receives a minimum version
+// of type *version.Version.
+//
+// It returns a boolean describing whether the
+// ProviderMeta vaultVersion is above the
+// minimum version.
 func (p *ProviderMeta) IsAPISupported(minVersion *version.Version) bool {
 	return p.vaultVersion.GreaterThanOrEqual(minVersion)
 }
 
+// GetVaultVersion returns the providerMeta
+// vaultVersion attribute.
 func (p *ProviderMeta) GetVaultVersion() *version.Version {
 	return p.vaultVersion
 }
@@ -233,12 +241,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	// Set the Vault version to *ProviderMeta object
-	vaultVersionString, err := getVaultVersion(client)
-	if err != nil {
-		return nil, err
-	}
-
-	vaultVersion, err := version.NewVersion(vaultVersionString)
+	vaultVersion, err := getVaultVersion(client)
 	if err != nil {
 		return nil, err
 	}
@@ -303,45 +306,40 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	return p.GetClient(), nil
 }
 
-// IsAPISupported receives a minimum version
-// that the Vault server version should be above.
+// IsAPISupported receives an interface
+// and a minimum *version.Version.
 //
-// It uses the go-version package
-// to perform a semantic version comparison, and
-// returns:
-//    - a boolean describing whether the Vault
-//      server version was above the minimum version
-//
-// This function can be used to perform semantic version comparisons
-// to conditionally enable features, or to resolve any diffs in the TF
-// state based on the Vault version.
+// It returns a boolean after computing
+// whether the API is supported by the
+// providerMeta, which is obtained from
+// the provided interface.
 func IsAPISupported(meta interface{}, minVersion *version.Version) bool {
 	var p *ProviderMeta
 	switch v := meta.(type) {
 	case *ProviderMeta:
 		p = v
 	default:
-		return false
+		panic(fmt.Sprintf("meta argument must be a %T, not %T", p, meta))
 	}
 
 	return p.IsAPISupported(minVersion)
 }
 
-func getVaultVersion(client *api.Client) (string, error) {
+func getVaultVersion(client *api.Client) (*version.Version, error) {
 	resp, err := client.Sys().SealStatus()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if resp == nil {
-		return "", fmt.Errorf("expected response data, got nil response")
+		return nil, fmt.Errorf("expected response data, got nil response")
 	}
 
 	if resp.Version == "" {
-		return "", fmt.Errorf("key %q not found in response", consts.FieldVersion)
+		return nil, fmt.Errorf("key %q not found in response", consts.FieldVersion)
 	}
 
-	return resp.Version, nil
+	return version.Must(version.NewSemver(resp.Version)), nil
 }
 
 func setChildToken(d *schema.ResourceData, c *api.Client) error {

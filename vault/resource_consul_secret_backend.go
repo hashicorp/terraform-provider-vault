@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -237,7 +238,7 @@ func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta
 
 	d.Partial(true)
 
-	path, err := remountToNewPath(d, client, consts.FieldPath, false)
+	path, err := util.Remount(d, client, consts.FieldPath, false)
 	if err != nil {
 		return diag.FromErr(err)
 	}

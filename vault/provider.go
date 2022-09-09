@@ -47,8 +47,8 @@ var (
 )
 
 func init() {
-	VaultVersion110 = version.Must(version.NewSemver(consts.VaultVersion10))
-	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion11))
+	VaultVersion110 = version.Must(version.NewSemver(consts.VaultVersion110))
+	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion111))
 }
 
 func Provider() *schema.Provider {
@@ -884,11 +884,11 @@ func MinVersionCheckWrapper(f schema.CreateContextFunc, minVersion string) schem
 			return diag.FromErr(e)
 		}
 
-		featureEnabled := provider.IsAPISupported(meta, mv)
+		apiSupported := provider.IsAPISupported(meta, mv)
 
-		currentVersion := meta.(*provider.ProviderMeta).GetVaultVersion().String()
+		currentVersion := meta.(*provider.ProviderMeta).GetVaultVersion()
 
-		if !featureEnabled {
+		if !apiSupported {
 			return diag.Errorf("feature not enabled on current Vault version. min version required=%s; "+
 				"current vault version=%s", minVersion, currentVersion)
 		}

@@ -31,7 +31,7 @@ const (
 
 func kubernetesSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: MinVersionCheckWrapper(kubernetesSecretBackendRoleCreateUpdate, consts.VaultVersion11),
+		CreateContext: MinVersionCheckWrapper(kubernetesSecretBackendRoleCreateUpdate, consts.VaultVersion111),
 		ReadContext:   ReadContextWrapper(kubernetesSecretBackendRoleRead),
 		UpdateContext: kubernetesSecretBackendRoleCreateUpdate,
 		DeleteContext: kubernetesSecretBackendRoleDelete,

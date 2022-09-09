@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func azureSecretBackendResource() *schema.Resource {
@@ -188,7 +189,7 @@ func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 
-	path, err := remountToNewPath(d, client, consts.FieldPath, false)
+	path, err := util.Remount(d, client, consts.FieldPath, false)
 	if err != nil {
 		return err
 	}
