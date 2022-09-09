@@ -7,6 +7,12 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/util"
+)
+
+type (
+	GetLoginSchema    func(string) *schema.Schema
+	getSchemaResource func(string) *schema.Resource
 )
 
 var AuthLoginFields = []string{
@@ -17,9 +23,8 @@ var AuthLoginFields = []string{
 
 type AuthLogin interface {
 	Init(data *schema.ResourceData, authFiled string) error
-	Schema() *schema.Resource
-	LoginPath() string
 	MountPath() string
+	LoginPath() string
 	Method() string
 	Login(client *api.Client) (*api.Secret, error)
 	Namespace() string
@@ -65,11 +70,16 @@ func (l *AuthLoginCommon) Method() string {
 	return ""
 }
 
-func (l *AuthLoginCommon) copyParams() map[string]interface{} {
+func (l *AuthLoginCommon) copyParams(excludes ...string) map[string]interface{} {
 	params := make(map[string]interface{}, len(l.params))
 	for k, v := range l.params {
 		params[k] = v
 	}
+
+	for _, k := range excludes {
+		delete(params, k)
+	}
+
 	return params
 }
 
@@ -155,4 +165,15 @@ func mustAddLoginSchema(r *schema.Resource) *schema.Resource {
 	})
 
 	return r
+}
+
+func getLoginSchema(authField, description string, resourceFunc getSchemaResource) *schema.Schema {
+	return &schema.Schema{
+		Type:          schema.TypeList,
+		Optional:      true,
+		MaxItems:      1,
+		Description:   description,
+		Elem:          resourceFunc(authField),
+		ConflictsWith: util.CalculateConflictsWith(authField, AuthLoginFields),
+	}
 }

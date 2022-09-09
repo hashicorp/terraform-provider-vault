@@ -50,7 +50,7 @@ func Provider() *schema.Provider {
 	if err != nil {
 		panic(err)
 	}
-	return &schema.Provider{
+	r := &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"address": {
 				Type:        schema.TypeString,
@@ -96,30 +96,6 @@ func Provider() *schema.Provider {
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_CAPATH", ""),
 				Description: "Path to directory containing CA certificate files to validate the server's certificate.",
-			},
-			consts.FieldAuthLoginDefault: {
-				Type:          schema.TypeList,
-				Optional:      true,
-				MaxItems:      1,
-				ConflictsWith: []string{consts.FieldAuthLoginAWS, consts.FieldAuthLoginUserpass},
-				Description:   "Login to vault with an existing auth method using auth/<mount>/login",
-				Elem:          provider.SchemaLoginGeneric,
-			},
-			consts.FieldAuthLoginUserpass: {
-				Type:          schema.TypeList,
-				Optional:      true,
-				MaxItems:      1,
-				ConflictsWith: []string{consts.FieldAuthLoginDefault, consts.FieldAuthLoginAWS},
-				Description:   "Login to vault using the userpass method",
-				Elem:          provider.SchemaLoginUserpass,
-			},
-			consts.FieldAuthLoginAWS: {
-				Type:          schema.TypeList,
-				Optional:      true,
-				MaxItems:      1,
-				ConflictsWith: []string{consts.FieldAuthLoginDefault, consts.FieldAuthLoginUserpass},
-				Description:   "Login to vault using the AWS method",
-				Elem:          provider.SchemaLoginAWS,
 			},
 			"client_auth": {
 				Type:        schema.TypeList,
@@ -208,6 +184,23 @@ func Provider() *schema.Provider {
 		DataSourcesMap: dataSourcesMap,
 		ResourcesMap:   resourcesMap,
 	}
+
+	for _, authField := range provider.AuthLoginFields {
+		var f provider.GetLoginSchema
+		switch authField {
+		case consts.FieldAuthLoginDefault:
+			f = provider.GetGenericLoginSchema
+		case consts.FieldAuthLoginUserpass:
+			f = provider.GetUserpassLoginSchema
+		case consts.FieldAuthLoginAWS:
+			f = provider.GetAWSLoginSchema
+		default:
+			continue
+		}
+		r.Schema[authField] = f(authField)
+	}
+
+	return r
 }
 
 // Description is essentially a DataSource or Resource with some additional metadata

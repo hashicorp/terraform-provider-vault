@@ -11,32 +11,43 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
-var SchemaLoginGeneric = &schema.Resource{
-	Schema: map[string]*schema.Schema{
-		consts.FieldPath: {
-			Type:     schema.TypeString,
-			Required: true,
-		},
-		consts.FieldNamespace: {
-			Type:     schema.TypeString,
-			Optional: true,
-		},
-		consts.FieldParameters: {
-			Type:     schema.TypeMap,
-			Optional: true,
-			Elem: &schema.Schema{
-				Type: schema.TypeString,
+func GetGenericLoginSchema(authField string) *schema.Schema {
+	return getLoginSchema(
+		authField,
+		"Login to vault with an existing auth method using auth/<mount>/login",
+		GetGenericLoginSchemaResource,
+	)
+}
+
+func GetGenericLoginSchemaResource(_ string) *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			consts.FieldPath: {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			consts.FieldNamespace: {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			consts.FieldParameters: {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			consts.FieldMethod: {
+				Type:     schema.TypeString,
+				Optional: true,
 			},
 		},
-		consts.FieldMethod: {
-			Type:     schema.TypeString,
-			Optional: true,
-		},
-	},
+	}
 }
 
 // AuthLoginGeneric provides a raw interface for authenticating to most
 // authentication engines.
+// Requires configuration provided by SchemaLoginGeneric.
 type AuthLoginGeneric struct {
 	AuthLoginCommon
 	path      string
@@ -44,16 +55,8 @@ type AuthLoginGeneric struct {
 	method    string
 }
 
-func (l *AuthLoginGeneric) Schema() *schema.Resource {
-	return nil
-}
-
 func (l *AuthLoginGeneric) Namespace() string {
 	return l.namespace
-}
-
-func (l *AuthLoginGeneric) MountPath() string {
-	return ""
 }
 
 func (l *AuthLoginGeneric) Init(d *schema.ResourceData, authField string) error {
