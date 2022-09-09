@@ -294,20 +294,21 @@ func consulSecretBackendConfigPath(backend string) string {
 
 func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
 	newToken := diff.Get("token").(string)
-	newBootstrap := diff.Get("bootstrap").(bool)
-
-	// Disallow the following:
-	//   1. Bootstrap is false, the token field is empty, and we know this is the final value of token.
-	if !newBootstrap && newToken == "" && diff.NewValueKnown("token") {
-		return fmt.Errorf("field 'bootstrap' must be set to true when 'token' is unspecified")
-	}
+	isTokenValueKnown := diff.NewValueKnown("token")
 
 	// Disallow the following:
 	//   1. Bootstrap is true and the token field is set to something.
 	//   2. Bootstrap is true and the token field is empty, but we don't know the final value of token.
-	if newBootstrap && newToken != "" ||
-		(newBootstrap && newToken == "" && !diff.NewValueKnown("token")) {
-		return fmt.Errorf("field 'bootstrap' must be set to false when 'token' is specified")
+	//   3. Bootstrap is false, the token field is empty, and we know this is the final value of token.
+	if newBootstrap := diff.Get("bootstrap").(bool); newBootstrap {
+		if newToken != "" ||
+			(newToken == "" && !isTokenValueKnown) {
+			return fmt.Errorf("field 'bootstrap' must be set to false when 'token' is specified")
+		}
+	} else {
+		if newToken == "" && isTokenValueKnown {
+			return fmt.Errorf("field 'bootstrap' must be set to true when 'token' is unspecified")
+		}
 	}
 
 	return nil
