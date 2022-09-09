@@ -38,7 +38,7 @@ func TestAccRabbitMQSecretBackend_basic(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				// the API can't serve these fields, so ignore them
-				ImportStateVerifyIgnore: []string{"connection_uri", "username", "password", "verify_connection"},
+				ImportStateVerifyIgnore: []string{"connection_uri", "username", "password", "verify_connection", "disable_remount"},
 			},
 			{
 				Config: testAccRabbitMQSecretBackendConfig_updated(path, connectionUri, username, password),
@@ -82,7 +82,7 @@ func TestAccRabbitMQSecretBackend_template(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				// the API can't serve these fields, so ignore them
-				ImportStateVerifyIgnore: []string{"connection_uri", "username", "password", "verify_connection"},
+				ImportStateVerifyIgnore: []string{"connection_uri", "username", "password", "verify_connection", "disable_remount"},
 			},
 		},
 	})
@@ -124,7 +124,7 @@ func TestRabbitMQSecretBackend_remount(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "description", "username",
-				"password"),
+				"password", "verify_connection", "disable_remount"),
 		},
 	})
 }

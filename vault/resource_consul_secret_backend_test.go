@@ -43,7 +43,7 @@ func TestConsulSecretBackend(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
 			{
 				Config: testConsulSecretBackend_initialConfigLocal(path, token),
 				Check: resource.ComposeTestCheckFunc(
@@ -61,7 +61,7 @@ func TestConsulSecretBackend(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
 			{
 				Config: testConsulSecretBackend_updateConfig(path, token),
 				Check: resource.ComposeTestCheckFunc(
@@ -79,7 +79,7 @@ func TestConsulSecretBackend(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
 			{
 				Config: testConsulSecretBackend_updateConfig_addCerts(path, token),
 				Check: resource.ComposeTestCheckFunc(
@@ -97,7 +97,7 @@ func TestConsulSecretBackend(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
 			{
 				Config: testConsulSecretBackend_updateConfig_updateCerts(path, token),
 				Check: resource.ComposeTestCheckFunc(
@@ -115,7 +115,7 @@ func TestConsulSecretBackend(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
 		},
 	})
 }
@@ -154,7 +154,7 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "bootstrap", "true"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap"),
+			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap", "disable_remount"),
 			{
 				Config: testConsulSecretBackend_bootstrapAddRole(path, consulAddr),
 				Check: resource.ComposeTestCheckFunc(
@@ -164,7 +164,7 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceRoleName, "consul_policies.*", "global-management"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap"),
+			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap", "disable_remount"),
 			{
 				Config:      testConsulSecretBackend_bootstrapConfig(path+"-new", consulAddr, "", true),
 				ExpectError: regexp.MustCompile(`Token not provided and failed to bootstrap ACLs`),
@@ -208,7 +208,20 @@ func TestConsulSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap"),
+			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap", "disable_remount"),
+			{
+				Config: testConsulSecretBackend_disableRemount(path, token),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1:8500"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
+					resource.TestCheckResourceAttr(resourceName, "disable_remount", "true"),
+				),
+			},
 		},
 	})
 }
@@ -252,6 +265,19 @@ resource "vault_consul_secret_backend" "test" {
 }`, path, token)
 }
 
+func testConsulSecretBackend_disableRemount(path, token string) string {
+	return fmt.Sprintf(`
+resource "vault_consul_secret_backend" "test" {
+  path = "%s"
+  description = "test description"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds = 86400
+  address = "127.0.0.1:8500"
+  token = "%s"
+  disable_remount = true
+}`, path, token)
+}
+
 func testConsulSecretBackend_initialConfigLocal(path, token string) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
@@ -273,6 +299,7 @@ resource "vault_consul_secret_backend" "test" {
   address = "%s"
   token = "%s"
   bootstrap = %t
+  disable_remount = true
 }
 `, path, addr, token, bootstrap)
 }

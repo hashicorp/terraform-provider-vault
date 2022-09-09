@@ -94,7 +94,7 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 			Description: "Maximum possible lease duration for secrets in seconds.",
 		},
 	}
-	return &schema.Resource{
+	return mustAddMountMigrationSchema(&schema.Resource{
 		Create:        createNomadAccessConfigResource,
 		Update:        updateNomadAccessConfigResource,
 		Read:          ReadWrapper(readNomadAccessConfigResource),
@@ -104,7 +104,7 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: fields,
-	}
+	})
 }
 
 func createNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {

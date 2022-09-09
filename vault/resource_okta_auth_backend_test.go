@@ -67,6 +67,7 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"token",
+					"disable_remount",
 				},
 			},
 			{
@@ -82,6 +83,7 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"token",
+					"disable_remount",
 				},
 			},
 		},
@@ -147,7 +149,7 @@ func TestOktaAuthBackend_remount(t *testing.T) {
 					testAccOktaAuthBackend_InitialCheck,
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "token"),
+			testutil.GetImportTestStep(resourceName, false, nil, "token", "disable_remount"),
 		},
 	})
 }

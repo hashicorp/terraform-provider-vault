@@ -36,13 +36,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "username_template"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				// the API can't serve these fields, so ignore them
-				ImportStateVerifyIgnore: []string{"secret_key"},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "secret_key", "disable_remount"),
 			{
 				Config: testAccAWSSecretBackendConfig_updated(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
@@ -92,13 +86,7 @@ func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "username_template", templ),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				// the API can't serve these fields, so ignore them
-				ImportStateVerifyIgnore: []string{"secret_key"},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "secret_key", "disable_remount"),
 		},
 	})
 }
@@ -131,6 +119,7 @@ func TestAccAWSSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil, "secret_key", "disable_remount"),
 		},
 	})
 }

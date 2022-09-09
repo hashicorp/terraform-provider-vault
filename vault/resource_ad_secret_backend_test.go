@@ -39,7 +39,7 @@ func TestADSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "userdn", "CN=Users,DC=corp,DC=example,DC=net"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "description"),
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "description", "disable_remount"),
 			// TODO: on vault-1.11+ length should conflict with password_policy
 			// We should re-enable this check when we have the adaptive version support.
 			//{
@@ -113,7 +113,7 @@ func TestADSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "userdn", "CN=Users,DC=corp,DC=example,DC=net"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "description"),
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "description", "disable_remount"),
 		},
 	})
 }

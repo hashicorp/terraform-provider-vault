@@ -17,7 +17,7 @@ import (
 )
 
 func jwtAuthBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return mustAddMountMigrationSchema(&schema.Resource{
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -164,7 +164,7 @@ func jwtAuthBackendResource() *schema.Resource {
 
 			"tune": authMountTuneSchema(),
 		},
-	}
+	})
 }
 
 func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {

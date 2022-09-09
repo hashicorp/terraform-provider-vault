@@ -281,7 +281,7 @@ func TestJWTAuthBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "local", "false"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "description"),
+			testutil.GetImportTestStep(resourceName, false, nil, "description", "disable_remount"),
 		},
 	})
 }

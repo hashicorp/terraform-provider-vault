@@ -18,7 +18,7 @@ import (
 )
 
 func consulSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return mustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: consulSecretBackendCreate,
 		ReadContext:   ReadContextWrapper(consulSecretBackendRead),
 		UpdateContext: consulSecretBackendUpdate,
@@ -110,7 +110,7 @@ func consulSecretBackendResource() *schema.Resource {
 				Description: "Specifies if the secret backend is local only",
 			},
 		},
-	}
+	})
 }
 
 func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

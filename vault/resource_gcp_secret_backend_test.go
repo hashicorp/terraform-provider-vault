@@ -81,7 +81,7 @@ func TestGCPSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "local", "false"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "credentials"),
+			testutil.GetImportTestStep(resourceName, false, nil, "credentials", "disable_remount"),
 		},
 	})
 }

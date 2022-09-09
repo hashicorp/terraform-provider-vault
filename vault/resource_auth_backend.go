@@ -13,7 +13,7 @@ import (
 )
 
 func AuthBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return mustAddMountMigrationSchema(&schema.Resource{
 		SchemaVersion: 1,
 
 		Create: authBackendWrite,
@@ -66,7 +66,7 @@ func AuthBackendResource() *schema.Resource {
 
 			"tune": authMountTuneSchema(),
 		},
-	}
+	})
 }
 
 func authBackendWrite(d *schema.ResourceData, meta interface{}) error {

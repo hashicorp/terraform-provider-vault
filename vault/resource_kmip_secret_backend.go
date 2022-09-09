@@ -26,7 +26,7 @@ var kmipAPIFields = []string{
 }
 
 func kmipSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return mustAddMountMigrationSchema(&schema.Resource{
 		Create:        kmipSecretBackendCreate,
 		Read:          ReadWrapper(kmipSecretBackendRead),
 		Update:        kmipSecretBackendUpdate,
@@ -107,7 +107,7 @@ func kmipSecretBackendResource() *schema.Resource {
 				Description: "Client certificate TTL in seconds",
 			},
 		},
-	}
+	})
 }
 
 func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {

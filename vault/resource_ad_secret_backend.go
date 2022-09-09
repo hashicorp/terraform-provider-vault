@@ -210,7 +210,7 @@ func adSecretBackendResource() *schema.Resource {
 			Description: `LDAP domain to use for users (eg: ou=People,dc=example,dc=org)`,
 		},
 	}
-	return &schema.Resource{
+	return mustAddMountMigrationSchema(&schema.Resource{
 		Create: createConfigResource,
 		Update: updateConfigResource,
 		Read:   ReadWrapper(readConfigResource),
@@ -220,7 +220,7 @@ func adSecretBackendResource() *schema.Resource {
 		},
 		CustomizeDiff: mountMigrationCustomizeDiffFieldBackend,
 		Schema:        fields,
-	}
+	})
 }
 
 func mountMigrationCustomizeDiffFieldBackend(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {

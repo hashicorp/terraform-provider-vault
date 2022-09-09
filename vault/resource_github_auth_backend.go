@@ -57,7 +57,7 @@ func githubAuthBackendResource() *schema.Resource {
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
-	return &schema.Resource{
+	return mustAddMountMigrationSchema(&schema.Resource{
 		Create: githubAuthBackendCreate,
 		Read:   ReadWrapper(githubAuthBackendRead),
 		Update: githubAuthBackendUpdate,
@@ -67,7 +67,7 @@ func githubAuthBackendResource() *schema.Resource {
 		},
 		Schema:        fields,
 		CustomizeDiff: mountMigrationCustomizeDiffFieldPath,
-	}
+	})
 }
 
 func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {

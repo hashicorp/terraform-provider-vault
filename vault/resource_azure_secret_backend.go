@@ -14,7 +14,7 @@ import (
 )
 
 func azureSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return mustAddMountMigrationSchema(&schema.Resource{
 		Create: azureSecretBackendCreate,
 		Read:   ReadWrapper(azureSecretBackendRead),
 		Update: azureSecretBackendUpdate,
@@ -84,7 +84,7 @@ func azureSecretBackendResource() *schema.Resource {
 				Description: "The Azure cloud environment. Valid values: AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud, AzureGermanCloud.",
 			},
 		},
-	}
+	})
 }
 
 func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {

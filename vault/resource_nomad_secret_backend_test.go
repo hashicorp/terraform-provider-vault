@@ -99,7 +99,7 @@ func TestNomadSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "ttl", "30"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "description", "token"),
+			testutil.GetImportTestStep(resourceName, false, nil, "description", "token", "disable_remount"),
 		},
 	})
 }

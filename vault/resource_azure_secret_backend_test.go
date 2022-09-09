@@ -95,7 +95,7 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "client_secret"),
+			testutil.GetImportTestStep(resourceName, false, nil, "client_secret", "disable_remount"),
 		},
 	})
 }

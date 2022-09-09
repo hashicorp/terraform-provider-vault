@@ -64,6 +64,7 @@ const (
 	FieldAnyMount                 = "any_mount"
 	FieldUUID                     = "uuid"
 	FieldMountAccessor            = "mount_accessor"
+	FieldDisableRemount           = "disable_remount"
 
 	/*
 		common environment variables

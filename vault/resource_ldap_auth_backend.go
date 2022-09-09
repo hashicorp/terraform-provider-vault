@@ -165,7 +165,7 @@ func ldapAuthBackendResource() *schema.Resource {
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
-	return &schema.Resource{
+	return mustAddMountMigrationSchema(&schema.Resource{
 		SchemaVersion: 1,
 
 		CreateContext: ldapAuthBackendWrite,
@@ -177,7 +177,7 @@ func ldapAuthBackendResource() *schema.Resource {
 		},
 		CustomizeDiff: mountMigrationCustomizeDiffFieldPath,
 		Schema:        fields,
-	}
+	})
 }
 
 func ldapAuthBackendConfigPath(path string) string {

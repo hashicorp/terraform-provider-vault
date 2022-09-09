@@ -234,7 +234,7 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuth.Accessor),
 				),
 			},
-			testutil.GetImportTestStep(resName, false, nil),
+			testutil.GetImportTestStep(resName, false, nil, "disable_remount"),
 		},
 	})
 }

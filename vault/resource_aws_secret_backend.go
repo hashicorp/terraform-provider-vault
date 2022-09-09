@@ -15,7 +15,7 @@ import (
 )
 
 func awsSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return mustAddMountMigrationSchema(&schema.Resource{
 		Create: awsSecretBackendCreate,
 		Read:   ReadWrapper(awsSecretBackendRead),
 		Update: awsSecretBackendUpdate,
@@ -96,7 +96,7 @@ func awsSecretBackendResource() *schema.Resource {
 				Description: "Template describing how dynamic usernames are generated.",
 			},
 		},
-	}
+	})
 }
 
 func mountMigrationCustomizeDiffFieldPath(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
@@ -115,16 +115,15 @@ func mountMigrationHelper(_ context.Context, diff *schema.ResourceDiff, meta int
 
 	// Mount Migration is only available for versions >= 1.10
 	remountSupported := provider.IsAPISupported(meta, VaultVersion110)
+	disable := diff.Get(consts.FieldDisableRemount).(bool)
 
-	if !remountSupported {
-		// Mount migration not available
-		// Destroy and recreate resource
-		if err := diff.ForceNew(mountField); err != nil {
-			return err
-		}
+	if remountSupported && !disable {
+		return nil
 	}
 
-	return nil
+	// Mount migration not available
+	// Destroy and recreate resource
+	return diff.ForceNew(mountField)
 }
 
 func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {

@@ -20,7 +20,7 @@ const (
 )
 
 func gcpAuthBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return mustAddMountMigrationSchema(&schema.Resource{
 		Create: gcpAuthBackendWrite,
 		Update: gcpAuthBackendUpdate,
 		Read:   ReadWrapper(gcpAuthBackendRead),
@@ -86,7 +86,7 @@ func gcpAuthBackendResource() *schema.Resource {
 				},
 			},
 		},
-	}
+	})
 }
 
 func gcpAuthCustomEndpointSchema() map[string]*schema.Schema {

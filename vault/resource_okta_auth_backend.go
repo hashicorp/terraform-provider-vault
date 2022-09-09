@@ -20,7 +20,7 @@ import (
 var oktaAuthType = "okta"
 
 func oktaAuthBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return mustAddMountMigrationSchema(&schema.Resource{
 		Create: oktaAuthBackendWrite,
 		Delete: oktaAuthBackendDelete,
 		Read:   ReadWrapper(oktaAuthBackendRead),
@@ -213,7 +213,7 @@ func oktaAuthBackendResource() *schema.Resource {
 				Description: "The mount accessor related to the auth mount.",
 			},
 		},
-	}
+	})
 }
 
 func normalizeOktaTTL(i interface{}) string {

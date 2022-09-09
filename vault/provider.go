@@ -850,6 +850,20 @@ func mustAddSchema(r *schema.Resource, m map[string]*schema.Schema) {
 	}
 }
 
+func mustAddMountMigrationSchema(r *schema.Resource) *schema.Resource {
+	mustAddSchema(r, map[string]*schema.Schema{
+		consts.FieldDisableRemount: {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+			Description: "If set, opts out of mount migration " +
+				"on path updates.",
+		},
+	})
+
+	return r
+}
+
 func UpdateSchemaResource(r *schema.Resource) *schema.Resource {
 	mustAddSchema(r, getNamespaceSchema())
 

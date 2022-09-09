@@ -79,7 +79,7 @@ func TestAuthBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "type", "github"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil),
+			testutil.GetImportTestStep(resourceName, false, nil, "disable_remount"),
 		},
 	})
 }

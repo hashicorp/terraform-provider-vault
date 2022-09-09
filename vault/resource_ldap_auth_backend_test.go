@@ -115,7 +115,7 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 					testLDAPAuthBackendCheck_attrs(resourceName, updatedPath),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "bindpass"),
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
 		},
 	})
 }

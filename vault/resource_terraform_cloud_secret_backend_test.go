@@ -88,7 +88,7 @@ func TestTerraformCloudSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "base_path", "/api/v2/"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "description", "token"),
+			testutil.GetImportTestStep(resourceName, false, nil, "description", "token", "disable_remount"),
 		},
 	})
 }
