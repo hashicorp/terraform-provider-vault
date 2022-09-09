@@ -154,13 +154,15 @@ func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {
 func mustAddLoginSchema(r *schema.Resource) *schema.Resource {
 	MustAddSchema(r, map[string]*schema.Schema{
 		consts.FieldNamespace: {
-			Type:     schema.TypeString,
-			Optional: true,
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The authentication engine's namespace.",
 		},
 		consts.FieldMount: {
-			Type:     schema.TypeString,
-			Optional: true,
-			Default:  consts.AuthMethodUserpass,
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The path where the authentication engine is mounted.",
+			Default:     consts.AuthMethodUserpass,
 		},
 	})
 
