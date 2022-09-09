@@ -44,9 +44,11 @@ var vaultMutexKV = helper.NewMutexKV()
 var (
 	VaultVersion110 *version.Version
 	VaultVersion111 *version.Version
+	VaultVersion190 *version.Version
 )
 
 func init() {
+	VaultVersion190 = version.Must(version.NewSemver(consts.VaultVersion190))
 	VaultVersion110 = version.Must(version.NewSemver(consts.VaultVersion110))
 	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion111))
 }
@@ -879,9 +881,15 @@ func ReadContextWrapper(f schema.ReadContextFunc) schema.ReadContextFunc {
 // wrapped schema.CreateContextFunc.
 func MinVersionCheckWrapper(f schema.CreateContextFunc, minVersion string) schema.CreateContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-		mv, e := version.NewVersion(minVersion)
-		if e != nil {
-			return diag.FromErr(e)
+		versionMap := map[string]*version.Version{
+			consts.VaultVersion190: VaultVersion190,
+			consts.VaultVersion110: VaultVersion110,
+			consts.VaultVersion111: VaultVersion111,
+		}
+
+		mv, ok := versionMap[minVersion]
+		if !ok {
+			return diag.Errorf("invalid min version string %s", minVersion)
 		}
 
 		apiSupported := provider.IsAPISupported(meta, mv)

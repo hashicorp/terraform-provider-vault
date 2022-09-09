@@ -6,7 +6,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -115,11 +114,7 @@ func mountMigrationHelper(_ context.Context, diff *schema.ResourceDiff, meta int
 	}
 
 	// Mount Migration is only available for versions >= 1.10
-	minVersion, err := version.NewVersion(consts.VaultVersion110)
-	if err != nil {
-		return err
-	}
-	remountSupported := provider.IsAPISupported(meta, minVersion)
+	remountSupported := provider.IsAPISupported(meta, VaultVersion110)
 
 	if !remountSupported {
 		// Mount migration not available

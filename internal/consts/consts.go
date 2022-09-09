@@ -87,7 +87,7 @@ const (
 	*/
 	VaultVersion111 = "1.11.0"
 	VaultVersion110 = "1.10.0"
-	VaultVersion19  = "1.9.0"
+	VaultVersion190 = "1.9.0"
 
 	/*
 		misc. path related constants
