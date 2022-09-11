@@ -26,10 +26,10 @@ resource "vault_mount" "kvv2" {
 }
 
 resource "vault_kv_secret_backend_v2" "config" {
-  mount                      = vault_mount.kvv2.path
-  max_versions               = 5
-  delete_version_after_input = "3.5h"
-  cas_required               = true
+  mount                = vault_mount.kvv2.path
+  max_versions         = 5
+  delete_version_after = "3.5h"
+  cas_required         = true
 }
 ```
 
