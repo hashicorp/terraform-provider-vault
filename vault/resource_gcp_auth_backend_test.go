@@ -122,6 +122,7 @@ func TestGCPAuthBackend_import(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"credentials",
+					"disable_remount",
 				},
 			},
 		},

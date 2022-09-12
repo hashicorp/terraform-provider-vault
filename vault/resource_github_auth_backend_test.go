@@ -184,11 +184,7 @@ func TestAccGithubAuthBackend_importTuning(t *testing.T) {
 				Config: testAccGithubAuthBackendConfig_tuning(path),
 				Check:  testAccCheckAuthMountExists(resName, &resAuth),
 			},
-			{
-				ResourceName:      resName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			testutil.GetImportTestStep(resName, false, nil, "disable_remount"),
 		},
 	})
 }

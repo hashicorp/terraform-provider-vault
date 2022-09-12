@@ -42,12 +42,7 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"bindpass"},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
 		},
 	})
 }
@@ -81,12 +76,8 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 				Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"bindpass", "client_tls_cert", "client_tls_key"},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass",
+				"client_tls_cert", "client_tls_key", "disable_remount"),
 		},
 	})
 }
