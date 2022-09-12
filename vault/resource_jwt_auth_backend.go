@@ -17,7 +17,7 @@ import (
 )
 
 func jwtAuthBackendResource() *schema.Resource {
-	return mustAddMountMigrationSchema(&schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

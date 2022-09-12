@@ -94,7 +94,7 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 			Description: "Maximum possible lease duration for secrets in seconds.",
 		},
 	}
-	return mustAddMountMigrationSchema(&schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create:        createNomadAccessConfigResource,
 		Update:        updateNomadAccessConfigResource,
 		Read:          ReadWrapper(readNomadAccessConfigResource),

@@ -15,7 +15,7 @@ import (
 )
 
 func awsSecretBackendResource() *schema.Resource {
-	return mustAddMountMigrationSchema(&schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: awsSecretBackendCreate,
 		Read:   ReadWrapper(awsSecretBackendRead),
 		Update: awsSecretBackendUpdate,

@@ -61,7 +61,7 @@ func kubernetesSecretBackendResource() *schema.Resource {
 	}
 
 	// Add common mount schema to the resource
-	mustAddSchema(resource, getMountSchema("type"))
+	provider.MustAddSchema(resource, getMountSchema("type"))
 
 	return resource
 }

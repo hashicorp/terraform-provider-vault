@@ -26,7 +26,7 @@ var kmipAPIFields = []string{
 }
 
 func kmipSecretBackendResource() *schema.Resource {
-	return mustAddMountMigrationSchema(&schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create:        kmipSecretBackendCreate,
 		Read:          ReadWrapper(kmipSecretBackendRead),
 		Update:        kmipSecretBackendUpdate,

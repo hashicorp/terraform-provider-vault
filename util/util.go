@@ -56,18 +56,22 @@ func ErrorContainsHTTPCode(err error, codes ...int) bool {
 	return false
 }
 
+// CalculateConflictsWith returns a slice of field names that conflict with
+// a single field (self).
 func CalculateConflictsWith(self string, group []string) []string {
-	if len(group) < 2 {
-		return []string{}
+	result := make([]string, 0)
+	seen := map[string]bool{
+		self: true,
 	}
-	results := make([]string, 0, len(group)-2)
 	for _, item := range group {
-		if item == self {
+		if _, ok := seen[item]; ok {
 			continue
 		}
-		results = append(results, item)
+
+		seen[item] = true
+		result = append(result, item)
 	}
-	return results
+	return result
 }
 
 func ArrayToTerraformList(values []string) string {

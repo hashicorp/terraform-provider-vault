@@ -9,10 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
@@ -204,41 +201,21 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		return nil, err
 	}
 
-	// Attempt to use auth/<mount>login if 'auth_login' is provided in provider config
-	authLoginI := d.Get("auth_login").([]interface{})
-	if len(authLoginI) > 1 {
-		return "", fmt.Errorf("auth_login block may appear only once")
+	authLogin, err := GetAuthLogin(d)
+	if err != nil {
+		return nil, err
 	}
 
-	if len(authLoginI) == 1 {
-		authLogin := authLoginI[0].(map[string]interface{})
-		authLoginPath := authLogin[consts.FieldPath].(string)
-		authLoginNamespace := ""
-		if authLoginNamespaceI, ok := authLogin[consts.FieldNamespace]; ok {
-			authLoginNamespace = authLoginNamespaceI.(string)
-			client.SetNamespace(authLoginNamespace)
-		}
-		authLoginParameters := authLogin[consts.FieldParameters].(map[string]interface{})
-
-		method := authLogin[consts.FieldMethod].(string)
-		if method == "aws" {
-			logger := hclog.Default()
-			if logging.IsDebugOrHigher() {
-				logger.SetLevel(hclog.Debug)
-			} else {
-				logger.SetLevel(hclog.Error)
-			}
-			if err := signAWSLogin(authLoginParameters, logger); err != nil {
-				return nil, fmt.Errorf("error signing AWS login request: %s", err)
-			}
-		}
-
-		secret, err := client.Logical().Write(authLoginPath, authLoginParameters)
+	if authLogin != nil {
+		client.SetNamespace(authLogin.Namespace())
+		secret, err := authLogin.Login(client)
 		if err != nil {
 			return nil, err
 		}
+
 		token = secret.Auth.ClientToken
 	}
+
 	if token != "" {
 		client.SetToken(token)
 	}
@@ -406,47 +383,6 @@ func setChildToken(d *schema.ResourceData, c *api.Client) error {
 
 	// Set the token to the generated child token
 	c.SetToken(childToken)
-
-	return nil
-}
-
-func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error {
-	var accessKey, secretKey, securityToken string
-	if val, ok := parameters["aws_access_key_id"].(string); ok {
-		accessKey = val
-	}
-
-	if val, ok := parameters["aws_secret_access_key"].(string); ok {
-		secretKey = val
-	}
-
-	if val, ok := parameters["aws_security_token"].(string); ok {
-		securityToken = val
-	}
-
-	creds, err := awsutil.RetrieveCreds(accessKey, secretKey, securityToken, logger)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve AWS credentials: %s", err)
-	}
-
-	var headerValue, stsRegion string
-	if val, ok := parameters["header_value"].(string); ok {
-		headerValue = val
-	}
-
-	if val, ok := parameters["sts_region"].(string); ok {
-		stsRegion = val
-	}
-
-	loginData, err := awsutil.GenerateLoginData(creds, headerValue, stsRegion, logger)
-	if err != nil {
-		return fmt.Errorf("failed to generate AWS login data: %s", err)
-	}
-
-	parameters["iam_http_request_method"] = loginData["iam_http_request_method"]
-	parameters["iam_request_url"] = loginData["iam_request_url"]
-	parameters["iam_request_headers"] = loginData["iam_request_headers"]
-	parameters["iam_request_body"] = loginData["iam_request_body"]
 
 	return nil
 }

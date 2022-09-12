@@ -20,7 +20,7 @@ import (
 var oktaAuthType = "okta"
 
 func oktaAuthBackendResource() *schema.Resource {
-	return mustAddMountMigrationSchema(&schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: oktaAuthBackendWrite,
 		Delete: oktaAuthBackendDelete,
 		Read:   ReadWrapper(oktaAuthBackendRead),

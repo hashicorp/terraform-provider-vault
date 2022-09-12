@@ -13,7 +13,7 @@ import (
 )
 
 func AuthBackendResource() *schema.Resource {
-	return mustAddMountMigrationSchema(&schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		SchemaVersion: 1,
 
 		Create: authBackendWrite,

@@ -108,7 +108,7 @@ variables in order to keep credential information out of the configuration.
   the given token must have the update capability on the auth/token/create
   path in Vault in order to create child tokens.  A token is required for
   the provider.  A token can explicitly set via token argument, alternatively 
-  a token can be implicitly set via an auth_login block.
+  a token can be dynamically set via an `auth_login*` block.
 
 * `token_name` - (Optional) Token name, that will be used by Terraform when
   creating the child token (`display_name`). This is useful to provide a reference of the
@@ -125,11 +125,15 @@ variables in order to keep credential information out of the configuration.
   the certificate presented by the Vault server. May be set via the
   `VAULT_CAPATH` environment variable.
 
+* `auth_login_userpass` - (Optional) Utilizes the `userpass` authentication engine. *[See usage details below.](#userpass)*
+
+* `auth_login_aws` - (Optional) Utilizes the `aws` authentication engine. *[See usage details below.](#aws)*
+
 * `auth_login` - (Optional) A configuration block, described below, that
   attempts to authenticate using the `auth/<method>/login` path to
   acquire a token which Terraform will use. Terraform still issues itself
   a limited child token using auth/token/create in order to enforce a short
-  TTL and limit exposure.
+  TTL and limit exposure. *[See usage details below.](#generic)*
 
 * `client_auth` - (Optional) A configuration block, described below, that
   provides credentials used by Terraform to authenticate with the Vault
@@ -186,7 +190,104 @@ variables in order to keep credential information out of the configuration.
 to be sent along with all requests to the Vault server.  This block can be specified
 multiple times.
 
-The `auth_login` configuration block accepts the following arguments:
+The `client_auth` configuration block accepts the following arguments:
+
+* `cert_file` - (Required) Path to a file on local disk that contains the
+  PEM-encoded certificate to present to the server.
+
+* `key_file` - (Required) Path to a file on local disk that contains the
+  PEM-encoded private key for which the authentication certificate was issued.
+
+The `headers` configuration block accepts the following arguments:
+
+* `name` - (Required) The name of the header.
+
+* `value` - (Required) The value of the header.
+
+The `client_auth` configuration block accepts the following arguments:
+
+* `cert_file` - (Required) Path to a file on local disk that contains the
+  PEM-encoded certificate to present to the server.
+
+* `key_file` - (Required) Path to a file on local disk that contains the
+  PEM-encoded private key for which the authentication certificate was issued.
+
+The `headers` configuration block accepts the following arguments:
+
+* `name` - (Required) The name of the header.
+
+* `value` - (Required) The value of the header.
+
+
+## Vault Authentication Configuration Options
+
+Vault supports multiple authentication engines. The provider supports the following authentication engines.
+
+### Userpass 
+
+Provides support for authenticating to Vault using the Username & Password authentication engine
+*For more details see: [Userpass Auth Method (HTTP API)](https://www.vaultproject.io/api-docs/auth/userpass#userpass-auth-method-http-api)*
+
+The `auth_login_userpass` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the  authentication engine mount.  
+  Default: `userpass`
+
+* `username` - (Required) The username to log into Vault with.
+  Can be specified with the `TERRAFORM_VAULT_USERNAME` environment variable.
+
+* `password` - (Optional) The password to log into Vault with.
+  Can be specified with the `TERRAFORM_VAULT_PASSWORD` environment variable. *Cannot be specified with `password_file`*.
+
+* `password_file` - (Optional) A file containing the password to log into Vault with.
+  Can be specified with the `TERRAFORM_VAULT_PASSWORD_FILE` environment variable. *Cannot be specified with `password`*
+
+### AWS
+
+Provides support for authenticating to Vault using the AWS authentication engine.
+*For more details see: [AWS Auth Method (API)](https://www.vaultproject.io/api-docs/auth/aws#aws-auth-method-api)
+
+The `auth_login_aws` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the authentication engine mount.  
+  Default: `aws`
+
+* `role` - (Optional) The IAM role to use when logging into Vault.
+
+* `identity` - (Optional) The base64 encoded EC2 instance identity document.
+
+* `signature` - (Optional) The base64 encoded SHA256 RSA signature of the instance identity document.
+
+* `pkcs7` - (Optional) PKCS#7 signature of the identity document.
+
+* `nonce` - (Optional) The nonce to be used for subsequent login requests.
+
+* `iam_http_request_method` - (Optional) The HTTP method used in the signed request.  
+  `POST` is is the only supported method.
+
+* `iam_http_request_url` - (Optional) The base64 encoded HTTP URL used in the signed request.
+
+* `iam_http_request_body` - (Optional) The base64 encoded body of the signed request.
+
+* `iam_http_request_headers` - (Optional) Mapping of extra IAM specific HTTP request login headers.
+
+### Generic
+
+Provides support for path based authentication to Vault.
+
+~> It is recommended to use one of the authentication engine specific configurations above.
+This configuration can be used for custom authentication engines, or in the case where an official authentication
+engine is not yet supported by the provider
+
+The path-based `auth_login` configuration block accepts the following arguments:
 
 * `path` - (Required) The login path of the auth backend. For example, login with
   approle by setting this path to `auth/approle/login`. Additionally, some mounts use parameters
@@ -204,19 +305,6 @@ The `auth_login` configuration block accepts the following arguments:
   against the auth backend. Refer to [Vault API documentation](https://www.vaultproject.io/api-docs/auth) for a particular auth method
   to see what can go here.
 
-The `client_auth` configuration block accepts the following arguments:
-
-* `cert_file` - (Required) Path to a file on local disk that contains the
-  PEM-encoded certificate to present to the server.
-
-* `key_file` - (Required) Path to a file on local disk that contains the
-  PEM-encoded private key for which the authentication certificate was issued.
-
-The `headers` configuration block accepts the following arguments:
-
-* `name` - (Required) The name of the header.
-
-* `value` - (Required) The value of the header.
 
 ## Provider Debugging
 

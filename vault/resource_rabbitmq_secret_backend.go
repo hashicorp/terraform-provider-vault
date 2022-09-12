@@ -14,7 +14,7 @@ import (
 )
 
 func rabbitMQSecretBackendResource() *schema.Resource {
-	return mustAddMountMigrationSchema(&schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create:        rabbitMQSecretBackendCreate,
 		Read:          ReadWrapper(rabbitMQSecretBackendRead),
 		Update:        rabbitMQSecretBackendUpdate,

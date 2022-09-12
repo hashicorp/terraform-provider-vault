@@ -209,7 +209,7 @@ func adSecretBackendResource() *schema.Resource {
 			Description: `LDAP domain to use for users (eg: ou=People,dc=example,dc=org)`,
 		},
 	}
-	return mustAddMountMigrationSchema(&schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: createConfigResource,
 		Update: updateConfigResource,
 		Read:   ReadWrapper(readConfigResource),

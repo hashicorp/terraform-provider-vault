@@ -365,3 +365,56 @@ func TestGetAPIRequestData(t *testing.T) {
 		})
 	}
 }
+
+func TestCalculateConflictsWith(t *testing.T) {
+	tests := []struct {
+		name  string
+		self  string
+		group []string
+		want  []string
+	}{
+		{
+			name:  "empty",
+			self:  "basic",
+			group: []string{},
+			want:  []string{},
+		},
+		{
+			name:  "empty-self",
+			self:  "basic",
+			group: []string{"basic"},
+			want:  []string{},
+		},
+		{
+			name:  "single",
+			self:  "single",
+			group: []string{"foo"},
+			want:  []string{"foo"},
+		},
+		{
+			name:  "single-self",
+			self:  "single",
+			group: []string{"foo", "single"},
+			want:  []string{"foo"},
+		},
+		{
+			name:  "multiple-self",
+			self:  "multiple",
+			group: []string{"multiple", "foo", "multiple"},
+			want:  []string{"foo"},
+		},
+		{
+			name:  "duplicates-other",
+			self:  "multiple",
+			group: []string{"foo", "bar", "foo", "bar"},
+			want:  []string{"foo", "bar"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := CalculateConflictsWith(tt.self, tt.group); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("CalculateConflictsWith() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

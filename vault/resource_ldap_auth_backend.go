@@ -165,7 +165,7 @@ func ldapAuthBackendResource() *schema.Resource {
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
-	return mustAddMountMigrationSchema(&schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		SchemaVersion: 1,
 
 		CreateContext: ldapAuthBackendWrite,

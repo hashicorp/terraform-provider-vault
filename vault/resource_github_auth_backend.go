@@ -57,7 +57,7 @@ func githubAuthBackendResource() *schema.Resource {
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
-	return mustAddMountMigrationSchema(&schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: githubAuthBackendCreate,
 		Read:   ReadWrapper(githubAuthBackendRead),
 		Update: githubAuthBackendUpdate,
