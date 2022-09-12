@@ -99,7 +99,7 @@ func awsSecretBackendResource() *schema.Resource {
 	})
 }
 
-func getMountMigrationDiff(field string) schema.CustomizeDiffFunc {
+func getMountCustomizeDiffFunc(field string) schema.CustomizeDiffFunc {
 	return func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
 		if !diff.HasChange(field) {
 			return nil
