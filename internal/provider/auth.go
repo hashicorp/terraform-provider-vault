@@ -15,6 +15,7 @@ type (
 	getSchemaResource func(string) *schema.Resource
 )
 
+// AuthLoginFields supported by the provider.
 var AuthLoginFields = []string{
 	consts.FieldAuthLoginDefault,
 	consts.FieldAuthLoginUserpass,
@@ -30,6 +31,7 @@ type AuthLogin interface {
 	Namespace() string
 }
 
+// AuthLoginCommon providing common methods for other AuthLogin* implementations.
 type AuthLoginCommon struct {
 	authField string
 	mount     string
@@ -151,7 +153,7 @@ func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {
 	return nil, nil
 }
 
-func mustAddLoginSchema(r *schema.Resource) *schema.Resource {
+func mustAddLoginSchema(r *schema.Resource, defaultMount string) *schema.Resource {
 	MustAddSchema(r, map[string]*schema.Schema{
 		consts.FieldNamespace: {
 			Type:        schema.TypeString,
@@ -162,7 +164,7 @@ func mustAddLoginSchema(r *schema.Resource) *schema.Resource {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "The path where the authentication engine is mounted.",
-			Default:     consts.AuthMethodUserpass,
+			Default:     defaultMount,
 		},
 	})
 

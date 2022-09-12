@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
+// GetUserpassLoginSchema for the userpass authentication engine.
 func GetUserpassLoginSchema(authField string) *schema.Schema {
 	return getLoginSchema(
 		authField,
@@ -20,6 +21,7 @@ func GetUserpassLoginSchema(authField string) *schema.Schema {
 	)
 }
 
+// GetUserpassLoginSchemaResource for the userpass authentication engine.
 func GetUserpassLoginSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
@@ -48,7 +50,7 @@ func GetUserpassLoginSchemaResource(authField string) *schema.Resource {
 				},
 			},
 		},
-	})
+	}, consts.MountTypeUserpass)
 }
 
 // AuthLoginUserpass provides an interface for authenticating to the
@@ -58,14 +60,17 @@ type AuthLoginUserpass struct {
 	AuthLoginCommon
 }
 
+// LoginPath for the userpass authentication engine.
 func (l *AuthLoginUserpass) LoginPath() string {
 	return fmt.Sprintf("auth/%s/login/%s", l.MountPath(), l.params[consts.FieldUsername])
 }
 
+// Method name for the userpass authentication engine.
 func (l *AuthLoginUserpass) Method() string {
 	return consts.AuthMethodUserpass
 }
 
+// Login using the userpass authentication engine.
 func (l *AuthLoginUserpass) Login(client *api.Client) (*api.Secret, error) {
 	params := l.copyParams(
 		consts.FieldNamespace,

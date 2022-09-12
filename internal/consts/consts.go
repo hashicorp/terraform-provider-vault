@@ -101,6 +101,7 @@ const (
 	MountTypeRabbitMQ   = "rabbitmq"
 	MountTypeNomad      = "nomad"
 	MountTypeKubernetes = "kubernetes"
+	MountTypeUserpass   = "userpass"
 
 	/*
 		Vault version constants
