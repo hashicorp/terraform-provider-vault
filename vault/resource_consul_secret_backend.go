@@ -316,6 +316,6 @@ func consulSecretsBackendCustomizeDiff(ctx context.Context, diff *schema.Resourc
 	}
 
 	// check whether mount migration is required
-	f := getMountMigrationDiff(consts.FieldPath)
+	f := getMountCustomizeDiffFunc(consts.FieldPath)
 	return f(ctx, diff, meta)
 }

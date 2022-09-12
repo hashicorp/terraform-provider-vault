@@ -175,7 +175,7 @@ func ldapAuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		CustomizeDiff: getMountMigrationDiff(consts.FieldPath),
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema:        fields,
 	})
 }

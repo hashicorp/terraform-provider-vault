@@ -99,7 +99,7 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 		Update:        updateNomadAccessConfigResource,
 		Read:          ReadWrapper(readNomadAccessConfigResource),
 		Delete:        deleteNomadAccessConfigResource,
-		CustomizeDiff: getMountMigrationDiff(consts.FieldBackend),
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

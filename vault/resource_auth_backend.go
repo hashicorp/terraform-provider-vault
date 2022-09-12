@@ -24,7 +24,7 @@ func AuthBackendResource() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		MigrateState:  resourceAuthBackendMigrateState,
-		CustomizeDiff: getMountMigrationDiff(consts.FieldPath),
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 
 		Schema: map[string]*schema.Schema{
 			"type": {

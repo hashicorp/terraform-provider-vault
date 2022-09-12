@@ -20,7 +20,7 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 		Update:        gcpSecretBackendUpdate,
 		Delete:        gcpSecretBackendDelete,
 		Exists:        gcpSecretBackendExists,
-		CustomizeDiff: getMountMigrationDiff(consts.FieldPath),
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

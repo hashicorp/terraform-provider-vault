@@ -176,7 +176,7 @@ func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interfac
 	}
 
 	// to check whether mount migration is required
-	f := getMountMigrationDiff(consts.FieldPath)
+	f := getMountCustomizeDiffFunc(consts.FieldPath)
 
 	for _, attr := range attributes {
 		if !d.NewValueKnown(attr) {

@@ -66,7 +66,7 @@ func githubAuthBackendResource() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema:        fields,
-		CustomizeDiff: getMountMigrationDiff(consts.FieldPath),
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 	})
 }
 

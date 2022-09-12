@@ -217,7 +217,7 @@ func adSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		CustomizeDiff: getMountMigrationDiff(consts.FieldBackend),
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
 		Schema:        fields,
 	})
 }
