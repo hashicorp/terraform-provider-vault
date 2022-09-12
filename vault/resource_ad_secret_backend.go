@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -218,13 +217,9 @@ func adSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		CustomizeDiff: mountMigrationCustomizeDiffFieldBackend,
+		CustomizeDiff: getMountMigrationDiff(consts.FieldBackend),
 		Schema:        fields,
 	})
-}
-
-func mountMigrationCustomizeDiffFieldBackend(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
-	return mountMigrationHelper(ctx, diff, meta, consts.FieldBackend)
 }
 
 func createConfigResource(d *schema.ResourceData, meta interface{}) error {

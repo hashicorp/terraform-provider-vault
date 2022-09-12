@@ -22,7 +22,21 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
-var MaxHTTPRetriesCCC int
+const DefaultMaxHTTPRetries = 2
+
+var (
+	MaxHTTPRetriesCCC int
+
+	VaultVersion190 *version.Version
+	VaultVersion110 *version.Version
+	VaultVersion111 *version.Version
+)
+
+func init() {
+	VaultVersion190 = version.Must(version.NewSemver(consts.VaultVersion190))
+	VaultVersion110 = version.Must(version.NewSemver(consts.VaultVersion110))
+	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion111))
+}
 
 // ProviderMeta provides resources with access to the Vault client and
 // other bits
@@ -471,5 +485,3 @@ func GetToken(d *schema.ResourceData) (string, error) {
 	}
 	return strings.TrimSpace(token), nil
 }
-
-const DefaultMaxHTTPRetries = 2

@@ -175,14 +175,16 @@ func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interfac
 		"provider_config",
 	}
 
+	// to check whether mount migration is required
+	f := getMountMigrationDiff(consts.FieldPath)
+
 	for _, attr := range attributes {
 		if !d.NewValueKnown(attr) {
-			// check whether mount migration is required
-			return mountMigrationCustomizeDiffFieldPath(ctx, d, meta)
+			return f(ctx, d, meta)
 		}
 
 		if _, ok := d.GetOk(attr); ok {
-			return mountMigrationCustomizeDiffFieldPath(ctx, d, meta)
+			return f(ctx, d, meta)
 		}
 	}
 

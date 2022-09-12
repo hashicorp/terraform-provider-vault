@@ -173,7 +173,7 @@ func consulSecretBackendRoleWrite(ctx context.Context, d *schema.ResourceData, m
 		"node_identities":    nodeIdentities,
 	}
 
-	useAPIVer1 := provider.IsAPISupported(meta, VaultVersion111)
+	useAPIVer1 := provider.IsAPISupported(meta, provider.VaultVersion111)
 
 	if useAPIVer1 {
 		data["consul_policies"] = policies
@@ -267,7 +267,7 @@ func consulSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	// Check whether Vault will return consul_policies or policies based on its version.
-	useAPIVer1 := provider.IsAPISupported(meta, VaultVersion111)
+	useAPIVer1 := provider.IsAPISupported(meta, provider.VaultVersion111)
 
 	// Determine to set either policies or consul_policies depending on the Vault version:
 	// * Vault version < 1.11: Use policies

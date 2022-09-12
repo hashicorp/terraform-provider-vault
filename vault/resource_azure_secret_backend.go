@@ -23,7 +23,7 @@ func azureSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		CustomizeDiff: mountMigrationCustomizeDiffFieldPath,
+		CustomizeDiff: getMountMigrationDiff(consts.FieldPath),
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,

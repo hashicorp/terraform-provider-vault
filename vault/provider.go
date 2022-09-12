@@ -41,18 +41,6 @@ const (
 // The key of the mutex should be the path in Vault.
 var vaultMutexKV = helper.NewMutexKV()
 
-var (
-	VaultVersion110 *version.Version
-	VaultVersion111 *version.Version
-	VaultVersion190 *version.Version
-)
-
-func init() {
-	VaultVersion190 = version.Must(version.NewSemver(consts.VaultVersion190))
-	VaultVersion110 = version.Must(version.NewSemver(consts.VaultVersion110))
-	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion111))
-}
-
 func Provider() *schema.Provider {
 	dataSourcesMap, err := parse(DataSourceRegistry)
 	if err != nil {
@@ -891,26 +879,13 @@ func ReadContextWrapper(f schema.ReadContextFunc) schema.ReadContextFunc {
 	}
 }
 
-// MinVersionCheckWrapper performs a minimum version requirement check prior to the
+// MountCreateContextWrapper performs a minimum version requirement check prior to the
 // wrapped schema.CreateContextFunc.
-func MinVersionCheckWrapper(f schema.CreateContextFunc, minVersion string) schema.CreateContextFunc {
+func MountCreateContextWrapper(f schema.CreateContextFunc, minVersion *version.Version) schema.CreateContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-		versionMap := map[string]*version.Version{
-			consts.VaultVersion190: VaultVersion190,
-			consts.VaultVersion110: VaultVersion110,
-			consts.VaultVersion111: VaultVersion111,
-		}
-
-		mv, ok := versionMap[minVersion]
-		if !ok {
-			return diag.Errorf("invalid min version string %s", minVersion)
-		}
-
-		apiSupported := provider.IsAPISupported(meta, mv)
-
 		currentVersion := meta.(*provider.ProviderMeta).GetVaultVersion()
 
-		if !apiSupported {
+		if !provider.IsAPISupported(meta, minVersion) {
 			return diag.Errorf("feature not enabled on current Vault version. min version required=%s; "+
 				"current vault version=%s", minVersion, currentVersion)
 		}

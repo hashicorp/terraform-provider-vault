@@ -29,7 +29,7 @@ func gcpAuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		CustomizeDiff: mountMigrationCustomizeDiffFieldPath,
+		CustomizeDiff: getMountMigrationDiff(consts.FieldPath),
 		Schema: map[string]*schema.Schema{
 			"credentials": {
 				Type:         schema.TypeString,

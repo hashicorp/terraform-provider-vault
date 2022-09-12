@@ -24,7 +24,7 @@ func awsSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		CustomizeDiff: mountMigrationCustomizeDiffFieldPath,
+		CustomizeDiff: getMountMigrationDiff(consts.FieldPath),
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
@@ -99,31 +99,29 @@ func awsSecretBackendResource() *schema.Resource {
 	})
 }
 
-func mountMigrationCustomizeDiffFieldPath(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
-	return mountMigrationHelper(ctx, diff, meta, consts.FieldPath)
-}
+func getMountMigrationDiff(field string) schema.CustomizeDiffFunc {
+	return func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+		if !diff.HasChange(field) {
+			return nil
+		}
 
-func mountMigrationHelper(_ context.Context, diff *schema.ResourceDiff, meta interface{}, mountField string) error {
-	if !diff.HasChange(mountField) {
-		return nil
+		o, _ := diff.GetChange(field)
+		if o == "" {
+			return nil
+		}
+
+		// Mount Migration is only available for versions >= 1.10
+		remountSupported := provider.IsAPISupported(meta, provider.VaultVersion110)
+		disable := diff.Get(consts.FieldDisableRemount).(bool)
+
+		if remountSupported && !disable {
+			return nil
+		}
+
+		// Mount migration not available
+		// Destroy and recreate resource
+		return diff.ForceNew(field)
 	}
-
-	o, _ := diff.GetChange(mountField)
-	if o == "" {
-		return nil
-	}
-
-	// Mount Migration is only available for versions >= 1.10
-	remountSupported := provider.IsAPISupported(meta, VaultVersion110)
-	disable := diff.Get(consts.FieldDisableRemount).(bool)
-
-	if remountSupported && !disable {
-		return nil
-	}
-
-	// Mount migration not available
-	// Destroy and recreate resource
-	return diff.ForceNew(mountField)
 }
 
 func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {

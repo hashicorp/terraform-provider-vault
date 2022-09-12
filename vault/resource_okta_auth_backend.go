@@ -29,7 +29,7 @@ func oktaAuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		CustomizeDiff: mountMigrationCustomizeDiffFieldPath,
+		CustomizeDiff: getMountMigrationDiff(consts.FieldPath),
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
 				Type:        schema.TypeString,

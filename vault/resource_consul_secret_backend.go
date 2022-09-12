@@ -145,7 +145,7 @@ func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta
 
 	// If a token isn't provided and the Vault version is less than 1.11, fail before
 	// mounting the path in Vault.
-	useAPIVer1 := provider.IsAPISupported(meta, VaultVersion111)
+	useAPIVer1 := provider.IsAPISupported(meta, provider.VaultVersion111)
 
 	if token == "" && !useAPIVer1 {
 		return diag.Errorf(`error writing Consul configuration: no token provided and the 
@@ -311,5 +311,6 @@ func consulSecretsBackendCustomizeDiff(ctx context.Context, diff *schema.Resourc
 	}
 
 	// check whether mount migration is required
-	return mountMigrationCustomizeDiffFieldPath(ctx, diff, meta)
+	f := getMountMigrationDiff(consts.FieldPath)
+	return f(ctx, diff, meta)
 }

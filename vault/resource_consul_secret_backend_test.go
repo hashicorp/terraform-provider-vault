@@ -180,6 +180,9 @@ func TestConsulSecretBackend_remount(t *testing.T) {
 
 	resourceName := "vault_consul_secret_backend.test"
 
+	var oldUUID string
+	var newUUID string
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
@@ -194,6 +197,7 @@ func TestConsulSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1:8500"),
 					resource.TestCheckResourceAttr(resourceName, "token", token),
 					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
+					getUUIDForMount(path, &oldUUID),
 				),
 			},
 			{
@@ -206,10 +210,15 @@ func TestConsulSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1:8500"),
 					resource.TestCheckResourceAttr(resourceName, "token", token),
 					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
+					getUUIDForMount(updatedPath, &newUUID),
+					testCheckMountUUIDs(oldUUID, newUUID, true),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap", "disable_remount"),
 			{
+				PreConfig: func() {
+					newUUID = ""
+				},
 				Config: testConsulSecretBackend_disableRemount(path, token),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", path),
@@ -220,10 +229,42 @@ func TestConsulSecretBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "token", token),
 					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
 					resource.TestCheckResourceAttr(resourceName, "disable_remount", "true"),
+					getUUIDForMount(path, &newUUID),
+					testCheckMountUUIDs(oldUUID, newUUID, false),
 				),
 			},
 		},
 	})
+}
+
+func getUUIDForMount(path string, uuid *string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client, err := provider.GetClient("", testProvider.Meta())
+
+		mounts, err := client.Sys().ListMounts()
+		if err != nil {
+			return err
+		}
+
+		mount, ok := mounts[strings.Trim(path, "/")+"/"]
+		if !ok {
+			return fmt.Errorf("given mount %s not found", path)
+		}
+
+		*uuid = mount.UUID
+
+		return nil
+	}
+}
+
+func testCheckMountUUIDs(id1, id2 string, checkEqual bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if id1 == id2 && !checkEqual {
+			return fmt.Errorf("expected different UUIDs, got equal. id1=%s, id2=%s", id1, id2)
+		}
+
+		return nil
+	}
 }
 
 func testAccConsulSecretBackendCheckDestroy(s *terraform.State) error {
