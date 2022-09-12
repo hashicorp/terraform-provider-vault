@@ -272,7 +272,7 @@ func testResourceApproleLoginCheckAttrs(t *testing.T) resource.TestCheckFunc {
 			Schema: approleProvider.Schema,
 		}
 		approleProviderData := approleProviderResource.TestResourceData()
-		approleProviderData.Set("auth_login", authLoginData)
+		approleProviderData.Set(consts.FieldAuthLoginDefault, authLoginData)
 		_, err := provider.NewProviderMeta(approleProviderData)
 		if err != nil {
 			t.Fatal(err)
