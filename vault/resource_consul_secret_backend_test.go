@@ -240,7 +240,7 @@ func TestConsulSecretBackend_remount(t *testing.T) {
 
 func testCaptureMountUUID(path string, store *testMountStore) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		mount, err := getMount(path)
+		mount, err := testGetMount(path)
 		if err != nil {
 			return err
 		}
@@ -254,7 +254,7 @@ func testCaptureMountUUID(path string, store *testMountStore) resource.TestCheck
 
 func testMountCompareUUIDs(path string, store *testMountStore, equal bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		mount, err := getMount(path)
+		mount, err := testGetMount(path)
 		if err != nil {
 			return err
 		}
@@ -275,7 +275,7 @@ func testMountCompareUUIDs(path string, store *testMountStore, equal bool) resou
 	}
 }
 
-func getMount(path string) (*api.MountOutput, error) {
+func testGetMount(path string) (*api.MountOutput, error) {
 	client, err := provider.GetClient("", testProvider.Meta())
 
 	mounts, err := client.Sys().ListMounts()
