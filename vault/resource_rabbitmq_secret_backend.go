@@ -10,15 +10,17 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func rabbitMQSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
-		Create: rabbitMQSecretBackendCreate,
-		Read:   ReadWrapper(rabbitMQSecretBackendRead),
-		Update: rabbitMQSecretBackendUpdate,
-		Delete: rabbitMQSecretBackendDelete,
-		Exists: rabbitMQSecretBackendExists,
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
+		Create:        rabbitMQSecretBackendCreate,
+		Read:          ReadWrapper(rabbitMQSecretBackendRead),
+		Update:        rabbitMQSecretBackendUpdate,
+		Delete:        rabbitMQSecretBackendDelete,
+		Exists:        rabbitMQSecretBackendExists,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -28,7 +30,6 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "rabbitmq",
-				ForceNew:    true,
 				Description: "The path of the RabbitMQ Secret Backend where the connection should be configured",
 				// standardise on no beginning or trailing slashes
 				StateFunc: func(v interface{}) string {
@@ -87,7 +88,7 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 				Description: "Template describing how dynamic usernames are generated.",
 			},
 		},
-	}
+	})
 }
 
 func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
@@ -179,6 +180,12 @@ func rabbitMQSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error
 
 	path := d.Id()
 	d.Partial(true)
+
+	path, err := util.Remount(d, client, consts.FieldPath, false)
+	if err != nil {
+		return err
+	}
+
 	if d.HasChanges("default_lease_ttl_seconds", "max_lease_ttl_seconds") {
 		config := api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),

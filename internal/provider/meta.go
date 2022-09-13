@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
@@ -18,7 +19,21 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
-var MaxHTTPRetriesCCC int
+const DefaultMaxHTTPRetries = 2
+
+var (
+	MaxHTTPRetriesCCC int
+
+	VaultVersion190 *version.Version
+	VaultVersion110 *version.Version
+	VaultVersion111 *version.Version
+)
+
+func init() {
+	VaultVersion190 = version.Must(version.NewSemver(consts.VaultVersion190))
+	VaultVersion110 = version.Must(version.NewSemver(consts.VaultVersion110))
+	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion111))
+}
 
 // ProviderMeta provides resources with access to the Vault client and
 // other bits
@@ -27,6 +42,7 @@ type ProviderMeta struct {
 	resourceData *schema.ResourceData
 	clientCache  map[string]*api.Client
 	m            sync.RWMutex
+	vaultVersion *version.Version
 }
 
 // GetClient returns the providers default Vault client.
@@ -71,6 +87,22 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 	p.clientCache[ns] = c
 
 	return c, nil
+}
+
+// IsAPISupported receives a minimum version
+// of type *version.Version.
+//
+// It returns a boolean describing whether the
+// ProviderMeta vaultVersion is above the
+// minimum version.
+func (p *ProviderMeta) IsAPISupported(minVersion *version.Version) bool {
+	return p.vaultVersion.GreaterThanOrEqual(minVersion)
+}
+
+// GetVaultVersion returns the providerMeta
+// vaultVersion attribute.
+func (p *ProviderMeta) GetVaultVersion() *version.Version {
+	return p.vaultVersion
 }
 
 func (p *ProviderMeta) validate() error {
@@ -199,6 +231,12 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		}
 	}
 
+	// Set the Vault version to *ProviderMeta object
+	vaultVersion, err := getVaultVersion(client)
+	if err != nil {
+		return nil, err
+	}
+
 	// Set the namespace to the requested namespace, if provided
 	namespace := d.Get(consts.FieldNamespace).(string)
 	if namespace != "" {
@@ -208,6 +246,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	return &ProviderMeta{
 		resourceData: d,
 		client:       client,
+		vaultVersion: vaultVersion,
 	}, nil
 }
 
@@ -256,6 +295,42 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	}
 
 	return p.GetClient(), nil
+}
+
+// IsAPISupported receives an interface
+// and a minimum *version.Version.
+//
+// It returns a boolean after computing
+// whether the API is supported by the
+// providerMeta, which is obtained from
+// the provided interface.
+func IsAPISupported(meta interface{}, minVersion *version.Version) bool {
+	var p *ProviderMeta
+	switch v := meta.(type) {
+	case *ProviderMeta:
+		p = v
+	default:
+		panic(fmt.Sprintf("meta argument must be a %T, not %T", p, meta))
+	}
+
+	return p.IsAPISupported(minVersion)
+}
+
+func getVaultVersion(client *api.Client) (*version.Version, error) {
+	resp, err := client.Sys().SealStatus()
+	if err != nil {
+		return nil, err
+	}
+
+	if resp == nil {
+		return nil, fmt.Errorf("expected response data, got nil response")
+	}
+
+	if resp.Version == "" {
+		return nil, fmt.Errorf("key %q not found in response", consts.FieldVersion)
+	}
+
+	return version.Must(version.NewSemver(resp.Version)), nil
 }
 
 func setChildToken(d *schema.ResourceData, c *api.Client) error {
@@ -346,5 +421,3 @@ func GetToken(d *schema.ResourceData) (string, error) {
 	}
 	return strings.TrimSpace(token), nil
 }
-
-const DefaultMaxHTTPRetries = 2

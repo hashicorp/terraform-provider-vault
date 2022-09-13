@@ -9,10 +9,11 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func AuthBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		SchemaVersion: 1,
 
 		Create: authBackendWrite,
@@ -22,7 +23,8 @@ func AuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		MigrateState: resourceAuthBackendMigrateState,
+		MigrateState:  resourceAuthBackendMigrateState,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 
 		Schema: map[string]*schema.Schema{
 			"type": {
@@ -36,7 +38,6 @@ func AuthBackendResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
-				ForceNew:     true,
 				Description:  "path to mount the backend. This defaults to the type.",
 				ValidateFunc: validateNoLeadingTrailingSlashes,
 				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
@@ -65,7 +66,7 @@ func AuthBackendResource() *schema.Resource {
 
 			"tune": authMountTuneSchema(),
 		},
-	}
+	})
 }
 
 func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
@@ -159,6 +160,13 @@ func authBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
+
+	if !d.IsNewResource() {
+		path, e = util.Remount(d, client, consts.FieldPath, true)
+		if e != nil {
+			return e
+		}
+	}
 
 	backendType := d.Get("type").(string)
 	var input api.MountConfigInput

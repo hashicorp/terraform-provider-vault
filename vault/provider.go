@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -14,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/internal/semver"
 )
 
 const (
@@ -844,21 +844,13 @@ func ReadContextWrapper(f schema.ReadContextFunc) schema.ReadContextFunc {
 	}
 }
 
-// MinVersionCheckWrapper performs a minimum version requirement check prior to the
+// MountCreateContextWrapper performs a minimum version requirement check prior to the
 // wrapped schema.CreateContextFunc.
-func MinVersionCheckWrapper(f schema.CreateContextFunc, minVersion string) schema.CreateContextFunc {
+func MountCreateContextWrapper(f schema.CreateContextFunc, minVersion *version.Version) schema.CreateContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-		client, e := provider.GetClient(d, meta)
-		if e != nil {
-			return diag.FromErr(e)
-		}
+		currentVersion := meta.(*provider.ProviderMeta).GetVaultVersion()
 
-		featureEnabled, currentVersion, err := semver.GreaterThanOrEqual(ctx, client, minVersion)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		if !featureEnabled {
+		if !provider.IsAPISupported(meta, minVersion) {
 			return diag.Errorf("feature not enabled on current Vault version. min version required=%s; "+
 				"current vault version=%s", minVersion, currentVersion)
 		}

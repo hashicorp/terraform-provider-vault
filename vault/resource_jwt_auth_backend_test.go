@@ -247,6 +247,45 @@ func TestAccJWTAuthBackend_invalid(t *testing.T) {
 	})
 }
 
+func TestJWTAuthBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-auth-jwt")
+	updatedPath := acctest.RandomWithPrefix("tf-test-auth-jwt-updated")
+
+	resourceName := "vault_jwt_auth_backend.jwt"
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendConfig(path, "", false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "description", "JWT backend"),
+					resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttrSet(resourceName, "accessor"),
+					resource.TestCheckResourceAttr(resourceName, "bound_issuer", ""),
+					resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
+					resource.TestCheckResourceAttr(resourceName, "local", "false"),
+				),
+			},
+			{
+				Config: testAccJWTAuthBackendConfig(updatedPath, "", false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					resource.TestCheckResourceAttr(resourceName, "description", "JWT backend"),
+					resource.TestCheckResourceAttr(resourceName, "oidc_discovery_url", "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttrSet(resourceName, "accessor"),
+					resource.TestCheckResourceAttr(resourceName, "bound_issuer", ""),
+					resource.TestCheckResourceAttr(resourceName, "type", "jwt"),
+					resource.TestCheckResourceAttr(resourceName, "local", "false"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "description", "disable_remount"),
+		},
+	})
+}
+
 func testAccJWTAuthBackendConfig(path, ns string, local bool) string {
 	config := fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "jwt" {

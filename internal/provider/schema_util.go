@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 func MustAddSchema(r *schema.Resource, m map[string]*schema.Schema) {
@@ -14,4 +16,18 @@ func MustAddSchema(r *schema.Resource, m map[string]*schema.Schema) {
 
 		r.Schema[k] = s
 	}
+}
+
+func MustAddMountMigrationSchema(r *schema.Resource) *schema.Resource {
+	MustAddSchema(r, map[string]*schema.Schema{
+		consts.FieldDisableRemount: {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+			Description: "If set, opts out of mount migration " +
+				"on path updates.",
+		},
+	})
+
+	return r
 }

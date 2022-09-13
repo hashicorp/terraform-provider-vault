@@ -78,7 +78,7 @@ const (
 	FieldIAMHttpRequestURL        = "iam_http_request_url"
 	FieldIAMHttpRequestBody       = "iam_http_request_body"
 	FieldIAMHttpRequestHeaders    = "iam_http_request_headers"
-
+	FieldDisableRemount           = "disable_remount"
 	/*
 		common environment variables
 	*/
@@ -106,9 +106,9 @@ const (
 	/*
 		Vault version constants
 	*/
-	VaultVersion11 = "1.11.0"
-	VaultVersion10 = "1.10.0"
-	VaultVersion9  = "1.9.0"
+	VaultVersion111 = "1.11.0"
+	VaultVersion110 = "1.10.0"
+	VaultVersion190 = "1.9.0"
 
 	/*
 		Vault auth methods

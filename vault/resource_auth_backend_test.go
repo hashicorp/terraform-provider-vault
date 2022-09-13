@@ -53,6 +53,37 @@ func TestResourceAuth(t *testing.T) {
 	})
 }
 
+func TestAuthBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-auth")
+	updatedPath := acctest.RandomWithPrefix("tf-test-auth-updated")
+
+	resourceName := "vault_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceAuth_initialConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test auth backend"),
+					resource.TestCheckResourceAttr(resourceName, "type", "github"),
+				),
+			},
+			{
+				Config: testResourceAuth_initialConfig(updatedPath),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test auth backend"),
+					resource.TestCheckResourceAttr(resourceName, "type", "github"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "disable_remount"),
+		},
+	})
+}
+
 func testAccCheckAuthBackendDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_auth_backend" {

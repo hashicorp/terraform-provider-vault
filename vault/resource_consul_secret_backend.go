@@ -3,11 +3,13 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/semver"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -16,7 +18,7 @@ import (
 )
 
 func consulSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: consulSecretBackendCreate,
 		ReadContext:   ReadContextWrapper(consulSecretBackendRead),
 		UpdateContext: consulSecretBackendUpdate,
@@ -30,7 +32,6 @@ func consulSecretBackendResource() *schema.Resource {
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Default:     "consul",
 				Description: "Unique name of the Vault Consul mount to configure",
 				StateFunc: func(s interface{}) string {
@@ -109,7 +110,7 @@ func consulSecretBackendResource() *schema.Resource {
 				Description: "Specifies if the secret backend is local only",
 			},
 		},
-	}
+	})
 }
 
 func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -144,10 +145,8 @@ func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta
 
 	// If a token isn't provided and the Vault version is less than 1.11, fail before
 	// mounting the path in Vault.
-	useAPIVer1, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion11)
-	if err != nil {
-		return diag.Errorf("failed to read Vault client version: %s", err)
-	}
+	useAPIVer1 := provider.IsAPISupported(meta, provider.VaultVersion111)
+
 	if token == "" && !useAPIVer1 {
 		return diag.Errorf(`error writing Consul configuration: no token provided and the 
 Vault client version does not meet the minimum requirement for this feature (Vault 1.11+)`)
@@ -239,6 +238,11 @@ func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta
 
 	d.Partial(true)
 
+	path, err := util.Remount(d, client, consts.FieldPath, false)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		config := api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
@@ -292,7 +296,7 @@ func consulSecretBackendConfigPath(backend string) string {
 	return strings.Trim(backend, "/") + "/config/access"
 }
 
-func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+func consulSecretsBackendCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
 	newToken := diff.Get("token").(string)
 	isTokenValueKnown := diff.NewValueKnown("token")
 
@@ -311,5 +315,7 @@ func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceD
 		}
 	}
 
-	return nil
+	// check whether mount migration is required
+	f := getMountCustomizeDiffFunc(consts.FieldPath)
+	return f(ctx, diff, meta)
 }
