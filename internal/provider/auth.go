@@ -20,6 +20,7 @@ var AuthLoginFields = []string{
 	consts.FieldAuthLoginDefault,
 	consts.FieldAuthLoginUserpass,
 	consts.FieldAuthLoginAWS,
+	consts.FieldAuthLoginCert,
 }
 
 type AuthLogin interface {
@@ -92,7 +93,7 @@ func (l *AuthLoginCommon) login(client *api.Client, path string, params map[stri
 func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]interface{}, error) {
 	v, ok := d.GetOk(l.authField)
 	if !ok {
-		return "", nil, fmt.Errorf("resource data missing %q", l.authField)
+		return "", nil, fmt.Errorf("resource data missing field %q", l.authField)
 	}
 
 	config := v.([]interface{})

@@ -1,0 +1,104 @@
+package provider
+
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"reflect"
+	"testing"
+
+	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
+)
+
+type authLoginTest struct {
+	name            string
+	authLogin       AuthLogin
+	handler         *testLoginHandler
+	want            *api.Secret
+	expectReqCount  int
+	expectReqParams []map[string]interface{}
+	expectReqPaths  []string
+	wantErr         bool
+}
+
+type testLoginHandler struct {
+	requestCount int
+	paths        []string
+	params       []map[string]interface{}
+	handlerFunc  func(t *testLoginHandler, w http.ResponseWriter, req *http.Request)
+}
+
+func (t *testLoginHandler) handler() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		t.requestCount++
+
+		t.paths = append(t.paths, req.URL.Path)
+
+		if req.Method != http.MethodPut {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		b, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		var params map[string]interface{}
+		if err := json.Unmarshal(b, &params); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		t.params = append(t.params, params)
+
+		t.handlerFunc(t, w, req)
+
+		if len(w.Header()) > 1 {
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func testAuthLogin(t *testing.T, tt authLoginTest) {
+	r := tt.handler
+
+	config, ln := testutil.TestHTTPServer(t, r.handler())
+	defer ln.Close()
+
+	config.Address = fmt.Sprintf("http://%s", ln.Addr())
+	c, err := api.NewClient(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := tt.authLogin.Login(c)
+	if (err != nil) != tt.wantErr {
+		t.Errorf("Login() error = %v, wantErr %v", err, tt.wantErr)
+		return
+	}
+
+	if tt.expectReqCount != tt.handler.requestCount {
+		t.Errorf("Login() expected %d requests, actual %d", tt.expectReqCount, tt.handler.requestCount)
+	}
+
+	if !reflect.DeepEqual(tt.expectReqPaths, tt.handler.paths) {
+		t.Errorf("Login() request paths do not match expected %#v, actual %#v", tt.expectReqPaths,
+			tt.handler.paths)
+	}
+
+	if !reflect.DeepEqual(tt.expectReqParams, tt.handler.params) {
+		t.Errorf("Login() request params do not match expected %#v, actual %#v", tt.expectReqParams,
+			tt.handler.params)
+	}
+
+	if !reflect.DeepEqual(got, tt.want) {
+		t.Errorf("Login() got = %v, want %v", got, tt.want)
+	}
+}
