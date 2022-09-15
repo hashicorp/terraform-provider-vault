@@ -2,7 +2,6 @@ package provider
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"path"
@@ -13,7 +12,6 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func Test_setupUserpassAuthParams(t *testing.T) {
@@ -85,7 +83,7 @@ func TestAuthLoginUserpass_LoginPath(t *testing.T) {
 		{
 			name: "basic",
 			fields: fields{
-				AuthLoginCommon: AuthLoginCommon{
+				AuthLoginCommon{
 					authField: "",
 					mount:     "foo",
 					params: map[string]interface{}{
@@ -108,37 +106,8 @@ func TestAuthLoginUserpass_LoginPath(t *testing.T) {
 	}
 }
 
-type testLoginHandler struct {
-	requestCount int
-	paths        []string
-	params       []map[string]interface{}
-}
-
-func (t *testLoginHandler) userpassHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		t.requestCount++
-
-		t.paths = append(t.paths, req.URL.Path)
-
-		if req.Method != http.MethodPut {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-
-		b, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		var params map[string]interface{}
-		if err := json.Unmarshal(b, &params); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		t.params = append(t.params, params)
-
+func TestAuthLoginUserpass_Login(t *testing.T) {
+	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
 		parts := strings.Split(req.URL.Path, "/")
 		m, err := json.Marshal(
 			&api.Secret{
@@ -154,29 +123,17 @@ func (t *testLoginHandler) userpassHandler() http.HandlerFunc {
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
-		w.Write(m)
+		if _, err := w.Write(m); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
-}
 
-func TestAuthLoginUserpass_Login(t *testing.T) {
-	type fields struct {
-		AuthLoginCommon AuthLoginCommon
-	}
-	tests := []struct {
-		name            string
-		fields          fields
-		handler         *testLoginHandler
-		want            *api.Secret
-		expectReqCount  int
-		expectReqParams []map[string]interface{}
-		expectReqPaths  []string
-		wantErr         bool
-	}{
+	tests := []authLoginTest{
 		{
 			name: "basic",
-			fields: fields{
-				AuthLoginCommon: AuthLoginCommon{
+			authLogin: &AuthLoginUserpass{
+				AuthLoginCommon{
 					authField: "baz",
 					mount:     "foo",
 					params: map[string]interface{}{
@@ -185,7 +142,9 @@ func TestAuthLoginUserpass_Login(t *testing.T) {
 					},
 				},
 			},
-			handler:        &testLoginHandler{},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
 			expectReqCount: 1,
 			expectReqPaths: []string{
 				"/v1/auth/foo/login/bob",
@@ -207,8 +166,8 @@ func TestAuthLoginUserpass_Login(t *testing.T) {
 		},
 		{
 			name: "error-no-username",
-			fields: fields{
-				AuthLoginCommon: AuthLoginCommon{
+			authLogin: &AuthLoginUserpass{
+				AuthLoginCommon{
 					authField: "baz",
 					mount:     "foo",
 					params: map[string]interface{}{
@@ -216,7 +175,9 @@ func TestAuthLoginUserpass_Login(t *testing.T) {
 					},
 				},
 			},
-			handler:         &testLoginHandler{},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
 			expectReqCount:  0,
 			expectReqPaths:  nil,
 			expectReqParams: nil,
@@ -226,44 +187,7 @@ func TestAuthLoginUserpass_Login(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := tt.handler
-
-			config, ln := testutil.TestHTTPServer(t, r.userpassHandler())
-			defer ln.Close()
-
-			config.Address = fmt.Sprintf("http://%s", ln.Addr())
-			c, err := api.NewClient(config)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			l := &AuthLoginUserpass{
-				AuthLoginCommon: tt.fields.AuthLoginCommon,
-			}
-
-			got, err := l.Login(c)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Login() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.expectReqCount != tt.handler.requestCount {
-				t.Errorf("Login() expected %d requests, actual %d", tt.expectReqCount, tt.handler.requestCount)
-			}
-
-			if !reflect.DeepEqual(tt.expectReqPaths, tt.handler.paths) {
-				t.Errorf("Login() request paths do not match expected %#v, actual %#v", tt.expectReqPaths,
-					tt.handler.paths)
-			}
-
-			if !reflect.DeepEqual(tt.expectReqParams, tt.handler.params) {
-				t.Errorf("Login() request params do not match expected %#v, actual %#v", tt.expectReqParams,
-					tt.handler.params)
-			}
-
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Login() got = %v, want %v", got, tt.want)
-			}
+			testAuthLogin(t, tt)
 		})
 	}
 }

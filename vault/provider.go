@@ -52,7 +52,7 @@ func Provider() *schema.Provider {
 	}
 	r := &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"address": {
+			consts.FieldAddress: {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultAddress, nil),
@@ -85,46 +85,47 @@ func Provider() *schema.Provider {
 				// Note that this is strongly discouraged due to the potential of exposing sensitive secret data.
 				Description: "Set this to true to prevent the creation of ephemeral child token used by this provider.",
 			},
-			"ca_cert_file": {
+			consts.FieldCACertFile: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_CACERT", ""),
+				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultCACert, ""),
 				Description: "Path to a CA certificate file to validate the server's certificate.",
 			},
-			"ca_cert_dir": {
+			consts.FieldCACertDir: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_CAPATH", ""),
+				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultCAPath, ""),
 				Description: "Path to directory containing CA certificate files to validate the server's certificate.",
 			},
-			"client_auth": {
+			consts.FieldClientAuth: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Client authentication credentials.",
+				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"cert_file": {
+						consts.FieldCertFile: {
 							Type:        schema.TypeString,
 							Required:    true,
-							DefaultFunc: schema.EnvDefaultFunc("VAULT_CLIENT_CERT", ""),
+							DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultClientCert, ""),
 							Description: "Path to a file containing the client certificate.",
 						},
-						"key_file": {
+						consts.FieldKeyFile: {
 							Type:        schema.TypeString,
 							Required:    true,
-							DefaultFunc: schema.EnvDefaultFunc("VAULT_CLIENT_KEY", ""),
+							DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultClientKey, ""),
 							Description: "Path to a file containing the private key that the certificate was issued for.",
 						},
 					},
 				},
 			},
-			"skip_tls_verify": {
+			consts.FieldSkipTLSVerify: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", false),
 				Description: "Set this to true only if the target Vault server is an insecure development instance.",
 			},
-			"tls_server_name": {
+			consts.FieldTLSServerName: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultTLSServerName, ""),
@@ -194,6 +195,8 @@ func Provider() *schema.Provider {
 			f = provider.GetUserpassLoginSchema
 		case consts.FieldAuthLoginAWS:
 			f = provider.GetAWSLoginSchema
+		case consts.FieldAuthLoginCert:
+			f = provider.GetCertLoginSchema
 		default:
 			continue
 		}

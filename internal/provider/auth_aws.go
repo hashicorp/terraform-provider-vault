@@ -87,7 +87,6 @@ type AuthLoginAWS struct {
 
 // LoginPath for the AWS authentication engine.
 func (l *AuthLoginAWS) LoginPath() string {
-	// TODO: add params validation
 	return fmt.Sprintf("auth/%s/login", l.MountPath())
 }
 

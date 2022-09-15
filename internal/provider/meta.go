@@ -121,12 +121,12 @@ func (p *ProviderMeta) validate() error {
 // It is meant to be used as a schema.ConfigureFunc.
 func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	clientConfig := api.DefaultConfig()
-	addr := d.Get("address").(string)
+	addr := d.Get(consts.FieldAddress).(string)
 	if addr != "" {
 		clientConfig.Address = addr
 	}
 
-	clientAuthI := d.Get("client_auth").([]interface{})
+	clientAuthI := d.Get(consts.FieldClientAuth).([]interface{})
 	if len(clientAuthI) > 1 {
 		return nil, fmt.Errorf("client_auth block may appear only once")
 	}
@@ -135,15 +135,15 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	clientAuthKey := ""
 	if len(clientAuthI) == 1 {
 		clientAuth := clientAuthI[0].(map[string]interface{})
-		clientAuthCert = clientAuth["cert_file"].(string)
-		clientAuthKey = clientAuth["key_file"].(string)
+		clientAuthCert = clientAuth[consts.FieldCertFile].(string)
+		clientAuthKey = clientAuth[consts.FieldKeyFile].(string)
 	}
 
 	err := clientConfig.ConfigureTLS(&api.TLSConfig{
-		CACert:        d.Get("ca_cert_file").(string),
-		CAPath:        d.Get("ca_cert_dir").(string),
-		Insecure:      d.Get("skip_tls_verify").(bool),
-		TLSServerName: d.Get("tls_server_name").(string),
+		CACert:        d.Get(consts.FieldCACertFile).(string),
+		CAPath:        d.Get(consts.FieldCACertDir).(string),
+		Insecure:      d.Get(consts.FieldSkipTLSVerify).(bool),
+		TLSServerName: d.Get(consts.FieldTLSServerName).(string),
 
 		ClientCert: clientAuthCert,
 		ClientKey:  clientAuthKey,

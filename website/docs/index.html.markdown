@@ -129,6 +129,8 @@ variables in order to keep credential information out of the configuration.
 
 * `auth_login_aws` - (Optional) Utilizes the `aws` authentication engine. *[See usage details below.](#aws)*
 
+* `auth_login_cert` - (Optional) Utilizes the `cert` authentication engine. *[See usage details below.](#tls-certificate)*
+
 * `auth_login` - (Optional) A configuration block, described below, that
   attempts to authenticate using the `auth/<method>/login` path to
   acquire a token which Terraform will use. Terraform still issues itself
@@ -139,6 +141,7 @@ variables in order to keep credential information out of the configuration.
   provides credentials used by Terraform to authenticate with the Vault
   server. At present there is little reason to set this, because Terraform
   does not support the TLS certificate authentication mechanism.
+  *Deprecated, use `auth_login_cert` instead.
 
 * `skip_tls_verify` - (Optional) Set this to `true` to disable verification
   of the Vault server's TLS certificate. This is strongly discouraged except
@@ -204,26 +207,11 @@ The `headers` configuration block accepts the following arguments:
 
 * `value` - (Required) The value of the header.
 
-The `client_auth` configuration block accepts the following arguments:
-
-* `cert_file` - (Required) Path to a file on local disk that contains the
-  PEM-encoded certificate to present to the server.
-
-* `key_file` - (Required) Path to a file on local disk that contains the
-  PEM-encoded private key for which the authentication certificate was issued.
-
-The `headers` configuration block accepts the following arguments:
-
-* `name` - (Required) The name of the header.
-
-* `value` - (Required) The value of the header.
-
-
 ## Vault Authentication Configuration Options
 
-Vault supports multiple authentication engines. The provider supports the following authentication engines.
+The Vault provider supports the following Vault authentication engines.
 
-### Userpass 
+### Userpass
 
 Provides support for authenticating to Vault using the Username & Password authentication engine
 *For more details see: [Userpass Auth Method (HTTP API)](https://www.vaultproject.io/api-docs/auth/userpass#userpass-auth-method-http-api)*
@@ -249,7 +237,7 @@ The `auth_login_userpass` configuration block accepts the following arguments:
 ### AWS
 
 Provides support for authenticating to Vault using the AWS authentication engine.
-*For more details see: [AWS Auth Method (API)](https://www.vaultproject.io/api-docs/auth/aws#aws-auth-method-api)
+*For more details see: [AWS Auth Method (API)](https://www.vaultproject.io/api-docs/auth/aws#aws-auth-method-api)*
 
 The `auth_login_aws` configuration block accepts the following arguments:
 
@@ -279,6 +267,30 @@ The `auth_login_aws` configuration block accepts the following arguments:
 
 * `iam_http_request_headers` - (Optional) Mapping of extra IAM specific HTTP request login headers.
 
+### TLS Certificate
+
+Provides support for authenticating to Vault using the Username & Password authentication engine
+*For more details see: [TLS Certificate Auth Method (API)](https://www.vaultproject.io/api-docs/auth/cert#tls-certificate-auth-method-api)*
+
+
+The `auth_login_cert` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the  authentication engine mount.  
+  Default: `cert`
+
+* `cert_file` - (Required) Path to a file on local disk that contains the
+  PEM-encoded certificate to present to the server.
+
+* `key_file` - (Required) Path to a file on local disk that contains the
+  PEM-encoded private key for which the authentication certificate was issued.
+
+*This login configuration honors the top-level TLS configuration parameters:
+[ca_cert_file](#ca_cert_file), [ca_cert_dir](#ca_cert_dir), [skip_tls_verify](#skip_tls_verify), [tls_server_name](#tls_server_name)*
+
 ### Generic
 
 Provides support for path based authentication to Vault.
@@ -304,7 +316,6 @@ The path-based `auth_login` configuration block accepts the following arguments:
 * `parameters` - (Optional) A map of key-value parameters to send when authenticating
   against the auth backend. Refer to [Vault API documentation](https://www.vaultproject.io/api-docs/auth) for a particular auth method
   to see what can go here.
-
 
 ## Provider Debugging
 

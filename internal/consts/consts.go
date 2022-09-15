@@ -67,9 +67,11 @@ const (
 	FieldUsername                 = "username"
 	FieldPassword                 = "password"
 	FieldPasswordFile             = "password_file"
+	FieldClientAuth               = "client_auth"
 	FieldAuthLoginDefault         = "auth_login"
 	FieldAuthLoginUserpass        = "auth_login_userpass"
 	FieldAuthLoginAWS             = "auth_login_aws"
+	FieldAuthLoginCert            = "auth_login_cert"
 	FieldIdentity                 = "identity"
 	FieldSignature                = "signature"
 	FieldPKCS7                    = "pkcs7"
@@ -79,6 +81,13 @@ const (
 	FieldIAMHttpRequestBody       = "iam_http_request_body"
 	FieldIAMHttpRequestHeaders    = "iam_http_request_headers"
 	FieldDisableRemount           = "disable_remount"
+	FieldCACertFile               = "ca_cert_file"
+	FieldCACertDir                = "ca_cert_dir"
+	FieldCertFile                 = "cert_file"
+	FieldKeyFile                  = "key_file"
+	FieldSkipTLSVerify            = "skip_tls_verify"
+	FieldTLSServerName            = "tls_server_name"
+	FieldAddress                  = "address"
 	/*
 		common environment variables
 	*/
@@ -102,6 +111,7 @@ const (
 	MountTypeNomad      = "nomad"
 	MountTypeKubernetes = "kubernetes"
 	MountTypeUserpass   = "userpass"
+	MountTypeCert       = "cert"
 
 	/*
 		Vault version constants
@@ -115,6 +125,7 @@ const (
 	*/
 	AuthMethodAWS      = "aws"
 	AuthMethodUserpass = "userpass"
+	AuthMethodCert     = "cert"
 
 	/*
 		misc. path related constants
