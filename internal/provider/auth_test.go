@@ -57,19 +57,13 @@ func (t *testLoginHandler) handler() http.HandlerFunc {
 		t.params = append(t.params, params)
 
 		t.handlerFunc(t, w, req)
-
-		if len(w.Header()) > 1 {
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
 	}
 }
 
 func testAuthLogin(t *testing.T, tt authLoginTest) {
-	r := tt.handler
+	t.Helper()
 
-	config, ln := testutil.TestHTTPServer(t, r.handler())
+	config, ln := testutil.TestHTTPServer(t, tt.handler.handler())
 	defer ln.Close()
 
 	config.Address = fmt.Sprintf("http://%s", ln.Addr())
