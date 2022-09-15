@@ -72,6 +72,7 @@ const (
 	FieldAuthLoginUserpass        = "auth_login_userpass"
 	FieldAuthLoginAWS             = "auth_login_aws"
 	FieldAuthLoginCert            = "auth_login_cert"
+	FieldAuthLoginGCP             = "auth_login_gcp"
 	FieldIdentity                 = "identity"
 	FieldSignature                = "signature"
 	FieldPKCS7                    = "pkcs7"
@@ -88,6 +89,10 @@ const (
 	FieldSkipTLSVerify            = "skip_tls_verify"
 	FieldTLSServerName            = "tls_server_name"
 	FieldAddress                  = "address"
+	FieldJWT                      = "jwt"
+	FieldCredentials              = "credentials"
+	FieldClientEmail              = "client_email"
+	FieldServiceAccount           = "service_account"
 	/*
 		common environment variables
 	*/
@@ -99,6 +104,10 @@ const (
 	EnvVarPassword = "TERRAFORM_VAULT_PASSWORD"
 	// EnvVarPasswordFile to get the password for the userpass auth method
 	EnvVarPasswordFile = "TERRAFORM_VAULT_PASSWORD_FILE"
+	// EnvVarGCPAuthJWT to get the signed JWT for the gcp auth method
+	EnvVarGCPAuthJWT = "TERRAFORM_VAULT_GCP_AUTH_JWT"
+
+	EnvVarGoogleApplicationCreds = "GOOGLE_APPLICATION_CREDENTIALS"
 
 	/*
 		common mount types
@@ -112,6 +121,7 @@ const (
 	MountTypeKubernetes = "kubernetes"
 	MountTypeUserpass   = "userpass"
 	MountTypeCert       = "cert"
+	MountTypeGCP        = "gcp"
 
 	/*
 		Vault version constants
@@ -126,6 +136,7 @@ const (
 	AuthMethodAWS      = "aws"
 	AuthMethodUserpass = "userpass"
 	AuthMethodCert     = "cert"
+	AuthMethodGCP      = "gcp"
 
 	/*
 		misc. path related constants

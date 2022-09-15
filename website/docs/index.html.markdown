@@ -131,6 +131,8 @@ variables in order to keep credential information out of the configuration.
 
 * `auth_login_cert` - (Optional) Utilizes the `cert` authentication engine. *[See usage details below.](#tls-certificate)*
 
+* `auth_login_gcp` - (Optional) Utilizes the `gcp` authentication engine. *[See usage details below.](#gcp)*
+
 * `auth_login` - (Optional) A configuration block, described below, that
   attempts to authenticate using the `auth/<method>/login` path to
   acquire a token which Terraform will use. Terraform still issues itself
@@ -213,7 +215,8 @@ The Vault provider supports the following Vault authentication engines.
 
 ### Userpass
 
-Provides support for authenticating to Vault using the Username & Password authentication engine
+Provides support for authenticating to Vault using the Username & Password authentication engine.
+
 *For more details see: [Userpass Auth Method (HTTP API)](https://www.vaultproject.io/api-docs/auth/userpass#userpass-auth-method-http-api)*
 
 The `auth_login_userpass` configuration block accepts the following arguments:
@@ -237,6 +240,7 @@ The `auth_login_userpass` configuration block accepts the following arguments:
 ### AWS
 
 Provides support for authenticating to Vault using the AWS authentication engine.
+
 *For more details see: [AWS Auth Method (API)](https://www.vaultproject.io/api-docs/auth/aws#aws-auth-method-api)*
 
 The `auth_login_aws` configuration block accepts the following arguments:
@@ -269,7 +273,8 @@ The `auth_login_aws` configuration block accepts the following arguments:
 
 ### TLS Certificate
 
-Provides support for authenticating to Vault using the Username & Password authentication engine
+Provides support for authenticating to Vault using the Username & Password authentication engine.
+
 *For more details see: [TLS Certificate Auth Method (API)](https://www.vaultproject.io/api-docs/auth/cert#tls-certificate-auth-method-api)*
 
 
@@ -290,6 +295,36 @@ The `auth_login_cert` configuration block accepts the following arguments:
 
 *This login configuration honors the top-level TLS configuration parameters:
 [ca_cert_file](#ca_cert_file), [ca_cert_dir](#ca_cert_dir), [skip_tls_verify](#skip_tls_verify), [tls_server_name](#tls_server_name)*
+
+### GCP
+
+Provides support for authenticating to Vault using the Google Cloud Auth engine.
+
+*For more details see: [Google Cloud Auth Method (API)](https://www.vaultproject.io/api-docs/auth/gcp#google-cloud-auth-method-api)*
+
+
+The `auth_login_gcp` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the  authentication engine mount.  
+  Default: `cert`
+
+* `role` - (Required) The name of the role against which the login is being attempted.
+
+* `jwt` - (Optional) The signed JSON Web Token against which the login is being attempted.
+
+* `credentials` - (Optional) Path to the Google Cloud credentials to use when getting the signed 
+  JWT token from the IAM service.  
+*conflicts with `jwt`*
+
+* `service_account` - (Optional) Name of the service account to issue the JWT token for.  
+*requires `credentials`*
+
+*This login configuration will attempt to get a signed JWT token if `jwt` is not specified. 
+It supports both the IAM and GCE meta-data services as the token source.*
 
 ### Generic
 

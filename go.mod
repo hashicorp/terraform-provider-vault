@@ -3,6 +3,10 @@ module github.com/hashicorp/terraform-provider-vault
 go 1.16
 
 require (
+	cloud.google.com/go/compute v1.7.0
+	cloud.google.com/go/iam v0.3.0
+	cloud.google.com/go/kms v1.4.0 // indirect
+	cloud.google.com/go/monitoring v1.6.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.22.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.13.2
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v0.3.1
@@ -31,6 +35,8 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
-	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
+	golang.org/x/oauth2 v0.0.0-20220822191816-0ebed06d0094
+	google.golang.org/api v0.96.0
+	google.golang.org/genproto v0.0.0-20220808131553-a91ffa7f803e
 	gopkg.in/yaml.v3 v3.0.0 // indirect
 )
