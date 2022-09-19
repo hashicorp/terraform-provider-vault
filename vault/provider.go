@@ -199,6 +199,8 @@ func Provider() *schema.Provider {
 			f = provider.GetCertLoginSchema
 		case consts.FieldAuthLoginGCP:
 			f = provider.GetGCPLoginSchema
+		case consts.FieldAuthLoginKerberos:
+			f = provider.GetKerberosLoginSchema
 		default:
 			continue
 		}

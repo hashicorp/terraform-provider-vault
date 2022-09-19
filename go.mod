@@ -30,8 +30,10 @@ require (
 	github.com/hashicorp/go-version v1.4.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.16.0
 	github.com/hashicorp/vault v1.11.2
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.8.0
 	github.com/hashicorp/vault/api v1.7.2
 	github.com/hashicorp/vault/sdk v0.5.3-0.20220721224827-e96a652fbfb0
+	github.com/jcmturner/gokrb5/v8 v8.4.2
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d

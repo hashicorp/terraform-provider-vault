@@ -73,6 +73,7 @@ const (
 	FieldAuthLoginAWS             = "auth_login_aws"
 	FieldAuthLoginCert            = "auth_login_cert"
 	FieldAuthLoginGCP             = "auth_login_gcp"
+	FieldAuthLoginKerberos        = "auth_login_kerberos"
 	FieldIdentity                 = "identity"
 	FieldSignature                = "signature"
 	FieldPKCS7                    = "pkcs7"
@@ -93,6 +94,14 @@ const (
 	FieldCredentials              = "credentials"
 	FieldClientEmail              = "client_email"
 	FieldServiceAccount           = "service_account"
+	FieldAuthorization            = "authorization"
+	FieldToken                    = "token"
+	FieldService                  = "service"
+	FieldRealm                    = "realm"
+	FieldKeytabPath               = "keytab_path"
+	FieldKRB5ConfPath             = "krb5conf_path"
+	FieldDisableFastNegotiation   = "disable_fast_negotiation"
+	FieldRemoveInstanceName       = "remove_instance_name"
 	/*
 		common environment variables
 	*/
@@ -109,6 +118,13 @@ const (
 
 	EnvVarGoogleApplicationCreds = "GOOGLE_APPLICATION_CREDENTIALS"
 
+	// EnvVarKrbSPENGOToken to get the signed JWT for the gcp auth method
+	EnvVarKrbSPENGOToken = "KRB_SPNEGO_TOKEN"
+	// EnvVarKRB5Conf path to the krb5.conf file.
+	EnvVarKRB5Conf = "KRB5_CONFIG"
+	// EnvVarKRBKeytab path the keytab file.
+	EnvVarKRBKeytab = "KRB_KEYTAB"
+
 	/*
 		common mount types
 	*/
@@ -122,6 +138,7 @@ const (
 	MountTypeUserpass   = "userpass"
 	MountTypeCert       = "cert"
 	MountTypeGCP        = "gcp"
+	MountTypeKerberos   = "kerberos"
 
 	/*
 		Vault version constants
@@ -137,6 +154,7 @@ const (
 	AuthMethodUserpass = "userpass"
 	AuthMethodCert     = "cert"
 	AuthMethodGCP      = "gcp"
+	AuthMethodKerberos = "kerberos"
 
 	/*
 		misc. path related constants

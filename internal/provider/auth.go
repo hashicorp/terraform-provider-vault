@@ -22,6 +22,7 @@ var AuthLoginFields = []string{
 	consts.FieldAuthLoginAWS,
 	consts.FieldAuthLoginCert,
 	consts.FieldAuthLoginGCP,
+	consts.FieldAuthLoginKerberos,
 }
 
 type AuthLogin interface {
@@ -143,6 +144,8 @@ func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {
 			l = &AuthLoginUserpass{}
 		case consts.FieldAuthLoginGCP:
 			l = &AuthLoginGCP{}
+		case consts.FieldAuthLoginKerberos:
+			l = &AuthLoginKerberos{}
 		default:
 			return nil, nil
 		}
