@@ -22,13 +22,15 @@ type authLoginTest struct {
 	expectReqParams []map[string]interface{}
 	expectReqPaths  []string
 	wantErr         bool
+	skipFunc        func(t *testing.T)
 }
 
 type testLoginHandler struct {
-	requestCount int
-	paths        []string
-	params       []map[string]interface{}
-	handlerFunc  func(t *testLoginHandler, w http.ResponseWriter, req *http.Request)
+	requestCount  int
+	paths         []string
+	params        []map[string]interface{}
+	excludeParams []string
+	handlerFunc   func(t *testLoginHandler, w http.ResponseWriter, req *http.Request)
 }
 
 func (t *testLoginHandler) handler() http.HandlerFunc {
@@ -54,6 +56,10 @@ func (t *testLoginHandler) handler() http.HandlerFunc {
 			return
 		}
 
+		for _, p := range t.excludeParams {
+			delete(params, p)
+		}
+
 		t.params = append(t.params, params)
 
 		t.handlerFunc(t, w, req)
@@ -62,6 +68,10 @@ func (t *testLoginHandler) handler() http.HandlerFunc {
 
 func testAuthLogin(t *testing.T, tt authLoginTest) {
 	t.Helper()
+
+	if tt.skipFunc != nil {
+		tt.skipFunc(t)
+	}
 
 	config, ln := testutil.TestHTTPServer(t, tt.handler.handler())
 	defer ln.Close()
@@ -93,6 +103,6 @@ func testAuthLogin(t *testing.T, tt authLoginTest) {
 	}
 
 	if !reflect.DeepEqual(got, tt.want) {
-		t.Errorf("Login() got = %v, want %v", got, tt.want)
+		t.Errorf("Login() got = %#v, want %#v", got, tt.want)
 	}
 }
