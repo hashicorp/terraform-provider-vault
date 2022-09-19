@@ -41,14 +41,14 @@ func GetGCPLoginSchemaResource(authField string) *schema.Resource {
 			},
 			consts.FieldJWT: {
 				Type:          schema.TypeString,
-				Required:      true,
+				Optional:      true,
 				Description:   "A signed JSON Web Token.",
 				DefaultFunc:   schema.EnvDefaultFunc(consts.EnvVarGCPAuthJWT, nil),
 				ConflictsWith: []string{fmt.Sprintf("%s.0.%s", authField, consts.FieldCredentials)},
 			},
 			consts.FieldCredentials: {
 				Type:          schema.TypeString,
-				Required:      true,
+				Optional:      true,
 				ValidateFunc:  validateCredentials,
 				Description:   "Path to the Google Cloud credentials file.",
 				DefaultFunc:   schema.EnvDefaultFunc(consts.EnvVarGoogleApplicationCreds, nil),
