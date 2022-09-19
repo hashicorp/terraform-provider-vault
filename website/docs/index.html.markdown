@@ -273,7 +273,7 @@ The `auth_login_aws` configuration block accepts the following arguments:
 
 ### TLS Certificate
 
-Provides support for authenticating to Vault using the Username & Password authentication engine.
+Provides support for authenticating to Vault using the TLS Certificate authentication engine.
 
 *For more details see: [TLS Certificate Auth Method (API)](https://www.vaultproject.io/api-docs/auth/cert#tls-certificate-auth-method-api)*
 
