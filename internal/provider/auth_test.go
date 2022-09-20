@@ -22,6 +22,7 @@ type authLoginTest struct {
 	expectReqParams []map[string]interface{}
 	expectReqPaths  []string
 	wantErr         bool
+	expectErr       error
 	skipFunc        func(t *testing.T)
 }
 
@@ -86,6 +87,12 @@ func testAuthLogin(t *testing.T, tt authLoginTest) {
 	if (err != nil) != tt.wantErr {
 		t.Errorf("Login() error = %v, wantErr %v", err, tt.wantErr)
 		return
+	}
+
+	if err != nil && tt.expectErr != nil {
+		if !reflect.DeepEqual(tt.expectErr, err) {
+			t.Errorf("Login() expected error %#v, actual %#v", tt.expectErr, err)
+		}
 	}
 
 	if tt.expectReqCount != tt.handler.requestCount {
