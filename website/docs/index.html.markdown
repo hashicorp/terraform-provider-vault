@@ -352,7 +352,9 @@ The `auth_login_kerberos` configuration block accepts the following arguments:
 
 * `token` - (Optional) Simple and Protected GSSAPI Negotiation Mechanism (SPNEGO) token.
   Can be specified with the `KRB_SPNEGO_TOKEN` environment variable.
- 
+
+* `username` - (Conflicts with `token`)  The username to login into Kerberos with.
+
 * `service` - (Conflicts with `token`) The service principle name.
  
 * `realm` - (Conflicts with `token`) The Kerberos server's authoritative authentication domain.
@@ -362,13 +364,14 @@ The `auth_login_kerberos` configuration block accepts the following arguments:
  
 * `keytab_path` - (Conflicts with `token`)  The Kerberos keytab file containing the entry of the login entity.
   Can be specified with the `KRB_KEYTAB` environment variable.
- 
+
 * `disable_fast_negotiation` - (Conflicts with `token`) Disable the Kerberos FAST negotiation.
  
 * `remove_instance_name` - (Conflicts with `token`) Strip the host from the username found in the keytab.
 
 *This login configuration will attempt to get a SPNEGO init token from the `service` domain if `token` is not specified.
-The following fields are required when token is not specified: `service`, `realm`, `krb5conf_path`, `keytab_path`*
+The following fields are required when token is not specified:
+`username`, `service`, `realm`, `krb5conf_path`, `keytab_path`*
 
 ### Generic
 
