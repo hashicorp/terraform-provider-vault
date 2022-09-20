@@ -25,12 +25,12 @@ func GetKerberosLoginSchema(authField string) *schema.Schema {
 
 // GetKerberosLoginSchemaResource for the kerberos authentication engine.
 func GetKerberosLoginSchemaResource(authField string) *schema.Resource {
-	conflicts := []string{consts.FieldToken}
+	conflicts := []string{fmt.Sprintf("%s.0.%s", authField, consts.FieldToken)}
 	s := mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldToken: {
 				Type:         schema.TypeString,
-				Required:     true,
+				Optional:     true,
 				DefaultFunc:  schema.EnvDefaultFunc(consts.EnvVarKrbSPENGOToken, nil),
 				Description:  "Simple and Protected GSSAPI Negotiation Mechanism (SPNEGO) token",
 				ValidateFunc: validateKRBNegToken,
