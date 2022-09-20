@@ -130,6 +130,21 @@ func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]inter
 	return path, params, nil
 }
 
+func (l *AuthLoginCommon) checkRequiredFields(d *schema.ResourceData, required ...string) error {
+	var missing []string
+	for _, f := range required {
+		if _, ok := l.getOk(d, f); !ok {
+			missing = append(missing, f)
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("required fields are unset: %v", missing)
+	}
+
+	return nil
+}
+
 func (l *AuthLoginCommon) getOk(d *schema.ResourceData, field string) (interface{}, bool) {
 	return d.GetOk(fmt.Sprintf("%s.0.%s", l.authField, field))
 }
@@ -153,6 +168,8 @@ func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {
 			l = &AuthLoginGCP{}
 		case consts.FieldAuthLoginKerberos:
 			l = &AuthLoginKerberos{}
+		case consts.FieldAuthLoginRadius:
+			l = &AuthLoginRadius{}
 		default:
 			return nil, nil
 		}

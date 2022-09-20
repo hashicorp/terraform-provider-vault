@@ -135,6 +135,8 @@ variables in order to keep credential information out of the configuration.
 
 * `auth_login_kerberos` - (Optional) Utilizes the `kerberos` authentication engine. *[See usage details below.](#kerberos)*
 
+* `auth_login_radius` - (Optional) Utilizes the `radius` authentication engine. *[See usage details below.](#radius)*
+
 * `auth_login` - (Optional) A configuration block, described below, that
   attempts to authenticate using the `auth/<method>/login` path to
   acquire a token which Terraform will use. Terraform still issues itself
@@ -372,6 +374,27 @@ The `auth_login_kerberos` configuration block accepts the following arguments:
 *This login configuration will attempt to get a SPNEGO init token from the `service` domain if `token` is not specified.
 The following fields are required when token is not specified:
 `username`, `service`, `realm`, `krb5conf_path`, `keytab_path`*
+
+### Radius
+
+Provides support for authenticating to Vault using the Radius Auth engine.
+
+*For more details see:
+[Radius Auth Method (API)](https://www.vaultproject.io/api-docs/auth/radius#radius-auth-method-api)*
+
+
+The `auth_login_radius` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the  authentication engine mount.  
+  Default: `radius`
+
+* `username` - (Required)  The username to Radius username to login into Vault with.
+
+* `password` - (Required)  The password for the Radius `username` to login into Vault with.
 
 ### Generic
 

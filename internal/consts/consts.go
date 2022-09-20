@@ -74,6 +74,7 @@ const (
 	FieldAuthLoginCert            = "auth_login_cert"
 	FieldAuthLoginGCP             = "auth_login_gcp"
 	FieldAuthLoginKerberos        = "auth_login_kerberos"
+	FieldAuthLoginRadius          = "auth_login_radius"
 	FieldIdentity                 = "identity"
 	FieldSignature                = "signature"
 	FieldPKCS7                    = "pkcs7"
@@ -125,6 +126,11 @@ const (
 	// EnvVarKRBKeytab path the keytab file.
 	EnvVarKRBKeytab = "KRB_KEYTAB"
 
+	// EnvVarRadiusUsername for the Radius auth login
+	EnvVarRadiusUsername = "RADIUS_USERNAME"
+	// EnvVarRadiusPassword for the Radius auth login
+	EnvVarRadiusPassword = "RADIUS_PASSWORD"
+
 	/*
 		common mount types
 	*/
@@ -139,6 +145,7 @@ const (
 	MountTypeCert       = "cert"
 	MountTypeGCP        = "gcp"
 	MountTypeKerberos   = "kerberos"
+	MountTypeRadius     = "radius"
 
 	/*
 		Vault version constants
@@ -155,6 +162,7 @@ const (
 	AuthMethodCert     = "cert"
 	AuthMethodGCP      = "gcp"
 	AuthMethodKerberos = "kerberos"
+	AuthMethodRadius   = "radius"
 
 	/*
 		misc. path related constants
