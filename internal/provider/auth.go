@@ -24,6 +24,7 @@ var AuthLoginFields = []string{
 	consts.FieldAuthLoginGCP,
 	consts.FieldAuthLoginKerberos,
 	consts.FieldAuthLoginRadius,
+	consts.FieldAuthLoginOCI,
 }
 
 type AuthLogin interface {
@@ -171,6 +172,8 @@ func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {
 			l = &AuthLoginKerberos{}
 		case consts.FieldAuthLoginRadius:
 			l = &AuthLoginRadius{}
+		case consts.FieldAuthLoginOCI:
+			l = &AuthLoginOCI{}
 		default:
 			return nil, nil
 		}

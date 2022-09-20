@@ -3,11 +3,13 @@ package provider
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/gosimple/slug"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
@@ -100,4 +102,26 @@ func validatePath(r *regexp.Regexp, i interface{}, k string) error {
 	}
 
 	return nil
+}
+
+// GetValidateDiagChoices sets up a SchemaValidateDiag func that checks that
+// the configured string value is supported.
+func GetValidateDiagChoices(choices []string) schema.SchemaValidateDiagFunc {
+	return func(i interface{}, path cty.Path) diag.Diagnostics {
+		have := i.(string)
+		for _, choice := range choices {
+			if have == choice {
+				return nil
+			}
+		}
+
+		return diag.Diagnostics{
+			{
+				Severity:      diag.Error,
+				Summary:       "Unsupported value.",
+				Detail:        fmt.Sprintf("Valid choices are: %s", strings.Join(choices, ", ")),
+				AttributePath: path,
+			},
+		}
+	}
 }

@@ -75,6 +75,7 @@ const (
 	FieldAuthLoginGCP             = "auth_login_gcp"
 	FieldAuthLoginKerberos        = "auth_login_kerberos"
 	FieldAuthLoginRadius          = "auth_login_radius"
+	FieldAuthLoginOCI             = "auth_login_oci"
 	FieldIdentity                 = "identity"
 	FieldSignature                = "signature"
 	FieldPKCS7                    = "pkcs7"
@@ -103,6 +104,8 @@ const (
 	FieldKRB5ConfPath             = "krb5conf_path"
 	FieldDisableFastNegotiation   = "disable_fast_negotiation"
 	FieldRemoveInstanceName       = "remove_instance_name"
+	FieldAuthType                 = "auth_type"
+	FieldRequestHeaders           = "request_headers"
 	/*
 		common environment variables
 	*/
@@ -146,6 +149,7 @@ const (
 	MountTypeGCP        = "gcp"
 	MountTypeKerberos   = "kerberos"
 	MountTypeRadius     = "radius"
+	MountTypeOCI        = "oci"
 
 	/*
 		Vault version constants
@@ -163,9 +167,11 @@ const (
 	AuthMethodGCP      = "gcp"
 	AuthMethodKerberos = "kerberos"
 	AuthMethodRadius   = "radius"
+	AuthMethodOCI      = "oci"
 
 	/*
 		misc. path related constants
 	*/
-	PathDelim = "/"
+	PathDelim      = "/"
+	VaultAPIV1Root = "/v1"
 )

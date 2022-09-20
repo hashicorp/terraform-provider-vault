@@ -19,6 +19,7 @@ type authLoginTest struct {
 	handler         *testLoginHandler
 	want            *api.Secret
 	expectReqCount  int
+	checkReqParams  bool
 	expectReqParams []map[string]interface{}
 	expectReqPaths  []string
 	wantErr         bool
@@ -104,7 +105,7 @@ func testAuthLogin(t *testing.T, tt authLoginTest) {
 			tt.handler.paths)
 	}
 
-	if !reflect.DeepEqual(tt.expectReqParams, tt.handler.params) {
+	if tt.checkReqParams && !reflect.DeepEqual(tt.expectReqParams, tt.handler.params) {
 		t.Errorf("Login() request params do not match expected %#v, actual %#v", tt.expectReqParams,
 			tt.handler.params)
 	}
