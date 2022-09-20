@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	kerberos "github.com/hashicorp/vault-plugin-auth-kerberos"
+	krbauth "github.com/hashicorp/vault-plugin-auth-kerberos"
 	"github.com/hashicorp/vault/api"
 	"github.com/jcmturner/gokrb5/v8/spnego"
 	"github.com/mitchellh/go-homedir"
@@ -91,6 +91,8 @@ func GetKerberosLoginSchemaResource(authField string) *schema.Resource {
 
 type AuthLoginKerberos struct {
 	AuthLoginCommon
+	// useful for unit testing
+	authHeaderFunc func(*krbauth.LoginCfg) (string, error)
 }
 
 // MountPath for the kerberos authentication engine.
@@ -111,6 +113,26 @@ func (l *AuthLoginKerberos) Init(d *schema.ResourceData, authField string) error
 		return err
 	}
 
+	if _, ok := l.getOk(d, consts.FieldToken); !ok {
+		required := []string{
+			consts.FieldUsername,
+			consts.FieldService,
+			consts.FieldRealm,
+			consts.FieldKeytabPath,
+			consts.FieldKRB5ConfPath,
+		}
+		missing := []string{}
+		for _, f := range required {
+			if _, ok := l.getOk(d, f); !ok {
+				missing = append(missing, f)
+			}
+		}
+
+		if len(missing) > 0 {
+			return fmt.Errorf("required fields are unset: %v", missing)
+		}
+	}
+
 	return nil
 }
 
@@ -121,24 +143,32 @@ func (l *AuthLoginKerberos) Method() string {
 
 // Login using the kerberos authentication engine.
 func (l *AuthLoginKerberos) Login(client *api.Client) (*api.Secret, error) {
-	token, err := l.getToken()
+	if !l.initialized {
+		return nil, fmt.Errorf("auth login not initialized")
+	}
+	negInitToken, err := l.getNegInitToken()
 	if err != nil {
 		return nil, err
 	}
 
 	return l.login(client, l.LoginPath(),
 		map[string]interface{}{
-			consts.FieldAuthorization: fmt.Sprintf("Negotiate %s", token),
+			consts.FieldAuthorization: negInitToken,
 		},
 	)
 }
 
-func (l *AuthLoginKerberos) getToken() (string, error) {
+func (l *AuthLoginKerberos) getNegInitToken() (string, error) {
 	if v, ok := l.params[consts.FieldToken]; ok && v.(string) != "" {
 		return fmt.Sprintf("Negotiate %s", v), nil
 	}
 
-	config := &kerberos.LoginCfg{
+	f := l.authHeaderFunc
+	if f == nil {
+		f = krbauth.GetAuthHeaderVal
+	}
+
+	config := &krbauth.LoginCfg{
 		Username:               l.params[consts.FieldUsername].(string),
 		Service:                l.params[consts.FieldService].(string),
 		Realm:                  l.params[consts.FieldRealm].(string),
@@ -147,8 +177,7 @@ func (l *AuthLoginKerberos) getToken() (string, error) {
 		DisableFASTNegotiation: l.params[consts.FieldDisableFastNegotiation].(bool),
 		RemoveInstanceName:     l.params[consts.FieldRemoveInstanceName].(bool),
 	}
-
-	token, err := kerberos.GetAuthHeaderVal(config)
+	token, err := f(config)
 	if err != nil {
 		return "", err
 	}
@@ -161,18 +190,19 @@ func validateKRBNegToken(v interface{}, s string) ([]string, []error) {
 		return nil, nil
 	}
 
+	var errors []error
 	b, err := base64.StdEncoding.DecodeString(v.(string))
 	if err != nil {
-		return nil, []error{err}
+		return nil, append(errors, fmt.Errorf("failed to decode token, err=%w", err))
 	}
 
 	isNeg, _, err := spnego.UnmarshalNegToken(b)
 	if err != nil {
-		return nil, []error{err}
+		return nil, append(errors, fmt.Errorf("failed to unmarshal token, err=%w", err))
 	}
 
 	if !isNeg {
-		return nil, []error{fmt.Errorf("token is not a valid SPNEGO negotiation token")}
+		return nil, append(errors, fmt.Errorf("not an initialization token"))
 	}
 
 	return nil, nil
@@ -186,11 +216,16 @@ func validateFileExists(v interface{}, s string) ([]string, []error) {
 	var errors []error
 	filename, err := homedir.Expand(v.(string))
 	if err != nil {
-		errors = append(errors, err)
-	} else {
-		if _, err := os.Stat(filename); err != nil {
-			errors = append(errors, err)
-		}
+		return nil, append(errors, err)
+	}
+
+	st, err := os.Stat(filename)
+	if err != nil {
+		return nil, append(errors, fmt.Errorf("failed to stat path %q, err=%w", filename, err))
+	}
+
+	if st.IsDir() {
+		return nil, append(errors, fmt.Errorf("path %q is not a file", filename))
 	}
 
 	return nil, errors
