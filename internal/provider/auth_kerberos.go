@@ -31,7 +31,7 @@ func GetKerberosLoginSchemaResource(authField string) *schema.Resource {
 			consts.FieldToken: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				DefaultFunc:  schema.EnvDefaultFunc(consts.EnvVarKrbSPENGOToken, nil),
+				DefaultFunc:  schema.EnvDefaultFunc(consts.EnvVarKrbSPNEGOToken, nil),
 				Description:  "Simple and Protected GSSAPI Negotiation Mechanism (SPNEGO) token",
 				ValidateFunc: validateKRBNegToken,
 			},
@@ -50,7 +50,7 @@ func GetKerberosLoginSchemaResource(authField string) *schema.Resource {
 			consts.FieldRealm: {
 				Type:          schema.TypeString,
 				Optional:      true,
-				Description:   "",
+				Description:   "The Kerberos server's authoritative authentication domain",
 				ConflictsWith: conflicts,
 			},
 			consts.FieldKRB5ConfPath: {
@@ -74,14 +74,14 @@ func GetKerberosLoginSchemaResource(authField string) *schema.Resource {
 				Optional:      true,
 				Default:       false,
 				ConflictsWith: conflicts,
-				Description:   "Disable the Kerberos FAST negotiation",
+				Description:   "Disable the Kerberos FAST negotiation.",
 			},
 			consts.FieldRemoveInstanceName: {
 				Type:          schema.TypeBool,
 				Optional:      true,
 				Default:       false,
 				ConflictsWith: conflicts,
-				Description:   "Strip the host from the any username found in the keytab.",
+				Description:   "Strip the host from the username found in the keytab.",
 			},
 		},
 	}, consts.MountTypeKerberos)
@@ -121,7 +121,7 @@ func (l *AuthLoginKerberos) Init(d *schema.ResourceData, authField string) error
 			consts.FieldKeytabPath,
 			consts.FieldKRB5ConfPath,
 		}
-		missing := []string{}
+		var missing []string
 		for _, f := range required {
 			if _, ok := l.getOk(d, f); !ok {
 				missing = append(missing, f)
@@ -185,7 +185,7 @@ func (l *AuthLoginKerberos) getNegInitToken() (string, error) {
 	return token, nil
 }
 
-func validateKRBNegToken(v interface{}, s string) ([]string, []error) {
+func validateKRBNegToken(v interface{}, _ string) ([]string, []error) {
 	if v == nil || v.(string) == "" {
 		return nil, nil
 	}
@@ -208,7 +208,7 @@ func validateKRBNegToken(v interface{}, s string) ([]string, []error) {
 	return nil, nil
 }
 
-func validateFileExists(v interface{}, s string) ([]string, []error) {
+func validateFileExists(v interface{}, _ string) ([]string, []error) {
 	if v == nil || v.(string) == "" {
 		return nil, nil
 	}

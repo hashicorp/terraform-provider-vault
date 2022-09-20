@@ -118,8 +118,8 @@ const (
 
 	EnvVarGoogleApplicationCreds = "GOOGLE_APPLICATION_CREDENTIALS"
 
-	// EnvVarKrbSPENGOToken to get the signed JWT for the gcp auth method
-	EnvVarKrbSPENGOToken = "KRB_SPNEGO_TOKEN"
+	// EnvVarKrbSPNEGOToken to get the signed JWT for the gcp auth method
+	EnvVarKrbSPNEGOToken = "KRB_SPNEGO_TOKEN"
 	// EnvVarKRB5Conf path to the krb5.conf file.
 	EnvVarKRB5Conf = "KRB5_CONFIG"
 	// EnvVarKRBKeytab path the keytab file.

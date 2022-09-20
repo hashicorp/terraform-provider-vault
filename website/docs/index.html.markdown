@@ -133,6 +133,8 @@ variables in order to keep credential information out of the configuration.
 
 * `auth_login_gcp` - (Optional) Utilizes the `gcp` authentication engine. *[See usage details below.](#gcp)*
 
+* `auth_login_kerberos` - (Optional) Utilizes the `kerberos` authentication engine. *[See usage details below.](#kerberos)*
+
 * `auth_login` - (Optional) A configuration block, described below, that
   attempts to authenticate using the `auth/<method>/login` path to
   acquire a token which Terraform will use. Terraform still issues itself
@@ -217,7 +219,8 @@ The Vault provider supports the following Vault authentication engines.
 
 Provides support for authenticating to Vault using the Username & Password authentication engine.
 
-*For more details see: [Userpass Auth Method (HTTP API)](https://www.vaultproject.io/api-docs/auth/userpass#userpass-auth-method-http-api)*
+*For more details see:
+[Userpass Auth Method (HTTP API)](https://www.vaultproject.io/api-docs/auth/userpass#userpass-auth-method-http-api)*
 
 The `auth_login_userpass` configuration block accepts the following arguments:
 
@@ -241,7 +244,8 @@ The `auth_login_userpass` configuration block accepts the following arguments:
 
 Provides support for authenticating to Vault using the AWS authentication engine.
 
-*For more details see: [AWS Auth Method (API)](https://www.vaultproject.io/api-docs/auth/aws#aws-auth-method-api)*
+*For more details see:
+[AWS Auth Method (API)](https://www.vaultproject.io/api-docs/auth/aws#aws-auth-method-api)*
 
 The `auth_login_aws` configuration block accepts the following arguments:
 
@@ -275,7 +279,8 @@ The `auth_login_aws` configuration block accepts the following arguments:
 
 Provides support for authenticating to Vault using the TLS Certificate authentication engine.
 
-*For more details see: [TLS Certificate Auth Method (API)](https://www.vaultproject.io/api-docs/auth/cert#tls-certificate-auth-method-api)*
+*For more details see:
+[TLS Certificate Auth Method (API)](https://www.vaultproject.io/api-docs/auth/cert#tls-certificate-auth-method-api)*
 
 
 The `auth_login_cert` configuration block accepts the following arguments:
@@ -294,13 +299,15 @@ The `auth_login_cert` configuration block accepts the following arguments:
   PEM-encoded private key for which the authentication certificate was issued.
 
 *This login configuration honors the top-level TLS configuration parameters:
-[ca_cert_file](#ca_cert_file), [ca_cert_dir](#ca_cert_dir), [skip_tls_verify](#skip_tls_verify), [tls_server_name](#tls_server_name)*
+[ca_cert_file](#ca_cert_file), [ca_cert_dir](#ca_cert_dir), [skip_tls_verify](#skip_tls_verify),
+[tls_server_name](#tls_server_name)*
 
 ### GCP
 
 Provides support for authenticating to Vault using the Google Cloud Auth engine.
 
-*For more details see: [Google Cloud Auth Method (API)](https://www.vaultproject.io/api-docs/auth/gcp#google-cloud-auth-method-api)*
+*For more details see:
+[Google Cloud Auth Method (API)](https://www.vaultproject.io/api-docs/auth/gcp#google-cloud-auth-method-api)*
 
 
 The `auth_login_gcp` configuration block accepts the following arguments:
@@ -310,7 +317,7 @@ The `auth_login_gcp` configuration block accepts the following arguments:
   *Available only for Vault Enterprise*.
 
 * `mount` - (Optional) The name of the  authentication engine mount.  
-  Default: `cert`
+  Default: `gcp`
 
 * `role` - (Required) The name of the role against which the login is being attempted.
 
@@ -325,6 +332,43 @@ The `auth_login_gcp` configuration block accepts the following arguments:
 
 *This login configuration will attempt to get a signed JWT token if `jwt` is not specified. 
 It supports both the IAM and GCE meta-data services as the token source.*
+
+### Kerberos
+
+Provides support for authenticating to Vault using the Kerberos Auth engine.
+
+*For more details see: 
+[Kerberos Auth Method (API)](https://www.vaultproject.io/api-docs/auth/kerberos#kerberos-auth-method-api)*
+
+
+The `auth_login_kerberos` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the  authentication engine mount.  
+  Default: `kerberos`
+
+* `token` - (Optional) Simple and Protected GSSAPI Negotiation Mechanism (SPNEGO) token.
+  Can be specified with the `KRB_SPNEGO_TOKEN` environment variable.
+ 
+* `service` - (Conflicts with `token`) The service principle name.
+ 
+* `realm` - (Conflicts with `token`) The Kerberos server's authoritative authentication domain.
+ 
+* `krb5conf_path` - (Conflicts with `token`) A valid Kerberos configuration file e.g. /etc/krb5.conf.
+  Can be specified with the `KRB5_CONFIG` environment variable.
+ 
+* `keytab_path` - (Conflicts with `token`)  The Kerberos keytab file containing the entry of the login entity.
+  Can be specified with the `KRB_KEYTAB` environment variable.
+ 
+* `disable_fast_negotiation` - (Conflicts with `token`) Disable the Kerberos FAST negotiation.
+ 
+* `remove_instance_name` - (Conflicts with `token`) Strip the host from the username found in the keytab.
+
+*This login configuration will attempt to get a SPNEGO init token from the `service` domain if `token` is not specified.
+The following fields are required when token is not specified: `service`, `realm`, `krb5conf_path`, `keytab_path`*
 
 ### Generic
 

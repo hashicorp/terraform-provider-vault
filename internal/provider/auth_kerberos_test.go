@@ -16,17 +16,13 @@ import (
 )
 
 const (
-	// base64 encoded SPENGO request token
+	// base64 encoded SPNEGO request token
 	testNegTokenInit = "oIICqjCCAqagJzAlBgkqhkiG9xIBAgIGBSsFAQUCBgkqhkiC9xIBAgIGBisGAQUCBaKCAnkEggJ1YIICcQYJKoZIhvcSAQICAQBuggJgMIICXKADAgEFoQMCAQ6iBwMFAAAAAACjggFwYYIBbDCCAWigAwIBBaENGwtURVNULkdPS1JCNaIjMCGgAwIBA6EaMBgbBEhUVFAbEGhvc3QudGVzdC5nb2tyYjWjggErMIIBJ6ADAgESoQMCAQKiggEZBIIBFdS9iQq8RW9E4uei6BEb1nZ6vwMmbfzal8Ypry7ORQpa4fFF5KTRvCyEjmamxrMdl0CyawPNvSVwv88SbpCt9fXrzp4oP/UIbaR7EpsU/Aqr1NHfnB88crgMxhTfwoeDRQsse3dJZR9DK0eqov8VjABmt1fz+wDde09j1oJ2x2Nz7N0/GcZuvEOoHld/PCY7h4NW9X6NbE7M1Ye4FTjnA5LPfnP8Eqb3xTeolKe7VWbIOsTWl1eqMgpR2NaQAXrr+VKt0Yia38Mwew5s2Mm1fPhYn75SgArLZGHCVHPUn6ob3OuLzj9h2yP5zWoJ1a3OtBHhxFRrMLMzMeVw/WvFCqQDVX519IjnWXUOoDiqtkVGZ9m2T0GkgdIwgc+gAwIBEqKBxwSBxNZ7oq5M9dkXyqsdhjYFJJMg6QSCVjZi7ZJAilQ7atXt64+TdekGCiBUkd8IL9Kl/sk9+3b0EBK7YMriDwetu3ehqlbwUh824eoQ3J+3YpArJU3XZk0LzG91HyAD5BmQrxtDMNEEd7+tY4ufC3BKyAzEdzH47I2AF2K62IhLjekK2x2+f8ew/6/Tj7Xri2VHzuMNiYcygc5jrXAEKhNHixp8K93g8iOs5i27hOLQbxBw9CZfZuBUREkzXi/MTQruW/gcWZk="
 	// base64 encoded response token
 	testNegTokenResp = "oRQwEqADCgEAoQsGCSqGSIb3EgECAg=="
 )
 
 func TestAuthLoginKerberos_Init(t *testing.T) {
-	type fields struct {
-		AuthLoginCommon AuthLoginCommon
-	}
-
 	tests := []struct {
 		name         string
 		authField    string
@@ -155,7 +151,10 @@ func TestAuthLoginKerberos_Login(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write(m)
+		if _, err := w.Write(m); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	getTestAuthHeaderFunc := func(expectConfig *krbauth.LoginCfg) func(c *krbauth.LoginCfg) (string, error) {
@@ -242,7 +241,6 @@ func TestAuthLoginKerberos_Login(t *testing.T) {
 }
 
 func Test_validateKRBNegToken(t *testing.T) {
-	type args struct{}
 	tests := []struct {
 		name       string
 		v          interface{}
