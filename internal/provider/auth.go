@@ -22,6 +22,7 @@ var AuthLoginFields = []string{
 	consts.FieldAuthLoginAWS,
 	consts.FieldAuthLoginCert,
 	consts.FieldAuthLoginGCP,
+	consts.FieldAuthLoginKerberos,
 }
 
 type AuthLogin interface {
@@ -35,9 +36,10 @@ type AuthLogin interface {
 
 // AuthLoginCommon providing common methods for other AuthLogin* implementations.
 type AuthLoginCommon struct {
-	authField string
-	mount     string
-	params    map[string]interface{}
+	authField   string
+	mount       string
+	params      map[string]interface{}
+	initialized bool
 }
 
 func (l *AuthLoginCommon) Init(d *schema.ResourceData, authField string) error {
@@ -92,6 +94,10 @@ func (l *AuthLoginCommon) login(client *api.Client, path string, params map[stri
 }
 
 func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]interface{}, error) {
+	if l.initialized {
+		return "", nil, fmt.Errorf("auth login already initiailized")
+	}
+
 	v, ok := d.GetOk(l.authField)
 	if !ok {
 		return "", nil, fmt.Errorf("resource data missing field %q", l.authField)
@@ -119,6 +125,8 @@ func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]inter
 		params = config[0].(map[string]interface{})
 	}
 
+	l.initialized = true
+
 	return path, params, nil
 }
 
@@ -143,6 +151,8 @@ func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {
 			l = &AuthLoginUserpass{}
 		case consts.FieldAuthLoginGCP:
 			l = &AuthLoginGCP{}
+		case consts.FieldAuthLoginKerberos:
+			l = &AuthLoginKerberos{}
 		default:
 			return nil, nil
 		}
