@@ -606,6 +606,10 @@ var (
 			Resource:      UpdateSchemaResource(auditResource()),
 			PathInventory: []string{"/sys/audit/{path}"},
 		},
+		"vault_audit_request_header": {
+			Resource:      UpdateSchemaResource(auditRequestHeaderResource()),
+			PathInventory: []string{"/sys/config/auditing/request-headers/{path}"},
+		},
 		"vault_ssh_secret_backend_ca": {
 			Resource:      UpdateSchemaResource(sshSecretBackendCAResource()),
 			PathInventory: []string{"/ssh/config/ca"},
