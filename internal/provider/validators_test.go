@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func Test_validateNoTrailingSlash(t *testing.T) {
@@ -34,7 +35,7 @@ func Test_validateNoTrailingSlash(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		_, errs := validateNoTrailingSlash(tc.val, "test_property")
+		_, errs := provider.ValidateNoTrailingSlash(tc.val, "test_property")
 
 		if len(errs) == 0 && tc.expectedErr == nil {
 			continue
@@ -96,7 +97,7 @@ func Test_validateNoLeadingTrailingSlashes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, actualErrs := validateNoLeadingTrailingSlashes(tt.args.i, tt.args.k)
+			got, actualErrs := provider.ValidateNoLeadingTrailingSlashes(tt.args.i, tt.args.k)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("validateNoLeadingTrailingSlashes() got = %v, want %v", got, tt.want)
 			}

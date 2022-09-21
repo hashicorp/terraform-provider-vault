@@ -35,7 +35,7 @@ func namespaceResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Namespace path.",
-				ValidateFunc: validateNoLeadingTrailingSlashes,
+				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 			},
 			consts.FieldNamespaceID: {
 				Type:        schema.TypeString,

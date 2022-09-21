@@ -62,7 +62,7 @@ func kmipSecretRoleResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Path where KMIP backend is mounted",
-				ValidateFunc: validateNoLeadingTrailingSlashes,
+				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 			},
 			"scope": {
 				Type:        schema.TypeString,

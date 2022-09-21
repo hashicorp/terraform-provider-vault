@@ -27,7 +27,7 @@ func mfaOktaResource() *schema.Resource {
 				Required:     true,
 				ForceNew:     true,
 				Description:  "Name of the MFA method.",
-				ValidateFunc: validateNoTrailingSlash,
+				ValidateFunc: provider.ValidateNoTrailingSlash,
 			},
 			consts.FieldMountAccessor: {
 				Type:     schema.TypeString,

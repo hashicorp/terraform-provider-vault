@@ -1,4 +1,4 @@
-package vault
+package provider
 
 import (
 	"fmt"
@@ -10,15 +10,13 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
-const pathDelim = "/"
-
 var (
 	regexpPathLeading  = regexp.MustCompile(fmt.Sprintf(`^%s`, consts.PathDelim))
 	regexpPathTrailing = regexp.MustCompile(fmt.Sprintf(`%s$`, consts.PathDelim))
 	regexpPath         = regexp.MustCompile(fmt.Sprintf(`%s|%s`, regexpPathLeading, regexpPathTrailing))
 )
 
-func validateStringSlug(i interface{}, k string) (s []string, es []error) {
+func ValidateStringSlug(i interface{}, k string) (s []string, es []error) {
 	v, ok := i.(string)
 	if !ok {
 		es = append(es, fmt.Errorf("expected type of %s to be string", k))
@@ -31,7 +29,7 @@ func validateStringSlug(i interface{}, k string) (s []string, es []error) {
 	return
 }
 
-func validateDuration(i interface{}, k string) (s []string, es []error) {
+func ValidateDuration(i interface{}, k string) (s []string, es []error) {
 	v, ok := i.(string)
 	if !ok {
 		es = append(es, fmt.Errorf("expected type of %s to be string", k))
@@ -44,25 +42,25 @@ func validateDuration(i interface{}, k string) (s []string, es []error) {
 	return
 }
 
-func validateNoTrailingSlash(i interface{}, k string) ([]string, []error) {
+func ValidateNoTrailingSlash(i interface{}, k string) ([]string, []error) {
 	var errs []error
-	if err := validatePath(regexpPathTrailing, i, k); err != nil {
+	if err := ValidatePath(regexpPathTrailing, i, k); err != nil {
 		errs = append(errs, err)
 	}
 
 	return nil, errs
 }
 
-func validateNoLeadingTrailingSlashes(i interface{}, k string) ([]string, []error) {
+func ValidateNoLeadingTrailingSlashes(i interface{}, k string) ([]string, []error) {
 	var errs []error
-	if err := validatePath(regexpPath, i, k); err != nil {
+	if err := ValidatePath(regexpPath, i, k); err != nil {
 		errs = append(errs, err)
 	}
 
 	return nil, errs
 }
 
-func validatePath(r *regexp.Regexp, i interface{}, k string) error {
+func ValidatePath(r *regexp.Regexp, i interface{}, k string) error {
 	v, ok := i.(string)
 	if !ok {
 		return fmt.Errorf("value for %q must be a string, not %T", k, i)
