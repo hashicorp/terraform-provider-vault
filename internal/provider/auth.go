@@ -23,6 +23,7 @@ var AuthLoginFields = []string{
 	consts.FieldAuthLoginCert,
 	consts.FieldAuthLoginGCP,
 	consts.FieldAuthLoginKerberos,
+	consts.FieldAuthLoginRadius,
 }
 
 type AuthLogin interface {
