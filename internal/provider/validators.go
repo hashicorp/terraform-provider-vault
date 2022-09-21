@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/gosimple/slug"
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
@@ -44,7 +46,7 @@ func ValidateDuration(i interface{}, k string) (s []string, es []error) {
 
 func ValidateNoTrailingSlash(i interface{}, k string) ([]string, []error) {
 	var errs []error
-	if err := ValidatePath(regexpPathTrailing, i, k); err != nil {
+	if err := validatePath(regexpPathTrailing, i, k); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -53,25 +55,48 @@ func ValidateNoTrailingSlash(i interface{}, k string) ([]string, []error) {
 
 func ValidateNoLeadingTrailingSlashes(i interface{}, k string) ([]string, []error) {
 	var errs []error
-	if err := ValidatePath(regexpPath, i, k); err != nil {
+	if err := validatePath(regexpPath, i, k); err != nil {
 		errs = append(errs, err)
 	}
 
 	return nil, errs
 }
 
-func ValidatePath(r *regexp.Regexp, i interface{}, k string) error {
+func ValidateDiagPath(i interface{}, path cty.Path) diag.Diagnostics {
+	return validateDiagPath(regexpPath, i, path)
+}
+
+func validateDiagPath(r *regexp.Regexp, i interface{}, path cty.Path) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if err := validatePath(r, i, ""); err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity:      diag.Error,
+			Summary:       "Invalid path specified.",
+			Detail:        err.Error(),
+			AttributePath: path,
+		})
+	}
+
+	return diags
+}
+
+func validatePath(r *regexp.Regexp, i interface{}, k string) error {
+	errPrefix := "value"
+	if k != "" {
+		errPrefix = fmt.Sprintf("%s %q for %q", errPrefix, i, k)
+	}
+
 	v, ok := i.(string)
 	if !ok {
-		return fmt.Errorf("value for %q must be a string, not %T", k, i)
+		return fmt.Errorf("%s must be a string, not %T", errPrefix, i)
 	}
 
 	if v == "" {
-		return fmt.Errorf("value for %q cannot be empty", k)
+		return fmt.Errorf("%s cannot be empty", errPrefix)
 	}
 
 	if r.MatchString(v) {
-		return fmt.Errorf("invalid value %q for %q, contains leading/trailing %q", v, k, consts.PathDelim)
+		return fmt.Errorf("%s contains leading/trailing %q", errPrefix, consts.PathDelim)
 	}
 
 	return nil
