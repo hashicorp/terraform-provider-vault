@@ -228,7 +228,7 @@ func TestAccJWTAuthBackend_invalid(t *testing.T) {
 				Config:  testAccJWTAuthBackendConfig(invalidPath, "", false),
 				Destroy: false,
 				ExpectError: regexp.MustCompile(
-					fmt.Sprintf(`invalid value "%s" for "path", contains leading/trailing "%s"`,
+					fmt.Sprintf(`value "%s" for "path" contains leading/trailing "%s"`,
 						invalidPath, consts.PathDelim)),
 			},
 			{
