@@ -83,7 +83,7 @@ func handleTestEnvUnsetF(t *testing.T, f func(f string, args ...interface{}), en
 
 func handleTestEnvSetF(t *testing.T, f func(f string, args ...interface{}), envVars ...string) []string {
 	t.Helper()
-	return handleTestEnv(nil, func(k, v string) {
+	return handleTestEnv(t, func(k, v string) {
 		t.Helper()
 		if v != "" {
 			f("%q is set", k)
