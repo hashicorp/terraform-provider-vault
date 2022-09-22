@@ -26,14 +26,14 @@ func TestResourceAuth(t *testing.T) {
 			{
 				Config: testResourceAuth_initialConfig(path + consts.PathDelim),
 				ExpectError: regexp.MustCompile(
-					fmt.Sprintf(`invalid value "%s" for %q, contains leading/trailing %q`,
+					fmt.Sprintf(`value "%s" for %q contains leading/trailing %q`,
 						path+consts.PathDelim, "path", consts.PathDelim),
 				),
 			},
 			{
 				Config: testResourceAuth_initialConfig(consts.PathDelim + path),
 				ExpectError: regexp.MustCompile(
-					fmt.Sprintf(`invalid value "%s" for %q, contains leading/trailing %q`,
+					fmt.Sprintf(`value "%s" for %q contains leading/trailing %q`,
 						consts.PathDelim+path, "path", consts.PathDelim),
 				),
 			},

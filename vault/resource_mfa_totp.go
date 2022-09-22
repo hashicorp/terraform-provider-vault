@@ -26,7 +26,7 @@ func mfaTOTPResource() *schema.Resource {
 				Required:     true,
 				ForceNew:     true,
 				Description:  "Name of the MFA method.",
-				ValidateFunc: validateNoTrailingSlash,
+				ValidateFunc: provider.ValidateNoTrailingSlash,
 			},
 			"issuer": {
 				Type:        schema.TypeString,

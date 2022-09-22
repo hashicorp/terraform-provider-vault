@@ -821,7 +821,7 @@ func getNamespaceSchema() map[string]*schema.Schema {
 			Optional:     true,
 			ForceNew:     true,
 			Description:  "Target namespace. (requires Enterprise)",
-			ValidateFunc: validateNoLeadingTrailingSlashes,
+			ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 		},
 	}
 }

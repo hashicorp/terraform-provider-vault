@@ -23,6 +23,7 @@ var AuthLoginFields = []string{
 	consts.FieldAuthLoginCert,
 	consts.FieldAuthLoginGCP,
 	consts.FieldAuthLoginKerberos,
+	consts.FieldAuthLoginRadius,
 }
 
 type AuthLogin interface {
@@ -192,10 +193,11 @@ func mustAddLoginSchema(r *schema.Resource, defaultMount string) *schema.Resourc
 			Description: "The authentication engine's namespace.",
 		},
 		consts.FieldMount: {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "The path where the authentication engine is mounted.",
-			Default:     defaultMount,
+			Type:             schema.TypeString,
+			Optional:         true,
+			Description:      "The path where the authentication engine is mounted.",
+			Default:          defaultMount,
+			ValidateDiagFunc: ValidateDiagPath,
 		},
 	})
 

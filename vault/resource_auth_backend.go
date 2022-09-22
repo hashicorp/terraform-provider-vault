@@ -39,7 +39,7 @@ func AuthBackendResource() *schema.Resource {
 				Optional:     true,
 				Computed:     true,
 				Description:  "path to mount the backend. This defaults to the type.",
-				ValidateFunc: validateNoLeadingTrailingSlashes,
+				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 					return old+"/" == new || new+"/" == old
 				},
