@@ -205,6 +205,8 @@ func Provider() *schema.Provider {
 			f = provider.GetRadiusLoginSchema
 		case consts.FieldAuthLoginOCI:
 			f = provider.GetOCILoginSchema
+		case consts.FieldAuthLoginOIDC:
+			f = provider.GetOIDCLoginSchema
 		default:
 			continue
 		}

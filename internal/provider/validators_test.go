@@ -248,7 +248,59 @@ func TestGetValidateDiagChoices(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := GetValidateDiagChoices(tt.choices)
 			if got := f(tt.value, nil); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetValidateDiagChoices()() = %v, want %v", got, tt.want)
+				t.Errorf("GetValidateDiagChoices()() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetValidateDiagURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		schemes []string
+		want    diag.Diagnostics
+	}{
+		{
+			name:    "basic",
+			value:   "http://foo.baz:8080/qux",
+			schemes: []string{"http"},
+			want:    nil,
+		},
+		{
+			name:    "invalid-scheme",
+			value:   "https://foo.baz:8080/qux",
+			schemes: []string{"http", "tcp"},
+			want: diag.Diagnostics{
+				{
+					Severity: diag.Error,
+					Summary:  `Unsupported scheme "https"`,
+					Detail: fmt.Sprintf(
+						"Valid schemes are: %s",
+						strings.Join([]string{"http", "tcp"}, ", ")),
+					AttributePath: nil,
+				},
+			},
+		},
+		{
+			name:    "invalid-url",
+			value:   "foo.bar",
+			schemes: []string{"http", "tcp"},
+			want: diag.Diagnostics{
+				{
+					Severity:      diag.Error,
+					Summary:       "Invalid URI.",
+					Detail:        `Failed to parse URL, err=parse "foo.bar": invalid URI for request`,
+					AttributePath: nil,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := GetValidateDiagURI(tt.schemes)
+			if got := f(tt.value, nil); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetValidateDiagURI()() got = %#v, want %#v", got, tt.want)
 			}
 		})
 	}

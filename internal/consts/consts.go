@@ -76,6 +76,7 @@ const (
 	FieldAuthLoginKerberos        = "auth_login_kerberos"
 	FieldAuthLoginRadius          = "auth_login_radius"
 	FieldAuthLoginOCI             = "auth_login_oci"
+	FieldAuthLoginOIDC            = "auth_login_oidc"
 	FieldIdentity                 = "identity"
 	FieldSignature                = "signature"
 	FieldPKCS7                    = "pkcs7"
@@ -106,6 +107,9 @@ const (
 	FieldRemoveInstanceName       = "remove_instance_name"
 	FieldAuthType                 = "auth_type"
 	FieldRequestHeaders           = "request_headers"
+	FieldCallbackAddress          = "callback_address"
+	FieldCallbackListenerAddress  = "callback_listener_address"
+
 	/*
 		common environment variables
 	*/
@@ -150,6 +154,7 @@ const (
 	MountTypeKerberos   = "kerberos"
 	MountTypeRadius     = "radius"
 	MountTypeOCI        = "oci"
+	MountTypeOIDC       = "oidc"
 
 	/*
 		Vault version constants
@@ -168,6 +173,7 @@ const (
 	AuthMethodKerberos = "kerberos"
 	AuthMethodRadius   = "radius"
 	AuthMethodOCI      = "oci"
+	AuthMethodOIDC     = "oidc"
 
 	/*
 		misc. path related constants

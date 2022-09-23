@@ -137,6 +137,10 @@ variables in order to keep credential information out of the configuration.
 
 * `auth_login_radius` - (Optional) Utilizes the `radius` authentication engine. *[See usage details below.](#radius)*
 
+* `auth_login_oci` - (Optional) Utilizes the `oci` authentication engine. *[See usage details below.](#oci)*
+
+* `auth_login_oidc` - (Optional) Utilizes the `oidc` authentication engine. *[See usage details below.](#oidc)*
+
 * `auth_login` - (Optional) A configuration block, described below, that
   attempts to authenticate using the `auth/<method>/login` path to
   acquire a token which Terraform will use. Terraform still issues itself
@@ -416,6 +420,29 @@ The `auth_login_oci` configuration block accepts the following arguments:
 * `role` - (Required) The name of the role against which the login is being attempted.
 
 * `auth_type` - (Required) The OCI authentication type to use. Valid choices are: *apikeys*, *instance*
+
+### OIDC
+
+Provides support for authenticating to Vault using the OIDC Auth engine.
+
+*For more details see:
+[OCI Auth Method (API)](https://www.vaultproject.io/api-docs/auth/jwt#jwt-oidc-auth-method-api)
+
+
+The `auth_login_oidc` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the authentication engine mount.  
+  Default: `oidc`
+
+* `role` - (Required) The name of the role against which the login is being attempted.
+
+* `callback_listener_address` - (Optional) The callback listener's address. *Must be a valid URI without the path.*
+ 
+* `callback_address` - (Optional)  The callback address. *Must be a valid URI without the path.*
 
 ### Generic
 
