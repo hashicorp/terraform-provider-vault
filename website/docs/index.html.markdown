@@ -230,7 +230,7 @@ The `auth_login_userpass` configuration block accepts the following arguments:
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
 
-* `mount` - (Optional) The name of the  authentication engine mount.  
+* `mount` - (Optional) The name of the authentication engine mount.  
   Default: `userpass`
 
 * `username` - (Required) The username to log into Vault with.
@@ -291,7 +291,7 @@ The `auth_login_cert` configuration block accepts the following arguments:
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
 
-* `mount` - (Optional) The name of the  authentication engine mount.  
+* `mount` - (Optional) The name of the authentication engine mount.  
   Default: `cert`
 
 * `cert_file` - (Required) Path to a file on local disk that contains the
@@ -318,7 +318,7 @@ The `auth_login_gcp` configuration block accepts the following arguments:
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
 
-* `mount` - (Optional) The name of the  authentication engine mount.  
+* `mount` - (Optional) The name of the authentication engine mount.  
   Default: `gcp`
 
 * `role` - (Required) The name of the role against which the login is being attempted.
@@ -349,7 +349,7 @@ The `auth_login_kerberos` configuration block accepts the following arguments:
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
 
-* `mount` - (Optional) The name of the  authentication engine mount.  
+* `mount` - (Optional) The name of the authentication engine mount.  
   Default: `kerberos`
 
 * `token` - (Optional) Simple and Protected GSSAPI Negotiation Mechanism (SPNEGO) token.
@@ -389,12 +389,33 @@ The `auth_login_radius` configuration block accepts the following arguments:
   This defaults to the root namespace. Cannot contain any leading or trailing slashes.
   *Available only for Vault Enterprise*.
 
-* `mount` - (Optional) The name of the  authentication engine mount.  
+* `mount` - (Optional) The name of the authentication engine mount.  
   Default: `radius`
 
-* `username` - (Required)  The username to Radius username to login into Vault with.
+* `username` - (Required) The username to Radius username to login into Vault with.
 
-* `password` - (Required)  The password for the Radius `username` to login into Vault with.
+* `password` - (Required) The password for the Radius `username` to login into Vault with.
+
+### OCI
+
+Provides support for authenticating to Vault using the OCI (Oracle Cloud Infrastructure) Auth engine.
+
+*For more details see:
+[OCI Auth Method (API)](https://www.vaultproject.io/api-docs/auth/oci#oci-auth-method-api)*
+
+
+The `auth_login_oci` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the authentication engine mount.  
+  Default: `oci`
+
+* `role` - (Required) The name of the role against which the login is being attempted.
+
+* `auth_type` - (Required) The OCI authentication type to use. Valid choices are: *apikeys*, *instance*
 
 ### Generic
 

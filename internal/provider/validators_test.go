@@ -3,6 +3,7 @@ package provider
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/go-cty/cty"
@@ -188,6 +189,66 @@ func TestValidateDiagPath(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := ValidateDiagPath(tt.i, tt.path); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ValidateDiagPath() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetValidateDiagChoices(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		choices []string
+		want    diag.Diagnostics
+	}{
+		{
+			name:    "basic",
+			value:   "foo",
+			choices: []string{"foo", "baz", "bar"},
+			want:    nil,
+		},
+		{
+			name:    "casing",
+			value:   "Foo",
+			choices: []string{"foo", "Foo", "bar"},
+			want:    nil,
+		},
+		{
+			name:    "invalid",
+			value:   "qux",
+			choices: []string{"foo", "baz", "bar"},
+			want: diag.Diagnostics{
+				{
+					Severity: diag.Error,
+					Summary:  "Unsupported value.",
+					Detail: fmt.Sprintf(
+						"Valid choices are: %s",
+						strings.Join([]string{"foo", "baz", "bar"}, ", ")),
+					AttributePath: nil,
+				},
+			},
+		},
+		{
+			name:    "invalid-casing",
+			value:   "Qux",
+			choices: []string{"qux", "baz", "bar"},
+			want: diag.Diagnostics{
+				{
+					Severity: diag.Error,
+					Summary:  "Unsupported value.",
+					Detail: fmt.Sprintf(
+						"Valid choices are: %s",
+						strings.Join([]string{"qux", "baz", "bar"}, ", ")),
+					AttributePath: nil,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := GetValidateDiagChoices(tt.choices)
+			if got := f(tt.value, nil); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetValidateDiagChoices()() = %v, want %v", got, tt.want)
 			}
 		})
 	}
