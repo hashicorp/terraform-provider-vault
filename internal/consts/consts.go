@@ -77,6 +77,7 @@ const (
 	FieldAuthLoginRadius          = "auth_login_radius"
 	FieldAuthLoginOCI             = "auth_login_oci"
 	FieldAuthLoginOIDC            = "auth_login_oidc"
+	FieldAuthLoginJWT             = "auth_login_jwt"
 	FieldIdentity                 = "identity"
 	FieldSignature                = "signature"
 	FieldPKCS7                    = "pkcs7"
@@ -123,6 +124,8 @@ const (
 	EnvVarPasswordFile = "TERRAFORM_VAULT_PASSWORD_FILE"
 	// EnvVarGCPAuthJWT to get the signed JWT for the gcp auth method
 	EnvVarGCPAuthJWT = "TERRAFORM_VAULT_GCP_AUTH_JWT"
+	// EnvVarVaultAuthJWT to get the signed JWT for the gcp auth method
+	EnvVarVaultAuthJWT = "TERRAFORM_VAULT_AUTH_JWT"
 
 	EnvVarGoogleApplicationCreds = "GOOGLE_APPLICATION_CREDENTIALS"
 
@@ -155,6 +158,7 @@ const (
 	MountTypeRadius     = "radius"
 	MountTypeOCI        = "oci"
 	MountTypeOIDC       = "oidc"
+	MountTypeJWT        = "jwt"
 
 	/*
 		Vault version constants
@@ -174,6 +178,7 @@ const (
 	AuthMethodRadius   = "radius"
 	AuthMethodOCI      = "oci"
 	AuthMethodOIDC     = "oidc"
+	AuthMethodJWT      = "jwt"
 
 	/*
 		misc. path related constants

@@ -26,6 +26,7 @@ var AuthLoginFields = []string{
 	consts.FieldAuthLoginRadius,
 	consts.FieldAuthLoginOCI,
 	consts.FieldAuthLoginOIDC,
+	consts.FieldAuthLoginJWT,
 }
 
 type AuthLogin interface {
@@ -177,6 +178,8 @@ func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {
 			l = &AuthLoginOCI{}
 		case consts.FieldAuthLoginOIDC:
 			l = &AuthLoginOIDC{}
+		case consts.FieldAuthLoginJWT:
+			l = &AuthLoginJWT{}
 		default:
 			return nil, nil
 		}
@@ -245,6 +248,8 @@ func MustAddAuthLoginSchema(s map[string]*schema.Schema) {
 			f = GetOCILoginSchema
 		case consts.FieldAuthLoginOIDC:
 			f = GetOIDCLoginSchema
+		case consts.FieldAuthLoginJWT:
+			f = GetJWTLoginSchema
 		default:
 			panic(fmt.Errorf("auth login %q has no schema defined", authField))
 		}
