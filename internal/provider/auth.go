@@ -220,3 +220,35 @@ func getLoginSchema(authField, description string, resourceFunc getSchemaResourc
 		ConflictsWith: util.CalculateConflictsWith(authField, AuthLoginFields),
 	}
 }
+
+// MustAddAuthLoginSchema adds all supported auth login type schema.Schema to
+// a schema map.
+func MustAddAuthLoginSchema(s map[string]*schema.Schema) {
+	for _, authField := range AuthLoginFields {
+		var f GetLoginSchema
+		switch authField {
+		case consts.FieldAuthLoginDefault:
+			f = GetGenericLoginSchema
+		case consts.FieldAuthLoginUserpass:
+			f = GetUserpassLoginSchema
+		case consts.FieldAuthLoginAWS:
+			f = GetAWSLoginSchema
+		case consts.FieldAuthLoginCert:
+			f = GetCertLoginSchema
+		case consts.FieldAuthLoginGCP:
+			f = GetGCPLoginSchema
+		case consts.FieldAuthLoginKerberos:
+			f = GetKerberosLoginSchema
+		case consts.FieldAuthLoginRadius:
+			f = GetRadiusLoginSchema
+		case consts.FieldAuthLoginOCI:
+			f = GetOCILoginSchema
+		case consts.FieldAuthLoginOIDC:
+			f = GetOIDCLoginSchema
+		default:
+			panic(fmt.Errorf("auth login %q has no schema defined", authField))
+		}
+
+		mustAddSchema(authField, f(authField), s)
+	}
+}

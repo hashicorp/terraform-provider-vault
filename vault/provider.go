@@ -186,32 +186,7 @@ func Provider() *schema.Provider {
 		ResourcesMap:   resourcesMap,
 	}
 
-	for _, authField := range provider.AuthLoginFields {
-		var f provider.GetLoginSchema
-		switch authField {
-		case consts.FieldAuthLoginDefault:
-			f = provider.GetGenericLoginSchema
-		case consts.FieldAuthLoginUserpass:
-			f = provider.GetUserpassLoginSchema
-		case consts.FieldAuthLoginAWS:
-			f = provider.GetAWSLoginSchema
-		case consts.FieldAuthLoginCert:
-			f = provider.GetCertLoginSchema
-		case consts.FieldAuthLoginGCP:
-			f = provider.GetGCPLoginSchema
-		case consts.FieldAuthLoginKerberos:
-			f = provider.GetKerberosLoginSchema
-		case consts.FieldAuthLoginRadius:
-			f = provider.GetRadiusLoginSchema
-		case consts.FieldAuthLoginOCI:
-			f = provider.GetOCILoginSchema
-		case consts.FieldAuthLoginOIDC:
-			f = provider.GetOIDCLoginSchema
-		default:
-			continue
-		}
-		r.Schema[authField] = f(authField)
-	}
+	provider.MustAddAuthLoginSchema(r.Schema)
 
 	return r
 }
