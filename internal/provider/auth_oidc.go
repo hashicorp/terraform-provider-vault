@@ -143,7 +143,7 @@ func (l *AuthLoginOIDC) getAuthParams() (map[string]string, error) {
 		params[fieldPort] = u.Port()
 	}
 
-	if u, err := parseURL(consts.FieldCallbackListenerAddress); err != nil {
+	if u, err := parseURL(consts.FieldCallbackAddress); err != nil {
 		return nil, err
 	} else if u != nil {
 		params[fieldCallbackHost] = u.Hostname()
