@@ -175,6 +175,8 @@ func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {
 			l = &AuthLoginRadius{}
 		case consts.FieldAuthLoginOCI:
 			l = &AuthLoginOCI{}
+		case consts.FieldAuthLoginOIDC:
+			l = &AuthLoginOIDC{}
 		default:
 			return nil, nil
 		}
