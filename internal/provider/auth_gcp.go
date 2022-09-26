@@ -97,7 +97,7 @@ func (l *AuthLoginGCP) Login(client *api.Client) (*api.Secret, error) {
 		return nil, err
 	}
 
-	params := l.copyParams(
+	params := l.copyParamsExcluding(
 		consts.FieldNamespace,
 		consts.FieldMount,
 		consts.FieldJWT,

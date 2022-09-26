@@ -90,7 +90,10 @@ func (l *AuthLoginGeneric) Method() string {
 }
 
 func (l *AuthLoginGeneric) Login(client *api.Client) (*api.Secret, error) {
-	params := l.copyParams()
+	params, err := l.copyParams()
+	if err != nil {
+		return nil, err
+	}
 
 	switch l.Method() {
 	// the AWS auth method was previously handled by the auth_login generic

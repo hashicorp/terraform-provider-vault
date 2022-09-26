@@ -14,17 +14,17 @@ import (
 )
 
 type authLoginTest struct {
-	name            string
-	authLogin       AuthLogin
-	handler         *testLoginHandler
-	want            *api.Secret
-	expectReqCount  int
-	checkReqParams  bool
-	expectReqParams []map[string]interface{}
-	expectReqPaths  []string
-	wantErr         bool
-	expectErr       error
-	skipFunc        func(t *testing.T)
+	name               string
+	authLogin          AuthLogin
+	handler            *testLoginHandler
+	want               *api.Secret
+	expectReqCount     int
+	skipCheckReqParams bool
+	expectReqParams    []map[string]interface{}
+	expectReqPaths     []string
+	wantErr            bool
+	expectErr          error
+	skipFunc           func(t *testing.T)
 }
 
 type testLoginHandler struct {
@@ -105,7 +105,7 @@ func testAuthLogin(t *testing.T, tt authLoginTest) {
 			tt.handler.paths)
 	}
 
-	if tt.checkReqParams && !reflect.DeepEqual(tt.expectReqParams, tt.handler.params) {
+	if !tt.skipCheckReqParams && !reflect.DeepEqual(tt.expectReqParams, tt.handler.params) {
 		t.Errorf("Login() request params do not match expected %#v, actual %#v", tt.expectReqParams,
 			tt.handler.params)
 	}

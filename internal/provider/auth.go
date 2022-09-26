@@ -27,6 +27,7 @@ var AuthLoginFields = []string{
 	consts.FieldAuthLoginOCI,
 	consts.FieldAuthLoginOIDC,
 	consts.FieldAuthLoginJWT,
+	consts.FieldAuthLoginAzure,
 }
 
 type AuthLogin interface {
@@ -80,17 +81,55 @@ func (l *AuthLoginCommon) Method() string {
 	return ""
 }
 
-func (l *AuthLoginCommon) copyParams(excludes ...string) map[string]interface{} {
+func (l *AuthLoginCommon) copyParams(includes ...string) (map[string]interface{}, error) {
 	params := make(map[string]interface{}, len(l.params))
-	for k, v := range l.params {
-		params[k] = v
+	if len(includes) == 0 {
+		for k, v := range l.params {
+			params[k] = v
+		}
+	} else {
+		var missing []string
+		for _, k := range includes {
+			v, ok := l.params[k]
+			if !ok {
+				missing = append(missing, k)
+				continue
+			}
+			params[k] = v
+		}
+		if len(missing) > 0 {
+			return nil, fmt.Errorf("missing params %v", missing)
+		}
 	}
 
+	return params, nil
+}
+
+func (l *AuthLoginCommon) copyParamsExcluding(excludes ...string) map[string]interface{} {
+	params, _ := l.copyParams()
 	for _, k := range excludes {
 		delete(params, k)
 	}
 
 	return params
+}
+
+func (l *AuthLoginCommon) copyParamsIncluding(includes ...string) (map[string]interface{}, error) {
+	missing := []string{}
+	params := map[string]interface{}{}
+	for _, k := range includes {
+		v, ok := l.params[k]
+		if !ok {
+			missing = append(missing, k)
+			continue
+		}
+		params[k] = v
+	}
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("missing params %v", missing)
+	}
+
+	return params, nil
 }
 
 func (l *AuthLoginCommon) login(client *api.Client, path string, params map[string]interface{}) (*api.Secret, error) {
@@ -149,6 +188,21 @@ func (l *AuthLoginCommon) checkRequiredFields(d *schema.ResourceData, required .
 	return nil
 }
 
+func (l *AuthLoginCommon) checkFieldsOneOf(d *schema.ResourceData, fields ...string) error {
+	if len(fields) == 0 {
+		return nil
+	}
+
+	for _, f := range fields {
+		if _, ok := l.getOk(d, f); ok {
+			return nil
+		}
+	}
+
+	return fmt.Errorf(
+		"at least one field must be set: %v", fields)
+}
+
 func (l *AuthLoginCommon) getOk(d *schema.ResourceData, field string) (interface{}, bool) {
 	return d.GetOk(fmt.Sprintf("%s.0.%s", l.authField, field))
 }
@@ -180,6 +234,8 @@ func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {
 			l = &AuthLoginOIDC{}
 		case consts.FieldAuthLoginJWT:
 			l = &AuthLoginJWT{}
+		case consts.FieldAuthLoginAzure:
+			l = &AuthLoginAzure{}
 		default:
 			return nil, nil
 		}
@@ -250,6 +306,8 @@ func MustAddAuthLoginSchema(s map[string]*schema.Schema) {
 			f = GetOIDCLoginSchema
 		case consts.FieldAuthLoginJWT:
 			f = GetJWTLoginSchema
+		case consts.FieldAuthLoginAzure:
+			f = GetAzureLoginSchema
 		default:
 			panic(fmt.Errorf("auth login %q has no schema defined", authField))
 		}
