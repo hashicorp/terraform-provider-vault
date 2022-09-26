@@ -124,7 +124,7 @@ const (
 	EnvVarPasswordFile = "TERRAFORM_VAULT_PASSWORD_FILE"
 	// EnvVarGCPAuthJWT to get the signed JWT for the gcp auth method
 	EnvVarGCPAuthJWT = "TERRAFORM_VAULT_GCP_AUTH_JWT"
-	// EnvVarVaultAuthJWT to get the signed JWT for the gcp auth method
+	// EnvVarVaultAuthJWT to login via the Vault jwt engine.
 	EnvVarVaultAuthJWT = "TERRAFORM_VAULT_AUTH_JWT"
 
 	EnvVarGoogleApplicationCreds = "GOOGLE_APPLICATION_CREDENTIALS"

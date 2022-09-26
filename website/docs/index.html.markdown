@@ -141,6 +141,8 @@ variables in order to keep credential information out of the configuration.
 
 * `auth_login_oidc` - (Optional) Utilizes the `oidc` authentication engine. *[See usage details below.](#oidc)*
 
+* `auth_login_jwt` - (Optional) Utilizes the `jwt` authentication engine. *[See usage details below.](#oidc)*
+
 * `auth_login` - (Optional) A configuration block, described below, that
   attempts to authenticate using the `auth/<method>/login` path to
   acquire a token which Terraform will use. Terraform still issues itself
@@ -425,8 +427,8 @@ The `auth_login_oci` configuration block accepts the following arguments:
 
 Provides support for authenticating to Vault using the OIDC Auth engine.
 
-*For more details see:
-[OCI Auth Method (API)](https://www.vaultproject.io/api-docs/auth/jwt#jwt-oidc-auth-method-api)
+*For more details see the OIDC specific documentation here:
+[OIDC/JWT Auth Method (API)](https://www.vaultproject.io/api-docs/auth/jwt#jwt-oidc-auth-method-api)
 
 
 The `auth_login_oidc` configuration block accepts the following arguments:
@@ -443,6 +445,28 @@ The `auth_login_oidc` configuration block accepts the following arguments:
 * `callback_listener_address` - (Optional) The callback listener's address. *Must be a valid URI without the path.*
  
 * `callback_address` - (Optional)  The callback address. *Must be a valid URI without the path.*
+
+### JWT
+
+Provides support for authenticating to Vault using the JWT Auth engine.
+
+*For more details see the JWT specific documentation here:
+[OIDC/JWT Auth Method (API)](https://www.vaultproject.io/api-docs/auth/jwt#jwt-oidc-auth-method-api)
+
+
+The `auth_login_jwt` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the authentication engine mount.  
+  Default: `jwt`
+
+* `role` - (Required) The name of the role against which the login is being attempted.
+
+* `jwt` - (Required) The signed JSON Web Token against which the login is being attempted.  
+  *Can be specified with the `TERRAFORM_VAULT_AUTH_JWT` environment variable.*
 
 ### Generic
 
