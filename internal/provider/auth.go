@@ -25,6 +25,8 @@ var AuthLoginFields = []string{
 	consts.FieldAuthLoginKerberos,
 	consts.FieldAuthLoginRadius,
 	consts.FieldAuthLoginOCI,
+	consts.FieldAuthLoginOIDC,
+	consts.FieldAuthLoginJWT,
 }
 
 type AuthLogin interface {
@@ -174,6 +176,10 @@ func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {
 			l = &AuthLoginRadius{}
 		case consts.FieldAuthLoginOCI:
 			l = &AuthLoginOCI{}
+		case consts.FieldAuthLoginOIDC:
+			l = &AuthLoginOIDC{}
+		case consts.FieldAuthLoginJWT:
+			l = &AuthLoginJWT{}
 		default:
 			return nil, nil
 		}
@@ -215,5 +221,39 @@ func getLoginSchema(authField, description string, resourceFunc getSchemaResourc
 		Description:   description,
 		Elem:          resourceFunc(authField),
 		ConflictsWith: util.CalculateConflictsWith(authField, AuthLoginFields),
+	}
+}
+
+// MustAddAuthLoginSchema adds all supported auth login type schema.Schema to
+// a schema map.
+func MustAddAuthLoginSchema(s map[string]*schema.Schema) {
+	for _, authField := range AuthLoginFields {
+		var f GetLoginSchema
+		switch authField {
+		case consts.FieldAuthLoginDefault:
+			f = GetGenericLoginSchema
+		case consts.FieldAuthLoginUserpass:
+			f = GetUserpassLoginSchema
+		case consts.FieldAuthLoginAWS:
+			f = GetAWSLoginSchema
+		case consts.FieldAuthLoginCert:
+			f = GetCertLoginSchema
+		case consts.FieldAuthLoginGCP:
+			f = GetGCPLoginSchema
+		case consts.FieldAuthLoginKerberos:
+			f = GetKerberosLoginSchema
+		case consts.FieldAuthLoginRadius:
+			f = GetRadiusLoginSchema
+		case consts.FieldAuthLoginOCI:
+			f = GetOCILoginSchema
+		case consts.FieldAuthLoginOIDC:
+			f = GetOIDCLoginSchema
+		case consts.FieldAuthLoginJWT:
+			f = GetJWTLoginSchema
+		default:
+			panic(fmt.Errorf("auth login %q has no schema defined", authField))
+		}
+
+		mustAddSchema(authField, f(authField), s)
 	}
 }

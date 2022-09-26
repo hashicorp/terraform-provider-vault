@@ -30,6 +30,7 @@ require (
 	github.com/hashicorp/go-version v1.4.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.16.0
 	github.com/hashicorp/vault v1.11.3
+	github.com/hashicorp/vault-plugin-auth-jwt v0.13.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.8.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.13.0-pre
 	github.com/hashicorp/vault/api v1.8.0

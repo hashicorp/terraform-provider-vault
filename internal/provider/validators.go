@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -109,6 +110,11 @@ func validatePath(r *regexp.Regexp, i interface{}, k string) error {
 func GetValidateDiagChoices(choices []string) schema.SchemaValidateDiagFunc {
 	return func(i interface{}, path cty.Path) diag.Diagnostics {
 		have := i.(string)
+		if len(choices) == 0 {
+			// not much value in this
+			return nil
+		}
+
 		for _, choice := range choices {
 			if have == choice {
 				return nil
@@ -120,6 +126,44 @@ func GetValidateDiagChoices(choices []string) schema.SchemaValidateDiagFunc {
 				Severity:      diag.Error,
 				Summary:       "Unsupported value.",
 				Detail:        fmt.Sprintf("Valid choices are: %s", strings.Join(choices, ", ")),
+				AttributePath: path,
+			},
+		}
+	}
+}
+
+// GetValidateDiagURI sets up a SchemaValidateDiag func that checks that
+// the raw url is valid request URI, and optionally contains a supported scheme.
+func GetValidateDiagURI(schemes []string) schema.SchemaValidateDiagFunc {
+	return func(i interface{}, path cty.Path) diag.Diagnostics {
+		have := i.(string)
+		u, err := url.ParseRequestURI(have)
+		if err != nil {
+			return diag.Diagnostics{
+				{
+					Severity:      diag.Error,
+					Summary:       "Invalid URI.",
+					Detail:        fmt.Sprintf("Failed to parse URL, err=%s", err),
+					AttributePath: path,
+				},
+			}
+		}
+
+		if len(schemes) == 0 {
+			return nil
+		}
+
+		for _, scheme := range schemes {
+			if scheme == u.Scheme {
+				return nil
+			}
+		}
+
+		return diag.Diagnostics{
+			{
+				Severity:      diag.Error,
+				Summary:       fmt.Sprintf("Unsupported scheme %q", u.Scheme),
+				Detail:        fmt.Sprintf("Valid schemes are: %s", strings.Join(schemes, ", ")),
 				AttributePath: path,
 			},
 		}
