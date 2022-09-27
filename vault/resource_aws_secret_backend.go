@@ -11,11 +11,11 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/internal/semver"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func awsSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: awsSecretBackendCreate,
 		Read:   ReadWrapper(awsSecretBackendRead),
 		Update: awsSecretBackendUpdate,
@@ -24,7 +24,7 @@ func awsSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		CustomizeDiff: mountMigrationCustomizeDiff,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
@@ -96,39 +96,32 @@ func awsSecretBackendResource() *schema.Resource {
 				Description: "Template describing how dynamic usernames are generated.",
 			},
 		},
-	}
+	})
 }
 
-func mountMigrationCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
-	if !diff.HasChange("path") {
-		return nil
-	}
+func getMountCustomizeDiffFunc(field string) schema.CustomizeDiffFunc {
+	return func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+		if !diff.HasChange(field) {
+			return nil
+		}
 
-	o, _ := diff.GetChange("path")
-	if o == "" {
-		return nil
-	}
+		o, _ := diff.GetChange(field)
+		if o == "" {
+			return nil
+		}
 
-	// Mount Migration is only available for versions >= 1.10
-	client, e := provider.GetClient(diff, meta)
-	if e != nil {
-		return e
-	}
+		// Mount Migration is only available for versions >= 1.10
+		remountSupported := provider.IsAPISupported(meta, provider.VaultVersion110)
+		disable := diff.Get(consts.FieldDisableRemount).(bool)
 
-	remountEnabled, _, err := semver.GreaterThanOrEqual(ctx, client, consts.VaultVersion10)
-	if err != nil {
-		return err
-	}
+		if remountSupported && !disable {
+			return nil
+		}
 
-	if !remountEnabled {
 		// Mount migration not available
 		// Destroy and recreate resource
-		if err := diff.ForceNew("path"); err != nil {
-			return err
-		}
+		return diff.ForceNew(field)
 	}
-
-	return nil
 }
 
 func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
@@ -276,17 +269,9 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Id()
 	d.Partial(true)
 
-	if d.HasChange("path") {
-		// semantic version check completed in CustomizeDiff
-		newPath := d.Get("path").(string)
-
-		err := client.Sys().Remount(path, newPath)
-		if err != nil {
-			return fmt.Errorf("error remounting to %q: %w", newPath, err)
-		}
-
-		path = newPath
-		d.SetId(path)
+	path, err := util.Remount(d, client, consts.FieldPath, false)
+	if err != nil {
+		return err
 	}
 
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {

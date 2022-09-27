@@ -20,7 +20,7 @@ import (
 var oktaAuthType = "okta"
 
 func oktaAuthBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: oktaAuthBackendWrite,
 		Delete: oktaAuthBackendDelete,
 		Read:   ReadWrapper(oktaAuthBackendRead),
@@ -29,11 +29,11 @@ func oktaAuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "path to mount the backend",
 				Default:     oktaAuthType,
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
@@ -213,7 +213,7 @@ func oktaAuthBackendResource() *schema.Resource {
 				Description: "The mount accessor related to the auth mount.",
 			},
 		},
-	}
+	})
 }
 
 func normalizeOktaTTL(i interface{}) string {
@@ -398,6 +398,14 @@ func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	path := d.Id()
+
+	if !d.IsNewResource() {
+		path, e = util.Remount(d, client, consts.FieldPath, true)
+		if e != nil {
+			return e
+		}
+	}
+
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
 
 	configuration := map[string]interface{}{

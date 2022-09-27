@@ -9,12 +9,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 	consulhelper "github.com/hashicorp/vault/helper/testhelpers/consul"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
+
+type testMountStore struct {
+	uuid string
+	path string
+}
 
 func TestConsulSecretBackend(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-consul")
@@ -42,8 +48,8 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckNoResourceAttr(resourceName, "client_key"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false,
-				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
+			testutil.GetImportTestStep(resourceName, false, nil,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
 			{
 				Config: testConsulSecretBackend_initialConfigLocal(path, token),
 				Check: resource.ComposeTestCheckFunc(
@@ -60,8 +66,8 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckNoResourceAttr(resourceName, "client_key"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false,
-				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
+			testutil.GetImportTestStep(resourceName, false, nil,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
 			{
 				Config: testConsulSecretBackend_updateConfig(path, token),
 				Check: resource.ComposeTestCheckFunc(
@@ -78,8 +84,8 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckNoResourceAttr(resourceName, "client_key"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false,
-				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
+			testutil.GetImportTestStep(resourceName, false, nil,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
 			{
 				Config: testConsulSecretBackend_updateConfig_addCerts(path, token),
 				Check: resource.ComposeTestCheckFunc(
@@ -96,8 +102,8 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "client_key", "FAKE-CLIENT-CERT-KEY-MATERIAL"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false,
-				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
+			testutil.GetImportTestStep(resourceName, false, nil,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
 			{
 				Config: testConsulSecretBackend_updateConfig_updateCerts(path, token),
 				Check: resource.ComposeTestCheckFunc(
@@ -114,8 +120,8 @@ func TestConsulSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "client_key", "UPDATED-FAKE-CLIENT-CERT-KEY-MATERIAL"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false,
-				"token", "bootstrap", "ca_cert", "client_cert", "client_key"),
+			testutil.GetImportTestStep(resourceName, false, nil,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
 		},
 	})
 }
@@ -154,7 +160,7 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "bootstrap", "true"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, "token", "bootstrap"),
+			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap", "disable_remount"),
 			{
 				Config: testConsulSecretBackend_bootstrapAddRole(path, consulAddr),
 				Check: resource.ComposeTestCheckFunc(
@@ -164,13 +170,125 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceRoleName, "consul_policies.*", "global-management"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, "token", "bootstrap"),
+			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap", "disable_remount"),
 			{
 				Config:      testConsulSecretBackend_bootstrapConfig(path+"-new", consulAddr, "", true),
 				ExpectError: regexp.MustCompile(`Token not provided and failed to bootstrap ACLs`),
 			},
 		},
 	})
+}
+
+func TestConsulSecretBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-consul")
+	updatedPath := acctest.RandomWithPrefix("tf-test-consul-updated")
+	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
+
+	resourceName := "vault_consul_secret_backend.test"
+
+	store := &testMountStore{}
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testConsulSecretBackend_initialConfig(path, token),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1:8500"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
+					testCaptureMountUUID(path, store),
+				),
+			},
+			{
+				Config: testConsulSecretBackend_initialConfig(updatedPath, token),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1:8500"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
+					testMountCompareUUIDs(updatedPath, store, true),
+					testCaptureMountUUID(updatedPath, store),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap", "disable_remount"),
+			{
+				Config: testConsulSecretBackend_disableRemount(path, token),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1:8500"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
+					resource.TestCheckResourceAttr(resourceName, "disable_remount", "true"),
+					testMountCompareUUIDs(path, store, false),
+				),
+			},
+		},
+	})
+}
+
+func testCaptureMountUUID(path string, store *testMountStore) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		mount, err := testGetMount(path)
+		if err != nil {
+			return err
+		}
+
+		store.path = path
+		store.uuid = mount.UUID
+
+		return nil
+	}
+}
+
+func testMountCompareUUIDs(path string, store *testMountStore, equal bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		mount, err := testGetMount(path)
+		if err != nil {
+			return err
+		}
+
+		if store.uuid == mount.UUID {
+			if !equal {
+				return fmt.Errorf("expected different uuids after mount creation; "+
+					"both uuids equal to %s", store.uuid)
+			}
+		} else {
+			if equal {
+				return fmt.Errorf("expected same uuid after remount; "+
+					"got id1=%s, id2=%s", store.uuid, mount.UUID)
+			}
+		}
+
+		return nil
+	}
+}
+
+func testGetMount(path string) (*api.MountOutput, error) {
+	client, err := provider.GetClient("", testProvider.Meta())
+
+	mounts, err := client.Sys().ListMounts()
+	if err != nil {
+		return nil, err
+	}
+
+	mount, ok := mounts[strings.Trim(path, "/")+"/"]
+	if !ok {
+		return nil, fmt.Errorf("given mount %s not found", path)
+	}
+
+	return mount, nil
 }
 
 func testAccConsulSecretBackendCheckDestroy(s *terraform.State) error {
@@ -212,6 +330,19 @@ resource "vault_consul_secret_backend" "test" {
 }`, path, token)
 }
 
+func testConsulSecretBackend_disableRemount(path, token string) string {
+	return fmt.Sprintf(`
+resource "vault_consul_secret_backend" "test" {
+  path = "%s"
+  description = "test description"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds = 86400
+  address = "127.0.0.1:8500"
+  token = "%s"
+  disable_remount = true
+}`, path, token)
+}
+
 func testConsulSecretBackend_initialConfigLocal(path, token string) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
@@ -233,6 +364,7 @@ resource "vault_consul_secret_backend" "test" {
   address = "%s"
   token = "%s"
   bootstrap = %t
+  disable_remount = true
 }
 `, path, addr, token, bootstrap)
 }

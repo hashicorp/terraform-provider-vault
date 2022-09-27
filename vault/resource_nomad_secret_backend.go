@@ -18,7 +18,6 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 		"backend": {
 			Type:        schema.TypeString,
 			Default:     "nomad",
-			ForceNew:    true,
 			Optional:    true,
 			Description: "The mount path for the Nomad backend.",
 			StateFunc: func(v interface{}) string {
@@ -95,16 +94,17 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 			Description: "Maximum possible lease duration for secrets in seconds.",
 		},
 	}
-	return &schema.Resource{
-		Create: createNomadAccessConfigResource,
-		Update: updateNomadAccessConfigResource,
-		Read:   ReadWrapper(readNomadAccessConfigResource),
-		Delete: deleteNomadAccessConfigResource,
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
+		Create:        createNomadAccessConfigResource,
+		Update:        updateNomadAccessConfigResource,
+		Read:          ReadWrapper(readNomadAccessConfigResource),
+		Delete:        deleteNomadAccessConfigResource,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: fields,
-	}
+	})
 }
 
 func createNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {
@@ -291,6 +291,11 @@ func updateNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) e
 
 	tune := api.MountConfigInput{}
 	data := map[string]interface{}{}
+
+	backend, err := util.Remount(d, client, consts.FieldBackend, false)
+	if err != nil {
+		return err
+	}
 
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		tune.DefaultLeaseTTL = fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds"))

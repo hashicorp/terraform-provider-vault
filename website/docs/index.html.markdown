@@ -108,7 +108,7 @@ variables in order to keep credential information out of the configuration.
   the given token must have the update capability on the auth/token/create
   path in Vault in order to create child tokens.  A token is required for
   the provider.  A token can explicitly set via token argument, alternatively 
-  a token can be implicitly set via an auth_login block.
+  a token can be dynamically set via an `auth_login*` block.
 
 * `token_name` - (Optional) Token name, that will be used by Terraform when
   creating the child token (`display_name`). This is useful to provide a reference of the
@@ -125,16 +125,35 @@ variables in order to keep credential information out of the configuration.
   the certificate presented by the Vault server. May be set via the
   `VAULT_CAPATH` environment variable.
 
+* `auth_login_userpass` - (Optional) Utilizes the `userpass` authentication engine. *[See usage details below.](#userpass)*
+
+* `auth_login_aws` - (Optional) Utilizes the `aws` authentication engine. *[See usage details below.](#aws)*
+
+* `auth_login_cert` - (Optional) Utilizes the `cert` authentication engine. *[See usage details below.](#tls-certificate)*
+
+* `auth_login_gcp` - (Optional) Utilizes the `gcp` authentication engine. *[See usage details below.](#gcp)*
+
+* `auth_login_kerberos` - (Optional) Utilizes the `kerberos` authentication engine. *[See usage details below.](#kerberos)*
+
+* `auth_login_radius` - (Optional) Utilizes the `radius` authentication engine. *[See usage details below.](#radius)*
+
+* `auth_login_oci` - (Optional) Utilizes the `oci` authentication engine. *[See usage details below.](#oci)*
+
+* `auth_login_oidc` - (Optional) Utilizes the `oidc` authentication engine. *[See usage details below.](#oidc)*
+
+* `auth_login_jwt` - (Optional) Utilizes the `jwt` authentication engine. *[See usage details below.](#oidc)*
+
 * `auth_login` - (Optional) A configuration block, described below, that
   attempts to authenticate using the `auth/<method>/login` path to
   acquire a token which Terraform will use. Terraform still issues itself
   a limited child token using auth/token/create in order to enforce a short
-  TTL and limit exposure.
+  TTL and limit exposure. *[See usage details below.](#generic)*
 
 * `client_auth` - (Optional) A configuration block, described below, that
   provides credentials used by Terraform to authenticate with the Vault
   server. At present there is little reason to set this, because Terraform
   does not support the TLS certificate authentication mechanism.
+  *Deprecated, use `auth_login_cert` instead.
 
 * `skip_tls_verify` - (Optional) Set this to `true` to disable verification
   of the Vault server's TLS certificate. This is strongly discouraged except
@@ -186,7 +205,278 @@ variables in order to keep credential information out of the configuration.
 to be sent along with all requests to the Vault server.  This block can be specified
 multiple times.
 
-The `auth_login` configuration block accepts the following arguments:
+The `client_auth` configuration block accepts the following arguments:
+
+* `cert_file` - (Required) Path to a file on local disk that contains the
+  PEM-encoded certificate to present to the server.
+
+* `key_file` - (Required) Path to a file on local disk that contains the
+  PEM-encoded private key for which the authentication certificate was issued.
+
+The `headers` configuration block accepts the following arguments:
+
+* `name` - (Required) The name of the header.
+
+* `value` - (Required) The value of the header.
+
+## Vault Authentication Configuration Options
+
+The Vault provider supports the following Vault authentication engines.
+
+### Userpass
+
+Provides support for authenticating to Vault using the Username & Password authentication engine.
+
+*For more details see:
+[Userpass Auth Method (HTTP API)](https://www.vaultproject.io/api-docs/auth/userpass#userpass-auth-method-http-api)*
+
+The `auth_login_userpass` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the authentication engine mount.  
+  Default: `userpass`
+
+* `username` - (Required) The username to log into Vault with.
+  Can be specified with the `TERRAFORM_VAULT_USERNAME` environment variable.
+
+* `password` - (Optional) The password to log into Vault with.
+  Can be specified with the `TERRAFORM_VAULT_PASSWORD` environment variable. *Cannot be specified with `password_file`*.
+
+* `password_file` - (Optional) A file containing the password to log into Vault with.
+  Can be specified with the `TERRAFORM_VAULT_PASSWORD_FILE` environment variable. *Cannot be specified with `password`*
+
+### AWS
+
+Provides support for authenticating to Vault using the AWS authentication engine.
+
+*For more details see:
+[AWS Auth Method (API)](https://www.vaultproject.io/api-docs/auth/aws#aws-auth-method-api)*
+
+The `auth_login_aws` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the authentication engine mount.  
+  Default: `aws`
+
+* `role` - (Optional) The IAM role to use when logging into Vault.
+
+* `identity` - (Optional) The base64 encoded EC2 instance identity document.
+
+* `signature` - (Optional) The base64 encoded SHA256 RSA signature of the instance identity document.
+
+* `pkcs7` - (Optional) PKCS#7 signature of the identity document.
+
+* `nonce` - (Optional) The nonce to be used for subsequent login requests.
+
+* `iam_http_request_method` - (Optional) The HTTP method used in the signed request.  
+  `POST` is is the only supported method.
+
+* `iam_http_request_url` - (Optional) The base64 encoded HTTP URL used in the signed request.
+
+* `iam_http_request_body` - (Optional) The base64 encoded body of the signed request.
+
+* `iam_http_request_headers` - (Optional) Mapping of extra IAM specific HTTP request login headers.
+
+### TLS Certificate
+
+Provides support for authenticating to Vault using the TLS Certificate authentication engine.
+
+*For more details see:
+[TLS Certificate Auth Method (API)](https://www.vaultproject.io/api-docs/auth/cert#tls-certificate-auth-method-api)*
+
+
+The `auth_login_cert` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the authentication engine mount.  
+  Default: `cert`
+
+* `cert_file` - (Required) Path to a file on local disk that contains the
+  PEM-encoded certificate to present to the server.
+
+* `key_file` - (Required) Path to a file on local disk that contains the
+  PEM-encoded private key for which the authentication certificate was issued.
+
+*This login configuration honors the top-level TLS configuration parameters:
+[ca_cert_file](#ca_cert_file), [ca_cert_dir](#ca_cert_dir), [skip_tls_verify](#skip_tls_verify),
+[tls_server_name](#tls_server_name)*
+
+### GCP
+
+Provides support for authenticating to Vault using the Google Cloud Auth engine.
+
+*For more details see:
+[Google Cloud Auth Method (API)](https://www.vaultproject.io/api-docs/auth/gcp#google-cloud-auth-method-api)*
+
+
+The `auth_login_gcp` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the authentication engine mount.  
+  Default: `gcp`
+
+* `role` - (Required) The name of the role against which the login is being attempted.
+
+* `jwt` - (Optional) The signed JSON Web Token against which the login is being attempted.
+
+* `credentials` - (Optional) Path to the Google Cloud credentials to use when getting the signed 
+  JWT token from the IAM service.  
+*conflicts with `jwt`*
+
+* `service_account` - (Optional) Name of the service account to issue the JWT token for.  
+*requires `credentials`*
+
+*This login configuration will attempt to get a signed JWT token if `jwt` is not specified. 
+It supports both the IAM and GCE meta-data services as the token source.*
+
+### Kerberos
+
+Provides support for authenticating to Vault using the Kerberos Auth engine.
+
+*For more details see: 
+[Kerberos Auth Method (API)](https://www.vaultproject.io/api-docs/auth/kerberos#kerberos-auth-method-api)*
+
+
+The `auth_login_kerberos` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the authentication engine mount.  
+  Default: `kerberos`
+
+* `token` - (Optional) Simple and Protected GSSAPI Negotiation Mechanism (SPNEGO) token.
+  Can be specified with the `KRB_SPNEGO_TOKEN` environment variable.
+
+* `username` - (Conflicts with `token`)  The username to login into Kerberos with.
+
+* `service` - (Conflicts with `token`) The service principle name.
+ 
+* `realm` - (Conflicts with `token`) The Kerberos server's authoritative authentication domain.
+ 
+* `krb5conf_path` - (Conflicts with `token`) A valid Kerberos configuration file e.g. /etc/krb5.conf.
+  Can be specified with the `KRB5_CONFIG` environment variable.
+ 
+* `keytab_path` - (Conflicts with `token`)  The Kerberos keytab file containing the entry of the login entity.
+  Can be specified with the `KRB_KEYTAB` environment variable.
+
+* `disable_fast_negotiation` - (Conflicts with `token`) Disable the Kerberos FAST negotiation.
+ 
+* `remove_instance_name` - (Conflicts with `token`) Strip the host from the username found in the keytab.
+
+*This login configuration will attempt to get a SPNEGO init token from the `service` domain if `token` is not specified.
+The following fields are required when token is not specified:
+`username`, `service`, `realm`, `krb5conf_path`, `keytab_path`*
+
+### Radius
+
+Provides support for authenticating to Vault using the Radius Auth engine.
+
+*For more details see:
+[Radius Auth Method (API)](https://www.vaultproject.io/api-docs/auth/radius#radius-auth-method-api)*
+
+
+The `auth_login_radius` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the authentication engine mount.  
+  Default: `radius`
+
+* `username` - (Required) The username to Radius username to login into Vault with.
+
+* `password` - (Required) The password for the Radius `username` to login into Vault with.
+
+### OCI
+
+Provides support for authenticating to Vault using the OCI (Oracle Cloud Infrastructure) Auth engine.
+
+*For more details see:
+[OCI Auth Method (API)](https://www.vaultproject.io/api-docs/auth/oci#oci-auth-method-api)*
+
+
+The `auth_login_oci` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the authentication engine mount.  
+  Default: `oci`
+
+* `role` - (Required) The name of the role against which the login is being attempted.
+
+* `auth_type` - (Required) The OCI authentication type to use. Valid choices are: *apikeys*, *instance*
+
+### OIDC
+
+Provides support for authenticating to Vault using the OIDC Auth engine.
+
+*For more details see the OIDC specific documentation here:
+[OIDC/JWT Auth Method (API)](https://www.vaultproject.io/api-docs/auth/jwt#jwt-oidc-auth-method-api)
+
+
+The `auth_login_oidc` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the authentication engine mount.  
+  Default: `oidc`
+
+* `role` - (Required) The name of the role against which the login is being attempted.
+
+* `callback_listener_address` - (Optional) The callback listener's address. *Must be a valid URI without the path.*
+ 
+* `callback_address` - (Optional)  The callback address. *Must be a valid URI without the path.*
+
+### JWT
+
+Provides support for authenticating to Vault using the JWT Auth engine.
+
+*For more details see the JWT specific documentation here:
+[OIDC/JWT Auth Method (API)](https://www.vaultproject.io/api-docs/auth/jwt#jwt-oidc-auth-method-api)
+
+
+The `auth_login_jwt` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the authentication engine mount.  
+  Default: `jwt`
+
+* `role` - (Required) The name of the role against which the login is being attempted.
+
+* `jwt` - (Required) The signed JSON Web Token against which the login is being attempted.  
+  *Can be specified with the `TERRAFORM_VAULT_AUTH_JWT` environment variable.*
+
+### Generic
+
+Provides support for path based authentication to Vault.
+
+~> It is recommended to use one of the authentication engine specific configurations above.
+This configuration can be used for custom authentication engines, or in the case where an official authentication
+engine is not yet supported by the provider
+
+The path-based `auth_login` configuration block accepts the following arguments:
 
 * `path` - (Required) The login path of the auth backend. For example, login with
   approle by setting this path to `auth/approle/login`. Additionally, some mounts use parameters
@@ -203,20 +493,6 @@ The `auth_login` configuration block accepts the following arguments:
 * `parameters` - (Optional) A map of key-value parameters to send when authenticating
   against the auth backend. Refer to [Vault API documentation](https://www.vaultproject.io/api-docs/auth) for a particular auth method
   to see what can go here.
-
-The `client_auth` configuration block accepts the following arguments:
-
-* `cert_file` - (Required) Path to a file on local disk that contains the
-  PEM-encoded certificate to present to the server.
-
-* `key_file` - (Required) Path to a file on local disk that contains the
-  PEM-encoded private key for which the authentication certificate was issued.
-
-The `headers` configuration block accepts the following arguments:
-
-* `name` - (Required) The name of the header.
-
-* `value` - (Required) The value of the header.
 
 ## Provider Debugging
 

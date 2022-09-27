@@ -42,12 +42,7 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"bindpass"},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
 		},
 	})
 }
@@ -81,12 +76,37 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 				Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass",
+				"client_tls_cert", "client_tls_key", "disable_remount"),
+		},
+	})
+}
+
+func TestLDAPAuthBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-auth-ldap")
+	updatedPath := acctest.RandomWithPrefix("tf-test-auth-ldap-updated")
+
+	resourceName := "vault_ldap_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"bindpass", "client_tls_cert", "client_tls_key"},
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
 			},
+			{
+				Config: testLDAPAuthBackendConfig_basic(updatedPath, "true", "true"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					testLDAPAuthBackendCheck_attrs(resourceName, updatedPath),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
 		},
 	})
 }

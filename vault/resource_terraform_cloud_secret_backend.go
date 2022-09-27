@@ -8,16 +8,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func terraformCloudSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
-		Create: terraformCloudSecretBackendCreate,
-		Read:   ReadWrapper(terraformCloudSecretBackendRead),
-		Update: terraformCloudSecretBackendUpdate,
-		Delete: terraformCloudSecretBackendDelete,
-		Exists: terraformCloudSecretBackendExists,
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
+		Create:        terraformCloudSecretBackendCreate,
+		Read:          ReadWrapper(terraformCloudSecretBackendRead),
+		Update:        terraformCloudSecretBackendUpdate,
+		Delete:        terraformCloudSecretBackendDelete,
+		Exists:        terraformCloudSecretBackendExists,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -26,7 +29,6 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 			"backend": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Default:     "terraform",
 				Description: "Unique name of the Vault Terraform Cloud mount to configure",
 				StateFunc: func(s interface{}) string {
@@ -72,7 +74,7 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 				Description: "Maximum possible lease duration for secrets in seconds",
 			},
 		},
-	}
+	})
 }
 
 func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
@@ -185,6 +187,11 @@ func terraformCloudSecretBackendUpdate(d *schema.ResourceData, meta interface{})
 
 	backend := d.Id()
 	configPath := terraformCloudSecretBackendConfigPath(backend)
+
+	backend, e = util.Remount(d, client, consts.FieldBackend, false)
+	if e != nil {
+		return e
+	}
 
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		defaultLeaseTTL := d.Get("default_lease_ttl_seconds")

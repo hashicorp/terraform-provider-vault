@@ -26,14 +26,14 @@ func TestResourceAuth(t *testing.T) {
 			{
 				Config: testResourceAuth_initialConfig(path + consts.PathDelim),
 				ExpectError: regexp.MustCompile(
-					fmt.Sprintf(`invalid value "%s" for %q, contains leading/trailing %q`,
+					fmt.Sprintf(`value "%s" for %q contains leading/trailing %q`,
 						path+consts.PathDelim, "path", consts.PathDelim),
 				),
 			},
 			{
 				Config: testResourceAuth_initialConfig(consts.PathDelim + path),
 				ExpectError: regexp.MustCompile(
-					fmt.Sprintf(`invalid value "%s" for %q, contains leading/trailing %q`,
+					fmt.Sprintf(`value "%s" for %q contains leading/trailing %q`,
 						consts.PathDelim+path, "path", consts.PathDelim),
 				),
 			},
@@ -49,6 +49,37 @@ func TestResourceAuth(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 				),
 			},
+		},
+	})
+}
+
+func TestAuthBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-auth")
+	updatedPath := acctest.RandomWithPrefix("tf-test-auth-updated")
+
+	resourceName := "vault_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceAuth_initialConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test auth backend"),
+					resource.TestCheckResourceAttr(resourceName, "type", "github"),
+				),
+			},
+			{
+				Config: testResourceAuth_initialConfig(updatedPath),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					resource.TestCheckResourceAttr(resourceName, "description", "Test auth backend"),
+					resource.TestCheckResourceAttr(resourceName, "type", "github"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "disable_remount"),
 		},
 	})
 }

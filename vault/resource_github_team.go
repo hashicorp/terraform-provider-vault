@@ -43,7 +43,7 @@ func githubTeamResource() *schema.Resource {
 				Required:     true,
 				ForceNew:     true,
 				Description:  "GitHub team name in \"slugified\" format.",
-				ValidateFunc: validateStringSlug,
+				ValidateFunc: provider.ValidateStringSlug,
 			},
 		},
 	}

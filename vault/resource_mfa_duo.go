@@ -26,7 +26,7 @@ func mfaDuoResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Name of the MFA method.",
-				ValidateFunc: validateNoTrailingSlash,
+				ValidateFunc: provider.ValidateNoTrailingSlash,
 			},
 			consts.FieldMountAccessor: {
 				Type:        schema.TypeString,

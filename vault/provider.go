@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -14,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/internal/semver"
 )
 
 const (
@@ -50,9 +50,9 @@ func Provider() *schema.Provider {
 	if err != nil {
 		panic(err)
 	}
-	return &schema.Provider{
+	r := &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"address": {
+			consts.FieldAddress: {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultAddress, nil),
@@ -85,74 +85,47 @@ func Provider() *schema.Provider {
 				// Note that this is strongly discouraged due to the potential of exposing sensitive secret data.
 				Description: "Set this to true to prevent the creation of ephemeral child token used by this provider.",
 			},
-			"ca_cert_file": {
+			consts.FieldCACertFile: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_CACERT", ""),
+				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultCACert, ""),
 				Description: "Path to a CA certificate file to validate the server's certificate.",
 			},
-			"ca_cert_dir": {
+			consts.FieldCACertDir: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("VAULT_CAPATH", ""),
+				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultCAPath, ""),
 				Description: "Path to directory containing CA certificate files to validate the server's certificate.",
 			},
-			"auth_login": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "Login to vault with an existing auth method using auth/<mount>/login",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						consts.FieldPath: {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						consts.FieldNamespace: {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						consts.FieldParameters: {
-							Type:     schema.TypeMap,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						consts.FieldMethod: {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-					},
-				},
-			},
-			"client_auth": {
+			consts.FieldClientAuth: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Client authentication credentials.",
+				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"cert_file": {
+						consts.FieldCertFile: {
 							Type:        schema.TypeString,
 							Required:    true,
-							DefaultFunc: schema.EnvDefaultFunc("VAULT_CLIENT_CERT", ""),
+							DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultClientCert, ""),
 							Description: "Path to a file containing the client certificate.",
 						},
-						"key_file": {
+						consts.FieldKeyFile: {
 							Type:        schema.TypeString,
 							Required:    true,
-							DefaultFunc: schema.EnvDefaultFunc("VAULT_CLIENT_KEY", ""),
+							DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultClientKey, ""),
 							Description: "Path to a file containing the private key that the certificate was issued for.",
 						},
 					},
 				},
 			},
-			"skip_tls_verify": {
+			consts.FieldSkipTLSVerify: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_SKIP_VERIFY", false),
 				Description: "Set this to true only if the target Vault server is an insecure development instance.",
 			},
-			"tls_server_name": {
+			consts.FieldTLSServerName: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultTLSServerName, ""),
@@ -212,6 +185,10 @@ func Provider() *schema.Provider {
 		DataSourcesMap: dataSourcesMap,
 		ResourcesMap:   resourcesMap,
 	}
+
+	provider.MustAddAuthLoginSchema(r.Schema)
+
+	return r
 }
 
 // Description is essentially a DataSource or Resource with some additional metadata
@@ -823,23 +800,13 @@ func getNamespaceSchema() map[string]*schema.Schema {
 			Optional:     true,
 			ForceNew:     true,
 			Description:  "Target namespace. (requires Enterprise)",
-			ValidateFunc: validateNoLeadingTrailingSlashes,
+			ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 		},
 	}
 }
 
-func mustAddSchema(r *schema.Resource, m map[string]*schema.Schema) {
-	for k, s := range m {
-		if _, ok := r.Schema[k]; ok {
-			panic(fmt.Sprintf("cannot add schema field %q,  already exists in the Schema map", k))
-		}
-
-		r.Schema[k] = s
-	}
-}
-
 func UpdateSchemaResource(r *schema.Resource) *schema.Resource {
-	mustAddSchema(r, getNamespaceSchema())
+	provider.MustAddSchema(r, getNamespaceSchema())
 
 	return r
 }
@@ -865,21 +832,13 @@ func ReadContextWrapper(f schema.ReadContextFunc) schema.ReadContextFunc {
 	}
 }
 
-// MinVersionCheckWrapper performs a minimum version requirement check prior to the
+// MountCreateContextWrapper performs a minimum version requirement check prior to the
 // wrapped schema.CreateContextFunc.
-func MinVersionCheckWrapper(f schema.CreateContextFunc, minVersion string) schema.CreateContextFunc {
+func MountCreateContextWrapper(f schema.CreateContextFunc, minVersion *version.Version) schema.CreateContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-		client, e := provider.GetClient(d, meta)
-		if e != nil {
-			return diag.FromErr(e)
-		}
+		currentVersion := meta.(*provider.ProviderMeta).GetVaultVersion()
 
-		featureEnabled, currentVersion, err := semver.GreaterThanOrEqual(ctx, client, minVersion)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		if !featureEnabled {
+		if !provider.IsAPISupported(meta, minVersion) {
 			return diag.Errorf("feature not enabled on current Vault version. min version required=%s; "+
 				"current vault version=%s", minVersion, currentVersion)
 		}

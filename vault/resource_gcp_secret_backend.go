@@ -8,16 +8,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func gcpSecretBackendResource(name string) *schema.Resource {
-	return &schema.Resource{
-		Create: gcpSecretBackendCreate,
-		Read:   ReadWrapper(gcpSecretBackendRead),
-		Update: gcpSecretBackendUpdate,
-		Delete: gcpSecretBackendDelete,
-		Exists: gcpSecretBackendExists,
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
+		Create:        gcpSecretBackendCreate,
+		Read:          ReadWrapper(gcpSecretBackendRead),
+		Update:        gcpSecretBackendUpdate,
+		Delete:        gcpSecretBackendDelete,
+		Exists:        gcpSecretBackendExists,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -26,7 +29,6 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Default:     "gcp",
 				Description: "Path to mount the backend at.",
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
@@ -78,7 +80,7 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 				Description: "Local mount flag that can be explicitly set to true to enforce local mount in HA environment",
 			},
 		},
-	}
+	})
 }
 
 func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
@@ -171,6 +173,12 @@ func gcpSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 	d.Partial(true)
+
+	path, err := util.Remount(d, client, consts.FieldPath, false)
+	if err != nil {
+		return err
+	}
+
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		config := api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),

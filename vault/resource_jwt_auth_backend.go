@@ -11,11 +11,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func jwtAuthBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -27,13 +29,12 @@ func jwtAuthBackendResource() *schema.Resource {
 		CustomizeDiff: jwtCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				ForceNew:     true,
 				Description:  "path to mount the backend",
 				Default:      "jwt",
-				ValidateFunc: validateNoTrailingSlash,
+				ValidateFunc: provider.ValidateNoTrailingSlash,
 			},
 
 			"type": {
@@ -163,10 +164,10 @@ func jwtAuthBackendResource() *schema.Resource {
 
 			"tune": authMountTuneSchema(),
 		},
-	}
+	})
 }
 
-func jwtCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	attributes := []string{
 		"oidc_discovery_url",
 		"jwks_url",
@@ -174,13 +175,16 @@ func jwtCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{
 		"provider_config",
 	}
 
+	// to check whether mount migration is required
+	f := getMountCustomizeDiffFunc(consts.FieldPath)
+
 	for _, attr := range attributes {
 		if !d.NewValueKnown(attr) {
-			return nil
+			return f(ctx, d, meta)
 		}
 
 		if _, ok := d.GetOk(attr); ok {
-			return nil
+			return f(ctx, d, meta)
 		}
 	}
 
@@ -354,6 +358,13 @@ func jwtAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path := getJwtPath(d)
 	log.Printf("[DEBUG] Updating auth %s in Vault", path)
+
+	if !d.IsNewResource() {
+		path, e = util.Remount(d, client, consts.FieldPath, true)
+		if e != nil {
+			return e
+		}
+	}
 
 	configuration := map[string]interface{}{}
 	for _, configOption := range matchingJwtMountConfigOptions {

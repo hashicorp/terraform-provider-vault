@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/pki"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -333,7 +334,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Optional:     true,
 				Computed:     true,
 				Description:  "Specifies the duration by which to backdate the NotBefore property.",
-				ValidateFunc: validateDuration,
+				ValidateFunc: provider.ValidateDuration,
 			},
 			"allowed_serial_numbers": {
 				Type:        schema.TypeList,

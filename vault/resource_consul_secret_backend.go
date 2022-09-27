@@ -6,6 +6,11 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/util"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -13,22 +18,20 @@ import (
 )
 
 func consulSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
-		Create:        consulSecretBackendCreate,
-		Read:          ReadWrapper(consulSecretBackendRead),
-		Update:        consulSecretBackendUpdate,
-		Delete:        consulSecretBackendDelete,
-		Exists:        consulSecretBackendExists,
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
+		CreateContext: consulSecretBackendCreate,
+		ReadContext:   ReadContextWrapper(consulSecretBackendRead),
+		UpdateContext: consulSecretBackendUpdate,
+		DeleteContext: consulSecretBackendDelete,
 		CustomizeDiff: consulSecretsBackendCustomizeDiff,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Default:     "consul",
 				Description: "Unique name of the Vault Consul mount to configure",
 				StateFunc: func(s interface{}) string {
@@ -107,13 +110,13 @@ func consulSecretBackendResource() *schema.Resource {
 				Description: "Specifies if the secret backend is local only",
 			},
 		},
-	}
+	})
 }
 
-func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
+func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Get("path").(string)
@@ -140,8 +143,17 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting Consul backend at %q", path)
 
+	// If a token isn't provided and the Vault version is less than 1.11, fail before
+	// mounting the path in Vault.
+	useAPIVer1 := provider.IsAPISupported(meta, provider.VaultVersion111)
+
+	if token == "" && !useAPIVer1 {
+		return diag.Errorf(`error writing Consul configuration: no token provided and the 
+Vault client version does not meet the minimum requirement for this feature (Vault 1.11+)`)
+	}
+
 	if err := client.Sys().Mount(path, info); err != nil {
-		return fmt.Errorf("Error mounting to %q: %s", path, err)
+		return diag.Errorf("error mounting to %q: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Mounted Consul backend at %q", path)
@@ -160,18 +172,18 @@ func consulSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if _, err := client.Logical().Write(configPath, data); err != nil {
-		return fmt.Errorf("Error writing Consul configuration for %q: %s", path, err)
+		return diag.Errorf("error writing Consul configuration for %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote Consul configuration to %q", configPath)
 	d.Partial(false)
 
-	return consulSecretBackendRead(d, meta)
+	return consulSecretBackendRead(ctx, d, meta)
 }
 
-func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
+func consulSecretBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -181,7 +193,7 @@ func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
-		return fmt.Errorf("Error reading mount %q: %s", path, err)
+		return diag.Errorf("error reading mount %q: %s", path, err)
 	}
 
 	// path can have a trailing slash, but doesn't need to have one
@@ -203,7 +215,7 @@ func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Reading %s from Vault", configPath)
 	secret, err := client.Logical().Read(configPath)
 	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+		return diag.Errorf("error reading from Vault: %s", err)
 	}
 
 	// token, sadly, we can't read out
@@ -215,16 +227,21 @@ func consulSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
+func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 	configPath := consulSecretBackendConfigPath(path)
 
 	d.Partial(true)
+
+	path, err := util.Remount(d, client, consts.FieldPath, false)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		config := api.MountConfigInput{
@@ -234,7 +251,7 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		log.Printf("[DEBUG] Updating lease TTLs for %q", path)
 		if err := client.Sys().TuneMount(path, config); err != nil {
-			return fmt.Errorf("Error updating mount TTLs for %q: %s", path, err)
+			return diag.Errorf("error updating mount TTLs for %q: %s", path, err)
 		}
 
 	}
@@ -250,18 +267,18 @@ func consulSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			"client_key":  d.Get("client_key").(string),
 		}
 		if _, err := client.Logical().Write(configPath, data); err != nil {
-			return fmt.Errorf("Error configuring Consul configuration for %q: %s", path, err)
+			return diag.Errorf("error configuring Consul configuration for %q: %s", path, err)
 		}
 		log.Printf("[DEBUG] Updated Consul configuration at %q", configPath)
 	}
 	d.Partial(false)
-	return consulSecretBackendRead(d, meta)
+	return consulSecretBackendRead(ctx, d, meta)
 }
 
-func consulSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
+func consulSecretBackendDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -269,47 +286,36 @@ func consulSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Unmounting Consul backend %q", path)
 	err := client.Sys().Unmount(path)
 	if err != nil {
-		return fmt.Errorf("Error unmounting Consul backend from %q: %s", path, err)
+		return diag.Errorf("error unmounting Consul backend from %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Unmounted Consul backend %q", path)
 	return nil
-}
-
-func consulSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-
-	log.Printf("[DEBUG] Checking if Consul backend exists at %q", path)
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return true, fmt.Errorf("Error retrieving list of mounts: %s", err)
-	}
-	log.Printf("[DEBUG] Checked if Consul backend exists at %q", path)
-	_, ok := mounts[strings.Trim(path, "/")+"/"]
-	return ok, nil
 }
 
 func consulSecretBackendConfigPath(backend string) string {
 	return strings.Trim(backend, "/") + "/config/access"
 }
 
-func consulSecretsBackendCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+func consulSecretsBackendCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
 	newToken := diff.Get("token").(string)
-	newBootstrap := diff.Get("bootstrap").(bool)
+	isTokenValueKnown := diff.NewValueKnown("token")
 
-	// If the user sets bootstrap to false but doesn't provide a token, disallow it.
-	if newToken == "" && !newBootstrap {
-		return fmt.Errorf("field 'bootstrap' must be set to true when 'token' is unspecified")
+	// Disallow the following:
+	//   1. Bootstrap is true and the token field is set to something.
+	//   2. Bootstrap is true and the token field is empty, but we don't know the final value of token.
+	//   3. Bootstrap is false, the token field is empty, and we know this is the final value of token.
+	if newBootstrap := diff.Get("bootstrap").(bool); newBootstrap {
+		if newToken != "" ||
+			(newToken == "" && !isTokenValueKnown) {
+			return fmt.Errorf("field 'bootstrap' must be set to false when 'token' is specified")
+		}
+	} else {
+		if newToken == "" && isTokenValueKnown {
+			return fmt.Errorf("field 'bootstrap' must be set to true when 'token' is unspecified")
+		}
 	}
 
-	// If the user sets bootstrap to true and also provides a token, disallow it.
-	if newToken != "" && newBootstrap {
-		return fmt.Errorf("field 'bootstrap' must be set to false when 'token' is specified")
-	}
-
-	return nil
+	// check whether mount migration is required
+	f := getMountCustomizeDiffFunc(consts.FieldPath)
+	return f(ctx, diff, meta)
 }

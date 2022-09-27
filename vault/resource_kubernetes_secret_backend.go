@@ -22,7 +22,7 @@ const (
 
 func kubernetesSecretBackendResource() *schema.Resource {
 	resource := &schema.Resource{
-		CreateContext: MinVersionCheckWrapper(kubernetesSecretBackendCreateUpdate, consts.VaultVersion11),
+		CreateContext: MountCreateContextWrapper(kubernetesSecretBackendCreateUpdate, provider.VaultVersion111),
 		ReadContext:   ReadContextWrapper(kubernetesSecretBackendRead),
 		UpdateContext: kubernetesSecretBackendCreateUpdate,
 		DeleteContext: kubernetesSecretBackendDelete,
@@ -61,7 +61,7 @@ func kubernetesSecretBackendResource() *schema.Resource {
 	}
 
 	// Add common mount schema to the resource
-	mustAddSchema(resource, getMountSchema("type"))
+	provider.MustAddSchema(resource, getMountSchema("type"))
 
 	return resource
 }

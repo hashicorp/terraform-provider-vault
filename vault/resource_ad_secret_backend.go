@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 
@@ -17,7 +18,6 @@ func adSecretBackendResource() *schema.Resource {
 		"backend": {
 			Type:        schema.TypeString,
 			Default:     "ad",
-			ForceNew:    true,
 			Optional:    true,
 			Description: `The mount path for a backend, for example, the path given in "$ vault auth enable -path=my-ad ad".`,
 			StateFunc: func(v interface{}) string {
@@ -209,7 +209,7 @@ func adSecretBackendResource() *schema.Resource {
 			Description: `LDAP domain to use for users (eg: ou=People,dc=example,dc=org)`,
 		},
 	}
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: createConfigResource,
 		Update: updateConfigResource,
 		Read:   ReadWrapper(readConfigResource),
@@ -217,8 +217,9 @@ func adSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		Schema: fields,
-	}
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
+		Schema:        fields,
+	})
 }
 
 func createConfigResource(d *schema.ResourceData, meta interface{}) error {
@@ -527,6 +528,11 @@ func updateConfigResource(d *schema.ResourceData, meta interface{}) error {
 	backend := d.Id()
 
 	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	backend, e = util.Remount(d, client, consts.FieldBackend, false)
 	if e != nil {
 		return e
 	}
