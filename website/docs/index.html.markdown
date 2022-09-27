@@ -266,24 +266,41 @@ The `auth_login_aws` configuration block accepts the following arguments:
 * `mount` - (Optional) The name of the authentication engine mount.  
   Default: `aws`
 
-* `role` - (Optional) The IAM role to use when logging into Vault.
+* `role` - (Required) The name of the role against which the login is being attempted.
 
-* `identity` - (Optional) The base64 encoded EC2 instance identity document.
+* `aws_access_key_id` - (Optional) The AWS access key ID.  
+ *Can be specified with the `AWS_ACCESS_KEY_ID` environment variable.*
 
-* `signature` - (Optional) The base64 encoded SHA256 RSA signature of the instance identity document.
+* `aws_secret_access_key` - (Optional) The AWS secret access key.  
+  *Can be specified with the `AWS_SECRET_ACCESS_KEY` environment variable.*
 
-* `pkcs7` - (Optional) PKCS#7 signature of the identity document.
+* `aws_session_token` - (Optional) The AWS session token.  
+  *Can be specified with the `AWS_SESSION_TOKEN` environment variable.*
 
-* `nonce` - (Optional) The nonce to be used for subsequent login requests.
+* `aws_profile` - (Optional) The name of the AWS profile.  
+  *Can be specified with the `AWS_PROFILE` environment variable.*
 
-* `iam_http_request_method` - (Optional) The HTTP method used in the signed request.  
-  `POST` is is the only supported method.
+* `aws_shared_credentials_file` - (Optional) Path to the AWS shared credentials file.  
+  *Can be specified with the `AWS_SHARED_CREDENTIALS_FILE` environment variable.*
 
-* `iam_http_request_url` - (Optional) The base64 encoded HTTP URL used in the signed request.
+* `aws_web_identity_token_file` - (Optional) Path to the file containing an OAuth 2.0 access token or OpenID
+  Connect ID token.  
+  *Can be specified with the `AWS_WEB_IDENTITY_TOKEN_FILE` environment variable.*
 
-* `iam_http_request_body` - (Optional) The base64 encoded body of the signed request.
+* `aws_region` - (Optional) The AWS region.  
+  *Can be specified with the `AWS_REGION` or `AWS_DEFAULT_REGION` environment variables.*
 
-* `iam_http_request_headers` - (Optional) Mapping of extra IAM specific HTTP request login headers.
+* `aws_role_arn` - (Optional) The ARN of the AWS Role to assume. *Used during STS AssumeRole*  
+  *Can be specified with the `AWS_ROLE_ARN` environment variable.*
+
+* `aws_role_session_name` - (Optional) Specifies the name to attach to the AWS role session. *Used during STS AssumeRole*  
+  *Can be specified with the `AWS_ROLE_SESSION_NAME` environment variable.*
+
+* `aws_sts_endpoint` - (Optional) The STS endpoint URL.
+
+* `aws_iam_endpoint` - (Optional) The IAM endpoint URL.
+
+* `header_value` - (Optional) The Vault header value to include in the STS signing request.
 
 ### TLS Certificate
 

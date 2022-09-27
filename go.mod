@@ -11,7 +11,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.13.2
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v0.3.1
 	github.com/Azure/go-autorest/autorest v0.11.24
-	github.com/aws/aws-sdk-go v1.41.8
+	github.com/aws/aws-sdk-go v1.44.106
 	github.com/cenkalti/backoff/v4 v4.1.2
 	github.com/containerd/containerd v1.6.6 // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
@@ -22,7 +22,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320
-	github.com/hashicorp/go-hclog v1.2.2
+	github.com/hashicorp/go-hclog v1.3.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-retryablehttp v0.7.0
 	github.com/hashicorp/go-secure-stdlib/awsutil v0.1.6
@@ -36,10 +36,12 @@ require (
 	github.com/hashicorp/vault/api v1.8.0
 	github.com/hashicorp/vault/sdk v0.6.0
 	github.com/jcmturner/gokrb5/v8 v8.4.2
+	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 	golang.org/x/oauth2 v0.0.0-20220822191816-0ebed06d0094
+	golang.org/x/sys v0.0.0-20220927170352-d9d178bc13c6 // indirect
 	google.golang.org/api v0.96.0
 	google.golang.org/genproto v0.0.0-20220808131553-a91ffa7f803e
 )

@@ -9,7 +9,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
@@ -420,4 +422,14 @@ func GetToken(d *schema.ResourceData) (string, error) {
 		return "", fmt.Errorf("error getting token: %s", err)
 	}
 	return strings.TrimSpace(token), nil
+}
+
+func getHCLogger() hclog.Logger {
+	logger := hclog.Default()
+	if logging.IsDebugOrHigher() {
+		logger.SetLevel(hclog.Debug)
+	} else {
+		logger.SetLevel(hclog.Error)
+	}
+	return logger
 }
