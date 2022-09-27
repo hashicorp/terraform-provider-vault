@@ -186,8 +186,8 @@ func TestAuthLoginOCI_Login(t *testing.T) {
 			},
 			expectReqCount: 1,
 			// validation is done in the request handler
-			checkReqParams: false,
-			expectReqPaths: []string{"/v1/auth/oci/login/alice"},
+			skipCheckReqParams: true,
+			expectReqPaths:     []string{"/v1/auth/oci/login/alice"},
 			skipFunc: func(t *testing.T) {
 				testutil.SkipTestEnvUnset(t, envVarTFAccOCIAuth)
 			},

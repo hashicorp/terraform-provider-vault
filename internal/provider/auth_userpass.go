@@ -72,7 +72,7 @@ func (l *AuthLoginUserpass) Method() string {
 
 // Login using the userpass authentication engine.
 func (l *AuthLoginUserpass) Login(client *api.Client) (*api.Secret, error) {
-	params := l.copyParams(
+	params := l.copyParamsExcluding(
 		consts.FieldNamespace,
 		consts.FieldMount,
 	)

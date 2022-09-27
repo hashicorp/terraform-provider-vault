@@ -97,7 +97,7 @@ func (l *AuthLoginAWS) Method() string {
 
 // Login using the AWS authentication engine.
 func (l *AuthLoginAWS) Login(client *api.Client) (*api.Secret, error) {
-	params := l.copyParams(
+	params := l.copyParamsExcluding(
 		consts.FieldNamespace,
 		consts.FieldMount,
 		consts.FieldPasswordFile,

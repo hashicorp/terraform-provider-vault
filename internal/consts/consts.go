@@ -78,6 +78,7 @@ const (
 	FieldAuthLoginOCI             = "auth_login_oci"
 	FieldAuthLoginOIDC            = "auth_login_oidc"
 	FieldAuthLoginJWT             = "auth_login_jwt"
+	FieldAuthLoginAzure           = "auth_login_azure"
 	FieldIdentity                 = "identity"
 	FieldSignature                = "signature"
 	FieldPKCS7                    = "pkcs7"
@@ -110,6 +111,11 @@ const (
 	FieldRequestHeaders           = "request_headers"
 	FieldCallbackAddress          = "callback_address"
 	FieldCallbackListenerAddress  = "callback_listener_address"
+	FieldScope                    = "scope"
+	FieldSubscriptionID           = "subscription_id"
+	FieldResourceGroupName        = "resource_group_name"
+	FieldVMName                   = "vm_name"
+	FieldVMSSName                 = "vmss_name"
 
 	/*
 		common environment variables
@@ -126,6 +132,8 @@ const (
 	EnvVarGCPAuthJWT = "TERRAFORM_VAULT_GCP_AUTH_JWT"
 	// EnvVarVaultAuthJWT to login via the Vault jwt engine.
 	EnvVarVaultAuthJWT = "TERRAFORM_VAULT_AUTH_JWT"
+	// EnvVarAzureAuthJWT to login into Vault's azure auth engine.
+	EnvVarAzureAuthJWT = "TERRAFORM_VAULT_AZURE_AUTH_JWT"
 
 	EnvVarGoogleApplicationCreds = "GOOGLE_APPLICATION_CREDENTIALS"
 
@@ -159,6 +167,7 @@ const (
 	MountTypeOCI        = "oci"
 	MountTypeOIDC       = "oidc"
 	MountTypeJWT        = "jwt"
+	MountTypeAzure      = "azure"
 
 	/*
 		Vault version constants
@@ -179,6 +188,7 @@ const (
 	AuthMethodOCI      = "oci"
 	AuthMethodOIDC     = "oidc"
 	AuthMethodJWT      = "jwt"
+	AuthMethodAzure    = "azure"
 
 	/*
 		misc. path related constants

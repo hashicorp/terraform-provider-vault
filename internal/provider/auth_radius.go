@@ -78,5 +78,5 @@ func (l *AuthLoginRadius) Login(client *api.Client) (*api.Secret, error) {
 		return nil, fmt.Errorf("auth login not initialized")
 	}
 
-	return l.login(client, l.LoginPath(), l.copyParams(consts.FieldNamespace, consts.FieldMount))
+	return l.login(client, l.LoginPath(), l.copyParamsExcluding(consts.FieldNamespace, consts.FieldMount))
 }

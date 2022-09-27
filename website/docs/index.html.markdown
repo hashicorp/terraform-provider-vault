@@ -143,6 +143,8 @@ variables in order to keep credential information out of the configuration.
 
 * `auth_login_jwt` - (Optional) Utilizes the `jwt` authentication engine. *[See usage details below.](#oidc)*
 
+* `auth_login_azure` - (Optional) Utilizes the `azure` authentication engine. *[See usage details below.](#azure)*
+
 * `auth_login` - (Optional) A configuration block, described below, that
   attempts to authenticate using the `auth/<method>/login` path to
   acquire a token which Terraform will use. Terraform still issues itself
@@ -467,6 +469,48 @@ The `auth_login_jwt` configuration block accepts the following arguments:
 
 * `jwt` - (Required) The signed JSON Web Token against which the login is being attempted.  
   *Can be specified with the `TERRAFORM_VAULT_AUTH_JWT` environment variable.*
+
+### Azure
+
+Provides support for authenticating to Vault using the Azure Auth engine.
+
+*For more details see the Azure specific documentation here:
+[Azure Auth Method (API)](https://www.vaultproject.io/api-docs/auth/azure#azure-auth-method-api)*
+
+
+The `auth_login_azure` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `mount` - (Optional) The name of the authentication engine mount.  
+  Default: `azure`
+
+* `role` - (Required) The name of the role against which the login is being attempted.
+
+* `jwt` - (Optional) The signed JSON Web Token against which the login is being attempted. 
+ If not provided a token will be created from Azure's managed identities for Azure resources API.
+  *Can be specified with the `TERRAFORM_VAULT_AZURE_AUTH_JWT` environment variable.*
+
+* `subscription_id` - (Required) The subscription ID for the machine that generated the MSI token.
+  This information can be obtained through instance metadata.
+
+* `resource_group_name` - (Required) The resource group for the machine that generated the MSI token.
+  This information can be obtained through instance metadata.
+ 
+* `vm_name` - (Optional) The virtual machine name for the machine that generated the MSI token.
+  This information can be obtained through instance metadata.
+
+* `vmss_name` - (Optional) The virtual machine scale set name for the machine that generated
+  the MSI token. This information can be obtained through instance metadata.
+
+* `tenant_id` - (Optional) Provides the tenant ID to use in a multi-tenant authentication scenario.
+
+* `client_id` - (Optional) The identity's client ID.
+
+* `scope` - (Optional) The scopes to include in the token request. Defaults to `https://management.azure.com/`
+
 
 ### Generic
 
