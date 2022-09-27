@@ -114,24 +114,6 @@ func (l *AuthLoginCommon) copyParamsExcluding(excludes ...string) map[string]int
 	return params
 }
 
-func (l *AuthLoginCommon) copyParamsIncluding(includes ...string) (map[string]interface{}, error) {
-	missing := []string{}
-	params := map[string]interface{}{}
-	for _, k := range includes {
-		v, ok := l.params[k]
-		if !ok {
-			missing = append(missing, k)
-			continue
-		}
-		params[k] = v
-	}
-	if len(missing) > 0 {
-		return nil, fmt.Errorf("missing params %v", missing)
-	}
-
-	return params, nil
-}
-
 func (l *AuthLoginCommon) login(client *api.Client, path string, params map[string]interface{}) (*api.Secret, error) {
 	return client.Logical().Write(path, params)
 }

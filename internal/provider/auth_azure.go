@@ -173,8 +173,13 @@ func (l *AuthLoginAzure) getJWT(ctx context.Context) (string, error) {
 		return "", err
 	}
 
+	var scopes []string
+	if v, ok := l.params[consts.FieldScope].(string); ok {
+		scopes = append(scopes, v)
+	}
+
 	tOpts := policy.TokenRequestOptions{
-		Scopes: []string{"https://management.azure.com/"},
+		Scopes: scopes,
 	}
 	if v, ok := l.params[consts.FieldTenantID]; ok {
 		tOpts.TenantID = v.(string)
