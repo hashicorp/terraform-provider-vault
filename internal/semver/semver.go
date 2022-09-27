@@ -34,10 +34,10 @@ func getTargetVaultVersion(ctx context.Context, client *api.Client) (string, err
 // It uses the go-version package
 // to perform a semantic version comparison, and
 // returns:
-//    - a boolean describing whether the Vault
-//      server version was above the minimum version
-//    - the current Vault server version as a string
-//    - errors captured during operation, if any
+//   - a boolean describing whether the Vault
+//     server version was above the minimum version
+//   - the current Vault server version as a string
+//   - errors captured during operation, if any
 //
 // This function can be used to perform semantic version comparisons
 // to conditionally enable features, or to resolve any diffs in the TF

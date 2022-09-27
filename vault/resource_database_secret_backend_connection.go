@@ -869,10 +869,14 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	case dbEngineElasticSearch:
 		setElasticsearchDatabaseConnectionData(d, prefix, data)
+	case dbEngineRedisElastiCache:
+		setRedisElastiCacheDatabaseConnectionData(d, prefix, data)
 	case dbEngineSnowflake:
 		setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	case dbEngineRedshift:
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
+	default:
+		return nil, fmt.Errorf("unrecognized DB engine: %v", engine)
 	}
 
 	return data, nil
@@ -1244,6 +1248,24 @@ func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 	}
 	if v, ok := d.GetOk(prefix + "tls_ca"); ok {
 		data["tls_ca"] = v.(string)
+	}
+}
+
+func setRedisElastiCacheDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	if v, ok := d.GetOk(prefix + "url"); ok {
+		data["url"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		data["password"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "region"); ok {
+		data["region"] = v.(string)
 	}
 }
 
