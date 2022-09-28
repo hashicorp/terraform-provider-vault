@@ -171,7 +171,7 @@ func GetValidateDiagURI(schemes []string) schema.SchemaValidateDiagFunc {
 	}
 }
 
-// ValidateDiagUUID validates that the input string conforms to the
+// ValidateDiagUUID validates that the input string conforms format defined in rfc4122.
 func ValidateDiagUUID(i interface{}, path cty.Path) diag.Diagnostics {
 	have := i.(string)
 	if !regexpUUID.MatchString(have) {
