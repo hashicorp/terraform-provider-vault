@@ -2,11 +2,9 @@ package provider
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -23,57 +21,96 @@ func GetAWSLoginSchema(authField string) *schema.Schema {
 }
 
 // GetAWSLoginSchemaResource for the AWS authentication engine.
-func GetAWSLoginSchemaResource(_ string) *schema.Resource {
+func GetAWSLoginSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldRole: {
 				Type:        schema.TypeString,
-				Optional:    true,
-				Description: `The IAM role to use when logging into Vault.`,
+				Required:    true,
+				Description: `The Vault role to use when logging into Vault.`,
 			},
-			consts.FieldIdentity: {
+			// static credential fields
+			consts.FieldAWSAccessKeyID: {
 				Type:        schema.TypeString,
-				Description: `The base64 encoded EC2 instance identity document.`,
 				Optional:    true,
+				Description: `The AWS access key ID.`,
+				DefaultFunc: schema.EnvDefaultFunc("AWS_ACCESS_KEY_ID", nil),
 			},
-			consts.FieldSignature: {
+			consts.FieldAWSSecretAccessKey: {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Description:  `The AWS secret access key.`,
+				DefaultFunc:  schema.EnvDefaultFunc("AWS_SECRET_ACCESS_KEY", nil),
+				RequiredWith: []string{fmt.Sprintf("%s.0.%s", authField, consts.FieldAWSAccessKeyID)},
+			},
+			consts.FieldAWSSessionToken: {
 				Type:        schema.TypeString,
-				Description: `The base64 encoded SHA256 RSA signature of the instance identity document.`,
 				Optional:    true,
+				Description: `The AWS session token.`,
+				DefaultFunc: schema.EnvDefaultFunc("AWS_SESSION_TOKEN", nil),
 			},
-			consts.FieldPKCS7: {
+			consts.FieldAWSProfile: {
 				Type:        schema.TypeString,
-				Description: `PKCS#7 signature of the identity document.`,
 				Optional:    true,
+				Description: `The name of the AWS profile.`,
+				DefaultFunc: schema.EnvDefaultFunc("AWS_PROFILE", nil),
 			},
-			consts.FieldNonce: {
+			consts.FieldAWSSharedCredentialsFile: {
 				Type:        schema.TypeString,
-				Description: `The nonce to be used for subsequent login requests.`,
 				Optional:    true,
+				Description: `Path to the AWS shared credentials file.`,
+				DefaultFunc: schema.EnvDefaultFunc("AWS_SHARED_CREDENTIALS_FILE", nil),
 			},
-			consts.FieldIAMHttpRequestMethod: {
+			consts.FieldAWSWebIdentityTokenFile: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: `Path to the file containing an OAuth 2.0 access token or OpenID ` +
+					`Connect ID token.`,
+				DefaultFunc: schema.EnvDefaultFunc("AWS_WEB_IDENTITY_TOKEN_FILE", nil),
+			},
+			// STS assume role fields
+			consts.FieldAWSRoleARN: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: `The ARN of the AWS Role to assume.` +
+					`Used during STS AssumeRole`,
+				DefaultFunc: schema.EnvDefaultFunc("AWS_ROLE_ARN", nil),
+			},
+			consts.FieldAWSRoleSessionName: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: `Specifies the name to attach to the AWS role session. ` +
+					`Used during STS AssumeRole`,
+				DefaultFunc: schema.EnvDefaultFunc("AWS_ROLE_SESSION_NAME", nil),
+			},
+			consts.FieldAWSRegion: {
 				Type:        schema.TypeString,
-				Description: `The HTTP method used in the signed request.`,
 				Optional:    true,
-				Default:     http.MethodPost,
+				Description: `The AWS region.`,
+				DefaultFunc: schema.MultiEnvDefaultFunc(
+					[]string{
+						"AWS_REGION",
+						"AWS_DEFAULT_REGION",
+					},
+					nil,
+				),
 			},
-			consts.FieldIAMHttpRequestURL: {
+			consts.FieldAWSSTSEndpoint: {
+				Type:             schema.TypeString,
+				Optional:         true,
+				Description:      `The STS endpoint URL.`,
+				ValidateDiagFunc: GetValidateDiagURI([]string{"https", "http"}),
+			},
+			consts.FieldAWSIAMEndpoint: {
+				Type:             schema.TypeString,
+				Optional:         true,
+				Description:      `The IAM endpoint URL.`,
+				ValidateDiagFunc: GetValidateDiagURI([]string{"https", "http"}),
+			},
+			consts.FieldHeaderValue: {
 				Type:        schema.TypeString,
-				Description: `The base64 encoded HTTP URL used in the signed request.`,
 				Optional:    true,
-			},
-			consts.FieldIAMHttpRequestBody: {
-				Type:        schema.TypeString,
-				Description: `The base64 encoded body of the signed request.`,
-				Optional:    true,
-			},
-			consts.FieldIAMHttpRequestHeaders: {
-				Type:        schema.TypeMap,
-				Optional:    true,
-				Description: `Mapping of extra IAM specific HTTP request login headers.`,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
+				Description: `The Vault header value to include in the STS signing request.`,
 			},
 		},
 	}, consts.MountTypeAWS)
@@ -85,7 +122,27 @@ type AuthLoginAWS struct {
 	AuthLoginCommon
 }
 
-// LoginPath for the AWS authentication engine.
+func (l *AuthLoginAWS) Init(d *schema.ResourceData, authField string) error {
+	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
+		return err
+	}
+
+	if err := l.checkRequiredFields(d, consts.FieldRole); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// MountPath for the aws authentication engine.
+func (l *AuthLoginAWS) MountPath() string {
+	if l.mount == "" {
+		return l.Method()
+	}
+	return l.mount
+}
+
+// LoginPath for the aws authentication engine.
 func (l *AuthLoginAWS) LoginPath() string {
 	return fmt.Sprintf("auth/%s/login", l.MountPath())
 }
@@ -95,53 +152,123 @@ func (l *AuthLoginAWS) Method() string {
 	return consts.AuthMethodAWS
 }
 
-// Login using the AWS authentication engine.
+// Login using the aws authentication engine.
 func (l *AuthLoginAWS) Login(client *api.Client) (*api.Secret, error) {
-	params := l.copyParamsExcluding(
-		consts.FieldNamespace,
-		consts.FieldMount,
-		consts.FieldPasswordFile,
+	params, err := l.copyParams(
+		consts.FieldRole,
 	)
-
-	logger := hclog.Default()
-	if logging.IsDebugOrHigher() {
-		logger.SetLevel(hclog.Debug)
-	} else {
-		logger.SetLevel(hclog.Error)
+	if err != nil {
+		return nil, err
 	}
-	if err := signAWSLogin(l.params, logger); err != nil {
-		return nil, fmt.Errorf("error signing AWS login request: %s", err)
+
+	loginData, err := l.getLoginData(getHCLogger())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get AWS credentials required for Vault login, err=%w", err)
+	}
+	for k, v := range loginData {
+		params[k] = v
 	}
 
 	return l.login(client, l.LoginPath(), params)
 }
 
+func (l *AuthLoginAWS) getLoginData(logger hclog.Logger) (map[string]interface{}, error) {
+	config, err := l.getCredentialsConfig(logger)
+	if err != nil {
+		return nil, err
+	}
+
+	creds, err := config.GenerateCredentialChain()
+	if err != nil {
+		return nil, err
+	}
+
+	var headerValue string
+	if v, ok := l.params[consts.FieldHeaderValue].(string); ok {
+		headerValue = v
+	}
+
+	return awsutil.GenerateLoginData(creds, headerValue, config.Region, logger)
+}
+
+func (l *AuthLoginAWS) getCredentialsConfig(logger hclog.Logger) (*awsutil.CredentialsConfig, error) {
+	// we do not leverage awsutil.Options here since awsutil.NewCredentialsConfig
+	// does not currently support all that we do.
+	config, err := awsutil.NewCredentialsConfig()
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := l.params[consts.FieldAWSAccessKeyID].(string); ok && v != "" {
+		config.AccessKey = v
+	}
+	if v, ok := l.params[consts.FieldAWSSecretAccessKey].(string); ok && v != "" {
+		config.SecretKey = v
+	}
+	if v, ok := l.params[consts.FieldAWSProfile].(string); ok && v != "" {
+		config.Profile = v
+	}
+	if v, ok := l.params[consts.FieldAWSSharedCredentialsFile].(string); ok && v != "" {
+		config.Filename = v
+	}
+	if v, ok := l.params[consts.FieldAWSWebIdentityTokenFile].(string); ok && v != "" {
+		config.WebIdentityTokenFile = v
+	}
+	if v, ok := l.params[consts.FieldAWSRoleARN].(string); ok && v != "" {
+		config.RoleARN = v
+	}
+	if v, ok := l.params[consts.FieldAWSRoleSessionName].(string); ok && v != "" {
+		config.RoleSessionName = v
+	}
+	if v, ok := l.params[consts.FieldAWSRegion].(string); ok && v != "" {
+		config.Region = v
+	}
+	if v, ok := l.params[consts.FieldAWSSessionToken].(string); ok && v != "" {
+		config.SessionToken = v
+	}
+	if v, ok := l.params[consts.FieldAWSSTSEndpoint].(string); ok && v != "" {
+		config.STSEndpoint = v
+	}
+	if v, ok := l.params[consts.FieldAWSIAMEndpoint].(string); ok && v != "" {
+		config.IAMEndpoint = v
+	}
+
+	return config, nil
+}
+
+// signAWSLogin is for use by the generic auth method
 func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error {
-	var accessKey, secretKey, securityToken string
-	if val, ok := parameters["aws_access_key_id"].(string); ok {
-		accessKey = val
+	var accessKey string
+	if v, ok := parameters[consts.FieldAWSAccessKeyID].(string); ok {
+		accessKey = v
 	}
 
-	if val, ok := parameters["aws_secret_access_key"].(string); ok {
-		secretKey = val
+	var secretKey string
+	if v, ok := parameters[consts.FieldAWSSecretAccessKey].(string); ok {
+		secretKey = v
 	}
 
-	if val, ok := parameters["aws_security_token"].(string); ok {
-		securityToken = val
+	var sessionToken string
+	if v, ok := parameters[consts.FieldAWSSessionToken].(string); ok {
+		sessionToken = v
+	} else if v, ok := parameters["aws_security_token"].(string); ok {
+		// this is actually wrong, this should be the session token,
+		// leaving this here so that it does not break any pre-existing configurations.
+		sessionToken = v
 	}
 
-	creds, err := awsutil.RetrieveCreds(accessKey, secretKey, securityToken, logger)
+	creds, err := awsutil.RetrieveCreds(accessKey, secretKey, sessionToken, logger)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve AWS credentials: %s", err)
 	}
 
-	var headerValue, stsRegion string
-	if val, ok := parameters["header_value"].(string); ok {
-		headerValue = val
+	var headerValue string
+	if v, ok := parameters[consts.FieldHeaderValue].(string); ok {
+		headerValue = v
 	}
 
-	if val, ok := parameters["sts_region"].(string); ok {
-		stsRegion = val
+	var stsRegion string
+	if v, ok := parameters["sts_region"].(string); ok {
+		stsRegion = v
 	}
 
 	loginData, err := awsutil.GenerateLoginData(creds, headerValue, stsRegion, logger)
@@ -149,10 +276,15 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 		return fmt.Errorf("failed to generate AWS login data: %s", err)
 	}
 
-	parameters["iam_http_request_method"] = loginData["iam_http_request_method"]
-	parameters["iam_request_url"] = loginData["iam_request_url"]
-	parameters["iam_request_headers"] = loginData["iam_request_headers"]
-	parameters["iam_request_body"] = loginData["iam_request_body"]
+	headerFields := []string{
+		consts.FieldIAMHttpRequestMethod,
+		consts.FieldIAMHttpRequestURL,
+		consts.FieldIAMHttpRequestBody,
+		consts.FieldIAMHttpRequestHeaders,
+	}
+	for _, k := range headerFields {
+		parameters[k] = loginData[k]
+	}
 
 	return nil
 }

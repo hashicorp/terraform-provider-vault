@@ -3,8 +3,6 @@ package provider
 import (
 	"fmt"
 
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -99,13 +97,7 @@ func (l *AuthLoginGeneric) Login(client *api.Client) (*api.Secret, error) {
 	// the AWS auth method was previously handled by the auth_login generic
 	// resource.
 	case consts.AuthMethodAWS:
-		logger := hclog.Default()
-		if logging.IsDebugOrHigher() {
-			logger.SetLevel(hclog.Debug)
-		} else {
-			logger.SetLevel(hclog.Error)
-		}
-		if err := signAWSLogin(params, logger); err != nil {
+		if err := signAWSLogin(params, getHCLogger()); err != nil {
 			return nil, fmt.Errorf("error signing AWS login request: %s", err)
 		}
 	}
