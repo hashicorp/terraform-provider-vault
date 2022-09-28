@@ -252,12 +252,12 @@ func managedKeysAWSConfigSchema() schemaMap {
 			Description: "A unique lowercase name that serves as " +
 				"identifying the key",
 		},
-		consts.FieldAWSAccessKey: {
+		consts.FieldAccessKey: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The AWS access key to use",
 		},
-		consts.FieldAWSSecretKey: {
+		consts.FieldSecretKey: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The AWS secret key to use",

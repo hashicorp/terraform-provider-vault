@@ -14,6 +14,20 @@ func MustAddSchema(r *schema.Resource, m map[string]*schema.Schema) {
 	}
 }
 
+func MustAddSchemaResource(s map[string]*schema.Resource, d map[string]*schema.Resource,
+	f func(r *schema.Resource) *schema.Resource,
+) {
+	for n, r := range s {
+		if f != nil {
+			r = f(r)
+		}
+		if _, ok := d[n]; ok {
+			panic(fmt.Sprintf("cannot add resource, Resource map already contains %q", n))
+		}
+		d[n] = r
+	}
+}
+
 func mustAddSchema(k string, s *schema.Schema, d map[string]*schema.Schema) {
 	if _, ok := d[k]; ok {
 		panic(fmt.Sprintf("cannot add schema field %q,  already exists in the Schema map", k))
