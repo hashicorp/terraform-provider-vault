@@ -3,6 +3,7 @@ package mfa
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const (
@@ -24,7 +26,16 @@ var (
 		ResourceNameOKTA:   GetOKTASchemaResource,
 		ResourceNamePingID: GetPingIDSchemaResource,
 	}
-	defaultComputedOnly = []string{consts.FieldType}
+	defaultComputedOnlyFields = []string{
+		consts.FieldType,
+		consts.FieldMethodID,
+		consts.FieldMountAccessor,
+		consts.FieldNamespaceID,
+		consts.FieldName,
+	}
+	defaultQuirkMap = map[string]string{
+		consts.FieldID: consts.FieldUUID,
+	}
 )
 
 func GetResources() map[string]*schema.Resource {
@@ -40,15 +51,34 @@ func GetResources() map[string]*schema.Resource {
 func mustAddCommonSchema(r *schema.Resource) *schema.Resource {
 	common := map[string]*schema.Schema{
 		consts.FieldUUID: {
-			Type:             schema.TypeString,
-			Computed:         true,
-			Description:      "Resource UUID.",
-			ValidateDiagFunc: provider.ValidateDiagUUID,
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "Resource UUID.",
 		},
 		consts.FieldType: {
 			Type:        schema.TypeString,
 			Computed:    true,
 			Description: "MFA type.",
+		},
+		consts.FieldMountAccessor: {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "Mount accessor.",
+		},
+		consts.FieldName: {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "Method name.",
+		},
+		consts.FieldNamespaceID: {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "Method's namespace ID.",
+		},
+		consts.FieldNamespacePath: {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "Method's namespace path.",
 		},
 	}
 	provider.MustAddSchema(r, common)
@@ -65,6 +95,16 @@ type ContextFuncConfig struct {
 	method       string
 	m            map[string]*schema.Schema
 	computedOnly []string
+	quirksMap    map[string]string
+}
+
+func (c *ContextFuncConfig) HasSchema(k string) bool {
+	if c.m == nil {
+		return false
+	}
+
+	_, ok := c.m[k]
+	return ok
 }
 
 func (c *ContextFuncConfig) GetWriteFields() []string {
@@ -83,20 +123,80 @@ func (c *ContextFuncConfig) GetWriteFields() []string {
 	return r
 }
 
+func (c *ContextFuncConfig) GetSecretFields() []string {
+	var fields []string
+	if c.m == nil {
+		return fields
+	}
+
+	for k, s := range c.m {
+		if !s.Computed && s.Sensitive && s.Required {
+			fields = append(fields, k)
+		}
+	}
+
+	return fields
+}
+
+func (c *ContextFuncConfig) GetRequestData(d *schema.ResourceData) map[string]interface{} {
+	return util.GetAPIRequestDataWithSlice(d, c.GetWriteFields())
+}
+
 func (c *ContextFuncConfig) Method() string {
 	return c.method
 }
 
-func NewContextFuncConfig(method string, m map[string]*schema.Schema, computedOnly []string) *ContextFuncConfig {
+func (c *ContextFuncConfig) GetRemappedField(k string) (string, bool) {
+	if c.quirksMap != nil {
+		if o, ok := c.quirksMap[k]; ok {
+			return o, true
+		}
+	}
+	return k, false
+}
+
+func NewContextFuncConfig(method string, m map[string]*schema.Schema, computedOnly []string, quirksMap map[string]string) *ContextFuncConfig {
 	if len(computedOnly) == 0 {
-		computedOnly = defaultComputedOnly
+		computedOnly = defaultComputedOnlyFields
+	}
+
+	if quirksMap == nil {
+		quirksMap = make(map[string]string, len(defaultQuirkMap))
+	}
+
+	for k, v := range defaultQuirkMap {
+		quirksMap[k] = v
 	}
 
 	return &ContextFuncConfig{
 		method:       method,
 		m:            m,
 		computedOnly: computedOnly,
+		quirksMap:    quirksMap,
 	}
+}
+
+func getSchemaResource(s map[string]*schema.Schema, config *ContextFuncConfig) *schema.Resource {
+	m := map[string]*schema.Schema{}
+	for k, v := range s {
+		m[k] = v
+	}
+
+	r := &schema.Resource{
+		Schema:        m,
+		CreateContext: GetCreateContextFunc(config),
+		UpdateContext: GetUpdateContextFunc(config),
+		ReadContext:   GetReadContextFunc(config),
+		DeleteContext: GetDeleteContextFunc(config),
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
+	}
+
+	mustAddCommonSchema(r)
+	config.m = r.Schema
+
+	return r
 }
 
 func GetCreateContextFunc(config *ContextFuncConfig) schema.CreateContextFunc {
@@ -106,16 +206,24 @@ func GetCreateContextFunc(config *ContextFuncConfig) schema.CreateContextFunc {
 			return dg
 		}
 
-		data := map[string]interface{}{}
-		for _, k := range config.GetWriteFields() {
-			if v, ok := d.GetOk(k); ok {
-				data[k] = v
-			}
-		}
-
-		_, err := c.Logical().Write(getRequestPath(config.Method()), data)
+		path := getRequestPath(config.Method())
+		resp, err := c.Logical().Write(path, config.GetRequestData(d))
 		if err != nil {
 			return diag.FromErr(err)
+		}
+
+		if resp == nil {
+			return diag.FromErr(fmt.Errorf("nil response on write to path %q", path))
+		}
+
+		if v, ok := resp.Data[consts.FieldMethodID]; !ok {
+			return diag.FromErr(fmt.Errorf("expected a value for %q", consts.FieldMethodID))
+		} else {
+			id, ok := v.(string)
+			if id == "" || !ok {
+				return diag.FromErr(fmt.Errorf("value for %q is empty or of the wrong type", consts.FieldMethodID))
+			}
+			d.SetId(id)
 		}
 
 		return GetReadContextFunc(config)(ctx, d, meta)
@@ -129,23 +237,14 @@ func GetUpdateContextFunc(config *ContextFuncConfig) schema.UpdateContextFunc {
 			return dg
 		}
 
-		var id string
-		if v, ok := d.GetOk(consts.FieldUUID); !ok {
-			return diag.FromErr(fmt.Errorf("no value set for %q, cannot update the resource"))
-		} else if v.(string) == "" {
-			return diag.FromErr(fmt.Errorf("empty value set for %q, cannot update the resource"))
-		} else {
-			id = v.(string)
+		id := d.Id()
+		if id == "" {
+			return diag.FromErr(fmt.Errorf("resource ID is empty"))
 		}
 
-		data := map[string]interface{}{}
-		for _, k := range config.GetWriteFields() {
-			if d.HasChange(k) {
-				data[k] = d.Get(k)
-			}
-		}
-
-		_, err := c.Logical().Write(getRequestPath(config.Method(), id), data)
+		// login MFA does not support partial updates unfortunately,
+		// so we update() becomes very similar to create.
+		_, err := c.Logical().Write(getRequestPath(config.Method(), id), config.GetRequestData(d))
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -162,11 +261,11 @@ func GetReadContextFunc(config *ContextFuncConfig) schema.ReadContextFunc {
 		}
 
 		var path string
-		if v, ok := d.GetOk(consts.FieldUUID); !ok {
-			d.SetId("")
+		id := d.Id()
+		if id == "" {
 			return nil
 		} else {
-			path = getRequestPath(config.Method(), v.(string))
+			path = getRequestPath(config.Method(), id)
 		}
 
 		resp, err := c.Logical().Read(path)
@@ -179,22 +278,32 @@ func GetReadContextFunc(config *ContextFuncConfig) schema.ReadContextFunc {
 			return nil
 		}
 
-		var id string
 		for k, v := range resp.Data {
-			if k == consts.FieldID {
-				id = v.(string)
-				k = consts.FieldUUID
+			sk := k
+			if o, ok := config.GetRemappedField(k); ok {
+				sk = o
 			}
-			if err := d.Set(k, v); err != nil {
+
+			if !config.HasSchema(sk) {
+				log.Printf("[WARN] Skipping unsupported response field %q, skipping it", k)
+				continue
+			}
+
+			if err := d.Set(sk, v); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 
-		if id == "" {
-			return diag.FromErr(fmt.Errorf("response contained an empty value for %q", consts.FieldID))
-		}
+		// handle sensitive values that are not returned from Vault
+		for _, k := range config.GetSecretFields() {
+			if _, ok := resp.Data[k]; ok {
+				continue
+			}
 
-		d.SetId(id)
+			if err := d.Set(k, d.Get(k)); err != nil {
+				return diag.FromErr(err)
+			}
+		}
 
 		return nil
 	}

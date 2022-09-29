@@ -8,7 +8,7 @@ import (
 
 const (
 	MethodTypeDuo   = "duo"
-	ResourceNameDuo = resourceNamePrefix + "_" + MethodTypeDuo
+	ResourceNameDuo = resourceNamePrefix + MethodTypeDuo
 )
 
 var duoSchemaMap = map[string]*schema.Schema{
@@ -48,18 +48,10 @@ var duoSchemaMap = map[string]*schema.Schema{
 }
 
 func GetDuoSchemaResource() *schema.Resource {
-	m := duoSchemaMap
-	config := NewContextFuncConfig(MethodTypeDuo, m, nil)
-	r := &schema.Resource{
-		Schema:        m,
-		CreateContext: GetCreateContextFunc(config),
-		UpdateContext: GetUpdateContextFunc(config),
-		ReadContext:   GetReadContextFunc(config),
-		DeleteContext: GetDeleteContextFunc(config),
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
-		},
-	}
+	config := NewContextFuncConfig(MethodTypeDuo, nil, nil, map[string]string{
+		// API is inconsistent between create/update and read.
+		"pushinfo": consts.FieldPushInfo,
+	})
 
-	return mustAddCommonSchema(r)
+	return getSchemaResource(duoSchemaMap, config)
 }

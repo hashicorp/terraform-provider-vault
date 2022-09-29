@@ -8,7 +8,7 @@ import (
 
 const (
 	MethodTypeOKTA   = "okta"
-	ResourceNameOKTA = resourceNamePrefix + "_" + MethodTypeOKTA
+	ResourceNameOKTA = resourceNamePrefix + MethodTypeOKTA
 )
 
 var oktaSchemaMap = map[string]*schema.Schema{
@@ -33,6 +33,8 @@ var oktaSchemaMap = map[string]*schema.Schema{
 		Optional:    true,
 		Description: `The base domain to use for API requests.`,
 	},
+	// TODO: is not included in the response from vault-10.x and up
+	// this may lead to a perpetual diff until vault is fixed.
 	consts.FieldPrimaryEmail: {
 		Type:        schema.TypeBool,
 		Optional:    true,
@@ -42,18 +44,7 @@ var oktaSchemaMap = map[string]*schema.Schema{
 }
 
 func GetOKTASchemaResource() *schema.Resource {
-	m := oktaSchemaMap
-	config := NewContextFuncConfig(MethodTypeOKTA, m, nil)
-	r := &schema.Resource{
-		Schema:        m,
-		CreateContext: GetCreateContextFunc(config),
-		UpdateContext: GetUpdateContextFunc(config),
-		ReadContext:   GetReadContextFunc(config),
-		DeleteContext: GetDeleteContextFunc(config),
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
-		},
-	}
+	config := NewContextFuncConfig(MethodTypeOKTA, nil, nil, nil)
 
-	return mustAddCommonSchema(r)
+	return getSchemaResource(oktaSchemaMap, config)
 }

@@ -9,6 +9,7 @@ const (
 	FieldMethod                   = "method"
 	FieldNamespace                = "namespace"
 	FieldNamespaceID              = "namespace_id"
+	FieldNamespacePath            = "namespace_path"
 	FieldBackend                  = "backend"
 	FieldPathFQ                   = "path_fq"
 	FieldData                     = "data"
@@ -149,6 +150,7 @@ const (
 	FieldAuthenticatorURL         = "authenticator_url"
 	FieldOrgAlias                 = "org_alias"
 	FieldType                     = "type"
+	FieldMethodID                 = "method_id"
 
 	/*
 		common environment variables
