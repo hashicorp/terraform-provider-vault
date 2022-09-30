@@ -587,7 +587,7 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 					"region": {
 						Type:        schema.TypeString,
 						Optional:    true,
-						Description: "The AWS region where the ElastiCache cluster lives. If omitted the plugin tries to infer the region from the environment.",
+						Description: "The AWS region where the ElastiCache cluster is hosted. If omitted the plugin tries to infer the region from the environment.",
 					},
 				},
 			},

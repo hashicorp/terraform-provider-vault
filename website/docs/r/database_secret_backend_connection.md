@@ -92,6 +92,9 @@ The following arguments are supported:
 
 * `influxdb` - (Optional) A nested block containing configuration options for InfluxDB connections.
 
+* `redis_elasticache` - (Optional) A nested block containing configuration options for Redis ElastiCache connections.
+
+
 Exactly one of the nested blocks of configuration options must be supplied.
 
 ### Cassandra Configuration Options
@@ -164,6 +167,16 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `connect_timeout` - (Optional) The number of seconds to use as a connection
   timeout.
+
+### Redis ElastiCache Configuration Options
+
+* `url` - (Required) The url to connect to.
+
+* `username` - (Optional) The AWS access key id to authenticate with. If omitted Vault tries to infer from the credentials chain provider instead.
+
+* `password` - (Optional) The AWS secret access key to authenticate with. If omitted Vault tries to infer from the credentials chain provider instead.
+
+* `region` - (Optional) The region where the ElastiCache cluster is hosted. If omitted Vault tries to infer from the environment instead.
 
 ### MongoDB Configuration Options
 
