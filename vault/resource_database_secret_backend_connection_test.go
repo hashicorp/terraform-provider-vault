@@ -866,6 +866,12 @@ func TestAccDatabaseSecretBackendConnection_redisElastiCache(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis_elasticache.0.url", url),
 				),
 			},
+			{
+				ResourceName:            testDefaultDatabaseSecretBackendResource,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"verify_connection", "couchbase.0.password"},
+			},
 		},
 	})
 }
