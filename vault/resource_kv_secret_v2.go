@@ -138,25 +138,8 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 		data[k] = d.Get(k)
 	}
 
-	writeData := func() error {
-		if _, err := client.Logical().Write(path, data); err != nil {
-			if respErr, ok := err.(*api.ResponseError); ok && (respErr.StatusCode == http.StatusBadRequest) {
-				return err
-			} else {
-				return backoff.Permanent(err)
-			}
-		}
-		return nil
-	}
-
-	bo := backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Millisecond*500), 10)
-
-	log.Printf("[DEBUG] creating KVV2 secret %s", path)
-	if err := backoff.RetryNotify(writeData, bo, func(err error, duration time.Duration) {
-		log.Printf("[WARN] create KVV2 %q failed, retrying in %s", path, duration)
-	}); err != nil {
-		return diag.Errorf("error creating KVV2 secret: %s", err)
-	}
+	if _, err := client.Logical().Write(path, data); err != nil {
+		return diag.Errorf("error writing secret data to %s, err=%s", path, err)
 
 	d.SetId(path)
 
