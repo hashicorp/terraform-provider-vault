@@ -11,16 +11,24 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestIdentityLoginMFADuo(t *testing.T) {
+func TestIdentityMFADuo(t *testing.T) {
+	t.Parallel()
+
 	resourceName := mfa.ResourceNameDuo + ".test"
 
 	checksCommon := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, consts.FieldType, mfa.MethodTypeDuo),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldUUID),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldMethodID),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, mfa.MethodTypeDuo),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldNamespaceID, "root"),
 	}
 
-	for k := range mfa.GetDuoSchemaResource().Schema {
+	res, err := mfa.GetDuoSchemaResource()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for k := range res.Schema {
 		switch k {
 		case consts.FieldName, consts.FieldMountAccessor:
 			checksCommon = append(checksCommon, resource.TestCheckResourceAttr(resourceName, k, ""))

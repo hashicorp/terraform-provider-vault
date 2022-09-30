@@ -43,8 +43,11 @@ var oktaSchemaMap = map[string]*schema.Schema{
 	},
 }
 
-func GetOKTASchemaResource() *schema.Resource {
-	config := NewContextFuncConfig(MethodTypeOKTA, nil, nil, nil)
+func GetOKTASchemaResource() (*schema.Resource, error) {
+	config, err := NewContextFuncConfig(MethodTypeOKTA, PathTypeMethodID, nil, nil, nil)
+	if err != nil {
+		return nil, err
+	}
 
-	return getSchemaResource(oktaSchemaMap, config)
+	return getMethodSchemaResource(oktaSchemaMap, config), nil
 }

@@ -12,11 +12,14 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestIdentityLoginMFATOTP(t *testing.T) {
+func TestIdentityMFATOTP(t *testing.T) {
+	t.Parallel()
+
 	resourceName := mfa.ResourceNameTOTP + ".test"
 
 	checksCommon := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldUUID),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldMethodID),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldNamespaceID, "root"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldType, mfa.MethodTypeTOTP),
 	}

@@ -11,16 +11,24 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestIdentityLoginMFAOKTA(t *testing.T) {
+func TestIdentityMFAOKTA(t *testing.T) {
+	t.Parallel()
+
 	resourceName := mfa.ResourceNameOKTA + ".test"
 
 	checksCommon := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, consts.FieldType, mfa.MethodTypeOKTA),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldUUID),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldMethodID),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, mfa.MethodTypeOKTA),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldNamespaceID, "root"),
 	}
 
-	for k := range mfa.GetOKTASchemaResource().Schema {
+	res, err := mfa.GetOKTASchemaResource()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for k := range res.Schema {
 		switch k {
 		case consts.FieldName, consts.FieldMountAccessor:
 			checksCommon = append(checksCommon, resource.TestCheckResourceAttr(resourceName, k, ""))

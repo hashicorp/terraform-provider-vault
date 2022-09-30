@@ -75,8 +75,11 @@ var (
 	}
 )
 
-func GetTOTPSchemaResource() *schema.Resource {
-	config := NewContextFuncConfig(MethodTypeTOTP, nil, nil, nil)
+func GetTOTPSchemaResource() (*schema.Resource, error) {
+	config, err := NewContextFuncConfig(MethodTypeTOTP, PathTypeMethodID, nil, nil, nil)
+	if err != nil {
+		return nil, err
+	}
 
-	return getSchemaResource(totpSchemaMap, config)
+	return getMethodSchemaResource(totpSchemaMap, config), nil
 }

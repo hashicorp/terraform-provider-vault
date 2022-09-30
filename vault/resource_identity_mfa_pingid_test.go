@@ -12,7 +12,9 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestIdentityLoginMFAPingID(t *testing.T) {
+func TestIdentityMFAPingID(t *testing.T) {
+	t.Parallel()
+
 	pingIDConfigTmpl := `
 use_base64_key=bXktc2VjcmV0LWtleQ==
 use_signature=%t
@@ -31,6 +33,7 @@ authenticator_url=https://authenticator.pingone.com/pingid/ppm
 	resourceName := mfa.ResourceNamePingID + ".test"
 	checksCommon := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldUUID),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldMethodID),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldNamespaceID, "root"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldIdpURL, "https://idpxnyl3m.pingidentity.com/pingid"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldAdminURL, "https://idpxnyl3m.pingidentity.com/pingid"),

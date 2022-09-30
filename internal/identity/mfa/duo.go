@@ -47,11 +47,11 @@ var duoSchemaMap = map[string]*schema.Schema{
 	},
 }
 
-func GetDuoSchemaResource() *schema.Resource {
-	config := NewContextFuncConfig(MethodTypeDuo, nil, nil, map[string]string{
+func GetDuoSchemaResource() (*schema.Resource, error) {
+	config, _ := NewContextFuncConfig(MethodTypeDuo, PathTypeMethodID, nil, nil, map[string]string{
 		// API is inconsistent between create/update and read.
 		"pushinfo": consts.FieldPushInfo,
 	})
 
-	return getSchemaResource(duoSchemaMap, config)
+	return getMethodSchemaResource(duoSchemaMap, config), nil
 }

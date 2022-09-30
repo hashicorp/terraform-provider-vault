@@ -55,7 +55,12 @@ func Provider() *schema.Provider {
 
 	// TODO: add support path inventory, probably means
 	// reworking the registry init entirely.
-	provider.MustAddSchemaResource(mfa.GetResources(), resourcesMap, nil)
+	mfaResources, err := mfa.GetResources()
+	if err != nil {
+		panic(err)
+	}
+
+	provider.MustAddSchemaResource(mfaResources, resourcesMap, nil)
 
 	r := &schema.Provider{
 		Schema: map[string]*schema.Schema{

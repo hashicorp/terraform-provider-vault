@@ -62,8 +62,8 @@ var pingIDSchemaMap = map[string]*schema.Schema{
 	},
 }
 
-func GetPingIDSchemaResource() *schema.Resource {
-	config := NewContextFuncConfig(MethodTypePingID, nil, []string{
+func GetPingIDSchemaResource() (*schema.Resource, error) {
+	config, err := NewContextFuncConfig(MethodTypePingID, PathTypeMethodID, nil, []string{
 		consts.FieldType,
 		consts.FieldUseSignature,
 		consts.FieldIdpURL,
@@ -71,6 +71,9 @@ func GetPingIDSchemaResource() *schema.Resource {
 		consts.FieldAuthenticatorURL,
 		consts.FieldOrgAlias,
 	}, nil)
+	if err != nil {
+		return nil, err
+	}
 
-	return getSchemaResource(pingIDSchemaMap, config)
+	return getMethodSchemaResource(pingIDSchemaMap, config), nil
 }

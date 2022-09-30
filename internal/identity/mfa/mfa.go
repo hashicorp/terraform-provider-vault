@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -15,16 +18,23 @@ import (
 )
 
 const (
-	resourceNamePrefix = "vault_identity_login_mfa_"
-	apiRoot            = "/identity/mfa/method"
+	resourceNamePrefix = "vault_identity_mfa_"
+	apiRoot            = "/identity/mfa"
+	apiMethodRoot      = apiRoot + "/method"
+
+	PathTypeName = iota
+	PathTypeMethodID
 )
 
+type schemaResourceFunc func() (*schema.Resource, error)
+
 var (
-	resources = map[string]func() *schema.Resource{
-		ResourceNameDuo:    GetDuoSchemaResource,
-		ResourceNameTOTP:   GetTOTPSchemaResource,
-		ResourceNameOKTA:   GetOKTASchemaResource,
-		ResourceNamePingID: GetPingIDSchemaResource,
+	resources = map[string]schemaResourceFunc{
+		ResourceNameDuo:              GetDuoSchemaResource,
+		ResourceNameTOTP:             GetTOTPSchemaResource,
+		ResourceNameOKTA:             GetOKTASchemaResource,
+		ResourceNamePingID:           GetPingIDSchemaResource,
+		ResourceNameLoginEnforcement: GetLoginEnforcementSchemaResource,
 	}
 	defaultComputedOnlyFields = []string{
 		consts.FieldType,
@@ -33,28 +43,72 @@ var (
 		consts.FieldNamespaceID,
 		consts.FieldName,
 	}
-	defaultQuirkMap = map[string]string{
+	defaultQuirksMap = map[string]string{
 		consts.FieldID: consts.FieldUUID,
 	}
 )
 
-func GetResources() map[string]*schema.Resource {
-	// TODO: will want to support vault.Description struct, punting on this for now.
-	r := map[string]*schema.Resource{}
-	for n, f := range resources {
-		r[n] = f()
+type PathType int
+
+func (t PathType) String() string {
+	switch t {
+	case PathTypeName:
+		return "name"
+	case PathTypeMethodID:
+		return "method"
+	default:
+		return "unknown"
 	}
+}
+
+type addSchemaFunc func(resource *schema.Resource) *schema.Resource
+
+func GetResources() (map[string]*schema.Resource, error) {
+	// TODO: will want to support vault.Description struct, punting on this for now.
+	errs := multierror.Error{
+		Errors: []error{},
+	}
+
+	res := map[string]*schema.Resource{}
+	for n, f := range resources {
+		r, err := f()
+		if err != nil {
+			errs.Errors = append(errs.Errors, err)
+			continue
+		}
+		res[n] = r
+	}
+
+	return res, errs.ErrorOrNil()
+}
+
+func mustAddCommonSchema(r *schema.Resource) *schema.Resource {
+	provider.MustAddNamespaceSchema(r.Schema)
+	provider.MustAddSchema(r,
+		map[string]*schema.Schema{
+			consts.FieldUUID: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Resource UUID.",
+			},
+			consts.FieldNamespaceID: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Method's namespace ID.",
+			},
+			consts.FieldNamespacePath: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Method's namespace path.",
+			},
+		},
+	)
 
 	return r
 }
 
-func mustAddCommonSchema(r *schema.Resource) *schema.Resource {
+func mustAddCommonMFASchema(r *schema.Resource) *schema.Resource {
 	common := map[string]*schema.Schema{
-		consts.FieldUUID: {
-			Type:        schema.TypeString,
-			Computed:    true,
-			Description: "Resource UUID.",
-		},
 		consts.FieldType: {
 			Type:        schema.TypeString,
 			Computed:    true,
@@ -70,32 +124,64 @@ func mustAddCommonSchema(r *schema.Resource) *schema.Resource {
 			Computed:    true,
 			Description: "Method name.",
 		},
-		consts.FieldNamespaceID: {
+		consts.FieldMethodID: {
 			Type:        schema.TypeString,
 			Computed:    true,
-			Description: "Method's namespace ID.",
-		},
-		consts.FieldNamespacePath: {
-			Type:        schema.TypeString,
-			Computed:    true,
-			Description: "Method's namespace path.",
+			Description: "Method ID.",
 		},
 	}
+
 	provider.MustAddSchema(r, common)
-	provider.MustAddNamespaceSchema(r.Schema)
 	return r
 }
 
 func getRequestPath(method string, others ...string) string {
-	parts := append([]string{apiRoot, method}, others...)
-	return strings.Join(parts, consts.PathDelim)
+	return joinPath(apiRoot, append([]string{method}, others...)...)
+}
+
+func getMethodRequestPath(method string, others ...string) string {
+	return joinPath(apiMethodRoot, append([]string{method}, others...)...)
+}
+
+func joinPath(root string, parts ...string) string {
+	return strings.Join(append([]string{root}, parts...), consts.PathDelim)
 }
 
 type ContextFuncConfig struct {
+	mu           sync.RWMutex
 	method       string
 	m            map[string]*schema.Schema
 	computedOnly []string
 	quirksMap    map[string]string
+	requireLock  bool
+	requestPath  string
+	pt           PathType
+}
+
+func (c *ContextFuncConfig) IDField() (string, error) {
+	if c.IsPathTypeMethod() {
+		return consts.FieldMethodID, nil
+	} else if c.IsPathTypeName() {
+		return consts.FieldName, nil
+	}
+
+	return "", fmt.Errorf("unsupported path type %s", c.pt)
+}
+
+func (c *ContextFuncConfig) PathType() PathType {
+	return c.pt
+}
+
+func (c *ContextFuncConfig) Lock() {
+	if c.requireLock {
+		c.mu.Lock()
+	}
+}
+
+func (c *ContextFuncConfig) Unlock() {
+	if c.requireLock {
+		c.mu.Unlock()
+	}
 }
 
 func (c *ContextFuncConfig) HasSchema(k string) bool {
@@ -155,28 +241,117 @@ func (c *ContextFuncConfig) GetRemappedField(k string) (string, bool) {
 	return k, false
 }
 
-func NewContextFuncConfig(method string, m map[string]*schema.Schema, computedOnly []string, quirksMap map[string]string) *ContextFuncConfig {
+func (c *ContextFuncConfig) IsPathTypeMethod() bool {
+	return c.pt == PathTypeMethodID
+}
+
+func (c *ContextFuncConfig) IsPathTypeName() bool {
+	return c.pt == PathTypeName
+}
+
+func (c *ContextFuncConfig) IsIDFromResponse() bool {
+	if c.pt == PathTypeMethodID {
+		return true
+	}
+	return false
+}
+
+func (c *ContextFuncConfig) GetRequestPathWithID(id string) (string, error) {
+	base, err := c.GetRequestPathBase()
+	if err != nil {
+		return "", err
+	}
+
+	return joinPath(base, id), nil
+}
+
+func (c *ContextFuncConfig) GetRequestPathBase() (string, error) {
+	if c.IsPathTypeMethod() {
+		return getMethodRequestPath(c.Method()), nil
+	} else if c.IsPathTypeName() {
+		return getRequestPath(c.Method()), nil
+	}
+
+	return "", fmt.Errorf("no request path method for type %s", c.pt)
+}
+
+func (c *ContextFuncConfig) GetIDFromResponse(resp *api.Secret) (string, error) {
+	// ID is derived from the response
+	if resp == nil {
+		return "", fmt.Errorf("response cannot be nil for path type %s", c.PathType())
+	}
+
+	idField, err := c.IDField()
+	if err != nil {
+		return "", err
+	}
+
+	v, ok := resp.Data[idField]
+	if !ok {
+		return "", fmt.Errorf("expected a value for %q", idField)
+	}
+
+	return c.id(idField, v)
+}
+
+func (c *ContextFuncConfig) GetIDFromResourceData(d *schema.ResourceData) (string, error) {
+	idField, err := c.IDField()
+	if err != nil {
+		return "", err
+	}
+
+	v, ok := d.Get(idField).(string)
+	if !ok {
+		return "", fmt.Errorf("expected a value for %q", idField)
+	}
+
+	return c.id(idField, v)
+}
+
+func (c *ContextFuncConfig) id(f string, v interface{}) (string, error) {
+	id, ok := v.(string)
+	if !ok || id == "" {
+		return "", fmt.Errorf("value for %q must be non-empty string", f)
+	}
+	return id, nil
+}
+
+func NewContextFuncConfig(method string, pt PathType, m map[string]*schema.Schema, computedOnly []string, quirksMap map[string]string) (*ContextFuncConfig, error) {
 	if len(computedOnly) == 0 {
 		computedOnly = defaultComputedOnlyFields
 	}
 
 	if quirksMap == nil {
-		quirksMap = make(map[string]string, len(defaultQuirkMap))
+		quirksMap = make(map[string]string, len(defaultQuirksMap))
 	}
 
-	for k, v := range defaultQuirkMap {
+	for k, v := range defaultQuirksMap {
 		quirksMap[k] = v
 	}
 
-	return &ContextFuncConfig{
+	switch pt {
+	case PathTypeName, PathTypeMethodID:
+	default:
+		return nil, fmt.Errorf("unsupported path type %s", pt)
+	}
+
+	config := &ContextFuncConfig{
 		method:       method,
+		pt:           pt,
 		m:            m,
 		computedOnly: computedOnly,
 		quirksMap:    quirksMap,
+		requireLock:  true,
 	}
+
+	return config, nil
 }
 
-func getSchemaResource(s map[string]*schema.Schema, config *ContextFuncConfig) *schema.Resource {
+func getMethodSchemaResource(s map[string]*schema.Schema, config *ContextFuncConfig) *schema.Resource {
+	return getSchemaResource(s, config, mustAddCommonSchema, mustAddCommonMFASchema)
+}
+
+func getSchemaResource(s map[string]*schema.Schema, config *ContextFuncConfig, addFuncs ...addSchemaFunc) *schema.Resource {
 	m := map[string]*schema.Schema{}
 	for k, v := range s {
 		m[k] = v
@@ -193,7 +368,16 @@ func getSchemaResource(s map[string]*schema.Schema, config *ContextFuncConfig) *
 		},
 	}
 
-	mustAddCommonSchema(r)
+	if len(addFuncs) == 0 {
+		addFuncs = []addSchemaFunc{
+			mustAddCommonSchema,
+		}
+	}
+
+	for _, f := range addFuncs {
+		r = f(r)
+	}
+
 	config.m = r.Schema
 
 	return r
@@ -201,30 +385,60 @@ func getSchemaResource(s map[string]*schema.Schema, config *ContextFuncConfig) *
 
 func GetCreateContextFunc(config *ContextFuncConfig) schema.CreateContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+		config.Lock()
+		defer config.Unlock()
+
 		c, dg := provider.GetClientDiag(d, meta)
 		if dg != nil {
 			return dg
 		}
 
-		path := getRequestPath(config.Method())
+		idField, err := config.IDField()
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		var path string
+		if config.IsIDFromResponse() {
+			p, err := config.GetRequestPathBase()
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			path = p
+		} else {
+			p, err := config.GetRequestPathWithID(d.Get(idField).(string))
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			path = p
+		}
+
 		resp, err := c.Logical().Write(path, config.GetRequestData(d))
 		if err != nil {
 			return diag.FromErr(err)
 		}
 
-		if resp == nil {
-			return diag.FromErr(fmt.Errorf("nil response on write to path %q", path))
+		var rid string
+		if config.IsIDFromResponse() {
+			id, err := config.GetIDFromResponse(resp)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+
+			rid = id
+		} else {
+			id, err := config.GetIDFromResourceData(d)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			id, ok := d.Get(idField).(string)
+			if !ok {
+				return diag.FromErr(fmt.Errorf("value for %q must be non-empty string", idField))
+			}
+			rid = id
 		}
 
-		if v, ok := resp.Data[consts.FieldMethodID]; !ok {
-			return diag.FromErr(fmt.Errorf("expected a value for %q", consts.FieldMethodID))
-		} else {
-			id, ok := v.(string)
-			if id == "" || !ok {
-				return diag.FromErr(fmt.Errorf("value for %q is empty or of the wrong type", consts.FieldMethodID))
-			}
-			d.SetId(id)
-		}
+		d.SetId(rid)
 
 		return GetReadContextFunc(config)(ctx, d, meta)
 	}
@@ -232,6 +446,9 @@ func GetCreateContextFunc(config *ContextFuncConfig) schema.CreateContextFunc {
 
 func GetUpdateContextFunc(config *ContextFuncConfig) schema.UpdateContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+		config.Lock()
+		defer config.Unlock()
+
 		c, dg := provider.GetClientDiag(d, meta)
 		if dg != nil {
 			return dg
@@ -242,10 +459,14 @@ func GetUpdateContextFunc(config *ContextFuncConfig) schema.UpdateContextFunc {
 			return diag.FromErr(fmt.Errorf("resource ID is empty"))
 		}
 
+		path, err := config.GetRequestPathWithID(id)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
 		// login MFA does not support partial updates unfortunately,
 		// so we update() becomes very similar to create.
-		_, err := c.Logical().Write(getRequestPath(config.Method(), id), config.GetRequestData(d))
-		if err != nil {
+		if _, err := c.Logical().Write(path, config.GetRequestData(d)); err != nil {
 			return diag.FromErr(err)
 		}
 
@@ -260,12 +481,14 @@ func GetReadContextFunc(config *ContextFuncConfig) schema.ReadContextFunc {
 			return dg
 		}
 
-		var path string
 		id := d.Id()
 		if id == "" {
 			return nil
-		} else {
-			path = getRequestPath(config.Method(), id)
+		}
+
+		path, err := config.GetRequestPathWithID(id)
+		if err != nil {
+			return diag.FromErr(err)
 		}
 
 		resp, err := c.Logical().Read(path)
@@ -305,6 +528,12 @@ func GetReadContextFunc(config *ContextFuncConfig) schema.ReadContextFunc {
 			}
 		}
 
+		if config.HasSchema(consts.FieldMethodID) {
+			if err := d.Set(consts.FieldMethodID, id); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
 		return nil
 	}
 }
@@ -316,11 +545,14 @@ func GetDeleteContextFunc(config *ContextFuncConfig) schema.DeleteContextFunc {
 			return dg
 		}
 
-		var path string
-		if v, ok := d.GetOk(consts.FieldUUID); !ok {
+		id := d.Id()
+		if id == "" {
 			return nil
-		} else {
-			path = getRequestPath(config.Method(), v.(string))
+		}
+
+		path, err := config.GetRequestPathWithID(id)
+		if err != nil {
+			return diag.FromErr(err)
 		}
 
 		if _, err := c.Logical().Delete(path); err != nil {
