@@ -573,21 +573,24 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Description: "The configuration endpoint for the ElastiCache cluster to connect to.",
 					},
 					"username": {
-						Type:        schema.TypeString,
-						Optional:    true,
-						Description: "The AWS access key id to use to talk to ElastiCache. If omitted the credentials chain provider is used instead.",
-						Sensitive:   true,
+						Type:     schema.TypeString,
+						Optional: true,
+						Description: "The AWS access key id to use to talk to ElastiCache. " +
+							"If omitted the credentials chain provider is used instead.",
+						Sensitive: true,
 					},
 					"password": {
-						Type:        schema.TypeString,
-						Optional:    true,
-						Description: "The AWS secret key id to use to talk to ElastiCache. If omitted the credentials chain provider is used instead.",
-						Sensitive:   true,
+						Type:     schema.TypeString,
+						Optional: true,
+						Description: "The AWS secret key id to use to talk to ElastiCache. " +
+							"If omitted the credentials chain provider is used instead.",
+						Sensitive: true,
 					},
 					"region": {
-						Type:        schema.TypeString,
-						Optional:    true,
-						Description: "The AWS region where the ElastiCache cluster is hosted. If omitted the plugin tries to infer the region from the environment.",
+						Type:     schema.TypeString,
+						Optional: true,
+						Description: "The AWS region where the ElastiCache cluster is hosted. " +
+							"If omitted the plugin tries to infer the region from the environment.",
 					},
 				},
 			},

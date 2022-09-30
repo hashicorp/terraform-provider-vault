@@ -94,7 +94,6 @@ The following arguments are supported:
 
 * `redis_elasticache` - (Optional) A nested block containing configuration options for Redis ElastiCache connections.
 
-
 Exactly one of the nested blocks of configuration options must be supplied.
 
 ### Cassandra Configuration Options

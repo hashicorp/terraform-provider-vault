@@ -870,7 +870,7 @@ func TestAccDatabaseSecretBackendConnection_redisElastiCache(t *testing.T) {
 				ResourceName:            testDefaultDatabaseSecretBackendResource,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"verify_connection", "couchbase.0.password"},
+				ImportStateVerifyIgnore: []string{"verify_connection", "redis_elasticache.0.password"},
 			},
 		},
 	})
