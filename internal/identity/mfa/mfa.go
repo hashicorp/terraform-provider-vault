@@ -431,10 +431,7 @@ func GetCreateContextFunc(config *ContextFuncConfig) schema.CreateContextFunc {
 			if err != nil {
 				return diag.FromErr(err)
 			}
-			id, ok := d.Get(idField).(string)
-			if !ok {
-				return diag.FromErr(fmt.Errorf("value for %q must be non-empty string", idField))
-			}
+
 			rid = id
 		}
 
