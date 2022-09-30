@@ -148,7 +148,7 @@ func joinPath(root string, parts ...string) string {
 }
 
 type ContextFuncConfig struct {
-	mu           sync.RWMutex
+	mu           sync.Mutex
 	method       string
 	m            map[string]*schema.Schema
 	computedOnly []string
