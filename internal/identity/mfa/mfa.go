@@ -63,6 +63,8 @@ func (t PathType) String() string {
 
 type addSchemaFunc func(resource *schema.Resource) *schema.Resource
 
+// GetResources returns a schema resource map for all resources configured
+// in the slice of resources. It is meant to be called during Provider initialization.
 func GetResources() (map[string]*schema.Resource, error) {
 	// TODO: will want to support vault.Description struct, punting on this for now.
 	errs := multierror.Error{
@@ -147,18 +149,23 @@ func joinPath(root string, parts ...string) string {
 	return strings.Join(append([]string{root}, parts...), consts.PathDelim)
 }
 
-type ContextFuncConfig struct {
+// contextFuncConfig provides the necessary configuration that is required by any of
+// any Get*ContextFunc factory functions.
+type contextFuncConfig struct {
 	mu           sync.Mutex
 	method       string
 	m            map[string]*schema.Schema
 	computedOnly []string
 	quirksMap    map[string]string
+	copyQuirks   []string
 	requireLock  bool
 	requestPath  string
 	pt           PathType
 }
 
-func (c *ContextFuncConfig) IDField() (string, error) {
+// GetRequestData needed for a Vault request. Only those fields provided by
+// GetWriteFields() will be included in the request data.
+func (c *contextFuncConfig) IDField() (string, error) {
 	if c.IsPathTypeMethod() {
 		return consts.FieldMethodID, nil
 	} else if c.IsPathTypeName() {
@@ -168,23 +175,32 @@ func (c *ContextFuncConfig) IDField() (string, error) {
 	return "", fmt.Errorf("unsupported path type %s", c.pt)
 }
 
-func (c *ContextFuncConfig) PathType() PathType {
+func (c *contextFuncConfig) PathType() PathType {
 	return c.pt
 }
 
-func (c *ContextFuncConfig) Lock() {
+// Lock locks the configuration's mutex if locking is required.
+// Useful when you want to serialize the CRUD operations for a given method
+// resource type. Configurations having the same method type should be
+// avoided.
+func (c *contextFuncConfig) Lock() {
 	if c.requireLock {
 		c.mu.Lock()
 	}
 }
 
-func (c *ContextFuncConfig) Unlock() {
+// Unlock unlocks the configuration's mutex if locking is required.
+// Useful when you want to serialize the CRUD operations for a given method
+// resource type. Configurations having the same method type should be
+// avoided.
+func (c *contextFuncConfig) Unlock() {
 	if c.requireLock {
 		c.mu.Unlock()
 	}
 }
 
-func (c *ContextFuncConfig) HasSchema(k string) bool {
+// HasSchema returns true if the schema map contains the provided field.
+func (c *contextFuncConfig) HasSchema(k string) bool {
 	if c.m == nil {
 		return false
 	}
@@ -193,7 +209,9 @@ func (c *ContextFuncConfig) HasSchema(k string) bool {
 	return ok
 }
 
-func (c *ContextFuncConfig) GetWriteFields() []string {
+// GetWriteFields returns non-computed fields that will be included
+// in a Vault write request.
+func (c *contextFuncConfig) GetWriteFields() []string {
 	computedOnly := make(map[string]bool, len(c.computedOnly))
 	for _, k := range c.computedOnly {
 		computedOnly[k] = true
@@ -209,7 +227,10 @@ func (c *ContextFuncConfig) GetWriteFields() []string {
 	return r
 }
 
-func (c *ContextFuncConfig) GetSecretFields() []string {
+// GetSecretFields returns a slice of fields that are
+// used to bootstrap a Vault configuration, and whose values can never be
+// requested from Vault.
+func (c *contextFuncConfig) GetSecretFields() []string {
 	var fields []string
 	if c.m == nil {
 		return fields
@@ -224,15 +245,20 @@ func (c *ContextFuncConfig) GetSecretFields() []string {
 	return fields
 }
 
-func (c *ContextFuncConfig) GetRequestData(d *schema.ResourceData) map[string]interface{} {
+// GetRequestData needed for a Vault request. Only those fields provided by
+// GetWriteFields() will be included in the request data.
+func (c *contextFuncConfig) GetRequestData(d *schema.ResourceData) map[string]interface{} {
 	return util.GetAPIRequestDataWithSlice(d, c.GetWriteFields())
 }
 
-func (c *ContextFuncConfig) Method() string {
+func (c *contextFuncConfig) Method() string {
 	return c.method
 }
 
-func (c *ContextFuncConfig) GetRemappedField(k string) (string, bool) {
+// GetRemappedField returns the remapped key and true if the input field should
+// be remapped. This can be useful in the case where private Terraform fields
+// collide with those returned from the Vault API.
+func (c *contextFuncConfig) GetRemappedField(k string) (string, bool) {
 	if c.quirksMap != nil {
 		if o, ok := c.quirksMap[k]; ok {
 			return o, true
@@ -241,22 +267,30 @@ func (c *ContextFuncConfig) GetRemappedField(k string) (string, bool) {
 	return k, false
 }
 
-func (c *ContextFuncConfig) IsPathTypeMethod() bool {
+// GetCopyQuirks is the slice of schema fields that have values that can be
+// copied from the state when the field is not present in the response
+// from vault (on read). Setting these fields is only every useful to work around
+// bugs in the Vault API.
+func (c *contextFuncConfig) GetCopyQuirks() []string {
+	return c.copyQuirks
+}
+
+func (c *contextFuncConfig) IsPathTypeMethod() bool {
 	return c.pt == PathTypeMethodID
 }
 
-func (c *ContextFuncConfig) IsPathTypeName() bool {
+func (c *contextFuncConfig) IsPathTypeName() bool {
 	return c.pt == PathTypeName
 }
 
-func (c *ContextFuncConfig) IsIDFromResponse() bool {
+func (c *contextFuncConfig) IsIDFromResponse() bool {
 	if c.pt == PathTypeMethodID {
 		return true
 	}
 	return false
 }
 
-func (c *ContextFuncConfig) GetRequestPathWithID(id string) (string, error) {
+func (c *contextFuncConfig) GetRequestPathWithID(id string) (string, error) {
 	base, err := c.GetRequestPathBase()
 	if err != nil {
 		return "", err
@@ -265,7 +299,7 @@ func (c *ContextFuncConfig) GetRequestPathWithID(id string) (string, error) {
 	return joinPath(base, id), nil
 }
 
-func (c *ContextFuncConfig) GetRequestPathBase() (string, error) {
+func (c *contextFuncConfig) GetRequestPathBase() (string, error) {
 	if c.IsPathTypeMethod() {
 		return getMethodRequestPath(c.Method()), nil
 	} else if c.IsPathTypeName() {
@@ -275,7 +309,7 @@ func (c *ContextFuncConfig) GetRequestPathBase() (string, error) {
 	return "", fmt.Errorf("no request path method for type %s", c.pt)
 }
 
-func (c *ContextFuncConfig) GetIDFromResponse(resp *api.Secret) (string, error) {
+func (c *contextFuncConfig) GetIDFromResponse(resp *api.Secret) (string, error) {
 	// ID is derived from the response
 	if resp == nil {
 		return "", fmt.Errorf("response cannot be nil for path type %s", c.PathType())
@@ -294,7 +328,7 @@ func (c *ContextFuncConfig) GetIDFromResponse(resp *api.Secret) (string, error) 
 	return c.id(idField, v)
 }
 
-func (c *ContextFuncConfig) GetIDFromResourceData(d *schema.ResourceData) (string, error) {
+func (c *contextFuncConfig) GetIDFromResourceData(d *schema.ResourceData) (string, error) {
 	idField, err := c.IDField()
 	if err != nil {
 		return "", err
@@ -308,7 +342,7 @@ func (c *ContextFuncConfig) GetIDFromResourceData(d *schema.ResourceData) (strin
 	return c.id(idField, v)
 }
 
-func (c *ContextFuncConfig) id(f string, v interface{}) (string, error) {
+func (c *contextFuncConfig) id(f string, v interface{}) (string, error) {
 	id, ok := v.(string)
 	if !ok || id == "" {
 		return "", fmt.Errorf("value for %q must be non-empty string", f)
@@ -316,7 +350,8 @@ func (c *ContextFuncConfig) id(f string, v interface{}) (string, error) {
 	return id, nil
 }
 
-func NewContextFuncConfig(method string, pt PathType, m map[string]*schema.Schema, computedOnly []string, quirksMap map[string]string) (*ContextFuncConfig, error) {
+// NewContextFuncConfig setups a contextFuncConfig that is supported by any of any Get*ContextFunc factory functions.
+func NewContextFuncConfig(method string, pt PathType, m map[string]*schema.Schema, computedOnly []string, quirksMap map[string]string) (*contextFuncConfig, error) {
 	if len(computedOnly) == 0 {
 		computedOnly = defaultComputedOnlyFields
 	}
@@ -335,7 +370,7 @@ func NewContextFuncConfig(method string, pt PathType, m map[string]*schema.Schem
 		return nil, fmt.Errorf("unsupported path type %s", pt)
 	}
 
-	config := &ContextFuncConfig{
+	config := &contextFuncConfig{
 		method:       method,
 		pt:           pt,
 		m:            m,
@@ -347,11 +382,11 @@ func NewContextFuncConfig(method string, pt PathType, m map[string]*schema.Schem
 	return config, nil
 }
 
-func getMethodSchemaResource(s map[string]*schema.Schema, config *ContextFuncConfig) *schema.Resource {
+func getMethodSchemaResource(s map[string]*schema.Schema, config *contextFuncConfig) *schema.Resource {
 	return getSchemaResource(s, config, mustAddCommonSchema, mustAddCommonMFASchema)
 }
 
-func getSchemaResource(s map[string]*schema.Schema, config *ContextFuncConfig, addFuncs ...addSchemaFunc) *schema.Resource {
+func getSchemaResource(s map[string]*schema.Schema, config *contextFuncConfig, addFuncs ...addSchemaFunc) *schema.Resource {
 	m := map[string]*schema.Schema{}
 	for k, v := range s {
 		m[k] = v
@@ -383,7 +418,9 @@ func getSchemaResource(s map[string]*schema.Schema, config *ContextFuncConfig, a
 	return r
 }
 
-func GetCreateContextFunc(config *ContextFuncConfig) schema.CreateContextFunc {
+// GetCreateContextFunc for a contextFuncConfig.
+// The return function supports the path types: PathTypeName, and PathTypeMethodID
+func GetCreateContextFunc(config *contextFuncConfig) schema.CreateContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		config.Lock()
 		defer config.Unlock()
@@ -441,7 +478,9 @@ func GetCreateContextFunc(config *ContextFuncConfig) schema.CreateContextFunc {
 	}
 }
 
-func GetUpdateContextFunc(config *ContextFuncConfig) schema.UpdateContextFunc {
+// GetUpdateContextFunc for a contextFuncConfig.
+// The return function supports the path types: PathTypeName, and PathTypeMethodID
+func GetUpdateContextFunc(config *contextFuncConfig) schema.UpdateContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		config.Lock()
 		defer config.Unlock()
@@ -471,7 +510,9 @@ func GetUpdateContextFunc(config *ContextFuncConfig) schema.UpdateContextFunc {
 	}
 }
 
-func GetReadContextFunc(config *ContextFuncConfig) schema.ReadContextFunc {
+// GetReadContextFunc for a contextFuncConfig.
+// The return function supports the path types: PathTypeName, and PathTypeMethodID
+func GetReadContextFunc(config *contextFuncConfig) schema.ReadContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		c, dg := provider.GetClientDiag(d, meta)
 		if dg != nil {
@@ -505,7 +546,7 @@ func GetReadContextFunc(config *ContextFuncConfig) schema.ReadContextFunc {
 			}
 
 			if !config.HasSchema(sk) {
-				log.Printf("[WARN] Skipping unsupported response field %q, skipping it", k)
+				log.Printf("[WARN] Unsupported response field %q, skipping it", k)
 				continue
 			}
 
@@ -525,9 +566,22 @@ func GetReadContextFunc(config *ContextFuncConfig) schema.ReadContextFunc {
 			}
 		}
 
-		if config.HasSchema(consts.FieldMethodID) {
-			if err := d.Set(consts.FieldMethodID, id); err != nil {
-				return diag.FromErr(err)
+		for _, k := range config.GetCopyQuirks() {
+			if _, ok := resp.Data[k]; !ok {
+				if err := d.Set(k, d.Get(k)); err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		}
+
+		// the method_id is renamed to `id` after create,
+		// but we want to preserve it as an exportable resource attribute.
+		if config.IsPathTypeMethod() {
+			k := consts.FieldMethodID
+			if _, ok := resp.Data[k]; !ok && config.HasSchema(k) {
+				if err := d.Set(k, id); err != nil {
+					return diag.FromErr(err)
+				}
 			}
 		}
 
@@ -535,7 +589,9 @@ func GetReadContextFunc(config *ContextFuncConfig) schema.ReadContextFunc {
 	}
 }
 
-func GetDeleteContextFunc(config *ContextFuncConfig) schema.DeleteContextFunc {
+// GetDeleteContextFunc for a contextFuncConfig.
+// The return function supports the path types: PathTypeName, and PathTypeMethodID
+func GetDeleteContextFunc(config *contextFuncConfig) schema.DeleteContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		c, dg := provider.GetClientDiag(d, meta)
 		if dg != nil {

@@ -33,8 +33,6 @@ var oktaSchemaMap = map[string]*schema.Schema{
 		Optional:    true,
 		Description: `The base domain to use for API requests.`,
 	},
-	// TODO: is not included in the response from vault-10.x and up
-	// this may lead to a perpetual diff until vault is fixed.
 	consts.FieldPrimaryEmail: {
 		Type:        schema.TypeBool,
 		Optional:    true,
@@ -45,6 +43,10 @@ var oktaSchemaMap = map[string]*schema.Schema{
 
 func GetOKTASchemaResource() (*schema.Resource, error) {
 	config, err := NewContextFuncConfig(MethodTypeOKTA, PathTypeMethodID, nil, nil, nil)
+	// TODO: the primary_email field is not included in the response
+	// from vault-10.x and up. Its value will be derived the from resource data
+	// if not present in the response from Vault.
+	config.copyQuirks = []string{consts.FieldPrimaryEmail}
 	if err != nil {
 		return nil, err
 	}

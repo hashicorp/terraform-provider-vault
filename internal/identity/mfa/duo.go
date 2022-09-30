@@ -37,7 +37,7 @@ var duoSchemaMap = map[string]*schema.Schema{
 	consts.FieldPushInfo: {
 		Type:        schema.TypeString,
 		Optional:    true,
-		Description: "Secret key for Duo",
+		Description: "Push information for Duo.",
 	},
 	consts.FieldUsePasscode: {
 		Type:        schema.TypeBool,

@@ -51,6 +51,7 @@ resource "%s" "test" {
   api_token       = "token1"
   base_url        = "qux.baz.com"
   username_format = "{}"
+  primary_email   = true
 }
 `, mfa.ResourceNameOKTA),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -59,6 +60,7 @@ resource "%s" "test" {
 						resource.TestCheckResourceAttr(resourceName, consts.FieldAPIToken, "token1"),
 						resource.TestCheckResourceAttr(resourceName, consts.FieldBaseURL, "qux.baz.com"),
 						resource.TestCheckResourceAttr(resourceName, consts.FieldUsernameFormat, "{}"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldPrimaryEmail, "true"),
 					)...,
 				),
 			},
@@ -70,6 +72,7 @@ resource "%s" "test" {
   api_token       = "token2"
   base_url        = "foo.baz.com"
   username_format = ""
+  primary_email   = false
 }
 `, mfa.ResourceNameOKTA),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -78,6 +81,7 @@ resource "%s" "test" {
 						resource.TestCheckResourceAttr(resourceName, consts.FieldAPIToken, "token2"),
 						resource.TestCheckResourceAttr(resourceName, consts.FieldBaseURL, "foo.baz.com"),
 						resource.TestCheckResourceAttr(resourceName, consts.FieldUsernameFormat, ""),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldPrimaryEmail, "false"),
 					)...,
 				),
 			},
