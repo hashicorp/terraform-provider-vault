@@ -5,13 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
-	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -140,6 +136,7 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 
 	if _, err := client.Logical().Write(path, data); err != nil {
 		return diag.Errorf("error writing secret data to %s, err=%s", path, err)
+	}
 
 	d.SetId(path)
 
