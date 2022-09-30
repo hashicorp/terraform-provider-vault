@@ -170,11 +170,11 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 ### Redis ElastiCache Configuration Options
 
-* `url` - (Required) The url to connect to.
+* `url` - (Required) The url to connect to including the port; e.g. master.my-cluster.xxxxxx.use1.cache.amazonaws.com:6379.
 
-* `username` - (Optional) The AWS access key id to authenticate with. If omitted Vault tries to infer from the credentials chain provider instead.
+* `username` - (Optional) The AWS access key id to authenticate with. If omitted Vault tries to infer from the credential provider chain instead.
 
-* `password` - (Optional) The AWS secret access key to authenticate with. If omitted Vault tries to infer from the credentials chain provider instead.
+* `password` - (Optional) The AWS secret access key to authenticate with. If omitted Vault tries to infer from the credential provider chain instead.
 
 * `region` - (Optional) The region where the ElastiCache cluster is hosted. If omitted Vault tries to infer from the environment instead.
 
