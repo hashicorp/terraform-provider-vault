@@ -38,6 +38,9 @@ The following arguments are supported:
 
 * `path` - (Optional) The path to mount the auth method — this defaults to 'gcp'.
 
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
+
 * `description` - (Optional) A description of the auth method.
 
 * `local` - (Optional) Specifies if the auth method is local only.

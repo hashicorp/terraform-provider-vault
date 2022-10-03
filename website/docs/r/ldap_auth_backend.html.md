@@ -78,6 +78,9 @@ The following arguments are supported:
 
 * `path` - (Optional) Path to mount the LDAP auth backend under
 
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
+
 * `description` - (Optional) Description for the LDAP auth backend mount
 
 * `local` - (Optional) Specifies if the auth method is local only.

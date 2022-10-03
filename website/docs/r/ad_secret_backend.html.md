@@ -43,6 +43,9 @@ The following arguments are supported:
 * `backend` - (Optional) The unique path this backend should be mounted at. Must
 not begin or end with a `/`. Defaults to `ad`.
 
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
+
 * `anonymous_group_search` - (Optional) Use anonymous binds when performing LDAP group searches
 (if true the initial credentials will still be used for the initial connection test).
 
