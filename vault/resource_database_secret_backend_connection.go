@@ -95,6 +95,10 @@ var (
 		name:              "snowflake",
 		defaultPluginName: "snowflake" + dbPluginSuffix,
 	}
+	dbEngineRedisElastiCache = &dbEngine{
+		name:              "redis_elasticache",
+		defaultPluginName: "redis-elasticache" + dbPluginSuffix,
+	}
 	dbEngineRedshift = &dbEngine{
 		name:              "redshift",
 		defaultPluginName: "redshift" + dbPluginSuffix,
@@ -116,6 +120,7 @@ var (
 		dbEnginePostgres,
 		dbEngineOracle,
 		dbEngineSnowflake,
+		dbEngineRedisElastiCache,
 		dbEngineRedshift,
 	}
 )
@@ -556,6 +561,42 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineOracle.Name(), dbEngineTypes),
 		},
+		dbEngineRedisElastiCache.name: {
+			Type:        typ,
+			Optional:    true,
+			Description: "Connection parameters for the redis-elasticache-database-plugin plugin.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"url": {
+						Type:        schema.TypeString,
+						Required:    true,
+						Description: "The configuration endpoint for the ElastiCache cluster to connect to.",
+					},
+					"username": {
+						Type:     schema.TypeString,
+						Optional: true,
+						Description: "The AWS access key id to use to talk to ElastiCache. " +
+							"If omitted the credentials chain provider is used instead.",
+						Sensitive: true,
+					},
+					"password": {
+						Type:     schema.TypeString,
+						Optional: true,
+						Description: "The AWS secret key id to use to talk to ElastiCache. " +
+							"If omitted the credentials chain provider is used instead.",
+						Sensitive: true,
+					},
+					"region": {
+						Type:     schema.TypeString,
+						Optional: true,
+						Description: "The AWS region where the ElastiCache cluster is hosted. " +
+							"If omitted the plugin tries to infer the region from the environment.",
+					},
+				},
+			},
+			MaxItems:      1,
+			ConflictsWith: util.CalculateConflictsWith(dbEngineRedisElastiCache.Name(), dbEngineTypes),
+		},
 		dbEngineRedshift.name: {
 			Type:        typ,
 			Optional:    true,
@@ -831,10 +872,14 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	case dbEngineElasticSearch:
 		setElasticsearchDatabaseConnectionData(d, prefix, data)
+	case dbEngineRedisElastiCache:
+		setRedisElastiCacheDatabaseConnectionData(d, prefix, data)
 	case dbEngineSnowflake:
 		setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	case dbEngineRedshift:
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
+	default:
+		return nil, fmt.Errorf("unrecognized DB engine: %v", engine)
 	}
 
 	return data, nil
@@ -943,6 +988,38 @@ func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 			result["tls_ca"] = v.(string)
 		}
 	}
+	return result
+}
+
+func getRedisElastiCacheConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	result := map[string]interface{}{}
+	if v, ok := data["url"]; ok {
+		result["url"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "url"); ok {
+		result["url"] = v.(string)
+	}
+	if v, ok := data["username"]; ok {
+		result["username"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "username"); ok {
+		result["username"] = v.(string)
+	}
+	if v, ok := data["password"]; ok {
+		result["password"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "password"); ok {
+		result["password"] = v.(string)
+	}
+	if v, ok := data["region"]; ok {
+		result["region"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "region"); ok {
+		result["region"] = v.(string)
+	}
+
 	return result
 }
 
@@ -1174,6 +1251,24 @@ func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 	}
 	if v, ok := d.GetOk(prefix + "tls_ca"); ok {
 		data["tls_ca"] = v.(string)
+	}
+}
+
+func setRedisElastiCacheDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	if v, ok := d.GetOk(prefix + "url"); ok {
+		data["url"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		data["password"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "region"); ok {
+		data["region"] = v.(string)
 	}
 }
 
@@ -1554,6 +1649,8 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 		result = getElasticsearchConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineSnowflake:
 		result = getSnowflakeConnectionDetailsFromResponse(d, prefix, resp)
+	case dbEngineRedisElastiCache:
+		result = getRedisElastiCacheConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineRedshift:
 		result = getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
 	default:
