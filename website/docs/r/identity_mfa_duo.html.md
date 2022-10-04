@@ -14,7 +14,7 @@ Resource for configuring the duo MFA method.
 
 ```hcl
 
-resource "vault_identity_mfa_duo" "test" {
+resource "vault_identity_mfa_duo" "example" {
   api_hostname    = "api-xxxxxxxx.duosecurity.com"
   secret_key      = "secret-key"
   integration_key = "secret-int-key"
@@ -51,5 +51,5 @@ In addition to the fields above, the following attributes are exported:
 Resource can be imported using its `uuid` field, e.g.
 
 ```
-$ terraform import vault_identity_mfa_duo.test 0d89c36a-4ff5-4d70-8749-bb6a5598aeec
+$ terraform import vault_identity_mfa_duo.example 0d89c36a-4ff5-4d70-8749-bb6a5598aeec
 ```

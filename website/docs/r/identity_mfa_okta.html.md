@@ -14,7 +14,7 @@ Resource for configuring the okta MFA method.
 
 ```hcl
 
-resource "vault_identity_mfa_okta" "test" {
+resource "vault_identity_mfa_okta" "example" {
   org_name        = "org1"
   api_token       = "token1"
   base_url        = "qux.baz.com"
@@ -50,5 +50,5 @@ In addition to the fields above, the following attributes are exported:
 Resource can be imported using its `uuid` field, e.g.
 
 ```
-$ terraform import vault_identity_mfa_okta.test 0d89c36a-4ff5-4d70-8749-bb6a5598aeec
+$ terraform import vault_identity_mfa_okta.example 0d89c36a-4ff5-4d70-8749-bb6a5598aeec
 ```

@@ -14,17 +14,17 @@ Resource for configuring MFA login-enforcement
 
 ```hcl
 
-resource "vault_identity_mfa_duo" "test" {
+resource "vault_identity_mfa_duo" "example" {
   secret_key      = "secret-key"
   integration_key = "int-key"
   api_hostname    = "foo.baz"
   push_info       = "push-info"
 }
 
-resource "vault_identity_mfa_login_enforcement" "test" {
+resource "vault_identity_mfa_login_enforcement" "example" {
   name = "default"
   mfa_method_ids = [
-    vault_identity_mfa_duo.test.method_id,
+    vault_identity_mfa_duo.example.method_id,
   ]
 }
 
@@ -56,5 +56,5 @@ In addition to the fields above, the following attributes are exported:
 Resource can be imported using its `name` field, e.g.
 
 ```
-$ terraform import vault_identity_mfa_login_enforcement.test default
+$ terraform import vault_identity_mfa_login_enforcement.example default
 ```

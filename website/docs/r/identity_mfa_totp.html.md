@@ -14,7 +14,7 @@ Resource for configuring the totp MFA method.
 
 ```hcl
 
-resource "vault_identity_mfa_totp" "test" {
+resource "vault_identity_mfa_totp" "example" {
   issuer = "issuer1"
 }
 
@@ -51,5 +51,5 @@ In addition to the fields above, the following attributes are exported:
 Resource can be imported using its `uuid` field, e.g.
 
 ```
-$ terraform import vault_identity_mfa_totp.test 0d89c36a-4ff5-4d70-8749-bb6a5598aeec
+$ terraform import vault_identity_mfa_totp.example 0d89c36a-4ff5-4d70-8749-bb6a5598aeec
 ```
