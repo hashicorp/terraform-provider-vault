@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -297,6 +298,15 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	}
 
 	return p.GetClient(), nil
+}
+
+func GetClientDiag(i interface{}, meta interface{}) (*api.Client, diag.Diagnostics) {
+	c, err := GetClient(i, meta)
+	if err != nil {
+		return nil, diag.FromErr(err)
+	}
+
+	return c, nil
 }
 
 // IsAPISupported receives an interface

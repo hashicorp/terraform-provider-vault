@@ -9,6 +9,7 @@ const (
 	FieldMethod                   = "method"
 	FieldNamespace                = "namespace"
 	FieldNamespaceID              = "namespace_id"
+	FieldNamespacePath            = "namespace_path"
 	FieldBackend                  = "backend"
 	FieldPathFQ                   = "path_fq"
 	FieldData                     = "data"
@@ -45,8 +46,8 @@ const (
 	FieldCurve                    = "curve"
 	FieldKeyBits                  = "key_bits"
 	FieldForceRWSession           = "force_rw_session"
-	FieldAWSAccessKey             = "access_key"
-	FieldAWSSecretKey             = "secret_key"
+	FieldAccessKey                = "access_key"
+	FieldSecretKey                = "secret_key"
 	FieldEndpoint                 = "endpoint"
 	FieldKeyType                  = "key_type"
 	FieldKMSKey                   = "kms_key"
@@ -62,6 +63,7 @@ const (
 	FieldAllowReplaceKey          = "allow_replace_key"
 	FieldAllowStoreKey            = "allow_store_key"
 	FieldAnyMount                 = "any_mount"
+	FieldID                       = "id"
 	FieldUUID                     = "uuid"
 	FieldMountAccessor            = "mount_accessor"
 	FieldUsername                 = "username"
@@ -124,6 +126,46 @@ const (
 	FieldResourceGroupName        = "resource_group_name"
 	FieldVMName                   = "vm_name"
 	FieldVMSSName                 = "vmss_name"
+	FieldUsernameFormat           = "username_format"
+	FieldIntegrationKey           = "integration_key"
+	FieldAPIHostname              = "api_hostname"
+	FieldPushInfo                 = "push_info"
+	FieldUsePasscode              = "use_passcode"
+	FieldIssuer                   = "issuer"
+	FieldPeriod                   = "period"
+	FieldKeySize                  = "key_size"
+	FieldQRSize                   = "qr_size"
+	FieldAlgorithm                = "algorithm"
+	FieldDigits                   = "digits"
+	FieldSkew                     = "skew"
+	FieldMaxValidationAttempts    = "max_validation_attempts"
+	FieldOrgName                  = "org_name"
+	FieldAPIToken                 = "api_token"
+	FieldBaseURL                  = "base_url"
+	FieldPrimaryEmail             = "primary_email"
+	FieldSettingsFileBase64       = "settings_file_base64"
+	FieldUseSignature             = "use_signature"
+	FieldIdpURL                   = "idp_url"
+	FieldAdminURL                 = "admin_url"
+	FieldAuthenticatorURL         = "authenticator_url"
+	FieldOrgAlias                 = "org_alias"
+	FieldType                     = "type"
+	FieldMethodID                 = "method_id"
+	FieldMFAMethodIDs             = "mfa_method_ids"
+	FieldAuthMethodAccessors      = "auth_method_accessors"
+	FieldAuthMethodTypes          = "auth_method_types"
+	FieldIdentityGroupIDs         = "identity_group_ids"
+	FieldIdentityEntityIDs        = "identity_entity_ids"
+	/*
+		auth_method_accessors ([]string: []) - Array of auth mount accessor IDs. If present, only auth methods corresponding to the given accessors are checked during login.
+
+		auth_method_types ([]string: []) - Array of auth method types. If present, only auth methods corresponding to the given types are checked during login.
+
+		identity_group_ids ([]string: []) - Array of identity group IDs. If present, only entities belonging to one of the given groups are checked during login. Note that these IDs can be from the current namespace or a child namespace.
+
+		identity_entity_ids ([]string: []) - Array of identity entity IDs. If present, only entities with the given IDs are checked during login. Note that these IDs can be from the current namespace or a child namespace.
+
+	*/
 
 	/*
 		common environment variables

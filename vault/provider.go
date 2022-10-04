@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/mfa"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -46,10 +47,21 @@ func Provider() *schema.Provider {
 	if err != nil {
 		panic(err)
 	}
+
 	resourcesMap, err := parse(ResourceRegistry)
 	if err != nil {
 		panic(err)
 	}
+
+	// TODO: add support path inventory, probably means
+	// reworking the registry init entirely.
+	mfaResources, err := mfa.GetResources()
+	if err != nil {
+		panic(err)
+	}
+
+	provider.MustAddSchemaResource(mfaResources, resourcesMap, nil)
+
 	r := &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			consts.FieldAddress: {
@@ -793,20 +805,8 @@ func parse(descs map[string]*Description) (map[string]*schema.Resource, error) {
 	return resourceMap, errs
 }
 
-func getNamespaceSchema() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		consts.FieldNamespace: {
-			Type:         schema.TypeString,
-			Optional:     true,
-			ForceNew:     true,
-			Description:  "Target namespace. (requires Enterprise)",
-			ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
-		},
-	}
-}
-
 func UpdateSchemaResource(r *schema.Resource) *schema.Resource {
-	provider.MustAddSchema(r, getNamespaceSchema())
+	provider.MustAddSchema(r, provider.GetNamespaceSchema())
 
 	return r
 }

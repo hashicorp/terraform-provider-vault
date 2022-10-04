@@ -30,11 +30,11 @@ func TestManagedKeys(t *testing.T) {
 					client, err := provider.GetClient("", testProvider.Meta())
 
 					data := map[string]interface{}{
-						consts.FieldAWSAccessKey: "ASIAKBASDADA09090",
-						consts.FieldAWSSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
-						consts.FieldKeyBits:      "2048",
-						consts.FieldKeyType:      "RSA",
-						consts.FieldKMSKey:       "alias/test_identifier_string",
+						consts.FieldAccessKey: "ASIAKBASDADA09090",
+						consts.FieldSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
+						consts.FieldKeyBits:   "2048",
+						consts.FieldKeyType:   "RSA",
+						consts.FieldKMSKey:    "alias/test_identifier_string",
 					}
 
 					p := getManagedKeysPath(kmsTypeAWS, name0)
@@ -62,22 +62,22 @@ func TestManagedKeys(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "aws.#", "2"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "aws.*",
 						map[string]string{
-							consts.FieldName:         name0,
-							consts.FieldKeyBits:      "2048",
-							consts.FieldKeyType:      "RSA",
-							consts.FieldKMSKey:       "alias/test_identifier_string",
-							consts.FieldAWSAccessKey: "ASIAKBASDADA09090",
-							consts.FieldAWSSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
+							consts.FieldName:      name0,
+							consts.FieldKeyBits:   "2048",
+							consts.FieldKeyType:   "RSA",
+							consts.FieldKMSKey:    "alias/test_identifier_string",
+							consts.FieldAccessKey: "ASIAKBASDADA09090",
+							consts.FieldSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
 						},
 					),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "aws.*",
 						map[string]string{
-							consts.FieldName:         name1,
-							consts.FieldKeyBits:      "4096",
-							consts.FieldKeyType:      "RSA",
-							consts.FieldKMSKey:       "alias/test_identifier_string_2",
-							consts.FieldAWSAccessKey: "ASIAKBASDADA09090",
-							consts.FieldAWSSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
+							consts.FieldName:      name1,
+							consts.FieldKeyBits:   "4096",
+							consts.FieldKeyType:   "RSA",
+							consts.FieldKMSKey:    "alias/test_identifier_string_2",
+							consts.FieldAccessKey: "ASIAKBASDADA09090",
+							consts.FieldSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
 						},
 					),
 				),
@@ -92,12 +92,12 @@ func TestManagedKeys(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "aws.#", "1"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "aws.*",
 						map[string]string{
-							consts.FieldName:         name0,
-							consts.FieldKeyBits:      "4096",
-							consts.FieldKeyType:      "RSA",
-							consts.FieldKMSKey:       "alias/test_identifier_string_2",
-							consts.FieldAWSAccessKey: "ASIAKBASDADA09090",
-							consts.FieldAWSSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
+							consts.FieldName:      name0,
+							consts.FieldKeyBits:   "4096",
+							consts.FieldKeyType:   "RSA",
+							consts.FieldKMSKey:    "alias/test_identifier_string_2",
+							consts.FieldAccessKey: "ASIAKBASDADA09090",
+							consts.FieldSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
 						},
 					),
 				),
@@ -116,11 +116,11 @@ func TestManagedKeys(t *testing.T) {
 
 					// Recreate w/ same name; forces UUID update out-of-band
 					data := map[string]interface{}{
-						consts.FieldAWSAccessKey: "ASIAKBASDADA09090",
-						consts.FieldAWSSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
-						consts.FieldKeyBits:      "4096",
-						consts.FieldKeyType:      "RSA",
-						consts.FieldKMSKey:       "alias/test_identifier_string_2",
+						consts.FieldAccessKey: "ASIAKBASDADA09090",
+						consts.FieldSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
+						consts.FieldKeyBits:   "4096",
+						consts.FieldKeyType:   "RSA",
+						consts.FieldKMSKey:    "alias/test_identifier_string_2",
 					}
 
 					_, err = client.Logical().Write(p, data)
@@ -133,12 +133,12 @@ func TestManagedKeys(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "aws.#", "1"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "aws.*",
 						map[string]string{
-							consts.FieldName:         name0,
-							consts.FieldKeyBits:      "4096",
-							consts.FieldKeyType:      "RSA",
-							consts.FieldKMSKey:       "alias/test_identifier_string_2",
-							consts.FieldAWSAccessKey: "ASIAKBASDADA09090",
-							consts.FieldAWSSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
+							consts.FieldName:      name0,
+							consts.FieldKeyBits:   "4096",
+							consts.FieldKeyType:   "RSA",
+							consts.FieldKMSKey:    "alias/test_identifier_string_2",
+							consts.FieldAccessKey: "ASIAKBASDADA09090",
+							consts.FieldSecretKey: "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
 						},
 					),
 				),

@@ -334,26 +334,40 @@ func CheckMountEnabled(client *api.Client, path string) (bool, error) {
 	return ok, nil
 }
 
-// GetAPIRequestData to pass to Vault from schema.ResourceData.
+// GetAPIRequestDataWithMap to pass to Vault from schema.ResourceData.
 // The fieldMap specifies the schema field to its vault constituent.
 // If the vault field is empty, then two fields are mapped 1:1.
-func GetAPIRequestData(d *schema.ResourceData, fieldMap map[string]string) map[string]interface{} {
+func GetAPIRequestDataWithMap(d *schema.ResourceData, fieldMap map[string]string) map[string]interface{} {
 	data := make(map[string]interface{})
 	for k1, k2 := range fieldMap {
 		if k2 == "" {
 			k2 = k1
 		}
 
-		sv := d.Get(k1)
-		switch v := sv.(type) {
-		case *schema.Set:
-			data[k2] = v.List()
-		default:
-			data[k2] = sv
-		}
+		data[k2] = getAPIRequestValue(d, k1)
 	}
 
 	return data
+}
+
+// GetAPIRequestDataWithSlice to pass to Vault from schema.ResourceData.
+func GetAPIRequestDataWithSlice(d *schema.ResourceData, fields []string) map[string]interface{} {
+	data := make(map[string]interface{})
+	for _, k := range fields {
+		data[k] = getAPIRequestValue(d, k)
+	}
+
+	return data
+}
+
+func getAPIRequestValue(d *schema.ResourceData, k string) interface{} {
+	sv := d.Get(k)
+	switch v := sv.(type) {
+	case *schema.Set:
+		return v.List()
+	default:
+		return sv
+	}
 }
 
 func Remount(d *schema.ResourceData, client *api.Client, mountField string, isAuthMount bool) (string, error) {
