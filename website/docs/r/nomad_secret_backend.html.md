@@ -45,6 +45,9 @@ The following arguments are supported:
 * `backend` - (Optional) The unique path this backend should be mounted at. Must
 not begin or end with a `/`. Defaults to `nomad`.
 
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
+
 * `address` - (Optional) Specifies the address of the Nomad instance, provided
 as "protocol://host:port" like "http://127.0.0.1:4646".
 
