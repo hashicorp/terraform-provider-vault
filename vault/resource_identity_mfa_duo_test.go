@@ -17,22 +17,12 @@ func TestIdentityMFADuo(t *testing.T) {
 	resourceName := mfa.ResourceNameDuo + ".test"
 
 	checksCommon := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldName, ""),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldMountAccessor, ""),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldUUID),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldMethodID),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldType, mfa.MethodTypeDuo),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldNamespaceID, "root"),
-	}
-
-	res, err := mfa.GetDuoSchemaResource()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for k := range res.Schema {
-		switch k {
-		case consts.FieldName, consts.FieldMountAccessor:
-			checksCommon = append(checksCommon, resource.TestCheckResourceAttr(resourceName, k, ""))
-		}
 	}
 
 	importTestStep := testutil.GetImportTestStep(resourceName, false, nil, consts.FieldIntegrationKey, consts.FieldSecretKey)

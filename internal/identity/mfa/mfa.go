@@ -500,8 +500,8 @@ func GetUpdateContextFunc(config *contextFuncConfig) schema.UpdateContextFunc {
 			return diag.FromErr(err)
 		}
 
-		// login MFA does not support partial updates unfortunately,
-		// so we update() becomes very similar to create.
+		// login MFA does not support partial updates unfortunately;
+		// so update() becomes very similar to create.
 		if _, err := c.Logical().Write(path, config.GetRequestData(d)); err != nil {
 			return diag.FromErr(err)
 		}

@@ -49,3 +49,21 @@ func MustAddMountMigrationSchema(r *schema.Resource) *schema.Resource {
 
 	return r
 }
+
+func GetNamespaceSchema() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		consts.FieldNamespace: {
+			Type:         schema.TypeString,
+			Optional:     true,
+			ForceNew:     true,
+			Description:  "Target namespace. (requires Enterprise)",
+			ValidateFunc: ValidateNoLeadingTrailingSlashes,
+		},
+	}
+}
+
+func MustAddNamespaceSchema(d map[string]*schema.Schema) {
+	for k, s := range GetNamespaceSchema() {
+		mustAddSchema(k, s, d)
+	}
+}

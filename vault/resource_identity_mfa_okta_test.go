@@ -17,22 +17,12 @@ func TestIdentityMFAOKTA(t *testing.T) {
 	resourceName := mfa.ResourceNameOKTA + ".test"
 
 	checksCommon := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldName, ""),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldMountAccessor, ""),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldUUID),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldMethodID),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldType, mfa.MethodTypeOKTA),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldNamespaceID, "root"),
-	}
-
-	res, err := mfa.GetOKTASchemaResource()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for k := range res.Schema {
-		switch k {
-		case consts.FieldName, consts.FieldMountAccessor:
-			checksCommon = append(checksCommon, resource.TestCheckResourceAttr(resourceName, k, ""))
-		}
 	}
 
 	// FieldPrimaryEmail is not being returned from the API, so we have to ignore it for now.
