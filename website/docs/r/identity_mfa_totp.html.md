@@ -12,14 +12,12 @@ Resource for configuring the totp MFA method.
 
 ## Example Usage
 
-```hcl
 
+```hcl
 resource "vault_identity_mfa_totp" "example" {
   issuer = "issuer1"
 }
-
 ```
-
 ## Argument Reference
 
 The following arguments are supported:

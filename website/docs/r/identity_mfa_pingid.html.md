@@ -12,14 +12,12 @@ Resource for configuring the pingid MFA method.
 
 ## Example Usage
 
-```hcl
 
+```hcl
 resource "vault_identity_mfa_duo" "example" {
   settings_file_base64 = "CnVzZV9iYXNlNjR[...]HBtCg=="
 }
-
 ```
-
 ## Argument Reference
 
 The following arguments are supported:

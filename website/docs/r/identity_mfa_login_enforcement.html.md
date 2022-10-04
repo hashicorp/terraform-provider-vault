@@ -12,8 +12,8 @@ Resource for configuring MFA login-enforcement
 
 ## Example Usage
 
-```hcl
 
+```hcl
 resource "vault_identity_mfa_duo" "example" {
   secret_key      = "secret-key"
   integration_key = "int-key"
@@ -27,9 +27,7 @@ resource "vault_identity_mfa_login_enforcement" "example" {
     vault_identity_mfa_duo.example.method_id,
   ]
 }
-
 ```
-
 ## Argument Reference
 
 The following arguments are supported:

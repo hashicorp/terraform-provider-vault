@@ -12,16 +12,14 @@ Resource for configuring the okta MFA method.
 
 ## Example Usage
 
-```hcl
 
+```hcl
 resource "vault_identity_mfa_okta" "example" {
   org_name        = "org1"
   api_token       = "token1"
   base_url        = "qux.baz.com"
 }
-
 ```
-
 ## Argument Reference
 
 The following arguments are supported:

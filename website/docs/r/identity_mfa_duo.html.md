@@ -12,16 +12,14 @@ Resource for configuring the duo MFA method.
 
 ## Example Usage
 
-```hcl
 
+```hcl
 resource "vault_identity_mfa_duo" "example" {
   api_hostname    = "api-xxxxxxxx.duosecurity.com"
   secret_key      = "secret-key"
   integration_key = "secret-int-key"
 }
-
 ```
-
 ## Argument Reference
 
 The following arguments are supported:
