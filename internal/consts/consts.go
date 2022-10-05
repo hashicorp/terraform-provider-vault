@@ -156,16 +156,22 @@ const (
 	FieldAuthMethodTypes          = "auth_method_types"
 	FieldIdentityGroupIDs         = "identity_group_ids"
 	FieldIdentityEntityIDs        = "identity_entity_ids"
-	/*
-		auth_method_accessors ([]string: []) - Array of auth mount accessor IDs. If present, only auth methods corresponding to the given accessors are checked during login.
-
-		auth_method_types ([]string: []) - Array of auth method types. If present, only auth methods corresponding to the given types are checked during login.
-
-		identity_group_ids ([]string: []) - Array of identity group IDs. If present, only entities belonging to one of the given groups are checked during login. Note that these IDs can be from the current namespace or a child namespace.
-
-		identity_entity_ids ([]string: []) - Array of identity entity IDs. If present, only entities with the given IDs are checked during login. Note that these IDs can be from the current namespace or a child namespace.
-
-	*/
+	FieldWrappingAccessor         = "wrapping_accessor"
+	FieldRoleName                 = "role_name"
+	FieldPolicies                 = "policies"
+	FieldNoParent                 = "no_parent"
+	FieldNoDefaultPolicy          = "no_default_policy"
+	FieldRenewable                = "renewable"
+	FieldExplicitMaxTTL           = "explicit_max_ttl"
+	FieldWrappingTTL              = "wrapping_ttl"
+	FieldDisplayName              = "display_name"
+	FieldNumUses                  = "num_uses"
+	FieldRenewMinLease            = "renew_min_lease"
+	FieldRenewIncrement           = "renew_increment"
+	FieldLeaseStarted             = "lease_started"
+	FieldClientToken              = "client_token"
+	FieldWrappedToken             = "wrapped_token"
+	FieldOrphan                   = "orphan"
 
 	/*
 		common environment variables
