@@ -1,3 +1,8 @@
+## 3.9.1 (October 06, 2022)
+BUGS:
+* Use the correct AWS login headers within auth_generic: ([#1625](https://github.com/hashicorp/terraform-provider-vault/pull/1625))
+* Fix resource recreation following out-of-band changes in Vault: ([#1567](https://github.com/hashicorp/terraform-provider-vault/pull/1567))
+
 ## 3.9.0 (October 05, 2022)
 IMPROVEMENTS:
 * Add first-class Azure login support: ([#1617](https://github.com/hashicorp/terraform-provider-vault/pull/1617))
