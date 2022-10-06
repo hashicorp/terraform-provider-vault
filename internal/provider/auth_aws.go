@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -278,12 +279,22 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 
 	headerFields := []string{
 		consts.FieldIAMHttpRequestMethod,
-		consts.FieldIAMHttpRequestURL,
-		consts.FieldIAMHttpRequestBody,
-		consts.FieldIAMHttpRequestHeaders,
+		consts.FieldIAMRequestURL,
+		consts.FieldIAMRequestBody,
+		consts.FieldIAMRequestHeaders,
 	}
+
+	var errs error
 	for _, k := range headerFields {
-		parameters[k] = loginData[k]
+		v, ok := loginData[k]
+		if !ok {
+			errs = multierror.Append(errs, fmt.Errorf("login data missing required header %q", k))
+		}
+		parameters[k] = v
+	}
+
+	if errs != nil {
+		return errs
 	}
 
 	return nil
