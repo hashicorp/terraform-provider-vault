@@ -72,10 +72,18 @@ func (l *AuthLoginUserpass) Method() string {
 
 // Login using the userpass authentication engine.
 func (l *AuthLoginUserpass) Login(client *api.Client) (*api.Secret, error) {
-	params := l.copyParamsExcluding(
+	if err := l.validate(); err != nil {
+		return nil, err
+	}
+
+	params, err := l.copyParamsExcluding(
 		consts.FieldNamespace,
 		consts.FieldMount,
 	)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := setupUserpassAuthParams(params); err != nil {
 		return nil, err
 	}

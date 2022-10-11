@@ -140,6 +140,7 @@ func TestAuthLoginUserpass_Login(t *testing.T) {
 						consts.FieldUsername: "bob",
 						consts.FieldPassword: "baz",
 					},
+					initialized: true,
 				},
 			},
 			handler: &testLoginHandler{
@@ -173,6 +174,7 @@ func TestAuthLoginUserpass_Login(t *testing.T) {
 					params: map[string]interface{}{
 						consts.FieldPassword: "baz",
 					},
+					initialized: true,
 				},
 			},
 			handler: &testLoginHandler{
@@ -183,6 +185,20 @@ func TestAuthLoginUserpass_Login(t *testing.T) {
 			expectReqParams: nil,
 			want:            nil,
 			wantErr:         true,
+		},
+		{
+			name: "error-uninitialized",
+			authLogin: &AuthLoginUserpass{
+				AuthLoginCommon{
+					initialized: false,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			want:      nil,
+			wantErr:   true,
+			expectErr: authLoginInitCheckError,
 		},
 	}
 	for _, tt := range tests {

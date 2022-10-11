@@ -155,6 +155,10 @@ func (l *AuthLoginAWS) Method() string {
 
 // Login using the aws authentication engine.
 func (l *AuthLoginAWS) Login(client *api.Client) (*api.Secret, error) {
+	if err := l.validate(); err != nil {
+		return nil, err
+	}
+
 	params, err := l.copyParams(
 		consts.FieldRole,
 	)

@@ -88,6 +88,10 @@ func (l *AuthLoginGeneric) Method() string {
 }
 
 func (l *AuthLoginGeneric) Login(client *api.Client) (*api.Secret, error) {
+	if err := l.validate(); err != nil {
+		return nil, err
+	}
+
 	params, err := l.copyParams()
 	if err != nil {
 		return nil, err

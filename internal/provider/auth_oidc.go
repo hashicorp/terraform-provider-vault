@@ -98,8 +98,8 @@ func (l *AuthLoginOIDC) Method() string {
 
 // Login using the oidc authentication engine.
 func (l *AuthLoginOIDC) Login(client *api.Client) (*api.Secret, error) {
-	if !l.initialized {
-		return nil, fmt.Errorf("auth login not initiailized")
+	if err := l.validate(); err != nil {
+		return nil, err
 	}
 
 	params, err := l.getAuthParams()
