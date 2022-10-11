@@ -305,3 +305,69 @@ func TestGetValidateDiagURL(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateDiagUUID(t *testing.T) {
+	type args struct{}
+	tests := []struct {
+		name string
+		i    interface{}
+		path cty.Path
+		want diag.Diagnostics
+	}{
+		{
+			name: "valid",
+			i:    "323e4572-a92c-13d3-a457-426614173970",
+			want: nil,
+			path: nil,
+		},
+		{
+			name: "rfc4122-casing",
+			i:    "323E4572-a92c-13d3-a457-426614173970",
+			path: nil,
+			want: diag.Diagnostics{
+				{
+					Severity: diag.Error,
+					Summary:  "Invalid UUID",
+					Detail: "Value must be in valid hexadecimal format, " +
+						"e.g. 323e4572-a92c-13d3-a457-426614173990",
+					AttributePath: nil,
+				},
+			},
+		},
+		{
+			name: "truncated",
+			i:    "323e4572-a92c-13d3-a457-4266141739",
+			want: diag.Diagnostics{
+				{
+					Severity: diag.Error,
+					Summary:  "Invalid UUID",
+					Detail: "Value must be in valid hexadecimal format, " +
+						"e.g. 323e4572-a92c-13d3-a457-426614173990",
+					AttributePath: nil,
+				},
+			},
+			path: nil,
+		},
+		{
+			name: "empty",
+			i:    "",
+			want: diag.Diagnostics{
+				{
+					Severity: diag.Error,
+					Summary:  "Invalid UUID",
+					Detail: "Value must be in valid hexadecimal format, " +
+						"e.g. 323e4572-a92c-13d3-a457-426614173990",
+					AttributePath: nil,
+				},
+			},
+			path: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ValidateDiagUUID(tt.i, tt.path); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ValidateDiagUUID() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -64,6 +64,9 @@ and a [Consul reset may be required.](https://learn.hashicorp.com/tutorials/cons
 * `path` - (Optional) The unique location this backend should be mounted at. Must not begin or end with a `/`. Defaults
 to `consul`.
 
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
+
 * `description` - (Optional) A human-friendly description for this backend.
 
 * `address` - (Required) Specifies the address of the Consul instance, provided as "host:port" like "127.0.0.1:8500".

@@ -39,6 +39,9 @@ The following arguments are supported:
 * `path` - (Required) The unique path this backend should be mounted at. Must
   not begin or end with a `/`. Defaults to `kmip`.
 
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
+
 * `description` - (Optional) A human-friendly description for this backend.
 
 * `listen_addrs` - (Optional) Addresses the KMIP server should listen on (`host:port`).

@@ -47,6 +47,9 @@ on `token`. Changing the value, however, _will_ overwrite the previously stored 
 
 * `backend` - (Optional) The unique location this backend should be mounted at. Must not begin or end with a `/`. Defaults to `terraform`.
 
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
+
 * `description` - (Optional) A human-friendly description for this backend.
 
 * `default_lease_ttl_seconds` - (Optional) The default TTL for credentials issued by this backend.

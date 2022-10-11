@@ -19,6 +19,7 @@ var (
 	regexpPathLeading  = regexp.MustCompile(fmt.Sprintf(`^%s`, consts.PathDelim))
 	regexpPathTrailing = regexp.MustCompile(fmt.Sprintf(`%s$`, consts.PathDelim))
 	regexpPath         = regexp.MustCompile(fmt.Sprintf(`%s|%s`, regexpPathLeading, regexpPathTrailing))
+	regexpUUID         = regexp.MustCompile("^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$")
 )
 
 func ValidateStringSlug(i interface{}, k string) (s []string, es []error) {
@@ -168,4 +169,22 @@ func GetValidateDiagURI(schemes []string) schema.SchemaValidateDiagFunc {
 			},
 		}
 	}
+}
+
+// ValidateDiagUUID validates that the input string conforms format defined in rfc4122.
+func ValidateDiagUUID(i interface{}, path cty.Path) diag.Diagnostics {
+	have := i.(string)
+	if !regexpUUID.MatchString(have) {
+		return diag.Diagnostics{
+			{
+				Severity: diag.Error,
+				Summary:  "Invalid UUID",
+				Detail: "Value must be in valid hexadecimal format, e.g. " +
+					"323e4572-a92c-13d3-a457-426614173990",
+				AttributePath: path,
+			},
+		}
+	}
+
+	return nil
 }
