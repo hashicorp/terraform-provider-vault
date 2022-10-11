@@ -615,6 +615,10 @@ var (
 			Resource:      UpdateSchemaResource(identityGroupMemberEntityIdsResource()),
 			PathInventory: []string{"/identity/group/id/{id}"},
 		},
+		"vault_identity_group_member_group_ids": {
+			Resource:      UpdateSchemaResource(identityGroupMemberGroupIdsResource()),
+			PathInventory: []string{"/identity/group/id/{id}"},
+		},
 		"vault_identity_group_policies": {
 			Resource:      UpdateSchemaResource(identityGroupPoliciesResource()),
 			PathInventory: []string{"/identity/lookup/group"},

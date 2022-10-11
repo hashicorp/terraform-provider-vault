@@ -10,27 +10,27 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-func identityGroupMemberEntityIdsResource() *schema.Resource {
+func identityGroupMemberGroupIdsResource() *schema.Resource {
 	return &schema.Resource{
-		Create: identityGroupMemberEntityIdsUpdate,
-		Update: identityGroupMemberEntityIdsUpdate,
-		Read:   ReadWrapper(identityGroupMemberEntityIdsRead),
-		Delete: identityGroupMemberEntityIdsDelete,
+		Create: identityGroupMemberGroupIdsUpdate,
+		Update: identityGroupMemberGroupIdsUpdate,
+		Read:   ReadWrapper(identityGroupMemberGroupIdsRead),
+		Delete: identityGroupMemberGroupIdsDelete,
 
 		Schema: map[string]*schema.Schema{
-			"member_entity_ids": {
+			"member_group_ids": {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "Entity IDs to be assigned as group members.",
+				Description: "Group IDs to be assigned as group members.",
 			},
 			"exclusive": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  true,
-				Description: `Should the resource manage member entity ids 
+				Description: `Should the resource manage member group ids
 exclusively? Beware of race conditions when disabling exclusive management`,
 			},
 			"group_id": {
@@ -39,18 +39,11 @@ exclusively? Beware of race conditions when disabling exclusive management`,
 				ForceNew:    true,
 				Description: "ID of the group.",
 			},
-			"group_name": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Name of the group.",
-				Deprecated: `The value for group_name may not always be accurate, 
-use "data.vault_identity_group.*.group_name", "vault_identity_group.*.group_name" instead`,
-			},
 		},
 	}
 }
 
-func identityGroupMemberEntityIdsUpdate(d *schema.ResourceData, meta interface{}) error {
+func identityGroupMemberGroupIdsUpdate(d *schema.ResourceData, meta interface{}) error {
 	gid := d.Get("group_id").(string)
 	path := identityGroupIDPath(gid)
 	vaultMutexKV.Lock(path)
@@ -61,34 +54,35 @@ func identityGroupMemberEntityIdsUpdate(d *schema.ResourceData, meta interface{}
 		return e
 	}
 
-	log.Printf("[DEBUG] Updating IdentityGroupMemberEntityIds %q", gid)
+	log.Printf("[DEBUG] Updating IdentityGroupMemberGroupIds %q", gid)
 
 	if d.HasChange("group_id") {
 		o, n := d.GetChange("group_id")
 		log.Printf("[DEBUG] Group ID has changed old=%q, new=%q", o, n)
 	}
+
 	resp, err := readIdentityGroup(client, gid, d.IsNewResource())
 	if err != nil {
 		return err
 	}
 
-	data, err := group.GetGroupMember(d, resp, "member_entity_ids")
+	data, err := group.GetGroupMember(d, resp, "member_group_ids")
 	if err != nil {
 		return err
 	}
 
 	_, err = client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error updating IdentityGroupMemberEntityIds %q: %s", gid, err)
+		return fmt.Errorf("error updating IdentityGroupMemberGroupIds %q: %s", gid, err)
 	}
-	log.Printf("[DEBUG] Updated IdentityGroupMemberEntityIds %q", gid)
+	log.Printf("[DEBUG] Updated IdentityGroupMemberGroupIds %q", gid)
 
 	d.SetId(gid)
 
-	return identityGroupMemberEntityIdsRead(d, meta)
+	return identityGroupMemberGroupIdsRead(d, meta)
 }
 
-func identityGroupMemberEntityIdsRead(d *schema.ResourceData, meta interface{}) error {
+func identityGroupMemberGroupIdsRead(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -96,11 +90,11 @@ func identityGroupMemberEntityIdsRead(d *schema.ResourceData, meta interface{}) 
 
 	id := d.Id()
 
-	log.Printf("[DEBUG] Read IdentityGroupMemberEntityIds %s", id)
+	log.Printf("[DEBUG] Read IdentityGroupMemberGroupIds %s", id)
 	resp, err := readIdentityGroup(client, id, d.IsNewResource())
 	if err != nil {
 		if isIdentityNotFoundError(err) {
-			log.Printf("[WARN] IdentityGroupMemberEntityIds %q not found, removing from state", id)
+			log.Printf("[WARN] IdentityGroupMemberGroupIds %q not found, removing from state", id)
 			d.SetId("")
 			return nil
 		}
@@ -110,18 +104,15 @@ func identityGroupMemberEntityIdsRead(d *schema.ResourceData, meta interface{}) 
 	if err := d.Set("group_id", id); err != nil {
 		return err
 	}
-	if err := d.Set("group_name", resp.Data["name"]); err != nil {
-		return err
-	}
 
-	if err := group.SetGroupMember(d, resp, "member_entity_ids"); err != nil {
+	if err := group.SetGroupMember(d, resp, "member_group_ids"); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func identityGroupMemberEntityIdsDelete(d *schema.ResourceData, meta interface{}) error {
+func identityGroupMemberGroupIdsDelete(d *schema.ResourceData, meta interface{}) error {
 	id := d.Get("group_id").(string)
 	path := identityGroupIDPath(id)
 	vaultMutexKV.Lock(path)
@@ -132,7 +123,7 @@ func identityGroupMemberEntityIdsDelete(d *schema.ResourceData, meta interface{}
 		return e
 	}
 
-	log.Printf("[DEBUG] Deleting IdentityGroupMemberEntityIds %q", id)
+	log.Printf("[DEBUG] Deleting IdentityGroupMemberGroupIds %q", id)
 
 	resp, err := readIdentityGroup(client, id, false)
 	if err != nil {
@@ -142,16 +133,16 @@ func identityGroupMemberEntityIdsDelete(d *schema.ResourceData, meta interface{}
 		return err
 	}
 
-	data, err := group.DeleteGroupMember(d, resp, "member_entity_ids")
+	data, err := group.DeleteGroupMember(d, resp, "member_group_ids")
 	if err != nil {
 		return err
 	}
 
 	_, err = client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error updating IdentityGroupMemberEntityIds %q: %s", id, err)
+		return fmt.Errorf("error updating IdentityGroupMemberGroupIds %q: %s", id, err)
 	}
-	log.Printf("[DEBUG] Updated IdentityGroupMemberEntityIds %q", id)
+	log.Printf("[DEBUG] Updated IdentityGroupMemberGroupIds %q", id)
 
 	return nil
 }

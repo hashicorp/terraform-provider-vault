@@ -75,7 +75,7 @@ func identityGroupResource() *schema.Resource {
 				// Suppress the diff if group type is "external" because we cannot manage
 				// group members
 				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					if d.Get("type").(string) == "external" {
+					if d.Get("type").(string) == "external" || d.Get("external_member_group_ids").(bool) == true {
 						return true
 					}
 					return false
@@ -102,7 +102,14 @@ func identityGroupResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
-				Description: "Manage member entities externally through `vault_identity_group_policies_member_entity_ids`",
+				Description: "Manage member entities externally through `vault_identity_group_member_entity_ids`",
+			},
+
+			"external_member_group_ids": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Manage member groups externally through `vault_identity_group_member_group_ids`",
 			},
 		},
 	}
@@ -120,10 +127,12 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 
 		// Member groups and entities can't be set for external groups
 		if d.Get("type").(string) == "internal" {
-			data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
-
 			if externalMemberEntityIds, ok := d.GetOk("external_member_entity_ids"); !(ok && externalMemberEntityIds.(bool)) {
 				data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
+			}
+
+			if externalMemberGroupIds, ok := d.GetOk("external_member_group_ids"); !(ok && externalMemberGroupIds.(bool)) {
+				data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
 			}
 		}
 
@@ -137,9 +146,12 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 			data["policies"] = d.Get("policies").(*schema.Set).List()
 			// Member groups and entities can't be set for external groups
 			if d.Get("type").(string) == "internal" {
-				data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
 				if !d.Get("external_member_entity_ids").(bool) {
 					data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
+				}
+
+				if !d.Get("external_member_group_ids").(bool) {
+					data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
 				}
 			}
 
