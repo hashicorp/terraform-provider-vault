@@ -236,8 +236,9 @@ func TestAuthLoginCert_Login(t *testing.T) {
 			name: "default",
 			authLogin: &AuthLoginCert{
 				AuthLoginCommon{
-					authField: "baz",
-					params:    map[string]interface{}{},
+					authField:   "baz",
+					params:      map[string]interface{}{},
+					initialized: true,
 				},
 			},
 			handler: &testLoginHandler{
@@ -266,6 +267,7 @@ func TestAuthLoginCert_Login(t *testing.T) {
 					params: map[string]interface{}{
 						consts.FieldName: "bob",
 					},
+					initialized: true,
 				},
 			},
 			handler: &testLoginHandler{
@@ -286,6 +288,20 @@ func TestAuthLoginCert_Login(t *testing.T) {
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "error-uninitialized",
+			authLogin: &AuthLoginCert{
+				AuthLoginCommon{
+					initialized: false,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			want:      nil,
+			wantErr:   true,
+			expectErr: authLoginInitCheckError,
 		},
 	}
 	for _, tt := range tests {

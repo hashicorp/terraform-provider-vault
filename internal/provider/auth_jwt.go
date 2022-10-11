@@ -73,9 +73,14 @@ func (l *AuthLoginJWT) Method() string {
 
 // Login using the jwt authentication engine.
 func (l *AuthLoginJWT) Login(client *api.Client) (*api.Secret, error) {
-	if !l.initialized {
-		return nil, fmt.Errorf("auth login not initialized")
+	if err := l.validate(); err != nil {
+		return nil, err
 	}
 
-	return l.login(client, l.LoginPath(), l.copyParamsExcluding(consts.FieldNamespace, consts.FieldMount))
+	params, err := l.copyParamsExcluding(consts.FieldNamespace, consts.FieldMount)
+	if err != nil {
+		return nil, err
+	}
+
+	return l.login(client, l.LoginPath(), params)
 }

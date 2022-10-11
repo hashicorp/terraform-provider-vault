@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -16,19 +17,23 @@ type (
 )
 
 // AuthLoginFields supported by the provider.
-var AuthLoginFields = []string{
-	consts.FieldAuthLoginDefault,
-	consts.FieldAuthLoginUserpass,
-	consts.FieldAuthLoginAWS,
-	consts.FieldAuthLoginCert,
-	consts.FieldAuthLoginGCP,
-	consts.FieldAuthLoginKerberos,
-	consts.FieldAuthLoginRadius,
-	consts.FieldAuthLoginOCI,
-	consts.FieldAuthLoginOIDC,
-	consts.FieldAuthLoginJWT,
-	consts.FieldAuthLoginAzure,
-}
+var (
+	AuthLoginFields = []string{
+		consts.FieldAuthLoginDefault,
+		consts.FieldAuthLoginUserpass,
+		consts.FieldAuthLoginAWS,
+		consts.FieldAuthLoginCert,
+		consts.FieldAuthLoginGCP,
+		consts.FieldAuthLoginKerberos,
+		consts.FieldAuthLoginRadius,
+		consts.FieldAuthLoginOCI,
+		consts.FieldAuthLoginOIDC,
+		consts.FieldAuthLoginJWT,
+		consts.FieldAuthLoginAzure,
+	}
+
+	authLoginInitCheckError = errors.New("auth login not initialized")
+)
 
 type AuthLogin interface {
 	Init(data *schema.ResourceData, authFiled string) error
@@ -57,7 +62,7 @@ func (l *AuthLoginCommon) Init(d *schema.ResourceData, authField string) error {
 	l.mount = path
 	l.params = params
 
-	return nil
+	return l.validate()
 }
 
 func (l *AuthLoginCommon) Namespace() string {
@@ -82,6 +87,10 @@ func (l *AuthLoginCommon) Method() string {
 }
 
 func (l *AuthLoginCommon) copyParams(includes ...string) (map[string]interface{}, error) {
+	if err := l.validate(); err != nil {
+		return nil, err
+	}
+
 	params := make(map[string]interface{}, len(l.params))
 	if len(includes) == 0 {
 		for k, v := range l.params {
@@ -105,13 +114,16 @@ func (l *AuthLoginCommon) copyParams(includes ...string) (map[string]interface{}
 	return params, nil
 }
 
-func (l *AuthLoginCommon) copyParamsExcluding(excludes ...string) map[string]interface{} {
-	params, _ := l.copyParams()
+func (l *AuthLoginCommon) copyParamsExcluding(excludes ...string) (map[string]interface{}, error) {
+	params, err := l.copyParams()
+	if err != nil {
+		return nil, err
+	}
 	for _, k := range excludes {
 		delete(params, k)
 	}
 
-	return params
+	return params, nil
 }
 
 func (l *AuthLoginCommon) login(client *api.Client, path string, params map[string]interface{}) (*api.Secret, error) {
@@ -120,7 +132,7 @@ func (l *AuthLoginCommon) login(client *api.Client, path string, params map[stri
 
 func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]interface{}, error) {
 	if l.initialized {
-		return "", nil, fmt.Errorf("auth login already initiailized")
+		return "", nil, fmt.Errorf("auth login already initialized")
 	}
 
 	v, ok := d.GetOk(l.authField)
@@ -187,6 +199,14 @@ func (l *AuthLoginCommon) checkFieldsOneOf(d *schema.ResourceData, fields ...str
 
 func (l *AuthLoginCommon) getOk(d *schema.ResourceData, field string) (interface{}, bool) {
 	return d.GetOk(fmt.Sprintf("%s.0.%s", l.authField, field))
+}
+
+func (l *AuthLoginCommon) validate() error {
+	if !l.initialized {
+		return authLoginInitCheckError
+	}
+
+	return nil
 }
 
 func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {

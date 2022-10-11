@@ -91,17 +91,24 @@ func (l *AuthLoginGCP) Method() string {
 
 // Login using the gcp authentication engine.
 func (l *AuthLoginGCP) Login(client *api.Client) (*api.Secret, error) {
+	if err := l.validate(); err != nil {
+		return nil, err
+	}
+
+	params, err := l.copyParamsExcluding(
+		consts.FieldNamespace,
+		consts.FieldMount,
+		consts.FieldJWT,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx := context.Background()
 	jwt, err := l.getJWT(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	params := l.copyParamsExcluding(
-		consts.FieldNamespace,
-		consts.FieldMount,
-		consts.FieldJWT,
-	)
 
 	params[consts.FieldJWT] = jwt
 
