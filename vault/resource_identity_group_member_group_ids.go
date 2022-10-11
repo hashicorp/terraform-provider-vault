@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -18,7 +19,7 @@ func identityGroupMemberGroupIdsResource() *schema.Resource {
 		Delete: identityGroupMemberGroupIdsDelete,
 
 		Schema: map[string]*schema.Schema{
-			"member_group_ids": {
+			consts.FieldMemberGroupIDs: {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
@@ -26,14 +27,14 @@ func identityGroupMemberGroupIdsResource() *schema.Resource {
 				},
 				Description: "Group IDs to be assigned as group members.",
 			},
-			"exclusive": {
+			consts.FieldExclusive: {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  true,
 				Description: `Should the resource manage member group ids
 exclusively? Beware of race conditions when disabling exclusive management`,
 			},
-			"group_id": {
+			consts.FieldGroupID: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
@@ -44,7 +45,7 @@ exclusively? Beware of race conditions when disabling exclusive management`,
 }
 
 func identityGroupMemberGroupIdsUpdate(d *schema.ResourceData, meta interface{}) error {
-	gid := d.Get("group_id").(string)
+	gid := d.Get(consts.FieldGroupID).(string)
 	path := identityGroupIDPath(gid)
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
@@ -56,8 +57,8 @@ func identityGroupMemberGroupIdsUpdate(d *schema.ResourceData, meta interface{})
 
 	log.Printf("[DEBUG] Updating IdentityGroupMemberGroupIds %q", gid)
 
-	if d.HasChange("group_id") {
-		o, n := d.GetChange("group_id")
+	if d.HasChange(consts.FieldGroupID) {
+		o, n := d.GetChange(consts.FieldGroupID)
 		log.Printf("[DEBUG] Group ID has changed old=%q, new=%q", o, n)
 	}
 
@@ -66,7 +67,7 @@ func identityGroupMemberGroupIdsUpdate(d *schema.ResourceData, meta interface{})
 		return err
 	}
 
-	data, err := group.GetGroupMember(d, resp, "member_group_ids")
+	data, err := group.GetGroupMember(d, resp, consts.FieldMemberGroupIDs)
 	if err != nil {
 		return err
 	}
@@ -101,11 +102,11 @@ func identityGroupMemberGroupIdsRead(d *schema.ResourceData, meta interface{}) e
 		return err
 	}
 
-	if err := d.Set("group_id", id); err != nil {
+	if err := d.Set(consts.FieldGroupID, id); err != nil {
 		return err
 	}
 
-	if err := group.SetGroupMember(d, resp, "member_group_ids"); err != nil {
+	if err := group.SetGroupMember(d, resp, consts.FieldMemberGroupIDs); err != nil {
 		return err
 	}
 
@@ -113,7 +114,7 @@ func identityGroupMemberGroupIdsRead(d *schema.ResourceData, meta interface{}) e
 }
 
 func identityGroupMemberGroupIdsDelete(d *schema.ResourceData, meta interface{}) error {
-	id := d.Get("group_id").(string)
+	id := d.Get(consts.FieldGroupID).(string)
 	path := identityGroupIDPath(id)
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
@@ -133,7 +134,7 @@ func identityGroupMemberGroupIdsDelete(d *schema.ResourceData, meta interface{})
 		return err
 	}
 
-	data, err := group.DeleteGroupMember(d, resp, "member_group_ids")
+	data, err := group.DeleteGroupMember(d, resp, consts.FieldMemberGroupIDs)
 	if err != nil {
 		return err
 	}

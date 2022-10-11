@@ -124,6 +124,11 @@ const (
 	FieldResourceGroupName        = "resource_group_name"
 	FieldVMName                   = "vm_name"
 	FieldVMSSName                 = "vmss_name"
+	FieldMemberEntityIDs          = "member_entity_ids"
+	FieldMemberGroupIDs           = "member_group_ids"
+	FieldExclusive                = "exclusive"
+	FieldGroupID                  = "group_id"
+	FieldGroupName                = "group_name"
 
 	/*
 		common environment variables
