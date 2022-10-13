@@ -8,16 +8,15 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccJWTAuthBackend(t *testing.T) {
 	path := acctest.RandomWithPrefix("jwt")
-	resourceName := "vault_jwt_auth_backend.jwt"
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".jwt"
 
 	getSteps := func(path, ns string) []resource.TestStep {
 		var commonChecks []resource.TestCheckFunc
@@ -88,7 +87,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 		resource.Test(t, resource.TestCase{
 			PreCheck:     func() { testutil.TestAccPreCheck(t) },
 			Providers:    testProviders,
-			CheckDestroy: testJWTAuthBackend_Destroyed(path),
+			CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:        getSteps(path, ""),
 		})
 	},
@@ -101,7 +100,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 		resource.Test(t, resource.TestCase{
 			PreCheck:     func() { testutil.TestEntPreCheck(t) },
 			Providers:    testProviders,
-			CheckDestroy: testJWTAuthBackend_Destroyed(path),
+			CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:        getSteps(path, ns),
 		})
 	},
@@ -110,7 +109,8 @@ func TestAccJWTAuthBackend(t *testing.T) {
 
 func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 	path := acctest.RandomWithPrefix("oidc")
-	resourceName := "vault_jwt_auth_backend.oidc"
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".oidc"
 	getSteps := func(path, ns string) []resource.TestStep {
 		var commonChecks []resource.TestCheckFunc
 		if ns != "" {
@@ -140,7 +140,7 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 		resource.Test(t, resource.TestCase{
 			PreCheck:     func() { testutil.TestAccPreCheck(t) },
 			Providers:    testProviders,
-			CheckDestroy: testJWTAuthBackend_Destroyed(path),
+			CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:        getSteps(path, ""),
 		})
 	},
@@ -153,7 +153,7 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 		resource.Test(t, resource.TestCase{
 			PreCheck:     func() { testutil.TestEntPreCheck(t) },
 			Providers:    testProviders,
-			CheckDestroy: testJWTAuthBackend_Destroyed(path),
+			CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:        getSteps(path, ns),
 		})
 	},
@@ -161,7 +161,8 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 }
 
 func TestAccJWTAuthBackend_OIDC(t *testing.T) {
-	resourceName := "vault_jwt_auth_backend.oidc"
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".oidc"
 	getSteps := func(path, ns string) []resource.TestStep {
 		var commonChecks []resource.TestCheckFunc
 		if ns != "" {
@@ -197,7 +198,7 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 		resource.Test(t, resource.TestCase{
 			PreCheck:     func() { testutil.TestAccPreCheck(t) },
 			Providers:    testProviders,
-			CheckDestroy: testJWTAuthBackend_Destroyed(path),
+			CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:        getSteps(path, ""),
 		})
 	},
@@ -210,7 +211,7 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 		resource.Test(t, resource.TestCase{
 			PreCheck:     func() { testutil.TestAccPreCheck(t) },
 			Providers:    testProviders,
-			CheckDestroy: testJWTAuthBackend_Destroyed(path),
+			CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:        getSteps(path, ns),
 		})
 	},
@@ -400,23 +401,6 @@ resource "vault_namespace" "test" {
 	}
 
 	return strings.Join(append(fragments, config, "}"), "\n")
-}
-
-func testJWTAuthBackend_Destroyed(path string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
-		authMounts, err := client.Sys().ListAuth()
-		if err != nil {
-			return err
-		}
-
-		if _, ok := authMounts[fmt.Sprintf("%s/", path)]; ok {
-			return fmt.Errorf("auth mount not destroyed")
-		}
-
-		return nil
-	}
 }
 
 func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
