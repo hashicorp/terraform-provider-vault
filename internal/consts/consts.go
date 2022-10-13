@@ -224,6 +224,7 @@ const (
 	MountTypeOIDC       = "oidc"
 	MountTypeJWT        = "jwt"
 	MountTypeAzure      = "azure"
+	MountTypeGitHub     = "github"
 
 	/*
 		Vault version constants
