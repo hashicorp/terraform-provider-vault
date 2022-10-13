@@ -2,26 +2,25 @@ package vault
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestGCPSecretBackend(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-gcp")
 
-	resourceName := "vault_gcp_secret_backend.test"
+	resourceType := "vault_gcp_secret_backend"
+	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccGCPSecretBackendCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPSecretBackend_initialConfig(path),
@@ -53,11 +52,13 @@ func TestGCPSecretBackend_remount(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-gcp")
 	updatedPath := acctest.RandomWithPrefix("tf-test-gcp-updated")
 
-	resourceName := "vault_gcp_secret_backend.test"
+	resourceType := "vault_gcp_secret_backend"
+	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPSecretBackend_initialConfig(path),
@@ -84,33 +85,6 @@ func TestGCPSecretBackend_remount(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil, "credentials", "disable_remount"),
 		},
 	})
-}
-
-func testAccGCPSecretBackendCheckDestroy(s *terraform.State) error {
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_gcp_secret_backend" {
-			continue
-		}
-
-		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
-		if e != nil {
-			return e
-		}
-
-		mounts, err := client.Sys().ListMounts()
-		if err != nil {
-			return err
-		}
-
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "gcp" && path == rsPath {
-				return fmt.Errorf("Mount %q still exists", path)
-			}
-		}
-	}
-	return nil
 }
 
 func testGCPSecretBackend_initialConfig(path string) string {

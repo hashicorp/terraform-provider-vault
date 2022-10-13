@@ -287,7 +287,7 @@ func TestJWTAuthBackend_remount(t *testing.T) {
 }
 
 func testAccJWTAuthBackendConfig(path, ns string, local bool) string {
-	config := fmt.Sprintf(`
+	c := fmt.Sprintf(`
 resource "vault_jwt_auth_backend" "jwt" {
   description        = "JWT backend"
   oidc_discovery_url = "https://myco.auth0.com/"
@@ -304,12 +304,13 @@ resource "vault_namespace" "test" {
 }
 `, ns),
 		}
-		config += `
+		c += `
   namespace = vault_namespace.test.path
 `
 	}
 
-	return strings.Join(append(fragments, config, "}"), "\n")
+	config := strings.Join(append(fragments, c, "}"), "\n")
+	return config
 }
 
 func testAccJWTAuthBackendConfigFullOIDC(path string, oidcDiscoveryUrl string, boundIssuer string, supportedAlgs string, ns string) string {

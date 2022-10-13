@@ -24,13 +24,14 @@ type testMountStore struct {
 
 func TestConsulSecretBackend(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-consul")
-	resourceName := "vault_consul_secret_backend.test"
+	resourceType := "vault_consul_secret_backend"
+	resourceName := resourceType + ".test"
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccConsulSecretBackendCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeConsul, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testConsulSecretBackend_initialConfig(path, token),
@@ -128,7 +129,8 @@ func TestConsulSecretBackend(t *testing.T) {
 
 func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-consul")
-	resourceName := "vault_consul_secret_backend.test"
+	resourceType := "vault_consul_secret_backend"
+	resourceName := resourceType + ".test"
 	resourceRoleName := "vault_consul_secret_backend_role.test"
 
 	if !testutil.CheckTestVaultVersion(t, "1.11") {
@@ -142,7 +144,7 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccConsulSecretBackendCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeConsul, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config:      testConsulSecretBackend_bootstrapConfig(path, consulAddr, "", false),
@@ -289,33 +291,6 @@ func testGetMount(path string) (*api.MountOutput, error) {
 	}
 
 	return mount, nil
-}
-
-func testAccConsulSecretBackendCheckDestroy(s *terraform.State) error {
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_consul_secret_backend" {
-			continue
-		}
-
-		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
-		if e != nil {
-			return e
-		}
-
-		mounts, err := client.Sys().ListMounts()
-		if err != nil {
-			return err
-		}
-
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "consul" && path == rsPath {
-				return fmt.Errorf("Mount %q still exists", path)
-			}
-		}
-	}
-	return nil
 }
 
 func testConsulSecretBackend_initialConfig(path, token string) string {

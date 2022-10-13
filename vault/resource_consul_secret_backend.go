@@ -32,7 +32,7 @@ func consulSecretBackendResource() *schema.Resource {
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Default:     "consul",
+				Default:     consts.MountTypeConsul,
 				Description: "Unique name of the Vault Consul mount to configure",
 				StateFunc: func(s interface{}) string {
 					return strings.Trim(s.(string), "/")
@@ -131,7 +131,7 @@ func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta
 	configPath := consulSecretBackendConfigPath(path)
 
 	info := &api.MountInput{
-		Type:        "consul",
+		Type:        consts.MountTypeConsul,
 		Description: d.Get("description").(string),
 		Local:       local,
 		Config: api.MountConfigInput{

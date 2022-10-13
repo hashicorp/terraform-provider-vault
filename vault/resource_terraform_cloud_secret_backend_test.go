@@ -3,14 +3,12 @@ package vault
 import (
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -18,12 +16,13 @@ func TestTerraformCloudSecretBackend(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	token := os.Getenv("TEST_TF_TOKEN")
 
-	resourceName := "vault_terraform_cloud_secret_backend.test"
+	resourceType := "vault_terraform_cloud_secret_backend"
+	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccTerraformCloudSecretBackendCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testTerraformCloudSecretBackend_initialConfig(backend, token),
@@ -91,29 +90,6 @@ func TestTerraformCloudSecretBackend_remount(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil, "description", "token", "disable_remount"),
 		},
 	})
-}
-
-func testAccTerraformCloudSecretBackendCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return err
-	}
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_terraform_cloud_secret_backend" {
-			continue
-		}
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "terraform_cloud" && path == rsPath {
-				return fmt.Errorf("Mount %q still exists", path)
-			}
-		}
-	}
-	return nil
 }
 
 func testTerraformCloudSecretBackend_initialConfig(path, token string) string {

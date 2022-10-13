@@ -2,25 +2,23 @@ package vault
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAzureSecretBackend(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-azure")
-	resourceName := "vault_azure_secret_backend.test"
+	resourceType := "vault_azure_secret_backend"
+	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccAzureSecretBackendCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testAzureSecretBackend_initialConfig(path),
@@ -66,10 +64,12 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-azure")
 	updatedPath := acctest.RandomWithPrefix("tf-test-azure-updated")
 
-	resourceName := "vault_azure_secret_backend.test"
+	resourceType := "vault_azure_secret_backend"
+	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testAzureSecretBackend_initialConfig(path),
@@ -98,33 +98,6 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil, "client_secret", "disable_remount"),
 		},
 	})
-}
-
-func testAccAzureSecretBackendCheckDestroy(s *terraform.State) error {
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_azure_secret_backend" {
-			continue
-		}
-
-		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
-		if e != nil {
-			return e
-		}
-
-		mounts, err := client.Sys().ListMounts()
-		if err != nil {
-			return err
-		}
-
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "azure" && path == rsPath {
-				return fmt.Errorf("Mount %q still exists", path)
-			}
-		}
-	}
-	return nil
 }
 
 func testAzureSecretBackend_initialConfig(path string) string {

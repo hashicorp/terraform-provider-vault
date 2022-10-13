@@ -224,6 +224,9 @@ const (
 	MountTypeOIDC       = "oidc"
 	MountTypeJWT        = "jwt"
 	MountTypeAzure      = "azure"
+	MountTypeAD         = "ad"
+	MountTypeConsul     = "consul"
+	MountTypeTerraform  = "terraform"
 
 	/*
 		Vault version constants
