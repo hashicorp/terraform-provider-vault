@@ -18,7 +18,7 @@ func TestAzureSecretBackend(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldBackend),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAzureSecretBackend_initialConfig(path),
@@ -69,7 +69,7 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldBackend),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAzureSecretBackend_initialConfig(path),

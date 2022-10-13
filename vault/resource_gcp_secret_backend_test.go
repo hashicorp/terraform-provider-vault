@@ -20,7 +20,7 @@ func TestGCPSecretBackend(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldBackend),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPSecretBackend_initialConfig(path),
@@ -58,7 +58,7 @@ func TestGCPSecretBackend_remount(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldBackend),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPSecretBackend_initialConfig(path),
