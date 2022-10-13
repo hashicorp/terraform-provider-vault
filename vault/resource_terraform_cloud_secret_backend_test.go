@@ -22,7 +22,7 @@ func TestTerraformCloudSecretBackend(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGCP, consts.FieldBackend),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeTerraform, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testTerraformCloudSecretBackend_initialConfig(backend, token),
@@ -56,12 +56,14 @@ func TestTerraformCloudSecretBackend_remount(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	updatedBackend := acctest.RandomWithPrefix("tf-test-terraform-cloud-updated")
 
-	resourceName := "vault_terraform_cloud_secret_backend.test"
+	resourceType := "vault_terraform_cloud_secret_backend"
+	resourceName := resourceType + ".test"
 	token := "randomized-token-12392183123"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeTerraform, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testTerraformCloudSecretBackend_initialConfig(backend, token),
