@@ -19,7 +19,7 @@ func githubAuthBackendResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "Path where the auth backend is mounted",
-			Default:     "github",
+			Default:     consts.MountTypeGitHub,
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
 			},
@@ -85,7 +85,7 @@ func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Enabling github auth backend at '%s'", path)
 	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
-		Type:        "github",
+		Type:        consts.MountTypeGitHub,
 		Description: description,
 	})
 	if err != nil {
@@ -222,5 +222,9 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	return authMountDisable(meta.(*provider.ProviderMeta).GetClient(), d.Id())
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+	return authMountDisable(client, d.Id())
 }
