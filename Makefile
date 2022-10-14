@@ -4,6 +4,7 @@ WEBSITE_REPO = github.com/hashicorp/terraform-website
 PKG_NAME = vault
 TF_ACC_TERRAFORM_VERSION ?= 1.2.2
 TESTARGS ?= -test.v
+TF_VAULT_VERSION ?=
 
 default: build
 

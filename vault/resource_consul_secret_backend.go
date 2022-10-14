@@ -123,9 +123,9 @@ func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta
 	address := d.Get("address").(string)
 	scheme := d.Get("scheme").(string)
 	token := d.Get("token").(string)
-	ca_cert := d.Get("ca_cert").(string)
-	client_cert := d.Get("client_cert").(string)
-	client_key := d.Get("client_key").(string)
+	caCert := d.Get("ca_cert").(string)
+	clientCert := d.Get("client_cert").(string)
+	clientKey := d.Get("client_key").(string)
 	local := d.Get("local").(bool)
 
 	configPath := consulSecretBackendConfigPath(path)
@@ -140,7 +140,6 @@ func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta
 		},
 	}
 
-	d.Partial(true)
 	log.Printf("[DEBUG] Mounting Consul backend at %q", path)
 
 	// If a token isn't provided and the Vault version is less than 1.11, fail before
@@ -155,27 +154,32 @@ Vault client version does not meet the minimum requirement for this feature (Vau
 	if err := client.Sys().Mount(path, info); err != nil {
 		return diag.Errorf("error mounting to %q: %s", path, err)
 	}
-
 	log.Printf("[DEBUG] Mounted Consul backend at %q", path)
-	d.SetId(path)
 
 	log.Printf("[DEBUG] Writing Consul configuration to %q", configPath)
 	data := map[string]interface{}{
 		"address":     address,
 		"scheme":      scheme,
-		"ca_cert":     ca_cert,
-		"client_cert": client_cert,
-		"client_key":  client_key,
+		"ca_cert":     caCert,
+		"client_cert": clientCert,
+		"client_key":  clientKey,
 	}
 	if token != "" {
 		data["token"] = token
 	}
 
 	if _, err := client.Logical().Write(configPath, data); err != nil {
-		return diag.Errorf("error writing Consul configuration for %q: %s", path, err)
+		// the mount was created, but we failed to configure it for some reason,
+		// we need to roll that back
+		if err := client.Sys().Unmount(path); err != nil {
+			return diag.Errorf("failed to unmount %q, after encountering a "+
+				"fatal configuration error, the mount may still persist in vault", path)
+		}
+		return diag.Errorf("error writing Consul configuration to %q: %s", configPath, err)
 	}
 	log.Printf("[DEBUG] Wrote Consul configuration to %q", configPath)
-	d.Partial(false)
+
+	d.SetId(path)
 
 	return consulSecretBackendRead(ctx, d, meta)
 }
@@ -206,17 +210,17 @@ func consulSecretBackendRead(_ context.Context, d *schema.ResourceData, meta int
 		return nil
 	}
 
-	d.Set("path", path)
-	d.Set("description", mount.Description)
-	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
-	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
-	d.Set("local", mount.Local)
-
 	log.Printf("[DEBUG] Reading %s from Vault", configPath)
 	secret, err := client.Logical().Read(configPath)
 	if err != nil {
 		return diag.Errorf("error reading from Vault: %s", err)
 	}
+
+	d.Set("path", path)
+	d.Set("description", mount.Description)
+	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
+	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
+	d.Set("local", mount.Local)
 
 	// token, sadly, we can't read out
 	// the API doesn't support it
@@ -235,8 +239,6 @@ func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta
 
 	path := d.Id()
 	configPath := consulSecretBackendConfigPath(path)
-
-	d.Partial(true)
 
 	path, err := util.Remount(d, client, consts.FieldPath, false)
 	if err != nil {
@@ -271,7 +273,7 @@ func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta
 		}
 		log.Printf("[DEBUG] Updated Consul configuration at %q", configPath)
 	}
-	d.Partial(false)
+
 	return consulSecretBackendRead(ctx, d, meta)
 }
 

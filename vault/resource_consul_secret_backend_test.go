@@ -172,10 +172,24 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceRoleName, "consul_policies.*", "global-management"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap", "disable_remount"),
 			{
-				Config:      testConsulSecretBackend_bootstrapConfig(path+"-new", consulAddr, "", true),
+				// test graceful remount
+				Config: testConsulSecretBackend_bootstrapAddRole(path+"-new", consulAddr),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceRoleName, consts.FieldName, "management"),
+					resource.TestCheckResourceAttr(resourceRoleName, consts.FieldBackend, path+"-new"),
+					resource.TestCheckResourceAttr(resourceRoleName, "consul_policies.#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceRoleName, "consul_policies.*", "global-management"),
+				),
+			},
+			{
+				Config:      testConsulSecretBackend_bootstrapAddRoleMulti(path+"-new", consulAddr),
 				ExpectError: regexp.MustCompile(`Token not provided and failed to bootstrap ACLs`),
+			},
+			{
+				// ensure that the failure step above did not introduce any side effects.
+				Config:   testConsulSecretBackend_bootstrapAddRole(path+"-new", consulAddr),
+				PlanOnly: true,
 			},
 		},
 	})
@@ -186,13 +200,15 @@ func TestConsulSecretBackend_remount(t *testing.T) {
 	updatedPath := acctest.RandomWithPrefix("tf-test-consul-updated")
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
 
-	resourceName := "vault_consul_secret_backend.test"
+	resourceType := "vault_consul_secret_backend"
+	resourceName := resourceType + ".test"
 
 	store := &testMountStore{}
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeConsul, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testConsulSecretBackend_initialConfig(path, token),
@@ -339,7 +355,7 @@ resource "vault_consul_secret_backend" "test" {
   address = "%s"
   token = "%s"
   bootstrap = %t
-  disable_remount = true
+  disable_remount = false
 }
 `, path, addr, token, bootstrap)
 }
@@ -347,28 +363,45 @@ resource "vault_consul_secret_backend" "test" {
 func testConsulSecretBackend_updateConfig(path, token string) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
-  path = "%s"
+  path        = "%s"
   description = "test description"
-  address = "consul.domain.tld:8501"
-  token = "%s"
-  scheme = "https"
-}`, path, token)
+  address     = "consul.domain.tld:8501"
+  token       = "%s"
+  scheme      = "https"
+}
+`, path, token)
 }
 
 func testConsulSecretBackend_bootstrapAddRole(path, addr string) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
-  path = "%s"
-  description = "test description"
-  address = "%s"
-  bootstrap = true
+  path            = "%s"
+  description     = "test description"
+  address         = "%s"
+  bootstrap       = true
+  disable_remount = false
 }
 
 resource "vault_consul_secret_backend_role" "test" {
-  backend = vault_consul_secret_backend.test.path
-  name = "management"
+  backend         = vault_consul_secret_backend.test.path
+  name            = "management"
   consul_policies = ["global-management"]
-}`, path, addr)
+}
+`, path, addr)
+}
+
+func testConsulSecretBackend_bootstrapAddRoleMulti(path, addr string) string {
+	return fmt.Sprintf(`
+%s
+
+resource "vault_consul_secret_backend" "test-2" {
+  path            = "%s-2"
+  description     = "test description"
+  address         = "%s"
+  bootstrap       = true
+  disable_remount = false
+}
+`, testConsulSecretBackend_bootstrapAddRole(path, addr), path, addr)
 }
 
 func testConsulSecretBackend_updateConfig_addCerts(path, token string) string {
