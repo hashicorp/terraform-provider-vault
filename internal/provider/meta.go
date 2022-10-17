@@ -198,13 +198,13 @@ func (p *ProviderMeta) GetClient() (*api.Client, error) {
 // The provided namespace will always be set relative to the default client's
 // namespace.
 func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
-	p.m.Lock()
-	defer p.m.Unlock()
-
 	client, err := p.GetClient()
 	if err != nil {
 		return nil, err
 	}
+
+	p.m.Lock()
+	defer p.m.Lock()
 
 	if err := p.validate(); err != nil {
 		return nil, err
