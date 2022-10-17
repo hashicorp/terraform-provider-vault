@@ -1,10 +1,15 @@
 package entity
 
 import (
+	"errors"
 	"fmt"
+	"log"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/mapstructure"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const (
@@ -14,6 +19,8 @@ const (
 	RootAliasIDPath  = RootAliasPath + "/id"
 	LookupPath       = "identity/lookup/entity"
 )
+
+var ErrEntityNotFound = errors.New("entity not found")
 
 // Entity represents a Vault identity entity
 type Entity struct {
@@ -151,4 +158,28 @@ func LookupEntityAlias(client *api.Client, params *FindAliasParams) (*Alias, err
 	}
 
 	return nil, nil
+}
+
+func ReadEntity(client *api.Client, path string, retry bool) (*api.Secret, error) {
+	log.Printf("[DEBUG] Reading Entity from %q", path)
+
+	var err error
+	if retry {
+		client, err = client.Clone()
+		if err != nil {
+			return nil, fmt.Errorf("error cloning client: %w", err)
+		}
+		util.SetupCCCRetryClient(client, provider.MaxHTTPRetriesCCC)
+	}
+
+	resp, err := client.Logical().Read(path)
+	if err != nil {
+		return resp, fmt.Errorf("failed reading %q", path)
+	}
+
+	if resp == nil {
+		return nil, fmt.Errorf("%w: %q", ErrEntityNotFound, path)
+	}
+
+	return resp, nil
 }

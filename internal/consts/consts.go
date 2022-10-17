@@ -177,6 +177,8 @@ const (
 	FieldExclusive                = "exclusive"
 	FieldGroupID                  = "group_id"
 	FieldGroupName                = "group_name"
+	FieldExternal                 = "external"
+	FieldInternal                 = "internal"
 
 	/*
 		common environment variables

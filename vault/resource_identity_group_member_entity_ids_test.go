@@ -309,8 +309,8 @@ func testAccCheckidentityGroupMemberEntityIdsDestroy(s *terraform.State) error {
 			return e
 		}
 
-		if _, err := readIdentityGroup(client, rs.Primary.ID, false); err != nil {
-			if isIdentityNotFoundError(err) {
+		if _, err := group.ReadIdentityGroup(client, rs.Primary.ID, false); err != nil {
+			if group.IsIdentityNotFoundError(err) {
 				continue
 			}
 			return err
@@ -362,7 +362,7 @@ func testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceName string) resource
 		}
 
 		id := rs.Primary.ID
-		path := identityGroupIDPath(id)
+		path := group.IdentityGroupIDPath(id)
 		tAttrs := []*testutil.VaultStateTest{
 			{
 				ResourceName: resourceName,

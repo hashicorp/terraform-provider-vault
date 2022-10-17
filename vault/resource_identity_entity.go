@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"errors"
 	"fmt"
 	"log"
 
@@ -10,11 +9,10 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
-
-var errEntityNotFound = errors.New("entity not found")
 
 func identityEntityResource() *schema.Resource {
 	return &schema.Resource{
@@ -190,7 +188,7 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 			return nil
 		}
 
-		if isIdentityNotFoundError(err) {
+		if group.IsIdentityNotFoundError(err) {
 			log.Printf("[WARN] IdentityEntity %q not found, removing from state", id)
 			d.SetId("")
 			return nil
@@ -276,33 +274,5 @@ func readIdentityEntity(client *api.Client, entityID string, retry bool) (*api.S
 	path := entity.JoinEntityID(entityID)
 	log.Printf("[DEBUG] Reading Entity %q from %q", entityID, path)
 
-	return readEntity(client, path, retry)
-}
-
-func readEntity(client *api.Client, path string, retry bool) (*api.Secret, error) {
-	log.Printf("[DEBUG] Reading Entity from %q", path)
-
-	var err error
-	if retry {
-		client, err = client.Clone()
-		if err != nil {
-			return nil, fmt.Errorf("error cloning client: %w", err)
-		}
-		util.SetupCCCRetryClient(client, provider.MaxHTTPRetriesCCC)
-	}
-
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return resp, fmt.Errorf("failed reading %q", path)
-	}
-
-	if resp == nil {
-		return nil, fmt.Errorf("%w: %q", errEntityNotFound, path)
-	}
-
-	return resp, nil
-}
-
-func isIdentityNotFoundError(err error) bool {
-	return err != nil && errors.Is(err, errEntityNotFound)
+	return entity.ReadEntity(client, path, retry)
 }

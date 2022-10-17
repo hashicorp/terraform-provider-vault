@@ -1,9 +1,9 @@
 package vault
 
 import (
-	"fmt"
-	"log"
+	"context"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -13,10 +13,10 @@ import (
 
 func identityGroupMemberGroupIdsResource() *schema.Resource {
 	return &schema.Resource{
-		Create: identityGroupMemberGroupIdsUpdate,
-		Update: identityGroupMemberGroupIdsUpdate,
-		Read:   ReadWrapper(identityGroupMemberGroupIdsRead),
-		Delete: identityGroupMemberGroupIdsDelete,
+		CreateContext: identityGroupMemberGroupIdsUpdate,
+		UpdateContext: identityGroupMemberGroupIdsUpdate,
+		ReadContext:   ReadContextWrapper(identityGroupMemberGroupIdsRead),
+		DeleteContext: identityGroupMemberGroupIdsDelete,
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldMemberGroupIDs: {
@@ -31,8 +31,8 @@ func identityGroupMemberGroupIdsResource() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  true,
-				Description: `Should the resource manage member group ids
-exclusively? Beware of race conditions when disabling exclusive management`,
+				Description: `If set to true, allows the resource to manage member group ids
+exclusively. Beware of race conditions when disabling exclusive management`,
 			},
 			consts.FieldGroupID: {
 				Type:        schema.TypeString,
@@ -44,106 +44,43 @@ exclusively? Beware of race conditions when disabling exclusive management`,
 	}
 }
 
-func identityGroupMemberGroupIdsUpdate(d *schema.ResourceData, meta interface{}) error {
+func identityGroupMemberGroupIdsUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	gid := d.Get(consts.FieldGroupID).(string)
-	path := identityGroupIDPath(gid)
+	path := group.IdentityGroupIDPath(gid)
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
 
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	log.Printf("[DEBUG] Updating IdentityGroupMemberGroupIds %q", gid)
-
-	if d.HasChange(consts.FieldGroupID) {
-		o, n := d.GetChange(consts.FieldGroupID)
-		log.Printf("[DEBUG] Group ID has changed old=%q, new=%q", o, n)
+	if diag := group.UpdateGroupMemberContextFunc(d, client, consts.FieldMemberGroupIDs); diag != nil {
+		return diag
 	}
 
-	resp, err := readIdentityGroup(client, gid, d.IsNewResource())
-	if err != nil {
-		return err
-	}
-
-	data, err := group.GetGroupMember(d, resp, consts.FieldMemberGroupIDs)
-	if err != nil {
-		return err
-	}
-
-	_, err = client.Logical().Write(path, data)
-	if err != nil {
-		return fmt.Errorf("error updating IdentityGroupMemberGroupIds %q: %s", gid, err)
-	}
-	log.Printf("[DEBUG] Updated IdentityGroupMemberGroupIds %q", gid)
-
-	d.SetId(gid)
-
-	return identityGroupMemberGroupIdsRead(d, meta)
+	return identityGroupMemberGroupIdsRead(ctx, d, meta)
 }
 
-func identityGroupMemberGroupIdsRead(d *schema.ResourceData, meta interface{}) error {
+func identityGroupMemberGroupIdsRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	id := d.Id()
-
-	log.Printf("[DEBUG] Read IdentityGroupMemberGroupIds %s", id)
-	resp, err := readIdentityGroup(client, id, d.IsNewResource())
-	if err != nil {
-		if isIdentityNotFoundError(err) {
-			log.Printf("[WARN] IdentityGroupMemberGroupIds %q not found, removing from state", id)
-			d.SetId("")
-			return nil
-		}
-		return err
-	}
-
-	if err := d.Set(consts.FieldGroupID, id); err != nil {
-		return err
-	}
-
-	if err := group.SetGroupMember(d, resp, consts.FieldMemberGroupIDs); err != nil {
-		return err
-	}
-
-	return nil
+	return group.ReadGroupMemberContextFunc(d, client, consts.FieldMemberGroupIDs, false)
 }
 
-func identityGroupMemberGroupIdsDelete(d *schema.ResourceData, meta interface{}) error {
+func identityGroupMemberGroupIdsDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	id := d.Get(consts.FieldGroupID).(string)
-	path := identityGroupIDPath(id)
+	path := group.IdentityGroupIDPath(id)
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
 
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	log.Printf("[DEBUG] Deleting IdentityGroupMemberGroupIds %q", id)
-
-	resp, err := readIdentityGroup(client, id, false)
-	if err != nil {
-		if isIdentityNotFoundError(err) {
-			return nil
-		}
-		return err
-	}
-
-	data, err := group.DeleteGroupMember(d, resp, consts.FieldMemberGroupIDs)
-	if err != nil {
-		return err
-	}
-
-	_, err = client.Logical().Write(path, data)
-	if err != nil {
-		return fmt.Errorf("error updating IdentityGroupMemberGroupIds %q: %s", id, err)
-	}
-	log.Printf("[DEBUG] Updated IdentityGroupMemberGroupIds %q", id)
-
-	return nil
+	return group.DeleteGroupMemberContextFunc(d, client, consts.FieldMemberGroupIDs)
 }

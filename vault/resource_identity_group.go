@@ -9,11 +9,10 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
-
-const identityGroupPath = "/identity/group"
 
 func identityGroupResource() *schema.Resource {
 	return &schema.Resource{
@@ -175,7 +174,7 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 	name := d.Get("name").(string)
 	typeValue := d.Get("type").(string)
 
-	path := identityGroupPath
+	path := group.IdentityGroupPath
 
 	data := map[string]interface{}{
 		"type": typeValue,
@@ -218,7 +217,7 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityGroup %q", id)
-	path := identityGroupIDPath(id)
+	path := group.IdentityGroupIDPath(id)
 
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
@@ -247,14 +246,14 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 	id := d.Id()
 
 	log.Printf("[DEBUG] Read IdentityGroup %s", id)
-	resp, err := readIdentityGroup(client, id, d.IsNewResource())
+	resp, err := group.ReadIdentityGroup(client, id, d.IsNewResource())
 	if err != nil {
 		// We need to check if the secret_id has expired
 		if util.IsExpiredTokenErr(err) {
 			return nil
 		}
 
-		if isIdentityNotFoundError(err) {
+		if group.IsIdentityNotFoundError(err) {
 			log.Printf("[WARN] IdentityGroup %q not found, removing from state", id)
 			d.SetId("")
 			return nil
@@ -280,7 +279,7 @@ func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
 
 	id := d.Id()
 
-	path := identityGroupIDPath(id)
+	path := group.IdentityGroupIDPath(id)
 
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
@@ -296,15 +295,11 @@ func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupNamePath(name string) string {
-	return fmt.Sprintf("%s/name/%s", identityGroupPath, name)
-}
-
-func identityGroupIDPath(id string) string {
-	return fmt.Sprintf("%s/id/%s", identityGroupPath, id)
+	return fmt.Sprintf("%s/name/%s", group.IdentityGroupPath, name)
 }
 
 func readIdentityGroupPolicies(client *api.Client, groupID string, retry bool) ([]interface{}, error) {
-	resp, err := readIdentityGroup(client, groupID, retry)
+	resp, err := group.ReadIdentityGroup(client, groupID, retry)
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +311,7 @@ func readIdentityGroupPolicies(client *api.Client, groupID string, retry bool) (
 }
 
 func readIdentityGroupMemberEntityIds(client *api.Client, groupID string, retry bool) ([]interface{}, error) {
-	resp, err := readIdentityGroup(client, groupID, retry)
+	resp, err := group.ReadIdentityGroup(client, groupID, retry)
 	if err != nil {
 		return nil, err
 	}
@@ -325,12 +320,4 @@ func readIdentityGroupMemberEntityIds(client *api.Client, groupID string, retry 
 		return v.([]interface{}), nil
 	}
 	return make([]interface{}, 0), nil
-}
-
-// This function may return `nil` for the IdentityGroup if it does not exist
-func readIdentityGroup(client *api.Client, groupID string, retry bool) (*api.Secret, error) {
-	path := identityGroupIDPath(groupID)
-	log.Printf("[DEBUG] Reading IdentityGroup %s from %q", groupID, path)
-
-	return readEntity(client, path, retry)
 }
