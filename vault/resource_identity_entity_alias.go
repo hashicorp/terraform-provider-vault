@@ -67,7 +67,7 @@ func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta
 
 	path := entity.RootAliasPath
 	name := d.Get("name").(string)
-	data := util.GetAPIRequestData(d, map[string]string{
+	data := util.GetAPIRequestDataWithMap(d, map[string]string{
 		"name":                    "",
 		consts.FieldMountAccessor: "",
 		"canonical_id":            "",
@@ -151,7 +151,7 @@ func identityEntityAliasUpdate(ctx context.Context, d *schema.ResourceData, meta
 	path := entity.JoinAliasID(id)
 
 	diags := diag.Diagnostics{}
-	data := util.GetAPIRequestData(d, map[string]string{
+	data := util.GetAPIRequestDataWithMap(d, map[string]string{
 		"name":                    "",
 		consts.FieldMountAccessor: "",
 		"canonical_id":            "",

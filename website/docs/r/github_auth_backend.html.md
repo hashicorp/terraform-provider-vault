@@ -32,6 +32,9 @@ The following arguments are supported:
 * `path` - (Optional) Path where the auth backend is mounted. Defaults to `auth/github`
   if not specified.
 
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
+
 * `organization` - (Required) The organization configured users must be part of.
 
 * `organization_id` (Optional) The ID of the organization users must be part of.

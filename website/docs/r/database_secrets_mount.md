@@ -162,6 +162,9 @@ Supported list of database secrets engines that can be configured:
 
 * `influxdb` - (Optional) A nested block containing configuration options for InfluxDB connections.  
   *See [Configuration Options](#influxdb-configuration-options) for more info*
+
+* `redis_elasticache` - (Optional) A nested block containing configuration options for InfluxDB connections.  
+  *See [Configuration Options](#redis-elasticache-configuration-options) for more info*
  
 ### Cassandra Configuration Options
 
@@ -393,6 +396,19 @@ Supported list of database secrets engines that can be configured:
 
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
   See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
+### Redis ElastiCache Configuration Options
+
+* `url` - (Required) The configuration endpoint for the ElastiCache cluster to connect to.
+
+* `username` - (Optional) The AWS access key id to use to talk to ElastiCache. 
+  If omitted the credentials chain provider is used instead.
+
+* `password` - (Optional) The AWS secret key id to use to talk to ElastiCache. 
+  If omitted the credentials chain provider is used instead.
+
+* `region` - (Optional) The AWS region where the ElastiCache cluster is hosted.
+  If omitted the plugin tries to infer the region from the environment.
 
 ### AWS Redshift Configuration Options
 

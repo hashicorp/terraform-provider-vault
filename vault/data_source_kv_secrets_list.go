@@ -19,7 +19,7 @@ func kvSecretListDataSource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Full KV-V1 path where secrets will be listed.",
-				ValidateFunc: validateNoTrailingSlash,
+				ValidateFunc: provider.ValidateNoTrailingSlash,
 			},
 
 			consts.FieldNames: {

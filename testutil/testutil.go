@@ -30,19 +30,23 @@ const (
 )
 
 func TestAccPreCheck(t *testing.T) {
+	t.Helper()
 	FatalTestEnvUnset(t, api.EnvVaultAddress, api.EnvVaultToken)
 }
 
 func TestEntPreCheck(t *testing.T) {
+	t.Helper()
 	SkipTestAccEnt(t)
 	TestAccPreCheck(t)
 }
 
 func SkipTestAcc(t *testing.T) {
+	t.Helper()
 	SkipTestEnvUnset(t, resource.EnvTfAcc)
 }
 
 func SkipTestAccEnt(t *testing.T) {
+	t.Helper()
 	SkipTestEnvUnset(t, "TF_ACC_ENTERPRISE")
 }
 
@@ -50,40 +54,45 @@ func SkipTestAccEnt(t *testing.T) {
 // have a non-empty value.
 func SkipTestEnvSet(t *testing.T, envVars ...string) []string {
 	t.Helper()
-	return handleTestEnvSetF(t.Skipf, envVars...)
+	return handleTestEnvSetF(t, t.Skipf, envVars...)
 }
 
 // SkipTestEnvUnset skips the test if any of the provided environment variables
 // are empty/unset.
 func SkipTestEnvUnset(t *testing.T, envVars ...string) []string {
 	t.Helper()
-	return handleTestEnvUnsetF(t.Skipf, envVars...)
+	return handleTestEnvUnsetF(t, t.Skipf, envVars...)
 }
 
 // FatalTestEnvUnset fails the test if any of the provided environment variables
 // have non-empty values.
 func FatalTestEnvUnset(t *testing.T, envVars ...string) []string {
 	t.Helper()
-	return handleTestEnvUnsetF(t.Fatalf, envVars...)
+	return handleTestEnvUnsetF(t, t.Fatalf, envVars...)
 }
 
-func handleTestEnvUnsetF(f func(f string, args ...interface{}), envVars ...string) []string {
-	return handleTestEnv(func(k, v string) {
+func handleTestEnvUnsetF(t *testing.T, f func(f string, args ...interface{}), envVars ...string) []string {
+	t.Helper()
+	return handleTestEnv(t, func(k, v string) {
+		t.Helper()
 		if v == "" {
 			f("%q must be set", k)
 		}
 	}, envVars...)
 }
 
-func handleTestEnvSetF(f func(f string, args ...interface{}), envVars ...string) []string {
-	return handleTestEnv(func(k, v string) {
+func handleTestEnvSetF(t *testing.T, f func(f string, args ...interface{}), envVars ...string) []string {
+	t.Helper()
+	return handleTestEnv(t, func(k, v string) {
+		t.Helper()
 		if v != "" {
 			f("%q is set", k)
 		}
 	}, envVars...)
 }
 
-func handleTestEnv(f func(k, v string), envVars ...string) []string {
+func handleTestEnv(t *testing.T, f func(k string, v string), envVars ...string) []string {
+	t.Helper()
 	var result []string
 	for _, k := range envVars {
 		v := os.Getenv(k)
@@ -682,16 +691,23 @@ func CheckJSONData(resourceName, attr, expected string) resource.TestCheckFunc {
 	}
 }
 
-// GetImportTestStep for resource name. Optionally include field names that should be ignored during the import
-// verification, typically ignore fields should only be provided for values that are not returned from the
-// provisioning API.
-func GetImportTestStep(resourceName string, skipVerify bool, ignoreFields ...string) resource.TestStep {
-	return resource.TestStep{
+// GetImportTestStep for resource name. If a custom ImportStateCheck function is not desired, pass
+// a nil value. Optionally include field names that should be ignored during the import
+// verification, typically ignore fields should only be provided for values that are not returned
+// from the provisioning API.
+func GetImportTestStep(resourceName string, skipVerify bool, check resource.ImportStateCheckFunc, ignoreFields ...string) resource.TestStep {
+	ts := resource.TestStep{
 		ResourceName:            resourceName,
 		ImportState:             true,
 		ImportStateVerify:       !skipVerify,
 		ImportStateVerifyIgnore: ignoreFields,
 	}
+
+	if check != nil {
+		ts.ImportStateCheck = check
+	}
+
+	return ts
 }
 
 // GetNamespaceImportStateCheck checks that the namespace was properly imported into the state.

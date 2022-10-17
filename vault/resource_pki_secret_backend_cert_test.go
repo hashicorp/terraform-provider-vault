@@ -183,6 +183,7 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
 		resource.TestCheckResourceAttrSet(resourceName, "expiration"),
 		resource.TestCheckResourceAttrSet(resourceName, "serial_number"),
+		resource.TestCheckResourceAttrSet(resourceName, "renew_pending"),
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -200,6 +201,13 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 			},
 			{
 				// test renewal based on cert expiry
+				// NOTE: Ideally we'd also directly test that the refreshed
+				// state has renew_pending set to true before creating the plan,
+				// but the test harness only exposes the state after applying
+				// the plan so we can't make assertions against the intermediate
+				// refresh and planning steps. Therefore we're only testing
+				// that renew_pending got set to true indirectly by observing
+				// that it then caused the certificate to get re-issued.
 				PreConfig: testWaitCertExpiry(store),
 				Config:    testPkiSecretBackendCertConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(

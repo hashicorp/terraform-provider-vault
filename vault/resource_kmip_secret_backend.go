@@ -26,11 +26,12 @@ var kmipAPIFields = []string{
 }
 
 func kmipSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
-		Create: kmipSecretBackendCreate,
-		Read:   ReadWrapper(kmipSecretBackendRead),
-		Update: kmipSecretBackendUpdate,
-		Delete: kmipSecretBackendDelete,
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
+		Create:        kmipSecretBackendCreate,
+		Read:          ReadWrapper(kmipSecretBackendRead),
+		Update:        kmipSecretBackendUpdate,
+		Delete:        kmipSecretBackendDelete,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -40,7 +41,7 @@ func kmipSecretBackendResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Path where KMIP secret backend will be mounted",
-				ValidateFunc: validateNoLeadingTrailingSlashes,
+				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -106,7 +107,7 @@ func kmipSecretBackendResource() *schema.Resource {
 				Description: "Client certificate TTL in seconds",
 			},
 		},
-	}
+	})
 }
 
 func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {

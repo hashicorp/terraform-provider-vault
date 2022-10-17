@@ -1,3 +1,34 @@
+## 3.9.1 (October 06, 2022)
+BUGS:
+* Use the correct AWS login headers within auth_generic: ([#1625](https://github.com/hashicorp/terraform-provider-vault/pull/1625))
+* Fix resource recreation following out-of-band changes in Vault: ([#1567](https://github.com/hashicorp/terraform-provider-vault/pull/1567))
+
+## 3.9.0 (October 05, 2022)
+IMPROVEMENTS:
+* Add first-class Azure login support: ([#1617](https://github.com/hashicorp/terraform-provider-vault/pull/1617))
+* Add first-class OIDC andJWT login support: ([#1615](https://github.com/hashicorp/terraform-provider-vault/pull/1615))
+* Add first-class OCI login support: ([#1614](https://github.com/hashicorp/terraform-provider-vault/pull/1614))
+* Add first-class Radius login support: ([#1609](https://github.com/hashicorp/terraform-provider-vault/pull/1609))
+* Add first-class Kerberos login support: ([#1608](https://github.com/hashicorp/terraform-provider-vault/pull/1608))
+* Add first-class GCP login support: ([#1607](https://github.com/hashicorp/terraform-provider-vault/pull/1607))
+* Add first-class TLS certificates login support: ([#1605](https://github.com/hashicorp/terraform-provider-vault/pull/1605))
+* Add first-class auth login config support for AWS: ([#1599](https://github.com/hashicorp/terraform-provider-vault/pull/1599)) ([#1618](https://github.com/hashicorp/terraform-provider-vault/pull/1618))
+* Add support for login MFA resources: ([#1620](https://github.com/hashicorp/terraform-provider-vault/pull/1620))
+* Add Managed Keys support: ([#1508](https://github.com/hashicorp/terraform-provider-vault/pull/1508))
+* Add support to perform semantic version comparisons against Vault's server version: ([#1426](https://github.com/hashicorp/terraform-provider-vault/pull/1426))
+* Add Mount Migration support to all secrets/auth backends: ([#1594](https://github.com/hashicorp/terraform-provider-vault/pull/1594))
+* Use new semantic version checking for Consul secrets backend logic: ([#1593](https://github.com/hashicorp/terraform-provider-vault/pull/1593))
+* Docs: Fix vault_kv_secret_backend_v2 delete_version_after example: ([#1602](https://github.com/hashicorp/terraform-provider-vault/pull/1602))
+* Support creating Azure secret backend role by specifying the role_id: ([#1573](https://github.com/hashicorp/terraform-provider-vault/pull/1573))
+* Add Redis ElastiCache database secrets engine support: ([#1596](https://github.com/hashicorp/terraform-provider-vault/pull/1596))
+* vault_pki_secret_backend_cert: Report when renewal is pending: ([#1597](https://github.com/hashicorp/terraform-provider-vault/pull/1597))
+* Accept data source values in the token field for Consul secrets backend: ([#1600](https://github.com/hashicorp/terraform-provider-vault/pull/1600))
+
+BUGS:
+* Fix erroneous persistent diff in the vault_token resource.: ([#1622](https://github.com/hashicorp/terraform-provider-vault/pull/1622))
+* Fix data_source_azure_access_credentials US Government Cloud: ([#1590](https://github.com/hashicorp/terraform-provider-vault/pull/1590))
+* Add kv-v2 write retry: ([#1579](https://github.com/hashicorp/terraform-provider-vault/pull/1579))
+
 ## 3.8.2 (August 11, 2022)
 IMPROVEMENTS:
 * Add bootstrap field to Consul backend resources: ([#1571](https://github.com/hashicorp/terraform-provider-vault/pull/1571))

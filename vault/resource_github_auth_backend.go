@@ -18,9 +18,8 @@ func githubAuthBackendResource() *schema.Resource {
 		consts.FieldPath: {
 			Type:        schema.TypeString,
 			Optional:    true,
-			ForceNew:    true,
 			Description: "Path where the auth backend is mounted",
-			Default:     "github",
+			Default:     consts.MountTypeGitHub,
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
 			},
@@ -58,7 +57,7 @@ func githubAuthBackendResource() *schema.Resource {
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: githubAuthBackendCreate,
 		Read:   ReadWrapper(githubAuthBackendRead),
 		Update: githubAuthBackendUpdate,
@@ -66,8 +65,9 @@ func githubAuthBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		Schema: fields,
-	}
+		Schema:        fields,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
+	})
 }
 
 func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
@@ -85,7 +85,7 @@ func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Enabling github auth backend at '%s'", path)
 	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
-		Type:        "github",
+		Type:        consts.MountTypeGitHub,
 		Description: description,
 	})
 	if err != nil {
@@ -106,6 +106,16 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
+
+	if !d.IsNewResource() {
+		mount, err := util.Remount(d, client, consts.FieldPath, true)
+		if err != nil {
+			return err
+		}
+
+		path = "auth/" + mount
+		configPath = path + "/config"
+	}
 
 	data := map[string]interface{}{}
 
@@ -212,10 +222,9 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client, err := meta.(*provider.ProviderMeta).GetClient()
-	if err != nil {
-		return fmt.Errorf("error obtaining Vault client: %w", err)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
 	}
-
 	return authMountDisable(client, d.Id())
 }

@@ -256,7 +256,7 @@ func TestPathParameters(t *testing.T) {
 	}
 }
 
-func TestGetAPIRequestData(t *testing.T) {
+func TestGetAPIRequestDataWithMap(t *testing.T) {
 	tests := []struct {
 		name string
 		d    map[string]*schema.Schema
@@ -359,8 +359,125 @@ func TestGetAPIRequestData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := schema.TestResourceDataRaw(t, tt.d, tt.sm)
-			if got := GetAPIRequestData(r, tt.m); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetAPIRequestData() = %v, want %v", got, tt.want)
+			if got := GetAPIRequestDataWithMap(r, tt.m); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetAPIRequestDataWithMap() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetAPIRequestDataWithSlice(t *testing.T) {
+	tests := []struct {
+		name string
+		d    map[string]*schema.Schema
+		s    []string
+		sm   map[string]interface{}
+		want map[string]interface{}
+	}{
+		{
+			name: "basic-default",
+			d: map[string]*schema.Schema{
+				"name": {
+					Type: schema.TypeString,
+				},
+			},
+			s: []string{"name"},
+			sm: map[string]interface{}{
+				"name": "bob",
+			},
+			want: map[string]interface{}{
+				"name": "bob",
+			},
+		},
+		{
+			name: "set",
+			d: map[string]*schema.Schema{
+				"name": {
+					Type: schema.TypeString,
+				},
+				"parts": {
+					Type: schema.TypeSet,
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
+					},
+				},
+			},
+			s: []string{
+				"name",
+				"parts",
+			},
+			sm: map[string]interface{}{
+				"name": "alice",
+				"parts": []interface{}{
+					"bolt",
+				},
+			},
+			want: map[string]interface{}{
+				"name": "alice",
+				"parts": []interface{}{
+					"bolt",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := schema.TestResourceDataRaw(t, tt.d, tt.sm)
+			if got := GetAPIRequestDataWithSlice(r, tt.s); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetAPIRequestDataWithSlice() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCalculateConflictsWith(t *testing.T) {
+	tests := []struct {
+		name  string
+		self  string
+		group []string
+		want  []string
+	}{
+		{
+			name:  "empty",
+			self:  "basic",
+			group: []string{},
+			want:  []string{},
+		},
+		{
+			name:  "empty-self",
+			self:  "basic",
+			group: []string{"basic"},
+			want:  []string{},
+		},
+		{
+			name:  "single",
+			self:  "single",
+			group: []string{"foo"},
+			want:  []string{"foo"},
+		},
+		{
+			name:  "single-self",
+			self:  "single",
+			group: []string{"foo", "single"},
+			want:  []string{"foo"},
+		},
+		{
+			name:  "multiple-self",
+			self:  "multiple",
+			group: []string{"multiple", "foo", "multiple"},
+			want:  []string{"foo"},
+		},
+		{
+			name:  "duplicates-other",
+			self:  "multiple",
+			group: []string{"foo", "bar", "foo", "bar"},
+			want:  []string{"foo", "bar"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := CalculateConflictsWith(tt.self, tt.group); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("CalculateConflictsWith() = %v, want %v", got, tt.want)
 			}
 		})
 	}

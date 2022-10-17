@@ -21,7 +21,6 @@ func identityGroupResource() *schema.Resource {
 		Update: identityGroupUpdate,
 		Read:   ReadWrapper(identityGroupRead),
 		Delete: identityGroupDelete,
-		Exists: identityGroupExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -282,30 +281,6 @@ func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleted IdentityGroup %q", id)
 
 	return nil
-}
-
-func identityGroupExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	id := d.Id()
-	key := id
-
-	if len(id) == 0 {
-		return false, nil
-	} else {
-		key = d.Get("name").(string)
-	}
-
-	log.Printf("[DEBUG] Checking if IdentityGroup %q exists", key)
-	resp, err := readIdentityGroup(client, id, true)
-	if err != nil {
-		return true, fmt.Errorf("error checking if IdentityGroup %q exists: %s", key, err)
-	}
-	log.Printf("[DEBUG] Checked if IdentityGroup %q exists", key)
-	return resp != nil, nil
 }
 
 func identityGroupNamePath(name string) string {

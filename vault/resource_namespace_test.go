@@ -55,21 +55,21 @@ func TestAccNamespace(t *testing.T) {
 				Config:  testNestedNamespaces(namespacePath+"/", 3),
 				Destroy: false,
 				ExpectError: regexp.MustCompile(
-					fmt.Sprintf(`invalid value "%s/" for "path", contains leading/trailing "%s"`,
+					fmt.Sprintf(`value "%s/" for "path" contains leading/trailing "%s"`,
 						namespacePath, consts.PathDelim)),
 			},
 			{
 				Config:  testNestedNamespaces("/"+namespacePath, 3),
 				Destroy: false,
 				ExpectError: regexp.MustCompile(
-					fmt.Sprintf(`invalid value "/%s" for "path", contains leading/trailing "%s"`,
+					fmt.Sprintf(`value "/%s" for "path" contains leading/trailing "%s"`,
 						namespacePath, consts.PathDelim)),
 			},
 			{
 				Config:  testNestedNamespaces("/"+namespacePath+"/", 3),
 				Destroy: false,
 				ExpectError: regexp.MustCompile(
-					fmt.Sprintf(`invalid value "/%s/" for "path", contains leading/trailing "%s"`,
+					fmt.Sprintf(`value "/%s/" for "path" contains leading/trailing "%s"`,
 						namespacePath, consts.PathDelim)),
 			},
 			{

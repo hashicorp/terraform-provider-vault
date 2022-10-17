@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
@@ -121,8 +122,38 @@ func TestGCPAuthBackend_import(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"credentials",
+					"disable_remount",
 				},
 			},
+		},
+	})
+}
+
+func TestGCPAuthBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-auth-gcp")
+	updatedPath := acctest.RandomWithPrefix("tf-test-auth-gcp-updated")
+
+	resourceName := "vault_gcp_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
+				Check: resource.ComposeTestCheckFunc(
+					testGCPAuthBackendCheck_attrs(),
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+				),
+			},
+			{
+				Config: testGCPAuthBackendConfig_basic(updatedPath, gcpJSONCredentials),
+				Check: resource.ComposeTestCheckFunc(
+					testGCPAuthBackendCheck_attrs(),
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "credentials", "disable_remount"),
 		},
 	})
 }

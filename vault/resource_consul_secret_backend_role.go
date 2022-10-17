@@ -1,11 +1,13 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -19,13 +21,12 @@ var (
 
 func consulSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
-		Create: consulSecretBackendRoleWrite,
-		Read:   ReadWrapper(consulSecretBackendRoleRead),
-		Update: consulSecretBackendRoleWrite,
-		Delete: consulSecretBackendRoleDelete,
-		Exists: consulSecretBackendRoleExists,
+		CreateContext: consulSecretBackendRoleWrite,
+		ReadContext:   ReadContextWrapper(consulSecretBackendRoleRead),
+		UpdateContext: consulSecretBackendRoleWrite,
+		DeleteContext: consulSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -138,21 +139,23 @@ func consulSecretBackendRoleGetBackend(d *schema.ResourceData) string {
 	}
 }
 
-func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
+func consulSecretBackendRoleWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	name := d.Get("name").(string)
 
 	backend := consulSecretBackendRoleGetBackend(d)
 	if backend == "" {
-		return fmt.Errorf("No backend specified for Consul secret backend role %s", name)
+		return diag.Errorf("no backend specified for Consul secret backend role %s", name)
 	}
 
 	path := consulSecretBackendRolePath(backend, name)
 
+	// This loads either the consul_policies or policies field, depending on which the
+	// user provided, and then stores it under the appropriate key in the data.
 	var policies []interface{}
 	if v, ok := d.GetOk("policies"); ok {
 		policies = v.([]interface{})
@@ -165,11 +168,17 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 	nodeIdentities := d.Get("node_identities").(*schema.Set).List()
 
 	data := map[string]interface{}{
-		"policies":           policies,
-		"consul_policies":    policies,
 		"consul_roles":       roles,
 		"service_identities": serviceIdentities,
 		"node_identities":    nodeIdentities,
+	}
+
+	useAPIVer1 := provider.IsAPISupported(meta, provider.VaultVersion111)
+
+	if useAPIVer1 {
+		data["consul_policies"] = policies
+	} else {
+		data["policies"] = policies
 	}
 
 	params := []string{
@@ -189,17 +198,17 @@ func consulSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) erro
 	log.Printf("[DEBUG] Configuring Consul secrets backend role at %q", path)
 
 	if _, err := client.Logical().Write(path, data); err != nil {
-		return fmt.Errorf("error writing role configuration for %q: %s", path, err)
+		return diag.Errorf("error writing role configuration for %q: %s", path, err)
 	}
 
 	d.SetId(path)
-	return consulSecretBackendRoleRead(d, meta)
+	return consulSecretBackendRoleRead(ctx, d, meta)
 }
 
-func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
+func consulSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	upgradeOldID(d)
@@ -209,30 +218,30 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 	if err != nil {
 		log.Printf("[WARN] Removing consul role %q because its ID is invalid", path)
 		d.SetId("")
-		return fmt.Errorf("invalid role ID %q: %s", path, err)
+		return diag.Errorf("invalid role ID %q: %s", path, err)
 	}
 
 	backend, err := consulSecretBackendRoleBackendFromPath(path)
 	if err != nil {
 		log.Printf("[WARN] Removing consul role %q because its ID is invalid", path)
 		d.SetId("")
-		return fmt.Errorf("invalid role ID %q: %s", path, err)
+		return diag.Errorf("invalid role ID %q: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading Consul secrets backend role at %q", path)
 
 	secret, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading role configuration for %q: %s", path, err)
+		return diag.Errorf("error reading role configuration for %q: %s", path, err)
 	}
 
 	if secret == nil {
-		return fmt.Errorf("resource not found")
+		return diag.Errorf("resource not found")
 	}
 
 	data := secret.Data
 	if err := d.Set("name", name); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	var pathKey string
 	if _, ok := d.GetOk(consts.FieldPath); ok {
@@ -241,7 +250,7 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 		pathKey = "backend"
 	}
 	if err := d.Set(pathKey, backend); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	// map request params to schema fields
@@ -257,17 +266,23 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 		"node_identities":    "node_identities",
 	}
 
-	_, hasLegacyPolicies := data["policies"]
-	if hasLegacyPolicies {
-		params["policies"] = "policies"
-		if _, ok := d.GetOk("consul_policies"); ok {
-			params["policies"] = "consul_policies"
-		}
+	// Check whether Vault will return consul_policies or policies based on its version.
+	useAPIVer1 := provider.IsAPISupported(meta, provider.VaultVersion111)
+
+	// Determine to set either policies or consul_policies depending on the Vault version:
+	// * Vault version < 1.11: Use policies
+	// * Vault version >= 1.11: Use consul_policies
+	policiesField := "consul_policies"
+	if !useAPIVer1 {
+		policiesField = "policies"
+	}
+
+	// If the user specified policies, store the result from Vault under that key.
+	// Otherwise, always store under the key consul_policies.
+	if _, ok := d.GetOk("policies"); ok {
+		params[policiesField] = "policies"
 	} else {
-		params["consul_policies"] = "consul_policies"
-		if _, ok := d.GetOk("policies"); ok {
-			params["consul_policies"] = "policies"
-		}
+		params[policiesField] = "consul_policies"
 	}
 
 	for k, v := range params {
@@ -283,17 +298,17 @@ func consulSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error
 			}
 		}
 		if err := d.Set(v, val); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	return nil
 }
 
-func consulSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func consulSecretBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -301,30 +316,10 @@ func consulSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) err
 	log.Printf("[DEBUG] Deleting Consul backend role at %q", path)
 
 	if _, err := client.Logical().Delete(path); err != nil {
-		return fmt.Errorf("error deleting Consul backend role at %q: %s", path, err)
+		return diag.Errorf("error deleting Consul backend role at %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Deleted Consul backend role at %q", path)
 	return nil
-}
-
-func consulSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	upgradeOldID(d)
-
-	path := d.Id()
-
-	log.Printf("[DEBUG] Checking Consul secrets backend role at %q", path)
-
-	secret, err := client.Logical().Read(path)
-	if err != nil {
-		return false, fmt.Errorf("error reading role configuration for %q: %s", path, err)
-	}
-
-	return secret != nil, nil
 }
 
 func upgradeOldID(d *schema.ResourceData) {

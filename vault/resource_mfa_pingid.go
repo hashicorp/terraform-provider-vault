@@ -27,7 +27,7 @@ func mfaPingIDResource() *schema.Resource {
 				Required:     true,
 				Description:  "Name of the MFA method.",
 				ForceNew:     true,
-				ValidateFunc: validateNoTrailingSlash,
+				ValidateFunc: provider.ValidateNoTrailingSlash,
 			},
 			consts.FieldMountAccessor: {
 				Type:     schema.TypeString,

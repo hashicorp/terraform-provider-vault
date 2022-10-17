@@ -845,6 +845,40 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseSecretBackendConnection_redisElastiCache(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineRedisElastiCache)
+
+	url := os.Getenv("ELASTICACHE_URL")
+	if url == "" {
+		t.Skip("ELASTICACHE_URL not set")
+	}
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineRedisElastiCache.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_redis_elasticache(name, backend, url),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis_elasticache.0.url", url),
+				),
+			},
+			{
+				ResourceName:            testDefaultDatabaseSecretBackendResource,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"verify_connection", "redis_elasticache.0.password"},
+			},
+		},
+	})
+}
+
 func TestAccDatabaseSecretBackendConnection_redshift(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineRedshift)
 
@@ -1420,6 +1454,27 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, url, username, password, userTempl)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_redis_elasticache(name, path, connURL string) string {
+	config := fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+`, path)
+
+	config += fmt.Sprintf(`
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+  redis_elasticache {
+    url = "%s"
+  }
+}`, name, connURL)
+
+	return config
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_redshift(name, path, connURL string, isUpdate bool) string {

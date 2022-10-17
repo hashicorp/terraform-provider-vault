@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -30,14 +31,27 @@ func testCheckMountDestroyed(resourceType, mountType, pathField string) resource
 				return e
 			}
 
-			mounts, err := client.Sys().ListMounts()
-			if err != nil {
-				return err
-			}
-
 			rsPath, ok := rs.Primary.Attributes[pathField]
 			if !ok {
 				return fmt.Errorf("resource's InstanceState missing required field %q", pathField)
+			}
+
+			mounts, err := client.Sys().ListMounts()
+			if err != nil {
+				if ns := client.Namespace(); ns != "" {
+					// handle the case where the test creates the namespace,
+					// in which case the mount will have been destroyed along with
+					// its namespace.
+					if util.Is404(err) {
+						if match := regexp.MustCompile(fmt.Sprintf(
+							`no handler for route "%s/sys/mounts". route entry not found.`, ns),
+						).MatchString(err.Error()); match {
+							return nil
+						}
+					}
+				}
+
+				return err
 			}
 
 			rsPath = util.NormalizeMountPath(rsPath)

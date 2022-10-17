@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -10,10 +11,11 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func awsSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: awsSecretBackendCreate,
 		Read:   ReadWrapper(awsSecretBackendRead),
 		Update: awsSecretBackendUpdate,
@@ -22,12 +24,12 @@ func awsSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Default:     "aws",
 				Description: "Path to mount the backend at.",
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
@@ -94,6 +96,31 @@ func awsSecretBackendResource() *schema.Resource {
 				Description: "Template describing how dynamic usernames are generated.",
 			},
 		},
+	})
+}
+
+func getMountCustomizeDiffFunc(field string) schema.CustomizeDiffFunc {
+	return func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+		if !diff.HasChange(field) {
+			return nil
+		}
+
+		o, _ := diff.GetChange(field)
+		if o == "" {
+			return nil
+		}
+
+		// Mount Migration is only available for versions >= 1.10
+		remountSupported := provider.IsAPISupported(meta, provider.VaultVersion110)
+		disable := diff.Get(consts.FieldDisableRemount).(bool)
+
+		if remountSupported && !disable {
+			return nil
+		}
+
+		// Mount migration not available
+		// Destroy and recreate resource
+		return diff.ForceNew(field)
 	}
 }
 
@@ -241,6 +268,12 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 	d.Partial(true)
+
+	path, err := util.Remount(d, client, consts.FieldPath, false)
+	if err != nil {
+		return err
+	}
+
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		config := api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),

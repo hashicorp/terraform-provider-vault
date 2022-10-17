@@ -36,13 +36,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "username_template"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				// the API can't serve these fields, so ignore them
-				ImportStateVerifyIgnore: []string{"secret_key"},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, "secret_key", "disable_remount"),
 			{
 				Config: testAccAWSSecretBackendConfig_updated(path, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
@@ -92,13 +86,40 @@ func TestAccAWSSecretBackend_usernameTempl(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "username_template", templ),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil, "secret_key", "disable_remount"),
+		},
+	})
+}
+
+func TestAccAWSSecretBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-aws")
+	updatedPath := acctest.RandomWithPrefix("tf-test-aws-updated")
+
+	resourceName := "vault_aws_secret_backend.test"
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				// the API can't serve these fields, so ignore them
-				ImportStateVerifyIgnore: []string{"secret_key"},
+				Config: testAccAWSSecretBackendConfig_basic(path, accessKey, secretKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+				),
 			},
+			{
+				Config: testAccAWSSecretBackendConfig_basic(updatedPath, accessKey, secretKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "secret_key", "disable_remount"),
 		},
 	})
 }

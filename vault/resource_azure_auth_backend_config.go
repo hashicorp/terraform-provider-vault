@@ -66,9 +66,9 @@ func azureAuthBackendConfigResource() *schema.Resource {
 }
 
 func azureAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	config, err := meta.(*provider.ProviderMeta).GetClient()
-	if err != nil {
-		return fmt.Errorf("error obtaining Vault client: %w", err)
+	config, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
 	}
 
 	// if backend comes from the config, it won't have the StateFunc
@@ -102,11 +102,10 @@ func azureAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	config, err := meta.(*provider.ProviderMeta).GetClient()
-	if err != nil {
-		return fmt.Errorf("error obtaining Vault client: %w", err)
+	config, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
 	}
-
 	log.Printf("[DEBUG] Reading Azure auth backend config")
 	secret, err := config.Logical().Read(d.Id())
 	if err != nil {
@@ -135,13 +134,12 @@ func azureAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	config, err := meta.(*provider.ProviderMeta).GetClient()
-	if err != nil {
-		return fmt.Errorf("error obtaining Vault client: %w", err)
+	config, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
 	}
-
 	log.Printf("[DEBUG] Deleting Azure auth backend config from %q", d.Id())
-	if _, err = config.Logical().Delete(d.Id()); err != nil {
+	if _, err := config.Logical().Delete(d.Id()); err != nil {
 		return fmt.Errorf("error deleting Azure auth backend config from %q: %s", d.Id(), err)
 	}
 	log.Printf("[DEBUG] Deleted Azure auth backend config from %q", d.Id())
@@ -150,11 +148,10 @@ func azureAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	config, err := meta.(*provider.ProviderMeta).GetClient()
-	if err != nil {
-		return true, fmt.Errorf("error obtaining Vault client: %w", err)
+	config, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
 	}
-
 	log.Printf("[DEBUG] Checking if Azure auth backend is configured at %q", d.Id())
 	secret, err := config.Logical().Read(d.Id())
 	if err != nil {
