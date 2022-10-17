@@ -203,12 +203,12 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 		return nil, err
 	}
 
-	p.m.Lock()
-	defer p.m.Lock()
-
 	if err := p.validate(); err != nil {
 		return nil, err
 	}
+
+	p.m.Lock()
+	defer p.m.Lock()
 
 	if ns == "" {
 		return nil, fmt.Errorf("empty namespace not allowed")
