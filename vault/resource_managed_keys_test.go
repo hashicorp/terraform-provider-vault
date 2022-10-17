@@ -49,11 +49,13 @@ func TestManagedKeys(t *testing.T) {
 			{
 				PreConfig: func() {
 					// Delete previously configured managed key from Vault
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					if err != nil {
+						t.Fatal(err)
+					}
 
 					p := getManagedKeysPath(kmsTypeAWS, name0)
-					_, err := client.Logical().Delete(p)
-					if err != nil {
+					if _, err := client.Logical().Delete(p); err != nil {
 						t.Fatalf("manual cleanup required, failed to delete Vault managed key %q, err=%s", p, err)
 					}
 				},
@@ -106,11 +108,13 @@ func TestManagedKeys(t *testing.T) {
 			{
 				PreConfig: func() {
 					// Delete previously configured managed key from Vault
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client, err := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					if err != nil {
+						t.Fatal(err)
+					}
 
 					p := getManagedKeysPath(kmsTypeAWS, name0)
-					_, err := client.Logical().Delete(p)
-					if err != nil {
+					if _, err := client.Logical().Delete(p); err != nil {
 						t.Fatalf("manual cleanup required, failed to delete Vault managed key %q, err=%s", p, err)
 					}
 
