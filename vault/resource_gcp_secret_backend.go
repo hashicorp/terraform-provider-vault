@@ -29,7 +29,7 @@ func gcpSecretBackendResource(name string) *schema.Resource {
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Default:     "gcp",
+				Default:     consts.MountTypeGCP,
 				Description: "Path to mount the backend at.",
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
 					value := v.(string)
@@ -101,7 +101,7 @@ func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting GCP backend at %q", path)
 	err := client.Sys().Mount(path, &api.MountInput{
-		Type:        "gcp",
+		Type:        consts.MountTypeGCP,
 		Description: description,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
