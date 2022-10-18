@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -27,7 +28,7 @@ func TestMFAPingIDBasic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "username_format", "user@example.com"),
 					resource.TestCheckResourceAttr(resourceName, "type", "pingid"),
 					resource.TestCheckResourceAttr(resourceName, "use_signature", "true"),
-					resource.TestCheckResourceAttr(resourceName, "namespace_id", ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespaceID, ""),
 					resource.TestCheckResourceAttr(resourceName, "settings_file_base64", settingsFile),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
@@ -36,7 +37,7 @@ func TestMFAPingIDBasic(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"mount_accessor", "username_format", "settings_file_base64"},
+				ImportStateVerifyIgnore: []string{consts.FieldMountAccessor, "username_format", "settings_file_base64"},
 			},
 		},
 	})

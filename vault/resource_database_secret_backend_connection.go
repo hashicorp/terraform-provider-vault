@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -94,6 +95,10 @@ var (
 		name:              "snowflake",
 		defaultPluginName: "snowflake" + dbPluginSuffix,
 	}
+	dbEngineRedisElastiCache = &dbEngine{
+		name:              "redis_elasticache",
+		defaultPluginName: "redis-elasticache" + dbPluginSuffix,
+	}
 	dbEngineRedshift = &dbEngine{
 		name:              "redshift",
 		defaultPluginName: "redshift" + dbPluginSuffix,
@@ -115,6 +120,7 @@ var (
 		dbEnginePostgres,
 		dbEngineOracle,
 		dbEngineSnowflake,
+		dbEngineRedisElastiCache,
 		dbEngineRedshift,
 	}
 )
@@ -555,6 +561,42 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineOracle.Name(), dbEngineTypes),
 		},
+		dbEngineRedisElastiCache.name: {
+			Type:        typ,
+			Optional:    true,
+			Description: "Connection parameters for the redis-elasticache-database-plugin plugin.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"url": {
+						Type:        schema.TypeString,
+						Required:    true,
+						Description: "The configuration endpoint for the ElastiCache cluster to connect to.",
+					},
+					"username": {
+						Type:     schema.TypeString,
+						Optional: true,
+						Description: "The AWS access key id to use to talk to ElastiCache. " +
+							"If omitted the credentials chain provider is used instead.",
+						Sensitive: true,
+					},
+					"password": {
+						Type:     schema.TypeString,
+						Optional: true,
+						Description: "The AWS secret key id to use to talk to ElastiCache. " +
+							"If omitted the credentials chain provider is used instead.",
+						Sensitive: true,
+					},
+					"region": {
+						Type:     schema.TypeString,
+						Optional: true,
+						Description: "The AWS region where the ElastiCache cluster is hosted. " +
+							"If omitted the plugin tries to infer the region from the environment.",
+					},
+				},
+			},
+			MaxItems:      1,
+			ConflictsWith: util.CalculateConflictsWith(dbEngineRedisElastiCache.Name(), dbEngineTypes),
+		},
 		dbEngineRedshift.name: {
 			Type:        typ,
 			Optional:    true,
@@ -596,7 +638,7 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 
 	return &schema.Resource{
 		Create: databaseSecretBackendConnectionCreateOrUpdate,
-		Read:   databaseSecretBackendConnectionRead,
+		Read:   ReadWrapper(databaseSecretBackendConnectionRead),
 		Update: databaseSecretBackendConnectionCreateOrUpdate,
 		Delete: databaseSecretBackendConnectionDelete,
 		Exists: databaseSecretBackendConnectionExists,
@@ -830,10 +872,14 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	case dbEngineElasticSearch:
 		setElasticsearchDatabaseConnectionData(d, prefix, data)
+	case dbEngineRedisElastiCache:
+		setRedisElastiCacheDatabaseConnectionData(d, prefix, data)
 	case dbEngineSnowflake:
 		setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	case dbEngineRedshift:
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
+	default:
+		return nil, fmt.Errorf("unrecognized DB engine: %v", engine)
 	}
 
 	return data, nil
@@ -945,6 +991,38 @@ func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 	return result
 }
 
+func getRedisElastiCacheConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	result := map[string]interface{}{}
+	if v, ok := data["url"]; ok {
+		result["url"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "url"); ok {
+		result["url"] = v.(string)
+	}
+	if v, ok := data["username"]; ok {
+		result["username"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "username"); ok {
+		result["username"] = v.(string)
+	}
+	if v, ok := data["password"]; ok {
+		result["password"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "password"); ok {
+		result["password"] = v.(string)
+	}
+	if v, ok := data["region"]; ok {
+		result["region"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "region"); ok {
+		result["region"] = v.(string)
+	}
+
+	return result
+}
+
 func getElasticsearchConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
@@ -1020,11 +1098,10 @@ func getCouchbaseConnectionDetailsFromResponse(d *schema.ResourceData, prefix st
 	if v, ok := data["insecure_tls"]; ok {
 		result["insecure_tls"] = v.(bool)
 	}
-	if v, ok := data["base64_pem"]; ok {
-		result["base64_pem"] = v.(string)
-	} else if v, ok := d.GetOk(prefix + "base64_pem"); ok {
-		result["base64_pem"] = v.(string)
-	}
+
+	// base64_pem maps to base64pem in Vault
+	result["base64_pem"] = data["base64pem"]
+
 	if v, ok := data["bucket_name"]; ok {
 		result["bucket_name"] = v.(string)
 	}
@@ -1177,6 +1254,24 @@ func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 	}
 }
 
+func setRedisElastiCacheDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	if v, ok := d.GetOk(prefix + "url"); ok {
+		data["url"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		data["password"] = v.(string)
+	}
+
+	if v, ok := d.GetOk(prefix + "region"); ok {
+		data["region"] = v.(string)
+	}
+}
+
 func setElasticsearchDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	if v, ok := d.GetOk(prefix + "url"); ok {
 		data["url"] = v.(string)
@@ -1228,10 +1323,10 @@ func setCouchbaseDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 		data["hosts"] = strings.Join(hosts, ",")
 	}
 	if v, ok := d.GetOk(prefix + "username"); ok {
-		data["username"] = v.(string)
+		data["username"] = v
 	}
 	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
+		data["password"] = v
 	}
 	if v, ok := d.GetOkExists(prefix + "tls"); ok {
 		data["tls"] = v.(bool)
@@ -1239,14 +1334,15 @@ func setCouchbaseDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	if v, ok := d.GetOkExists(prefix + "insecure_tls"); ok {
 		data["insecure_tls"] = v.(bool)
 	}
-	if v, ok := d.GetOkExists(prefix + "base64_pem"); ok {
-		data["base64_pem"] = v.(string)
+	if v, ok := d.GetOk(prefix + "base64_pem"); ok {
+		// base64_pem maps to base64pem in Vault
+		data["base64pem"] = v
 	}
-	if v, ok := d.GetOkExists(prefix + "bucket_name"); ok {
-		data["bucket_name"] = v.(string)
+	if v, ok := d.GetOk(prefix + "bucket_name"); ok {
+		data["bucket_name"] = v
 	}
-	if v, ok := d.GetOkExists(prefix + "username_template"); ok {
-		data["username_template"] = v.(int)
+	if v, ok := d.GetOk(prefix + "username_template"); ok {
+		data["username_template"] = v
 	}
 }
 
@@ -1304,7 +1400,10 @@ func setDatabaseConnectionDataWithDisableEscaping(d *schema.ResourceData, prefix
 func databaseSecretBackendConnectionCreateOrUpdate(
 	d *schema.ResourceData, meta interface{},
 ) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	engine, err := getDBEngine(d)
 	if err != nil {
@@ -1411,7 +1510,10 @@ func getSortedPluginPrefixes() ([]string, error) {
 }
 
 func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -1547,6 +1649,8 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 		result = getElasticsearchConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineSnowflake:
 		result = getSnowflakeConnectionDetailsFromResponse(d, prefix, resp)
+	case dbEngineRedisElastiCache:
+		result = getRedisElastiCacheConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineRedshift:
 		result = getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
 	default:
@@ -1633,7 +1737,11 @@ func getConnectionDetailsMongoDBAtlas(d *schema.ResourceData, prefix string, res
 }
 
 func databaseSecretBackendConnectionDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Removing database connection config %q", path)
@@ -1647,7 +1755,10 @@ func databaseSecretBackendConnectionDelete(d *schema.ResourceData, meta interfac
 }
 
 func databaseSecretBackendConnectionExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 

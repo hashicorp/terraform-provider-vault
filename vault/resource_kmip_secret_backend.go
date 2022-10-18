@@ -5,6 +5,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -24,11 +26,12 @@ var kmipAPIFields = []string{
 }
 
 func kmipSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
-		Create: kmipSecretBackendCreate,
-		Read:   kmipSecretBackendRead,
-		Update: kmipSecretBackendUpdate,
-		Delete: kmipSecretBackendDelete,
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
+		Create:        kmipSecretBackendCreate,
+		Read:          ReadWrapper(kmipSecretBackendRead),
+		Update:        kmipSecretBackendUpdate,
+		Delete:        kmipSecretBackendDelete,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -38,7 +41,7 @@ func kmipSecretBackendResource() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Path where KMIP secret backend will be mounted",
-				ValidateFunc: validateNoTrailingLeadingSlashes,
+				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -104,17 +107,20 @@ func kmipSecretBackendResource() *schema.Resource {
 				Description: "Client certificate TTL in seconds",
 			},
 		},
-	}
+	})
 }
 
 func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Get("path").(string)
 	defaultTLSClientTTL := fmt.Sprintf("%ds", d.Get("default_tls_client_ttl").(int))
 
 	log.Printf("[DEBUG] Mounting KMIP backend at %q", path)
 	if err := client.Sys().Mount(path, &api.MountInput{
-		Type:        "kmip",
+		Type:        consts.MountTypeKMIP,
 		Description: d.Get("description").(string),
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: defaultTLSClientTTL,
@@ -130,7 +136,10 @@ func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 
 	if !d.IsNewResource() && d.HasChange("path") {
@@ -212,7 +221,10 @@ func kmipSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Reading KMIP config at %s/config", path)
@@ -238,7 +250,10 @@ func kmipSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := d.Id()
 	log.Printf("[DEBUG] Unmounting KMIP backend %q", path)
 

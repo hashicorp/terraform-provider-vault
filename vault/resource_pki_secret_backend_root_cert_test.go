@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -41,9 +40,9 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendRootCertificateDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRootCertificateConfig_basic(path),
@@ -56,7 +55,11 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 			{
 				// test unmounted backend
 				PreConfig: func() {
-					client := testProvider.Meta().(*api.Client)
+					client, err := provider.GetClient("", testProvider.Meta())
+					if err != nil {
+						t.Fatal(err)
+					}
+
 					if err := client.Sys().Unmount(path); err != nil {
 						t.Fatal(err)
 					}
@@ -72,7 +75,8 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 			{
 				// test out of band update to the root CA
 				PreConfig: func() {
-					client := testProvider.Meta().(*api.Client)
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+
 					_, err := client.Logical().Delete(fmt.Sprintf("%s/root", path))
 					if err != nil {
 						t.Fatal(err)
@@ -102,27 +106,34 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 	})
 }
 
-func testPkiSecretBackendRootCertificateDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return err
+	resourceName := "vault_pki_secret_backend_root_cert.test"
+	managedKeyName := acctest.RandomWithPrefix("kms-key")
+
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", path),
+		resource.TestCheckResourceAttr(resourceName, "type", "kms"),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "test Root CA"),
+		resource.TestCheckResourceAttr(resourceName, "managed_key_name", managedKeyName),
 	}
 
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_mount" {
-			continue
-		}
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "pki" && path == rsPath {
-				return fmt.Errorf("Mount %q still exists", path)
-			}
-		}
-	}
-	return nil
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendRootCertificateConfig_managedKeys(path, managedKeyName, accessKey, secretKey),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks)...,
+				),
+			},
+		},
+	})
 }
 
 func testPkiSecretBackendRootCertificateConfig_basic(path string) string {
@@ -152,6 +163,39 @@ resource "vault_pki_secret_backend_root_cert" "test" {
   province             = "test"
 }
 `, path)
+
+	return config
+}
+
+func testPkiSecretBackendRootCertificateConfig_managedKeys(path, managedKeyName, accessKey, secretKey string) string {
+	config := fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  aws {
+    name       = "%s"
+    access_key = "%s"
+    secret_key = "%s"
+    key_bits   = "2048"
+    key_type   = "RSA"
+    kms_key    = "alias/test_identifier_string"
+  }
+}
+
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
+  allowed_managed_keys      = [tolist(vault_managed_keys.test.aws)[0].name]
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend          = vault_mount.test.path
+  type             = "kms"
+  common_name      = "test Root CA"
+  managed_key_id = tolist(vault_managed_keys.test.aws)[0].uuid
+}
+`, managedKeyName, accessKey, secretKey, path)
 
 	return config
 }

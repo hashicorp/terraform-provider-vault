@@ -9,7 +9,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -90,7 +91,7 @@ func azureAuthBackendRoleResource() *schema.Resource {
 
 	return &schema.Resource{
 		CreateContext: azureAuthBackendRoleCreate,
-		ReadContext:   azureAuthBackendRoleRead,
+		ReadContext:   ReadContextWrapper(azureAuthBackendRoleRead),
 		UpdateContext: azureAuthBackendRoleUpdate,
 		DeleteContext: azureAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
@@ -101,7 +102,10 @@ func azureAuthBackendRoleResource() *schema.Resource {
 }
 
 func azureAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -178,7 +182,10 @@ func azureAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 }
 
 func azureAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	backend, err := azureAuthBackendRoleBackendFromPath(path)
@@ -209,30 +216,12 @@ func azureAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 
 	d.Set("backend", backend)
 	d.Set("role", role)
-
-	if _, ok := d.GetOk("bound_service_principal_ids"); ok {
-		d.Set("bound_service_principal_ids", resp.Data["bound_service_principal_ids"])
-	}
-
-	if _, ok := d.GetOk("bound_group_ids"); ok {
-		d.Set("bound_group_ids", resp.Data["bound_group_ids"])
-	}
-
-	if _, ok := d.GetOk("bound_locations"); ok {
-		d.Set("bound_locations", resp.Data["bound_locations"])
-	}
-
-	if _, ok := d.GetOk("bound_subscription_ids"); ok {
-		d.Set("bound_subscription_ids", resp.Data["bound_subscription_ids"])
-	}
-
-	if _, ok := d.GetOk("bound_resource_groups"); ok {
-		d.Set("bound_resource_groups", resp.Data["bound_resource_groups"])
-	}
-
-	if _, ok := d.GetOk("bound_scale_sets"); ok {
-		d.Set("bound_scale_sets", resp.Data["bound_scale_sets"])
-	}
+	d.Set("bound_service_principal_ids", resp.Data["bound_service_principal_ids"])
+	d.Set("bound_group_ids", resp.Data["bound_group_ids"])
+	d.Set("bound_locations", resp.Data["bound_locations"])
+	d.Set("bound_subscription_ids", resp.Data["bound_subscription_ids"])
+	d.Set("bound_resource_groups", resp.Data["bound_resource_groups"])
+	d.Set("bound_scale_sets", resp.Data["bound_scale_sets"])
 
 	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
 
@@ -240,7 +229,10 @@ func azureAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 }
 
 func azureAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating Azure auth backend role %q", path)
@@ -307,7 +299,10 @@ func azureAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 }
 
 func azureAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting Azure auth backend role %q", path)

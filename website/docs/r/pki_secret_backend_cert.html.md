@@ -34,6 +34,11 @@ resource "vault_pki_secret_backend_cert" "app" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `backend` - (Required) The PKI secret backend the resource belongs to.
 
 * `name` - (Required) Name of the role to create the certificate against
@@ -79,3 +84,5 @@ In addition to the fields above, the following attributes are exported:
 * `serial_number` - The serial number
 
 * `expiration` - The expiration date of the certificate in unix epoch format
+
+* `renew_pending` - `true` if the current time (during refresh) is after the start of the early renewal window declared by `min_seconds_remaining`, and `false` otherwise; if `auto_renew` is set to `true` then the provider will plan to replace the certificate once renewal is pending.

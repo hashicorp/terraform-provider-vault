@@ -34,6 +34,11 @@ resource "vault_mfa_pingid" "my_pingid" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 - `name` `(string: <required>)` – Name of the MFA method.
 
 - `mount_accessor` `(string: <required>)` - The mount to tie this method to for use in automatic mappings. 
@@ -78,4 +83,3 @@ Mounts can be imported using the `path`, e.g.
 ```
 $ terraform import vault_mfa_pingid.my_pingid my_pingid
 ```
-

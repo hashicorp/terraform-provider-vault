@@ -7,8 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -310,12 +310,16 @@ func TestAccAppRoleAuthBackendRole_fullUpdate(t *testing.T) {
 }
 
 func testAccCheckAppRoleAuthBackendRoleDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_approle_auth_backend_role" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("error checking for AppRole auth backend role %q: %s", rs.Primary.ID, err)

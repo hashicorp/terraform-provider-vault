@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -9,13 +10,23 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
+	consulhelper "github.com/hashicorp/vault/helper/testhelpers/consul"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+type testMountStore struct {
+	uuid string
+	path string
+}
+
 func TestConsulSecretBackend(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-consul")
+	resourceName := "vault_consul_secret_backend.test"
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -24,99 +35,278 @@ func TestConsulSecretBackend(t *testing.T) {
 			{
 				Config: testConsulSecretBackend_initialConfig(path, token),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "path", path),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "description", "test description"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "default_lease_ttl_seconds", "3600"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "max_lease_ttl_seconds", "86400"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "address", "127.0.0.1:8500"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "token", token),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "scheme", "http"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "local", "false"),
-					resource.TestCheckNoResourceAttr("vault_consul_secret_backend.test", "ca_cert"),
-					resource.TestCheckNoResourceAttr("vault_consul_secret_backend.test", "client_cert"),
-					resource.TestCheckNoResourceAttr("vault_consul_secret_backend.test", "client_key"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1:8500"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckNoResourceAttr(resourceName, "ca_cert"),
+					resource.TestCheckNoResourceAttr(resourceName, "client_cert"),
+					resource.TestCheckNoResourceAttr(resourceName, "client_key"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
 			{
 				Config: testConsulSecretBackend_initialConfigLocal(path, token),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "path", path),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "description", "test description"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "default_lease_ttl_seconds", "3600"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "max_lease_ttl_seconds", "86400"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "address", "127.0.0.1:8500"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "token", token),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "scheme", "http"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "local", "true"),
-					resource.TestCheckNoResourceAttr("vault_consul_secret_backend.test", "ca_cert"),
-					resource.TestCheckNoResourceAttr("vault_consul_secret_backend.test", "client_cert"),
-					resource.TestCheckNoResourceAttr("vault_consul_secret_backend.test", "client_key"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1:8500"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "true"),
+					resource.TestCheckNoResourceAttr(resourceName, "ca_cert"),
+					resource.TestCheckNoResourceAttr(resourceName, "client_cert"),
+					resource.TestCheckNoResourceAttr(resourceName, "client_key"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
 			{
 				Config: testConsulSecretBackend_updateConfig(path, token),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "path", path),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "description", "test description"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "default_lease_ttl_seconds", "0"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "max_lease_ttl_seconds", "0"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "address", "consul.domain.tld:8501"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "token", token),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "scheme", "https"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "local", "false"),
-					resource.TestCheckNoResourceAttr("vault_consul_secret_backend.test", "ca_cert"),
-					resource.TestCheckNoResourceAttr("vault_consul_secret_backend.test", "client_cert"),
-					resource.TestCheckNoResourceAttr("vault_consul_secret_backend.test", "client_key"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "0"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "0"),
+					resource.TestCheckResourceAttr(resourceName, "address", "consul.domain.tld:8501"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "scheme", "https"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckNoResourceAttr(resourceName, "ca_cert"),
+					resource.TestCheckNoResourceAttr(resourceName, "client_cert"),
+					resource.TestCheckNoResourceAttr(resourceName, "client_key"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
 			{
 				Config: testConsulSecretBackend_updateConfig_addCerts(path, token),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "path", path),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "description", "test description"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "default_lease_ttl_seconds", "0"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "max_lease_ttl_seconds", "0"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "address", "consul.domain.tld:8501"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "token", token),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "scheme", "https"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "local", "false"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "ca_cert", "FAKE-CERT-MATERIAL"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "client_cert", "FAKE-CLIENT-CERT-MATERIAL"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "client_key", "FAKE-CLIENT-CERT-KEY-MATERIAL"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "0"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "0"),
+					resource.TestCheckResourceAttr(resourceName, "address", "consul.domain.tld:8501"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "scheme", "https"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, "ca_cert", "FAKE-CERT-MATERIAL"),
+					resource.TestCheckResourceAttr(resourceName, "client_cert", "FAKE-CLIENT-CERT-MATERIAL"),
+					resource.TestCheckResourceAttr(resourceName, "client_key", "FAKE-CLIENT-CERT-KEY-MATERIAL"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
 			{
 				Config: testConsulSecretBackend_updateConfig_updateCerts(path, token),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "path", path),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "description", "test description"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "default_lease_ttl_seconds", "0"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "max_lease_ttl_seconds", "0"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "address", "consul.domain.tld:8501"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "token", token),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "scheme", "https"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "local", "false"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "ca_cert", "FAKE-CERT-MATERIAL"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "client_cert", "UPDATED-FAKE-CLIENT-CERT-MATERIAL"),
-					resource.TestCheckResourceAttr("vault_consul_secret_backend.test", "client_key", "UPDATED-FAKE-CLIENT-CERT-KEY-MATERIAL"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "0"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "0"),
+					resource.TestCheckResourceAttr(resourceName, "address", "consul.domain.tld:8501"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "scheme", "https"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, "ca_cert", "FAKE-CERT-MATERIAL"),
+					resource.TestCheckResourceAttr(resourceName, "client_cert", "UPDATED-FAKE-CLIENT-CERT-MATERIAL"),
+					resource.TestCheckResourceAttr(resourceName, "client_key", "UPDATED-FAKE-CLIENT-CERT-KEY-MATERIAL"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				"token", "bootstrap", "ca_cert", "client_cert", "client_key", "disable_remount"),
+		},
+	})
+}
+
+func TestConsulSecretBackend_Bootstrap(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-consul")
+	resourceName := "vault_consul_secret_backend.test"
+	resourceRoleName := "vault_consul_secret_backend_role.test"
+
+	if !testutil.CheckTestVaultVersion(t, "1.11") {
+		t.Skipf("test requires Vault 1.11 or newer")
+	}
+
+	cleanup, consulConfig := consulhelper.PrepareTestContainer(t, "1.12.3", false, false)
+	t.Cleanup(cleanup)
+	consulAddr := consulConfig.Address()
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testAccConsulSecretBackendCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config:      testConsulSecretBackend_bootstrapConfig(path, consulAddr, "", false),
+				ExpectError: regexp.MustCompile("field 'bootstrap' must be set to true when 'token' is unspecified"),
+			},
+			{
+				Config:      testConsulSecretBackend_bootstrapConfig(path, consulAddr, "token", true),
+				ExpectError: regexp.MustCompile("field 'bootstrap' must be set to false when 'token' is specified"),
+			},
+			{
+				Config: testConsulSecretBackend_bootstrapConfig(path, consulAddr, "", true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, "address", consulAddr),
+					resource.TestCheckResourceAttr(resourceName, "bootstrap", "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap", "disable_remount"),
+			{
+				Config: testConsulSecretBackend_bootstrapAddRole(path, consulAddr),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceRoleName, consts.FieldName, "management"),
+					resource.TestCheckResourceAttr(resourceRoleName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceRoleName, "consul_policies.#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceRoleName, "consul_policies.*", "global-management"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap", "disable_remount"),
+			{
+				Config:      testConsulSecretBackend_bootstrapConfig(path+"-new", consulAddr, "", true),
+				ExpectError: regexp.MustCompile(`Token not provided and failed to bootstrap ACLs`),
+			},
+		},
+	})
+}
+
+func TestConsulSecretBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-consul")
+	updatedPath := acctest.RandomWithPrefix("tf-test-consul-updated")
+	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
+
+	resourceName := "vault_consul_secret_backend.test"
+
+	store := &testMountStore{}
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testConsulSecretBackend_initialConfig(path, token),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1:8500"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
+					testCaptureMountUUID(path, store),
+				),
+			},
+			{
+				Config: testConsulSecretBackend_initialConfig(updatedPath, token),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1:8500"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
+					testMountCompareUUIDs(updatedPath, store, true),
+					testCaptureMountUUID(updatedPath, store),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "token", "bootstrap", "disable_remount"),
+			{
+				Config: testConsulSecretBackend_disableRemount(path, token),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1:8500"),
+					resource.TestCheckResourceAttr(resourceName, "token", token),
+					resource.TestCheckResourceAttr(resourceName, "scheme", "http"),
+					resource.TestCheckResourceAttr(resourceName, "disable_remount", "true"),
+					testMountCompareUUIDs(path, store, false),
 				),
 			},
 		},
 	})
 }
 
-func testAccConsulSecretBackendCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
+func testCaptureMountUUID(path string, store *testMountStore) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		mount, err := testGetMount(path)
+		if err != nil {
+			return err
+		}
+
+		store.path = path
+		store.uuid = mount.UUID
+
+		return nil
+	}
+}
+
+func testMountCompareUUIDs(path string, store *testMountStore, equal bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		mount, err := testGetMount(path)
+		if err != nil {
+			return err
+		}
+
+		if store.uuid == mount.UUID {
+			if !equal {
+				return fmt.Errorf("expected different uuids after mount creation; "+
+					"both uuids equal to %s", store.uuid)
+			}
+		} else {
+			if equal {
+				return fmt.Errorf("expected same uuid after remount; "+
+					"got id1=%s, id2=%s", store.uuid, mount.UUID)
+			}
+		}
+
+		return nil
+	}
+}
+
+func testGetMount(path string) (*api.MountOutput, error) {
+	client, err := provider.GetClient("", testProvider.Meta())
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	mount, ok := mounts[strings.Trim(path, "/")+"/"]
+	if !ok {
+		return nil, fmt.Errorf("given mount %s not found", path)
+	}
+
+	return mount, nil
+}
+
+func testAccConsulSecretBackendCheckDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_consul_secret_backend" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		mounts, err := client.Sys().ListMounts()
+		if err != nil {
+			return err
+		}
+
 		for path, mount := range mounts {
 			path = strings.Trim(path, "/")
 			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
@@ -140,6 +330,19 @@ resource "vault_consul_secret_backend" "test" {
 }`, path, token)
 }
 
+func testConsulSecretBackend_disableRemount(path, token string) string {
+	return fmt.Sprintf(`
+resource "vault_consul_secret_backend" "test" {
+  path = "%s"
+  description = "test description"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds = 86400
+  address = "127.0.0.1:8500"
+  token = "%s"
+  disable_remount = true
+}`, path, token)
+}
+
 func testConsulSecretBackend_initialConfigLocal(path, token string) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
@@ -153,6 +356,19 @@ resource "vault_consul_secret_backend" "test" {
 }`, path, token)
 }
 
+func testConsulSecretBackend_bootstrapConfig(path, addr, token string, bootstrap bool) string {
+	return fmt.Sprintf(`
+resource "vault_consul_secret_backend" "test" {
+  path = "%s"
+  description = "test description"
+  address = "%s"
+  token = "%s"
+  bootstrap = %t
+  disable_remount = true
+}
+`, path, addr, token, bootstrap)
+}
+
 func testConsulSecretBackend_updateConfig(path, token string) string {
 	return fmt.Sprintf(`
 resource "vault_consul_secret_backend" "test" {
@@ -162,6 +378,22 @@ resource "vault_consul_secret_backend" "test" {
   token = "%s"
   scheme = "https"
 }`, path, token)
+}
+
+func testConsulSecretBackend_bootstrapAddRole(path, addr string) string {
+	return fmt.Sprintf(`
+resource "vault_consul_secret_backend" "test" {
+  path = "%s"
+  description = "test description"
+  address = "%s"
+  bootstrap = true
+}
+
+resource "vault_consul_secret_backend_role" "test" {
+  backend = vault_consul_secret_backend.test.path
+  name = "management"
+  consul_policies = ["global-management"]
+}`, path, addr)
 }
 
 func testConsulSecretBackend_updateConfig_addCerts(path, token string) string {

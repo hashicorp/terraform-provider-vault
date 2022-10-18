@@ -41,6 +41,11 @@ resource "vault_database_secret_backend_connection" "postgres" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+   *Available only for Vault Enterprise*.
+
 * `name` - (Required) A unique name to give the database connection.
 
 * `backend` - (Required) The unique name of the Vault mount to configure.
@@ -86,6 +91,8 @@ The following arguments are supported:
 * `snowflake` - (Optional) A nested block containing configuration options for Snowflake connections.
 
 * `influxdb` - (Optional) A nested block containing configuration options for InfluxDB connections.
+
+* `redis_elasticache` - (Optional) A nested block containing configuration options for Redis ElastiCache connections.
 
 Exactly one of the nested blocks of configuration options must be supplied.
 
@@ -159,6 +166,16 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `connect_timeout` - (Optional) The number of seconds to use as a connection
   timeout.
+
+### Redis ElastiCache Configuration Options
+
+* `url` - (Required) The url to connect to including the port; e.g. master.my-cluster.xxxxxx.use1.cache.amazonaws.com:6379.
+
+* `username` - (Optional) The AWS access key id to authenticate with. If omitted Vault tries to infer from the credential provider chain instead.
+
+* `password` - (Optional) The AWS secret access key to authenticate with. If omitted Vault tries to infer from the credential provider chain instead.
+
+* `region` - (Optional) The region where the ElastiCache cluster is hosted. If omitted Vault tries to infer from the environment instead.
 
 ### MongoDB Configuration Options
 

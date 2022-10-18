@@ -5,9 +5,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -15,7 +15,7 @@ func identityEntityPoliciesResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityEntityPoliciesUpdate,
 		Update: identityEntityPoliciesUpdate,
-		Read:   identityEntityPoliciesRead,
+		Read:   ReadWrapper(identityEntityPoliciesRead),
 		Delete: identityEntityPoliciesDelete,
 
 		Schema: map[string]*schema.Schema{
@@ -51,7 +51,11 @@ func identityEntityPoliciesResource() *schema.Resource {
 }
 
 func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Get("entity_id").(string)
 
 	log.Printf("[DEBUG] Updating IdentityEntityPolicies %q", id)
@@ -95,7 +99,11 @@ func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Read IdentityEntityPolicies %s", id)
@@ -134,7 +142,11 @@ func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func identityEntityPoliciesDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Get("entity_id").(string)
 
 	log.Printf("[DEBUG] Deleting IdentityEntityPolicies %q", id)

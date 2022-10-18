@@ -1,30 +1,35 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func awsSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: awsSecretBackendCreate,
-		Read:   awsSecretBackendRead,
+		Read:   ReadWrapper(awsSecretBackendRead),
 		Update: awsSecretBackendUpdate,
 		Delete: awsSecretBackendDelete,
 		Exists: awsSecretBackendExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Default:     "aws",
 				Description: "Path to mount the backend at.",
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
@@ -41,7 +46,6 @@ func awsSecretBackendResource() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
 			"default_lease_ttl_seconds": {
@@ -92,13 +96,41 @@ func awsSecretBackendResource() *schema.Resource {
 				Description: "Template describing how dynamic usernames are generated.",
 			},
 		},
+	})
+}
+
+func getMountCustomizeDiffFunc(field string) schema.CustomizeDiffFunc {
+	return func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+		if !diff.HasChange(field) {
+			return nil
+		}
+
+		o, _ := diff.GetChange(field)
+		if o == "" {
+			return nil
+		}
+
+		// Mount Migration is only available for versions >= 1.10
+		remountSupported := provider.IsAPISupported(meta, provider.VaultVersion110)
+		disable := diff.Get(consts.FieldDisableRemount).(bool)
+
+		if remountSupported && !disable {
+			return nil
+		}
+
+		// Mount migration not available
+		// Destroy and recreate resource
+		return diff.ForceNew(field)
 	}
 }
 
 func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
-	path := d.Get("path").(string)
+	path := d.Get(consts.FieldPath).(string)
 	description := d.Get("description").(string)
 	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
 	maxTTL := d.Get("max_lease_ttl_seconds").(int)
@@ -112,7 +144,7 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting AWS backend at %q", path)
 	err := client.Sys().Mount(path, &api.MountInput{
-		Type:        "aws",
+		Type:        consts.MountTypeAWS,
 		Description: description,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
@@ -156,7 +188,10 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -217,7 +252,7 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	d.Set("path", path)
+	d.Set(consts.FieldPath, path)
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
@@ -226,10 +261,19 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	d.Partial(true)
+
+	path, err := util.Remount(d, client, consts.FieldPath, false)
+	if err != nil {
+		return err
+	}
+
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		config := api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
@@ -279,7 +323,10 @@ func awsSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -293,7 +340,11 @@ func awsSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if AWS backend exists at %q", path)
 	mounts, err := client.Sys().ListMounts()

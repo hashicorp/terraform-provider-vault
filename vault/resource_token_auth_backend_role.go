@@ -9,7 +9,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var tokenAuthBackendRoleNameFromPathRegex = regexp.MustCompile("^auth/token/roles/(.+)$")
@@ -105,7 +106,7 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 
 	return &schema.Resource{
 		CreateContext: tokenAuthBackendRoleCreate,
-		ReadContext:   tokenAuthBackendRoleRead,
+		ReadContext:   ReadContextWrapper(tokenAuthBackendRoleRead),
 		UpdateContext: tokenAuthBackendRoleUpdate,
 		DeleteContext: tokenAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
@@ -130,7 +131,10 @@ func tokenAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string]in
 }
 
 func tokenAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	role := d.Get("role_name").(string)
 
@@ -154,7 +158,10 @@ func tokenAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 }
 
 func tokenAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	roleName, err := tokenAuthBackendRoleNameFromPath(path)
@@ -197,7 +204,10 @@ func tokenAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 }
 
 func tokenAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating Token auth backend role %q", path)
@@ -215,7 +225,10 @@ func tokenAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 }
 
 func tokenAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting Token auth backend role %q", path)

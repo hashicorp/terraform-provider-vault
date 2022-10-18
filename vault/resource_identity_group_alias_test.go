@@ -7,8 +7,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -29,7 +30,7 @@ func TestAccIdentityGroupAlias(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(nameGroupAlias, "name", group),
 					resource.TestCheckResourceAttrPair(nameGroupAlias, "canonical_id", nameGroup, "id"),
-					resource.TestCheckResourceAttrPair(nameGroupAlias, "mount_accessor", nameGithubA, "accessor"),
+					resource.TestCheckResourceAttrPair(nameGroupAlias, consts.FieldMountAccessor, nameGithubA, "accessor"),
 				),
 			},
 		},
@@ -57,7 +58,7 @@ func TestAccIdentityGroupAliasUpdate(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(nameGroupAlias, "name", aliasA),
 					resource.TestCheckResourceAttrPair(nameGroupAlias, "canonical_id", nameGroupA, "id"),
-					resource.TestCheckResourceAttrPair(nameGroupAlias, "mount_accessor", nameGithubA, "accessor"),
+					resource.TestCheckResourceAttrPair(nameGroupAlias, consts.FieldMountAccessor, nameGithubA, "accessor"),
 				),
 			},
 			{
@@ -65,7 +66,7 @@ func TestAccIdentityGroupAliasUpdate(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(nameGroupAlias, "name", aliasB),
 					resource.TestCheckResourceAttrPair(nameGroupAlias, "canonical_id", nameGroupB, "id"),
-					resource.TestCheckResourceAttrPair(nameGroupAlias, "mount_accessor", nameGithubB, "accessor"),
+					resource.TestCheckResourceAttrPair(nameGroupAlias, consts.FieldMountAccessor, nameGithubB, "accessor"),
 				),
 			},
 		},
@@ -73,12 +74,16 @@ func TestAccIdentityGroupAliasUpdate(t *testing.T) {
 }
 
 func testAccCheckIdentityGroupAliasDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_group_alias" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(identityGroupAliasIDPath(rs.Primary.ID))
 		if err != nil {
 			return fmt.Errorf("error checking for identity group %q: %s", rs.Primary.ID, err)

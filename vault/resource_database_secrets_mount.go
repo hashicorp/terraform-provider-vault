@@ -8,6 +8,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 type dbConfigStore struct {
@@ -102,7 +105,7 @@ func databaseSecretsMountCustomizeDiff(ctx context.Context, d *schema.ResourceDi
 func databaseSecretsMountResource() *schema.Resource {
 	return &schema.Resource{
 		Create:        databaseSecretsMountCreateOrUpdate,
-		Read:          databaseSecretsMountRead,
+		Read:          ReadWrapper(databaseSecretsMountRead),
 		Update:        databaseSecretsMountCreateOrUpdate,
 		Delete:        databaseSecretsMountDelete,
 		CustomizeDiff: databaseSecretsMountCustomizeDiff,
@@ -209,12 +212,15 @@ func setCommonDatabaseSchema(s schemaMap) schemaMap {
 }
 
 func databaseSecretsMountCreateOrUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	var root string
 	if d.IsNewResource() {
 		root = d.Get("path").(string)
-		if err := createMount(d, client, root, "database"); err != nil {
+		if err := createMount(d, client, root, consts.MountTypeDatabase); err != nil {
 			return err
 		}
 	} else {
@@ -259,7 +265,10 @@ func databaseSecretsMountCreateOrUpdate(d *schema.ResourceData, meta interface{}
 }
 
 func databaseSecretsMountRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	if err := readMount(d, meta, true); err != nil {
 		return err

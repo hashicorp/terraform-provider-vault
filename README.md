@@ -42,9 +42,6 @@ $ cd $GOPATH/src/github.com/hashicorp/terraform-provider-vault
 $ make build
 ```
 
-Using the provider
-----------------------
-
 Developing the Provider
 ---------------------------
 
@@ -77,8 +74,7 @@ In order to run the full suite of Acceptance tests, you will need the following:
 There may be additional variables for specific tests. Consult the specific test(s) for more information.
     - `AWS_ACCESS_KEY_ID`
     - `AWS_SECRET_ACCESS_KEY`
-    - `GOOGLE_CREDENTIALS`
-    - `GOOGLE_PROJECT`
+    - `GOOGLE_CREDENTIALS` the contents of a GCP creds JSON, alternatively read from `GOOGLE_CREDENTIALS_FILE`
     - `RMQ_CONNECTION_URI`
     - `RMQ_USERNAME`
     - `RMQ_PASSWORD`
@@ -87,6 +83,7 @@ There may be additional variables for specific tests. Consult the specific test(
     - `ARM_CLIENT_ID`
     - `ARM_CLIENT_SECRET`
     - `ARM_RESOURCE_GROUP`
+    - `TF_VAULT_VERSION`
 4. Run `make testacc`
 
 If you wish to run specific tests, use the `TESTARGS` environment variable:
@@ -94,3 +91,35 @@ If you wish to run specific tests, use the `TESTARGS` environment variable:
 ```sh
 TESTARGS="--run DataSourceAWSAccessCredentials" make testacc
 ```
+
+Using a local development build
+----------------------
+
+It's possible to use a local build of the Vault provider with Terraform directly.
+This is useful when testing the provider outside the acceptance test framework.
+
+Configure Terraform to use the development build of the provider.
+
+> **warning**: backup your `~/.terraformrc` before running this command:
+ 
+```shell
+cat > ~/.terraformrc <<HERE
+provider_installation {
+  dev_overrides {
+    "hashicorp/vault" = "$HOME/.terraform.d/plugins"
+  }
+  
+  # For all other providers, install them directly from their origin provider
+  # registries as normal. If you omit this, Terraform will _only_ use
+  # the dev_overrides block, and so no other providers will be available.
+  direct {}
+}
+HERE
+```
+
+Then execute the `dev` make target from the project root.
+```shell
+make dev
+```
+Now Terraform is set up to use the `dev` provider build instead of the provider 
+from the HashiCorp registry.

@@ -8,7 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func alicloudAuthBackendRoleResource() *schema.Resource {
@@ -41,7 +42,7 @@ func alicloudAuthBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: alicloudAuthBackendRoleCreate,
 		UpdateContext: alicloudAuthBackendRoleUpdate,
-		ReadContext:   alicloudAuthBackendRoleRead,
+		ReadContext:   ReadContextWrapper(alicloudAuthBackendRoleRead),
 		DeleteContext: alicloudAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
@@ -83,7 +84,10 @@ func alicloudAuthBackendRoleUpdateFields(d *schema.ResourceData, data map[string
 }
 
 func alicloudAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -106,7 +110,11 @@ func alicloudAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func alicloudAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -123,7 +131,11 @@ func alicloudAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func alicloudAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading AliCloud role %q", path)
@@ -168,7 +180,11 @@ func alicloudAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta
 }
 
 func alicloudAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting AliCloud role %q", path)
@@ -179,18 +195,4 @@ func alicloudAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, me
 	log.Printf("[DEBUG] Deleted AliCloud role %q", path)
 
 	return nil
-}
-
-func alicloudAuthBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-	path := d.Id()
-
-	log.Printf("[DEBUG] Checking if AliCloud Auth Backend role %q exists", path)
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking for existence of AliCloud Auth Backend resource config %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if AliCloud Auth Backend role %q exists", path)
-
-	return resp != nil, nil
 }

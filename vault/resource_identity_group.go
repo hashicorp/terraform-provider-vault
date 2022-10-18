@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -17,9 +19,8 @@ func identityGroupResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityGroupCreate,
 		Update: identityGroupUpdate,
-		Read:   identityGroupRead,
+		Read:   ReadWrapper(identityGroupRead),
 		Delete: identityGroupDelete,
-		Exists: identityGroupExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -38,7 +39,7 @@ func identityGroupResource() *schema.Resource {
 				Optional:    true,
 				Default:     "internal",
 			},
-			"metadata": {
+			consts.FieldMetadata: {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				Description: "Metadata to be associated with the group.",
@@ -125,13 +126,13 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 			}
 		}
 
-		if metadata, ok := d.GetOk("metadata"); ok {
+		if metadata, ok := d.GetOk(consts.FieldMetadata); ok {
 			data["metadata"] = metadata
 		}
 	} else {
 		if d.HasChanges("name", "external_policies", "policies", "metadata", "member_entity_ids", "member_group_ids") {
 			data["name"] = d.Get("name")
-			data["metadata"] = d.Get("metadata")
+			data["metadata"] = d.Get(consts.FieldMetadata)
 			data["policies"] = d.Get("policies").(*schema.Set).List()
 			// Member groups and entities can't be set for external groups
 			if d.Get("type").(string) == "internal" {
@@ -154,7 +155,10 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 }
 
 func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 	typeValue := d.Get("type").(string)
@@ -194,7 +198,11 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityGroup %q", id)
@@ -219,7 +227,11 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Read IdentityGroup %s", id)
@@ -249,7 +261,11 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	path := identityGroupIDPath(id)
@@ -265,26 +281,6 @@ func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleted IdentityGroup %q", id)
 
 	return nil
-}
-
-func identityGroupExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-	id := d.Id()
-	key := id
-
-	if len(id) == 0 {
-		return false, nil
-	} else {
-		key = d.Get("name").(string)
-	}
-
-	log.Printf("[DEBUG] Checking if IdentityGroup %q exists", key)
-	resp, err := readIdentityGroup(client, id, true)
-	if err != nil {
-		return true, fmt.Errorf("error checking if IdentityGroup %q exists: %s", key, err)
-	}
-	log.Printf("[DEBUG] Checked if IdentityGroup %q exists", key)
-	return resp != nil, nil
 }
 
 func identityGroupNamePath(name string) string {

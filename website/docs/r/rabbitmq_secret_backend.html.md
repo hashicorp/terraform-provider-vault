@@ -32,6 +32,11 @@ resource "vault_rabbitmq_secret_backend" "rabbitmq" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `connection_uri` - (Required)  Specifies the RabbitMQ connection URI.
 
 * `username` - (Required) Specifies the RabbitMQ management administrator username.
@@ -52,6 +57,9 @@ overwrite the previously stored values.
 
 * `path` - (Optional) The unique path this backend should be mounted at. Must
 not begin or end with a `/`. Defaults to `rabbitmq`.
+
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
 
 * `description` - (Optional) A human-friendly description for this backend.
 

@@ -30,6 +30,11 @@ resource "vault_aws_auth_backend_identity_whitelist" "example" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `backend` - (Optional) The path of the AWS backend being configured.
 
 * `safety_buffer` - (Optional) The amount of extra time, in minutes, that must

@@ -60,9 +60,34 @@ resource "vault_raft_snapshot_agent_config" "s3_backups" {
 }
 ```
 
+#### Azure BLOB
+
+```hcl
+variable "azure_account_name" {}
+variable "azure_account_key" {}
+
+resource "vault_raft_snapshot_agent_config" "azure_backups" {
+  name             = "azure_backup"
+  interval_seconds = 86400 # 24h
+  retain           = 7
+  path_prefix      = "/"
+  storage_type     = "azure-blob"
+
+  # Storage Type Configuration
+  azure_container_name = "vault-blob"
+  azure_account_name   = var.azure_account_name
+  azure_account_key    = var.azure_account_key
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
+
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
 
 - `name` `<required>` – Name of the configuration to modify.
 

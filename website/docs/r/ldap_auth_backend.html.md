@@ -29,6 +29,11 @@ resource "vault_ldap_auth_backend" "ldap" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `url` - (Required) The URL of the LDAP server
 
 * `starttls` - (Optional) Control use of TLS when conecting to LDAP
@@ -67,9 +72,14 @@ The following arguments are supported:
 
 * `groupattr` - (Optional) LDAP attribute to follow on objects returned by groupfilter
 
+* `username_as_alias` - (Optional) Force the auth method to use the username passed by the user as the alias name.
+
 * `use_token_groups` - (Optional) Use the Active Directory tokenGroups constructed attribute of the user to find the group memberships
 
 * `path` - (Optional) Path to mount the LDAP auth backend under
+
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
 
 * `description` - (Optional) Description for the LDAP auth backend mount
 

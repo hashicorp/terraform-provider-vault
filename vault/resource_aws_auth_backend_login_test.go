@@ -183,7 +183,6 @@ resource "vault_aws_auth_backend_role" "test" {
   role = "%s"
   auth_type = "iam"
   bound_iam_principal_arns = ["%s"]
-  policies = ["default"]
   depends_on = ["vault_aws_auth_backend_client.test"]
 }
 
@@ -215,7 +214,6 @@ resource "vault_aws_auth_backend_role" "test" {
   backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "ec2"
-  policies = ["default"]
   bound_ami_ids = ["%s"]
   bound_account_ids = ["%s"]
   bound_iam_instance_profile_arns = ["%s"]
@@ -249,7 +247,6 @@ resource "vault_aws_auth_backend_role" "test" {
   backend = vault_auth_backend.aws.path
   role = "%s"
   auth_type = "ec2"
-  policies = ["default"]
   bound_ami_ids = ["%s"]
   bound_account_ids = ["%s"]
   bound_iam_instance_profile_arns = ["%s"]

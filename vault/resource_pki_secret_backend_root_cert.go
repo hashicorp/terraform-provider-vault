@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -25,7 +26,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 		Update: func(data *schema.ResourceData, i interface{}) error {
 			return nil
 		},
-		Read: pkiSecretBackendCertRead,
+		Read: ReadWrapper(pkiSecretBackendCertRead),
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
@@ -42,7 +43,11 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				return nil
 			}
 
-			client := meta.(*api.Client)
+			client, e := provider.GetClient(d, meta)
+			if e != nil {
+				return e
+			}
+
 			cert, err := getCACertificate(client, d.Get("backend").(string))
 			if err != nil {
 				return err
@@ -74,14 +79,14 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			"type": {
 				Type:         schema.TypeString,
 				Required:     true,
-				Description:  "Type of intermediate to create. Must be either \"exported\" or \"internal\".",
+				Description:  "Type of root to create. Must be either \"exported\" or \"internal\".",
 				ForceNew:     true,
-				ValidateFunc: validation.StringInSlice([]string{"exported", "internal"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"exported", "internal", "kms"}, false),
 			},
 			"common_name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "CN of intermediate to create.",
+				Description: "CN of root to create.",
 				ForceNew:    true,
 			},
 			"alt_names": {
@@ -242,12 +247,31 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				Computed:    true,
 				Description: "The certificate's serial number, hex formatted.",
 			},
+			"managed_key_name": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				Description:   "The name of the previously configured managed key.",
+				ForceNew:      true,
+				ConflictsWith: []string{"managed_key_id"},
+			},
+			"managed_key_id": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				Description:   "The ID of the previously configured managed key.",
+				ForceNew:      true,
+				ConflictsWith: []string{"managed_key_name"},
+			},
 		},
 	}
 }
 
 func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	rootType := d.Get("type").(string)
@@ -289,8 +313,6 @@ func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) er
 		"ttl":                  d.Get("ttl").(string),
 		"format":               d.Get("format").(string),
 		"private_key_format":   d.Get("private_key_format").(string),
-		"key_type":             d.Get("key_type").(string),
-		"key_bits":             d.Get("key_bits").(int),
 		"max_path_length":      d.Get("max_path_length").(int),
 		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
 		"ou":                   d.Get("ou").(string),
@@ -300,6 +322,13 @@ func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) er
 		"province":             d.Get("province").(string),
 		"street_address":       d.Get("street_address").(string),
 		"postal_code":          d.Get("postal_code").(string),
+		"managed_key_name":     d.Get("managed_key_name").(string),
+		"managed_key_id":       d.Get("managed_key_id").(string),
+	}
+
+	if rootType != "kms" {
+		data["key_type"] = d.Get("key_type").(string)
+		data["key_bits"] = d.Get("key_bits").(int)
 	}
 
 	if len(altNames) > 0 {
@@ -374,7 +403,10 @@ func getCACertificate(client *api.Client, mount string) (*x509.Certificate, erro
 }
 
 func pkiSecretBackendRootCertDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 

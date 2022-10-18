@@ -5,15 +5,19 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sync"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/config"
 	"github.com/mitchellh/go-homedir"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -43,6 +47,10 @@ import (
 // each run. In case of weird behavior, restart the Vault dev server to
 // start over with a fresh Vault. (Remember to reset VAULT_TOKEN.)
 
+const providerName = "vault"
+
+var testInitOnce = sync.Once{}
+
 func TestProvider(t *testing.T) {
 	if err := Provider().InternalValidate(); err != nil {
 		t.Fatalf("err: %s", err)
@@ -55,10 +63,41 @@ var (
 )
 
 func init() {
-	testProvider = Provider()
-	testProviders = map[string]*schema.Provider{
-		"vault": testProvider,
-	}
+	initTestProvider()
+}
+
+func initTestProvider() {
+	testInitOnce.Do(
+		func() {
+			// only required when running acceptance tests
+			if os.Getenv(resource.EnvTfAcc) == "" {
+				return
+			}
+
+			if testProvider == nil {
+				testProvider = Provider()
+				testProviders = map[string]*schema.Provider{
+					providerName: testProvider,
+				}
+				rs := &schema.Resource{
+					Schema: testProvider.Schema,
+				}
+
+				m, err := testProvider.ConfigureFunc(rs.TestResourceData())
+				if err != nil {
+					panic(err)
+				}
+				testProvider.SetMeta(m)
+			}
+		},
+	)
+}
+
+var providerFactories = map[string]func() (*schema.Provider, error){
+	providerName: func() (*schema.Provider, error) {
+		initTestProvider()
+		return testProvider, nil
+	},
 }
 
 // A basic token helper script.
@@ -85,7 +124,7 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 	})
 
 	rootProviderData := rootProviderResource.TestResourceData()
-	if _, err := providerConfigure(rootProviderData); err != nil {
+	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -108,7 +147,7 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 	})
 
 	rootProviderData := rootProviderResource.TestResourceData()
-	if _, err := providerConfigure(rootProviderData); err != nil {
+	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -121,7 +160,7 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 		Schema: rootProvider.Schema,
 	}
 	rootProviderData := rootProviderResource.TestResourceData()
-	if _, err := providerConfigure(rootProviderData); err != nil {
+	if _, err := provider.NewProviderMeta(rootProviderData); err != nil {
 		t.Fatal(err)
 	}
 
@@ -147,8 +186,8 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	}
 	nsProviderData := nsProviderResource.TestResourceData()
 	nsProviderData.Set("namespace", namespacePath)
-	nsProviderData.Set("token", os.Getenv("VAULT_TOKEN"))
-	if _, err := providerConfigure(nsProviderData); err != nil {
+	nsProviderData.Set("token", os.Getenv(api.EnvVaultToken))
+	if _, err := provider.NewProviderMeta(nsProviderData); err != nil {
 		t.Fatal(err)
 	}
 
@@ -233,8 +272,8 @@ func testResourceApproleLoginCheckAttrs(t *testing.T) resource.TestCheckFunc {
 			Schema: approleProvider.Schema,
 		}
 		approleProviderData := approleProviderResource.TestResourceData()
-		approleProviderData.Set("auth_login", authLoginData)
-		_, err := providerConfigure(approleProviderData)
+		approleProviderData.Set(consts.FieldAuthLoginDefault, authLoginData)
+		_, err := provider.NewProviderMeta(approleProviderData)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -291,7 +330,7 @@ func testResourceAdminPeriodicOrphanTokenCheckAttrs(namespacePath string, t *tes
 		ns2ProviderData := ns2ProviderResource.TestResourceData()
 		ns2ProviderData.Set("namespace", namespacePath)
 		ns2ProviderData.Set("token", vaultToken)
-		if _, err := providerConfigure(ns2ProviderData); err != nil {
+		if _, err := provider.NewProviderMeta(ns2ProviderData); err != nil {
 			t.Fatal(err)
 		}
 
@@ -354,9 +393,9 @@ func TestAccProviderToken(t *testing.T) {
 	}
 
 	// Create a "resource" we can use for constructing ResourceData.
-	provider := Provider()
+	p := Provider()
 	providerResource := &schema.Resource{
-		Schema: provider.Schema,
+		Schema: p.Schema,
 	}
 
 	type testcase struct {
@@ -373,7 +412,7 @@ func TestAccProviderToken(t *testing.T) {
 			expectedToken: "",
 		},
 		{
-			// The provider will read the token file "~/.vault-token".
+			// The p will read the token file "~/.vault-token".
 			name:          "File",
 			fileToken:     true,
 			expectedToken: "file-token",
@@ -423,8 +462,8 @@ func TestAccProviderToken(t *testing.T) {
 				d.Set("token", "schema-token")
 			}
 
-			// Get and check the provider token.
-			token, err := providerToken(d)
+			// Get and check the p token.
+			token, err := provider.GetToken(d)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -516,7 +555,7 @@ func TestAccTokenName(t *testing.T) {
 }
 
 func TestAccChildToken(t *testing.T) {
-	defer os.Unsetenv("TERRAFORM_VAULT_SKIP_CHILD_TOKEN")
+	defer os.Unsetenv(consts.EnvVarSkipChildToken)
 
 	checkTokenUsed := func(expectChildToken bool) resource.TestCheckFunc {
 		if expectChildToken {
@@ -526,7 +565,7 @@ func TestAccChildToken(t *testing.T) {
 		} else {
 			// If the child token setting was disabled, the used token
 			// should match the user-provided VAULT_TOKEN
-			return checkSelfToken("id", os.Getenv("VAULT_TOKEN"))
+			return checkSelfToken("id", os.Getenv(api.EnvVaultToken))
 		}
 	}
 
@@ -591,12 +630,12 @@ func TestAccChildToken(t *testing.T) {
 				{
 					PreConfig: func() {
 						if test.useChildTokenEnv {
-							err := os.Setenv("TERRAFORM_VAULT_SKIP_CHILD_TOKEN", test.skipChildTokenEnv)
+							err := os.Setenv(consts.EnvVarSkipChildToken, test.skipChildTokenEnv)
 							if err != nil {
 								t.Fatal(err)
 							}
 						} else {
-							err := os.Unsetenv("TERRAFORM_VAULT_SKIP_CHILD_TOKEN")
+							err := os.Unsetenv(consts.EnvVarSkipChildToken)
 							if err != nil {
 								t.Fatal(err)
 							}
@@ -731,7 +770,7 @@ func TestAccProviderVaultAddrEnv(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.vaultAddrEnv != "" {
-				unset, err := tempSetenv("VAULT_ADDR", tc.vaultAddrEnv)
+				unset, err := tempSetenv(api.EnvVaultAddress, tc.vaultAddrEnv)
 				defer failIfErr(t, unset)
 				if err != nil {
 					t.Fatal(err)
@@ -747,7 +786,7 @@ func TestAccProviderVaultAddrEnv(t *testing.T) {
 			}
 
 			// Get and check the provider token.
-			token, err := providerToken(d)
+			token, err := provider.GetToken(d)
 			if err != nil {
 				t.Fatal(err)
 			}

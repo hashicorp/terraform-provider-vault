@@ -7,15 +7,15 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func awsSecretBackendRoleResource(name string) *schema.Resource {
 	return &schema.Resource{
 		Create: awsSecretBackendRoleWrite,
-		Read:   awsSecretBackendRoleRead,
+		Read:   ReadWrapper(awsSecretBackendRoleRead),
 		Update: awsSecretBackendRoleWrite,
 		Delete: awsSecretBackendRoleDelete,
 		Exists: awsSecretBackendRoleExists,
@@ -100,7 +100,10 @@ func awsSecretBackendRoleResource(name string) *schema.Resource {
 }
 
 func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -136,7 +139,6 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		} else {
 			return fmt.Errorf("permissions_boundary_arn is only valid when credential_type is iam_user")
 		}
-
 	}
 	if d.HasChange("policy_document") {
 		data["policy_document"] = policyDocument
@@ -188,7 +190,10 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	pathPieces := strings.Split(path, "/")
@@ -244,7 +249,10 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func awsSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting role %q", path)
@@ -257,7 +265,10 @@ func awsSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error 
 }
 
 func awsSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", path)

@@ -7,8 +7,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -28,7 +29,7 @@ func TestQuotaLeaseCount(t *testing.T) {
 				Config: testQuotaLeaseCountConfig(ns, name, "", leaseCount),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "path", ns+"/"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, ns+"/"),
 					resource.TestCheckResourceAttr(resourceName, "max_leases", leaseCount),
 				),
 			},
@@ -36,7 +37,7 @@ func TestQuotaLeaseCount(t *testing.T) {
 				Config: testQuotaLeaseCountConfig(ns, name, "", newLeaseCount),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "path", ns+"/"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, ns+"/"),
 					resource.TestCheckResourceAttr(resourceName, "max_leases", newLeaseCount),
 				),
 			},
@@ -44,7 +45,7 @@ func TestQuotaLeaseCount(t *testing.T) {
 				Config: testQuotaLeaseCountConfig(ns, name, "sys/", newLeaseCount),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "path", ns+"/sys/"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, ns+"/sys/"),
 					resource.TestCheckResourceAttr(resourceName, "max_leases", newLeaseCount),
 				),
 			},
@@ -54,7 +55,7 @@ func TestQuotaLeaseCount(t *testing.T) {
 
 func testQuotaLeaseCountCheckDestroy(leaseCounts []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*api.Client)
+		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 		for _, name := range leaseCounts {
 			resp, err := client.Logical().Read(quotaLeaseCountPath(name))

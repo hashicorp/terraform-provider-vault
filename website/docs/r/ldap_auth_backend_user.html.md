@@ -35,6 +35,11 @@ resource "vault_ldap_auth_backend_user" "user" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `username` - (Required) The LDAP username
 
 * `policies` - (Optional) Policies which should be granted to user

@@ -8,21 +8,22 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func genericSecretDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: genericSecretDataSourceRead,
+		Read: ReadWrapper(genericSecretDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Full path from which a secret will be read.",
 			},
 
-			"version": {
+			consts.FieldVersion: {
 				Type:     schema.TypeInt,
 				Required: false,
 				Optional: true,
@@ -37,27 +38,27 @@ func genericSecretDataSource() *schema.Resource {
 					"in the TF state.",
 			},
 
-			"data_json": {
+			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "JSON-encoded secret data read from Vault.",
 				Sensitive:   true,
 			},
 
-			"data": {
+			consts.FieldData: {
 				Type:        schema.TypeMap,
 				Computed:    true,
 				Description: "Map of strings read from Vault.",
 				Sensitive:   true,
 			},
 
-			"lease_id": {
+			consts.FieldLeaseID: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Lease identifier assigned by vault.",
 			},
 
-			"lease_duration": {
+			consts.FieldLeaseDuration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "Lease duration in seconds relative to the time in lease_start_time.",
@@ -69,7 +70,7 @@ func genericSecretDataSource() *schema.Resource {
 				Description: "Time at which the lease was read, using the clock of the system where Terraform was running",
 			},
 
-			"lease_renewable": {
+			consts.FieldLeaseRenewable: {
 				Type:        schema.TypeBool,
 				Computed:    true,
 				Description: "True if the duration of this lease can be extended through renewal.",
@@ -79,7 +80,10 @@ func genericSecretDataSource() *schema.Resource {
 }
 
 func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 
@@ -99,7 +103,7 @@ func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error
 	// Ignoring error because this value came from JSON in the
 	// first place so no reason why it should fail to re-encode.
 	jsonDataBytes, _ := json.Marshal(secret.Data)
-	if err := d.Set("data_json", string(jsonDataBytes)); err != nil {
+	if err := d.Set(consts.FieldDataJSON, string(jsonDataBytes)); err != nil {
 		return err
 	}
 
@@ -123,15 +127,15 @@ func genericSecretDataSourceRead(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	if err := d.Set("lease_id", secret.LeaseID); err != nil {
+	if err := d.Set(consts.FieldLeaseID, secret.LeaseID); err != nil {
 		return err
 	}
 
-	if err := d.Set("lease_duration", secret.LeaseDuration); err != nil {
+	if err := d.Set(consts.FieldLeaseDuration, secret.LeaseDuration); err != nil {
 		return err
 	}
 
-	if err := d.Set("lease_renewable", secret.Renewable); err != nil {
+	if err := d.Set(consts.FieldLeaseRenewable, secret.Renewable); err != nil {
 		return err
 	}
 

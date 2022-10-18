@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -118,12 +119,16 @@ func TestAccIdentityEntityUpdateRemovePolicies(t *testing.T) {
 }
 
 func testAccCheckIdentityEntityDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_entity" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(entity.JoinEntityID(rs.Primary.ID))
 		if err != nil {
 			return fmt.Errorf("error checking for identity entity %q: %s", rs.Primary.ID, err)
@@ -137,26 +142,31 @@ func testAccCheckIdentityEntityDestroy(s *terraform.State) error {
 
 func testAccIdentityEntityCheckAttrs(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		rs, err := testGetResourceFromRootModule(s, resourceName)
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
 		if err != nil {
 			return err
 		}
 
 		path := entity.JoinEntityID(rs.Primary.ID)
-		tAttrs := []*vaultStateTest{
+		tAttrs := []*testutil.VaultStateTest{
 			{
-				rs:        resourceName,
-				stateAttr: "name",
-				vaultAttr: "name",
+				ResourceName: resourceName,
+				StateAttr:    "name",
+				VaultAttr:    "name",
 			},
 			{
-				rs:        resourceName,
-				stateAttr: "policies",
-				vaultAttr: "policies",
+				ResourceName: resourceName,
+				StateAttr:    "policies",
+				VaultAttr:    "policies",
 			},
 		}
 
-		return assertVaultState(s, path, tAttrs...)
+		return testutil.AssertVaultState(client, s, path, tAttrs...)
 	}
 }
 
@@ -294,9 +304,9 @@ func TestReadEntity(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer func() {
-				maxHTTPRetriesCCC = DefaultMaxHTTPRetriesCCC
+				provider.MaxHTTPRetriesCCC = DefaultMaxHTTPRetriesCCC
 			}()
-			maxHTTPRetriesCCC = tt.maxRetries
+			provider.MaxHTTPRetriesCCC = tt.maxRetries
 
 			r := tt.retryHandler
 

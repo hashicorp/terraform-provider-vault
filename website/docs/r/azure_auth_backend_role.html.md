@@ -36,6 +36,11 @@ resource "vault_azure_auth_backend_role" "example" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `role` - (Required) The name of the role.
 
 * `bound_service_principal_ids` - (Optional) If set, defines a constraint on the

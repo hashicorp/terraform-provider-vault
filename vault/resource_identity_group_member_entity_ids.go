@@ -5,14 +5,15 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func identityGroupMemberEntityIdsResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityGroupMemberEntityIdsUpdate,
 		Update: identityGroupMemberEntityIdsUpdate,
-		Read:   identityGroupMemberEntityIdsRead,
+		Read:   ReadWrapper(identityGroupMemberEntityIdsRead),
 		Delete: identityGroupMemberEntityIdsDelete,
 
 		Schema: map[string]*schema.Schema{
@@ -54,7 +55,10 @@ func identityGroupMemberEntityIdsUpdate(d *schema.ResourceData, meta interface{}
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
 
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	log.Printf("[DEBUG] Updating IdentityGroupMemberEntityIds %q", gid)
 
@@ -118,7 +122,11 @@ func identityGroupMemberEntityIdsUpdate(d *schema.ResourceData, meta interface{}
 }
 
 func identityGroupMemberEntityIdsRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Read IdentityGroupMemberEntityIds %s", id)
@@ -174,7 +182,10 @@ func identityGroupMemberEntityIdsDelete(d *schema.ResourceData, meta interface{}
 	vaultMutexKV.Lock(path)
 	defer vaultMutexKV.Unlock(path)
 
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	log.Printf("[DEBUG] Deleting IdentityGroupMemberEntityIds %q", id)
 

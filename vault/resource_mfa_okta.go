@@ -6,7 +6,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func mfaOktaResource() *schema.Resource {
@@ -14,7 +16,7 @@ func mfaOktaResource() *schema.Resource {
 		Create: mfaOktaWrite,
 		Update: mfaOktaUpdate,
 		Delete: mfaOktaDelete,
-		Read:   mfaOktaRead,
+		Read:   ReadWrapper(mfaOktaRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -25,9 +27,9 @@ func mfaOktaResource() *schema.Resource {
 				Required:     true,
 				ForceNew:     true,
 				Description:  "Name of the MFA method.",
-				ValidateFunc: validateNoTrailingSlash,
+				ValidateFunc: provider.ValidateNoTrailingSlash,
 			},
-			"mount_accessor": {
+			consts.FieldMountAccessor: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -89,7 +91,7 @@ func mfaOktaRequestData(d *schema.ResourceData) map[string]interface{} {
 	}
 
 	fields := []string{
-		"name", "api_token", "mount_accessor",
+		"name", "api_token", consts.FieldMountAccessor,
 		"username_format", "org_name", "base_url",
 	}
 
@@ -103,7 +105,10 @@ func mfaOktaRequestData(d *schema.ResourceData) map[string]interface{} {
 }
 
 func mfaOktaWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Get("name").(string)
 	path := mfaOktaPath(name)
 
@@ -119,7 +124,10 @@ func mfaOktaWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaOktaRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := mfaOktaPath(d.Id())
 
 	log.Printf("[DEBUG] Reading MFA Okta config %q", path)
@@ -129,7 +137,7 @@ func mfaOktaRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	fields := []string{
-		"name", "mount_accessor", "username_format",
+		"name", consts.FieldMountAccessor, "username_format",
 		"org_name", "base_url", "primary_email",
 		"id",
 	}
@@ -148,7 +156,10 @@ func mfaOktaUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaOktaDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := mfaOktaPath(d.Id())
 
 	log.Printf("[DEBUG] Deleting mfaOkta %s from Vault", path)

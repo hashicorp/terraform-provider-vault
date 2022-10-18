@@ -33,6 +33,11 @@ resource "vault_cert_auth_backend_role" "cert" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `name` - (Required) Name of the role
 
 * `certificate` - (Required) CA certificate used to validate client certificates
@@ -47,7 +52,8 @@ The following arguments are supported:
 
 * `allowed_uri_sans` - (Optional) Allowed URIs for authenticated client certificates
 
-* `allowed_organization_units` - (Optional) Allowed organization units for authenticated client certificates
+* `allowed_organizational_units` - (Optional) Allowed organization units for authenticated client certificates.
+ *In previous provider releases this field was incorrectly named `allowed_organization_units`, please update accordingly*
 
 * `required_extensions` - (Optional) TLS extensions required on client certificates
 

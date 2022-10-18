@@ -8,7 +8,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -18,7 +20,7 @@ func identityEntityResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityEntityCreate,
 		Update: identityEntityUpdate,
-		Read:   identityEntityRead,
+		Read:   ReadWrapper(identityEntityRead),
 		Delete: identityEntityDelete,
 		Exists: identityEntityExists,
 		Importer: &schema.ResourceImporter{
@@ -33,7 +35,7 @@ func identityEntityResource() *schema.Resource {
 				Computed:    true,
 			},
 
-			"metadata": {
+			consts.FieldMetadata: {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				Description: "Metadata to be associated with the entity.",
@@ -82,7 +84,7 @@ func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interfac
 			}
 		}
 
-		if metadata, ok := d.GetOk("metadata"); ok {
+		if metadata, ok := d.GetOk(consts.FieldMetadata); ok {
 			data["metadata"] = metadata
 		}
 
@@ -107,7 +109,10 @@ func identityEntityUpdateFields(d *schema.ResourceData, data map[string]interfac
 }
 
 func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 
@@ -143,7 +148,11 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityEntity %q", id)
@@ -166,7 +175,11 @@ func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	log.Printf("[DEBUG] Read IdentityEntity %s", id)
@@ -194,7 +207,11 @@ func identityEntityRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
 	path := entity.JoinEntityID(id)
@@ -213,7 +230,11 @@ func identityEntityDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityEntityExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	id := d.Id()
 
 	path := entity.JoinEntityID(id)
@@ -267,7 +288,7 @@ func readEntity(client *api.Client, path string, retry bool) (*api.Secret, error
 		if err != nil {
 			return nil, fmt.Errorf("error cloning client: %w", err)
 		}
-		util.SetupCCCRetryClient(client, maxHTTPRetriesCCC)
+		util.SetupCCCRetryClient(client, provider.MaxHTTPRetriesCCC)
 	}
 
 	resp, err := client.Logical().Read(path)

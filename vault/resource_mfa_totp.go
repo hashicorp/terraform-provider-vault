@@ -6,7 +6,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func mfaTOTPResource() *schema.Resource {
@@ -14,7 +15,7 @@ func mfaTOTPResource() *schema.Resource {
 		Create: mfaTOTPWrite,
 		Update: mfaTOTPUpdate,
 		Delete: mfaTOTPDelete,
-		Read:   mfaTOTPRead,
+		Read:   ReadWrapper(mfaTOTPRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -25,7 +26,7 @@ func mfaTOTPResource() *schema.Resource {
 				Required:     true,
 				ForceNew:     true,
 				Description:  "Name of the MFA method.",
-				ValidateFunc: validateNoTrailingSlash,
+				ValidateFunc: provider.ValidateNoTrailingSlash,
 			},
 			"issuer": {
 				Type:        schema.TypeString,
@@ -111,7 +112,10 @@ func mfaTOTPRequestData(d *schema.ResourceData) map[string]interface{} {
 }
 
 func mfaTOTPWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Get("name").(string)
 	path := mfaTOTPPath(name)
 
@@ -127,7 +131,10 @@ func mfaTOTPWrite(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaTOTPRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Id()
 	path := mfaTOTPPath(name)
 
@@ -157,7 +164,10 @@ func mfaTOTPUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func mfaTOTPDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := mfaTOTPPath(d.Id())
 
 	log.Printf("[DEBUG] Deleting mfaTOTP %s from Vault", path)

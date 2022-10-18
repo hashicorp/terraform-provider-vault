@@ -9,7 +9,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -160,7 +161,7 @@ func awsAuthBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CustomizeDiff: resourceVaultAwsAuthBackendRoleCustomizeDiff,
 		CreateContext: awsAuthBackendRoleCreate,
-		ReadContext:   awsAuthBackendRoleRead,
+		ReadContext:   ReadContextWrapper(awsAuthBackendRoleRead),
 		UpdateContext: awsAuthBackendRoleUpdate,
 		DeleteContext: awsAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
@@ -196,7 +197,10 @@ func setSlice(d *schema.ResourceData, tfFieldName, vaultFieldName string, data m
 }
 
 func awsAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -300,7 +304,10 @@ func awsAuthBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta 
 }
 
 func awsAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	backend, err := awsAuthBackendRoleBackendFromPath(path)
@@ -401,7 +408,11 @@ func awsAuthBackendRoleRead(_ context.Context, d *schema.ResourceData, meta inte
 }
 
 func awsAuthBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating AWS auth backend role %q", path)
@@ -507,7 +518,10 @@ func isEc2(authType, inferred string) bool {
 }
 
 func awsAuthBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting AWS auth backend role %q", path)

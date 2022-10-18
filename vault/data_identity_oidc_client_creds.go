@@ -5,12 +5,13 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func identityOIDCClientCredsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: readOIDCClientCredsResource,
+		Read: ReadWrapper(readOIDCClientCredsResource),
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -33,7 +34,10 @@ func identityOIDCClientCredsDataSource() *schema.Resource {
 }
 
 func readOIDCClientCredsResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	name := d.Get("name").(string)
 	path := getOIDCClientPath(name)
 

@@ -30,6 +30,11 @@ resource "vault_approle_auth_backend_role" "example" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `role_name` - (Required) The name of the role.
 
 * `role_id` - (Optional) The RoleID of this role. If not specified, one will be

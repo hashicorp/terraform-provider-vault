@@ -8,8 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -115,12 +115,16 @@ func TestAccAWSSecretBackendRole_nested(t *testing.T) {
 }
 
 func testAccAWSSecretBackendRoleCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_aws_secret_backend_role" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return err
@@ -203,7 +207,6 @@ func testAccAWSSecretBackendRoleCheckUpdatedAttributes(name, backend string) res
 
 func testAccAWSSecretBackendRoleConfig_basic(name, path, accessKey, secretKey string) string {
 	resources := []string{
-
 		fmt.Sprintf(`
 resource "vault_aws_secret_backend" "test" {
   path = "%s"

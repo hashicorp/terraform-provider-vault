@@ -12,6 +12,7 @@ const (
 	RootEntityIDPath = RootEntityPath + "/id"
 	RootAliasPath    = RootEntityPath + "-alias"
 	RootAliasIDPath  = RootAliasPath + "/id"
+	LookupPath       = "identity/lookup/entity"
 )
 
 // Entity represents a Vault identity entity
@@ -111,4 +112,43 @@ func JoinAliasID(id string) string {
 // JoinEntityID to the root entity ID path.
 func JoinEntityID(id string) string {
 	return fmt.Sprintf("%s/%s", RootEntityIDPath, id)
+}
+
+// LookupEntityAlias for the given FindAliasParams.
+func LookupEntityAlias(client *api.Client, params *FindAliasParams) (*Alias, error) {
+	if params.Name == "" {
+		return nil, fmt.Errorf("alias name cannot be empty params=%#v", params)
+	}
+
+	if params.MountAccessor == "" {
+		return nil, fmt.Errorf("alias mount_accessor cannot be empty params=%#v", params)
+	}
+
+	resp, err := client.Logical().Write(LookupPath, map[string]interface{}{
+		"alias_name":           params.Name,
+		"alias_mount_accessor": params.MountAccessor,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if resp == nil {
+		return nil, nil
+	}
+
+	var a Alias
+	if aliases, ok := resp.Data["aliases"]; ok && aliases != nil {
+		for _, alias := range aliases.([]interface{}) {
+			v := alias.(map[string]interface{})
+			if err := mapstructure.Decode(v, &a); err != nil {
+				return nil, err
+			}
+
+			if a.Name == params.Name {
+				return &a, nil
+			}
+		}
+	}
+
+	return nil, nil
 }

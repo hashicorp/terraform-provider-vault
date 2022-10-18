@@ -53,6 +53,11 @@ resource "vault_azure_secret_backend" "azure" {
 
 The following arguments are supported:
 
+- `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 - `subscription_id` (`string: <required>`) - The subscription id for the Azure Active Directory.
 
 - `use_microsoft_graph_api` (`bool: <optional>`) - Use the Microsoft Graph API introduced in `vault-1.9`. 
@@ -67,6 +72,9 @@ The following arguments are supported:
 - `environment` (`string:""`) - The Azure environment.
 
 - `path` (`string: <optional>`) - The unique path this backend should be mounted at. Defaults to `azure`.
+
+- `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
 
 ## Attributes Reference
 

@@ -15,8 +15,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -47,7 +48,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendCertDestroy,
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, false),
@@ -79,29 +80,6 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testPkiSecretBackendCertDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return err
-	}
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_mount" {
-			continue
-		}
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "pki" && path == rsPath {
-				return fmt.Errorf("Mount %q still exists", path)
-			}
-		}
-	}
-	return nil
 }
 
 func testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath string, withCert, revoke bool) string {
@@ -205,12 +183,13 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "revoke", "false"),
 		resource.TestCheckResourceAttrSet(resourceName, "expiration"),
 		resource.TestCheckResourceAttrSet(resourceName, "serial_number"),
+		resource.TestCheckResourceAttrSet(resourceName, "renew_pending"),
 	}
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendCertDestroy,
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendCertConfig_renew(path),
@@ -222,6 +201,13 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 			},
 			{
 				// test renewal based on cert expiry
+				// NOTE: Ideally we'd also directly test that the refreshed
+				// state has renew_pending set to true before creating the plan,
+				// but the test harness only exposes the state after applying
+				// the plan so we can't make assertions against the intermediate
+				// refresh and planning steps. Therefore we're only testing
+				// that renew_pending got set to true indirectly by observing
+				// that it then caused the certificate to get re-issued.
 				PreConfig: testWaitCertExpiry(store),
 				Config:    testPkiSecretBackendCertConfig_renew(path),
 				Check: resource.ComposeTestCheckFunc(
@@ -234,7 +220,8 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 			{
 				// test unmounted backend
 				PreConfig: func() {
-					client := testProvider.Meta().(*api.Client)
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+
 					if err := client.Sys().Unmount(path); err != nil {
 						t.Fatal(err)
 					}
@@ -307,7 +294,7 @@ resource "vault_pki_secret_backend_cert" "test" {
 
 func testCapturePKICert(resourceName string, store *testPKICertStore) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		rs, err := testGetResourceFromRootModule(s, resourceName)
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
 		if err != nil {
 			return err
 		}
@@ -360,7 +347,7 @@ func testPKICertRevocation(path string, store *testPKICertStore) resource.TestCh
 			return fmt.Errorf("certificate in %#v is empty", store)
 		}
 
-		addr := testProvider.Meta().(*api.Client).Address()
+		addr := testProvider.Meta().(*provider.ProviderMeta).GetClient().Address()
 		url := fmt.Sprintf("%s/v1/%s/crl", addr, path)
 		c := cleanhttp.DefaultClient()
 		resp, err := c.Get(url)
@@ -411,7 +398,7 @@ func testPKICertRevocation(path string, store *testPKICertStore) resource.TestCh
 
 func testPKICertReIssued(resourceName string, store *testPKICertStore) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		rs, err := testGetResourceFromRootModule(s, resourceName)
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
 		if err != nil {
 			return err
 		}
@@ -425,12 +412,4 @@ func testPKICertReIssued(resourceName string, store *testPKICertStore) resource.
 
 		return nil
 	}
-}
-
-func testGetResourceFromRootModule(s *terraform.State, resourceName string) (*terraform.ResourceState, error) {
-	if rs, ok := s.RootModule().Resources[resourceName]; ok {
-		return rs, nil
-	}
-
-	return nil, fmt.Errorf("expected resource %q, not found in state", resourceName)
 }

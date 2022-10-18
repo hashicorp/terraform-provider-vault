@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var (
@@ -111,7 +111,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 
 		CreateContext: gcpAuthResourceCreate,
 		UpdateContext: gcpAuthResourceUpdate,
-		ReadContext:   gcpAuthResourceRead,
+		ReadContext:   ReadContextWrapper(gcpAuthResourceRead),
 		DeleteContext: gcpAuthResourceDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
@@ -169,7 +169,10 @@ func gcpRoleUpdateFields(d *schema.ResourceData, data map[string]interface{}, cr
 }
 
 func gcpAuthResourceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	backend := d.Get("backend").(string)
 	role := d.Get("role").(string)
@@ -192,7 +195,10 @@ func gcpAuthResourceCreate(ctx context.Context, d *schema.ResourceData, meta int
 }
 
 func gcpAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	data := map[string]interface{}{}
@@ -209,7 +215,10 @@ func gcpAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta int
 }
 
 func gcpAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Reading GCP role %q", path)
@@ -275,7 +284,10 @@ func gcpAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interfa
 }
 
 func gcpAuthResourceDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting GCP role %q", path)

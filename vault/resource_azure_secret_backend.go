@@ -7,23 +7,27 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func azureSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: azureSecretBackendCreate,
-		Read:   azureSecretBackendRead,
+		Read:   ReadWrapper(azureSecretBackendRead),
 		Update: azureSecretBackendUpdate,
 		Delete: azureSecretBackendDelete,
 		Exists: azureSecretBackendExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Default:     "azure",
 				Description: "Path to mount the backend at.",
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
@@ -80,11 +84,14 @@ func azureSecretBackendResource() *schema.Resource {
 				Description: "The Azure cloud environment. Valid values: AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud, AzureGermanCloud.",
 			},
 		},
-	}
+	})
 }
 
 func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 	description := d.Get("description").(string)
@@ -116,7 +123,10 @@ func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -172,9 +182,17 @@ func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
+
+	path, err := util.Remount(d, client, consts.FieldPath, false)
+	if err != nil {
+		return err
+	}
 
 	data := azureSecretBackendRequestData(d)
 	if len(data) > 0 {
@@ -189,7 +207,10 @@ func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -203,7 +224,11 @@ func azureSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func azureSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if Azure backend exists at %q", path)
 	mounts, err := client.Sys().ListMounts()

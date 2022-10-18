@@ -4,9 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
-	"log"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func readSentinelPolicy(client *api.Client, policyType string, name string) (map[string]interface{}, error) {
@@ -73,7 +76,10 @@ func ValidateSentinelEnforcementLevel(v interface{}, k string) (ws []string, err
 }
 
 func sentinelPolicyDelete(policyType string, d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 
@@ -88,12 +94,14 @@ func sentinelPolicyDelete(policyType string, d *schema.ResourceData, meta interf
 }
 
 func sentinelPolicyRead(policyType string, attributes []string, d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Id()
 
 	policy, err := readSentinelPolicy(client, policyType, name)
-
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
@@ -107,7 +115,10 @@ func sentinelPolicyRead(policyType string, attributes []string, d *schema.Resour
 }
 
 func sentinelPolicyWrite(policyType string, attributes []string, d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	name := d.Get("name").(string)
 
@@ -118,7 +129,6 @@ func sentinelPolicyWrite(policyType string, attributes []string, d *schema.Resou
 	}
 
 	err := PutSentinelPolicy(client, policyType, name, body)
-
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}

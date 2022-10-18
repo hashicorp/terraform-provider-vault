@@ -31,6 +31,11 @@ resource "vault_gcp_auth_backend_role" "gcp" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `role` - (Required) Name of the GCP role
 
 * `type` - (Required) Type of GCP authentication role (either `gce` or `iam`)

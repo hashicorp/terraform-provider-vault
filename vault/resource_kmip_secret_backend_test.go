@@ -2,14 +2,12 @@ package vault
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -17,7 +15,8 @@ func TestAccKMIPSecretBackend_basic(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
-	resourceName := "vault_kmip_secret_backend.test"
+	resourceType := "vault_kmip_secret_backend"
+	resourceName := resourceType + ".test"
 
 	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 2)
 	if err != nil {
@@ -33,7 +32,7 @@ func TestAccKMIPSecretBackend_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy: testAccKMIPSecretBackendCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPSecretBackend_initialConfig(path, addr1),
@@ -80,7 +79,8 @@ func TestAccKMIPSecretBackend_remount(t *testing.T) {
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	remountPath := acctest.RandomWithPrefix("tf-test-kmip-updated")
-	resourceName := "vault_kmip_secret_backend.test"
+	resourceType := "vault_kmip_secret_backend"
+	resourceName := resourceType + ".test"
 
 	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 1)
 	if err != nil {
@@ -96,7 +96,7 @@ func TestAccKMIPSecretBackend_remount(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy: testAccKMIPSecretBackendCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testKMIPSecretBackend_initialConfig(path, addr1),
@@ -134,30 +134,6 @@ func TestAccKMIPSecretBackend_remount(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testAccKMIPSecretBackendCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return err
-	}
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_kmip_secret_backend" {
-			continue
-		}
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "kmip" && path == rsPath {
-				return fmt.Errorf("mount %q still exists", path)
-			}
-		}
-	}
-
-	return nil
 }
 
 func testKMIPSecretBackend_initialConfig(path, addr string) string {

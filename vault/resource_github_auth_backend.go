@@ -8,17 +8,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func githubAuthBackendResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		"path": {
+		consts.FieldPath: {
 			Type:        schema.TypeString,
 			Optional:    true,
-			ForceNew:    true,
 			Description: "Path where the auth backend is mounted",
-			Default:     "github",
+			Default:     consts.MountTypeGitHub,
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
 			},
@@ -56,23 +57,27 @@ func githubAuthBackendResource() *schema.Resource {
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: githubAuthBackendCreate,
-		Read:   githubAuthBackendRead,
+		Read:   ReadWrapper(githubAuthBackendRead),
 		Update: githubAuthBackendUpdate,
 		Delete: githubAuthBackendDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		Schema: fields,
-	}
+		Schema:        fields,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
+	})
 }
 
 func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	var description string
 
-	client := meta.(*api.Client)
-	path := strings.Trim(d.Get("path").(string), "/")
+	path := strings.Trim(d.Get(consts.FieldPath).(string), "/")
 
 	if v, ok := d.GetOk("description"); ok {
 		description = v.(string)
@@ -80,7 +85,7 @@ func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Enabling github auth backend at '%s'", path)
 	err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
-		Type:        "github",
+		Type:        consts.MountTypeGitHub,
 		Description: description,
 	})
 	if err != nil {
@@ -95,10 +100,22 @@ func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
-
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
+
+	if !d.IsNewResource() {
+		mount, err := util.Remount(d, client, consts.FieldPath, true)
+		if err != nil {
+			return err
+		}
+
+		path = "auth/" + mount
+		configPath = path + "/config"
+	}
 
 	data := map[string]interface{}{}
 
@@ -151,7 +168,11 @@ func githubAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := "auth/" + d.Id()
 	configPath := path + "/config"
 
@@ -201,5 +222,9 @@ func githubAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func githubAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	return authMountDisable(meta.(*api.Client), d.Id())
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+	return authMountDisable(client, d.Id())
 }
