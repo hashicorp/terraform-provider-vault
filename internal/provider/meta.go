@@ -50,18 +50,21 @@ type ProviderMeta struct {
 
 // GetClient returns the providers default Vault client.
 func (p *ProviderMeta) GetClient() (*api.Client, error) {
-	p.m.Lock()
-	defer p.m.Lock()
+	if err := p.validate(); err != nil {
+		return nil, err
+	}
 
-	// client  has already been initialized
+	p.m.Lock()
+	defer func() {
+		p.m.Unlock()
+	}()
+
+	// client has already been initialized
 	if p.client != nil {
 		return p.client, nil
 	}
 
 	d := p.resourceData
-	if d == nil {
-		return nil, fmt.Errorf("badly created ProviderMeta, no client and no resourceData")
-	}
 
 	clientConfig := api.DefaultConfig()
 	addr := d.Get(consts.FieldAddress).(string)
@@ -188,7 +191,7 @@ func (p *ProviderMeta) GetClient() (*api.Client, error) {
 		client.SetNamespace(namespace)
 	}
 
-	// Store the client for later user
+	// Set the client to *ProviderMeta object for later usage
 	p.client = client
 
 	return p.client, nil
@@ -198,17 +201,17 @@ func (p *ProviderMeta) GetClient() (*api.Client, error) {
 // The provided namespace will always be set relative to the default client's
 // namespace.
 func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
-	client, err := p.GetClient()
+	_, err := p.GetClient()
 	if err != nil {
 		return nil, err
 	}
 
+	p.m.Lock()
+	defer p.m.Unlock()
+
 	if err := p.validate(); err != nil {
 		return nil, err
 	}
-
-	p.m.Lock()
-	defer p.m.Lock()
 
 	if ns == "" {
 		return nil, fmt.Errorf("empty namespace not allowed")
@@ -227,7 +230,7 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 		return v, nil
 	}
 
-	c, err := client.Clone()
+	c, err := p.client.Clone()
 	if err != nil {
 		return nil, err
 	}
@@ -255,12 +258,8 @@ func (p *ProviderMeta) GetVaultVersion() *version.Version {
 }
 
 func (p *ProviderMeta) validate() error {
-	if p.client == nil {
-		return fmt.Errorf("root api.Client not set, init with NewProviderMeta()")
-	}
-
-	if p.resourceData == nil {
-		return fmt.Errorf("provider ResourceData not set, init with NewProviderMeta()")
+	if p.client == nil && p.resourceData == nil {
+		return fmt.Errorf("ResourceData not set, init with NewProviderMeta()")
 	}
 
 	return nil
@@ -271,7 +270,6 @@ func (p *ProviderMeta) validate() error {
 func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	return &ProviderMeta{
 		resourceData: d,
-		client:       nil,
 	}, nil
 }
 
