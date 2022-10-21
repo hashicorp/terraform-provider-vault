@@ -29,7 +29,7 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 			"backend": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Default:     "terraform",
+				Default:     consts.MountTypeTerraform,
 				Description: "Unique name of the Vault Terraform Cloud mount to configure",
 				StateFunc: func(s interface{}) string {
 					return strings.Trim(s.(string), "/")
@@ -94,7 +94,7 @@ func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{})
 	configPath := terraformCloudSecretBackendConfigPath(backend)
 
 	info := &api.MountInput{
-		Type:        "terraform",
+		Type:        consts.MountTypeTerraform,
 		Description: description,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultLeaseTTL),
