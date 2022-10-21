@@ -35,14 +35,14 @@ func TestProviderMeta_GetNSClient(t *testing.T) {
 	}{
 		{
 			name:         "no-client",
-			client:       nil,
+			client:       &api.Client{},
 			resourceData: &schema.ResourceData{},
 			wantErr:      true,
 			expectErr:    errors.New("empty namespace not allowed"),
 		},
 		{
 			name:         "no-resource-data",
-			client:       &api.Client{},
+			client:       nil,
 			resourceData: nil,
 			wantErr:      true,
 			expectErr:    errors.New("provider ResourceData not set, init with NewProviderMeta()"),

@@ -67,13 +67,13 @@ func (p *ProviderMeta) GetClient() (*api.Client, error) {
 	d := p.resourceData
 
 	clientConfig := api.DefaultConfig()
-	addr := d.Get(consts.FieldAddress).(string)
-	if addr != "" {
+	addr, ok := d.Get(consts.FieldAddress).(string)
+	if addr != "" && ok {
 		clientConfig.Address = addr
 	}
 
-	clientAuthI := d.Get(consts.FieldClientAuth).([]interface{})
-	if len(clientAuthI) > 1 {
+	clientAuthI, ok := d.Get(consts.FieldClientAuth).([]interface{})
+	if len(clientAuthI) > 1 && ok {
 		return nil, fmt.Errorf("client_auth block may appear only once")
 	}
 
@@ -85,17 +85,23 @@ func (p *ProviderMeta) GetClient() (*api.Client, error) {
 		clientAuthKey = clientAuth[consts.FieldKeyFile].(string)
 	}
 
-	err := clientConfig.ConfigureTLS(&api.TLSConfig{
-		CACert:        d.Get(consts.FieldCACertFile).(string),
-		CAPath:        d.Get(consts.FieldCACertDir).(string),
-		Insecure:      d.Get(consts.FieldSkipTLSVerify).(bool),
-		TLSServerName: d.Get(consts.FieldTLSServerName).(string),
+	caCert, okCACert := d.Get(consts.FieldCACertFile).(string)
+	caPath, okCAPath := d.Get(consts.FieldCACertDir).(string)
+	insecure, _ := d.Get(consts.FieldSkipTLSVerify).(bool)
+	tlsServerName, okTLSServerName := d.Get(consts.FieldTLSServerName).(string)
+	if okCACert || okCAPath || okTLSServerName {
+		err := clientConfig.ConfigureTLS(&api.TLSConfig{
+			CACert:        caCert,
+			CAPath:        caPath,
+			Insecure:      insecure,
+			TLSServerName: tlsServerName,
 
-		ClientCert: clientAuthCert,
-		ClientKey:  clientAuthKey,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to configure TLS for Vault API: %s", err)
+			ClientCert: clientAuthCert,
+			ClientKey:  clientAuthKey,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to configure TLS for Vault API: %s", err)
+		}
 	}
 
 	clientConfig.HttpClient.Transport = helper.NewTransport(
@@ -122,13 +128,12 @@ func (p *ProviderMeta) GetClient() (*api.Client, error) {
 	client.SetCloneToken(true)
 
 	// Set headers if provided
-	headers := d.Get("headers").([]interface{})
 	parsedHeaders := client.Headers().Clone()
-
 	if parsedHeaders == nil {
 		parsedHeaders = make(http.Header)
 	}
 
+	headers, _ := d.Get("headers").([]interface{})
 	for _, h := range headers {
 		header := h.(map[string]interface{})
 		if name, ok := header["name"]; ok {
@@ -137,9 +142,13 @@ func (p *ProviderMeta) GetClient() (*api.Client, error) {
 	}
 	client.SetHeaders(parsedHeaders)
 
-	client.SetMaxRetries(d.Get("max_retries").(int))
+	if maxRetries, ok := d.Get("max_retries").(int); ok {
+		client.SetMaxRetries(maxRetries)
+	}
 
-	MaxHTTPRetriesCCC = d.Get("max_retries_ccc").(int)
+	if maxHTTPRetriesCcc, ok := d.Get("max_retries_ccc").(int); ok {
+		MaxHTTPRetriesCCC = maxHTTPRetriesCcc
+	}
 
 	// Try and get the token from the config or token helper
 	token, err := GetToken(d)
@@ -169,8 +178,8 @@ func (p *ProviderMeta) GetClient() (*api.Client, error) {
 		return nil, errors.New("no vault token found")
 	}
 
-	skipChildToken := d.Get("skip_child_token").(bool)
-	if !skipChildToken {
+	skipChildToken, ok := d.Get("skip_child_token").(bool)
+	if !skipChildToken && ok {
 		err := setChildToken(d, client)
 		if err != nil {
 			return nil, err
@@ -259,7 +268,7 @@ func (p *ProviderMeta) GetVaultVersion() *version.Version {
 
 func (p *ProviderMeta) validate() error {
 	if p.client == nil && p.resourceData == nil {
-		return fmt.Errorf("ResourceData not set, init with NewProviderMeta()")
+		return fmt.Errorf("provider ResourceData not set, init with NewProviderMeta()")
 	}
 
 	return nil
@@ -420,11 +429,11 @@ func setChildToken(d *schema.ResourceData, c *api.Client) error {
 }
 
 func GetToken(d *schema.ResourceData) (string, error) {
-	if token := d.Get("token").(string); token != "" {
+	if token, ok := d.Get("token").(string); ok && token != "" {
 		return token, nil
 	}
 
-	if addAddr := d.Get("add_address_to_env").(string); addAddr == "true" {
+	if addAddr, ok := d.Get("add_address_to_env").(string); ok && addAddr == "true" {
 		if addr := d.Get("address").(string); addr != "" {
 			addrEnvVar := api.EnvVaultAddress
 			if current, exists := os.LookupEnv(addrEnvVar); exists {
