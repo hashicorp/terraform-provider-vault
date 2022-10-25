@@ -1,24 +1,26 @@
 package group
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const (
 	LookupPath        = "identity/lookup/group"
 	IdentityGroupPath = "/identity/group"
+
+	GroupResourceType = iota
+	EntityResourceType
 )
 
 func IdentityGroupIDPath(id string) string {
@@ -37,101 +39,144 @@ func IsIdentityNotFoundError(err error) bool {
 	return err != nil && errors.Is(err, entity.ErrEntityNotFound)
 }
 
-// UpdateGroupMemberContextFunc is a common context function for all
-// update operations to be performed on Identity Group Members
-func UpdateGroupMemberContextFunc(d *schema.ResourceData, client *api.Client, memberField string) diag.Diagnostics {
-	gid := d.Get(consts.FieldGroupID).(string)
-	path := IdentityGroupIDPath(gid)
-
-	log.Printf("[DEBUG] Updating field %q on Identity Group %q", memberField, gid)
-
-	if d.HasChange(consts.FieldGroupID) {
-		o, n := d.GetChange(consts.FieldGroupID)
-		log.Printf("[DEBUG] Group ID has changed old=%q, new=%q", o, n)
+func getFieldFromResourceType(resourceType int) string {
+	var ret string
+	switch resourceType {
+	case GroupResourceType:
+		ret = consts.FieldMemberGroupIDs
+	case EntityResourceType:
+		ret = consts.FieldMemberEntityIDs
 	}
 
-	resp, err := ReadIdentityGroup(client, gid, d.IsNewResource())
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	data, err := GetGroupMember(d, resp, memberField)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	_, err = client.Logical().Write(path, data)
-	if err != nil {
-		return diag.Errorf("error updating field %q on Identity Group %s: err=%s", memberField, gid, err)
-	}
-	log.Printf("[DEBUG] Updated field %q on Identity Group %s", memberField, gid)
-
-	d.SetId(gid)
-
-	return nil
+	return ret
 }
 
-// ReadGroupMemberContextFunc is a common context function for all
-// read operations to be performed on Identity Group Members
-func ReadGroupMemberContextFunc(d *schema.ResourceData, client *api.Client, memberField string, setGroupName bool) diag.Diagnostics {
-	id := d.Id()
+// GetGroupMemberUpdateContextFunc is a common context function for all
+// Update operations to be performed on Identity Group Members
+func GetGroupMemberUpdateContextFunc(resourceType int) func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics {
+	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+		gid := d.Get(consts.FieldGroupID).(string)
+		path := IdentityGroupIDPath(gid)
+		provider.VaultMutexKV.Lock(path)
+		defer provider.VaultMutexKV.Unlock(path)
 
-	log.Printf("[DEBUG] Reading Identity Group %s with field %q", id, memberField)
-	resp, err := ReadIdentityGroup(client, id, d.IsNewResource())
-	if err != nil {
-		if IsIdentityNotFoundError(err) {
-			log.Printf("[WARN] Identity Group %s not found, removing from state", id)
-			d.SetId("")
-			return nil
+		client, e := provider.GetClient(d, meta)
+		if e != nil {
+			return diag.FromErr(e)
 		}
-		return diag.FromErr(err)
-	}
 
-	if err := d.Set(consts.FieldGroupID, id); err != nil {
-		return diag.FromErr(err)
-	}
+		memberField := getFieldFromResourceType(resourceType)
 
-	if setGroupName {
-		if err := d.Set(consts.FieldGroupName, resp.Data[consts.FieldName]); err != nil {
+		log.Printf("[DEBUG] Updating field %q on Identity Group %q", memberField, gid)
+
+		if d.HasChange(consts.FieldGroupID) {
+			o, n := d.GetChange(consts.FieldGroupID)
+			log.Printf("[DEBUG] Group ID has changed old=%q, new=%q", o, n)
+		}
+
+		resp, err := ReadIdentityGroup(client, gid, d.IsNewResource())
+		if err != nil {
 			return diag.FromErr(err)
 		}
-	}
 
-	if err := SetGroupMember(d, resp, memberField); err != nil {
-		return diag.FromErr(err)
-	}
+		data, err := GetGroupMember(d, resp, memberField)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 
-	return nil
+		_, err = client.Logical().Write(path, data)
+		if err != nil {
+			return diag.Errorf("error updating field %q on Identity Group %s: err=%s", memberField, gid, err)
+		}
+		log.Printf("[DEBUG] Updated field %q on Identity Group %s", memberField, gid)
+
+		d.SetId(gid)
+
+		return nil
+	}
 }
 
-// DeleteGroupMemberContextFunc is a common context function for all
-// delete operations to be performed on Identity Group Members
-func DeleteGroupMemberContextFunc(d *schema.ResourceData, client *api.Client, memberField string) diag.Diagnostics {
-	id := d.Get(consts.FieldGroupID).(string)
-	path := IdentityGroupIDPath(id)
-
-	log.Printf("[DEBUG] Deleting Identity Group %q with field %q", memberField, id)
-
-	resp, err := ReadIdentityGroup(client, id, false)
-	if err != nil {
-		if IsIdentityNotFoundError(err) {
-			return nil
+// GetGroupMemberReadContextFunc is a common context function for all
+// read operations to be performed on Identity Group Members
+func GetGroupMemberReadContextFunc(resourceType int, setGroupName bool) schema.ReadContextFunc {
+	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+		client, e := provider.GetClient(d, meta)
+		if e != nil {
+			return diag.FromErr(e)
 		}
-		return diag.FromErr(err)
-	}
 
-	data, err := DeleteGroupMember(d, resp, memberField)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+		id := d.Id()
 
-	_, err = client.Logical().Write(path, data)
-	if err != nil {
-		return diag.Errorf("error deleting Identity Group %q with field %q; err=%s", id, memberField, err)
-	}
-	log.Printf("[DEBUG]  Deleted Identity Group %q with field %q", memberField, id)
+		memberField := getFieldFromResourceType(resourceType)
 
-	return nil
+		log.Printf("[DEBUG] Reading Identity Group %s with field %q", id, memberField)
+		resp, err := ReadIdentityGroup(client, id, d.IsNewResource())
+		if err != nil {
+			if IsIdentityNotFoundError(err) {
+				log.Printf("[WARN] Identity Group %s not found, removing from state", id)
+				d.SetId("")
+				return nil
+			}
+			return diag.FromErr(err)
+		}
+
+		if err := d.Set(consts.FieldGroupID, id); err != nil {
+			return diag.FromErr(err)
+		}
+
+		if setGroupName {
+			if err := d.Set(consts.FieldGroupName, resp.Data[consts.FieldName]); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
+		if err := SetGroupMember(d, resp, memberField); err != nil {
+			return diag.FromErr(err)
+		}
+
+		return nil
+	}
+}
+
+// GetGroupMemberDeleteContextFunc is a common context function for all
+// delete operations to be performed on Identity Group Members
+func GetGroupMemberDeleteContextFunc(resourceType int) schema.DeleteContextFunc {
+	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+		id := d.Get(consts.FieldGroupID).(string)
+		path := IdentityGroupIDPath(id)
+		provider.VaultMutexKV.Lock(path)
+		defer provider.VaultMutexKV.Unlock(path)
+
+		client, e := provider.GetClient(d, meta)
+		if e != nil {
+			return diag.FromErr(e)
+		}
+
+		memberField := getFieldFromResourceType(resourceType)
+
+		log.Printf("[DEBUG] Deleting Identity Group %q with field %q", memberField, id)
+
+		resp, err := ReadIdentityGroup(client, id, false)
+		if err != nil {
+			if IsIdentityNotFoundError(err) {
+				return nil
+			}
+			return diag.FromErr(err)
+		}
+
+		data, err := DeleteGroupMember(d, resp, memberField)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		_, err = client.Logical().Write(path, data)
+		if err != nil {
+			return diag.Errorf("error deleting Identity Group %q with field %q; err=%s", id, memberField, err)
+		}
+		log.Printf("[DEBUG]  Deleted Identity Group %q with field %q", memberField, id)
+
+		return nil
+	}
 }
 
 // GetGroupMember returns group member data based on an input
@@ -259,83 +304,4 @@ func DeleteGroupMember(d *schema.ResourceData, resp *api.Secret, memberField str
 	}
 
 	return data, nil
-}
-
-// needed for testing
-type GroupMemberTester struct {
-	EntityIDS []string
-	GroupIDS  []string
-}
-
-func (r *GroupMemberTester) SetMemberEntities(resource string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		result, err := r.getGroupMemberResourceData(s, resource, consts.FieldMemberEntityIDs)
-		if err != nil {
-			return err
-		}
-		r.EntityIDS = result
-		return nil
-	}
-}
-
-func (r *GroupMemberTester) SetMemberGroups(resource string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		result, err := r.getGroupMemberResourceData(s, resource, consts.FieldMemberGroupIDs)
-		if err != nil {
-			return err
-		}
-		r.GroupIDS = result
-		return nil
-	}
-}
-
-func (r *GroupMemberTester) getGroupMemberResourceData(s *terraform.State, resource, memberField string) ([]string, error) {
-	var result []string
-	resourceState := s.Modules[0].Resources[resource]
-	if resourceState == nil {
-		return result, fmt.Errorf("resource not found in state")
-	}
-
-	instanceState := resourceState.Primary
-	if instanceState == nil {
-		return result, fmt.Errorf("resource not found in state")
-	}
-
-	count, err := strconv.Atoi(instanceState.Attributes[fmt.Sprintf("%s.#", memberField)])
-	if err != nil {
-		return nil, err
-	}
-
-	for i := 0; i < count; i++ {
-		k := fmt.Sprintf("%s.%d", memberField, i)
-		result = append(result, instanceState.Attributes[k])
-	}
-
-	return result, nil
-}
-
-func (r *GroupMemberTester) CheckMemberEntities(resourceName string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		for i, v := range r.EntityIDS {
-			k := fmt.Sprintf("member_entity_ids.%d", i)
-			f := resource.TestCheckResourceAttr(resourceName, k, v)
-			if err := f(s); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-}
-
-func (r *GroupMemberTester) CheckMemberGroups(resourceName string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		for i, v := range r.GroupIDS {
-			k := fmt.Sprintf("member_group_ids.%d", i)
-			f := resource.TestCheckResourceAttr(resourceName, k, v)
-			if err := f(s); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
 }

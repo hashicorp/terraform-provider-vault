@@ -61,8 +61,8 @@ func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[DEBUG] Updating IdentityGroupPolicies %q", id)
 	path := group.IdentityGroupIDPath(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := make(map[string]interface{})
 	policies := d.Get("policies").(*schema.Set).List()
@@ -162,8 +162,8 @@ func identityGroupPoliciesDelete(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[DEBUG] Deleting IdentityGroupPolicies %q", id)
 	path := group.IdentityGroupIDPath(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := make(map[string]interface{})
 

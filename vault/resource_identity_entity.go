@@ -156,8 +156,8 @@ func identityEntityUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating IdentityEntity %q", id)
 	path := entity.JoinEntityID(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := map[string]interface{}{}
 
@@ -214,8 +214,8 @@ func identityEntityDelete(d *schema.ResourceData, meta interface{}) error {
 
 	path := entity.JoinEntityID(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	log.Printf("[DEBUG] Deleting IdentityEntitty %q", id)
 	_, err := client.Logical().Delete(path)

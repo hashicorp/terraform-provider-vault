@@ -251,11 +251,11 @@ func getEntityLockFuncs(d *schema.ResourceData, root string) (func(), func()) {
 	mountAccessor := d.Get(consts.FieldMountAccessor).(string)
 	lockKey := strings.Join([]string{root, mountAccessor}, "/")
 	lock := func() {
-		vaultMutexKV.Lock(lockKey)
+		provider.VaultMutexKV.Lock(lockKey)
 	}
 
 	unlock := func() {
-		vaultMutexKV.Unlock(lockKey)
+		provider.VaultMutexKV.Unlock(lockKey)
 	}
 	return lock, unlock
 }

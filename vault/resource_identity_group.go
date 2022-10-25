@@ -219,8 +219,8 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating IdentityGroup %q", id)
 	path := group.IdentityGroupIDPath(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := map[string]interface{}{}
 
@@ -281,8 +281,8 @@ func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
 
 	path := group.IdentityGroupIDPath(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	log.Printf("[DEBUG] Deleting IdentityGroup %q", id)
 	_, err := client.Logical().Delete(path)

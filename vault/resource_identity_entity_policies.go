@@ -62,8 +62,8 @@ func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) erro
 	log.Printf("[DEBUG] Updating IdentityEntityPolicies %q", id)
 	path := entity.JoinEntityID(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := make(map[string]interface{})
 	policies := d.Get("policies").(*schema.Set).List()
@@ -153,8 +153,8 @@ func identityEntityPoliciesDelete(d *schema.ResourceData, meta interface{}) erro
 	log.Printf("[DEBUG] Deleting IdentityEntityPolicies %q", id)
 	path := entity.JoinEntityID(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := make(map[string]interface{})
 
