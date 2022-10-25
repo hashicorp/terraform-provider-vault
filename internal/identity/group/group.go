@@ -25,7 +25,7 @@ func IdentityGroupIDPath(id string) string {
 	return fmt.Sprintf("%s/id/%s", IdentityGroupPath, id)
 }
 
-// This function may return `nil` for the IdentityGroup if it does not exist
+// ReadIdentityGroup may return `nil` for the IdentityGroup if it does not exist
 func ReadIdentityGroup(client *api.Client, groupID string, retry bool) (*api.Secret, error) {
 	path := IdentityGroupIDPath(groupID)
 	log.Printf("[DEBUG] Reading IdentityGroup %s from %q", groupID, path)
@@ -37,6 +37,8 @@ func IsIdentityNotFoundError(err error) bool {
 	return err != nil && errors.Is(err, entity.ErrEntityNotFound)
 }
 
+// UpdateGroupMemberContextFunc is a common context function for all
+// update operations to be performed on Identity Group Members
 func UpdateGroupMemberContextFunc(d *schema.ResourceData, client *api.Client, memberField string) diag.Diagnostics {
 	gid := d.Get(consts.FieldGroupID).(string)
 	path := IdentityGroupIDPath(gid)
@@ -69,6 +71,8 @@ func UpdateGroupMemberContextFunc(d *schema.ResourceData, client *api.Client, me
 	return nil
 }
 
+// ReadGroupMemberContextFunc is a common context function for all
+// read operations to be performed on Identity Group Members
 func ReadGroupMemberContextFunc(d *schema.ResourceData, client *api.Client, memberField string, setGroupName bool) diag.Diagnostics {
 	id := d.Id()
 
@@ -100,6 +104,8 @@ func ReadGroupMemberContextFunc(d *schema.ResourceData, client *api.Client, memb
 	return nil
 }
 
+// DeleteGroupMemberContextFunc is a common context function for all
+// delete operations to be performed on Identity Group Members
 func DeleteGroupMemberContextFunc(d *schema.ResourceData, client *api.Client, memberField string) diag.Diagnostics {
 	id := d.Get(consts.FieldGroupID).(string)
 	path := IdentityGroupIDPath(id)
@@ -128,6 +134,9 @@ func DeleteGroupMemberContextFunc(d *schema.ResourceData, client *api.Client, me
 	return nil
 }
 
+// GetGroupMember returns group member data based on an input
+// 'memberField'. It manages the lifecycle of internal group
+// members appropriately by performing any necessary deduplication
 func GetGroupMember(d *schema.ResourceData, resp *api.Secret, memberField string) (map[string]interface{}, error) {
 	data := map[string]interface{}{}
 
@@ -177,6 +186,8 @@ func GetGroupMember(d *schema.ResourceData, resp *api.Secret, memberField string
 	return data, nil
 }
 
+// SetGroupMember sets group member data to the TF state based
+// on a 'memberField'
 func SetGroupMember(d *schema.ResourceData, resp *api.Secret, memberField string) error {
 	curIDS := resp.Data[memberField]
 	if d.Get(consts.FieldExclusive).(bool) {
@@ -208,6 +219,8 @@ func SetGroupMember(d *schema.ResourceData, resp *api.Secret, memberField string
 	return nil
 }
 
+// DeleteGroupMember deletes group member data from Vault and the TF
+// state based on a 'memberField'
 func DeleteGroupMember(d *schema.ResourceData, resp *api.Secret, memberField string) (map[string]interface{}, error) {
 	data := map[string]interface{}{}
 
