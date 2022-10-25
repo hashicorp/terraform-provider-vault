@@ -8,7 +8,9 @@ Manages member groups for an Identity Group for Vault.
 
 # vault\_identity\_group\_member\_group\_ids
 
-Manages member groups for an Identity Group for Vault. The [Identity secrets engine](https://www.vaultproject.io/docs/secrets/identity/index.html) is the identity management solution for Vault.
+Manages member groups for an Identity Group for Vault. The
+[Identity secrets engine](https://www.vaultproject.io/docs/secrets/identity/index.html)
+is the identity management solution for Vault.
 
 ## Example Usage
 
