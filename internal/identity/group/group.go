@@ -39,23 +39,30 @@ func IsIdentityNotFoundError(err error) bool {
 	return err != nil && errors.Is(err, entity.ErrEntityNotFound)
 }
 
-func getFieldFromResourceType(resourceType int) string {
+func getFieldFromResourceType(resourceType int) (string, error) {
 	var ret string
 	switch resourceType {
 	case GroupResourceType:
 		ret = consts.FieldMemberGroupIDs
 	case EntityResourceType:
 		ret = consts.FieldMemberEntityIDs
+	default:
+		return "", fmt.Errorf("unkown resource type")
 	}
 
-	return ret
+	return ret, nil
 }
 
 // GetGroupMemberUpdateContextFunc is a common context function for all
 // Update operations to be performed on Identity Group Members
 func GetGroupMemberUpdateContextFunc(resourceType int) func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-		gid := d.Get(consts.FieldGroupID).(string)
+		gidRaw := d.Get(consts.FieldGroupID)
+		gid, ok := gidRaw.(string)
+		if !ok {
+			return diag.Errorf("invalid Group ID type %T", gidRaw)
+		}
+
 		path := IdentityGroupIDPath(gid)
 		provider.VaultMutexKV.Lock(path)
 		defer provider.VaultMutexKV.Unlock(path)
@@ -65,7 +72,10 @@ func GetGroupMemberUpdateContextFunc(resourceType int) func(context.Context, *sc
 			return diag.FromErr(e)
 		}
 
-		memberField := getFieldFromResourceType(resourceType)
+		memberField, err := getFieldFromResourceType(resourceType)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 
 		log.Printf("[DEBUG] Updating field %q on Identity Group %q", memberField, gid)
 
@@ -107,7 +117,10 @@ func GetGroupMemberReadContextFunc(resourceType int, setGroupName bool) schema.R
 
 		id := d.Id()
 
-		memberField := getFieldFromResourceType(resourceType)
+		memberField, err := getFieldFromResourceType(resourceType)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 
 		log.Printf("[DEBUG] Reading Identity Group %s with field %q", id, memberField)
 		resp, err := ReadIdentityGroup(client, id, d.IsNewResource())
@@ -142,7 +155,12 @@ func GetGroupMemberReadContextFunc(resourceType int, setGroupName bool) schema.R
 // delete operations to be performed on Identity Group Members
 func GetGroupMemberDeleteContextFunc(resourceType int) schema.DeleteContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-		id := d.Get(consts.FieldGroupID).(string)
+		idRaw := d.Get(consts.FieldGroupID)
+		id, ok := idRaw.(string)
+		if !ok {
+			return diag.Errorf("invalid Group ID type %T", idRaw)
+		}
+
 		path := IdentityGroupIDPath(id)
 		provider.VaultMutexKV.Lock(path)
 		defer provider.VaultMutexKV.Unlock(path)
@@ -152,7 +170,10 @@ func GetGroupMemberDeleteContextFunc(resourceType int) schema.DeleteContextFunc 
 			return diag.FromErr(e)
 		}
 
-		memberField := getFieldFromResourceType(resourceType)
+		memberField, err := getFieldFromResourceType(resourceType)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 
 		log.Printf("[DEBUG] Deleting Identity Group %q with field %q", memberField, id)
 
