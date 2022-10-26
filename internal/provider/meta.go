@@ -112,11 +112,6 @@ func (p *ProviderMeta) GetVaultVersion() *version.Version {
 	return p.vaultVersion
 }
 
-// SetVaultVersion for this instance.
-func (p *ProviderMeta) SetVaultVersion(v *version.Version) {
-	p.vaultVersion = v
-}
-
 func (p *ProviderMeta) validate() error {
 	if p.client == nil {
 		return fmt.Errorf("root api.Client not set, init with NewProviderMeta()")
