@@ -203,6 +203,18 @@ variables in order to keep credential information out of the configuration.
   See [namespaces](https://www.vaultproject.io/docs/enterprise/namespaces) for more info.
   *Available only for Vault Enterprise*.
 
+* `skip_get_vault_version` - (Optional) Skip the dynamic fetching of the Vault server version. 
+  Set to `true` when the */sys/seal-status* API endpoint is not available. See (#vault_version_override) 
+  for related info
+
+* `vault_version_override` - (Optional) Override the target Vault server semantic version.
+  Normally the version is dynamically set from the */sys/seal-status* API endpoint. In the case where this endpoint
+  is not available an override can be specified here.
+
+~> Setting the `vault_version_override` determines Vault server's API compatability, so
+it's important that the value specified here matches the target server. It is recommended to
+only ever use this option in the case where the server version cannot be dynamically determined.
+
 * `headers` - (Optional) A configuration block, described below, that provides headers
 to be sent along with all requests to the Vault server.  This block can be specified
 multiple times.
@@ -220,6 +232,7 @@ The `headers` configuration block accepts the following arguments:
 * `name` - (Required) The name of the header.
 
 * `value` - (Required) The value of the header.
+
 
 ## Vault Authentication Configuration Options
 

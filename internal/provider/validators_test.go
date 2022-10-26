@@ -371,3 +371,54 @@ func TestValidateDiagUUID(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateDiagSemVer(t *testing.T) {
+	want := diag.Diagnostics{
+		{
+			Severity: diag.Error,
+			Summary:  "Invalid semantic version",
+			Detail: "Value must be in valid semantic version string, e.g. " +
+				"1.12.0",
+			AttributePath: nil,
+		},
+	}
+	type args struct{}
+	tests := []struct {
+		name string
+		i    interface{}
+		path cty.Path
+		want diag.Diagnostics
+	}{
+		{
+			name: "invalid",
+			i:    "v0. 2.0",
+			path: nil,
+			want: want,
+		},
+		{
+			name: "invalid-empty",
+			i:    "",
+			path: nil,
+			want: want,
+		},
+		{
+			name: "valid",
+			i:    "0.2.0",
+			path: nil,
+			want: nil,
+		},
+		{
+			name: "valid-with-v-prefix",
+			i:    "v0.2.0",
+			path: nil,
+			want: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ValidateDiagSemVer(tt.i, tt.path); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ValidateDiagSemVer() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/gosimple/slug"
 	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -181,6 +182,24 @@ func ValidateDiagUUID(i interface{}, path cty.Path) diag.Diagnostics {
 				Summary:  "Invalid UUID",
 				Detail: "Value must be in valid hexadecimal format, e.g. " +
 					"323e4572-a92c-13d3-a457-426614173990",
+				AttributePath: path,
+			},
+		}
+	}
+
+	return nil
+}
+
+// ValidateSemVer validates that the input string conforms to SemVer 2.0.0
+func ValidateDiagSemVer(i interface{}, path cty.Path) diag.Diagnostics {
+	have := i.(string)
+	if _, err := version.NewSemver(have); err != nil {
+		return diag.Diagnostics{
+			{
+				Severity: diag.Error,
+				Summary:  "Invalid semantic version",
+				Detail: "Value must be in valid semantic version string, e.g. " +
+					"1.12.0",
 				AttributePath: path,
 			},
 		}
