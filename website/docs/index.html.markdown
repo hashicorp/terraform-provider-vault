@@ -141,7 +141,7 @@ variables in order to keep credential information out of the configuration.
 
 * `auth_login_oidc` - (Optional) Utilizes the `oidc` authentication engine. *[See usage details below.](#oidc)*
 
-* `auth_login_jwt` - (Optional) Utilizes the `jwt` authentication engine. *[See usage details below.](#oidc)*
+* `auth_login_jwt` - (Optional) Utilizes the `jwt` authentication engine. *[See usage details below.](#jwt)*
 
 * `auth_login_azure` - (Optional) Utilizes the `azure` authentication engine. *[See usage details below.](#azure)*
 
@@ -446,8 +446,11 @@ The `auth_login_oci` configuration block accepts the following arguments:
 
 Provides support for authenticating to Vault using the OIDC Auth engine.
 
+~> Use of this login method requires access to a web browser on the host machine in
+  order to complete the authorization flow.
+
 *For more details see the OIDC specific documentation here:
-[OIDC/JWT Auth Method (API)](https://www.vaultproject.io/api-docs/auth/jwt#jwt-oidc-auth-method-api)
+[OIDC/JWT Auth Method (API)](https://www.vaultproject.io/api-docs/auth/jwt#jwt-oidc-auth-method-api)*
 
 
 The `auth_login_oidc` configuration block accepts the following arguments:
@@ -470,7 +473,7 @@ The `auth_login_oidc` configuration block accepts the following arguments:
 Provides support for authenticating to Vault using the JWT Auth engine.
 
 *For more details see the JWT specific documentation here:
-[OIDC/JWT Auth Method (API)](https://www.vaultproject.io/api-docs/auth/jwt#jwt-oidc-auth-method-api)
+[OIDC/JWT Auth Method (API)](https://www.vaultproject.io/api-docs/auth/jwt#jwt-oidc-auth-method-api)*
 
 
 The `auth_login_jwt` configuration block accepts the following arguments:

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	jwtauth "github.com/hashicorp/vault-plugin-auth-jwt"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -141,11 +142,12 @@ func TestAuthLoginOIDC_getAuthParams(t *testing.T) {
 				consts.FieldCallbackAddress:         "",
 			},
 			want: map[string]string{
-				consts.FieldMount:  consts.MountTypeOIDC,
-				consts.FieldRole:   "alice",
-				fieldSkipBrowser:   "true",
-				fieldListenAddress: "localhost",
-				fieldPort:          "55000",
+				consts.FieldMount:          consts.MountTypeOIDC,
+				consts.FieldRole:           "alice",
+				jwtauth.FieldSkipBrowser:   "false",
+				jwtauth.FieldListenAddress: "localhost",
+				jwtauth.FieldPort:          "55000",
+				jwtauth.FieldAbortOnError:  "true",
 			},
 			wantErr: false,
 		},
@@ -156,12 +158,13 @@ func TestAuthLoginOIDC_getAuthParams(t *testing.T) {
 				consts.FieldCallbackAddress: "http://127.0.0.1:55001",
 			},
 			want: map[string]string{
-				consts.FieldMount:   consts.MountTypeOIDC,
-				consts.FieldRole:    "alice",
-				fieldSkipBrowser:    "true",
-				fieldCallbackHost:   "127.0.0.1",
-				fieldCallbackPort:   "55001",
-				fieldCallbackMethod: "http",
+				consts.FieldMount:           consts.MountTypeOIDC,
+				consts.FieldRole:            "alice",
+				jwtauth.FieldSkipBrowser:    "false",
+				jwtauth.FieldCallbackHost:   "127.0.0.1",
+				jwtauth.FieldCallbackPort:   "55001",
+				jwtauth.FieldCallbackMethod: "http",
+				jwtauth.FieldAbortOnError:   "true",
 			},
 			wantErr: false,
 		},
@@ -173,14 +176,15 @@ func TestAuthLoginOIDC_getAuthParams(t *testing.T) {
 				consts.FieldCallbackAddress:         "http://127.0.0.1:55001",
 			},
 			want: map[string]string{
-				consts.FieldMount:   consts.MountTypeOIDC,
-				consts.FieldRole:    "alice",
-				fieldSkipBrowser:    "true",
-				fieldListenAddress:  "localhost",
-				fieldPort:           "55000",
-				fieldCallbackHost:   "127.0.0.1",
-				fieldCallbackPort:   "55001",
-				fieldCallbackMethod: "http",
+				consts.FieldMount:           consts.MountTypeOIDC,
+				consts.FieldRole:            "alice",
+				jwtauth.FieldSkipBrowser:    "false",
+				jwtauth.FieldAbortOnError:   "true",
+				jwtauth.FieldListenAddress:  "localhost",
+				jwtauth.FieldPort:           "55000",
+				jwtauth.FieldCallbackHost:   "127.0.0.1",
+				jwtauth.FieldCallbackPort:   "55001",
+				jwtauth.FieldCallbackMethod: "http",
 			},
 			wantErr: false,
 		},
