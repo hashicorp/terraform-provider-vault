@@ -172,6 +172,8 @@ const (
 	FieldClientToken              = "client_token"
 	FieldWrappedToken             = "wrapped_token"
 	FieldOrphan                   = "orphan"
+	FieldVaultVersionOverride     = "vault_version_override"
+	FieldSkipGetVaultVersion      = "skip_get_vault_version"
 
 	/*
 		common environment variables
