@@ -185,6 +185,19 @@ func Provider() *schema.Provider {
 					},
 				},
 			},
+			consts.FieldSkipGetVaultVersion: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Skip the dynamic fetching of the Vault server version.",
+			},
+			consts.FieldVaultVersionOverride: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "Override the Vault server version, " +
+					"which is normally determined dynamically from the target Vault server",
+				ValidateDiagFunc: provider.ValidateDiagSemVer,
+			},
 		},
 		ConfigureFunc:  provider.NewProviderMeta,
 		DataSourcesMap: dataSourcesMap,

@@ -86,6 +86,10 @@ func (l *AuthLoginCert) Method() string {
 
 // Login using the cert authentication engine.
 func (l *AuthLoginCert) Login(client *api.Client) (*api.Secret, error) {
+	if err := l.validate(); err != nil {
+		return nil, err
+	}
+
 	c, err := client.Clone()
 	if err != nil {
 		return nil, err

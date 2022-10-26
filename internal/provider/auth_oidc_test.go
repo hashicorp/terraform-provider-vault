@@ -1,11 +1,15 @@
 package provider
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	jwtauth "github.com/hashicorp/vault-plugin-auth-jwt"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
@@ -138,11 +142,12 @@ func TestAuthLoginOIDC_getAuthParams(t *testing.T) {
 				consts.FieldCallbackAddress:         "",
 			},
 			want: map[string]string{
-				consts.FieldMount:  consts.MountTypeOIDC,
-				consts.FieldRole:   "alice",
-				fieldSkipBrowser:   "true",
-				fieldListenAddress: "localhost",
-				fieldPort:          "55000",
+				consts.FieldMount:          consts.MountTypeOIDC,
+				consts.FieldRole:           "alice",
+				jwtauth.FieldSkipBrowser:   "false",
+				jwtauth.FieldListenAddress: "localhost",
+				jwtauth.FieldPort:          "55000",
+				jwtauth.FieldAbortOnError:  "true",
 			},
 			wantErr: false,
 		},
@@ -153,12 +158,13 @@ func TestAuthLoginOIDC_getAuthParams(t *testing.T) {
 				consts.FieldCallbackAddress: "http://127.0.0.1:55001",
 			},
 			want: map[string]string{
-				consts.FieldMount:   consts.MountTypeOIDC,
-				consts.FieldRole:    "alice",
-				fieldSkipBrowser:    "true",
-				fieldCallbackHost:   "127.0.0.1",
-				fieldCallbackPort:   "55001",
-				fieldCallbackMethod: "http",
+				consts.FieldMount:           consts.MountTypeOIDC,
+				consts.FieldRole:            "alice",
+				jwtauth.FieldSkipBrowser:    "false",
+				jwtauth.FieldCallbackHost:   "127.0.0.1",
+				jwtauth.FieldCallbackPort:   "55001",
+				jwtauth.FieldCallbackMethod: "http",
+				jwtauth.FieldAbortOnError:   "true",
 			},
 			wantErr: false,
 		},
@@ -170,14 +176,15 @@ func TestAuthLoginOIDC_getAuthParams(t *testing.T) {
 				consts.FieldCallbackAddress:         "http://127.0.0.1:55001",
 			},
 			want: map[string]string{
-				consts.FieldMount:   consts.MountTypeOIDC,
-				consts.FieldRole:    "alice",
-				fieldSkipBrowser:    "true",
-				fieldListenAddress:  "localhost",
-				fieldPort:           "55000",
-				fieldCallbackHost:   "127.0.0.1",
-				fieldCallbackPort:   "55001",
-				fieldCallbackMethod: "http",
+				consts.FieldMount:           consts.MountTypeOIDC,
+				consts.FieldRole:            "alice",
+				jwtauth.FieldSkipBrowser:    "false",
+				jwtauth.FieldAbortOnError:   "true",
+				jwtauth.FieldListenAddress:  "localhost",
+				jwtauth.FieldPort:           "55000",
+				jwtauth.FieldCallbackHost:   "127.0.0.1",
+				jwtauth.FieldCallbackPort:   "55001",
+				jwtauth.FieldCallbackMethod: "http",
 			},
 			wantErr: false,
 		},
@@ -213,6 +220,55 @@ func TestAuthLoginOIDC_getAuthParams(t *testing.T) {
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getAuthParams() got = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestAuthLoginOIDC_Login(t *testing.T) {
+	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
+		role := "default"
+		params := t.params[len(t.params)-1]
+		if v, ok := params[consts.FieldRole]; ok {
+			role = v.(string)
+		}
+
+		m, err := json.Marshal(
+			&api.Secret{
+				Auth: &api.SecretAuth{
+					Metadata: map[string]string{
+						"role": role,
+					},
+				},
+			},
+		)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(m)
+	}
+
+	tests := []authLoginTest{
+		{
+			name: "error-uninitialized",
+			authLogin: &AuthLoginOIDC{
+				AuthLoginCommon{
+					initialized: false,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			want:      nil,
+			wantErr:   true,
+			expectErr: authLoginInitCheckError,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testAuthLogin(t, tt)
 		})
 	}
 }

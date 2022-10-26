@@ -86,8 +86,8 @@ func (l *AuthLoginOCI) Method() string {
 
 // Login using the OCI authentication engine.
 func (l *AuthLoginOCI) Login(client *api.Client) (*api.Secret, error) {
-	if !l.initialized {
-		return nil, fmt.Errorf("auth login not initialized")
+	if err := l.validate(); err != nil {
+		return nil, err
 	}
 
 	v := l.params[consts.FieldAuthType]

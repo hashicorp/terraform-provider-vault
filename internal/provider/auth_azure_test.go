@@ -255,11 +255,6 @@ func TestAuthLoginAzure_Login(t *testing.T) {
 			name: "error-uninitialized",
 			authLogin: &AuthLoginAzure{
 				AuthLoginCommon: AuthLoginCommon{
-					authField: consts.FieldAuthLoginAzure,
-					params: map[string]interface{}{
-						consts.FieldRole: "alice",
-						consts.FieldJWT:  "jwt1",
-					},
 					initialized: false,
 				},
 			},
@@ -269,7 +264,7 @@ func TestAuthLoginAzure_Login(t *testing.T) {
 			expectReqCount: 0,
 			want:           nil,
 			wantErr:        true,
-			expectErr:      fmt.Errorf("auth login not initialized"),
+			expectErr:      authLoginInitCheckError,
 		},
 	}
 	for _, tt := range tests {

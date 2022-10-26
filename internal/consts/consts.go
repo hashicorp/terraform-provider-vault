@@ -172,6 +172,8 @@ const (
 	FieldClientToken              = "client_token"
 	FieldWrappedToken             = "wrapped_token"
 	FieldOrphan                   = "orphan"
+	FieldVaultVersionOverride     = "vault_version_override"
+	FieldSkipGetVaultVersion      = "skip_get_vault_version"
 	FieldMemberEntityIDs          = "member_entity_ids"
 	FieldMemberGroupIDs           = "member_group_ids"
 	FieldExclusive                = "exclusive"
@@ -231,6 +233,10 @@ const (
 	MountTypeOIDC       = "oidc"
 	MountTypeJWT        = "jwt"
 	MountTypeAzure      = "azure"
+	MountTypeGitHub     = "github"
+	MountTypeAD         = "ad"
+	MountTypeConsul     = "consul"
+	MountTypeTerraform  = "terraform"
 
 	/*
 		Vault version constants

@@ -378,13 +378,13 @@ func TestIsAPISupported(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		minVersion string
+		minVersion *version.Version
 		expected   bool
 		meta       interface{}
 	}{
 		{
-			name:       "server-greater-than",
-			minVersion: "1.8.0",
+			name:       "supported-greater-than",
+			minVersion: version.Must(version.NewSemver("1.8.0")),
 			expected:   true,
 			meta: &ProviderMeta{
 				client:       rootClient,
@@ -392,8 +392,8 @@ func TestIsAPISupported(t *testing.T) {
 			},
 		},
 		{
-			name:       "server-less-than",
-			minVersion: "1.12.0",
+			name:       "supported-less-than",
+			minVersion: version.Must(version.NewSemver("1.12.0")),
 			expected:   false,
 			meta: &ProviderMeta{
 				client:       rootClient,
@@ -401,12 +401,21 @@ func TestIsAPISupported(t *testing.T) {
 			},
 		},
 		{
-			name:       "server-equal",
-			minVersion: "1.10.0",
+			name:       "supported-equal",
+			minVersion: version.Must(version.NewSemver("1.10.0")),
 			expected:   true,
 			meta: &ProviderMeta{
 				client:       rootClient,
 				vaultVersion: VaultVersion10,
+			},
+		},
+		{
+			name:       "unsupported-unset",
+			minVersion: version.Must(version.NewSemver("1.12.0")),
+			expected:   false,
+			meta: &ProviderMeta{
+				client:       rootClient,
+				vaultVersion: nil,
 			},
 		},
 	}
@@ -427,12 +436,7 @@ func TestIsAPISupported(t *testing.T) {
 				tt.meta = m
 			}
 
-			mv, err := version.NewVersion(tt.minVersion)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			isTFVersionGreater := tt.meta.(*ProviderMeta).IsAPISupported(mv)
+			isTFVersionGreater := tt.meta.(*ProviderMeta).IsAPISupported(tt.minVersion)
 
 			if isTFVersionGreater != tt.expected {
 				t.Errorf("IsAPISupported() got = %v, want %v", isTFVersionGreater, tt.expected)

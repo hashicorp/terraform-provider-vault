@@ -176,11 +176,6 @@ func TestAuthLoginRadius_Login(t *testing.T) {
 			name: "error-uninitialized",
 			authLogin: &AuthLoginRadius{
 				AuthLoginCommon: AuthLoginCommon{
-					authField: consts.FieldAuthLoginRadius,
-					params: map[string]interface{}{
-						consts.FieldUsername: "alice",
-						consts.FieldPassword: "password1",
-					},
 					initialized: false,
 				},
 			},
@@ -190,7 +185,7 @@ func TestAuthLoginRadius_Login(t *testing.T) {
 			expectReqCount: 0,
 			want:           nil,
 			wantErr:        true,
-			expectErr:      fmt.Errorf("auth login not initialized"),
+			expectErr:      authLoginInitCheckError,
 		},
 	}
 	for _, tt := range tests {

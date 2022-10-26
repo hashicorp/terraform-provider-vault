@@ -132,8 +132,8 @@ func (l *AuthLoginAzure) Method() string {
 
 // Login using the azure authentication engine.
 func (l *AuthLoginAzure) Login(client *api.Client) (*api.Secret, error) {
-	if !l.initialized {
-		return nil, fmt.Errorf("auth login not initialized")
+	if err := l.validate(); err != nil {
+		return nil, err
 	}
 
 	params, err := l.copyParams(l.requiredParams()...)

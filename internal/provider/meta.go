@@ -99,7 +99,11 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 // ProviderMeta vaultVersion is above the
 // minimum version.
 func (p *ProviderMeta) IsAPISupported(minVersion *version.Version) bool {
-	return p.vaultVersion.GreaterThanOrEqual(minVersion)
+	ver := p.GetVaultVersion()
+	if ver == nil {
+		return false
+	}
+	return ver.GreaterThanOrEqual(minVersion)
 }
 
 // GetVaultVersion returns the providerMeta
@@ -234,12 +238,22 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		}
 	}
 
-	// Set the Vault version to *ProviderMeta object
-	vaultVersion, err := getVaultVersion(client)
-	if err != nil {
-		return nil, err
+	var vaultVersion *version.Version
+	if v, ok := d.GetOk(consts.FieldVaultVersionOverride); ok {
+		ver, err := version.NewVersion(v.(string))
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for %q, err=%w",
+				consts.FieldVaultVersionOverride, err)
+		}
+		vaultVersion = ver
+	} else if !d.Get(consts.FieldSkipGetVaultVersion).(bool) {
+		// Set the Vault version to *ProviderMeta object
+		ver, err := getVaultVersion(client)
+		if err != nil {
+			return nil, err
+		}
+		vaultVersion = ver
 	}
-
 	// Set the namespace to the requested namespace, if provided
 	namespace := d.Get(consts.FieldNamespace).(string)
 	if namespace != "" {
@@ -331,7 +345,7 @@ func IsAPISupported(meta interface{}, minVersion *version.Version) bool {
 func getVaultVersion(client *api.Client) (*version.Version, error) {
 	resp, err := client.Sys().SealStatus()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not determine the Vault server version, err=%s", err)
 	}
 
 	if resp == nil {

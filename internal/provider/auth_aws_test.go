@@ -1,13 +1,16 @@
 package provider
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"reflect"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
@@ -260,6 +263,55 @@ func TestAuthLoginAWS_getCredentialsConfig(t *testing.T) {
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getCredentialsConfig() got = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestAuthLoginAWS_Login(t *testing.T) {
+	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
+		role := "default"
+		params := t.params[len(t.params)-1]
+		if v, ok := params[consts.FieldRole]; ok {
+			role = v.(string)
+		}
+
+		m, err := json.Marshal(
+			&api.Secret{
+				Auth: &api.SecretAuth{
+					Metadata: map[string]string{
+						"role": role,
+					},
+				},
+			},
+		)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(m)
+	}
+
+	tests := []authLoginTest{
+		{
+			name: "error-uninitialized",
+			authLogin: &AuthLoginAWS{
+				AuthLoginCommon{
+					initialized: false,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			want:      nil,
+			wantErr:   true,
+			expectErr: authLoginInitCheckError,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testAuthLogin(t, tt)
 		})
 	}
 }
