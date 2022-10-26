@@ -204,7 +204,7 @@ variables in order to keep credential information out of the configuration.
   *Available only for Vault Enterprise*.
 
 * `skip_get_vault_version` - (Optional) Skip the dynamic fetching of the Vault server version. 
-  Set to `true` when the */sys/seal-status* API endpoint is not available. See (#vault_version_override) 
+  Set to `true` when the */sys/seal-status* API endpoint is not available. See [vault_version_override](#vault_version_override)
   for related info
 
 * `vault_version_override` - (Optional) Override the target Vault server semantic version.
