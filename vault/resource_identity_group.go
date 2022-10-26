@@ -9,11 +9,10 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
-
-const identityGroupPath = "/identity/group"
 
 func identityGroupResource() *schema.Resource {
 	return &schema.Resource{
@@ -74,7 +73,7 @@ func identityGroupResource() *schema.Resource {
 				// Suppress the diff if group type is "external" because we cannot manage
 				// group members
 				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-					if d.Get("type").(string) == "external" {
+					if d.Get("type").(string) == "external" || d.Get("external_member_group_ids").(bool) == true {
 						return true
 					}
 					return false
@@ -101,7 +100,14 @@ func identityGroupResource() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
-				Description: "Manage member entities externally through `vault_identity_group_policies_member_entity_ids`",
+				Description: "Manage member entities externally through `vault_identity_group_member_entity_ids`",
+			},
+
+			"external_member_group_ids": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Manage member groups externally through `vault_identity_group_member_group_ids`",
 			},
 		},
 	}
@@ -119,10 +125,12 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 
 		// Member groups and entities can't be set for external groups
 		if d.Get("type").(string) == "internal" {
-			data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
-
 			if externalMemberEntityIds, ok := d.GetOk("external_member_entity_ids"); !(ok && externalMemberEntityIds.(bool)) {
 				data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
+			}
+
+			if externalMemberGroupIds, ok := d.GetOk("external_member_group_ids"); !(ok && externalMemberGroupIds.(bool)) {
+				data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
 			}
 		}
 
@@ -136,9 +144,12 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 			data["policies"] = d.Get("policies").(*schema.Set).List()
 			// Member groups and entities can't be set for external groups
 			if d.Get("type").(string) == "internal" {
-				data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
 				if !d.Get("external_member_entity_ids").(bool) {
 					data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
+				}
+
+				if !d.Get("external_member_group_ids").(bool) {
+					data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
 				}
 			}
 
@@ -163,7 +174,7 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 	name := d.Get("name").(string)
 	typeValue := d.Get("type").(string)
 
-	path := identityGroupPath
+	path := group.IdentityGroupPath
 
 	data := map[string]interface{}{
 		"type": typeValue,
@@ -206,10 +217,10 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 	id := d.Id()
 
 	log.Printf("[DEBUG] Updating IdentityGroup %q", id)
-	path := identityGroupIDPath(id)
+	path := group.IdentityGroupIDPath(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := map[string]interface{}{}
 
@@ -235,14 +246,14 @@ func identityGroupRead(d *schema.ResourceData, meta interface{}) error {
 	id := d.Id()
 
 	log.Printf("[DEBUG] Read IdentityGroup %s", id)
-	resp, err := readIdentityGroup(client, id, d.IsNewResource())
+	resp, err := group.ReadIdentityGroup(client, id, d.IsNewResource())
 	if err != nil {
 		// We need to check if the secret_id has expired
 		if util.IsExpiredTokenErr(err) {
 			return nil
 		}
 
-		if isIdentityNotFoundError(err) {
+		if group.IsIdentityNotFoundError(err) {
 			log.Printf("[WARN] IdentityGroup %q not found, removing from state", id)
 			d.SetId("")
 			return nil
@@ -268,10 +279,10 @@ func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
 
 	id := d.Id()
 
-	path := identityGroupIDPath(id)
+	path := group.IdentityGroupIDPath(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	log.Printf("[DEBUG] Deleting IdentityGroup %q", id)
 	_, err := client.Logical().Delete(path)
@@ -284,15 +295,11 @@ func identityGroupDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupNamePath(name string) string {
-	return fmt.Sprintf("%s/name/%s", identityGroupPath, name)
-}
-
-func identityGroupIDPath(id string) string {
-	return fmt.Sprintf("%s/id/%s", identityGroupPath, id)
+	return fmt.Sprintf("%s/name/%s", group.IdentityGroupPath, name)
 }
 
 func readIdentityGroupPolicies(client *api.Client, groupID string, retry bool) ([]interface{}, error) {
-	resp, err := readIdentityGroup(client, groupID, retry)
+	resp, err := group.ReadIdentityGroup(client, groupID, retry)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +311,7 @@ func readIdentityGroupPolicies(client *api.Client, groupID string, retry bool) (
 }
 
 func readIdentityGroupMemberEntityIds(client *api.Client, groupID string, retry bool) ([]interface{}, error) {
-	resp, err := readIdentityGroup(client, groupID, retry)
+	resp, err := group.ReadIdentityGroup(client, groupID, retry)
 	if err != nil {
 		return nil, err
 	}
@@ -313,12 +320,4 @@ func readIdentityGroupMemberEntityIds(client *api.Client, groupID string, retry 
 		return v.([]interface{}), nil
 	}
 	return make([]interface{}, 0), nil
-}
-
-// This function may return `nil` for the IdentityGroup if it does not exist
-func readIdentityGroup(client *api.Client, groupID string, retry bool) (*api.Secret, error) {
-	path := identityGroupIDPath(groupID)
-	log.Printf("[DEBUG] Reading IdentityGroup %s from %q", groupID, path)
-
-	return readEntity(client, path, retry)
 }

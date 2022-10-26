@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
-	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/mfa"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -35,12 +34,6 @@ const (
 	// for Client Controlled Consistency related operations.
 	DefaultMaxHTTPRetriesCCC = 10
 )
-
-// This is a global MutexKV for use within this provider.
-// Use this when you need to have multiple resources or even multiple instances
-// of the same resource write to the same path in Vault.
-// The key of the mutex should be the path in Vault.
-var vaultMutexKV = helper.NewMutexKV()
 
 func Provider() *schema.Provider {
 	dataSourcesMap, err := parse(DataSourceRegistry)
@@ -638,6 +631,10 @@ var (
 		},
 		"vault_identity_group_member_entity_ids": {
 			Resource:      UpdateSchemaResource(identityGroupMemberEntityIdsResource()),
+			PathInventory: []string{"/identity/group/id/{id}"},
+		},
+		"vault_identity_group_member_group_ids": {
+			Resource:      UpdateSchemaResource(identityGroupMemberGroupIdsResource()),
 			PathInventory: []string{"/identity/group/id/{id}"},
 		},
 		"vault_identity_group_policies": {

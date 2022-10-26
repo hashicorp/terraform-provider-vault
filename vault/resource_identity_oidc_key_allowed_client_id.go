@@ -44,8 +44,8 @@ func identityOidcKeyAllowedClientIdWrite(d *schema.ResourceData, meta interface{
 	path := identityOidcKeyPath(name)
 	clientID := d.Get("allowed_client_id").(string)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data, err := identityOidcKeyApiRead(name, client)
 	if err != nil {
@@ -109,8 +109,8 @@ func identityOidcKeyAllowedClientIdDelete(d *schema.ResourceData, meta interface
 	path := identityOidcKeyPath(name)
 	clientID := d.Get("allowed_client_id").(string)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data, err := identityOidcKeyApiRead(name, client)
 	if err != nil {

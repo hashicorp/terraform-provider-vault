@@ -174,6 +174,13 @@ const (
 	FieldOrphan                   = "orphan"
 	FieldVaultVersionOverride     = "vault_version_override"
 	FieldSkipGetVaultVersion      = "skip_get_vault_version"
+	FieldMemberEntityIDs          = "member_entity_ids"
+	FieldMemberGroupIDs           = "member_group_ids"
+	FieldExclusive                = "exclusive"
+	FieldGroupID                  = "group_id"
+	FieldGroupName                = "group_name"
+	FieldExternal                 = "external"
+	FieldInternal                 = "internal"
 
 	/*
 		common environment variables

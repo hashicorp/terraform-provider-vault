@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -161,7 +162,7 @@ func testAccCheckIdentityGroupDestroy(s *terraform.State) error {
 			return e
 		}
 
-		secret, err := client.Logical().Read(identityGroupIDPath(rs.Primary.ID))
+		secret, err := client.Logical().Read(group.IdentityGroupIDPath(rs.Primary.ID))
 		if err != nil {
 			return fmt.Errorf("error checking for identity group %q: %s", rs.Primary.ID, err)
 		}
@@ -190,7 +191,7 @@ func testAccIdentityGroupCheckAttrs(resourceName string) resource.TestCheckFunc 
 		}
 
 		id := rs.Primary.ID
-		path := identityGroupIDPath(id)
+		path := group.IdentityGroupIDPath(id)
 
 		attrs := map[string]string{
 			"name":     "name",

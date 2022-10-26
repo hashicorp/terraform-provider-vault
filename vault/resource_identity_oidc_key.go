@@ -90,8 +90,8 @@ func identityOidcKeyCreate(d *schema.ResourceData, meta interface{}) error {
 	name := d.Get("name").(string)
 	path := identityOidcKeyPath(name)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := make(map[string]interface{})
 
@@ -114,8 +114,8 @@ func identityOidcKeyUpdate(d *schema.ResourceData, meta interface{}) error {
 	name := d.Id()
 	path := identityOidcKeyPath(name)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	log.Printf("[DEBUG] Updating IdentityOidcKey %s at %s", name, path)
 
@@ -166,8 +166,8 @@ func identityOidcKeyDelete(d *schema.ResourceData, meta interface{}) error {
 	name := d.Id()
 	path := identityOidcKeyPath(name)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	log.Printf("[DEBUG] Deleting IdentityOidcKey %q", name)
 	_, err := client.Logical().Delete(path)

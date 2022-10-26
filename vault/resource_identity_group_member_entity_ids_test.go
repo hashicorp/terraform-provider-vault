@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -76,7 +77,7 @@ func TestAccIdentityGroupMemberEntityIdsExclusive(t *testing.T) {
 func TestAccIdentityGroupMemberEntityIdsNonExclusiveEmpty(t *testing.T) {
 	devEntity := acctest.RandomWithPrefix("dev-entity")
 	testEntity := acctest.RandomWithPrefix("test-entity")
-	var devEntityTester memberEntityTester
+	var devEntityTester group.GroupMemberTester
 	resourceNameDev := "vault_identity_group_member_entity_ids.dev"
 	resourceNameTest := "vault_identity_group_member_entity_ids.test"
 	resource.Test(t, resource.TestCase{
@@ -125,14 +126,14 @@ type identityGMETest struct {
 }
 
 func TestAccIdentityGroupMemberEntityIdsNonExclusive(t *testing.T) {
-	var tester1 memberEntityTester
+	var tester1 group.GroupMemberTester
 	entity1 := acctest.RandomWithPrefix("entity")
 
 	entity2 := acctest.RandomWithPrefix("entity")
-	var tester2 memberEntityTester
+	var tester2 group.GroupMemberTester
 
 	entity3 := acctest.RandomWithPrefix("entity")
-	var tester3 memberEntityTester
+	var tester3 group.GroupMemberTester
 
 	resourceNameDev := "vault_identity_group_member_entity_ids.dev"
 	resourceNameTest := "vault_identity_group_member_entity_ids.test"
@@ -297,59 +298,6 @@ resource "vault_identity_group_member_entity_ids" "%s" {
 	return config
 }
 
-type memberEntityTester struct {
-	EntityIDS []string
-}
-
-func (r *memberEntityTester) SetMemberEntities(resource string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		result, err := r.getMemberEntities(s, resource)
-		if err != nil {
-			return err
-		}
-		r.EntityIDS = result
-		return nil
-	}
-}
-
-func (r *memberEntityTester) getMemberEntities(s *terraform.State, resource string) ([]string, error) {
-	var result []string
-	resourceState := s.Modules[0].Resources[resource]
-	if resourceState == nil {
-		return result, fmt.Errorf("resource not found in state")
-	}
-
-	instanceState := resourceState.Primary
-	if instanceState == nil {
-		return result, fmt.Errorf("resource not found in state")
-	}
-
-	count, err := strconv.Atoi(instanceState.Attributes["member_entity_ids.#"])
-	if err != nil {
-		return nil, err
-	}
-
-	for i := 0; i < count; i++ {
-		k := fmt.Sprintf("member_entity_ids.%d", i)
-		result = append(result, instanceState.Attributes[k])
-	}
-
-	return result, nil
-}
-
-func (r *memberEntityTester) CheckMemberEntities(resourceName string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		for i, v := range r.EntityIDS {
-			k := fmt.Sprintf("member_entity_ids.%d", i)
-			f := resource.TestCheckResourceAttr(resourceName, k, v)
-			if err := f(s); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-}
-
 func testAccCheckidentityGroupMemberEntityIdsDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_identity_group_member_entity_ids" {
@@ -361,8 +309,8 @@ func testAccCheckidentityGroupMemberEntityIdsDestroy(s *terraform.State) error {
 			return e
 		}
 
-		if _, err := readIdentityGroup(client, rs.Primary.ID, false); err != nil {
-			if isIdentityNotFoundError(err) {
+		if _, err := group.ReadIdentityGroup(client, rs.Primary.ID, false); err != nil {
+			if group.IsIdentityNotFoundError(err) {
 				continue
 			}
 			return err
@@ -414,7 +362,7 @@ func testAccIdentityGroupMemberEntityIdsCheckAttrs(resourceName string) resource
 		}
 
 		id := rs.Primary.ID
-		path := identityGroupIDPath(id)
+		path := group.IdentityGroupIDPath(id)
 		tAttrs := []*testutil.VaultStateTest{
 			{
 				ResourceName: resourceName,

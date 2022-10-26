@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -260,7 +261,7 @@ func TestReadEntity(t *testing.T) {
 			},
 			maxRetries:      DefaultMaxHTTPRetriesCCC,
 			expectedRetries: DefaultMaxHTTPRetriesCCC,
-			wantError: fmt.Errorf(`%w: %q`, errEntityNotFound,
+			wantError: fmt.Errorf(`%w: %q`, entity.ErrEntityNotFound,
 				entity.JoinEntityID("retry-exhausted-default-max-404")),
 		},
 		{
@@ -284,7 +285,7 @@ func TestReadEntity(t *testing.T) {
 			},
 			maxRetries:      5,
 			expectedRetries: 5,
-			wantError: fmt.Errorf(`%w: %q`, errEntityNotFound,
+			wantError: fmt.Errorf(`%w: %q`, entity.ErrEntityNotFound,
 				entity.JoinEntityID("retry-exhausted-custom-max-404")),
 		},
 		{
@@ -324,7 +325,7 @@ func TestReadEntity(t *testing.T) {
 				path = tt.name
 			}
 
-			actualResp, err := readEntity(c, path, true)
+			actualResp, err := entity.ReadEntity(c, path, true)
 
 			if tt.wantError != nil {
 				if err == nil {
@@ -336,8 +337,8 @@ func TestReadEntity(t *testing.T) {
 				}
 
 				if tt.retryHandler.retryStatus == http.StatusNotFound {
-					if !isIdentityNotFoundError(err) {
-						t.Errorf("expected an errEntityNotFound err %q, actual %q", errEntityNotFound, err)
+					if !group.IsIdentityNotFoundError(err) {
+						t.Errorf("expected an errEntityNotFound err %q, actual %q", entity.ErrEntityNotFound, err)
 					}
 				}
 			} else {
@@ -375,23 +376,23 @@ func TestIsEntityNotFoundError(t *testing.T) {
 	}{
 		{
 			name:     "default",
-			err:      errEntityNotFound,
+			err:      entity.ErrEntityNotFound,
 			expected: true,
 		},
 		{
 			name:     "wrapped",
-			err:      fmt.Errorf("%w: foo", errEntityNotFound),
+			err:      fmt.Errorf("%w: foo", entity.ErrEntityNotFound),
 			expected: true,
 		},
 		{
 			name:     "not",
-			err:      fmt.Errorf("%s: foo", errEntityNotFound),
+			err:      fmt.Errorf("%s: foo", entity.ErrEntityNotFound),
 			expected: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := isIdentityNotFoundError(tt.err)
+			actual := group.IsIdentityNotFoundError(tt.err)
 			if actual != tt.expected {
 				t.Fatalf("isIdentityNotFoundError(): expected %v, actual %v", tt.expected, actual)
 			}

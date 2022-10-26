@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -85,8 +86,8 @@ func testAccCheckidentityGroupPoliciesDestroy(s *terraform.State) error {
 			return e
 		}
 
-		if _, err := readIdentityGroup(client, rs.Primary.ID, false); err != nil {
-			if isIdentityNotFoundError(err) {
+		if _, err := group.ReadIdentityGroup(client, rs.Primary.ID, false); err != nil {
+			if group.IsIdentityNotFoundError(err) {
 				continue
 			}
 			return err
@@ -134,7 +135,7 @@ func testAccIdentityGroupPoliciesCheckAttrs(resourceName string) resource.TestCh
 			return err
 		}
 
-		path := identityGroupIDPath(rs.Primary.ID)
+		path := group.IdentityGroupIDPath(rs.Primary.ID)
 
 		attrs := map[string]string{
 			"group_id":   "id",

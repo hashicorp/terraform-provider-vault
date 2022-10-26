@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -81,7 +82,7 @@ func testAccCheckidentityEntityPoliciesDestroy(s *terraform.State) error {
 		}
 
 		if _, err := readIdentityEntity(client, rs.Primary.ID, false); err != nil {
-			if isIdentityNotFoundError(err) {
+			if group.IsIdentityNotFoundError(err) {
 				continue
 			}
 			return err
