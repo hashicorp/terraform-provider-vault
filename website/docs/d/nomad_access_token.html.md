@@ -40,7 +40,6 @@ resource "vault_nomad_secret_role" "test" {
 data "vault_nomad_access_token" "token" {
   backend = vault_nomad_secret_backend.config.backend
   role    = vault_nomad_secret_role.test.role
-  depends_on = [vault_nomad_secret_role.test]
 }
 ```
 

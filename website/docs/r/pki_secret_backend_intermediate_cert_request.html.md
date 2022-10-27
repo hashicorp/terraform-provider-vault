@@ -21,7 +21,6 @@ for more details.
 
 ```hcl
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
-  depends_on  = [vault_mount.pki]
   backend     = vault_mount.pki.path
   type        = "internal"
   common_name = "app.my.domain"
@@ -81,7 +80,6 @@ The following arguments are supported:
 
 * `managed_key_id` - (Optional) The ID of the previously configured managed key. This field is
   required if `type` is `kms` and it conflicts with `managed_key_name`
-
 
 ## Attributes Reference
 
