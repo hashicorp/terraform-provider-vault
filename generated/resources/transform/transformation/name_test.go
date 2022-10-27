@@ -50,6 +50,7 @@ func TestTransformationName(t *testing.T) {
 				ResourceName: resourceName,
 				ImportState:  true,
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					m := nameTestProvider.SchemaProvider().Meta().(*provider.ProviderMeta)
 					if len(states) != 1 {
 						return fmt.Errorf("expected 1 state but received %+v", states)
 					}
@@ -84,8 +85,12 @@ func TestTransformationName(t *testing.T) {
 					if state.Attributes["name"] != "ccn-fpe" {
 						t.Fatalf("expected %q, received %q", "ccn-fpw", state.Attributes["name"])
 					}
-					if state.Attributes["deletion_allowed"] != "true" {
-						t.Fatalf("expected %q, received %q", "true", state.Attributes["deletion_allowed"])
+					var expectDeletionAllowed string
+					if m.IsAPISupported(provider.VaultVersion112) {
+						expectDeletionAllowed = "true"
+					}
+					if state.Attributes["deletion_allowed"] != expectDeletionAllowed {
+						t.Fatalf("expected %q, received %q", expectDeletionAllowed, state.Attributes["deletion_allowed"])
 					}
 					return nil
 				},
@@ -102,6 +107,10 @@ func TestTransformationName(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_roles.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "masking_character", "-"),
 				),
+			},
+			{
+				Config:   basicConfig(path, "ccn-fpe", "fpe", "ccn-1", "generated", "payments-1", "-"),
+				PlanOnly: true,
 			},
 		},
 	})

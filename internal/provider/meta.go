@@ -27,15 +27,13 @@ const DefaultMaxHTTPRetries = 2
 var (
 	MaxHTTPRetriesCCC int
 
-	VaultVersion190 *version.Version
-	VaultVersion110 *version.Version
-	VaultVersion111 *version.Version
-)
-
-func init() {
 	VaultVersion190 = version.Must(version.NewSemver(consts.VaultVersion190))
 	VaultVersion110 = version.Must(version.NewSemver(consts.VaultVersion110))
 	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion111))
+	VaultVersion112 = version.Must(version.NewSemver(consts.VaultVersion112))
+)
+
+func init() {
 }
 
 // ProviderMeta provides resources with access to the Vault client and

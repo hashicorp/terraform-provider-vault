@@ -89,10 +89,12 @@ func NameResource() *schema.Resource {
 }
 
 func createNameResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := provider.GetClient(d, meta)
+	m := meta.(*provider.ProviderMeta)
+	client, e := provider.GetClient(d, m)
 	if e != nil {
 		return e
 	}
+
 	path := d.Get("path").(string)
 	vaultPath := util.ParsePath(path, nameEndpoint, d)
 	log.Printf("[DEBUG] Creating %q", vaultPath)
@@ -115,7 +117,9 @@ func createNameResource(d *schema.ResourceData, meta interface{}) error {
 		data["type"] = v
 	}
 
-	data["deletion_allowed"] = d.Get("deletion_allowed")
+	if m.IsAPISupported(provider.VaultVersion112) {
+		data["deletion_allowed"] = d.Get("deletion_allowed")
+	}
 
 	log.Printf("[DEBUG] Writing %q", vaultPath)
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
@@ -127,10 +131,12 @@ func createNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readNameResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := provider.GetClient(d, meta)
+	m := meta.(*provider.ProviderMeta)
+	client, e := provider.GetClient(d, m)
 	if e != nil {
 		return e
 	}
+
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Reading %q", vaultPath)
 
@@ -183,14 +189,8 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error setting state key 'type': %s", err)
 		}
 	}
-	if val, ok := resp.Data["deletion_allowed"]; ok {
-		if err := d.Set("deletion_allowed", val); err != nil {
-			return fmt.Errorf("error setting state key 'deletion_allowed': %s", err)
-		}
-	} else {
-		// in the case where the backend does not provide this field, we can get
-		// it from the resource data directly.
-		if err := d.Set("deletion_allowed", d.Get("deletion_allowed")); err != nil {
+	if m.IsAPISupported(provider.VaultVersion112) {
+		if err := d.Set("deletion_allowed", resp.Data["deletion_allowed"]); err != nil {
 			return fmt.Errorf("error setting state key 'deletion_allowed': %s", err)
 		}
 	}
@@ -198,10 +198,12 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateNameResource(d *schema.ResourceData, meta interface{}) error {
-	client, e := provider.GetClient(d, meta)
+	m := meta.(*provider.ProviderMeta)
+	client, e := provider.GetClient(d, m)
 	if e != nil {
 		return e
 	}
+
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Updating %q", vaultPath)
 
@@ -222,7 +224,9 @@ func updateNameResource(d *schema.ResourceData, meta interface{}) error {
 		data["type"] = raw
 	}
 
-	data["deletion_allowed"] = d.Get("deletion_allowed")
+	if m.IsAPISupported(provider.VaultVersion112) {
+		data["deletion_allowed"] = d.Get("deletion_allowed")
+	}
 
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
 		return fmt.Errorf("error updating template auth backend role %q: %s", vaultPath, err)
