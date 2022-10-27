@@ -21,6 +21,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
+const defaultGCPScope = "https://www.googleapis.com/auth/cloud-platform"
+
 // GetGCPLoginSchema for the gcp authentication engine.
 func GetGCPLoginSchema(authField string) *schema.Schema {
 	return getLoginSchema(
@@ -125,7 +127,7 @@ func (l *AuthLoginGCP) getJWT(ctx context.Context) (string, error) {
 
 	if v, ok := l.params[consts.FieldCredentials]; ok && v.(string) != "" {
 		// get the token from IAM
-		creds, err := getGCPOauthCredentials(ctx, v.(string), "https://www.googleapis.com/auth/cloud-platform")
+		creds, err := getGCPOauthCredentials(ctx, v.(string), defaultGCPScope)
 		if err != nil {
 			return "", fmt.Errorf(
 				"JSON credentials are not valid, err=%w", err)
