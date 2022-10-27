@@ -99,6 +99,8 @@ func (l *AuthLoginGCP) Login(client *api.Client) (*api.Secret, error) {
 		consts.FieldNamespace,
 		consts.FieldMount,
 		consts.FieldJWT,
+		consts.FieldCredentials,
+		consts.FieldServiceAccount,
 	)
 	if err != nil {
 		return nil, err
@@ -123,7 +125,7 @@ func (l *AuthLoginGCP) getJWT(ctx context.Context) (string, error) {
 
 	if v, ok := l.params[consts.FieldCredentials]; ok && v.(string) != "" {
 		// get the token from IAM
-		creds, err := getGCPOauthCredentials(ctx, v.(string))
+		creds, err := getGCPOauthCredentials(ctx, v.(string), "https://www.googleapis.com/auth/cloud-platform")
 		if err != nil {
 			return "", fmt.Errorf(
 				"JSON credentials are not valid, err=%w", err)
