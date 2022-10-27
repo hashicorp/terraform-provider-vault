@@ -67,6 +67,13 @@ func NameResource() *schema.Resource {
 			Optional:    true,
 			Description: `The type of transformation to perform.`,
 		},
+		"deletion_allowed": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+			Description: `If true, this transform can be deleted. ` +
+				`Otherwise deletion is blocked while this value remains false.`,
+		},
 	}
 	return &schema.Resource{
 		Create: createNameResource,
@@ -107,6 +114,8 @@ func createNameResource(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := d.GetOkExists("type"); ok {
 		data["type"] = v
 	}
+
+	data["deletion_allowed"] = d.Get("deletion_allowed")
 
 	log.Printf("[DEBUG] Writing %q", vaultPath)
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
@@ -174,6 +183,17 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error setting state key 'type': %s", err)
 		}
 	}
+	if val, ok := resp.Data["deletion_allowed"]; ok {
+		if err := d.Set("deletion_allowed", val); err != nil {
+			return fmt.Errorf("error setting state key 'deletion_allowed': %s", err)
+		}
+	} else {
+		// in the case where the backend does not provide this field, we can get
+		// it from the resource data directly.
+		if err := d.Set("deletion_allowed", d.Get("deletion_allowed")); err != nil {
+			return fmt.Errorf("error setting state key 'deletion_allowed': %s", err)
+		}
+	}
 	return nil
 }
 
@@ -201,9 +221,13 @@ func updateNameResource(d *schema.ResourceData, meta interface{}) error {
 	if raw, ok := d.GetOk("type"); ok {
 		data["type"] = raw
 	}
+
+	data["deletion_allowed"] = d.Get("deletion_allowed")
+
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
 		return fmt.Errorf("error updating template auth backend role %q: %s", vaultPath, err)
 	}
+
 	log.Printf("[DEBUG] Updated %q", vaultPath)
 	return readNameResource(d, meta)
 }

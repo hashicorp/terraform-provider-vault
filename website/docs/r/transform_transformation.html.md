@@ -16,12 +16,13 @@ it will be created. If the transformation exists, it will be updated with the ne
 ## Example Usage
 
 ```hcl
-resource "vault_mount" "mount_transform" {
+resource "vault_mount" "example" {
   path = "transform"
   type = "transform"
 }
-resource "vault_transform_transformation" "test" {
-  path          = vault_mount.mount_transform.path
+
+resource "vault_transform_transformation" "example" {
+  path          = vault_mount.example.path
   name          = "ccn-fpe"
   type          = "fpe"
   template      = "ccn"
@@ -47,7 +48,9 @@ The following arguments are supported:
 * `templates` - (Optional) Templates configured for transformation.
 * `tweak_source` - (Optional) The source of where the tweak value comes from. Only valid when in FPE mode.
 * `type` - (Optional) The type of transformation to perform.
-
+* `deletion_allowed` - (Optional) If true, this transform can be deleted.
+  Otherwise, deletion is blocked while this value remains false. Default: `false`
+  *Only supported on vault-1.12+*
 
 ## Tutorials
 
