@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/mitchellh/go-homedir"
 	googleoauth "golang.org/x/oauth2/google"
+	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
 	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
 
@@ -20,8 +21,6 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
-
-const defaultGCPScope = "https://www.googleapis.com/auth/cloud-platform"
 
 // GetGCPLoginSchema for the gcp authentication engine.
 func GetGCPLoginSchema(authField string) *schema.Schema {
@@ -127,7 +126,7 @@ func (l *AuthLoginGCP) getJWT(ctx context.Context) (string, error) {
 
 	if v, ok := l.params[consts.FieldCredentials]; ok && v.(string) != "" {
 		// get the token from IAM
-		creds, err := getGCPOauthCredentials(ctx, v.(string), defaultGCPScope)
+		creds, err := getGCPOauthCredentials(ctx, v.(string), iam.CloudPlatformScope)
 		if err != nil {
 			return "", fmt.Errorf(
 				"JSON credentials are not valid, err=%w", err)
