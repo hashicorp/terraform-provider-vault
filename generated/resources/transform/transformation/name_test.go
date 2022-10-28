@@ -50,7 +50,6 @@ func TestTransformationName(t *testing.T) {
 				ResourceName: resourceName,
 				ImportState:  true,
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
-					m := nameTestProvider.SchemaProvider().Meta().(*provider.ProviderMeta)
 					if len(states) != 1 {
 						return fmt.Errorf("expected 1 state but received %+v", states)
 					}
@@ -86,7 +85,7 @@ func TestTransformationName(t *testing.T) {
 						t.Fatalf("expected %q, received %q", "ccn-fpw", state.Attributes["name"])
 					}
 					var expectDeletionAllowed string
-					if m.IsAPISupported(provider.VaultVersion112) {
+					if provider.IsAPISupported(nameTestProvider.SchemaProvider().Meta(), provider.VaultVersion112) {
 						expectDeletionAllowed = "true"
 					}
 					if state.Attributes["deletion_allowed"] != expectDeletionAllowed {

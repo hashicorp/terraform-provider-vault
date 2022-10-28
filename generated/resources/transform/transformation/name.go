@@ -89,8 +89,7 @@ func NameResource() *schema.Resource {
 }
 
 func createNameResource(d *schema.ResourceData, meta interface{}) error {
-	m := meta.(*provider.ProviderMeta)
-	client, e := provider.GetClient(d, m)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -117,7 +116,7 @@ func createNameResource(d *schema.ResourceData, meta interface{}) error {
 		data["type"] = v
 	}
 
-	if m.IsAPISupported(provider.VaultVersion112) {
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		data["deletion_allowed"] = d.Get("deletion_allowed")
 	}
 
@@ -131,8 +130,7 @@ func createNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readNameResource(d *schema.ResourceData, meta interface{}) error {
-	m := meta.(*provider.ProviderMeta)
-	client, e := provider.GetClient(d, m)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -189,7 +187,7 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error setting state key 'type': %s", err)
 		}
 	}
-	if m.IsAPISupported(provider.VaultVersion112) {
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		if err := d.Set("deletion_allowed", resp.Data["deletion_allowed"]); err != nil {
 			return fmt.Errorf("error setting state key 'deletion_allowed': %s", err)
 		}
@@ -198,8 +196,7 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func updateNameResource(d *schema.ResourceData, meta interface{}) error {
-	m := meta.(*provider.ProviderMeta)
-	client, e := provider.GetClient(d, m)
+	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
 	}
@@ -224,7 +221,7 @@ func updateNameResource(d *schema.ResourceData, meta interface{}) error {
 		data["type"] = raw
 	}
 
-	if m.IsAPISupported(provider.VaultVersion112) {
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		data["deletion_allowed"] = d.Get("deletion_allowed")
 	}
 
