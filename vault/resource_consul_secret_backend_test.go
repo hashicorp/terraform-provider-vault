@@ -133,17 +133,18 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 	resourceName := resourceType + ".test"
 	resourceRoleName := "vault_consul_secret_backend_role.test"
 
-	if !testutil.CheckTestVaultVersion(t, "1.11") {
-		t.Skipf("test requires Vault 1.11 or newer")
-	}
-
 	cleanup, consulConfig := consulhelper.PrepareTestContainer(t, "1.12.3", false, false)
 	t.Cleanup(cleanup)
 	consulAddr := consulConfig.Address()
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers: testProviders,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			if !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion111) {
+				t.Skipf("test requires Vault %s or newer", provider.VaultVersion111)
+			}
+		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeConsul, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{

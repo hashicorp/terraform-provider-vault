@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -16,8 +17,15 @@ func TestAzureSecretBackend(t *testing.T) {
 	resourceType := "vault_azure_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers: testProviders,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+
+			maxVer := provider.VaultVersion112
+			if provider.IsAPISupported(testProvider.Meta(), maxVer) {
+				t.Skipf("Skip until resource supports vault-%s", maxVer)
+			}
+		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
@@ -67,8 +75,15 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 	resourceType := "vault_azure_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers: testProviders,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+
+			maxVer := provider.VaultVersion112
+			if provider.IsAPISupported(testProvider.Meta(), maxVer) {
+				t.Skipf("Skip until resource supports vault-%s", maxVer)
+			}
+		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{

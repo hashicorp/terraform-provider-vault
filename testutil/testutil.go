@@ -20,8 +20,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/go-homedir"
 
-	goversion "github.com/hashicorp/go-version"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
@@ -192,21 +190,6 @@ func GetTestADCreds(t *testing.T) (string, string, string) {
 func GetTestNomadCreds(t *testing.T) (string, string) {
 	v := SkipTestEnvUnset(t, "NOMAD_ADDR", "NOMAD_TOKEN")
 	return v[0], v[1]
-}
-
-// Returns true if TF_VAULT_VERSION is greater than or equal to the given Vault version
-func CheckTestVaultVersion(t *testing.T, cutoff string) bool {
-	v := SkipTestEnvUnset(t, "TF_VAULT_VERSION")
-
-	cutoffVersion, _ := goversion.NewVersion(cutoff)
-	envVersion, err := goversion.NewVersion(v[0])
-	if err != nil {
-		t.Fatalf("error parsing vault version from TF_VAULT_VERSION environment variable: %v", err)
-	} else {
-		return envVersion.GreaterThanOrEqual(cutoffVersion)
-	}
-
-	return false
 }
 
 func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {
