@@ -180,8 +180,8 @@ func TestConsulSecretBackendRole_Legacy(t *testing.T) {
 		Providers: testProviders,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			if !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion111) {
-				t.Skipf("test requires Vault %s or newer", provider.VaultVersion111)
+			if provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion111) {
+				t.Skipf("test is reserved for Vault %s and below", provider.VaultVersion110)
 			}
 		},
 		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
