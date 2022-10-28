@@ -4,6 +4,8 @@ WEBSITE_REPO = github.com/hashicorp/terraform-website
 PKG_NAME = vault
 TF_ACC_TERRAFORM_VERSION ?= 1.2.2
 TESTARGS ?= -test.v
+TF_VAULT_VERSION ?=
+TEST_PATH ?= ./...
 
 default: build
 
@@ -11,10 +13,10 @@ build: fmtcheck
 	go install
 
 test: fmtcheck
-	TF_ACC= go test $(TESTARGS) -timeout 10m -parallel=4 ./...
+	TF_ACC= go test $(TESTARGS) -timeout 10m -parallel=4 $(TEST_PATH)
 
 testacc: fmtcheck
-	TF_ACC=1 go test $(TESTARGS) -timeout 30m ./...
+	TF_ACC=1 go test $(TESTARGS) -timeout 30m $(TEST_PATH)
 
 testacc-ent:
 	make testacc TF_ACC_ENTERPRISE=1

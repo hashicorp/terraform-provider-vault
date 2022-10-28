@@ -3,14 +3,12 @@ package vault
 import (
 	"fmt"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -18,12 +16,13 @@ func TestADSecretBackend(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-ad")
 	bindDN, bindPass, url := testutil.GetTestADCreds(t)
 
-	resourceName := "vault_ad_secret_backend.test"
+	resourceType := "vault_ad_secret_backend"
+	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
 		Providers:                 testProviders,
 		PreCheck:                  func() { testutil.TestAccPreCheck(t) },
 		PreventPostDestroyRefresh: true,
-		CheckDestroy:              testAccADSecretBackendCheckDestroy,
+		CheckDestroy:              testCheckMountDestroyed(resourceType, consts.MountTypeAD, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testADSecretBackend_initialConfig(backend, bindDN, bindPass, url),
@@ -116,33 +115,6 @@ func TestADSecretBackend_remount(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "description", "disable_remount"),
 		},
 	})
-}
-
-func testAccADSecretBackendCheckDestroy(s *terraform.State) error {
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_ad_secret_backend" {
-			continue
-		}
-
-		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
-		if e != nil {
-			return e
-		}
-
-		mounts, err := client.Sys().ListMounts()
-		if err != nil {
-			return err
-		}
-
-		for backend, mount := range mounts {
-			backend = strings.Trim(backend, "/")
-			rsBackend := strings.Trim(rs.Primary.Attributes["backend"], "/")
-			if mount.Type == "ad" && backend == rsBackend {
-				return fmt.Errorf("Mount %q still exists", rsBackend)
-			}
-		}
-	}
-	return nil
 }
 
 func testADSecretBackend_initialConfig(backend, bindDN, bindPass, url string) string {

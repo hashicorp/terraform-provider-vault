@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -184,9 +185,9 @@ func identityEntityAliasRead(ctx context.Context, d *schema.ResourceData, meta i
 	diags := diag.Diagnostics{}
 
 	log.Printf("[DEBUG] Reading entity alias %q from %q", id, path)
-	resp, err := readEntity(client, path, d.IsNewResource())
+	resp, err := entity.ReadEntity(client, path, d.IsNewResource())
 	if err != nil {
-		if isIdentityNotFoundError(err) {
+		if group.IsIdentityNotFoundError(err) {
 			log.Printf("[WARN] entity alias %q not found, removing from state", id)
 			d.SetId("")
 			return diags
@@ -250,11 +251,11 @@ func getEntityLockFuncs(d *schema.ResourceData, root string) (func(), func()) {
 	mountAccessor := d.Get(consts.FieldMountAccessor).(string)
 	lockKey := strings.Join([]string{root, mountAccessor}, "/")
 	lock := func() {
-		vaultMutexKV.Lock(lockKey)
+		provider.VaultMutexKV.Lock(lockKey)
 	}
 
 	unlock := func() {
-		vaultMutexKV.Unlock(lockKey)
+		provider.VaultMutexKV.Unlock(lockKey)
 	}
 	return lock, unlock
 }

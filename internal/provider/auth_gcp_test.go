@@ -167,6 +167,7 @@ func TestAuthLoginGCP_Login(t *testing.T) {
 						consts.FieldCredentials:    os.Getenv(consts.EnvVarGoogleApplicationCreds),
 						consts.FieldServiceAccount: os.Getenv(envVarGCPServiceAccount),
 					},
+					initialized: true,
 				},
 			},
 			handler: &testLoginHandler{
@@ -178,9 +179,7 @@ func TestAuthLoginGCP_Login(t *testing.T) {
 				"/v1/auth/qux/login",
 			},
 			expectReqParams: []map[string]interface{}{{
-				consts.FieldRole:           "bob",
-				consts.FieldCredentials:    os.Getenv(consts.EnvVarGoogleApplicationCreds),
-				consts.FieldServiceAccount: os.Getenv(envVarGCPServiceAccount),
+				consts.FieldRole: "bob",
 			}},
 			want: &api.Secret{
 				Auth: &api.SecretAuth{

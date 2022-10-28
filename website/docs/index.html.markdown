@@ -141,7 +141,7 @@ variables in order to keep credential information out of the configuration.
 
 * `auth_login_oidc` - (Optional) Utilizes the `oidc` authentication engine. *[See usage details below.](#oidc)*
 
-* `auth_login_jwt` - (Optional) Utilizes the `jwt` authentication engine. *[See usage details below.](#oidc)*
+* `auth_login_jwt` - (Optional) Utilizes the `jwt` authentication engine. *[See usage details below.](#jwt)*
 
 * `auth_login_azure` - (Optional) Utilizes the `azure` authentication engine. *[See usage details below.](#azure)*
 
@@ -203,6 +203,18 @@ variables in order to keep credential information out of the configuration.
   See [namespaces](https://www.vaultproject.io/docs/enterprise/namespaces) for more info.
   *Available only for Vault Enterprise*.
 
+* `skip_get_vault_version` - (Optional) Skip the dynamic fetching of the Vault server version. 
+  Set to `true` when the */sys/seal-status* API endpoint is not available. See [vault_version_override](#vault_version_override)
+  for related info
+
+* `vault_version_override` - (Optional) Override the target Vault server semantic version.
+  Normally the version is dynamically set from the */sys/seal-status* API endpoint. In the case where this endpoint
+  is not available an override can be specified here.
+
+~> Setting the `vault_version_override` determines Vault server's API compatability, so
+it's important that the value specified here matches the target server. It is recommended to
+only ever use this option in the case where the server version cannot be dynamically determined.
+
 * `headers` - (Optional) A configuration block, described below, that provides headers
 to be sent along with all requests to the Vault server.  This block can be specified
 multiple times.
@@ -220,6 +232,7 @@ The `headers` configuration block accepts the following arguments:
 * `name` - (Required) The name of the header.
 
 * `value` - (Required) The value of the header.
+
 
 ## Vault Authentication Configuration Options
 
@@ -446,8 +459,11 @@ The `auth_login_oci` configuration block accepts the following arguments:
 
 Provides support for authenticating to Vault using the OIDC Auth engine.
 
+~> Use of this login method requires access to a web browser on the host machine in
+  order to complete the authorization flow.
+
 *For more details see the OIDC specific documentation here:
-[OIDC/JWT Auth Method (API)](https://www.vaultproject.io/api-docs/auth/jwt#jwt-oidc-auth-method-api)
+[OIDC/JWT Auth Method (API)](https://www.vaultproject.io/api-docs/auth/jwt#jwt-oidc-auth-method-api)*
 
 
 The `auth_login_oidc` configuration block accepts the following arguments:
@@ -470,7 +486,7 @@ The `auth_login_oidc` configuration block accepts the following arguments:
 Provides support for authenticating to Vault using the JWT Auth engine.
 
 *For more details see the JWT specific documentation here:
-[OIDC/JWT Auth Method (API)](https://www.vaultproject.io/api-docs/auth/jwt#jwt-oidc-auth-method-api)
+[OIDC/JWT Auth Method (API)](https://www.vaultproject.io/api-docs/auth/jwt#jwt-oidc-auth-method-api)*
 
 
 The `auth_login_jwt` configuration block accepts the following arguments:

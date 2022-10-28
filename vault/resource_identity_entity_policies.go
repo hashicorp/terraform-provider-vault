@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -61,8 +62,8 @@ func identityEntityPoliciesUpdate(d *schema.ResourceData, meta interface{}) erro
 	log.Printf("[DEBUG] Updating IdentityEntityPolicies %q", id)
 	path := entity.JoinEntityID(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := make(map[string]interface{})
 	policies := d.Get("policies").(*schema.Set).List()
@@ -109,7 +110,7 @@ func identityEntityPoliciesRead(d *schema.ResourceData, meta interface{}) error 
 	log.Printf("[DEBUG] Read IdentityEntityPolicies %s", id)
 	resp, err := readIdentityEntity(client, id, d.IsNewResource())
 	if err != nil {
-		if isIdentityNotFoundError(err) {
+		if group.IsIdentityNotFoundError(err) {
 			log.Printf("[WARN] IdentityEntityPolicies %q not found, removing from state", id)
 			d.SetId("")
 			return nil
@@ -152,8 +153,8 @@ func identityEntityPoliciesDelete(d *schema.ResourceData, meta interface{}) erro
 	log.Printf("[DEBUG] Deleting IdentityEntityPolicies %q", id)
 	path := entity.JoinEntityID(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := make(map[string]interface{})
 
@@ -162,7 +163,7 @@ func identityEntityPoliciesDelete(d *schema.ResourceData, meta interface{}) erro
 	} else {
 		apiPolicies, err := readIdentityEntityPolicies(client, id)
 		if err != nil {
-			if isIdentityNotFoundError(err) {
+			if group.IsIdentityNotFoundError(err) {
 				return nil
 			}
 			return err

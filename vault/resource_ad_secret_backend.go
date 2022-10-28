@@ -17,7 +17,7 @@ func adSecretBackendResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
 		"backend": {
 			Type:        schema.TypeString,
-			Default:     "ad",
+			Default:     consts.MountTypeAD,
 			Optional:    true,
 			Description: `The mount path for a backend, for example, the path given in "$ vault auth enable -path=my-ad ad".`,
 			StateFunc: func(v interface{}) string {
@@ -236,7 +236,7 @@ func createConfigResource(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Mounting AD backend at %q", backend)
 	err := client.Sys().Mount(backend, &api.MountInput{
-		Type:        "ad",
+		Type:        consts.MountTypeAD,
 		Description: description,
 		Local:       local,
 		Config: api.MountConfigInput{

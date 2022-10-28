@@ -11,17 +11,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
-const (
-	// OIDC auth login fields
-	// TODO: these fields should be exported from vault-plugin-auth-jwt instead
-	fieldCallbackHost   = "callbackhost"
-	fieldCallbackMethod = "callbackmethod"
-	fieldListenAddress  = "listenaddress"
-	fieldPort           = "port"
-	fieldCallbackPort   = "callbackport"
-	fieldSkipBrowser    = "skip_browser"
-)
-
 // GetOIDCLoginSchema for the oidc authentication engine.
 func GetOIDCLoginSchema(authField string) *schema.Schema {
 	return getLoginSchema(
@@ -113,7 +102,6 @@ func (l *AuthLoginOIDC) Login(client *api.Client) (*api.Secret, error) {
 
 func (l *AuthLoginOIDC) getAuthParams() (map[string]string, error) {
 	var role string
-	// TODO: add common getParam() to AuthLoginCommon
 	if v, ok := l.params[consts.FieldRole]; ok {
 		role = v.(string)
 	} else {
@@ -123,7 +111,11 @@ func (l *AuthLoginOIDC) getAuthParams() (map[string]string, error) {
 	params := map[string]string{
 		consts.FieldMount: l.MountPath(),
 		consts.FieldRole:  role,
-		fieldSkipBrowser:  "true",
+		// skip_browser should remain false since there is no other way
+		// to relay the IDP URL to the operator.
+		// The OIDC flow supported is interactive, and requires a web browser.
+		jwtauth.FieldSkipBrowser:  "false",
+		jwtauth.FieldAbortOnError: "true",
 	}
 
 	parseURL := func(param string) (*url.URL, error) {
@@ -139,16 +131,16 @@ func (l *AuthLoginOIDC) getAuthParams() (map[string]string, error) {
 	if u, err := parseURL(consts.FieldCallbackListenerAddress); err != nil {
 		return nil, err
 	} else if u != nil {
-		params[fieldListenAddress] = u.Hostname()
-		params[fieldPort] = u.Port()
+		params[jwtauth.FieldListenAddress] = u.Hostname()
+		params[jwtauth.FieldPort] = u.Port()
 	}
 
 	if u, err := parseURL(consts.FieldCallbackAddress); err != nil {
 		return nil, err
 	} else if u != nil {
-		params[fieldCallbackHost] = u.Hostname()
-		params[fieldCallbackPort] = u.Port()
-		params[fieldCallbackMethod] = u.Scheme
+		params[jwtauth.FieldCallbackHost] = u.Hostname()
+		params[jwtauth.FieldCallbackPort] = u.Port()
+		params[jwtauth.FieldCallbackMethod] = u.Scheme
 	}
 
 	return params, nil

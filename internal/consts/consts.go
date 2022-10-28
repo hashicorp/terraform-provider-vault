@@ -172,6 +172,15 @@ const (
 	FieldClientToken              = "client_token"
 	FieldWrappedToken             = "wrapped_token"
 	FieldOrphan                   = "orphan"
+	FieldVaultVersionOverride     = "vault_version_override"
+	FieldSkipGetVaultVersion      = "skip_get_vault_version"
+	FieldMemberEntityIDs          = "member_entity_ids"
+	FieldMemberGroupIDs           = "member_group_ids"
+	FieldExclusive                = "exclusive"
+	FieldGroupID                  = "group_id"
+	FieldGroupName                = "group_name"
+	FieldExternal                 = "external"
+	FieldInternal                 = "internal"
 
 	/*
 		common environment variables
@@ -224,13 +233,18 @@ const (
 	MountTypeOIDC       = "oidc"
 	MountTypeJWT        = "jwt"
 	MountTypeAzure      = "azure"
+	MountTypeGitHub     = "github"
+	MountTypeAD         = "ad"
+	MountTypeConsul     = "consul"
+	MountTypeTerraform  = "terraform"
 
 	/*
 		Vault version constants
 	*/
-	VaultVersion111 = "1.11.0"
-	VaultVersion110 = "1.10.0"
 	VaultVersion190 = "1.9.0"
+	VaultVersion110 = "1.10.0"
+	VaultVersion111 = "1.11.0"
+	VaultVersion112 = "1.12.0"
 
 	/*
 		Vault auth methods

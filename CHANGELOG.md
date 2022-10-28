@@ -1,3 +1,12 @@
+## 3.10.0 (October 26, 2022)
+IMPROVEMENTS:
+* Add support for externally managed Group Member IDs to Vault Identity Group: ([#1630](https://github.com/hashicorp/terraform-provider-vault/pull/1630))
+* Support configuring vault version handling: ([#1646](https://github.com/hashicorp/terraform-provider-vault/pull/1646))
+
+BUGS:
+* Ensure that namespaced github auth mounts are destroyed: ([#1637](https://github.com/hashicorp/terraform-provider-vault/pull/1637))
+* Ensure all AuthLogin instances are validated on call to Login(): ([#1631](https://github.com/hashicorp/terraform-provider-vault/pull/1631))
+
 ## 3.9.1 (October 06, 2022)
 BUGS:
 * Use the correct AWS login headers within auth_generic: ([#1625](https://github.com/hashicorp/terraform-provider-vault/pull/1625))
