@@ -48,23 +48,27 @@ resource "vault_mount" "transform" {
   path = "%s"
   type = "transform"
 }
+
 resource "vault_transform_transformation_name" "ccn-fpe" {
-  path = vault_mount.transform.path
-  name = "ccn-fpe"
-  type = "fpe"
-  template = "builtin/creditcardnumber"
-  tweak_source = "internal"
-  allowed_roles = ["payments"]
+  path             = vault_mount.transform.path
+  name             = "ccn-fpe"
+  type             = "fpe"
+  template         = "builtin/creditcardnumber"
+  tweak_source     = "internal"
+  allowed_roles    = ["payments"]
+  deletion_allowed = true
 }
+
 resource "vault_transform_role_name" "payments" {
-  path = vault_transform_transformation_name.ccn-fpe.path
-  name = "payments"
-  transformations = ["ccn-fpe"]
+  path            = vault_transform_transformation_name.ccn-fpe.path
+  name            = "payments"
+  transformations = [vault_transform_transformation_name.ccn-fpe.name]
 }
+
 data "vault_transform_encode_role_name" "test" {
-    path      = vault_transform_role_name.payments.path
-    role_name = "payments"
-    value     = "1111-2222-3333-4444"
+  path      = vault_transform_role_name.payments.path
+  role_name = "payments"
+  value     = "1111-2222-3333-4444"
 }
 `, path)
 }
@@ -94,23 +98,27 @@ resource "vault_mount" "transform" {
   path = "%s"
   type = "transform"
 }
+
 resource "vault_transform_transformation_name" "ccn-fpe" {
-  path = vault_mount.transform.path
-  name = "ccn-fpe"
-  type = "fpe"
-  template = "builtin/creditcardnumber"
-  tweak_source = "internal"
-  allowed_roles = ["payments"]
+  path             = vault_mount.transform.path
+  name             = "ccn-fpe"
+  type             = "fpe"
+  template         = "builtin/creditcardnumber"
+  tweak_source     = "internal"
+  allowed_roles    = ["payments"]
+  deletion_allowed = true
 }
+
 resource "vault_transform_role_name" "payments" {
-  path = vault_transform_transformation_name.ccn-fpe.path
-  name = "payments"
-  transformations = ["ccn-fpe"]
+  path            = vault_transform_transformation_name.ccn-fpe.path
+  name            = "payments"
+  transformations = [vault_transform_transformation_name.ccn-fpe.name]
 }
+
 data "vault_transform_encode_role_name" "test" {
-    path      = vault_transform_role_name.payments.path
-    role_name = "payments"
-    batch_input = [{"value":"1111-2222-3333-4444"}]
+  path        = vault_transform_role_name.payments.path
+  role_name   = "payments"
+  batch_input = [{ "value" : "1111-2222-3333-4444" }]
 }
 `, path)
 }

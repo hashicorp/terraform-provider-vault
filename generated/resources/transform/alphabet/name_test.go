@@ -81,9 +81,10 @@ resource "vault_mount" "mount_transform" {
   path = "%s"
   type = "transform"
 }
+
 resource "vault_transform_alphabet_name" "test" {
-  path = vault_mount.mount_transform.path
-  name = "%s"
+  path     = vault_mount.mount_transform.path
+  name     = "%s"
   alphabet = "%s"
 }
 `, path, name, alphabet)
