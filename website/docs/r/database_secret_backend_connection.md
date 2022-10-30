@@ -171,19 +171,19 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 ### Redis Configuration Options
 
-* `host` - (Required) Redis server host.
+* `host` - (Required) Redis host to connect to.
+
+* `username` - (Required) Specifies the username to use for admin access.
+
+* `password` - (Required) Specifies the password corresponding to the given admin username.
 
 * `port` - (Optional) Redis server port (defaults to `6379`)
 
-* `username` - (Optional) ...
+* `tls` - (Optional) Whether to use TLS when connecting to Redis.
 
-* `password` - (Optional) ...
+* `insecure_tls` - (Optional) Whether to ignore insecure TLS when connecting to Redis.
 
-* `tls` - (Optional) ...
-
-* `insecure_tls` - (Optional) ...
-
-* `ca_cert` - (Optional) ...
+* `ca_cert` - (Optional) The path to a PEM-encoded CA cert file to use to verify the Redis server's identity.
 
 ### Redis ElastiCache Configuration Options
 
