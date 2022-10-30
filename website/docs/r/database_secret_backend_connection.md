@@ -92,6 +92,8 @@ The following arguments are supported:
 
 * `influxdb` - (Optional) A nested block containing configuration options for InfluxDB connections.
 
+* `redis` - (Optional) A nested block containing configuration options for Redis connections.
+
 * `redis_elasticache` - (Optional) A nested block containing configuration options for Redis ElastiCache connections.
 
 Exactly one of the nested blocks of configuration options must be supplied.
@@ -166,6 +168,22 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `connect_timeout` - (Optional) The number of seconds to use as a connection
   timeout.
+
+### Redis Configuration Options
+
+* `host` - (Required) Redis server host.
+
+* `port` - (Optional) Redis server port (defaults to `6379`)
+
+* `username` - (Optional) ...
+
+* `password` - (Optional) ...
+
+* `tls` - (Optional) ...
+
+* `insecure_tls` - (Optional) ...
+
+* `ca_cert` - (Optional) ...
 
 ### Redis ElastiCache Configuration Options
 
