@@ -128,6 +128,8 @@ func TestConsulSecretBackend(t *testing.T) {
 }
 
 func TestConsulSecretBackend_Bootstrap(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
 	path := acctest.RandomWithPrefix("tf-test-consul")
 	resourceType := "vault_consul_secret_backend"
 	resourceName := resourceType + ".test"
