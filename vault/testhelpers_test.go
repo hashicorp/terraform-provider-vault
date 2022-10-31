@@ -76,31 +76,46 @@ func testCheckMountDestroyed(resourceType, mountType, pathField string) resource
 // SkipIfAPIVersionLT skips of the running vault version is less-than ver.
 func SkipIfAPIVersionLT(t *testing.T, m interface{}, ver *version.Version) {
 	t.Helper()
-	SkipOnAPIVersion(t, m, ver.LessThan, "Vault version lt %q", ver)
+	f := func(curVer *version.Version) bool {
+		return curVer.LessThan(ver)
+	}
+	SkipOnAPIVersion(t, m, f, "Vault version lt %q", ver)
 }
 
 // SkipIfAPIVersionLTE skips if the running vault version is less-than-or-equal to ver.
 func SkipIfAPIVersionLTE(t *testing.T, m interface{}, ver *version.Version) {
 	t.Helper()
-	SkipOnAPIVersion(t, m, ver.LessThanOrEqual, "Vault version lte %q", ver)
+	f := func(curVer *version.Version) bool {
+		return curVer.LessThanOrEqual(ver)
+	}
+	SkipOnAPIVersion(t, m, f, "Vault version lte %q", ver)
 }
 
 // SkipIfAPIVersionEQ skips if the running vault version is equal to ver.
 func SkipIfAPIVersionEQ(t *testing.T, m interface{}, ver *version.Version) {
 	t.Helper()
-	SkipOnAPIVersion(t, m, ver.Equal, "Vault version eq %q", ver)
+	f := func(curVer *version.Version) bool {
+		return curVer.Equal(ver)
+	}
+	SkipOnAPIVersion(t, m, f, "Vault version eq %q", ver)
 }
 
 // SkipIfAPIVersionGT skips if the running vault version is greater-than ver.
 func SkipIfAPIVersionGT(t *testing.T, m interface{}, ver *version.Version) {
 	t.Helper()
-	SkipOnAPIVersion(t, m, ver.GreaterThan, "Vault version gt %q", ver)
+	f := func(curVer *version.Version) bool {
+		return curVer.GreaterThan(ver)
+	}
+	SkipOnAPIVersion(t, m, f, "Vault version gt %q", ver)
 }
 
 // SkipIfAPIVersionGTE skips if the running vault version is greater-than-or-equal to ver.
 func SkipIfAPIVersionGTE(t *testing.T, m interface{}, ver *version.Version) {
 	t.Helper()
-	SkipOnAPIVersion(t, m, ver.GreaterThanOrEqual, "Vault version gte %q", ver)
+	f := func(curVer *version.Version) bool {
+		return curVer.GreaterThanOrEqual(ver)
+	}
+	SkipOnAPIVersion(t, m, f, "Vault version gte %q", ver)
 }
 
 func SkipOnAPIVersion(t *testing.T, m interface{}, cmp func(*version.Version) bool, format string, args ...interface{}) {
@@ -111,7 +126,9 @@ func SkipOnAPIVersion(t *testing.T, m interface{}, cmp func(*version.Version) bo
 	if curVer == nil {
 		t.Fatalf("vault version not set on %T", p)
 	}
-	if !cmp(curVer) {
+
+	t.Logf("Vault server version %q", curVer)
+	if cmp(curVer) {
 		t.Skipf(format, args...)
 	}
 }
