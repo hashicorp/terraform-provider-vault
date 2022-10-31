@@ -3,7 +3,9 @@ package vault
 import (
 	"fmt"
 	"regexp"
+	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
@@ -68,5 +70,48 @@ func testCheckMountDestroyed(resourceType, mountType, pathField string) resource
 		}
 
 		return nil
+	}
+}
+
+// SkipIfAPIVersionLT skips of the running vault version is less-than ver.
+func SkipIfAPIVersionLT(t *testing.T, m interface{}, ver *version.Version) {
+	t.Helper()
+	SkipOnAPIVersion(t, m, ver.LessThan, "Vault version lt %q", ver)
+}
+
+// SkipIfAPIVersionLTE skips if the running vault version is less-than-or-equal to ver.
+func SkipIfAPIVersionLTE(t *testing.T, m interface{}, ver *version.Version) {
+	t.Helper()
+	SkipOnAPIVersion(t, m, ver.LessThanOrEqual, "Vault version lte %q", ver)
+}
+
+// SkipIfAPIVersionEQ skips if the running vault version is equal to ver.
+func SkipIfAPIVersionEQ(t *testing.T, m interface{}, ver *version.Version) {
+	t.Helper()
+	SkipOnAPIVersion(t, m, ver.Equal, "Vault version eq %q", ver)
+}
+
+// SkipIfAPIVersionGT skips if the running vault version is greater-than ver.
+func SkipIfAPIVersionGT(t *testing.T, m interface{}, ver *version.Version) {
+	t.Helper()
+	SkipOnAPIVersion(t, m, ver.GreaterThan, "Vault version gt %q", ver)
+}
+
+// SkipIfAPIVersionGTE skips if the running vault version is greater-than-or-equal to ver.
+func SkipIfAPIVersionGTE(t *testing.T, m interface{}, ver *version.Version) {
+	t.Helper()
+	SkipOnAPIVersion(t, m, ver.GreaterThanOrEqual, "Vault version gte %q", ver)
+}
+
+func SkipOnAPIVersion(t *testing.T, m interface{}, cmp func(*version.Version) bool, format string, args ...interface{}) {
+	t.Helper()
+
+	p := m.(*provider.ProviderMeta)
+	curVer := p.GetVaultVersion()
+	if curVer == nil {
+		t.Fatalf("vault version not set on %T", p)
+	}
+	if !cmp(curVer) {
+		t.Skipf(format, args...)
 	}
 }

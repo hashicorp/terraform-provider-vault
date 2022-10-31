@@ -70,7 +70,7 @@ func TestConsulSecretBackendRole(t *testing.T) {
 		Providers: testProviders,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
 		},
 		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
@@ -178,7 +178,7 @@ func TestConsulSecretBackendRole_Legacy(t *testing.T) {
 		Providers: testProviders,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			testutil.SkipIfAPIVersionGT(t, testProvider.Meta(), provider.VaultVersion110)
+			SkipIfAPIVersionGT(t, testProvider.Meta(), provider.VaultVersion110)
 		},
 		CheckDestroy: testAccConsulSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
