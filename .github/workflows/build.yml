@@ -21,6 +21,10 @@ jobs:
       - name: Build
         run: |
           make build
+      - name: Run unit tests
+        # here to short-circuit the acceptance tests, in the case of a failure.
+        run: |
+          make test
   acceptance:
     needs: [go-version, build]
     runs-on: ubuntu-latest
