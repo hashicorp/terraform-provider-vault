@@ -20,11 +20,7 @@ func TestAzureSecretBackend(t *testing.T) {
 		Providers: testProviders,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-
-			maxVer := provider.VaultVersion112
-			if provider.IsAPISupported(testProvider.Meta(), maxVer) {
-				t.Skipf("Skip until resource supports vault-%s", maxVer)
-			}
+			testutil.SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion112)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -78,11 +74,7 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 		Providers: testProviders,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-
-			maxVer := provider.VaultVersion112
-			if provider.IsAPISupported(testProvider.Meta(), maxVer) {
-				t.Skipf("Skip until resource supports vault-%s", maxVer)
-			}
+			testutil.SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion112)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldPath),
 		Steps: []resource.TestStep{

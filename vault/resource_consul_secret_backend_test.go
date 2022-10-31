@@ -141,9 +141,7 @@ func TestConsulSecretBackend_Bootstrap(t *testing.T) {
 		Providers: testProviders,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			if !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion111) {
-				t.Skipf("test requires Vault %s or newer", provider.VaultVersion111)
-			}
+			testutil.SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeConsul, consts.FieldPath),
 		Steps: []resource.TestStep{

@@ -353,10 +353,7 @@ func TestAccKubernetesAuthBackendConfig_localCA(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			maxVer := provider.VaultVersion111
-			if provider.IsAPISupported(testProvider.Meta(), maxVer) {
-				t.Skipf("Skip until test is fixed for vault-%s", maxVer)
-			}
+			testutil.SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion111)
 		},
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
