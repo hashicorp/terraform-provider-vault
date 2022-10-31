@@ -599,7 +599,7 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Type:        schema.TypeBool,
 						Optional:    true,
 						Description: "Whether to use TLS when connecting to Redis.",
-						Default:     true,
+						Default:     false,
 					},
 					"insecure_tls": {
 						Type:        schema.TypeBool,
@@ -1092,8 +1092,6 @@ func getRedisConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 	}
 	if v, ok := data["ca_cert"]; ok {
 		result["ca_cert"] = v.(string)
-	} else if v, ok := d.GetOk(prefix + "ca_cert"); ok {
-		result["ca_cert"] = v.(string)
 	}
 	return result
 }
@@ -1363,7 +1361,7 @@ func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 
 func setRedisDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	if v, ok := d.GetOk(prefix + "host"); ok {
-		data["url"] = v.(string)
+		data["host"] = v.(string)
 	}
 	if v, ok := d.GetOkExists(prefix + "port"); ok {
 		data["port"] = v.(int)
@@ -1374,14 +1372,14 @@ func setRedisDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
 	}
-	if v, ok := d.GetOk(prefix + "tls"); ok {
+	if v, ok := d.GetOkExists(prefix + "tls"); ok {
 		data["tls"] = v.(bool)
 	}
-	if v, ok := d.GetOk(prefix + "insecure_tls"); ok {
+	if v, ok := d.GetOkExists(prefix + "insecure_tls"); ok {
 		data["insecure_tls"] = v.(bool)
 	}
-	if v, ok := d.GetOk(prefix + "ca_file"); ok {
-		data["ca_file"] = v.(string)
+	if v, ok := d.GetOkExists(prefix + "ca_cert"); ok {
+		data["ca_cert"] = v.(string)
 	}
 }
 
