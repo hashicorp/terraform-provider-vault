@@ -79,7 +79,7 @@ func SkipIfAPIVersionLT(t *testing.T, m interface{}, ver *version.Version) {
 	f := func(curVer *version.Version) bool {
 		return curVer.LessThan(ver)
 	}
-	SkipOnAPIVersion(t, m, f, "Vault version lt %q", ver)
+	SkipOnAPIVersion(t, m, f, "Vault version < %q", ver)
 }
 
 // SkipIfAPIVersionLTE skips if the running vault version is less-than-or-equal to ver.
@@ -88,7 +88,7 @@ func SkipIfAPIVersionLTE(t *testing.T, m interface{}, ver *version.Version) {
 	f := func(curVer *version.Version) bool {
 		return curVer.LessThanOrEqual(ver)
 	}
-	SkipOnAPIVersion(t, m, f, "Vault version lte %q", ver)
+	SkipOnAPIVersion(t, m, f, "Vault version <= %q", ver)
 }
 
 // SkipIfAPIVersionEQ skips if the running vault version is equal to ver.
@@ -97,7 +97,7 @@ func SkipIfAPIVersionEQ(t *testing.T, m interface{}, ver *version.Version) {
 	f := func(curVer *version.Version) bool {
 		return curVer.Equal(ver)
 	}
-	SkipOnAPIVersion(t, m, f, "Vault version eq %q", ver)
+	SkipOnAPIVersion(t, m, f, "Vault version == %q", ver)
 }
 
 // SkipIfAPIVersionGT skips if the running vault version is greater-than ver.
@@ -106,7 +106,7 @@ func SkipIfAPIVersionGT(t *testing.T, m interface{}, ver *version.Version) {
 	f := func(curVer *version.Version) bool {
 		return curVer.GreaterThan(ver)
 	}
-	SkipOnAPIVersion(t, m, f, "Vault version gt %q", ver)
+	SkipOnAPIVersion(t, m, f, "Vault version > %q", ver)
 }
 
 // SkipIfAPIVersionGTE skips if the running vault version is greater-than-or-equal to ver.
@@ -115,7 +115,7 @@ func SkipIfAPIVersionGTE(t *testing.T, m interface{}, ver *version.Version) {
 	f := func(curVer *version.Version) bool {
 		return curVer.GreaterThanOrEqual(ver)
 	}
-	SkipOnAPIVersion(t, m, f, "Vault version gte %q", ver)
+	SkipOnAPIVersion(t, m, f, "Vault version >= %q", ver)
 }
 
 func SkipOnAPIVersion(t *testing.T, m interface{}, cmp func(*version.Version) bool, format string, args ...interface{}) {
