@@ -33,9 +33,6 @@ var (
 	VaultVersion112 = version.Must(version.NewSemver(consts.VaultVersion112))
 )
 
-func init() {
-}
-
 // ProviderMeta provides resources with access to the Vault client and
 // other bits
 type ProviderMeta struct {

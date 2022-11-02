@@ -21,6 +21,10 @@ jobs:
       - name: Build
         run: |
           make build
+      - name: Run unit tests
+        # here to short-circuit the acceptance tests, in the case of a failure.
+        run: |
+          make test
   acceptance:
     needs: [go-version, build]
     runs-on: ubuntu-latest
@@ -113,9 +117,6 @@ jobs:
           COUCHBASE_PASSWORD: password
           CONSUL_HTTP_ADDR: "consul:8500"
         run: |
-          export TF_VAULT_VERSION=$(echo ${{ matrix.image }} | \
-            awk -F: '{match($NF, /^([0-9]+\.[0-9]+\.[0-9]+)/); printf("%s", substr($NF, RSTART, RLENGTH))}')
-          [ -n "${TF_VAULT_VERSION}" ] || (echo "could not get vault version from matrix.image: ${{ matrix.image }}" >&2 ; exit 1)
           make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
