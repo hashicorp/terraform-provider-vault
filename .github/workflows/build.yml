@@ -33,8 +33,9 @@ jobs:
       matrix:
         # TODO: enable 1.9 job once the provider is Vault version aware
         image:
-        - "vault-enterprise:1.10.4-ent"
-        - "vault-enterprise:1.11.0-ent"
+        - "vault-enterprise:1.10.6-ent"
+        - "vault-enterprise:1.11.4-ent"
+        - "vault-enterprise:1.12.0-ent"
     container:
       image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     services:
