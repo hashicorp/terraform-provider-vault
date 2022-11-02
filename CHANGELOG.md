@@ -2,6 +2,7 @@
 IMPROVEMENTS:
 * Add support for externally managed Group Member IDs to Vault Identity Group: ([#1630](https://github.com/hashicorp/terraform-provider-vault/pull/1630))
 * Support configuring vault version handling: ([#1646](https://github.com/hashicorp/terraform-provider-vault/pull/1646))
+* Add Redis database secrets engine support: ([#1659](https://github.com/hashicorp/terraform-provider-vault/pull/1659))
 
 BUGS:
 * Ensure that namespaced github auth mounts are destroyed: ([#1637](https://github.com/hashicorp/terraform-provider-vault/pull/1637))
