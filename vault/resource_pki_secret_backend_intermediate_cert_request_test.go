@@ -16,20 +16,26 @@ func TestPkiSecretBackendIntermediateCertRequest_basic(t *testing.T) {
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
+	testCheckFunc := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "backend", path),
+		resource.TestCheckResourceAttr(resourceName, "type", "internal"),
+		resource.TestCheckResourceAttr(resourceName, "common_name", "test.my.domain"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
+	}
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendIntermediateCertRequestConfig_basic(path),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", path),
-					resource.TestCheckResourceAttr(resourceName, "type", "internal"),
-					resource.TestCheckResourceAttr(resourceName, "common_name", "test.my.domain"),
-					resource.TestCheckResourceAttr(resourceName, "uri_sans.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "uri_sans.0", "spiffe://test.my.domain"),
-				),
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_basic(path, false),
+				Check:  resource.ComposeTestCheckFunc(testCheckFunc...),
+			},
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_basic(path, true),
+				Check:  resource.ComposeTestCheckFunc(testCheckFunc...),
 			},
 		},
 	})
@@ -62,7 +68,7 @@ func TestPkiSecretBackendIntermediateCertRequest_managedKeys(t *testing.T) {
 	})
 }
 
-func testPkiSecretBackendIntermediateCertRequestConfig_basic(path string) string {
+func testPkiSecretBackendIntermediateCertRequestConfig_basic(path string, addConstraints bool) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path                      = "%s"
@@ -73,12 +79,13 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
-  backend     = vault_mount.test.path
-  type        = "internal"
-  common_name = "test.my.domain"
-  uri_sans    = ["spiffe://test.my.domain"]
+  backend               = vault_mount.test.path
+  type                  = "internal"
+  common_name           = "test.my.domain"
+  uri_sans              = ["spiffe://test.my.domain"]
+  add_basic_constraints = %t
 }
-`, path)
+`, path, addConstraints)
 }
 
 func testPkiSecretBackendIntermediateCertRequestConfig_managedKeys(path, keyName, accessKey, secretKey string) string {
