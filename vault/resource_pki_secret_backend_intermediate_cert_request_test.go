@@ -31,11 +31,13 @@ func TestPkiSecretBackendIntermediateCertRequest_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_basic(path, false),
-				Check:  resource.ComposeTestCheckFunc(testCheckFunc...),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckResourceAttr(resourceName, "add_basic_constraints", "false"))...),
 			},
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_basic(path, true),
-				Check:  resource.ComposeTestCheckFunc(testCheckFunc...),
+				Check: resource.ComposeTestCheckFunc(append(testCheckFunc,
+					resource.TestCheckResourceAttr(resourceName, "add_basic_constraints", "true"))...),
 			},
 		},
 	})

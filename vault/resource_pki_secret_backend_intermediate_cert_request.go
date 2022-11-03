@@ -185,7 +185,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 			},
 			"add_basic_constraints": {
 				Type:        schema.TypeBool,
-				Description: "Whether to add a Basic Constraints extension with CA: true",
+				Description: "Set 'CA: true' in basic constraints to the CSR to allow signing with ADCS.",
 				ForceNew:    true,
 				Default:     false,
 				Optional:    true,
