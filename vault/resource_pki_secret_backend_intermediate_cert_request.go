@@ -184,11 +184,12 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				ConflictsWith: []string{"managed_key_name"},
 			},
 			"add_basic_constraints": {
-				Type:        schema.TypeBool,
-				Description: "Set 'CA: true' in basic constraints to the CSR to allow signing with ADCS.",
-				ForceNew:    true,
-				Default:     false,
-				Optional:    true,
+				Type: schema.TypeBool,
+				Description: `Set 'CA: true' in a Basic Constraints extension. Only needed as
+a workaround in some compatibility scenarios with Active Directory Certificate Services.`,
+				ForceNew: true,
+				Default:  false,
+				Optional: true,
 			},
 		},
 	}
