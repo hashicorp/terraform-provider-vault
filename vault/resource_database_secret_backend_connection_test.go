@@ -869,6 +869,8 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.port", "6379"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.password", password),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.tls", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.insecure_tls", "false"),
 				),
 			},
 			{
