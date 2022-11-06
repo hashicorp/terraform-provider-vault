@@ -198,24 +198,25 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	MaxHTTPRetriesCCC = d.Get("max_retries_ccc").(int)
 
 	// Try and get the token from the config or token helper
-	token, err := GetToken(d)
+	token, err := GetTokenFunc(d)
 	if err != nil {
 		return nil, err
 	}
 
-	authLogin, err := GetAuthLogin(d)
-	if err != nil {
-		return nil, err
-	}
-
-	if authLogin != nil {
-		client.SetNamespace(authLogin.Namespace())
-		secret, err := authLogin.Login(client)
+	if token == "" {
+		authLogin, err := GetAuthLogin(d)
 		if err != nil {
 			return nil, err
 		}
 
-		token = secret.Auth.ClientToken
+		if authLogin != nil {
+			client.SetNamespace(authLogin.Namespace())
+			secret, err := authLogin.Login(client)
+			if err != nil {
+				return nil, err
+			}
+			token = secret.Auth.ClientToken
+		}
 	}
 
 	if token != "" {
@@ -407,6 +408,8 @@ func setChildToken(d *schema.ResourceData, c *api.Client) error {
 
 	return nil
 }
+
+var GetTokenFunc = GetToken
 
 func GetToken(d *schema.ResourceData) (string, error) {
 	if token := d.Get("token").(string); token != "" {
