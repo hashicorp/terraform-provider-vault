@@ -602,16 +602,17 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Default:     false,
 					},
 					"insecure_tls": {
-						Type:        schema.TypeBool,
-						Optional:    true,
-						Description: "Specifies whether to skip verification of the server certificate when using TLS.",
-						Default:     false,
+						Type:     schema.TypeBool,
+						Optional: true,
+						Description: "Specifies whether to skip verification of the server " +
+							"certificate when using TLS.",
+						Default: false,
 					},
 					"ca_cert": {
-						Type:        schema.TypeString,
-						Optional:    true,
-						Description: "The contents of a PEM-encoded CA cert file to use to verify the Redis server's identity",
-						Default:     "",
+						Type:     schema.TypeString,
+						Optional: true,
+						Description: "The contents of a PEM-encoded CA cert file " +
+							"to use to verify the Redis server's identity",
 					},
 				},
 			},

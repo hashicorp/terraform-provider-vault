@@ -416,7 +416,7 @@ Supported list of database secrets engines that can be configured:
 * `insecure_tls` - (Optional) Whether to skip verification of the server
   certificate when using TLS.
 
-* `ca_cert` - (Optional) The path to a PEM-encoded CA cert file to use to verify the Redis server's identity.
+* `ca_cert` - (Optional) The contents of a PEM-encoded CA cert file to use to verify the Redis server's identity.
 
 ### Redis ElastiCache Configuration Options
 
