@@ -612,7 +612,8 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Type:     schema.TypeString,
 						Optional: true,
 						Description: "The contents of a PEM-encoded CA cert file " +
-							"to use to verify the Redis server's identity",
+							"to use to verify the Redis server's identity.",
+						Default: false,
 					},
 				},
 			},
