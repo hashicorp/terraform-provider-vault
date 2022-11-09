@@ -82,6 +82,9 @@ The following arguments are supported:
 * `managed_key_id` - (Optional) The ID of the previously configured managed key. This field is
   required if `type` is `kms` and it conflicts with `managed_key_name`
 
+* `add_basic_constraints` - (Optional) Adds a Basic Constraints extension with 'CA: true'.
+  Only needed as a workaround in some compatibility scenarios with Active Directory
+  Certificate Services
 
 ## Attributes Reference
 
