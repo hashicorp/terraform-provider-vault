@@ -95,6 +95,10 @@ var (
 		name:              "snowflake",
 		defaultPluginName: "snowflake" + dbPluginSuffix,
 	}
+	dbEngineRedis = &dbEngine{
+		name:              "redis",
+		defaultPluginName: "redis" + dbPluginSuffix,
+	}
 	dbEngineRedisElastiCache = &dbEngine{
 		name:              "redis_elasticache",
 		defaultPluginName: "redis-elasticache" + dbPluginSuffix,
@@ -120,6 +124,7 @@ var (
 		dbEnginePostgres,
 		dbEngineOracle,
 		dbEngineSnowflake,
+		dbEngineRedis,
 		dbEngineRedisElastiCache,
 		dbEngineRedshift,
 	}
@@ -561,6 +566,60 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineOracle.Name(), dbEngineTypes),
 		},
+		dbEngineRedis.name: {
+			Type:        typ,
+			Optional:    true,
+			Description: "Connection parameters for the redis-database-plugin plugin.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"host": {
+						Type:        schema.TypeString,
+						Required:    true,
+						Description: "Specifies the host to connect to",
+					},
+					"port": {
+						Type:         schema.TypeInt,
+						Optional:     true,
+						Description:  "The transport port to use to connect to Redis.",
+						Default:      6379,
+						ValidateFunc: validation.IsPortNumber,
+					},
+					"username": {
+						Type:        schema.TypeString,
+						Required:    true,
+						Description: "Specifies the username for Vault to use.",
+					},
+					"password": {
+						Type:        schema.TypeString,
+						Required:    true,
+						Description: "Specifies the password corresponding to the given username.",
+						Sensitive:   true,
+					},
+					"tls": {
+						Type:        schema.TypeBool,
+						Optional:    true,
+						Description: "Specifies whether to use TLS when connecting to Redis.",
+						Default:     false,
+					},
+					"insecure_tls": {
+						Type:     schema.TypeBool,
+						Optional: true,
+						Description: "Specifies whether to skip verification of the server " +
+							"certificate when using TLS.",
+						Default: false,
+					},
+					"ca_cert": {
+						Type:     schema.TypeString,
+						Optional: true,
+						Description: "The contents of a PEM-encoded CA cert file " +
+							"to use to verify the Redis server's identity.",
+						Default: false,
+					},
+				},
+			},
+			MaxItems:      1,
+			ConflictsWith: util.CalculateConflictsWith(dbEngineRedis.Name(), dbEngineTypes),
+		},
 		dbEngineRedisElastiCache.name: {
 			Type:        typ,
 			Optional:    true,
@@ -872,6 +931,8 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	case dbEngineElasticSearch:
 		setElasticsearchDatabaseConnectionData(d, prefix, data)
+	case dbEngineRedis:
+		setRedisDatabaseConnectionData(d, prefix, data)
 	case dbEngineRedisElastiCache:
 		setRedisElastiCacheDatabaseConnectionData(d, prefix, data)
 	case dbEngineSnowflake:
@@ -988,6 +1049,43 @@ func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 			result["tls_ca"] = v.(string)
 		}
 	}
+	return result
+}
+
+func getRedisConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	result := map[string]interface{}{}
+
+	if v, ok := data["host"]; ok {
+		result["host"] = v.(string)
+	}
+	if v, ok := data["port"]; ok {
+		port, _ := v.(json.Number).Int64()
+		result["port"] = port
+	}
+	if v, ok := data["username"]; ok {
+		result["username"] = v.(string)
+	}
+	if v, ok := data["password"]; ok {
+		result["password"] = v.(string)
+	} else if v, ok := d.GetOk(prefix + "password"); ok {
+		// keep the password we have in state/config if the API doesn't return one
+		result["password"] = v.(string)
+	}
+	if v, ok := data["tls"]; ok {
+		result["tls"] = v.(bool)
+	}
+	if v, ok := data["insecure_tls"]; ok {
+		result["insecure_tls"] = v.(bool)
+	}
+	if v, ok := data["ca_cert"]; ok {
+		result["ca_cert"] = v.(string)
+	}
+
 	return result
 }
 
@@ -1251,6 +1349,30 @@ func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 	}
 	if v, ok := d.GetOk(prefix + "tls_ca"); ok {
 		data["tls_ca"] = v.(string)
+	}
+}
+
+func setRedisDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	if v, ok := d.GetOk(prefix + "host"); ok {
+		data["host"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "port"); ok {
+		data["port"] = v.(int)
+	}
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "password"); ok {
+		data["password"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "tls"); ok {
+		data["tls"] = v.(bool)
+	}
+	if v, ok := d.GetOk(prefix + "insecure_tls"); ok {
+		data["insecure_tls"] = v.(bool)
+	}
+	if v, ok := d.GetOk(prefix + "ca_cert"); ok {
+		data["ca_cert"] = v.(string)
 	}
 }
 
@@ -1649,6 +1771,8 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 		result = getElasticsearchConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineSnowflake:
 		result = getSnowflakeConnectionDetailsFromResponse(d, prefix, resp)
+	case dbEngineRedis:
+		result = getRedisConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineRedisElastiCache:
 		result = getRedisElastiCacheConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineRedshift:

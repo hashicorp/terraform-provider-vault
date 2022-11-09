@@ -163,7 +163,10 @@ Supported list of database secrets engines that can be configured:
 * `influxdb` - (Optional) A nested block containing configuration options for InfluxDB connections.  
   *See [Configuration Options](#influxdb-configuration-options) for more info*
 
-* `redis_elasticache` - (Optional) A nested block containing configuration options for InfluxDB connections.  
+* `redis` - (Optional) A nested block containing configuration options for Redis connections.  
+  *See [Configuration Options](#redis-configuration-options) for more info*
+
+* `redis_elasticache` - (Optional) A nested block containing configuration options for Redis ElastiCache connections.  
   *See [Configuration Options](#redis-elasticache-configuration-options) for more info*
  
 ### Cassandra Configuration Options
@@ -396,6 +399,24 @@ Supported list of database secrets engines that can be configured:
 
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
   See [Vault docs](https://www.vaultproject.io/docs/concepts/username-templating)
+
+### Redis Configuration Options
+
+* `host` - (Required) The host to connect to.
+
+* `username` - (Required) The username to authenticate with.
+
+* `password` - (Required) The password to authenticate with.
+
+* `port` - (Optional) The default port to connect to if no port is specified as
+  part of the host.
+
+* `tls` - (Optional) Whether to use TLS when connecting to Redis.
+
+* `insecure_tls` - (Optional) Whether to skip verification of the server
+  certificate when using TLS.
+
+* `ca_cert` - (Optional) The contents of a PEM-encoded CA cert file to use to verify the Redis server's identity.
 
 ### Redis ElastiCache Configuration Options
 

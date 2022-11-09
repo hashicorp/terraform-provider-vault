@@ -842,6 +842,47 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 	})
 }
 
+func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineRedis)
+
+	values := testutil.SkipTestEnvUnset(t, "REDIS_HOST", "REDIS_USERNAME", "REDIS_PASSWORD")
+	host := values[0]
+	username := values[1]
+	password := values[2]
+
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineRedis.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_redis(name, backend, host, username, password),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.host", host),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.port", "6379"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.password", password),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.tls", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.insecure_tls", "false"),
+				),
+			},
+			{
+				ResourceName:            testDefaultDatabaseSecretBackendResource,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"verify_connection", "redis.0.password"},
+			},
+		},
+	})
+}
+
 func TestAccDatabaseSecretBackendConnection_redisElastiCache(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineRedisElastiCache)
 
@@ -1451,6 +1492,29 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, url, username, password, userTempl)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_redis(name, path, host, username, password string) string {
+	config := fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+`, path)
+
+	config += fmt.Sprintf(`
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["*"]
+  redis {
+    	host = "%s"
+		username = "%s"
+		password = "%s"
+  }
+}`, name, host, username, password)
+
+	return config
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_redis_elasticache(name, path, connURL string) string {
