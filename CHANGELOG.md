@@ -1,3 +1,13 @@
+## 3.11.0 (November 16, 2022)
+IMPROVEMENTS:
+* Add Basic Constraints attribute to vault_pki_secret_backend_intermediate_cert_request: ([#1661](https://github.com/hashicorp/terraform-provider-vault/pull/1661))
+* Add Redis database secrets engine support: ([#1659](https://github.com/hashicorp/terraform-provider-vault/pull/1659))
+* Add support for setting deletion_allowed on a transformation: ([#1650](https://github.com/hashicorp/terraform-provider-vault/pull/1650))
+
+BUGS:
+* Fix panic while importing MFA Duo resource: ([#1669](https://github.com/hashicorp/terraform-provider-vault/pull/1669))
+* Fix GCP auth with service account credentials: ([#1648](https://github.com/hashicorp/terraform-provider-vault/pull/1648))
+
 ## 3.10.0 (October 26, 2022)
 IMPROVEMENTS:
 * Add support for externally managed Group Member IDs to Vault Identity Group: ([#1630](https://github.com/hashicorp/terraform-provider-vault/pull/1630))
