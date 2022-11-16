@@ -118,6 +118,12 @@ func mfaDuoRead(_ context.Context, d *schema.ResourceData, meta interface{}) dia
 	name := d.Id()
 
 	resp, err := client.Logical().Read(mfaDuoPath(name))
+	if resp == nil {
+		log.Printf("[WARN] %q not found, removing from state", mfaDuoPath(name))
+		d.SetId("")
+		return nil
+	}
+
 	if err != nil {
 		return diag.Errorf("error reading from Vault: %s", err)
 	}
