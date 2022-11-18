@@ -314,9 +314,7 @@ func pkiSecretBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 			return err
 		}
 	} else {
-		// trigger a resource re-creation whenever path does not have update capability anymore
-		log.Printf("[WARN] No 'update' capability on  %q, setting resource for re-creation", path)
-		d.SetId("")
+		return fmt.Errorf("no update capability available on %q", path)
 	}
 
 	return nil
