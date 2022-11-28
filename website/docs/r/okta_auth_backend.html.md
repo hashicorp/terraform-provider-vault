@@ -40,7 +40,7 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
    *Available only for Vault Enterprise*.
 
-* `path` - (Required) Path to mount the Okta auth backend
+* `path` - (Optional) Path to mount the Okta auth backend. Default to path `okta`.
 
 * `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
   See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
