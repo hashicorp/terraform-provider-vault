@@ -61,7 +61,7 @@ The following arguments are supported:
 - `subscription_id` (`string: <required>`) - The subscription id for the Azure Active Directory.
 
 - `use_microsoft_graph_api` (`bool: <optional>`) - Use the Microsoft Graph API introduced in `vault-1.9`. 
-   Should be set to true for `vault-1.10+`
+   Should be set to true for `vault-1.10+`. This parameter has been deprecated and will be ignored in `vault-1.12+`.
 
 - `tenant_id` (`string: <required>`) - The tenant id for the Azure Active Directory.
 
