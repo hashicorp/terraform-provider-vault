@@ -16,53 +16,7 @@ func TestAzureSecretBackend(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-azure")
 	resourceType := "vault_azure_secret_backend"
 	resourceName := resourceType + ".test"
-	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion112)
-		},
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldPath),
-		Steps: []resource.TestStep{
-			{
-				Config: testAzureSecretBackend_initialConfig(path),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "subscription_id", "11111111-2222-3333-4444-111111111111"),
-					resource.TestCheckResourceAttr(resourceName, "tenant_id", "11111111-2222-3333-4444-222222222222"),
-					resource.TestCheckResourceAttr(resourceName, "client_id", "11111111-2222-3333-4444-333333333333"),
-					resource.TestCheckResourceAttr(resourceName, "client_secret", "12345678901234567890"),
-					resource.TestCheckResourceAttr(resourceName, "environment", "AzurePublicCloud"),
-					resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"),
-				),
-			},
-			{
-				Config: testAzureSecretBackend_updated(path),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "subscription_id", "11111111-2222-3333-4444-111111111111"),
-					resource.TestCheckResourceAttr(resourceName, "tenant_id", "22222222-3333-4444-5555-333333333333"),
-					resource.TestCheckResourceAttr(resourceName, "client_id", "22222222-3333-4444-5555-444444444444"),
-					resource.TestCheckResourceAttr(resourceName, "client_secret", "098765432109876543214"),
-					resource.TestCheckResourceAttr(resourceName, "environment", "AzurePublicCloud"),
-					resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "true"),
-				),
-			},
-			{
-				Config: testAzureSecretBackend_updateSubscriptionID(path),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "subscription_id", "11111112-2221-3332-4443-111111111110"),
-					resource.TestCheckResourceAttr(resourceName, "tenant_id", "22222222-3333-4444-5555-333333333333"),
-					resource.TestCheckResourceAttr(resourceName, "client_id", "22222222-3333-4444-5555-444444444444"),
-					resource.TestCheckResourceAttr(resourceName, "client_secret", "098765432109876543214"),
-					resource.TestCheckResourceAttr(resourceName, "environment", "AzurePublicCloud"),
-					resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "true"),
-				),
-			},
-		},
-	})
-	azureCheckFuncs := []resource.TestCheckFunc{
+	azureInitialCheckFuncs := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 		resource.TestCheckResourceAttr(resourceName, "subscription_id", "11111111-2222-3333-4444-111111111111"),
 		resource.TestCheckResourceAttr(resourceName, "tenant_id", "11111111-2222-3333-4444-222222222222"),
@@ -71,9 +25,27 @@ func TestAzureSecretBackend(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "environment", "AzurePublicCloud"),
 	}
 
+	azureUpdatedCheckFuncs := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+		resource.TestCheckResourceAttr(resourceName, "subscription_id", "11111111-2222-3333-4444-111111111111"),
+		resource.TestCheckResourceAttr(resourceName, "tenant_id", "22222222-3333-4444-5555-333333333333"),
+		resource.TestCheckResourceAttr(resourceName, "client_id", "22222222-3333-4444-5555-444444444444"),
+		resource.TestCheckResourceAttr(resourceName, "client_secret", "098765432109876543214"),
+		resource.TestCheckResourceAttr(resourceName, "environment", "AzurePublicCloud"),
+	}
+
+	azureUpdatedSubscriptionIDCheckFuncs := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+		resource.TestCheckResourceAttr(resourceName, "subscription_id", "11111111-2222-3333-4444-111111111111"),
+		resource.TestCheckResourceAttr(resourceName, "tenant_id", "22222222-3333-4444-5555-333333333333"),
+		resource.TestCheckResourceAttr(resourceName, "client_id", "22222222-3333-4444-5555-444444444444"),
+		resource.TestCheckResourceAttr(resourceName, "client_secret", "098765432109876543214"),
+		resource.TestCheckResourceAttr(resourceName, "environment", "AzurePublicCloud"),
+	}
+
 	skipMSGraphCheck := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion112)
 	if !skipMSGraphCheck {
-		azureCheckFuncs = append(azureCheckFuncs,
+		azureInitialCheckFuncs = append(azureInitialCheckFuncs,
 			resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"))
 	}
 
@@ -86,15 +58,15 @@ func TestAzureSecretBackend(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAzureSecretBackend_initialConfig(path),
-				Check:  resource.ComposeTestCheckFunc(azureCheckFuncs...),
+				Check:  resource.ComposeTestCheckFunc(azureInitialCheckFuncs...),
 			},
 			{
 				Config: testAzureSecretBackend_updated(path),
-				Check:  resource.ComposeTestCheckFunc(azureCheckFuncs...),
+				Check:  resource.ComposeTestCheckFunc(azureUpdatedCheckFuncs...),
 			},
 			{
 				Config: testAzureSecretBackend_updateSubscriptionID(path),
-				Check:  resource.ComposeTestCheckFunc(azureCheckFuncs...),
+				Check:  resource.ComposeTestCheckFunc(azureUpdatedSubscriptionIDCheckFuncs...),
 			},
 		},
 	})

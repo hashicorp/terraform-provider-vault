@@ -60,8 +60,9 @@ The following arguments are supported:
 
 - `subscription_id` (`string: <required>`) - The subscription id for the Azure Active Directory.
 
-- `use_microsoft_graph_api` (`bool: <optional>`) - Use the Microsoft Graph API introduced in `vault-1.9`. 
-   Should be set to true for `vault-1.10+`. This parameter has been deprecated and will be ignored in `vault-1.12+`.
+- `use_microsoft_graph_api` (`bool: <optional>`) - Indicates whether the secrets engine should use 
+  the Microsoft Graph API. This parameter has been deprecated and will be ignored in `vault-1.12+`. 
+  For more information, please refer to the [Vault docs](https://developer.hashicorp.com/vault/api-docs/secret/azure#use_microsoft_graph_api)
 
 - `tenant_id` (`string: <required>`) - The tenant id for the Azure Active Directory.
 
