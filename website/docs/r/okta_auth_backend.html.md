@@ -76,9 +76,9 @@ If this is not supplied only locally configured groups will be enabled.
 
 ### Okta User
 
-* `username` - (Required Optional) Name of the user within Okta
+* `username` - (Required) Name of the user within Okta
 
-* `groups` - (Optional) List of Okta groups to associate with this user
+* `groups` - (Required) List of Okta groups to associate with this user
 
 * `policies` - (Optional) List of Vault policies to associate with this user
 
