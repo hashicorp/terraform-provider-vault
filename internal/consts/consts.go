@@ -181,6 +181,11 @@ const (
 	FieldGroupName                = "group_name"
 	FieldExternal                 = "external"
 	FieldInternal                 = "internal"
+	FieldMaxVersions              = "max_versions"
+	FieldCASRequired              = "cas_required"
+	FieldDeleteVersionAfter       = "delete_version_after"
+	FieldCustomMetadata           = "custom_metadata"
+	FieldCustomMetadataJSON       = "custom_metadata_json"
 
 	/*
 		common environment variables
