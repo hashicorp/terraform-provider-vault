@@ -15,6 +15,7 @@ func TestAccKVSecretMetadataV2(t *testing.T) {
 	resourceName := "vault_kv_secret_metadata_v2.test"
 	mount := acctest.RandomWithPrefix("tf-kvv2")
 	name := acctest.RandomWithPrefix("kv-metadata")
+	path := fmt.Sprintf("%s/metadata/%s", mount, name)
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
@@ -25,6 +26,7 @@ func TestAccKVSecretMetadataV2(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxVersions, "5"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDeleteVersionAfter, "3700"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCASRequired, "false"),
@@ -35,6 +37,7 @@ func TestAccKVSecretMetadataV2(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxVersions, "7"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDeleteVersionAfter, "87550"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCASRequired, "false"),

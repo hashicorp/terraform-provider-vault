@@ -36,6 +36,12 @@ func kvSecretMetadataV2Resource(name string) *schema.Resource {
 				ForceNew:    true,
 				Description: "Unique identifier for the secret metadata.",
 			},
+			consts.FieldPath: {
+				Type:     schema.TypeString,
+				Computed: true,
+				Description: "Full path where the KV-V2 secret metadata " +
+					"will be written.",
+			},
 			consts.FieldMaxVersions: {
 				Type:        schema.TypeInt,
 				Optional:    true,
@@ -119,6 +125,10 @@ func kvSecretMetadataV2Read(_ context.Context, d *schema.ResourceData, meta inte
 	diags := diag.Diagnostics{}
 
 	path := d.Id()
+
+	if err := d.Set(consts.FieldPath, path); err != nil {
+		return diag.FromErr(err)
+	}
 
 	log.Printf("[DEBUG] Reading %s from Vault", path)
 	config, err := client.Logical().Read(path)

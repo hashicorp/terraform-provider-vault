@@ -7,7 +7,7 @@ description: |-
   every key in the key-value store.
 ---
 
-# vault\_kv\_secret\_v2
+# vault\_kv\_secret\_backend\_v2
 
 Configures KV-V2 backend level settings that are applied to
 every key in the key-value store.
@@ -65,7 +65,8 @@ No additional attributes are exported by this resource.
 
 ## Import
 
-The KV-V2 secret backend can be imported using the `path`, e.g.
+The KV-V2 secret backend can be imported using its unique ID,
+the `${mount}/config`, e.g.
 
 ```
 $ terraform import vault_kv_secret_backend_v2.config kvv2/config
