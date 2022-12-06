@@ -451,12 +451,10 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			ConflictsWith: util.CalculateConflictsWith(dbEngineInfluxDB.Name(), dbEngineTypes),
 		},
 		dbEngineMongoDB.name: {
-			Type:        typ,
-			Optional:    true,
-			Description: "Connection parameters for the mongodb-database-plugin plugin.",
-			Elem: connectionStringResource(&connectionStringConfig{
-				includeUserPass: true,
-			}),
+			Type:          typ,
+			Optional:      true,
+			Description:   "Connection parameters for the mongodb-database-plugin plugin.",
+			Elem:          mongoDBConnectionStringResource(),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEngineMongoDB.Name(), dbEngineTypes),
 		},
@@ -767,6 +765,24 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 	return res
 }
 
+func mongoDBConnectionStringResource() *schema.Resource {
+	r := connectionStringResource(&connectionStringConfig{
+		includeUserPass: true,
+	})
+	r.Schema["tls_certificate_key"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "x509 certificate for connecting to the database. This must be a PEM encoded version of the private key and the certificate combined.",
+		Sensitive:   true,
+	}
+	r.Schema["tls_ca"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "x509 CA file for validating the certificate presented by the MongoDB server. Must be PEM encoded.",
+	}
+	return r
+}
+
 func mysqlConnectionStringResource() *schema.Resource {
 	r := connectionStringResource(&connectionStringConfig{
 		includeUserPass: true,
@@ -904,7 +920,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineHana:
 		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	case dbEngineMongoDB:
-		setDatabaseConnectionDataWithUserPass(d, prefix, data)
+		setMongoDBDatabaseConnectionData(d, prefix, data)
 	case dbEngineMongoDBAtlas:
 		if v, ok := d.GetOk(prefix + "public_key"); ok {
 			data["public_key"] = v.(string)
@@ -1025,6 +1041,31 @@ func getConnectionDetailsFromResponseWithDisableEscaping(d *schema.ResourceData,
 		result["disable_escaping"] = v.(bool)
 	}
 
+	return result
+}
+
+func getMongoDBConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
+		result["tls_certificate_key"] = v.(string)
+	} else {
+		if v, ok := data["tls_certificate_key"]; ok {
+			result["tls_certificate_key"] = v.(string)
+		}
+	}
+	if v, ok := d.GetOk(prefix + "tls_ca"); ok {
+		result["tls_ca"] = v.(string)
+	} else {
+		if v, ok := data["tls_ca"]; ok {
+			result["tls_ca"] = v.(string)
+		}
+	}
 	return result
 }
 
@@ -1339,6 +1380,16 @@ func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 		//  way the mssql plugin handles this field. We can probably revert this once vault-1.9.3
 		//  is released.
 		data["contained_db"] = strconv.FormatBool(v.(bool))
+	}
+}
+
+func setMongoDBDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
+		data["tls_certificate_key"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "tls_ca"); ok {
+		data["tls_ca"] = v.(string)
 	}
 }
 
@@ -1746,7 +1797,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineHana:
 		result = getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
 	case dbEngineMongoDB:
-		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
+		result = getMongoDBConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineMongoDBAtlas:
 		result = getConnectionDetailsMongoDBAtlas(d, prefix, resp)
 	case dbEngineMSSQL:
