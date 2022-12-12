@@ -49,6 +49,10 @@ func TestAzureSecretBackend(t *testing.T) {
 	if !skipMSGraphCheck {
 		azureInitialCheckFuncs = append(azureInitialCheckFuncs,
 			resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"))
+		azureUpdatedCheckFuncs = append(azureUpdatedCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"))
+		azureUpdatedSubscriptionIDCheckFuncs = append(azureUpdatedSubscriptionIDCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"))
 	}
 
 	resource.Test(t, resource.TestCase{
