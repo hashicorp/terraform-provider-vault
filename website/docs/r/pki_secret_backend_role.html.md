@@ -63,6 +63,8 @@ The following arguments are supported:
 
 * `allow_any_name` - (Optional) Flag to allow any name
 
+* `allow_wildcard_certificates` - (Optional) Flag to allow wildcard certificates
+
 * `enforce_hostnames` - (Optional) Flag to allow only valid host names
 
 * `allow_ip_sans` - (Optional) Flag to allow IP SANs

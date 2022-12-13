@@ -41,6 +41,7 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "allow_subdomains", "true"),
 		resource.TestCheckResourceAttr(resourceName, "allow_glob_domains", "false"),
 		resource.TestCheckResourceAttr(resourceName, "allow_any_name", "false"),
+		resource.TestCheckResourceAttr(resourceName, "allow_wildcard_certificates", "true"),
 		resource.TestCheckResourceAttr(resourceName, "enforce_hostnames", "true"),
 		resource.TestCheckResourceAttr(resourceName, "allow_ip_sans", "true"),
 		resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans.0", "uri.test.domain"),
@@ -138,6 +139,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "allow_subdomains", "true"),
 		resource.TestCheckResourceAttr(resourceName, "allow_glob_domains", "false"),
 		resource.TestCheckResourceAttr(resourceName, "allow_any_name", "false"),
+		resource.TestCheckResourceAttr(resourceName, "allow_wildcard_certificates", "true"),
 		resource.TestCheckResourceAttr(resourceName, "enforce_hostnames", "true"),
 		resource.TestCheckResourceAttr(resourceName, "allow_ip_sans", "true"),
 		resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans.0", "uri.test.domain"),
@@ -235,6 +237,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allow_subdomains", "true"),
 					resource.TestCheckResourceAttr(resourceName, "allow_glob_domains", "false"),
 					resource.TestCheckResourceAttr(resourceName, "allow_any_name", "false"),
+					resource.TestCheckResourceAttr(resourceName, "allow_wildcard_certificates", "false"),
 					resource.TestCheckResourceAttr(resourceName, "enforce_hostnames", "true"),
 					resource.TestCheckResourceAttr(resourceName, "allow_ip_sans", "true"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans.0", "uri.test.domain"),
@@ -296,6 +299,7 @@ resource "vault_pki_secret_backend_role" "test" {
   allow_subdomains                   = true
   allow_glob_domains                 = false
   allow_any_name                     = false
+  allow_wildcard_certificates        = true
   enforce_hostnames                  = true
   allow_ip_sans                      = true
   allowed_uri_sans                   = ["uri.test.domain"]
@@ -347,6 +351,7 @@ resource "vault_pki_secret_backend_role" "test" {
   allow_subdomains = true
   allow_glob_domains = false
   allow_any_name = false
+  allow_wildcard_certificates = false
   enforce_hostnames = true
   allow_ip_sans = true
   allowed_uri_sans = ["uri.test.domain"]
