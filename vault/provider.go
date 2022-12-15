@@ -328,6 +328,10 @@ var (
 			Resource:      UpdateSchemaResource(kvSecretSubkeysV2DataSource()),
 			PathInventory: []string{"/secret/subkeys/{path}"},
 		},
+		"vault_raft_autopilot_state": {
+			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
+			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
