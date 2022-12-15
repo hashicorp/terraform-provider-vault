@@ -6,59 +6,61 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var autopilotStatePath = "sys/storage/raft/autopilot/state"
 
 var raftAutopilotStateFields = []string{
-	"failure_tolerance",
-	"type",
-	"bound_service_accounts",
-	"bound_projects",
-	"bound_zones",
-	"bound_regions",
-	"bound_instance_groups",
-	"token_policies",
+	consts.FieldFailureTolerance,
+	consts.FieldOptimisticFailureTolerance,
+	consts.FieldHealthy,
+	consts.FieldLeader,
+	consts.FieldOptimisticFailureTolerance,
+	consts.FieldRedundancyZones,
+	consts.FieldServers,
+	consts.FieldUpgradeInfo,
+	consts.FieldVoters,
 }
 
 func raftAutopilotStateDataSource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		"failure_tolerance": {
+		consts.FieldFailureTolerance: {
 			Type: schema.TypeInt,
 			// TODO(JM): do we actually need descriptions for this data source?
 			Description: "How many nodes could fail before the cluster becomes unhealthy",
 		},
-		"healthy": {
+		consts.FieldHealthy: {
 			Type:        schema.TypeString,
 			Description: "Health status",
 		},
-		"leader": {
+		consts.FieldLeader: {
 			Type:        schema.TypeString,
 			Description: "Current leader of Vault",
 		},
-		"optimistic_failure_tolerance": {
+		consts.FieldOptimisticFailureTolerance: {
 			Type: schema.TypeInt,
 		},
-		"redundancy_zones": {
+		consts.FieldRedundancyZones: {
 			Type: schema.TypeMap,
 			Elem: &schema.Schema{
 				// TODO(JM): type map[string]struct ???
 				Type: schema.TypeString,
 			},
 		},
-		"servers": {
+		consts.FieldServers: {
 			Type: schema.TypeMap,
 			Elem: &schema.Schema{
 				// TODO(JM): type map[string]struct ???
 				Type: schema.TypeString,
 			},
 		},
-		"upgrade_info": {
+		consts.FieldUpgradeInfo: {
 			// TODO(JM): type struct ???
 			Type: schema.TypeMap,
 		},
-		"voters": {
+		consts.FieldVoters: {
 			Type: schema.TypeList,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
