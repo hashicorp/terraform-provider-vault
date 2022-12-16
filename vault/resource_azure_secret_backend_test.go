@@ -79,42 +79,52 @@ func TestAzureSecretBackend(t *testing.T) {
 }
 
 func TestAzureSecretBackend_remount(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
 	path := acctest.RandomWithPrefix("tf-test-azure")
 	updatedPath := acctest.RandomWithPrefix("tf-test-azure-updated")
 
 	resourceType := "vault_azure_secret_backend"
 	resourceName := resourceType + ".test"
+	azureInitialCheckFuncs := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+		resource.TestCheckResourceAttr(resourceName, "subscription_id", "11111111-2222-3333-4444-111111111111"),
+		resource.TestCheckResourceAttr(resourceName, "tenant_id", "11111111-2222-3333-4444-222222222222"),
+		resource.TestCheckResourceAttr(resourceName, "client_id", "11111111-2222-3333-4444-333333333333"),
+		resource.TestCheckResourceAttr(resourceName, "client_secret", "12345678901234567890"),
+		resource.TestCheckResourceAttr(resourceName, "environment", "AzurePublicCloud"),
+	}
+	azureUpdatedCheckFuncs := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
+		resource.TestCheckResourceAttr(resourceName, "subscription_id", "11111111-2222-3333-4444-111111111111"),
+		resource.TestCheckResourceAttr(resourceName, "tenant_id", "11111111-2222-3333-4444-222222222222"),
+		resource.TestCheckResourceAttr(resourceName, "client_id", "11111111-2222-3333-4444-333333333333"),
+		resource.TestCheckResourceAttr(resourceName, "client_secret", "12345678901234567890"),
+		resource.TestCheckResourceAttr(resourceName, "environment", "AzurePublicCloud"),
+	}
+
+	skipMSGraphCheck := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion112)
+	if !skipMSGraphCheck {
+		azureInitialCheckFuncs = append(azureInitialCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"))
+		azureUpdatedCheckFuncs = append(azureUpdatedCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"))
+	}
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion112)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAzureSecretBackend_initialConfig(path),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "subscription_id", "11111111-2222-3333-4444-111111111111"),
-					resource.TestCheckResourceAttr(resourceName, "tenant_id", "11111111-2222-3333-4444-222222222222"),
-					resource.TestCheckResourceAttr(resourceName, "client_id", "11111111-2222-3333-4444-333333333333"),
-					resource.TestCheckResourceAttr(resourceName, "client_secret", "12345678901234567890"),
-					resource.TestCheckResourceAttr(resourceName, "environment", "AzurePublicCloud"),
-					resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"),
-				),
+				Check:  resource.ComposeTestCheckFunc(azureInitialCheckFuncs...),
 			},
 			{
 				Config: testAzureSecretBackend_initialConfig(updatedPath),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
-					resource.TestCheckResourceAttr(resourceName, "subscription_id", "11111111-2222-3333-4444-111111111111"),
-					resource.TestCheckResourceAttr(resourceName, "tenant_id", "11111111-2222-3333-4444-222222222222"),
-					resource.TestCheckResourceAttr(resourceName, "client_id", "11111111-2222-3333-4444-333333333333"),
-					resource.TestCheckResourceAttr(resourceName, "client_secret", "12345678901234567890"),
-					resource.TestCheckResourceAttr(resourceName, "environment", "AzurePublicCloud"),
-					resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"),
-				),
+				Check:  resource.ComposeTestCheckFunc(azureInitialCheckFuncs...),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "client_secret", "disable_remount"),
 		},
