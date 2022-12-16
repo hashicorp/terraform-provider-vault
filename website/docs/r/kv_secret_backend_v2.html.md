@@ -7,7 +7,7 @@ description: |-
   every key in the key-value store.
 ---
 
-# vault\_kv\_secret\_v2
+# vault\_kv\_secret\_backend\_v2
 
 Configures KV-V2 backend level settings that are applied to
 every key in the key-value store.
