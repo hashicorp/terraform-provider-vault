@@ -27,8 +27,7 @@ var raftAutopilotStateFields = []string{
 func raftAutopilotStateDataSource() *schema.Resource {
 	fields := map[string]*schema.Schema{
 		consts.FieldFailureTolerance: {
-			Type: schema.TypeInt,
-			// TODO(JM): do we actually need descriptions for this data source?
+			Type:        schema.TypeInt,
 			Description: "How many nodes could fail before the cluster becomes unhealthy",
 		},
 		consts.FieldHealthy: {
@@ -40,31 +39,169 @@ func raftAutopilotStateDataSource() *schema.Resource {
 			Description: "Current leader of Vault",
 		},
 		consts.FieldOptimisticFailureTolerance: {
-			Type: schema.TypeInt,
+			Type:        schema.TypeInt,
+			Description: "The cluster-level optimistic failure tolerance.",
 		},
 		consts.FieldRedundancyZones: {
 			Type: schema.TypeMap,
-			Elem: &schema.Schema{
-				// TODO(JM): type map[string]struct ???
-				Type: schema.TypeString,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"servers": {
+						Type: schema.TypeList,
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					"voters": {
+						Type: schema.TypeList,
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					"failure_tolerance": {
+						Type: schema.TypeInt,
+					},
+				},
 			},
+			Description: "Additional output related to redundancy zones.",
 		},
 		consts.FieldServers: {
 			Type: schema.TypeMap,
-			Elem: &schema.Schema{
-				// TODO(JM): type map[string]struct ???
-				Type: schema.TypeString,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"id": {
+						Type: schema.TypeString,
+					},
+					"name": {
+						Type: schema.TypeString,
+					},
+					"address": {
+						Type: schema.TypeString,
+					},
+					"node_status": {
+						Type: schema.TypeString,
+					},
+					"last_contact": {
+						Type: schema.TypeString,
+					},
+					"last_term": {
+						Type: schema.TypeInt,
+					},
+					"last_index": {
+						Type: schema.TypeInt,
+					},
+					"healthy": {
+						Type: schema.TypeBool,
+					},
+					"stable_since": {
+						Type: schema.TypeString,
+					},
+					"status": {
+						Type: schema.TypeString,
+					},
+					"version": {
+						Type: schema.TypeString,
+					},
+					"upgrade_version": {
+						Type: schema.TypeString,
+					},
+					"redundancy_zone": {
+						Type: schema.TypeString,
+					},
+					"node_type": {
+						Type: schema.TypeString,
+					},
+				},
 			},
+			Description: "A node in a Vault cluster.",
 		},
 		consts.FieldUpgradeInfo: {
-			// TODO(JM): type struct ???
 			Type: schema.TypeMap,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"status": {
+						Type: schema.TypeString,
+					},
+					"target_version": {
+						Type: schema.TypeString,
+					},
+					"target_version_voters": {
+						Type: schema.TypeList,
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					"target_version_non_voters": {
+						Type: schema.TypeList,
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					"target_version_read_replicas": {
+						Type: schema.TypeList,
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					"other_version_voters": {
+						Type: schema.TypeList,
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					"other_version_non_voters": {
+						Type: schema.TypeList,
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					"other_version_read_replicas": {
+						Type: schema.TypeList,
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					"redundancy_zones": {
+						Type: schema.TypeMap,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"target_version_voters": {
+									Type: schema.TypeList,
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								"target_version_non_voters": {
+									Type: schema.TypeList,
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								"other_version_voters": {
+									Type: schema.TypeList,
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								"other_version_non_voters": {
+									Type: schema.TypeList,
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+							},
+						},
+						Description: "Additional output related to automated upgrades.",
+					},
+				},
+			},
 		},
 		consts.FieldVoters: {
 			Type: schema.TypeList,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
+			Description: "The voters in the Vault cluster.",
 		},
 	}
 	return &schema.Resource{
@@ -90,8 +227,7 @@ func raftAutopilotStateDataSourceRead(d *schema.ResourceData, meta interface{}) 
 
 	if resp == nil {
 		d.SetId("")
-		// TODO(JMF): do we return error or nil here?
-		// return fmt.Errorf("unable to read raft autopilot state at %q", path)
+		log.Printf("[WARN] unable to read raft autopilot state at %q", path)
 		return nil
 	}
 
