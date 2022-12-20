@@ -42,6 +42,19 @@ The following arguments are supported:
 
 * `disable` - (Optional) Disables or enables CRL building.
 
+* `ocsp_disable` - (Optional) Disables or enables the OCSP responder in Vault.
+
+* `ocsp_expiry` - (Optional) The amount of time an OCSP response can be cached for, useful for OCSP stapling refresh durations.
+
+* `auto_rebuild` - (Optional) Enables or disables periodic rebuilding of the CRL upon expiry.
+
+* `auto_rebuild_grace_period` - (Optional) Grace period before CRL expiry to attempt rebuild of CRL.
+
+* `enable_delta` - (Optional) Enables or disables building of delta CRLs with up-to-date revocation information, augmenting the last complete CRL.
+
+* `delta_rebuild_interval` - (Optional) Interval to check for new revocations on, to regenerate the delta CRL.
+
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
