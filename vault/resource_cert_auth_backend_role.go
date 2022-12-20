@@ -97,7 +97,7 @@ func certAuthBackendRoleResource() *schema.Resource {
 		"allowed_metadata_extensions": {
 			Type:        schema.TypeSet,
 			Optional:    true,
-			Description: "A array of oid extensions. Upon successful authentication, these extensions will be added as metadata if they are present in the certificate.",
+			Description: "A array of oid extensions.",
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},

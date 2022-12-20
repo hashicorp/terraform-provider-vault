@@ -55,6 +55,9 @@ The following arguments are supported:
 * `allowed_organizational_units` - (Optional) Allowed organization units for authenticated client certificates.
  *In previous provider releases this field was incorrectly named `allowed_organization_units`, please update accordingly*
 
+* `allowed_metadata_extensions` - (Optional) A array of oid extensions. Upon successful authentication, 
+  these extensions will be added as metadata if they are present in the certificate.
+
 * `required_extensions` - (Optional) TLS extensions required on client certificates
 
 * `display_name` - (Optional) The name to display on tokens issued under this role.
