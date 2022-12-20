@@ -14,7 +14,6 @@ var autopilotStatePath = "sys/storage/raft/autopilot/state"
 
 var raftAutopilotStateFields = []string{
 	consts.FieldFailureTolerance,
-	consts.FieldOptimisticFailureTolerance,
 	consts.FieldHealthy,
 	consts.FieldLeader,
 	consts.FieldOptimisticFailureTolerance,
@@ -28,24 +27,29 @@ func raftAutopilotStateDataSource() *schema.Resource {
 	fields := map[string]*schema.Schema{
 		consts.FieldFailureTolerance: {
 			Type:        schema.TypeInt,
+			Computed:    true,
 			Description: "How many nodes could fail before the cluster becomes unhealthy",
 		},
 		consts.FieldHealthy: {
 			Type:        schema.TypeString,
+			Computed:    true,
 			Description: "Health status",
 		},
 		consts.FieldLeader: {
 			Type:        schema.TypeString,
+			Computed:    true,
 			Description: "Current leader of Vault",
 		},
 		consts.FieldOptimisticFailureTolerance: {
 			Type:        schema.TypeInt,
+			Computed:    true,
 			Description: "The cluster-level optimistic failure tolerance.",
 		},
 		consts.FieldRedundancyZones: {
-			Type: schema.TypeMap,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
+			Type:     schema.TypeMap,
+			Computed: true,
+			Elem: &schema.Schema{
+				Elem: map[string]*schema.Schema{
 					"servers": {
 						Type: schema.TypeList,
 						Elem: &schema.Schema{
@@ -66,7 +70,8 @@ func raftAutopilotStateDataSource() *schema.Resource {
 			Description: "Additional output related to redundancy zones.",
 		},
 		consts.FieldServers: {
-			Type: schema.TypeMap,
+			Type:     schema.TypeMap,
+			Computed: true,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"id": {
@@ -116,7 +121,8 @@ func raftAutopilotStateDataSource() *schema.Resource {
 			Description: "A node in a Vault cluster.",
 		},
 		consts.FieldUpgradeInfo: {
-			Type: schema.TypeMap,
+			Type:     schema.TypeMap,
+			Computed: true,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"status": {
@@ -162,7 +168,8 @@ func raftAutopilotStateDataSource() *schema.Resource {
 						},
 					},
 					"redundancy_zones": {
-						Type: schema.TypeMap,
+						Type:     schema.TypeMap,
+						Computed: true,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"target_version_voters": {
@@ -197,7 +204,8 @@ func raftAutopilotStateDataSource() *schema.Resource {
 			},
 		},
 		consts.FieldVoters: {
-			Type: schema.TypeList,
+			Type:     schema.TypeList,
+			Computed: true,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
