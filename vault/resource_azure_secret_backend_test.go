@@ -110,7 +110,7 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 			resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"))
 
 		azureUpdatedCheckFuncs = append(azureUpdatedCheckFuncs,
-			resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"))
+			resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "true"))
 	}
 
 	resource.Test(t, resource.TestCase{
