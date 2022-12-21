@@ -46,7 +46,7 @@ The following arguments are supported:
 
 * `ocsp_expiry` - (Optional) The amount of time an OCSP response can be cached for, useful for OCSP stapling refresh durations.
 
-* `auto_rebuild` - (Optional) Enables or disables periodic rebuilding of the CRL upon expiry.
+* `auto_rebuild` - (Optional) Enables periodic rebuilding of the CRL upon expiry.
 
 * `auto_rebuild_grace_period` - (Optional) Grace period before CRL expiry to attempt rebuild of CRL.
 
