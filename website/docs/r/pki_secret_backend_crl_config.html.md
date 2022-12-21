@@ -50,7 +50,7 @@ The following arguments are supported:
 
 * `auto_rebuild_grace_period` - (Optional) Grace period before CRL expiry to attempt rebuild of CRL.
 
-* `enable_delta` - (Optional) Enables or disables building of delta CRLs with up-to-date revocation information, augmenting the last complete CRL.
+* `enable_delta` - (Optional) Enables building of delta CRLs with up-to-date revocation information, augmenting the last complete CRL.
 
 * `delta_rebuild_interval` - (Optional) Interval to check for new revocations on, to regenerate the delta CRL.
 
