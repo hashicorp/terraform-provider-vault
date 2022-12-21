@@ -10,23 +10,26 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+// TestAccDataSourceRaftAutoPilotState assumes that a raft cluster exists with
+// autopilot_redundancy_zone configured for each node
+// see: https://developer.hashicorp.com/vault/docs/enterprise/redundancy-zones
 func TestAccDataSourceRaftAutoPilotState(t *testing.T) {
-	dataSourceName := "data.vault_raft_autopilot_state.test"
+	ds := "data.vault_raft_autopilot_state.test"
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceRaftAutoPilotStateConfig(),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldFailureTolerance, "1"),
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldHealthy, "true"),
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldLeader, "foo"),
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldOptimisticFailureTolerance, "2"),
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldRedundancyZones, "bar"),
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldServers, "baz"),
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldUpgradeInfo, "qux"),
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldVoters, "qoo"),
+					resource.TestCheckResourceAttrSet(ds, consts.FieldFailureTolerance),
+					resource.TestCheckResourceAttr(ds, consts.FieldHealthy, "true"),
+					resource.TestCheckResourceAttrSet(ds, consts.FieldLeader),
+					resource.TestCheckResourceAttrSet(ds, consts.FieldOptimisticFailureTolerance),
+					resource.TestCheckResourceAttrSet(ds, consts.FieldRedundancyZonesJSON),
+					resource.TestCheckResourceAttrSet(ds, consts.FieldServersJSON),
+					resource.TestCheckResourceAttrSet(ds, consts.FieldUpgradeInfoJSON),
+					resource.TestCheckResourceAttrSet(ds, consts.FieldVoters+".#"),
 				),
 			},
 		},

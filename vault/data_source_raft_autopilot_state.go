@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -17,10 +18,15 @@ var raftAutopilotStateFields = []string{
 	consts.FieldHealthy,
 	consts.FieldLeader,
 	consts.FieldOptimisticFailureTolerance,
-	consts.FieldRedundancyZones,
-	consts.FieldServers,
-	consts.FieldUpgradeInfo,
 	consts.FieldVoters,
+}
+
+// serializeFields is a map of fields that have complex structures that we will
+// serialize for convenience instead of defining the schema explicitly
+var serializeFields = map[string]string{
+	consts.FieldRedundancyZones: consts.FieldRedundancyZonesJSON,
+	consts.FieldServers:         consts.FieldServersJSON,
+	consts.FieldUpgradeInfo:     consts.FieldUpgradeInfoJSON,
 }
 
 func raftAutopilotStateDataSource() *schema.Resource {
@@ -31,7 +37,7 @@ func raftAutopilotStateDataSource() *schema.Resource {
 			Description: "How many nodes could fail before the cluster becomes unhealthy",
 		},
 		consts.FieldHealthy: {
-			Type:        schema.TypeString,
+			Type:        schema.TypeBool,
 			Computed:    true,
 			Description: "Health status",
 		},
@@ -45,163 +51,41 @@ func raftAutopilotStateDataSource() *schema.Resource {
 			Computed:    true,
 			Description: "The cluster-level optimistic failure tolerance.",
 		},
-		consts.FieldRedundancyZones: {
-			Type:     schema.TypeMap,
+		consts.FieldRedundancyZonesJSON: {
+			Type:     schema.TypeString,
 			Computed: true,
-			Elem: &schema.Schema{
-				Elem: map[string]*schema.Schema{
-					"servers": {
-						Type: schema.TypeList,
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					"voters": {
-						Type: schema.TypeList,
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					"failure_tolerance": {
-						Type: schema.TypeInt,
-					},
-				},
-			},
-			Description: "Additional output related to redundancy zones.",
+			// we save the subkeys as a JSON string in order to
+			// cleanly support nested values
+			Description: "Subkeys for the redundancy zones read from Vault.",
+		},
+		consts.FieldRedundancyZones: {
+			Type:        schema.TypeMap,
+			Computed:    true,
+			Description: "Additional output related to redundancy zones stored as a map of strings.",
+		},
+		consts.FieldServersJSON: {
+			Type:     schema.TypeString,
+			Computed: true,
+			// we save the subkeys as a JSON string in order to
+			// cleanly support nested values
+			Description: "Subkeys for the servers read from Vault.",
 		},
 		consts.FieldServers: {
-			Type:     schema.TypeMap,
+			Type:        schema.TypeMap,
+			Computed:    true,
+			Description: "Additional output related to servers stored as a map of strings.",
+		},
+		consts.FieldUpgradeInfoJSON: {
+			Type:     schema.TypeString,
 			Computed: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"id": {
-						Type: schema.TypeString,
-					},
-					"name": {
-						Type: schema.TypeString,
-					},
-					"address": {
-						Type: schema.TypeString,
-					},
-					"node_status": {
-						Type: schema.TypeString,
-					},
-					"last_contact": {
-						Type: schema.TypeString,
-					},
-					"last_term": {
-						Type: schema.TypeInt,
-					},
-					"last_index": {
-						Type: schema.TypeInt,
-					},
-					"healthy": {
-						Type: schema.TypeBool,
-					},
-					"stable_since": {
-						Type: schema.TypeString,
-					},
-					"status": {
-						Type: schema.TypeString,
-					},
-					"version": {
-						Type: schema.TypeString,
-					},
-					"upgrade_version": {
-						Type: schema.TypeString,
-					},
-					"redundancy_zone": {
-						Type: schema.TypeString,
-					},
-					"node_type": {
-						Type: schema.TypeString,
-					},
-				},
-			},
-			Description: "A node in a Vault cluster.",
+			// we save the subkeys as a JSON string in order to
+			// cleanly support nested values
+			Description: "Subkeys for the servers read from Vault.",
 		},
 		consts.FieldUpgradeInfo: {
-			Type:     schema.TypeMap,
-			Computed: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"status": {
-						Type: schema.TypeString,
-					},
-					"target_version": {
-						Type: schema.TypeString,
-					},
-					"target_version_voters": {
-						Type: schema.TypeList,
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					"target_version_non_voters": {
-						Type: schema.TypeList,
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					"target_version_read_replicas": {
-						Type: schema.TypeList,
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					"other_version_voters": {
-						Type: schema.TypeList,
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					"other_version_non_voters": {
-						Type: schema.TypeList,
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					"other_version_read_replicas": {
-						Type: schema.TypeList,
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					"redundancy_zones": {
-						Type:     schema.TypeMap,
-						Computed: true,
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								"target_version_voters": {
-									Type: schema.TypeList,
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-								"target_version_non_voters": {
-									Type: schema.TypeList,
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-								"other_version_voters": {
-									Type: schema.TypeList,
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-								"other_version_non_voters": {
-									Type: schema.TypeList,
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-							},
-						},
-						Description: "Additional output related to automated upgrades.",
-					},
-				},
-			},
+			Type:        schema.TypeMap,
+			Computed:    true,
+			Description: "Additional output related to upgrade info stored as a map of strings.",
 		},
 		consts.FieldVoters: {
 			Type:     schema.TypeList,
@@ -244,6 +128,22 @@ func raftAutopilotStateDataSourceRead(d *schema.ResourceData, meta interface{}) 
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
 				return fmt.Errorf("error reading %s for raft autopilot state %q: %q", k, path, err)
+			}
+		}
+	}
+
+	for k, v := range serializeFields {
+		if data, ok := resp.Data[k]; ok {
+			jsonData, err := json.Marshal(data)
+			if err != nil {
+				return fmt.Errorf("error marshaling JSON for %q at %q: %s", v, path, err)
+			}
+			if err := d.Set(v, string(jsonData)); err != nil {
+				return err
+			}
+
+			if err := d.Set(k, serializeDataMapToString(data.(map[string]interface{}))); err != nil {
+				return err
 			}
 		}
 	}
