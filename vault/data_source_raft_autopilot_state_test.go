@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -37,11 +36,11 @@ func TestAccDataSourceRaftAutoPilotState(t *testing.T) {
 }
 
 func testDataSourceRaftAutoPilotStateConfig() string {
-	return fmt.Sprintf(`
+	return `
 resource "vault_raft_autopilot" "test" {
 }
 
 data "vault_raft_autopilot_state" "test" {
 }
-`)
+`
 }
