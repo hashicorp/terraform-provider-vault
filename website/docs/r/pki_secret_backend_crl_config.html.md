@@ -54,7 +54,6 @@ The following arguments are supported:
 
 * `delta_rebuild_interval` - (Optional) Interval to check for new revocations on, to regenerate the delta CRL.
 
-
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
