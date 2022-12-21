@@ -81,7 +81,7 @@ func TestAzureSecretBackend(t *testing.T) {
 func TestAzureSecretBackend_remount(t *testing.T) {
 	testutil.SkipTestAcc(t)
 
-	path := acctest.RandomWithPrefix("tf-test-azure")
+	// path := acctest.RandomWithPrefix("tf-test-azure")
 	updatedPath := acctest.RandomWithPrefix("tf-test-azure-updated")
 
 	resourceType := "vault_azure_secret_backend"
@@ -100,9 +100,9 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 			resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"))
 	}
 
-	azureInitialCheckFuncs := append(commonChecks,
-		resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-	)
+	//azureInitialCheckFuncs := append(commonChecks,
+	//	resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+	//)
 
 	azureUpdatedCheckFuncs := append(commonChecks,
 		resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
@@ -115,10 +115,10 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldPath),
 		Steps: []resource.TestStep{
-			{
-				Config: testAzureSecretBackend_initialConfig(path),
-				Check:  resource.ComposeTestCheckFunc(azureInitialCheckFuncs...),
-			},
+			//{
+			//	Config: testAzureSecretBackend_initialConfig(path),
+			//	Check:  resource.ComposeTestCheckFunc(azureInitialCheckFuncs...),
+			//},
 			{
 				Config: testAzureSecretBackend_initialConfig(updatedPath),
 				Check:  resource.ComposeTestCheckFunc(azureUpdatedCheckFuncs...),
