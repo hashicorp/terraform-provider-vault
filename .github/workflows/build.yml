@@ -116,6 +116,7 @@ jobs:
           COUCHBASE_USERNAME: Administrator
           COUCHBASE_PASSWORD: password
           CONSUL_HTTP_ADDR: "consul:8500"
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
           make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"

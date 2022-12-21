@@ -288,6 +288,9 @@ func (c *ghRESTClient) do(method, path string, v interface{}) error {
 	}
 
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err

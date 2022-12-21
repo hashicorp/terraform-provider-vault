@@ -80,12 +80,14 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "AWS access key ID read from Vault.",
+				Sensitive:   true,
 			},
 
 			"secret_key": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "AWS secret key read from Vault.",
+				Sensitive:   true,
 			},
 
 			"security_token": {
