@@ -42,7 +42,7 @@ The following arguments are supported:
 
 * `disable` - (Optional) Disables or enables CRL building.
 
-* `ocsp_disable` - (Optional) Disables or enables the OCSP responder in Vault.
+* `ocsp_disable` - (Optional) Disables the OCSP responder in Vault.
 
 * `ocsp_expiry` - (Optional) The amount of time an OCSP response can be cached for, useful for OCSP stapling refresh durations.
 
