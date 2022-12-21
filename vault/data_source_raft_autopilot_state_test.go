@@ -37,10 +37,8 @@ func TestAccDataSourceRaftAutoPilotState(t *testing.T) {
 
 func testDataSourceRaftAutoPilotStateConfig() string {
 	return `
-resource "vault_raft_autopilot" "test" {
-}
+resource "vault_raft_autopilot" "test" {}
 
-data "vault_raft_autopilot_state" "test" {
-}
+data "vault_raft_autopilot_state" "test" {}
 `
 }
