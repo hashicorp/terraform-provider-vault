@@ -86,17 +86,7 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 
 	resourceType := "vault_azure_secret_backend"
 	resourceName := resourceType + ".test"
-	azureInitialCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-		resource.TestCheckResourceAttr(resourceName, "subscription_id", "11111111-2222-3333-4444-111111111111"),
-		resource.TestCheckResourceAttr(resourceName, "tenant_id", "11111111-2222-3333-4444-222222222222"),
-		resource.TestCheckResourceAttr(resourceName, "client_id", "11111111-2222-3333-4444-333333333333"),
-		resource.TestCheckResourceAttr(resourceName, "client_secret", "12345678901234567890"),
-		resource.TestCheckResourceAttr(resourceName, "environment", "AzurePublicCloud"),
-	}
-
-	azureUpdatedCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
+	commonChecks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, "subscription_id", "11111111-2222-3333-4444-111111111111"),
 		resource.TestCheckResourceAttr(resourceName, "tenant_id", "11111111-2222-3333-4444-222222222222"),
 		resource.TestCheckResourceAttr(resourceName, "client_id", "11111111-2222-3333-4444-333333333333"),
@@ -106,12 +96,17 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 
 	skipMSGraphCheck := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion112)
 	if !skipMSGraphCheck {
-		azureInitialCheckFuncs = append(azureInitialCheckFuncs,
-			resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"))
-
-		azureUpdatedCheckFuncs = append(azureUpdatedCheckFuncs,
+		commonChecks = append(commonChecks,
 			resource.TestCheckResourceAttr(resourceName, "use_microsoft_graph_api", "false"))
 	}
+
+	azureInitialCheckFuncs := append(commonChecks,
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+	)
+
+	azureUpdatedCheckFuncs := append(commonChecks,
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
+	)
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
@@ -133,7 +128,7 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 	})
 }
 
-func testAzureSecretBackend_initialConfig(path string) string {
+func testAzureSecretBackend_initialConfig(updatedPath string) string {
 	return fmt.Sprintf(`
 	resource "vault_azure_secret_backend" "test" {
 	 path = "%s"
@@ -142,7 +137,7 @@ func testAzureSecretBackend_initialConfig(path string) string {
 	 client_id = "11111111-2222-3333-4444-333333333333"
 	 client_secret = "12345678901234567890"
 	 environment = "AzurePublicCloud"
-	}`, path)
+	}`, updatedPath)
 }
 
 func testAzureSecretBackend_updated(path string) string {
