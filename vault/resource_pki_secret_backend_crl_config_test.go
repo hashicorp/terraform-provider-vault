@@ -33,18 +33,6 @@ func TestPkiSecretBackendCrlConfig_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_crl_config.test", "delta_rebuild_interval", "15m"),
 				),
 			},
-		},
-	})
-}
-
-func TestPkiSecretBackendCrlConfig_updated(t *testing.T) {
-	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
-
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
-		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendCrlConfigConfig_updated(rootPath),
 				Check: resource.ComposeTestCheckFunc(
