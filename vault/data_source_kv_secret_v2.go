@@ -3,11 +3,12 @@ package vault
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -102,14 +103,19 @@ func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(err)
 	}
 
+	var secret *api.Secret
+	var err error
 	if v, ok := d.GetOk(consts.FieldVersion); ok {
-		// add version to path as a query param
-		path = fmt.Sprintf("%s?version=%d", path, v.(int))
+		data := map[string][]string{
+			"version": {strconv.Itoa(v.(int))},
+		}
+		secret, err = client.Logical().ReadWithData(path, data)
+		log.Printf("[DEBUG] Reading secret at %q (version %d) from Vault", path, v)
+	} else {
+		secret, err = client.Logical().Read(path)
+		log.Printf("[DEBUG] Reading secret at %q (latest version) from Vault", path)
 	}
 
-	log.Printf("[DEBUG] Reading secret at %q from Vault", path)
-
-	secret, err := client.Logical().Read(path)
 	if err != nil {
 		return diag.Errorf("error reading secret %q from Vault: %s", path, err)
 	}
