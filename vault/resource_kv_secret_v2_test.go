@@ -25,24 +25,29 @@ func TestAccKVSecretV2(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, "cas", "1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, "delete_all_versions", "true"),
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.cas_required", "false"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.extra", "cheese"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.pizza", "please"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.delete_version_after", "0"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.max_versions", "5"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"data_json", "disable_read",
-					"delete_all_versions", "mount",
-					"name", "cas",
-				},
-			},
+			//{
+			//	ResourceName:      resourceName,
+			//	ImportState:       true,
+			//	ImportStateVerify: true,
+			//	ImportStateVerifyIgnore: []string{
+			//		"data_json", "disable_read",
+			//		"delete_all_versions", "mount",
+			//		"name", "cas",
+			//	},
+			//},
 		},
 	})
 }
@@ -55,17 +60,23 @@ func testKVSecretV2Config(mount, name string) string {
 
 	ret += fmt.Sprintf(`
 resource "vault_kv_secret_v2" "test" {
-  mount                      = vault_mount.kvv2.path
-  name                       = "%s"
-  cas                        = 1
-  delete_all_versions        = true
-  data_json                  = jsonencode(
-  {
-    zip       = "zap",
-    foo       = "bar",
-    flag      = false
-  }
+  mount               = vault_mount.kvv2.path
+  name                = "%s"
+  delete_all_versions = true
+  data_json = jsonencode(
+    {
+      zip  = "zap",
+      foo  = "bar",
+      flag = false
+    }
   )
+  custom_metadata {
+    max_versions = 5
+    data = {
+      extra = "cheese",
+      pizza = "please"
+    }
+  }
 }`, name)
 
 	return ret

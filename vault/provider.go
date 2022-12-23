@@ -788,10 +788,6 @@ var (
 			Resource:      UpdateSchemaResource(kvSecretV2Resource("vault_kv_secret_v2")),
 			PathInventory: []string{"/secret/data/{path}"},
 		},
-		"vault_kv_secret_metadata_v2": {
-			Resource:      UpdateSchemaResource(kvSecretMetadataV2Resource("vault_kv_secret_metadata_v2")),
-			PathInventory: []string{"/secret/metadata/{path}"},
-		},
 		"vault_kubernetes_secret_backend": {
 			Resource:      UpdateSchemaResource(kubernetesSecretBackendResource()),
 			PathInventory: []string{"/kubernetes/config"},
