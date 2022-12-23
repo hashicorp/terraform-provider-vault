@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -271,6 +272,38 @@ func Test_assertVaultState(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := assertVaultState(tt.resp, tt.tfs, tt.path, tt.tests...); (err != nil) != tt.wantErr {
 				t.Errorf("assertVaultState() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestGetGHOrgResponse(t *testing.T) {
+	tests := []struct {
+		name string
+		org  string
+		want *GHOrgResponse
+	}{
+		{
+			name: "hashicorp",
+			org:  "hashicorp",
+			want: &GHOrgResponse{
+				Login: "hashicorp",
+				ID:    761456,
+			},
+		},
+		{
+			name: "hashicorp",
+			org:  "hashicorp",
+			want: &GHOrgResponse{
+				Login: "hashicorp",
+				ID:    761456,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetGHOrgResponse(t, tt.org); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetGHOrgResponse() = %v, want %v", got, tt.want)
 			}
 		})
 	}

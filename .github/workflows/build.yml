@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - id: go-version
-        run: echo "::set-output name=version::$(cat ./.go-version)"
+        run: echo "version=$(cat .go-version)" >> $GITHUB_OUTPUT
   build:
     needs: [go-version]
     runs-on: ubuntu-latest
@@ -27,11 +27,21 @@ jobs:
       image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
       - name: Build
         run: |
           make build
       - name: Run unit tests
         # here to short-circuit the acceptance tests, in the case of a failure.
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
           echo make test
   acceptance:
@@ -110,6 +120,14 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
       - name: Acceptance Tests
         env:
           VAULT_TOKEN: "root"

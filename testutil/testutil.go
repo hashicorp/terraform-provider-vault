@@ -246,11 +246,18 @@ var ghOrgResponseCache = sync.Map{}
 func GetGHOrgResponse(t *testing.T, org string) *GHOrgResponse {
 	t.Helper()
 
+	client := newGHRESTClient()
+
+	var vm map[string]interface{}
+	if err := client.get("rate_limit", &vm); err != nil {
+		t.Fatal(err)
+	}
+
+	spew.Dump(vm)
+
 	if v, ok := ghOrgResponseCache.Load(org); ok {
 		return v.(*GHOrgResponse)
 	}
-
-	client := newGHRESTClient()
 
 	result := &GHOrgResponse{}
 	if err := client.get(fmt.Sprintf("orgs/%s", org), result); err != nil {
