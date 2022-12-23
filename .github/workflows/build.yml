@@ -23,21 +23,29 @@ jobs:
   build:
     needs: [go-version]
     runs-on: ubuntu-latest
+    outputs:
+      go_mod_cache: ${{ steps.go-version.outputs.version }}
     container:
       image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     steps:
+      - name: go env
+        run: |
+          go env
+      - id: go-mod-cache
+        run: |
+          echo "go_mod_cache=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v3
+      - name: Build
+        run: |
+          make build
       - uses: actions/cache@v3
         with:
           path: |
-            ~/.cache/go-build
+            ${{ steps.go-mod-cache.outputs.go_mod_cache }}
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - name: Build
-        run: |
-          make build
       - name: Run unit tests
         # here to short-circuit the acceptance tests, in the case of a failure.
         env:

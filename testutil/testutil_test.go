@@ -292,17 +292,26 @@ func TestGetGHOrgResponse(t *testing.T) {
 			},
 		},
 		{
-			name: "hashicorp",
-			org:  "hashicorp",
+			name: "github",
+			org:  "github",
 			want: &GHOrgResponse{
-				Login: "hashicorp",
-				ID:    761456,
+				Login: "github",
+				ID:    9919,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := GetGHOrgResponse(t, tt.org); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetGHOrgResponse() = %v, want %v", got, tt.want)
+			}
+			v, ok := ghOrgResponseCache.Load(tt.org)
+			if !ok {
+				t.Fatalf("GetGHOrgResponse() result not cached for %s", tt.org)
+			}
+
+			got := v.(*GHOrgResponse)
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetGHOrgResponse() = %v, want %v", got, tt.want)
 			}
 		})
