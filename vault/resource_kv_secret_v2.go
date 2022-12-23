@@ -151,17 +151,6 @@ func getKVV2MetadataPath(mount, name string) string {
 	return fmt.Sprintf("%s/metadata/%s", mount, name)
 }
 
-//func hashCustomMetadata(v interface{}) int {
-//	var result int
-//	if m, ok := v.(map[string]interface{}); ok {
-//		if v, ok := m[consts.FieldName]; ok {
-//			result = getHashFromName(v.(string))
-//		}
-//	}
-//
-//	return result
-//}
-
 func getCustomMetadata(d *schema.ResourceData) map[string]interface{} {
 	data := map[string]interface{}{}
 

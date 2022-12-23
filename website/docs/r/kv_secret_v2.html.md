@@ -69,6 +69,11 @@ The following arguments are supported:
 * `data_json` - (Required) JSON-encoded string that will be
   written as the secret data at the given path.
 
+* `custom_metadata` - (Optional) A nested block containing configuration options for the
+  secret metadata. Refer to the
+  [Vault docs](https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2#create-update-metadata)
+  for more info on configuration options.
+
 ## Required Vault Capabilities
 
 Use of this resource requires the `create` or `update` capability
