@@ -51,26 +51,30 @@ func getCRLConfigChecks(resourceName string, isUpdate bool) resource.TestCheckFu
 	}
 }
 
-func TestPkiSecretBackendCrlConfig_lte_111(t *testing.T) {
-	setupCRLConfigTest(t, func() {
-		testutil.TestAccPreCheck(t)
-		SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
-	},
-		"ocsp_disable",
-		"ocsp_expiry",
-		"auto_rebuild",
-		"auto_rebuild_grace_period",
-		"enable_delta",
-		"delta_rebuild_interval",
-	)
-}
+func TestPkiSecretBackendCrlConfig(t *testing.T) {
+	// test against vault-1.11 and below
+	t.Run("vault-1.11-and-below", func(t *testing.T) {
+		setupCRLConfigTest(t, func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion112)
+		},
+			"ocsp_disable",
+			"ocsp_expiry",
+			"auto_rebuild",
+			"auto_rebuild_grace_period",
+			"enable_delta",
+			"delta_rebuild_interval",
+		)
+	})
 
-func TestPkiSecretBackendCrlConfig_gte_112(t *testing.T) {
-	setupCRLConfigTest(t, func() {
-		testutil.TestAccPreCheck(t)
-		SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
-	},
-	)
+	// test against vault-1.12 and above
+	t.Run("vault-1.12-and-above", func(t *testing.T) {
+		setupCRLConfigTest(t, func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+		},
+		)
+	})
 }
 
 func setupCRLConfigTest(t *testing.T, preCheck func(), ignoreImportFields ...string) {
