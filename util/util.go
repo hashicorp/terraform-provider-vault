@@ -360,7 +360,8 @@ func GetAPIRequestDataWithSlice(d *schema.ResourceData, fields []string) map[str
 	return data
 }
 
-// GetAPIRequestDataWithSlice to pass to Vault from schema.ResourceData.
+// GetAPIRequestDataWithSliceOk to pass to Vault from schema.ResourceData.
+// Only field values that are set in schema.ResourceData will be returned
 func GetAPIRequestDataWithSliceOk(d *schema.ResourceData, fields []string) map[string]interface{} {
 	data := make(map[string]interface{})
 	for _, k := range fields {
