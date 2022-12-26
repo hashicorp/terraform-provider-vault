@@ -24,15 +24,17 @@ jobs:
     needs: [go-version]
     runs-on: ubuntu-latest
     outputs:
-      go_mod_cache: ${{ steps.go-version.outputs.version }}
+      go_cache: ${{ steps.go-mod-cache.outputs.go_cache }}
+      go_mod_cache: ${{ steps.go-mod-cache.outputs.go_mod_cache }}
     container:
       image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     steps:
       - name: go env
         run: |
           go env
-      - id: go-mod-cache
+      - id: go-cache-paths
         run: |
+          echo "go_cache=$(go env GOCACHE)" >> $GITHUB_OUTPUT
           echo "go_mod_cache=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v3
       - name: Build
@@ -41,8 +43,8 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: |
-            ${{ steps.go-mod-cache.outputs.go_mod_cache }}
-            ~/go/pkg/mod
+            ${{ steps.go-cache-paths.outputs.go_cache }}
+            ${{ steps.go-cache-paths.outputs.go_mod_cache }}
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
@@ -153,6 +155,7 @@ jobs:
           CONSUL_HTTP_ADDR: "consul:8500"
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
+          printenv | sort
           make testacc-ent TESTARGS='-test.v -test.parallel=10 -test.run TestAccGithubAuthBackend_basic' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
