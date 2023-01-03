@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -106,7 +107,7 @@ func kvSecretV2Resource(name string) *schema.Resource {
 			consts.FieldCustomMetadata: {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "Custom metadata to be set for the secret",
+				Description: "Custom metadata to be set for the secret.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						consts.FieldMaxVersions: {
@@ -126,14 +127,14 @@ func kvSecretV2Resource(name string) *schema.Resource {
 							Type:     schema.TypeInt,
 							Optional: true,
 							Description: "If set, specifies the length of time before " +
-								"a version is deleted",
+								"a version is deleted.",
 						},
 						consts.FieldData: {
 							Type:     schema.TypeMap,
 							Optional: true,
 							Computed: true,
 							Description: "A map of arbitrary string to string valued " +
-								"user-provided metadata meant to describe the secret",
+								"user-provided metadata meant to describe the secret.",
 						},
 					},
 				},
@@ -147,21 +148,17 @@ func getKVV2Path(mount, name, prefix string) string {
 	return fmt.Sprintf("%s/%s/%s", mount, prefix, name)
 }
 
-func getKVV2MetadataPath(mount, name string) string {
-	return fmt.Sprintf("%s/metadata/%s", mount, name)
-}
-
 func getCustomMetadata(d *schema.ResourceData) map[string]interface{} {
 	data := map[string]interface{}{}
 
-	metadataFields := []string{
+	fields := []string{
 		consts.FieldMaxVersions,
 		consts.FieldCASRequired,
 		consts.FieldDeleteVersionAfter,
 		consts.FieldData,
 	}
 	fieldPrefix := fmt.Sprintf("%s.0", consts.FieldCustomMetadata)
-	for _, k := range metadataFields {
+	for _, k := range fields {
 		fieldKey := fmt.Sprintf("%s.%s", fieldPrefix, k)
 		vaultStateKey := k
 		if k == consts.FieldData {
@@ -210,7 +207,7 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 	if _, ok := d.GetOk(consts.FieldCustomMetadata); ok {
 		cm := getCustomMetadata(d)
 
-		metadataPath := getKVV2MetadataPath(mount, name)
+		metadataPath := getKVV2Path(mount, name, consts.FieldMetadata)
 		log.Printf("[DEBUG] Writing custom metadata for secret at %s", path)
 		if _, err := client.Logical().Write(metadataPath, cm); err != nil {
 			return diag.Errorf("error writing custom metadata to %s, err=%s", metadataPath, err)
@@ -269,8 +266,7 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 						return diag.FromErr(err)
 					}
 
-					customMetadata := []interface{}{cm}
-					if err := d.Set(consts.FieldCustomMetadata, customMetadata); err != nil {
+					if err := d.Set(consts.FieldCustomMetadata, []interface{}{cm}); err != nil {
 						return diag.FromErr(err)
 					}
 				}
@@ -283,10 +279,7 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 }
 
 func readKVV2Metadata(d *schema.ResourceData, client *api.Client) (map[string]interface{}, error) {
-	mount := d.Get(consts.FieldMount).(string)
-	name := d.Get(consts.FieldName).(string)
-
-	path := getKVV2MetadataPath(mount, name)
+	path := strings.Replace(d.Id(), consts.FieldData, consts.FieldMetadata, 1)
 
 	log.Printf("[DEBUG] Reading metadata for KVV2 secret at %s", path)
 	resp, err := client.Logical().Read(path)

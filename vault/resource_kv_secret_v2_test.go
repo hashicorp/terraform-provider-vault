@@ -38,16 +38,16 @@ func TestAccKVSecretV2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.max_versions", "5"),
 				),
 			},
-			//{
-			//	ResourceName:      resourceName,
-			//	ImportState:       true,
-			//	ImportStateVerify: true,
-			//	ImportStateVerifyIgnore: []string{
-			//		"data_json", "disable_read",
-			//		"delete_all_versions", "mount",
-			//		"name", "cas",
-			//	},
-			//},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"data_json", "disable_read",
+					"delete_all_versions", "mount",
+					"name", "cas",
+				},
+			},
 		},
 	})
 }
