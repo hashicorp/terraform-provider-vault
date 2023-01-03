@@ -18,6 +18,7 @@ var (
 		"max_trailing_logs":                  1000,
 		"min_quorum":                         3,
 		"server_stabilization_time":          "10s",
+		"disable_upgrade_migration":          false,
 	}
 )
 
@@ -59,6 +60,12 @@ func raftAutopilotConfigResource() *schema.Resource {
 			Default:     autopilotDefaults["server_stabilization_time"],
 			Optional:    true,
 		},
+		"disable_upgrade_migration": {
+			Type:        schema.TypeBool,
+			Description: "Disables automatically upgrading Vault using autopilot. (Enterprise-only)",
+			Default:     autopilotDefaults["disable_upgrade_migration"],
+			Optional:    true,
+		},
 	}
 	return &schema.Resource{
 		Create: createOrUpdateAutopilotConfigResource,
@@ -82,6 +89,7 @@ func createOrUpdateAutopilotConfigResource(d *schema.ResourceData, meta interfac
 		"max_trailing_logs":                  d.Get("max_trailing_logs").(int),
 		"min_quorum":                         d.Get("min_quorum").(int),
 		"server_stabilization_time":          d.Get("server_stabilization_time").(string),
+		"disable_upgrade_migration":          d.Get("disable_upgrade_migration").(bool),
 	}
 
 	log.Print("[DEBUG] Configuring autopilot")
@@ -140,6 +148,12 @@ func readAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error
 	if val, ok := resp.Data["server_stabilization_time"]; ok {
 		if err := d.Set("server_stabilization_time", val); err != nil {
 			return fmt.Errorf("error setting state key 'server_stabilization_time': %s", err)
+		}
+	}
+
+	if val, ok := resp.Data["disable_upgrade_migration"]; ok {
+		if err := d.Set("disable_upgrade_migration", val); err != nil {
+			return fmt.Errorf("error setting state key 'disable_upgrade_migration': %s", err)
 		}
 	}
 

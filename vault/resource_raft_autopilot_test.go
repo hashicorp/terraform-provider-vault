@@ -28,12 +28,13 @@ func TestAccRaftAutopilotConfig_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "dead_server_last_contact_threshold", "12h0m0s"),
 					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "last_contact_threshold", autopilotDefaults["last_contact_threshold"].(string)),
 					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "max_trailing_logs", strconv.Itoa(autopilotDefaults["max_trailing_logs"].(int))),
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "min_quorum", "3"),
+					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "min_quorum", strconv.Itoa(autopilotDefaults["min_quorum"].(int))),
 					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "server_stabilization_time", autopilotDefaults["server_stabilization_time"].(string)),
+					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "disable_upgrade_migration", "false"),
 				),
 			},
 			{
-				Config: testAccRaftAutopilotConfig_updated(true, "30s", "20s", 100, 5, "50s"),
+				Config: testAccRaftAutopilotConfig_updated(true, true, "30s", "20s", "50s", 100, 5),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "cleanup_dead_servers", "true"),
 					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "dead_server_last_contact_threshold", "30s"),
@@ -41,6 +42,7 @@ func TestAccRaftAutopilotConfig_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "max_trailing_logs", "100"),
 					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "min_quorum", "5"),
 					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "server_stabilization_time", "50s"),
+					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "disable_upgrade_migration", "true"),
 				),
 			},
 		},
@@ -80,14 +82,15 @@ resource "vault_raft_autopilot" "test" {
 }`, cleanup, dsThresh, quorum)
 }
 
-func testAccRaftAutopilotConfig_updated(cleanup bool, dsThresh string, lcThresh string, logs int, quorum int, stabTime string) string {
+func testAccRaftAutopilotConfig_updated(cleanup, disableUpgrade bool, dsThresh, lcThresh, stabTime string, logs, quorum int) string {
 	return fmt.Sprintf(`
 resource "vault_raft_autopilot" "test" {
   cleanup_dead_servers = %t
+  disable_upgrade_migration = %t
   dead_server_last_contact_threshold = "%s"
   last_contact_threshold = "%s"
+  server_stabilization_time = "%s"
   max_trailing_logs = %d
   min_quorum = %d
-  server_stabilization_time = "%s"
-}`, cleanup, dsThresh, lcThresh, logs, quorum, stabTime)
+}`, cleanup, disableUpgrade, dsThresh, lcThresh, stabTime, logs, quorum)
 }
