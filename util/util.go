@@ -360,14 +360,39 @@ func GetAPIRequestDataWithSlice(d *schema.ResourceData, fields []string) map[str
 	return data
 }
 
-func getAPIRequestValue(d *schema.ResourceData, k string) interface{} {
-	sv := d.Get(k)
-	switch v := sv.(type) {
-	case *schema.Set:
-		return v.List()
-	default:
-		return sv
+// GetAPIRequestDataWithSliceOk to pass to Vault from schema.ResourceData.
+// Only field values that are set in schema.ResourceData will be returned
+func GetAPIRequestDataWithSliceOk(d *schema.ResourceData, fields []string) map[string]interface{} {
+	data := make(map[string]interface{})
+	for _, k := range fields {
+		if v, ok := getAPIRequestValueOk(d, k); ok {
+			data[k] = v
+		}
 	}
+
+	return data
+}
+
+func getAPIRequestValue(d *schema.ResourceData, k string) interface{} {
+	return getAPIValue(d.Get(k))
+}
+
+func getAPIValue(i interface{}) interface{} {
+	switch s := i.(type) {
+	case *schema.Set:
+		return s.List()
+	default:
+		return s
+	}
+}
+
+func getAPIRequestValueOk(d *schema.ResourceData, k string) (interface{}, bool) {
+	sv, ok := d.GetOk(k)
+	if !ok {
+		return nil, ok
+	}
+
+	return getAPIValue(sv), ok
 }
 
 func Remount(d *schema.ResourceData, client *api.Client, mountField string, isAuthMount bool) (string, error) {
