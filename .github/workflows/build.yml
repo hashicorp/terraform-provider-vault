@@ -23,37 +23,19 @@ jobs:
   build:
     needs: [go-version]
     runs-on: ubuntu-latest
-    outputs:
-      go_cache: ${{ steps.go-mod-cache.outputs.go_cache }}
-      go_mod_cache: ${{ steps.go-mod-cache.outputs.go_mod_cache }}
     container:
       image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     steps:
-      - name: go env
-        run: |
-          go env
-      - id: go-cache-paths
-        run: |
-          echo "go_cache=$(go env GOCACHE)" >> $GITHUB_OUTPUT
-          echo "go_mod_cache=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v3
       - name: Build
         run: |
           make build
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ${{ steps.go-cache-paths.outputs.go_cache }}
-            ${{ steps.go-cache-paths.outputs.go_mod_cache }}
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
       - name: Run unit tests
         # here to short-circuit the acceptance tests, in the case of a failure.
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
-          echo make test
+          make test
   acceptance:
     needs: [go-version, build]
     runs-on: ubuntu-latest
@@ -130,14 +112,6 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
       - name: Acceptance Tests
         env:
           VAULT_TOKEN: "root"
@@ -155,8 +129,7 @@ jobs:
           CONSUL_HTTP_ADDR: "consul:8500"
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
-          printenv | sort
-          make testacc-ent TESTARGS='-test.v -test.parallel=10 -test.run TestAccGithubAuthBackend_basic' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
+          make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json

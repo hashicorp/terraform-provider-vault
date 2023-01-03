@@ -37,3 +37,6 @@ terraform-provider-vault
 
 # Scratch directory for miscellaneous files/examples/etc.
 scratch
+
+# others
+.swp

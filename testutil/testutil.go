@@ -15,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/coreos/pkg/multierror"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -247,14 +246,6 @@ func GetGHOrgResponse(t *testing.T, org string) *GHOrgResponse {
 	t.Helper()
 
 	client := newGHRESTClient()
-
-	var vm map[string]interface{}
-	if err := client.get("rate_limit", &vm); err != nil {
-		t.Fatal(err)
-	}
-
-	spew.Dump(vm)
-
 	if v, ok := ghOrgResponseCache.Load(org); ok {
 		return v.(*GHOrgResponse)
 	}
@@ -301,8 +292,6 @@ func (c *ghRESTClient) do(method, path string, v interface{}) error {
 	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
-
-	spew.Dump(req.Header)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
