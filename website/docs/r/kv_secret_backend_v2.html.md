@@ -25,7 +25,7 @@ resource "vault_mount" "kvv2" {
   description = "KV Version 2 secret engine mount"
 }
 
-resource "vault_kv_secret_backend_v2" "config" {
+resource "vault_kv_secret_backend_v2" "example" {
   mount                = vault_mount.kvv2.path
   max_versions         = 5
   delete_version_after = 12600
@@ -69,5 +69,5 @@ The KV-V2 secret backend can be imported using its unique ID,
 the `${mount}/config`, e.g.
 
 ```
-$ terraform import vault_kv_secret_backend_v2.config kvv2/config
+$ terraform import vault_kv_secret_backend_v2.example kvv2/config
 ```

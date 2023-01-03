@@ -16,6 +16,13 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
+var metadataFields = map[string]string{
+	consts.FieldMaxVersions:        consts.FieldMaxVersions,
+	consts.FieldCASRequired:        consts.FieldCASRequired,
+	consts.FieldDeleteVersionAfter: consts.FieldDeleteVersionAfter,
+	consts.FieldCustomMetadata:     consts.FieldData,
+}
+
 func kvSecretV2Resource(name string) *schema.Resource {
 	return &schema.Resource{
 		CreateContext: kvSecretV2Write,
@@ -151,21 +158,12 @@ func getKVV2Path(mount, name, prefix string) string {
 func getCustomMetadata(d *schema.ResourceData) map[string]interface{} {
 	data := map[string]interface{}{}
 
-	fields := []string{
-		consts.FieldMaxVersions,
-		consts.FieldCASRequired,
-		consts.FieldDeleteVersionAfter,
-		consts.FieldData,
-	}
 	fieldPrefix := fmt.Sprintf("%s.0", consts.FieldCustomMetadata)
-	for _, k := range fields {
-		fieldKey := fmt.Sprintf("%s.%s", fieldPrefix, k)
-		vaultStateKey := k
-		if k == consts.FieldData {
-			vaultStateKey = consts.FieldCustomMetadata
-		}
-		if v, ok := d.GetOk(fieldKey); ok {
-			data[vaultStateKey] = v
+	for vaultKey, stateKey := range metadataFields {
+		fieldKey := fmt.Sprintf("%s.%s", fieldPrefix, stateKey)
+
+		if val, ok := d.GetOk(fieldKey); ok {
+			data[vaultKey] = val
 		}
 	}
 	return data
@@ -292,12 +290,6 @@ func readKVV2Metadata(d *schema.ResourceData, client *api.Client) (map[string]in
 		return nil, nil
 	}
 
-	metadataFields := map[string]string{
-		consts.FieldMaxVersions:        consts.FieldMaxVersions,
-		consts.FieldCASRequired:        consts.FieldCASRequired,
-		consts.FieldDeleteVersionAfter: consts.FieldDeleteVersionAfter,
-		consts.FieldCustomMetadata:     consts.FieldData,
-	}
 	data := map[string]interface{}{}
 
 	for vaultKey, tfKey := range metadataFields {
