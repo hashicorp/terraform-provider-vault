@@ -114,19 +114,18 @@ func kvSecretV2Resource(name string) *schema.Resource {
 			consts.FieldCustomMetadata: {
 				Type:        schema.TypeList,
 				Optional:    true,
+				Computed:    true,
 				Description: "Custom metadata to be set for the secret.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						consts.FieldMaxVersions: {
 							Type:        schema.TypeInt,
 							Optional:    true,
-							Computed:    true,
 							Description: "The number of versions to keep per key.",
 						},
 						consts.FieldCASRequired: {
 							Type:     schema.TypeBool,
 							Optional: true,
-							Computed: true,
 							Description: "If true, all keys will require the cas " +
 								"parameter to be set on all write requests.",
 						},
@@ -139,7 +138,6 @@ func kvSecretV2Resource(name string) *schema.Resource {
 						consts.FieldData: {
 							Type:     schema.TypeMap,
 							Optional: true,
-							Computed: true,
 							Description: "A map of arbitrary string to string valued " +
 								"user-provided metadata meant to describe the secret.",
 						},
