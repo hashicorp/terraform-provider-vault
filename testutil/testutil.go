@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/coreos/pkg/multierror"
@@ -238,17 +239,16 @@ type GHOrgResponse struct {
 }
 
 // cache GH API responses to avoid triggering the GH request rate limiter
-var ghOrgResponseCache = map[string]*GHOrgResponse{}
+var ghOrgResponseCache = sync.Map{}
 
 // GetGHOrgResponse returns the GH org's meta configuration.
 func GetGHOrgResponse(t *testing.T, org string) *GHOrgResponse {
 	t.Helper()
 
-	if v, ok := ghOrgResponseCache[org]; ok {
-		return v
-	}
-
 	client := newGHRESTClient()
+	if v, ok := ghOrgResponseCache.Load(org); ok {
+		return v.(*GHOrgResponse)
+	}
 
 	result := &GHOrgResponse{}
 	if err := client.get(fmt.Sprintf("orgs/%s", org), result); err != nil {
@@ -259,7 +259,7 @@ func GetGHOrgResponse(t *testing.T, org string) *GHOrgResponse {
 		t.Fatalf("expected org %q from GH API response, actual %q", org, result.Login)
 	}
 
-	ghOrgResponseCache[org] = result
+	ghOrgResponseCache.Store(org, result)
 
 	return result
 }
@@ -288,9 +288,11 @@ func (c *ghRESTClient) do(method, path string, v interface{}) error {
 	}
 
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err
