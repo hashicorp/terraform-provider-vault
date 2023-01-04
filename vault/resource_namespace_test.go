@@ -52,7 +52,8 @@ func TestAccNamespace(t *testing.T) {
 			{
 				Config: testNamespaceConfig(namespacePath + "-foo"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_namespace.test", consts.FieldPath, namespacePath+"-foo")),
+					resource.TestCheckResourceAttr("vault_namespace.test", consts.FieldPath, namespacePath+"-foo"),
+					testNamespaceDestroy(namespacePath)),
 			},
 			{
 				Config: testNestedNamespaces(namespacePath, 3),
