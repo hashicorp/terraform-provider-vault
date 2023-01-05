@@ -55,6 +55,8 @@ voting nodes.
 - `server_stabilization_time` - (Optional) Minimum amount of time a server must be 
 stable in the 'healthy' state before being added to the cluster.
 
+- `disable_upgrade_migration` – (Optional) Disables automatically upgrading Vault using autopilot. (Enterprise-only)
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

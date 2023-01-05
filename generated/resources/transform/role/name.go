@@ -48,7 +48,7 @@ func NameResource() *schema.Resource {
 		Exists: resourceNameExists,
 		Delete: deleteNameResource,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: fields,
 	}

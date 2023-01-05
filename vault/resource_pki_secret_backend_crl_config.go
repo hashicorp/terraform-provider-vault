@@ -8,6 +8,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
+)
+
+const (
+	crlConfigPathBase = "/config/crl"
 )
 
 func pkiSecretBackendCrlConfigResource() *schema.Resource {
@@ -16,6 +21,9 @@ func pkiSecretBackendCrlConfigResource() *schema.Resource {
 		Read:   ReadWrapper(pkiSecretBackendCrlConfigRead),
 		Update: pkiSecretBackendCrlConfigUpdate,
 		Delete: pkiSecretBackendCrlConfigDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -90,32 +98,23 @@ func pkiSecretBackendCrlConfigCreate(d *schema.ResourceData, meta interface{}) e
 	backend := d.Get("backend").(string)
 	path := pkiSecretBackendCrlConfigPath(backend)
 
-	data := make(map[string]interface{})
-	if expiry, ok := d.GetOk("expiry"); ok {
-		data["expiry"] = expiry
-	}
-	if disable, ok := d.GetOk("disable"); ok {
-		data["disable"] = disable
-	}
-	if ocspDisable, ok := d.GetOk("ocsp_disable"); ok {
-		data["ocsp_disable"] = ocspDisable
-	}
-	if ocspExpiry, ok := d.GetOk("ocsp_expiry"); ok {
-		data["ocsp_expiry"] = ocspExpiry
-	}
-	if autoRebuild, ok := d.GetOk("auto_rebuild"); ok {
-		data["auto_rebuild"] = autoRebuild
-	}
-	if autoRebuildGracePeriod, ok := d.GetOk("auto_rebuild_grace_period"); ok {
-		data["auto_rebuild_grace_period"] = autoRebuildGracePeriod
-	}
-	if enableDelta, ok := d.GetOk("enable_delta"); ok {
-		data["enable_delta"] = enableDelta
-	}
-	if deltaRebuildInterval, ok := d.GetOk("delta_rebuild_interval"); ok {
-		data["delta_rebuild_interval"] = deltaRebuildInterval
+	fields := []string{
+		"expiry",
+		"disable",
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		fields = append(fields, []string{
+			"ocsp_disable",
+			"ocsp_expiry",
+			"auto_rebuild",
+			"auto_rebuild_grace_period",
+			"enable_delta",
+			"delta_rebuild_interval",
+		}...)
+	}
+
+	data := util.GetAPIRequestDataWithSliceOk(d, fields)
 	log.Printf("[DEBUG] Creating CRL config on PKI secret backend %q", backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -134,14 +133,12 @@ func pkiSecretBackendCrlConfigRead(d *schema.ResourceData, meta interface{}) err
 	}
 
 	path := d.Id()
-	backend := pkiSecretBackendCrlConfigPath(path)
-
-	log.Printf("[DEBUG] Reading CRL config from PKI secret backend %q", backend)
+	log.Printf("[DEBUG] Reading PKI CRL config from path %q", path)
 	config, err := client.Logical().Read(path)
 	if err != nil {
-		log.Printf("[WARN] Removing path %q its ID is invalid", path)
+		log.Printf("[WARN] Removing path %q its ID is invalid, err=%s", path, err)
 		d.SetId("")
-		return fmt.Errorf("invalid path ID %q: %s", path, err)
+		return fmt.Errorf("invalid path ID %q: %w", path, err)
 	}
 
 	if config == nil {
@@ -149,14 +146,16 @@ func pkiSecretBackendCrlConfigRead(d *schema.ResourceData, meta interface{}) err
 		return nil
 	}
 
-	d.Set("expiry", config.Data["expiry"])
-	d.Set("disable", config.Data["disable"])
-	d.Set("ocsp_disable", config.Data["ocsp_disable"])
-	d.Set("ocsp_expiry", config.Data["ocsp_expiry"])
-	d.Set("auto_rebuild", config.Data["auto_rebuild"])
-	d.Set("auto_rebuild_grace_period", config.Data["auto_rebuild_grace_period"])
-	d.Set("enable_delta", config.Data["enable_delta"])
-	d.Set("delta_rebuild_interval", config.Data["delta_rebuild_interval"])
+	if _, ok := d.GetOk("backend"); !ok {
+		// ensure that the backend is set on import
+		if err := d.Set("backend", strings.TrimRight(path, crlConfigPathBase)); err != nil {
+			return err
+		}
+	}
+
+	if err := util.SetResourceData(d, config.Data); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -168,40 +167,29 @@ func pkiSecretBackendCrlConfigUpdate(d *schema.ResourceData, meta interface{}) e
 	}
 
 	path := d.Id()
-	backend := pkiSecretBackendCrlConfigPath(path)
-
-	data := make(map[string]interface{})
-	if expiry, ok := d.GetOk("expiry"); ok {
-		data["expiry"] = expiry
-	}
-	if disable, ok := d.GetOk("disable"); ok {
-		data["disable"] = disable
-	}
-	if ocspDisable, ok := d.GetOk("ocsp_disable"); ok {
-		data["ocsp_disable"] = ocspDisable
-	}
-	if ocspExpiry, ok := d.GetOk("ocsp_expiry"); ok {
-		data["ocsp_expiry"] = ocspExpiry
-	}
-	if autoRebuild, ok := d.GetOk("auto_rebuild"); ok {
-		data["auto_rebuild"] = autoRebuild
-	}
-	if autoRebuildGracePeriod, ok := d.GetOk("auto_rebuild_grace_period"); ok {
-		data["auto_rebuild_grace_period"] = autoRebuildGracePeriod
-	}
-	if enableDelta, ok := d.GetOk("enable_delta"); ok {
-		data["enable_delta"] = enableDelta
-	}
-	if deltaRebuildInterval, ok := d.GetOk("delta_rebuild_interval"); ok {
-		data["delta_rebuild_interval"] = deltaRebuildInterval
+	fields := []string{
+		"expiry",
+		"disable",
 	}
 
-	log.Printf("[DEBUG] Updating CRL config on PKI secret backend %q", backend)
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		fields = append(fields, []string{
+			"ocsp_disable",
+			"ocsp_expiry",
+			"auto_rebuild",
+			"auto_rebuild_grace_period",
+			"enable_delta",
+			"delta_rebuild_interval",
+		}...)
+	}
+
+	data := util.GetAPIRequestDataWithSliceOk(d, fields)
+	log.Printf("[DEBUG] Updating CRL config on PKI secret path %q", path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error updating CRL config for PKI secret backend %q: %s", backend, err)
+		return fmt.Errorf("error updating CRL config for PKI secret path %q: %s", path, err)
 	}
-	log.Printf("[DEBUG] Updated CRL config on PKI secret backend %q", backend)
+	log.Printf("[DEBUG] Updated CRL config on PKI secret path %q", path)
 
 	return pkiSecretBackendCrlConfigRead(d, meta)
 }
@@ -211,5 +199,5 @@ func pkiSecretBackendCrlConfigDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func pkiSecretBackendCrlConfigPath(backend string) string {
-	return strings.Trim(backend, "/") + "/config/crl"
+	return strings.Trim(backend, "/") + crlConfigPathBase
 }
