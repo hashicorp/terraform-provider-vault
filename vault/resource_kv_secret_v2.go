@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-var metadataFields = map[string]string{
+var kvMetadataFields = map[string]string{
 	consts.FieldMaxVersions:        consts.FieldMaxVersions,
 	consts.FieldCASRequired:        consts.FieldCASRequired,
 	consts.FieldDeleteVersionAfter: consts.FieldDeleteVersionAfter,
@@ -157,7 +157,7 @@ func getCustomMetadata(d *schema.ResourceData) map[string]interface{} {
 	data := map[string]interface{}{}
 
 	fieldPrefix := fmt.Sprintf("%s.0", consts.FieldCustomMetadata)
-	for vaultKey, stateKey := range metadataFields {
+	for vaultKey, stateKey := range kvMetadataFields {
 		fieldKey := fmt.Sprintf("%s.%s", fieldPrefix, stateKey)
 
 		if val, ok := d.GetOk(fieldKey); ok {
@@ -290,7 +290,7 @@ func readKVV2Metadata(d *schema.ResourceData, client *api.Client) (map[string]in
 
 	data := map[string]interface{}{}
 
-	for vaultKey, tfKey := range metadataFields {
+	for vaultKey, tfKey := range kvMetadataFields {
 		if val, ok := resp.Data[vaultKey]; ok {
 			// the delete_version_after field is written to
 			// Vault as an integer but is returned as a string
@@ -300,10 +300,11 @@ func readKVV2Metadata(d *schema.ResourceData, client *api.Client) (map[string]in
 				if err != nil {
 					return nil, fmt.Errorf("error parsing duration, err=%s", err)
 				}
-				data[tfKey] = t.Seconds()
-			} else {
-				data[tfKey] = val
+				val = t.Seconds()
 			}
+
+			data[tfKey] = val
+
 		}
 	}
 

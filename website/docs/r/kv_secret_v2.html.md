@@ -97,8 +97,7 @@ and the `read` capability for drift detection (by default).
 * `delete_version_after` - (Optional) If set, specifies the length of time before
   a version is deleted. Accepts duration in integer seconds.
 
-* `data` - (Optional) A map of arbitrary string to string valued user-provided
-  metadata meant to describe the secret.
+* `data` - (Optional) A string to string map describing the secret.
 
 ## Attributes Reference
 
