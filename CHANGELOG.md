@@ -1,3 +1,17 @@
+## 3.12.0 (January 5, 2023)
+IMPROVEMENTS:
+* Add support for importing the PKI CRL config: ([#1710](https://github.com/hashicorp/terraform-provider-vault/pull/1710))
+* Ensure duplicate alias names are handled properly in LookupEntityAlias: ([#1708](https://github.com/hashicorp/terraform-provider-vault/pull/1708))
+* Add support for a Raft Autopilot State datasource: ([#1705](https://github.com/hashicorp/terraform-provider-vault/pull/1705))
+* Add support for adding metadata to a KV V2 Secret: ([#1687](https://github.com/hashicorp/terraform-provider-vault/pull/1687))
+* Set AWS credentials sensitive: ([#1678](https://github.com/hashicorp/terraform-provider-vault/pull/1678))
+* Set ForceNew on the path field of namespaces: ([#1713](https://github.com/hashicorp/terraform-provider-vault/pull/1713))
+
+BUGS:
+* Fix removed MSGraph param in Azure Secrets: ([#1682](https://github.com/hashicorp/terraform-provider-vault/pull/1682))
+* Fix KV V2 data source when specifying a version: ([#1677](https://github.com/hashicorp/terraform-provider-vault/pull/1677))
+* Ensure that `vault_kv_secret_backend_v2` mount is correctly imported: ([#1701](https://github.com/hashicorp/terraform-provider-vault/pull/1701))
+
 ## 3.11.0 (November 16, 2022)
 IMPROVEMENTS:
 * Add Basic Constraints attribute to vault_pki_secret_backend_intermediate_cert_request: ([#1661](https://github.com/hashicorp/terraform-provider-vault/pull/1661))
