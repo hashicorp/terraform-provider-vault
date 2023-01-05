@@ -34,6 +34,13 @@ resource "vault_kv_secret_v2" "example" {
     foo       = "bar"
   }
   )
+  custom_metadata {
+    max_versions = 5
+    data = {
+      foo = "vault@example.com",
+      bar = "12345"
+    }
+  }
 }
 ```
 
