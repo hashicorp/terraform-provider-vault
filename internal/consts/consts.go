@@ -192,6 +192,11 @@ const (
 	FieldServersJSON                = "servers_json"
 	FieldUpgradeInfo                = "upgrade_info"
 	FieldUpgradeInfoJSON            = "upgrade_info_json"
+	FieldMaxVersions                = "max_versions"
+	FieldCASRequired                = "cas_required"
+	FieldDeleteVersionAfter         = "delete_version_after"
+	FieldCustomMetadata             = "custom_metadata"
+	FieldCustomMetadataJSON         = "custom_metadata_json"
 
 	/*
 		common environment variables
