@@ -46,16 +46,6 @@ func TestAccNamespace(t *testing.T) {
 		CheckDestroy: testNamespaceDestroy(namespacePath),
 		Steps: []resource.TestStep{
 			{
-				Config: testNamespaceConfig(namespacePath),
-				Check:  testNamespaceCheckAttrs(),
-			},
-			{
-				Config: testNamespaceConfig(namespacePath + "-foo"),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_namespace.test", consts.FieldPath, namespacePath+"-foo"),
-					testNamespaceDestroy(namespacePath)),
-			},
-			{
 				Config: testNestedNamespaces(namespacePath, 3),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					append(checks, getNestedChecks(3)...)...,
@@ -93,6 +83,12 @@ func TestAccNamespace(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					append(checks, getNestedChecks(0)...)...,
 				),
+			},
+			{
+				Config: testNestedNamespaces(namespacePath+"-foo", 0),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceNameParent, consts.FieldPath, namespacePath+"-foo"),
+					testNamespaceDestroy(namespacePath)),
 			},
 		},
 	})
