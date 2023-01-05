@@ -23,7 +23,7 @@ resource "vault_mount" "kvv2" {
   description = "KV Version 2 secret engine mount"
 }
 
-resource "vault_kv_secret_v2" "secret" {
+resource "vault_kv_secret_v2" "example" {
   mount                      = vault_mount.kvv2.path
   name                       = "secret"
   cas                        = 1
@@ -69,10 +69,9 @@ The following arguments are supported:
 * `data_json` - (Required) JSON-encoded string that will be
   written as the secret data at the given path.
 
-* `custom_metadata` - (Optional) A nested block containing configuration options for the
-  secret metadata. Refer to the
-  [Vault docs](https://developer.hashicorp.com/vault/api-docs/secret/kv/kv-v2#create-update-metadata)
-  for more info on configuration options.
+* `custom_metadata` - (Optional) A nested block that allows configuring metadata for the
+  KV secret. Refer to the
+  [Configuration Options](#custom-metadata-configuration-options) for more info.
 
 ## Required Vault Capabilities
 
@@ -80,6 +79,19 @@ Use of this resource requires the `create` or `update` capability
 (depending on whether the resource already exists) on the given path,
 the `delete` capability if the resource is removed from configuration,
 and the `read` capability for drift detection (by default).
+
+### Custom Metadata Configuration Options
+
+* `max_versions` - (Optional) The number of versions to keep per key.
+
+* `cas_required` - (Optional) If true, all keys will require the cas
+  parameter to be set on all write requests.
+
+* `delete_version_after` - (Optional) If set, specifies the length of time before
+  a version is deleted. Accepts duration in integer seconds.
+
+* `data` - (Optional) A map of arbitrary string to string valued user-provided
+  metadata meant to describe the secret.
 
 ## Attributes Reference
 
@@ -99,5 +111,5 @@ serialized as JSON.
 KV-V2 secrets can be imported using the `path`, e.g.
 
 ```
-$ terraform import vault_kv_secret_v2.secret kvv2/data/secret
+$ terraform import vault_kv_secret_v2.example kvv2/data/secret
 ```
