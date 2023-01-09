@@ -444,3 +444,84 @@ func TestIsAPISupported(t *testing.T) {
 		})
 	}
 }
+
+func TestIsENTAPISupported(t *testing.T) {
+	rootClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatalf("error initializing root client, err=%s", err)
+	}
+
+	VaultVersion10, err := version.NewVersion("1.10.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	VaultVersion11, err := version.NewVersion("1.11.0+entrandom")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	VaultVersion12, err := version.NewVersion("1.12.0+ent")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []struct {
+		name       string
+		minVersion *version.Version
+		expected   bool
+		meta       interface{}
+	}{
+		{
+			name:       "not-enterprise",
+			minVersion: version.Must(version.NewSemver("1.8.0")),
+			expected:   false,
+			meta: &ProviderMeta{
+				client:       rootClient,
+				vaultVersion: VaultVersion10,
+			},
+		},
+		{
+			name:       "wrong-suffix",
+			minVersion: version.Must(version.NewSemver("1.11.0")),
+			expected:   false,
+			meta: &ProviderMeta{
+				client:       rootClient,
+				vaultVersion: VaultVersion11,
+			},
+		},
+		{
+			name:       "enterprise-supported",
+			minVersion: version.Must(version.NewSemver("1.12.0")),
+			expected:   true,
+			meta: &ProviderMeta{
+				client:       rootClient,
+				vaultVersion: VaultVersion12,
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.meta != nil {
+				m := tt.meta.(*ProviderMeta)
+				m.resourceData = schema.TestResourceDataRaw(t,
+					map[string]*schema.Schema{
+						consts.FieldNamespace: {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+					map[string]interface{}{},
+				)
+				tt.meta = m
+			}
+
+			isTFVersionGreater := tt.meta.(*ProviderMeta).IsEntAPISupported(tt.minVersion)
+
+			if isTFVersionGreater != tt.expected {
+				t.Errorf("IsAPISupported() got = %v, want %v", isTFVersionGreater, tt.expected)
+			}
+		})
+	}
+}

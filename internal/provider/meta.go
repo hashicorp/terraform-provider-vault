@@ -22,7 +22,10 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
-const DefaultMaxHTTPRetries = 2
+const (
+	DefaultMaxHTTPRetries = 2
+	enterpriseSuffix      = "+ent"
+)
 
 var (
 	MaxHTTPRetriesCCC int
@@ -99,6 +102,20 @@ func (p *ProviderMeta) IsAPISupported(minVersion *version.Version) bool {
 		return false
 	}
 	return ver.GreaterThanOrEqual(minVersion)
+}
+
+// IsEntAPISupported receives a minimum version
+// of type *version.Version.
+//
+// It returns a boolean describing whether the
+// ProviderMeta vaultVersion is above the
+// minimum version and supports enterprise
+// features.
+func (p *ProviderMeta) IsEntAPISupported(minVersion *version.Version) bool {
+	ver := p.GetVaultVersion()
+
+	return p.IsAPISupported(minVersion) &&
+		strings.HasSuffix(ver.String(), enterpriseSuffix)
 }
 
 // GetVaultVersion returns the providerMeta
@@ -335,6 +352,22 @@ func IsAPISupported(meta interface{}, minVersion *version.Version) bool {
 	}
 
 	return p.IsAPISupported(minVersion)
+}
+
+// IsEntAPISupported works the same as
+// IsAPISupported, but also confirms that
+// the providerMeta API supports enterprise
+// features.
+func IsEntAPISupported(meta interface{}, minVersion *version.Version) bool {
+	var p *ProviderMeta
+	switch v := meta.(type) {
+	case *ProviderMeta:
+		p = v
+	default:
+		panic(fmt.Sprintf("meta argument must be a %T, not %T", p, meta))
+	}
+
+	return p.IsEntAPISupported(minVersion)
 }
 
 func getVaultVersion(client *api.Client) (*version.Version, error) {
