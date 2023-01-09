@@ -16,7 +16,7 @@ func TestAccRaftAutopilotConfig_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
 		},
 		CheckDestroy: testAccRaftAutopilotConfigCheckDestroy,
