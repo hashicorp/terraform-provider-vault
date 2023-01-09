@@ -71,6 +71,9 @@ func raftAutopilotConfigResource() *schema.Resource {
 		Read:   ReadWrapper(readAutopilotConfigResource),
 		Delete: deleteAutopilotConfigResource,
 		Schema: fields,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 	}
 }
 
@@ -89,18 +92,24 @@ func createOrUpdateAutopilotConfigResource(d *schema.ResourceData, meta interfac
 		"server_stabilization_time",
 	}
 
-	isAPISupported := provider.IsEntAPISupported(meta, provider.VaultVersion111)
-	if isAPISupported {
-		// add relevant enterprise API fields supported after Vault 1.11
-		fields = append(fields, "disable_upgrade_migration")
-	}
-
 	c := map[string]interface{}{}
 
 	for _, k := range fields {
 		if v, ok := d.GetOk(k); ok {
 			c[k] = v
 		}
+	}
+
+	isEnterprise := provider.IsEnterpriseSupported(meta)
+	isAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
+	enterpriseAPIField := "disable_upgrade_migration"
+	val, ok := d.GetOk(enterpriseAPIField)
+
+	if (!isAPISupported || !isEnterprise) && ok {
+		return fmt.Errorf("%s is not supported by "+
+			"this version of vault", enterpriseAPIField)
+	} else if (isAPISupported && isEnterprise) && ok {
+		c[enterpriseAPIField] = val
 	}
 
 	log.Print("[DEBUG] Configuring autopilot")

@@ -445,7 +445,7 @@ func TestIsAPISupported(t *testing.T) {
 	}
 }
 
-func TestIsENTAPISupported(t *testing.T) {
+func TestIsEnterpriseSupported(t *testing.T) {
 	rootClient, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		t.Fatalf("error initializing root client, err=%s", err)
@@ -456,7 +456,7 @@ func TestIsENTAPISupported(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	VaultVersion11, err := version.NewVersion("1.11.0+entrandom")
+	VaultVersion11HSM, err := version.NewVersion("1.11.0+ent.hsm")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -467,33 +467,29 @@ func TestIsENTAPISupported(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name       string
-		minVersion *version.Version
-		expected   bool
-		meta       interface{}
+		name     string
+		expected bool
+		meta     interface{}
 	}{
 		{
-			name:       "not-enterprise",
-			minVersion: version.Must(version.NewSemver("1.8.0")),
-			expected:   false,
+			name:     "not-enterprise",
+			expected: false,
 			meta: &ProviderMeta{
 				client:       rootClient,
 				vaultVersion: VaultVersion10,
 			},
 		},
 		{
-			name:       "wrong-suffix",
-			minVersion: version.Must(version.NewSemver("1.11.0")),
-			expected:   false,
+			name:     "enterprise-hsm",
+			expected: true,
 			meta: &ProviderMeta{
 				client:       rootClient,
-				vaultVersion: VaultVersion11,
+				vaultVersion: VaultVersion11HSM,
 			},
 		},
 		{
-			name:       "enterprise-supported",
-			minVersion: version.Must(version.NewSemver("1.12.0")),
-			expected:   true,
+			name:     "enterprise",
+			expected: true,
 			meta: &ProviderMeta{
 				client:       rootClient,
 				vaultVersion: VaultVersion12,
@@ -517,10 +513,10 @@ func TestIsENTAPISupported(t *testing.T) {
 				tt.meta = m
 			}
 
-			isTFVersionGreater := tt.meta.(*ProviderMeta).IsEntAPISupported(tt.minVersion)
+			isEnterprise := tt.meta.(*ProviderMeta).IsEnterpriseSupported()
 
-			if isTFVersionGreater != tt.expected {
-				t.Errorf("IsAPISupported() got = %v, want %v", isTFVersionGreater, tt.expected)
+			if isEnterprise != tt.expected {
+				t.Errorf("IsEnterpriseSupported() got = %v, want %v", isEnterprise, tt.expected)
 			}
 		})
 	}

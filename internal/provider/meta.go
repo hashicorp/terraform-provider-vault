@@ -24,7 +24,7 @@ import (
 
 const (
 	DefaultMaxHTTPRetries = 2
-	enterpriseSuffix      = "+ent"
+	enterpriseMetadata    = "ent"
 )
 
 var (
@@ -104,18 +104,13 @@ func (p *ProviderMeta) IsAPISupported(minVersion *version.Version) bool {
 	return ver.GreaterThanOrEqual(minVersion)
 }
 
-// IsEntAPISupported receives a minimum version
-// of type *version.Version.
-//
-// It returns a boolean describing whether the
-// ProviderMeta vaultVersion is above the
-// minimum version and supports enterprise
+// IsEnterpriseSupported returns a boolean
+// describing whether the ProviderMeta
+// vaultVersion supports enterprise
 // features.
-func (p *ProviderMeta) IsEntAPISupported(minVersion *version.Version) bool {
+func (p *ProviderMeta) IsEnterpriseSupported() bool {
 	ver := p.GetVaultVersion()
-
-	return p.IsAPISupported(minVersion) &&
-		strings.HasSuffix(ver.String(), enterpriseSuffix)
+	return strings.Contains(ver.Metadata(), enterpriseMetadata)
 }
 
 // GetVaultVersion returns the providerMeta
@@ -354,11 +349,10 @@ func IsAPISupported(meta interface{}, minVersion *version.Version) bool {
 	return p.IsAPISupported(minVersion)
 }
 
-// IsEntAPISupported works the same as
-// IsAPISupported, but also confirms that
+// IsEnterpriseSupported confirms that
 // the providerMeta API supports enterprise
 // features.
-func IsEntAPISupported(meta interface{}, minVersion *version.Version) bool {
+func IsEnterpriseSupported(meta interface{}) bool {
 	var p *ProviderMeta
 	switch v := meta.(type) {
 	case *ProviderMeta:
@@ -367,7 +361,7 @@ func IsEntAPISupported(meta interface{}, minVersion *version.Version) bool {
 		panic(fmt.Sprintf("meta argument must be a %T, not %T", p, meta))
 	}
 
-	return p.IsEntAPISupported(minVersion)
+	return p.IsEnterpriseSupported()
 }
 
 func getVaultVersion(client *api.Client) (*version.Version, error) {
