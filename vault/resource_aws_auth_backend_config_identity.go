@@ -1,40 +1,42 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	"github.com/hashicorp/vault/api"
 )
 
-var (
-	awsAuthBackendConfigIdentityBackendFromPathRegex = regexp.MustCompile("^auth/(.+)/config/identity$")
-)
+var awsAuthBackendConfigIdentityBackendFromPathRegex = regexp.MustCompile("^auth/(.+)/config/identity$")
 
 func awsAuthBackendConfigIdentityResource() *schema.Resource {
 	return &schema.Resource{
-		Create: awsAuthBackendConfigIdentityWrite,
-		Update: awsAuthBackendConfigIdentityWrite,
-		Read:   awsAuthBackendConfigIdentityRead,
-		Delete: awsAuthBackendConfigIdentityDelete,
+		CreateContext: awsAuthBackendConfigIdentityWrite,
+		UpdateContext: awsAuthBackendConfigIdentityWrite,
+		ReadContext:   awsAuthBackendConfigIdentityRead,
+		DeleteContext: awsAuthBackendConfigIdentityDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"iam_alias": {
+			consts.FieldIAMAlias: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "role_id",
 				Description:  "How to generate the identity alias when using the iam auth method.",
 				ValidateFunc: validation.StringInSlice([]string{"role_id", "unique_id", "full_arn"}, false),
 			},
-			"iam_metadata": {
+			consts.FieldIAMMetadata: {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "The metadata to include on the token returned by the login endpoint.",
@@ -42,14 +44,14 @@ func awsAuthBackendConfigIdentityResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ec2_alias": {
+			consts.FieldEC2Alias: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "Configures how to generate the identity alias when using the ec2 auth method.",
 				Default:      "role_id",
 				ValidateFunc: validation.StringInSlice([]string{"role_id", "instance_id", "image_id"}, false),
 			},
-			"ec2_metadata": {
+			consts.FieldEC2Metadata: {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "The metadata to include on the token returned by the login endpoint.",
@@ -57,7 +59,7 @@ func awsAuthBackendConfigIdentityResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Unique name of the auth backend to configure.",
@@ -72,8 +74,11 @@ func awsAuthBackendConfigIdentityResource() *schema.Resource {
 	}
 }
 
-func awsAuthBackendConfigIdentityWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func awsAuthBackendConfigIdentityWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, err := provider.GetClient(d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	var iamMetadata, ec2Metadata []string
 	backend := d.Get("backend").(string)
@@ -97,32 +102,34 @@ func awsAuthBackendConfigIdentityWrite(d *schema.ResourceData, meta interface{})
 	}
 
 	log.Printf("[DEBUG] Writing AWS identity config to %q", path)
-	_, err := client.Logical().Write(path, data)
-
+	_, err = client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error configuring AWS auth identity config %q: %s", path, err)
+		return diag.Errorf("error configuring AWS auth identity config %q: %s", path, err)
 	}
 	d.SetId(path)
 
 	log.Printf("[DEBUG] Wrote AWS identity config to %q", path)
 
-	return awsAuthBackendConfigIdentityRead(d, meta)
+	return awsAuthBackendConfigIdentityRead(ctx, d, meta)
 }
 
-func awsAuthBackendConfigIdentityRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func awsAuthBackendConfigIdentityRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, err := provider.GetClient(d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	path := d.Id()
 
 	backend, err := awsAuthBackendConfigIdentityBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for AWS auth identity config:  %s", path, err)
+		return diag.Errorf("invalid path %q for AWS auth identity config:  %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading identity config %q from AWS auth backend", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading AWS auth backend identity config %q: %s", path, err)
+		return diag.Errorf("error reading AWS auth backend identity config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read identity config %q from AWS auth backend", path)
 	if resp == nil {
@@ -140,7 +147,7 @@ func awsAuthBackendConfigIdentityRead(d *schema.ResourceData, meta interface{}) 
 	return nil
 }
 
-func awsAuthBackendConfigIdentityDelete(d *schema.ResourceData, meta interface{}) error {
+func awsAuthBackendConfigIdentityDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	log.Printf("[DEBUG] Deleting AWS identity config from state file")
 	return nil
 }

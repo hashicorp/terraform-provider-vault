@@ -8,13 +8,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccAwsAuthBackendConfigIdentity_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAwsAuthBackendConfigIdentityDestroy,
 		Steps: []resource.TestStep{
@@ -35,7 +36,7 @@ func TestAccAwsAuthBackendConfigIdentity_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccCheckAwsAuthBackendConfigIdentityDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -51,13 +52,15 @@ func TestAccAwsAuthBackendConfigIdentity_basic(t *testing.T) {
 }
 
 func testAccCheckAwsAuthBackendConfigIdentityDestroy(s *terraform.State) error {
-	config := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_aws_auth_backend_config_identity" {
 			continue
 		}
-		secret, err := config.Logical().Read(rs.Primary.ID)
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("error checking for AWS auth backend %q config: %s", rs.Primary.ID, err)
 		}
@@ -102,8 +105,12 @@ func testAccAwsAuthBackendConfigIdentityCheck_attrs(backend string) resource.Tes
 			return fmt.Errorf("expected ID to be %q, got %q", "auth/"+backend+"/config/identity", endpoint)
 		}
 
-		config := testProvider.Meta().(*api.Client)
-		resp, err := config.Logical().Read(endpoint)
+		client, e := provider.GetClient(instanceState, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
+		resp, err := client.Logical().Read(endpoint)
 		if err != nil {
 			return fmt.Errorf("error reading back AWS auth identity config from %q: %s", endpoint, err)
 		}
