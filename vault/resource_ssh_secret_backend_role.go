@@ -100,6 +100,11 @@ func sshSecretBackendRoleResource() *schema.Resource {
 			Type:     schema.TypeString,
 			Optional: true,
 		},
+		"default_user_template": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+		},
 		"key_id_format": {
 			Type:     schema.TypeString,
 			Optional: true,
@@ -247,6 +252,10 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		data["default_user"] = v.(string)
 	}
 
+	if v, ok := d.GetOk("default_user_template"); ok {
+		data["default_user_template"] = v.(bool)
+	}
+
 	if v, ok := d.GetOk("key_id_format"); ok {
 		data["key_id_format"] = v.(string)
 	}
@@ -363,10 +372,12 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		"allowed_critical_options", "allowed_domains",
 		"cidr_list", "allowed_extensions", "default_extensions",
 		"default_critical_options", "allowed_users_template",
-		"allowed_users", "default_user", "key_id_format",
-		"max_ttl", "ttl", "algorithm_signer",
+		"allowed_users", "default_user_template", "default_user",
+		"key_id_format", "max_ttl", "ttl", "algorithm_signer",
 	}
 
+	// Some fields cannot be read from the API
+	// So... if they drift, they drift.
 	for _, k := range fields {
 		if err := d.Set(k, role.Data[k]); err != nil {
 			return err
