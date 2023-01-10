@@ -16,6 +16,9 @@ func TestAccKVSecretV2(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-kvv2")
 	name := acctest.RandomWithPrefix("tf-secret")
 
+	updatedMount := acctest.RandomWithPrefix("tf-cloud-metadata")
+	updatedName := acctest.RandomWithPrefix("tf-database-creds")
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
@@ -48,6 +51,27 @@ func TestAccKVSecretV2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.pizza", "please"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.delete_version_after", "0"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.max_versions", "5"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"data_json", "disable_read",
+					"delete_all_versions", "cas",
+				},
+			},
+			{
+				Config: testKVSecretV2Config_initial(updatedMount, updatedName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, updatedMount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, updatedName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", updatedMount, updatedName)),
+					resource.TestCheckResourceAttr(resourceName, "delete_all_versions", "true"),
+					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
+					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
 				),
 			},
 			{
