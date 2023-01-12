@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"golang.org/x/oauth2/google"
@@ -32,6 +33,7 @@ func TestGCPSecretImpersonatedAccount(t *testing.T) {
 
 	noBindings := testGCPSecretImpersonatedAccount_accessToken(backend, impersonatedAccount, credentials, serviceAccountEmail)
 
+	resourceName := "vault_gcp_secret_impersonated_account.test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -41,12 +43,12 @@ func TestGCPSecretImpersonatedAccount(t *testing.T) {
 				Config: noBindings,
 				Check: resource.ComposeTestCheckFunc(
 					testGCPSecretImpersonatedAccount_attrs(backend, impersonatedAccount),
-					resource.TestCheckResourceAttr("vault_gcp_secret_impersonated_account.test", "backend", backend),
-					resource.TestCheckResourceAttr("vault_gcp_secret_impersonated_account.test", "impersonated_account", impersonatedAccount),
-					resource.TestCheckResourceAttr("vault_gcp_secret_impersonated_account.test", "service_account_email", serviceAccountEmail),
-					resource.TestCheckResourceAttr("vault_gcp_secret_impersonated_account.test", "service_account_project", project),
-					resource.TestCheckResourceAttr("vault_gcp_secret_impersonated_account.test", "token_scopes.#", "1"),
-					resource.TestCheckResourceAttr("vault_gcp_secret_impersonated_account.test", "token_scopes.0", "https://www.googleapis.com/auth/cloud-platform"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, "impersonated_account", impersonatedAccount),
+					resource.TestCheckResourceAttr(resourceName, "service_account_email", serviceAccountEmail),
+					resource.TestCheckResourceAttr(resourceName, "service_account_project", project),
+					resource.TestCheckResourceAttr(resourceName, "token_scopes.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "token_scopes.0", "https://www.googleapis.com/auth/cloud-platform"),
 				),
 			},
 			{
