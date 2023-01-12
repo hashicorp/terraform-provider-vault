@@ -59,7 +59,7 @@ func TestAccKVSecretV2(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"data_json", "disable_read",
-					"delete_all_versions", "cas",
+					"delete_all_versions",
 				},
 			},
 			{
@@ -80,7 +80,7 @@ func TestAccKVSecretV2(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"data_json", "disable_read",
-					"delete_all_versions", "cas",
+					"delete_all_versions",
 				},
 			},
 		},

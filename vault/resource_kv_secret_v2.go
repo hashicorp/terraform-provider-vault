@@ -225,24 +225,24 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 		return diag.FromErr(err)
 	}
 
+	// id should be of the form "mount/data/name"
+	// limit substrings to 3 in case name has '/'
+	// in it or if it's a nested secret
+	parsedPath := strings.SplitN(path, "/", 3)
+
+	mount := parsedPath[0]
+	name := parsedPath[2]
+
+	// Set mount and name fields
+	if err := d.Set(consts.FieldMount, mount); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldName, name); err != nil {
+		return diag.FromErr(err)
+	}
+
 	if shouldRead {
-		parsedPath := strings.Split(path, "/")
-		if len(parsedPath) != 3 {
-			// id should be of the form "mount/data/name"
-			return diag.Errorf("malformed resource id")
-		}
-
-		mount := parsedPath[0]
-		name := parsedPath[2]
-
-		// Set mount and name fields
-		if err := d.Set(consts.FieldMount, mount); err != nil {
-			return diag.FromErr(err)
-		}
-
-		if err := d.Set(consts.FieldName, name); err != nil {
-			return diag.FromErr(err)
-		}
 
 		client, e := provider.GetClient(d, meta)
 		if e != nil {
