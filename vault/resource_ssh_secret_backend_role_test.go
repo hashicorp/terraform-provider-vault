@@ -153,8 +153,10 @@ func TestAccSSHSecretBackendRole_template(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "name", name),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "backend", backend),
 					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user", "ssh-{{identity.entity.id}}-user"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user_template", "true"),
 				),
 			},
+			testutil.GetImportTestStep("vault_ssh_secret_backend_role.test_role", false, nil),
 		},
 	})
 }
