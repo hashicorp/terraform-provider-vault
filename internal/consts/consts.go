@@ -194,6 +194,8 @@ const (
 	FieldUpgradeInfoJSON            = "upgrade_info_json"
 	FieldMaxVersions                = "max_versions"
 	FieldCASRequired                = "cas_required"
+	FieldCAS                        = "cas"
+	FieldOptions                    = "options"
 	FieldDeleteVersionAfter         = "delete_version_after"
 	FieldCustomMetadata             = "custom_metadata"
 	FieldCustomMetadataJSON         = "custom_metadata_json"

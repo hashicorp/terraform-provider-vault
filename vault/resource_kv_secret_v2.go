@@ -184,13 +184,14 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 		return diag.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
 	}
 
-	data := map[string]interface{}{
-		"data": secretData,
+	options := d.Get(consts.FieldOptions).(map[string]interface{})
+	if _, isSet := options["cas"]; !isSet {
+		options["cas"] = d.Get(consts.FieldCAS)
 	}
 
-	kvFields := []string{"cas", "options"}
-	for _, k := range kvFields {
-		data[k] = d.Get(k)
+	data := map[string]interface{}{
+		"data":    secretData,
+		"options": options,
 	}
 
 	if _, err := client.Logical().Write(path, data); err != nil {
