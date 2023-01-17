@@ -159,7 +159,7 @@ func TestAccSSHSecretBackendRole_template(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "default_user_template", "true"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "default_user_template"),
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
