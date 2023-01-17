@@ -375,6 +375,10 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		"key_id_format", "max_ttl", "ttl", "algorithm_signer",
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		fields = append(fields, []string{"default_user_template"}...)
+	}
+
 	// cidr_list cannot be read from the API
 	// So... if they drift, they drift.
 	for _, k := range fields {

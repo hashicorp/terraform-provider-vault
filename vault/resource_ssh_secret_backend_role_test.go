@@ -143,9 +143,13 @@ func TestAccSSHSecretBackendRole_template(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test/ssh")
 	name := acctest.RandomWithPrefix("tf-test-role")
 	resourceName := "vault_ssh_secret_backend_role.test_role"
+
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers: testProviders,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+		},
 		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
