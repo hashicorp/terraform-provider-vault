@@ -373,8 +373,8 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		"allowed_critical_options", "allowed_domains",
 		"cidr_list", "allowed_extensions", "default_extensions",
 		"default_critical_options", "allowed_users_template",
-		"allowed_users", "default_user_template", "default_user",
-		"key_id_format", "max_ttl", "ttl", "algorithm_signer",
+		"allowed_users", "default_user", "key_id_format",
+		"max_ttl", "ttl", "algorithm_signer",
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
