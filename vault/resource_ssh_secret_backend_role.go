@@ -251,8 +251,10 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		data["default_user"] = v.(string)
 	}
 
-	if v, ok := d.GetOk("default_user_template"); ok {
-		data["default_user_template"] = v.(bool)
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if v, ok := d.GetOk("default_user_template"); ok {
+			data["default_user_template"] = v.(bool)
+		}
 	}
 
 	if v, ok := d.GetOk("key_id_format"); ok {
@@ -380,7 +382,7 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// cidr_list cannot be read from the API
-	// So... if they drift, they drift.
+	// potential for drift here
 	for _, k := range fields {
 		if err := d.Set(k, role.Data[k]); err != nil {
 			return err
