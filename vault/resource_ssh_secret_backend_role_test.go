@@ -142,6 +142,7 @@ func TestAccSSHSecretBackendRoleOTP_basic(t *testing.T) {
 func TestAccSSHSecretBackendRole_template(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test/ssh")
 	name := acctest.RandomWithPrefix("tf-test-role")
+	resourceName := "vault_ssh_secret_backend_role.test_role"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -150,13 +151,13 @@ func TestAccSSHSecretBackendRole_template(t *testing.T) {
 			{
 				Config: testAccSSHSecretBackendRoleConfig_template(name, backend),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "name", name),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "backend", backend),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user", "ssh-{{identity.entity.id}}-user"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user_template", "true"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "default_user", "ssh-{{identity.entity.id}}-user"),
+					resource.TestCheckResourceAttr(resourceName, "default_user_template", "true"),
 				),
 			},
-			testutil.GetImportTestStep("vault_ssh_secret_backend_role.test_role", false, nil),
+			testutil.GetImportTestStep(resourceName, false, nil, "default_user_template"),
 		},
 	})
 }
