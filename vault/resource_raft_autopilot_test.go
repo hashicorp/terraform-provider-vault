@@ -13,10 +13,12 @@ import (
 )
 
 func TestAccRaftAutopilotConfig_basic(t *testing.T) {
+	resourceName := "vault_raft_autopilot.test"
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
 		},
 		CheckDestroy: testAccRaftAutopilotConfigCheckDestroy,
@@ -24,27 +26,28 @@ func TestAccRaftAutopilotConfig_basic(t *testing.T) {
 			{
 				Config: testAccRaftAutopilotConfig_basic(true, "12h0m0s", 3),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "cleanup_dead_servers", "true"),
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "dead_server_last_contact_threshold", "12h0m0s"),
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "last_contact_threshold", autopilotDefaults["last_contact_threshold"].(string)),
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "max_trailing_logs", strconv.Itoa(autopilotDefaults["max_trailing_logs"].(int))),
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "min_quorum", strconv.Itoa(autopilotDefaults["min_quorum"].(int))),
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "server_stabilization_time", autopilotDefaults["server_stabilization_time"].(string)),
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "disable_upgrade_migration", "false"),
+					resource.TestCheckResourceAttr(resourceName, "cleanup_dead_servers", "true"),
+					resource.TestCheckResourceAttr(resourceName, "dead_server_last_contact_threshold", "12h0m0s"),
+					resource.TestCheckResourceAttr(resourceName, "last_contact_threshold", autopilotDefaults["last_contact_threshold"].(string)),
+					resource.TestCheckResourceAttr(resourceName, "max_trailing_logs", strconv.Itoa(autopilotDefaults["max_trailing_logs"].(int))),
+					resource.TestCheckResourceAttr(resourceName, "min_quorum", strconv.Itoa(autopilotDefaults["min_quorum"].(int))),
+					resource.TestCheckResourceAttr(resourceName, "server_stabilization_time", autopilotDefaults["server_stabilization_time"].(string)),
+					resource.TestCheckResourceAttr(resourceName, "disable_upgrade_migration", "false"),
 				),
 			},
 			{
 				Config: testAccRaftAutopilotConfig_updated(true, true, "30s", "20s", "50s", 100, 5),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "cleanup_dead_servers", "true"),
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "dead_server_last_contact_threshold", "30s"),
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "last_contact_threshold", "20s"),
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "max_trailing_logs", "100"),
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "min_quorum", "5"),
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "server_stabilization_time", "50s"),
-					resource.TestCheckResourceAttr("vault_raft_autopilot.test", "disable_upgrade_migration", "true"),
+					resource.TestCheckResourceAttr(resourceName, "cleanup_dead_servers", "true"),
+					resource.TestCheckResourceAttr(resourceName, "dead_server_last_contact_threshold", "30s"),
+					resource.TestCheckResourceAttr(resourceName, "last_contact_threshold", "20s"),
+					resource.TestCheckResourceAttr(resourceName, "max_trailing_logs", "100"),
+					resource.TestCheckResourceAttr(resourceName, "min_quorum", "5"),
+					resource.TestCheckResourceAttr(resourceName, "server_stabilization_time", "50s"),
+					resource.TestCheckResourceAttr(resourceName, "disable_upgrade_migration", "true"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
