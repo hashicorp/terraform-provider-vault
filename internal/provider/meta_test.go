@@ -444,3 +444,80 @@ func TestIsAPISupported(t *testing.T) {
 		})
 	}
 }
+
+func TestIsEnterpriseSupported(t *testing.T) {
+	rootClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatalf("error initializing root client, err=%s", err)
+	}
+
+	VaultVersion10, err := version.NewVersion("1.10.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	VaultVersion11HSM, err := version.NewVersion("1.11.0+ent.hsm")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	VaultVersion12, err := version.NewVersion("1.12.0+ent")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []struct {
+		name     string
+		expected bool
+		meta     interface{}
+	}{
+		{
+			name:     "not-enterprise",
+			expected: false,
+			meta: &ProviderMeta{
+				client:       rootClient,
+				vaultVersion: VaultVersion10,
+			},
+		},
+		{
+			name:     "enterprise-hsm",
+			expected: true,
+			meta: &ProviderMeta{
+				client:       rootClient,
+				vaultVersion: VaultVersion11HSM,
+			},
+		},
+		{
+			name:     "enterprise",
+			expected: true,
+			meta: &ProviderMeta{
+				client:       rootClient,
+				vaultVersion: VaultVersion12,
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.meta != nil {
+				m := tt.meta.(*ProviderMeta)
+				m.resourceData = schema.TestResourceDataRaw(t,
+					map[string]*schema.Schema{
+						consts.FieldNamespace: {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+					map[string]interface{}{},
+				)
+				tt.meta = m
+			}
+
+			isEnterprise := tt.meta.(*ProviderMeta).IsEnterpriseSupported()
+
+			if isEnterprise != tt.expected {
+				t.Errorf("IsEnterpriseSupported() got = %v, want %v", isEnterprise, tt.expected)
+			}
+		})
+	}
+}

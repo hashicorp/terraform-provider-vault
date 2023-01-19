@@ -18,7 +18,6 @@ var (
 		"max_trailing_logs":                  1000,
 		"min_quorum":                         3,
 		"server_stabilization_time":          "10s",
-		"disable_upgrade_migration":          false,
 	}
 )
 
@@ -63,7 +62,6 @@ func raftAutopilotConfigResource() *schema.Resource {
 		"disable_upgrade_migration": {
 			Type:        schema.TypeBool,
 			Description: "Disables automatically upgrading Vault using autopilot. (Enterprise-only)",
-			Default:     autopilotDefaults["disable_upgrade_migration"],
 			Optional:    true,
 		},
 	}
@@ -73,6 +71,9 @@ func raftAutopilotConfigResource() *schema.Resource {
 		Read:   ReadWrapper(readAutopilotConfigResource),
 		Delete: deleteAutopilotConfigResource,
 		Schema: fields,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 	}
 }
 
@@ -82,14 +83,33 @@ func createOrUpdateAutopilotConfigResource(d *schema.ResourceData, meta interfac
 		return e
 	}
 
-	c := map[string]interface{}{
-		"cleanup_dead_servers":               d.Get("cleanup_dead_servers").(bool),
-		"last_contact_threshold":             d.Get("last_contact_threshold").(string),
-		"dead_server_last_contact_threshold": d.Get("dead_server_last_contact_threshold").(string),
-		"max_trailing_logs":                  d.Get("max_trailing_logs").(int),
-		"min_quorum":                         d.Get("min_quorum").(int),
-		"server_stabilization_time":          d.Get("server_stabilization_time").(string),
-		"disable_upgrade_migration":          d.Get("disable_upgrade_migration").(bool),
+	fields := []string{
+		"cleanup_dead_servers",
+		"last_contact_threshold",
+		"dead_server_last_contact_threshold",
+		"max_trailing_logs",
+		"min_quorum",
+		"server_stabilization_time",
+	}
+
+	c := map[string]interface{}{}
+
+	for _, k := range fields {
+		if v, ok := d.GetOk(k); ok {
+			c[k] = v
+		}
+	}
+
+	isEnterprise := provider.IsEnterpriseSupported(meta)
+	isAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
+	enterpriseAPIField := "disable_upgrade_migration"
+	val, ok := d.GetOk(enterpriseAPIField)
+
+	if (!isAPISupported || !isEnterprise) && ok {
+		return fmt.Errorf("%s is not supported by "+
+			"this version of vault", enterpriseAPIField)
+	} else if (isAPISupported && isEnterprise) && ok {
+		c[enterpriseAPIField] = val
 	}
 
 	log.Print("[DEBUG] Configuring autopilot")
