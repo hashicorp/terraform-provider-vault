@@ -716,6 +716,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 	}
 
 	username := parsedURL.User.Username()
+	password, _ := parsedURL.User.Password()
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEnginePostgres.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
@@ -726,7 +727,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, userTempl, parsedURL),
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, userTempl, username, password, parsedURL),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -739,6 +740,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_idle_connections", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.max_connection_lifetime", "0"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password", password),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.disable_escaping", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", userTempl),
 				),
@@ -1445,9 +1447,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, connURL, username, password)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_postgresql(name, path, userTempl string, parsedURL *url.URL) string {
-	password, _ := parsedURL.User.Password()
-
+func testAccDatabaseSecretBackendConnectionConfig_postgresql(name, path, userTempl, username, password string, parsedURL *url.URL) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1468,7 +1468,7 @@ resource "vault_database_secret_backend_connection" "test" {
       disable_escaping  = true
   }
 }
-`, path, name, parsedURL.String(), parsedURL.User.Username(), password, userTempl)
+`, path, name, parsedURL.String(), username, password, userTempl)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_snowflake(name, path, url, username, password, userTempl string) string {
