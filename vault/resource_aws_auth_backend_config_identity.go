@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 var awsAuthBackendConfigIdentityBackendFromPathRegex = regexp.MustCompile("^auth/(.+)/config/identity$")
@@ -25,7 +24,7 @@ func awsAuthBackendConfigIdentityResource() *schema.Resource {
 		ReadContext:   awsAuthBackendConfigIdentityRead,
 		DeleteContext: awsAuthBackendConfigIdentityDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -80,11 +79,9 @@ func awsAuthBackendConfigIdentityWrite(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	var iamMetadata, ec2Metadata []string
 	backend := d.Get("backend").(string)
-	iamAlias := d.Get("iam_alias").(string)
-	ec2Alias := d.Get("ec2_alias").(string)
 
+	var iamMetadata, ec2Metadata []string
 	if iamMetadataConfig, ok := d.GetOk("iam_metadata"); ok {
 		iamMetadata = util.TerraformSetToStringArray(iamMetadataConfig)
 	}
@@ -93,13 +90,20 @@ func awsAuthBackendConfigIdentityWrite(ctx context.Context, d *schema.ResourceDa
 		ec2Metadata = util.TerraformSetToStringArray(ec2MetadataConfig)
 	}
 
-	path := awsAuthBackendConfigIdentityPath(backend)
 	data := map[string]interface{}{
-		"iam_alias":    iamAlias,
 		"iam_metadata": iamMetadata,
-		"ec2_alias":    ec2Alias,
 		"ec2_metadata": ec2Metadata,
 	}
+
+	fields := []string{
+		"iam_alias",
+		"ec2_alias",
+	}
+	for _, k := range fields {
+		data[k] = d.Get(k)
+	}
+
+	path := awsAuthBackendConfigIdentityPath(backend)
 
 	log.Printf("[DEBUG] Writing AWS identity config to %q", path)
 	_, err = client.Logical().Write(path, data)
@@ -138,11 +142,20 @@ func awsAuthBackendConfigIdentityRead(_ context.Context, d *schema.ResourceData,
 		return nil
 	}
 
-	d.Set("iam_alias", resp.Data["iam_alias"])
-	d.Set("iam_metadata", resp.Data["iam_metadata"])
-	d.Set("ec2_alias", resp.Data["ec2_alias"])
-	d.Set("ec2_metadata", resp.Data["ec2_metadata"])
-	d.Set("backend", backend)
+	fields := []string{
+		"iam_alias",
+		"iam_metadata",
+		"ec2_alias",
+		"ec2_metadata",
+	}
+	for _, k := range fields {
+		if err := d.Set(k, resp.Data[k]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if err := d.Set("backend", backend); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
@@ -150,20 +163,6 @@ func awsAuthBackendConfigIdentityRead(_ context.Context, d *schema.ResourceData,
 func awsAuthBackendConfigIdentityDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	log.Printf("[DEBUG] Deleting AWS identity config from state file")
 	return nil
-}
-
-func awsAuthBackendConfigIdentityExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-
-	path := d.Id()
-
-	log.Printf("[DEBUG] Checking if identity config %q exists in AWS auth backend", path)
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking for existence of AWS auth backend identity config %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if identity config %q exists in AWS auth backend", path)
-	return resp != nil, nil
 }
 
 func awsAuthBackendConfigIdentityPath(backend string) string {

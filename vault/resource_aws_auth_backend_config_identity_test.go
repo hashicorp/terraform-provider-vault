@@ -12,8 +12,9 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccAwsAuthBackendConfigIdentity_import(t *testing.T) {
+func TestAccAwsAuthBackendConfigIdentity(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
+	resourceName := "vault_aws_auth_backend_config_identity.config"
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
@@ -21,32 +22,30 @@ func TestAccAwsAuthBackendConfigIdentity_import(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAwsAuthBackendConfigIdentity_basic(backend),
-				Check:  testAccAwsAuthBackendConfigIdentityCheck_attrs(backend),
-			},
-			{
-				ResourceName:      "vault_aws_auth_backend_config_identity.config",
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
-func TestAccAwsAuthBackendConfigIdentity_basic(t *testing.T) {
-	backend := acctest.RandomWithPrefix("aws")
-	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccCheckAwsAuthBackendConfigIdentityDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccAwsAuthBackendConfigIdentity_basic(backend),
-				Check:  testAccAwsAuthBackendConfigIdentityCheck_attrs(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "iam_alias", "unique_id"),
+					resource.TestCheckResourceAttr(resourceName, "iam_metadata.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "iam_metadata.0", "client_arn"),
+					resource.TestCheckResourceAttr(resourceName, "iam_metadata.1", "inferred_aws_region"),
+					resource.TestCheckResourceAttr(resourceName, "ec2_alias", "role_id"),
+					resource.TestCheckResourceAttr(resourceName, "ec2_metadata.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "ec2_metadata.0", "account_id"),
+					resource.TestCheckResourceAttr(resourceName, "ec2_metadata.1", "auth_type"),
+				),
 			},
 			{
 				Config: testAccAwsAuthBackendConfigIdentity_updated(backend),
-				Check:  testAccAwsAuthBackendConfigIdentityCheck_attrs(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "iam_alias", "full_arn"),
+					resource.TestCheckResourceAttr(resourceName, "iam_metadata.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "iam_metadata.0", "client_user_id"),
+					resource.TestCheckResourceAttr(resourceName, "ec2_alias", "role_id"),
+					resource.TestCheckResourceAttr(resourceName, "ec2_metadata.#", "0"),
+				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
@@ -83,6 +82,7 @@ resource "vault_aws_auth_backend_config_identity" "config" {
   backend = vault_auth_backend.aws.path
   iam_alias = "unique_id"
   iam_metadata = ["inferred_aws_region", "client_arn"]
+  ec2_metadata = ["account_id", "auth_type"]
 }
 `, backend)
 }
