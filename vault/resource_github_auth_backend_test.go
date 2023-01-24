@@ -80,7 +80,6 @@ func TestAccGithubAuthBackend_ns(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
 			testutil.TestEntPreCheck(t)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
