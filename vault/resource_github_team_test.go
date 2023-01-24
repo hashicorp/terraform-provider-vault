@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"regexp"
-	"strconv"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -129,7 +128,7 @@ func testAccGithubTeamConfig_basic(backend string, team string, policies []strin
 resource "vault_github_auth_backend" "gh" {
 	path = "%s"
 	organization = "hashicorp"
-	organization_id = "%s"
+	organization_id = %d
 }
 
 resource "vault_github_team" "team" {
@@ -137,5 +136,5 @@ resource "vault_github_team" "team" {
 	team = "%s"
 	policies = %s
 }
-`, backend, strconv.Itoa(testGHOrgID), team, p)
+`, backend, testGHOrgID, team, p)
 }

@@ -78,8 +78,11 @@ func TestAccGithubAuthBackend_ns(t *testing.T) {
 	var resAuth api.AuthMount
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers: testProviders,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
+		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
@@ -325,10 +328,11 @@ resource "vault_github_auth_backend" "test" {
   namespace     = vault_namespace.test.path
   path          = "%s"
   organization  = "%s"
+  organization_id = %d
   token_ttl     = 1200
   token_max_ttl = 3000
 }
-`, ns, path, org)
+`, ns, path, org, testGHOrgID)
 
 	return config
 }
@@ -350,7 +354,8 @@ func testAccGithubAuthBackendConfig_tuning(path string) string {
 resource "vault_github_auth_backend" "test" {
   	path = "%s"
   	organization = "%s"
-  
+    organization_id = %d
+
   	tune {
 		default_lease_ttl = "10m"
 		max_lease_ttl = "20m"
@@ -362,7 +367,7 @@ resource "vault_github_auth_backend" "test" {
 		token_type = "batch"
 	}
 }
-`, path, testGHOrg)
+`, path, testGHOrg, testGHOrgID)
 }
 
 func testAccGithubAuthBackendConfig_tuningUpdated(path string) string {
@@ -370,7 +375,8 @@ func testAccGithubAuthBackendConfig_tuningUpdated(path string) string {
 resource "vault_github_auth_backend" "test" {
   	path = "%s"
 	organization = "%s"
-  
+    organization_id = %d
+
   	tune {
 		default_lease_ttl = "50m"
 		max_lease_ttl = "1h10m"
@@ -381,7 +387,7 @@ resource "vault_github_auth_backend" "test" {
 		token_type = "default-batch"
 	}
 }
-`, path, testGHOrg)
+`, path, testGHOrg, testGHOrgID)
 }
 
 func testAccGithubAuthBackendConfig_description(path, org, description string) string {
@@ -389,7 +395,8 @@ func testAccGithubAuthBackendConfig_description(path, org, description string) s
 resource "vault_github_auth_backend" "test" {
 	path = "%s"
 	organization = "%s"
-	description = "%s"  
+	organization_id = %d
+	description = "%s"
 }
-`, path, org, description)
+`, path, org, testGHOrgID, description)
 }
