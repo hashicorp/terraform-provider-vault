@@ -302,6 +302,8 @@ func (c *ghRESTClient) do(method, path string, v interface{}) error {
 		return fmt.Errorf("invalid response for req=%#v, resp=%#v", req, resp)
 	}
 
+	fmt.Println("x-ratelimit-limit")
+	fmt.Println(resp.Header["x-ratelimit-limit"])
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
