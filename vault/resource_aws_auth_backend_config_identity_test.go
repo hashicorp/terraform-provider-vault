@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"strconv"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -85,66 +84,6 @@ resource "vault_aws_auth_backend_config_identity" "config" {
   ec2_metadata = ["account_id", "auth_type"]
 }
 `, backend)
-}
-
-func testAccAwsAuthBackendConfigIdentityCheck_attrs(backend string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_aws_auth_backend_config_identity.config"]
-		if resourceState == nil {
-			return fmt.Errorf("resource not found in state")
-		}
-
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("resource has no primary instance")
-		}
-
-		endpoint := instanceState.ID
-
-		if endpoint != "auth/"+backend+"/config/identity" {
-			return fmt.Errorf("expected ID to be %q, got %q", "auth/"+backend+"/config/identity", endpoint)
-		}
-
-		client, e := provider.GetClient(instanceState, testProvider.Meta())
-		if e != nil {
-			return e
-		}
-
-		resp, err := client.Logical().Read(endpoint)
-		if err != nil {
-			return fmt.Errorf("error reading back AWS auth identity config from %q: %s", endpoint, err)
-		}
-		if resp == nil {
-			return fmt.Errorf("AWS auth not configured at %q", endpoint)
-		}
-		attrs := map[string]string{
-			"iam_alias":    "iam_alias",
-			"iam_metadata": "iam_metadata",
-			"ec2_alias":    "ec2_alias",
-			"ec2_metadata": "ec2_metadata",
-		}
-		for stateAttr, apiAttr := range attrs {
-			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {
-				continue
-			}
-
-			if stateStringVal, ok := instanceState.Attributes[stateAttr]; ok {
-				if resp.Data[apiAttr] != stateStringVal {
-					return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, stateStringVal, resp.Data[apiAttr])
-				}
-			} else if listLength, ok := instanceState.Attributes[stateAttr+".#"]; ok {
-				compLen, _ := strconv.Atoi(listLength)
-				for i := 0; i < compLen; i++ {
-					stateVal := instanceState.Attributes[fmt.Sprintf("%s.%d", stateAttr, i)]
-					respVal := resp.Data[apiAttr].([]interface{})[i]
-					if respVal != stateVal {
-						return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, stateVal, respVal)
-					}
-				}
-			}
-		}
-		return nil
-	}
 }
 
 func testAccAwsAuthBackendConfigIdentity_updated(backend string) string {

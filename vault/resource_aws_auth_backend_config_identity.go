@@ -79,25 +79,25 @@ func awsAuthBackendConfigIdentityWrite(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	backend := d.Get("backend").(string)
+	backend := d.Get(consts.FieldBackend).(string)
 
 	var iamMetadata, ec2Metadata []string
-	if iamMetadataConfig, ok := d.GetOk("iam_metadata"); ok {
+	if iamMetadataConfig, ok := d.GetOk(consts.FieldIAMMetadata); ok {
 		iamMetadata = util.TerraformSetToStringArray(iamMetadataConfig)
 	}
 
-	if ec2MetadataConfig, ok := d.GetOk("ec2_metadata"); ok {
+	if ec2MetadataConfig, ok := d.GetOk(consts.FieldEC2Metadata); ok {
 		ec2Metadata = util.TerraformSetToStringArray(ec2MetadataConfig)
 	}
 
 	data := map[string]interface{}{
-		"iam_metadata": iamMetadata,
-		"ec2_metadata": ec2Metadata,
+		consts.FieldIAMMetadata: iamMetadata,
+		consts.FieldEC2Metadata: ec2Metadata,
 	}
 
 	fields := []string{
-		"iam_alias",
-		"ec2_alias",
+		consts.FieldIAMAlias,
+		consts.FieldEC2Alias,
 	}
 	for _, k := range fields {
 		data[k] = d.Get(k)
@@ -143,17 +143,17 @@ func awsAuthBackendConfigIdentityRead(_ context.Context, d *schema.ResourceData,
 	}
 
 	fields := []string{
-		"iam_alias",
-		"iam_metadata",
-		"ec2_alias",
-		"ec2_metadata",
+		consts.FieldIAMAlias,
+		consts.FieldIAMMetadata,
+		consts.FieldEC2Alias,
+		consts.FieldEC2Metadata,
 	}
 	for _, k := range fields {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return diag.FromErr(err)
 		}
 	}
-	if err := d.Set("backend", backend); err != nil {
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
 		return diag.FromErr(err)
 	}
 
