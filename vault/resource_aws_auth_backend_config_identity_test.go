@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -22,26 +23,26 @@ func TestAccAwsAuthBackendConfigIdentity(t *testing.T) {
 			{
 				Config: testAccAwsAuthBackendConfigIdentity_basic(backend),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "iam_alias", "unique_id"),
-					resource.TestCheckResourceAttr(resourceName, "iam_metadata.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "iam_metadata.0", "client_arn"),
-					resource.TestCheckResourceAttr(resourceName, "iam_metadata.1", "inferred_aws_region"),
-					resource.TestCheckResourceAttr(resourceName, "ec2_alias", "role_id"),
-					resource.TestCheckResourceAttr(resourceName, "ec2_metadata.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "ec2_metadata.0", "account_id"),
-					resource.TestCheckResourceAttr(resourceName, "ec2_metadata.1", "auth_type"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMAlias, "unique_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMMetadata+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMMetadata+".0", "client_arn"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMMetadata+".1", "inferred_aws_region"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEC2Alias, "role_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEC2Metadata+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEC2Metadata+".0", "account_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEC2Metadata+".1", "auth_type"),
 				),
 			},
 			{
 				Config: testAccAwsAuthBackendConfigIdentity_updated(backend),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "iam_alias", "full_arn"),
-					resource.TestCheckResourceAttr(resourceName, "iam_metadata.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "iam_metadata.0", "client_user_id"),
-					resource.TestCheckResourceAttr(resourceName, "ec2_alias", "role_id"),
-					resource.TestCheckResourceAttr(resourceName, "ec2_metadata.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMAlias, "full_arn"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMMetadata+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMMetadata+".0", "client_user_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEC2Alias, "role_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEC2Metadata+".#", "0"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil),
