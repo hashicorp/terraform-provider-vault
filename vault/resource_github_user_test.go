@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -18,13 +19,17 @@ func TestAccGithubUser_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_github_user.user"
 	user := "john_doe"
+
+	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
+	orgID := strconv.Itoa(orgMeta.ID)
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccGithubUserCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGithubUserConfig_basic(backend, user, []string{"admin", "security"}),
+				Config: testAccGithubUserConfig_basic(backend, user, orgID, []string{"admin", "security"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/map/users/"+user),
 					resource.TestCheckResourceAttr(resName, "backend", backend),
@@ -35,7 +40,7 @@ func TestAccGithubUser_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccGithubUserConfig_basic(backend, user, []string{}),
+				Config: testAccGithubUserConfig_basic(backend, user, orgID, []string{}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/map/users/"+user),
 					resource.TestCheckResourceAttr(resName, "backend", backend),
@@ -51,12 +56,16 @@ func TestAccGithubUser_importBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("github")
 	resName := "vault_github_user.user"
 	user := "import"
+
+	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
+	orgID := strconv.Itoa(orgMeta.ID)
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGithubUserConfig_basic(backend, user, []string{"security", "admin"}),
+				Config: testAccGithubUserConfig_basic(backend, user, orgID, []string{"security", "admin"}),
 			},
 			{
 				ResourceName:      resName,
@@ -102,12 +111,13 @@ func testAccGithubUserCheckDestroy(s *terraform.State) error {
 	return fmt.Errorf("Github user resource still exists")
 }
 
-func testAccGithubUserConfig_basic(backend string, user string, policies []string) string {
+func testAccGithubUserConfig_basic(backend, user, orgID string, policies []string) string {
 	p, _ := json.Marshal(policies)
 	return fmt.Sprintf(`
 resource "vault_github_auth_backend" "gh" {
 	path = "%s"
 	organization = "hashicorp"
+	organization_id = "%s"
 }
 
 resource "vault_github_user" "user" {
@@ -115,5 +125,5 @@ resource "vault_github_user" "user" {
 	user = "%s"
 	policies = %s
 }
-`, backend, user, p)
+`, backend, orgID, user, p)
 }
