@@ -21,16 +21,13 @@ func TestAccGithubTeam_basic(t *testing.T) {
 	resName := "vault_github_team.team"
 	team := "my-team-slugified"
 
-	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
-	orgID := strconv.Itoa(orgMeta.ID)
-
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccGithubTeamCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGithubTeamConfig_basic(backend, team, orgID, []string{"admin", "security"}),
+				Config: testAccGithubTeamConfig_basic(backend, team, []string{"admin", "security"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/map/teams/"+team),
 					resource.TestCheckResourceAttr(resName, "backend", backend),
@@ -41,7 +38,7 @@ func TestAccGithubTeam_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccGithubTeamConfig_basic(backend, team, orgID, []string{}),
+				Config: testAccGithubTeamConfig_basic(backend, team, []string{}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/map/teams/"+team),
 					resource.TestCheckResourceAttr(resName, "backend", backend),
@@ -57,16 +54,13 @@ func TestAccGithubTeam_teamConfigError(t *testing.T) {
 	backend := acctest.RandomWithPrefix("github")
 	team := "Team With Spaces"
 
-	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
-	orgID := strconv.Itoa(orgMeta.ID)
-
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccGithubTeamCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccGithubTeamConfig_basic(backend, team, orgID, []string{}),
+				Config:      testAccGithubTeamConfig_basic(backend, team, []string{}),
 				ExpectError: regexp.MustCompile(`\: expected team to be a slugified value*`),
 			},
 		},
@@ -78,15 +72,12 @@ func TestAccGithubTeam_importBasic(t *testing.T) {
 	resName := "vault_github_team.team"
 	team := "import-team"
 
-	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
-	orgID := strconv.Itoa(orgMeta.ID)
-
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGithubTeamConfig_basic(backend, team, orgID, []string{"admin", "developer"}),
+				Config: testAccGithubTeamConfig_basic(backend, team, []string{"admin", "developer"}),
 			},
 			{
 				ResourceName:      resName,
@@ -132,7 +123,7 @@ func testAccGithubTeamCheckDestroy(s *terraform.State) error {
 	return fmt.Errorf("Github Team resource still exists")
 }
 
-func testAccGithubTeamConfig_basic(backend, team, orgID string, policies []string) string {
+func testAccGithubTeamConfig_basic(backend string, team string, policies []string) string {
 	p, _ := json.Marshal(policies)
 	return fmt.Sprintf(`
 resource "vault_github_auth_backend" "gh" {
@@ -146,5 +137,5 @@ resource "vault_github_team" "team" {
 	team = "%s"
 	policies = %s
 }
-`, backend, orgID, team, p)
+`, backend, strconv.Itoa(testGHOrgID), team, p)
 }

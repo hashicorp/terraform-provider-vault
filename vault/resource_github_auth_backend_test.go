@@ -19,12 +19,13 @@ import (
 
 // as of vault-1.10 github-auth acceptance tests should use a valid GitHub
 // organization where applicable.
-const testGHOrg = "hashicorp"
+const (
+	testGHOrg   = "hashicorp"
+	testGHOrgID = 761456
+)
 
 func TestAccGithubAuthBackend_basic(t *testing.T) {
 	testutil.SkipTestAcc(t)
-
-	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
 
 	path := acctest.RandomWithPrefix("github")
 	resourceType := "vault_github_auth_backend"
@@ -44,7 +45,7 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
 					// expect computed value for organization_id
-					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
+					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(testGHOrgID)),
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "1200"),
 					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "3000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
@@ -70,8 +71,6 @@ func TestAccGithubAuthBackend_basic(t *testing.T) {
 func TestAccGithubAuthBackend_ns(t *testing.T) {
 	testutil.SkipTestAcc(t)
 
-	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
-
 	path := acctest.RandomWithPrefix("github")
 	ns := acctest.RandomWithPrefix("ns")
 	resourceType := "vault_github_auth_backend"
@@ -91,7 +90,7 @@ func TestAccGithubAuthBackend_ns(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
 					// expect computed value for organization_id
-					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
+					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(testGHOrgID)),
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "1200"),
 					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "3000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
@@ -103,8 +102,6 @@ func TestAccGithubAuthBackend_ns(t *testing.T) {
 
 func TestAccGithubAuthBackend_tuning(t *testing.T) {
 	testutil.SkipTestAcc(t)
-
-	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
 
 	backend := acctest.RandomWithPrefix("github")
 	resourceType := "vault_github_auth_backend"
@@ -123,7 +120,7 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "id", backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
-					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
+					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(testGHOrgID)),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "10m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "20m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "hidden"),
@@ -149,7 +146,7 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "id", backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, backend),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
-					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
+					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(testGHOrgID)),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "50m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "1h10m"),
 					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "unauth"),
@@ -174,8 +171,6 @@ func TestAccGithubAuthBackend_tuning(t *testing.T) {
 func TestAccGithubAuthBackend_description(t *testing.T) {
 	testutil.SkipTestAcc(t)
 
-	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
-
 	path := acctest.RandomWithPrefix("github")
 	resourceType := "vault_github_auth_backend"
 	resourceName := resourceType + ".test"
@@ -191,7 +186,7 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 					testAccCheckAuthMountExists(resourceName, &resAuth),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
-					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
+					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(testGHOrgID)),
 					resource.TestCheckResourceAttr(resourceName, "description", "Github Auth Mount"),
 				),
 			},
@@ -200,8 +195,7 @@ func TestAccGithubAuthBackend_description(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAuthMountExists(resourceName, &resAuth),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "organization", orgMeta.Login),
-					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
+					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(testGHOrgID)),
 					resource.TestCheckResourceAttr(resourceName, "description", "Github Auth Mount Updated"),
 				),
 			},
@@ -232,8 +226,6 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-gh")
 	updatedPath := acctest.RandomWithPrefix("tf-test-gh-updated")
 
-	orgMeta := testutil.GetGHOrgResponse(t, testGHOrg)
-
 	resourceType := "vault_github_auth_backend"
 	resourceName := resourceType + ".test"
 	var resAuth api.AuthMount
@@ -251,7 +243,7 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
 					// expect computed value for organization_id
-					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
+					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(testGHOrgID)),
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "1200"),
 					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "3000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
@@ -265,7 +257,7 @@ func TestGithubAuthBackend_remount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
 					resource.TestCheckResourceAttr(resourceName, "organization", testGHOrg),
 					// expect computed value for organization_id
-					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(orgMeta.ID)),
+					resource.TestCheckResourceAttr(resourceName, "organization_id", strconv.Itoa(testGHOrgID)),
 					resource.TestCheckResourceAttr(resourceName, "token_ttl", "1200"),
 					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "3000"),
 					resource.TestCheckResourceAttrPtr(resourceName, "accessor", &resAuth.Accessor),
