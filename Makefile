@@ -24,6 +24,10 @@ dev: fmtcheck
 	go build -o terraform-provider-vault
 	mv terraform-provider-vault ~/.terraform.d/plugins/
 
+debug: fmtcheck
+	go build -gcflags "all=-N -l" -o terraform-provider-vault
+	mv terraform-provider-vault ~/.terraform.d/plugins/
+
 generate:
 	result=$(cd generated && find . -type f -not -name '*_test.go' | grep -v 'registry.go' | xargs rm && cd - )
 	go run cmd/generate/main.go -openapi-doc=testdata/openapi.json
