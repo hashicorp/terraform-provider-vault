@@ -156,9 +156,12 @@ func identityGroupUpdateFields(d *schema.ResourceData, meta interface{}, data ma
 			// already configured on the group to prevent removal
 			data["external_policies"] = d.Get("external_policies").(bool)
 			if data["external_policies"].(bool) {
-				client := meta.(*api.Client)
+				client, e := provider.GetClient(d, meta)
+				if e != nil {
+					return e
+				}
 				id := d.Id()
-				apiPolicies, err := readIdentityGroupPolicies(client, id)
+				apiPolicies, err := readIdentityGroupPolicies(client, id, false)
 				if err != nil {
 					return err
 				}
@@ -185,7 +188,7 @@ func identityGroupCreate(d *schema.ResourceData, meta interface{}) error {
 		"type": typeValue,
 	}
 
-	if err := identityGroupUpdateFields(d, data); err != nil {
+	if err := identityGroupUpdateFields(d, meta, data); err != nil {
 		return fmt.Errorf("error writing IdentityGroup to %q: %s", name, err)
 	}
 
@@ -229,7 +232,7 @@ func identityGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	data := map[string]interface{}{}
 
-	if err := identityGroupUpdateFields(d, data); err != nil {
+	if err := identityGroupUpdateFields(d, meta, data); err != nil {
 		return fmt.Errorf("error updating IdentityGroup %q: %s", id, err)
 	}
 

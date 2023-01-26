@@ -105,7 +105,7 @@ func TestAccIdentityGroupExternalPolicies(t *testing.T) {
 	group := acctest.RandomWithPrefix("test-group")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckIdentityGroupDestroy,
 		Steps: []resource.TestStep{
@@ -121,7 +121,7 @@ func TestAccIdentityGroupExternalPolicies(t *testing.T) {
 			{
 				Config: testAccIdentityGroupExternalPoliciesConfig(group, "foobar"),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityGroupCheckAttrs(),
+					testAccIdentityGroupCheckAttrs("vault_identity_group.group"),
 					// A no diff apply will update the state
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.0", "bar"),
@@ -132,7 +132,7 @@ func TestAccIdentityGroupExternalPolicies(t *testing.T) {
 			{
 				Config: testAccIdentityGroupExternalPoliciesConfig(group, "baz"),
 				Check: resource.ComposeTestCheckFunc(
-					testAccIdentityGroupCheckAttrs(),
+					testAccIdentityGroupCheckAttrs("vault_identity_group.group"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.#", "2"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.0", "bar"),
 					resource.TestCheckResourceAttr("vault_identity_group.group", "policies.1", "foo"),
