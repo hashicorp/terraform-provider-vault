@@ -1,108 +1,135 @@
 package vault
 
 import (
-	"testing"
-
 	"fmt"
-	"strings"
+	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccRabbitmqSecretBackend_basic(t *testing.T) {
+func TestAccRabbitMQSecretBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	connectionUri, username, password := getTestRMQCreds(t)
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
+	resourceType := "vault_rabbitmq_secret_backend"
+	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testAccPreCheck(t) },
-		CheckDestroy: testAccRabbitmqSecretBackendCheckDestroy,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeRabbitMQ, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRabbitmqSecretBackendConfig_basic(path, connectionUri, username, password),
+				Config: testAccRabbitMQSecretBackendConfig_basic(path, connectionUri, username, password),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "path", path),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "description", "test description"),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "default_lease_ttl_seconds", "3600"),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "max_lease_ttl_seconds", "86400"),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "connection_uri", connectionUri),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "username", username),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "password", password),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "connection_uri", connectionUri),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "password", password),
 				),
 			},
 			{
-				Config: testAccRabbitmqSecretBackendConfig_updated(path, connectionUri, username, password),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "path", path),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "description", "test description"),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "default_lease_ttl_seconds", "1800"),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "max_lease_ttl_seconds", "43200"),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "connection_uri", connectionUri),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "username", username),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "password", password),
-				),
-			},
-		},
-	})
-}
-
-func TestAccRabbitmqSecretBackend_import(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
-	connectionUri, username, password := getTestRMQCreds(t)
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccRabbitmqSecretBackendCheckDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccRabbitmqSecretBackendConfig_basic(path, connectionUri, username, password),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "path", path),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "description", "test description"),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "default_lease_ttl_seconds", "3600"),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "max_lease_ttl_seconds", "86400"),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "connection_uri", connectionUri),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "username", username),
-					resource.TestCheckResourceAttr("vault_rabbitmq_secret_backend.test", "password", password),
-				),
-			},
-			{
-				ResourceName:      "vault_rabbitmq_secret_backend.test",
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 				// the API can't serve these fields, so ignore them
-				ImportStateVerifyIgnore: []string{"connection_uri", "username", "password", "verify_connection"},
+				ImportStateVerifyIgnore: []string{"connection_uri", "username", "password", "verify_connection", "disable_remount"},
+			},
+			{
+				Config: testAccRabbitMQSecretBackendConfig_updated(path, connectionUri, username, password),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "1800"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "43200"),
+					resource.TestCheckResourceAttr(resourceName, "connection_uri", connectionUri),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "password", password),
+				),
 			},
 		},
 	})
 }
 
-func testAccRabbitmqSecretBackendCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return err
-	}
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_rabbitmq_secret_backend" {
-			continue
-		}
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "rabbitmq" && path == rsPath {
-				return fmt.Errorf("mount %q still exists", path)
-			}
-		}
-	}
-	return nil
+func TestAccRabbitMQSecretBackend_template(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
+	resourceType := "vault_rabbitmq_secret_backend"
+	resourceName := resourceType + ".test"
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeRabbitMQ, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRabbitMQSecretBackendTemplateConfig(path, connectionUri, username, password, path, path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, "connection_uri", connectionUri),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "password", password),
+					resource.TestCheckResourceAttr(resourceName, "password_policy", path),
+					resource.TestCheckResourceAttr(resourceName, "username_template", path),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				// the API can't serve these fields, so ignore them
+				ImportStateVerifyIgnore: []string{"connection_uri", "username", "password", "verify_connection", "disable_remount"},
+			},
+		},
+	})
 }
 
-func testAccRabbitmqSecretBackendConfig_basic(path, connectionUri, username, password string) string {
+func TestRabbitMQSecretBackend_remount(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-rabbitmq")
+	updatedPath := acctest.RandomWithPrefix("tf-test-rabbitmq-updated")
+
+	resourceName := "vault_rabbitmq_secret_backend.test"
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRabbitMQSecretBackendConfig_basic(path, connectionUri, username, password),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "connection_uri", connectionUri),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "password", password),
+				),
+			},
+			{
+				Config: testAccRabbitMQSecretBackendConfig_basic(updatedPath, connectionUri, username, password),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
+					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
+					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "86400"),
+					resource.TestCheckResourceAttr(resourceName, "connection_uri", connectionUri),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "password", password),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "description", "username",
+				"password", "verify_connection", "disable_remount"),
+		},
+	})
+}
+
+func testAccRabbitMQSecretBackendConfig_basic(path, connectionUri, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_rabbitmq_secret_backend" "test" {
   path = "%s"
@@ -115,7 +142,7 @@ resource "vault_rabbitmq_secret_backend" "test" {
 }`, path, connectionUri, username, password)
 }
 
-func testAccRabbitmqSecretBackendConfig_updated(path, connectionUri, username, password string) string {
+func testAccRabbitMQSecretBackendConfig_updated(path, connectionUri, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_rabbitmq_secret_backend" "test" {
   path = "%s"
@@ -126,4 +153,16 @@ resource "vault_rabbitmq_secret_backend" "test" {
   username = "%s"
   password = "%s"
 }`, path, connectionUri, username, password)
+}
+
+func testAccRabbitMQSecretBackendTemplateConfig(path, connectionUri, username, password, uTemplate, passPolicy string) string {
+	return fmt.Sprintf(`
+resource "vault_rabbitmq_secret_backend" "test" {
+  path              = "%s"
+  connection_uri    = "%s"
+  username          = "%s"
+  password          = "%s"
+  username_template = "%s"
+  password_policy   = "%s"
+}`, path, connectionUri, username, password, uTemplate, passPolicy)
 }

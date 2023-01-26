@@ -20,9 +20,9 @@ resource "vault_auth_backend" "approle" {
 }
 
 resource "vault_approle_auth_backend_role" "example" {
-  backend   = vault_auth_backend.approle.path
-  role_name = "test-role"
-  policies  = ["default", "dev", "prod"]
+  backend         = vault_auth_backend.approle.path
+  role_name       = "test-role"
+  token_policies  = ["default", "dev", "prod"]
 }
 
 resource "vault_approle_auth_backend_role_secret_id" "id" {
@@ -40,6 +40,11 @@ resource "vault_approle_auth_backend_login" "login" {
 ## Argument Reference
 
 The following arguments are supported:
+
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
 
 * `role_id` - (Required) The ID of the role to log in with.
 

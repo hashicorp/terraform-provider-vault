@@ -1,19 +1,22 @@
 package vault
 
 import (
-	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
+	"context"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendIntermediateCertRequestCreate,
-		Read:   pkiSecretBackendIntermediateCertRequestRead,
-		Delete: pkiSecretBackendIntermediateCertRequestDelete,
+		CreateContext: pkiSecretBackendIntermediateCertRequestCreate,
+		ReadContext:   pkiSecretBackendIntermediateCertRequestRead,
+		DeleteContext: pkiSecretBackendIntermediateCertRequestDelete,
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -27,7 +30,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Required:     true,
 				Description:  "Type of intermediate to create. Must be either \"exported\" or \"internal\".",
 				ForceNew:     true,
-				ValidateFunc: validation.StringInSlice([]string{"exported", "internal"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"exported", "internal", "kms"}, false),
 			},
 			"common_name": {
 				Type:        schema.TypeString,
@@ -93,7 +96,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Description:  "The desired key type.",
 				ForceNew:     true,
 				Default:      "rsa",
-				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519"}, false),
 			},
 			"key_bits": {
 				Type:        schema.TypeInt,
@@ -166,12 +169,37 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Computed:    true,
 				Description: "The private key type.",
 			},
+			"managed_key_name": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The name of the previously configured managed key.",
+				ForceNew:      true,
+				ConflictsWith: []string{"managed_key_id"},
+			},
+			"managed_key_id": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The ID of the previously configured managed key.",
+				ForceNew:      true,
+				ConflictsWith: []string{"managed_key_name"},
+			},
+			"add_basic_constraints": {
+				Type: schema.TypeBool,
+				Description: `Set 'CA: true' in a Basic Constraints extension. Only needed as
+a workaround in some compatibility scenarios with Active Directory Certificate Services.`,
+				ForceNew: true,
+				Default:  false,
+				Optional: true,
+			},
 		},
 	}
 }
 
-func pkiSecretBackendIntermediateCertRequestCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	backend := d.Get("backend").(string)
 	intermediateType := d.Get("type").(string)
@@ -203,19 +231,25 @@ func pkiSecretBackendIntermediateCertRequestCreate(d *schema.ResourceData, meta 
 	}
 
 	data := map[string]interface{}{
-		"common_name":          d.Get("common_name").(string),
-		"format":               d.Get("format").(string),
-		"private_key_format":   d.Get("private_key_format").(string),
-		"key_type":             d.Get("key_type").(string),
-		"key_bits":             d.Get("key_bits").(int),
-		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
-		"ou":                   d.Get("ou").(string),
-		"organization":         d.Get("organization").(string),
-		"country":              d.Get("country").(string),
-		"locality":             d.Get("locality").(string),
-		"province":             d.Get("province").(string),
-		"street_address":       d.Get("street_address").(string),
-		"postal_code":          d.Get("postal_code").(string),
+		"common_name":           d.Get("common_name").(string),
+		"format":                d.Get("format").(string),
+		"private_key_format":    d.Get("private_key_format").(string),
+		"exclude_cn_from_sans":  d.Get("exclude_cn_from_sans").(bool),
+		"ou":                    d.Get("ou").(string),
+		"organization":          d.Get("organization").(string),
+		"country":               d.Get("country").(string),
+		"locality":              d.Get("locality").(string),
+		"province":              d.Get("province").(string),
+		"street_address":        d.Get("street_address").(string),
+		"postal_code":           d.Get("postal_code").(string),
+		"managed_key_name":      d.Get("managed_key_name").(string),
+		"managed_key_id":        d.Get("managed_key_id").(string),
+		"add_basic_constraints": d.Get("add_basic_constraints").(bool),
+	}
+
+	if intermediateType != "kms" {
+		data["key_type"] = d.Get("key_type").(string)
+		data["key_bits"] = d.Get("key_bits").(int)
 	}
 
 	if len(altNames) > 0 {
@@ -237,26 +271,34 @@ func pkiSecretBackendIntermediateCertRequestCreate(d *schema.ResourceData, meta 
 	log.Printf("[DEBUG] Creating intermediate cert request on PKI secret backend %q", backend)
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating intermediate cert request for PKI secret backend %q: %s", backend, err)
+		return diag.Errorf("error creating intermediate cert request for PKI secret backend %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Created intermediate cert request on PKI secret backend %q", backend)
 
-	d.Set("csr", resp.Data["csr"])
+	if err := d.Set("csr", resp.Data["csr"]); err != nil {
+		return diag.FromErr(err)
+	}
 
 	if d.Get("type") == "exported" {
-		d.Set("private_key", resp.Data["private_key"])
-		d.Set("private_key_type", resp.Data["private_key_type"])
+		if err := d.Set("private_key", resp.Data["private_key"]); err != nil {
+			return diag.FromErr(err)
+		}
+
+		if err := d.Set("private_key_type", resp.Data["private_key_type"]); err != nil {
+			return diag.FromErr(err)
+		}
+
 	}
 
 	d.SetId(path)
-	return pkiSecretBackendIntermediateCertRequestRead(d, meta)
+	return pkiSecretBackendIntermediateCertRequestRead(ctx, d, meta)
 }
 
-func pkiSecretBackendIntermediateCertRequestRead(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendIntermediateCertRequestRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }
 
-func pkiSecretBackendIntermediateCertRequestDelete(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendIntermediateCertRequestDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }
 

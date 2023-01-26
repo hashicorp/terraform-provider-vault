@@ -1,7 +1,10 @@
-TEST?=$$(go list ./...)
-GOFMT_FILES?=$$(find . -name '*.go')
-WEBSITE_REPO=github.com/hashicorp/terraform-website
-PKG_NAME=vault
+TEST ?= $$(go list ./...)
+GOFMT_FILES ?= $$(find . -name '*.go')
+WEBSITE_REPO = github.com/hashicorp/terraform-website
+PKG_NAME = vault
+TF_ACC_TERRAFORM_VERSION ?= 1.2.2
+TESTARGS ?= -test.v
+TEST_PATH ?= ./...
 
 default: build
 
@@ -9,12 +12,13 @@ build: fmtcheck
 	go install
 
 test: fmtcheck
-	go test $(TEST) || exit 1
-	echo $(TEST) | \
-		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
+	TF_ACC= go test $(TESTARGS) -timeout 10m -parallel=4 $(TEST_PATH)
 
 testacc: fmtcheck
-	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 20m
+	TF_ACC=1 go test $(TESTARGS) -timeout 30m $(TEST_PATH)
+
+testacc-ent:
+	make testacc TF_ACC_ENTERPRISE=1
 
 dev: fmtcheck
 	go build -o terraform-provider-vault
@@ -65,5 +69,4 @@ ifeq (,$(wildcard $(GOPATH)/src/$(WEBSITE_REPO)))
 endif
 	@$(MAKE) -C $(GOPATH)/src/$(WEBSITE_REPO) website-provider-test PROVIDER_PATH=$(shell pwd) PROVIDER_NAME=$(PKG_NAME)
 
-.PHONY: build test testacc vet fmt fmtcheck errcheck test-compile website website-test
-
+.PHONY: build test testacc testacc-ent vet fmt fmtcheck errcheck test-compile website website-test

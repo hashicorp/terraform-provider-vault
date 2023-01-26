@@ -1,21 +1,73 @@
 package vault
 
 import (
+	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func pkiSecretBackendRootCertResource() *schema.Resource {
 	return &schema.Resource{
 		Create: pkiSecretBackendRootCertCreate,
-		Read:   pkiSecretBackendRootCertRead,
-		Update: pkiSecretBackendRootCertUpdate,
 		Delete: pkiSecretBackendRootCertDelete,
+		Update: func(data *schema.ResourceData, i interface{}) error {
+			return nil
+		},
+		Read: ReadWrapper(pkiSecretBackendCertRead),
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    pkiSecretSerialNumberResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: pkiSecretSerialNumberUpgradeV0,
+			},
+		},
+		SchemaVersion: 1,
+		CustomizeDiff: func(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			key := "serial"
+			o, _ := d.GetChange(key)
+			// skip on new resource
+			if o.(string) == "" {
+				return nil
+			}
+
+			client, e := provider.GetClient(d, meta)
+			if e != nil {
+				return e
+			}
+
+			cert, err := getCACertificate(client, d.Get("backend").(string))
+			if err != nil {
+				return err
+			}
+
+			if cert != nil {
+				n := certutil.GetHexFormatted(cert.SerialNumber.Bytes(), ":")
+				if d.Get(key).(string) != n {
+					if err := d.SetNewComputed(key); err != nil {
+						return err
+					}
+					if err := d.ForceNew(key); err != nil {
+						return err
+					}
+				}
+
+			}
+
+			return nil
+		},
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -27,14 +79,14 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			"type": {
 				Type:         schema.TypeString,
 				Required:     true,
-				Description:  "Type of intermediate to create. Must be either \"exported\" or \"internal\".",
+				Description:  "Type of root to create. Must be either \"exported\" or \"internal\".",
 				ForceNew:     true,
-				ValidateFunc: validation.StringInSlice([]string{"exported", "internal"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"exported", "internal", "kms"}, false),
 			},
 			"common_name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "CN of intermediate to create.",
+				Description: "CN of root to create.",
 				ForceNew:    true,
 			},
 			"alt_names": {
@@ -58,7 +110,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			"uri_sans": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "List of alterative URIs.",
+				Description: "List of alternative URIs.",
 				ForceNew:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -177,7 +229,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			"certificate": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The certicate.",
+				Description: "The certificate.",
 			},
 			"issuing_ca": {
 				Type:        schema.TypeString,
@@ -187,14 +239,39 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			"serial": {
 				Type:        schema.TypeString,
 				Computed:    true,
+				Deprecated:  "Use serial_number instead",
 				Description: "The serial number.",
+			},
+			"serial_number": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The certificate's serial number, hex formatted.",
+			},
+			"managed_key_name": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				Description:   "The name of the previously configured managed key.",
+				ForceNew:      true,
+				ConflictsWith: []string{"managed_key_id"},
+			},
+			"managed_key_id": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				Description:   "The ID of the previously configured managed key.",
+				ForceNew:      true,
+				ConflictsWith: []string{"managed_key_name"},
 			},
 		},
 	}
 }
 
 func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	rootType := d.Get("type").(string)
@@ -236,8 +313,6 @@ func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) er
 		"ttl":                  d.Get("ttl").(string),
 		"format":               d.Get("format").(string),
 		"private_key_format":   d.Get("private_key_format").(string),
-		"key_type":             d.Get("key_type").(string),
-		"key_bits":             d.Get("key_bits").(int),
 		"max_path_length":      d.Get("max_path_length").(int),
 		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
 		"ou":                   d.Get("ou").(string),
@@ -247,6 +322,13 @@ func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) er
 		"province":             d.Get("province").(string),
 		"street_address":       d.Get("street_address").(string),
 		"postal_code":          d.Get("postal_code").(string),
+		"managed_key_name":     d.Get("managed_key_name").(string),
+		"managed_key_id":       d.Get("managed_key_id").(string),
+	}
+
+	if rootType != "kms" {
+		data["key_type"] = d.Get("key_type").(string)
+		data["key_bits"] = d.Get("key_bits").(int)
 	}
 
 	if len(altNames) > 0 {
@@ -279,21 +361,52 @@ func pkiSecretBackendRootCertCreate(d *schema.ResourceData, meta interface{}) er
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("issuing_ca", resp.Data["issuing_ca"])
 	d.Set("serial", resp.Data["serial_number"])
+	d.Set("serial_number", resp.Data["serial_number"])
 
 	d.SetId(path)
-	return pkiSecretBackendRootCertRead(d, meta)
-}
 
-func pkiSecretBackendRootCertRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func pkiSecretBackendRootCertUpdate(d *schema.ResourceData, m interface{}) error {
-	return nil
+func getCACertificate(client *api.Client, mount string) (*x509.Certificate, error) {
+	path := fmt.Sprintf("/v1/%s/ca/pem", mount)
+	req := client.NewRequest(http.MethodGet, path)
+	req.ClientToken = ""
+	resp, err := client.RawRequest(req)
+	if err != nil {
+		if util.ErrorContainsHTTPCode(err, http.StatusNotFound, http.StatusForbidden) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if resp == nil {
+		return nil, fmt.Errorf("expected a response body, got nil response")
+	}
+
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	b, _ := pem.Decode(data)
+	if b != nil {
+		cert, err := x509.ParseCertificate(b.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		return cert, nil
+	}
+
+	return nil, nil
 }
 
 func pkiSecretBackendRootCertDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 
@@ -313,4 +426,24 @@ func pkiSecretBackendIntermediateSetSignedReadPath(backend string, rootType stri
 
 func pkiSecretBackendIntermediateSetSignedDeletePath(backend string) string {
 	return strings.Trim(backend, "/") + "/root"
+}
+
+func pkiSecretSerialNumberResourceV0() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"serial_number": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+		},
+	}
+}
+
+func pkiSecretSerialNumberUpgradeV0(
+	_ context.Context, rawState map[string]interface{}, _ interface{},
+) (map[string]interface{}, error) {
+	rawState["serial_number"] = rawState["serial"]
+
+	return rawState, nil
 }

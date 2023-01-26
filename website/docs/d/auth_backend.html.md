@@ -20,6 +20,11 @@ data "vault_auth_backend" "example" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  *Available only for Vault Enterprise*.
+
 * `path` - (Required) The auth backend mount point.
 
 ## Attributes Reference
@@ -38,4 +43,4 @@ In addition to the fields above, the following attributes are exported:
 
 * `local` - Specifies if the auth method is local only.
 
-* `accessor` - The accessor for this auth method
+* `accessor` - The accessor for this auth method.

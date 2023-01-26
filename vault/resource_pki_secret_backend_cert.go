@@ -9,16 +9,18 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func pkiSecretBackendCertResource() *schema.Resource {
 	return &schema.Resource{
 		Create:        pkiSecretBackendCertCreate,
-		Read:          pkiSecretBackendCertRead,
+		Read:          ReadWrapper(pkiSecretBackendCertRead),
 		Update:        pkiSecretBackendCertUpdate,
 		Delete:        pkiSecretBackendCertDelete,
-		CustomizeDiff: pkiSecretBackendCertDiff,
+		CustomizeDiff: pkiCertAutoRenewCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -149,14 +151,29 @@ func pkiSecretBackendCertResource() *schema.Resource {
 			"expiration": {
 				Type:        schema.TypeInt,
 				Computed:    true,
-				Description: "The certificate expiration.",
+				Description: "The certificate expiration as a Unix-style timestamp.",
+			},
+			"renew_pending": {
+				Type:     schema.TypeBool,
+				Computed: true,
+				Description: "Initially false, and then set to true during refresh once " +
+					"the expiration is less than min_seconds_remaining in the future.",
+			},
+			"revoke": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Revoke the certificate upon resource destruction.",
 			},
 		},
 	}
 }
 
 func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -165,6 +182,7 @@ func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error 
 
 	commonName := d.Get("common_name").(string)
 
+	// TODO: cleanup this bit...
 	iAltNames := d.Get("alt_names").([]interface{})
 	altNames := make([]string, 0, len(iAltNames))
 	for _, iAltName := range iAltNames {
@@ -233,36 +251,37 @@ func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error 
 	d.Set("serial_number", resp.Data["serial_number"])
 	d.Set("expiration", resp.Data["expiration"])
 
+	if err := pkiSecretBackendCertSynchronizeRenewPending(d); err != nil {
+		return err
+	}
+
 	d.SetId(fmt.Sprintf("%s/%s/%s", backend, name, commonName))
 	return pkiSecretBackendCertRead(d, meta)
 }
 
-func pkiSecretBackendCertNeedsRenewed(autoRenew bool, expiration int, minSecRemaining int) bool {
-	if !autoRenew {
-		return false
-	}
-	expireTime := time.Unix(int64(expiration), 0)
-	renewTime := expireTime.Add(-time.Duration(minSecRemaining) * time.Second)
-	return time.Now().After(renewTime)
-}
-
-func pkiSecretBackendCertDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
-	if d.Id() == "" {
+func pkiCertAutoRenewCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	// The Create and Read functions will both set renew_pending if
+	// the current time is after the min_seconds_remaining timestamp. During
+	// planning we respond to that by proposing automatic renewal, if enabled.
+	if d.Id() == "" || !d.Get("auto_renew").(bool) {
 		return nil
 	}
-
-	minSeconds := 0
-	if v, ok := d.GetOk("min_seconds_remaining"); ok {
-		minSeconds = v.(int)
-	}
-	if pkiSecretBackendCertNeedsRenewed(d.Get("auto_renew").(bool), d.Get("expiration").(int), minSeconds) {
+	if d.Get("renew_pending").(bool) {
 		log.Printf("[DEBUG] certificate %q is due for renewal", d.Id())
 		if err := d.SetNewComputed("certificate"); err != nil {
 			return err
 		}
-		if err := d.SetNewComputed("private_key"); err != nil {
+
+		if err := d.ForceNew("certificate"); err != nil {
 			return err
 		}
+
+		// Renewing the certificate will reset the value of renew_pending
+		d.SetNewComputed("renew_pending")
+		if err := d.ForceNew("renew_pending"); err != nil {
+			return err
+		}
+
 		return nil
 	}
 
@@ -271,26 +290,98 @@ func pkiSecretBackendCertDiff(_ context.Context, d *schema.ResourceDiff, meta in
 }
 
 func pkiSecretBackendCertRead(d *schema.ResourceData, meta interface{}) error {
+	if d.IsNewResource() {
+		return nil
+	}
+
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+	path := d.Get("backend").(string)
+	enabled, err := util.CheckMountEnabled(client, path)
+	if err != nil {
+		log.Printf("[WARN] Failed to check if mount %q exist, preempting the read operation", path)
+		return nil
+	}
+
+	if enabled {
+		if err := pkiSecretBackendCertSynchronizeRenewPending(d); err != nil {
+			return err
+		}
+	} else {
+		// trigger a resource re-creation whenever the engine's mount has disappeared
+		log.Printf("[WARN] Mount %q does not exist, setting resource for re-creation", path)
+		d.SetId("")
+	}
+
 	return nil
 }
 
 func pkiSecretBackendCertUpdate(d *schema.ResourceData, m interface{}) error {
-	minSeconds := 0
-	if v, ok := d.GetOk("min_seconds_remaining"); ok {
-		minSeconds = v.(int)
-	}
-	if pkiSecretBackendCertNeedsRenewed(d.Get("auto_renew").(bool), d.Get("expiration").(int), minSeconds) {
-		return pkiSecretBackendCertCreate(d, m)
-	}
+	// TODO: add mount gone detection
 	return nil
 }
 
 func pkiSecretBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
+	if d.Get("revoke").(bool) {
+		client, e := provider.GetClient(d, meta)
+		if e != nil {
+			return e
+		}
+
+		backend := d.Get("backend").(string)
+		path := strings.Trim(backend, "/") + "/revoke"
+
+		serialNumber := d.Get("serial_number").(string)
+		commonName := d.Get("common_name").(string)
+		data := map[string]interface{}{
+			"serial_number": serialNumber,
+		}
+
+		log.Printf("[DEBUG] Revoking certificate %q with serial number %q on PKI secret backend %q",
+			commonName, serialNumber, backend)
+		_, err := client.Logical().Write(path, data)
+		if err != nil {
+			return fmt.Errorf("error revoking certificate %q with serial number %q for PKI secret backend %q: %w",
+				commonName, serialNumber, backend, err)
+		}
+		log.Printf("[DEBUG] Successfully revoked certificate %q with serial number %q on PKI secret backend %q",
+			commonName,
+			serialNumber, backend)
+	}
+
 	return nil
 }
 
 func pkiSecretBackendCertPath(backend string, name string) string {
 	return strings.Trim(backend, "/") + "/issue/" + strings.Trim(name, "/")
+}
+
+// pkiSecretBackendCertSynchronizeRenewPending calculates whether the
+// expiration time of the certificate is fewer than min_seconds_remaining
+// seconds in the future (relative to the current system time), and then
+// updates the renew_pending attribute accordingly.
+func pkiSecretBackendCertSynchronizeRenewPending(d *schema.ResourceData) error {
+	if _, ok := d.Get("renew_pending").(bool); !ok {
+		// pkiSecretBackendCertRead is shared between vault_pki_secret_backend_cert
+		// and vault_pki_secret_backend_root_cert, and the latter doesn't have
+		// an auto-renew mechanism so doesn't have a "renew_pending" attribute
+		// to update.
+		return nil
+	}
+
+	expiration := d.Get("expiration").(int)
+	earlyRenew := d.Get("min_seconds_remaining").(int)
+	effectiveExpiration := int64(expiration - earlyRenew)
+	return d.Set("renew_pending", checkPKICertExpiry(effectiveExpiration))
+}
+
+func checkPKICertExpiry(expiration int64) bool {
+	expiry := time.Unix(expiration, 0)
+	now := time.Now()
+
+	return now.After(expiry)
 }
 
 func convertIntoSliceOfString(slice interface{}) []string {

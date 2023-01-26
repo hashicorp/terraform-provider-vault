@@ -45,6 +45,11 @@ EOT
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `path` - (Required) The full logical path at which to write the given data.
   To write data into the "generic" secret backend mounted in Vault by default,
   this should be prefixed with `secret/`. Writing to other backends with this
@@ -54,9 +59,14 @@ The following arguments are supported:
 * `data_json` - (Required) String containing a JSON-encoded object that will be
   written as the secret data at the given path.
 
-* `disable_read` - (Optional) True/false. Set this to true if your vault
+* `disable_read` - (Optional) true/false. Set this to true if your vault
   authentication is not able to read the data. Setting this to `true` will
   break drift detection. Defaults to false.
+
+* `delete_all_versions` - (Optional) true/false.  Only applicable for kv-v2 stores.
+  If set to `true`, permanently deletes all versions for
+  the specified key. The default behavior is to only delete the latest version of the
+  secret.
 
 ## Required Vault Capabilities
 

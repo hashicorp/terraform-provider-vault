@@ -14,7 +14,9 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const (
@@ -38,7 +40,7 @@ const (
 
 func awsAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: awsAccessCredentialsDataSourceRead,
+		Read: ReadWrapper(awsAccessCredentialsDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -78,27 +80,30 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "AWS access key ID read from Vault.",
+				Sensitive:   true,
 			},
 
 			"secret_key": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "AWS secret key read from Vault.",
+				Sensitive:   true,
 			},
 
 			"security_token": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "AWS security token read from Vault. (Only returned if type is 'sts').",
+				Sensitive:   true,
 			},
 
-			"lease_id": {
+			consts.FieldLeaseID: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Lease identifier assigned by vault.",
 			},
 
-			"lease_duration": {
+			consts.FieldLeaseDuration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "Lease duration in seconds relative to the time in lease_start_time.",
@@ -110,7 +115,7 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 				Description: "Time at which the lease was read, using the clock of the system where Terraform was running",
 			},
 
-			"lease_renewable": {
+			consts.FieldLeaseRenewable: {
 				Type:        schema.TypeBool,
 				Computed:    true,
 				Description: "True if the duration of this lease can be extended through renewal.",
@@ -125,7 +130,10 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 }
 
 func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	credType := d.Get("type").(string)
@@ -164,10 +172,10 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	d.Set("access_key", secret.Data["access_key"])
 	d.Set("secret_key", secret.Data["secret_key"])
 	d.Set("security_token", secret.Data["security_token"])
-	d.Set("lease_id", secret.LeaseID)
-	d.Set("lease_duration", secret.LeaseDuration)
+	d.Set(consts.FieldLeaseID, secret.LeaseID)
+	d.Set(consts.FieldLeaseDuration, secret.LeaseDuration)
 	d.Set("lease_start_time", time.Now().Format(time.RFC3339))
-	d.Set("lease_renewable", secret.Renewable)
+	d.Set(consts.FieldLeaseRenewable, secret.Renewable)
 
 	awsConfig := &aws.Config{
 		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),

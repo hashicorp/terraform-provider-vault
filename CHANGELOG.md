@@ -1,8 +1,327 @@
-## 3.1.0 (Unreleased)
+## 3.12.0 (January 5, 2023)
+IMPROVEMENTS:
+* Add support for importing the PKI CRL config: ([#1710](https://github.com/hashicorp/terraform-provider-vault/pull/1710))
+* Ensure duplicate alias names are handled properly in LookupEntityAlias: ([#1708](https://github.com/hashicorp/terraform-provider-vault/pull/1708))
+* Add support for a Raft Autopilot State datasource: ([#1705](https://github.com/hashicorp/terraform-provider-vault/pull/1705))
+* Add support for adding metadata to a KV V2 Secret: ([#1687](https://github.com/hashicorp/terraform-provider-vault/pull/1687))
+* Set AWS credentials sensitive: ([#1678](https://github.com/hashicorp/terraform-provider-vault/pull/1678))
+* Set ForceNew on the path field of namespaces: ([#1713](https://github.com/hashicorp/terraform-provider-vault/pull/1713))
+
+BUGS:
+* Fix removed MSGraph param in Azure Secrets: ([#1682](https://github.com/hashicorp/terraform-provider-vault/pull/1682))
+* Fix KV V2 data source when specifying a version: ([#1677](https://github.com/hashicorp/terraform-provider-vault/pull/1677))
+* Ensure that `vault_kv_secret_backend_v2` mount is correctly imported: ([#1701](https://github.com/hashicorp/terraform-provider-vault/pull/1701))
+
+## 3.11.0 (November 16, 2022)
+IMPROVEMENTS:
+* Add Basic Constraints attribute to vault_pki_secret_backend_intermediate_cert_request: ([#1661](https://github.com/hashicorp/terraform-provider-vault/pull/1661))
+* Add Redis database secrets engine support: ([#1659](https://github.com/hashicorp/terraform-provider-vault/pull/1659))
+* Add support for setting deletion_allowed on a transformation: ([#1650](https://github.com/hashicorp/terraform-provider-vault/pull/1650))
+
+BUGS:
+* Fix panic while importing MFA Duo resource: ([#1669](https://github.com/hashicorp/terraform-provider-vault/pull/1669))
+* Fix GCP auth with service account credentials: ([#1648](https://github.com/hashicorp/terraform-provider-vault/pull/1648))
+
+## 3.10.0 (October 26, 2022)
+IMPROVEMENTS:
+* Add support for externally managed Group Member IDs to Vault Identity Group: ([#1630](https://github.com/hashicorp/terraform-provider-vault/pull/1630))
+* Support configuring vault version handling: ([#1646](https://github.com/hashicorp/terraform-provider-vault/pull/1646))
+
+BUGS:
+* Ensure that namespaced github auth mounts are destroyed: ([#1637](https://github.com/hashicorp/terraform-provider-vault/pull/1637))
+* Ensure all AuthLogin instances are validated on call to Login(): ([#1631](https://github.com/hashicorp/terraform-provider-vault/pull/1631))
+
+## 3.9.1 (October 06, 2022)
+BUGS:
+* Use the correct AWS login headers within auth_generic: ([#1625](https://github.com/hashicorp/terraform-provider-vault/pull/1625))
+* Fix resource recreation following out-of-band changes in Vault: ([#1567](https://github.com/hashicorp/terraform-provider-vault/pull/1567))
+
+## 3.9.0 (October 05, 2022)
+IMPROVEMENTS:
+* Add first-class Azure login support: ([#1617](https://github.com/hashicorp/terraform-provider-vault/pull/1617))
+* Add first-class OIDC andJWT login support: ([#1615](https://github.com/hashicorp/terraform-provider-vault/pull/1615))
+* Add first-class OCI login support: ([#1614](https://github.com/hashicorp/terraform-provider-vault/pull/1614))
+* Add first-class Radius login support: ([#1609](https://github.com/hashicorp/terraform-provider-vault/pull/1609))
+* Add first-class Kerberos login support: ([#1608](https://github.com/hashicorp/terraform-provider-vault/pull/1608))
+* Add first-class GCP login support: ([#1607](https://github.com/hashicorp/terraform-provider-vault/pull/1607))
+* Add first-class TLS certificates login support: ([#1605](https://github.com/hashicorp/terraform-provider-vault/pull/1605))
+* Add first-class auth login config support for AWS: ([#1599](https://github.com/hashicorp/terraform-provider-vault/pull/1599)) ([#1618](https://github.com/hashicorp/terraform-provider-vault/pull/1618))
+* Add support for login MFA resources: ([#1620](https://github.com/hashicorp/terraform-provider-vault/pull/1620))
+* Add Managed Keys support: ([#1508](https://github.com/hashicorp/terraform-provider-vault/pull/1508))
+* Add support to perform semantic version comparisons against Vault's server version: ([#1426](https://github.com/hashicorp/terraform-provider-vault/pull/1426))
+* Add Mount Migration support to all secrets/auth backends: ([#1594](https://github.com/hashicorp/terraform-provider-vault/pull/1594))
+* Use new semantic version checking for Consul secrets backend logic: ([#1593](https://github.com/hashicorp/terraform-provider-vault/pull/1593))
+* Docs: Fix vault_kv_secret_backend_v2 delete_version_after example: ([#1602](https://github.com/hashicorp/terraform-provider-vault/pull/1602))
+* Support creating Azure secret backend role by specifying the role_id: ([#1573](https://github.com/hashicorp/terraform-provider-vault/pull/1573))
+* Add Redis ElastiCache database secrets engine support: ([#1596](https://github.com/hashicorp/terraform-provider-vault/pull/1596))
+* vault_pki_secret_backend_cert: Report when renewal is pending: ([#1597](https://github.com/hashicorp/terraform-provider-vault/pull/1597))
+* Accept data source values in the token field for Consul secrets backend: ([#1600](https://github.com/hashicorp/terraform-provider-vault/pull/1600))
+
+BUGS:
+* Fix erroneous persistent diff in the vault_token resource.: ([#1622](https://github.com/hashicorp/terraform-provider-vault/pull/1622))
+* Fix data_source_azure_access_credentials US Government Cloud: ([#1590](https://github.com/hashicorp/terraform-provider-vault/pull/1590))
+* Add kv-v2 write retry: ([#1579](https://github.com/hashicorp/terraform-provider-vault/pull/1579))
+
+## 3.8.2 (August 11, 2022)
+IMPROVEMENTS:
+* Add bootstrap field to Consul backend resources: ([#1571](https://github.com/hashicorp/terraform-provider-vault/pull/1571))
+* Add `data` field to KV data sources: ([#1577](https://github.com/hashicorp/terraform-provider-vault/pull/1577))
+
+BUGS:
+* fix: remove unnecessary nesting of secret data for KV-V1 secrets: ([#1570](https://github.com/hashicorp/terraform-provider-vault/pull/1570))
+
+NOTES:
+* `vault_kv_secret` no longer stores secrets in Vault under a nested `data` object.
+  In versions 3.8.1 and below, the kv resource inadvertently nested the `value` under `data`.
+  To remedy this please update any consumers of this KV and run a `terraform apply` to properly set the value.
+
+## 3.8.1 (August 04, 2022)
+IMPROVEMENTS:
+* docs: Fix broken provider.namespace links: ([#1562](https://github.com/hashicorp/terraform-provider-vault/pull/1562))
+* docs: Add Azure example for `r/raft_snapshot_agent_config`: ([#1534](https://github.com/hashicorp/terraform-provider-vault/pull/1534))
+* docs: Document namespaced resource import: ([#1561](https://github.com/hashicorp/terraform-provider-vault/pull/1561))
+* docs: Add more visible note that `d/aws_access_credentials` cannot be renewed: ([#1464](https://github.com/hashicorp/terraform-provider-vault/pull/1464))
+
+BUGS:
+* fix: Persist namespace to state on resource import: ([#1563](https://github.com/hashicorp/terraform-provider-vault/pull/1563))
+* fix: Update all transform resources with namespace support: ([#1558](https://github.com/hashicorp/terraform-provider-vault/pull/1558))
+* fix: Make password_policy conflict with the formatter field: ([#1557](https://github.com/hashicorp/terraform-provider-vault/pull/1557))
+* fix: Correct typo in `r/pki_secret_backend_root_cert` description: ([#1511](https://github.com/hashicorp/terraform-provider-vault/pull/1511))
+
+## 3.8.0 (July 26, 2022)
+FEATURES:
+* Adds support for Kubernetes secrets engine:
+  ([#1515](https://github.com/hashicorp/terraform-provider-vault/pull/1515))
+* PKI: Add support for CPS URL in custom policy identifiers:
+  ([#1495](https://github.com/hashicorp/terraform-provider-vault/pull/1495))
+
+IMPROVEMENTS:
+* Fix Import for OIDC Scope resource:
+  ([#1548](https://github.com/hashicorp/terraform-provider-vault/pull/1548))
+* Update entity alias creation to use entity lookup api: 
+  ([#1517](https://github.com/hashicorp/terraform-provider-vault/pull/1517))
+  ([#1552](https://github.com/hashicorp/terraform-provider-vault/pull/1552))
+* Add support for Consul secrets engine enhancements: 
+  ([#1518](https://github.com/hashicorp/terraform-provider-vault/pull/1518))
+* auth/gcp: adds `custom_endpoint` parameter to backend config: 
+  ([#1482](https://github.com/hashicorp/terraform-provider-vault/pull/1482))
+* auth/jwt: adds `user_claim_json_pointer` and `max_age` to roles:
+  ([#1478](https://github.com/hashicorp/terraform-provider-vault/pull/1478))
+
+BUGS:
+* Support updating backend descriptions: 
+ ([#1550](https://github.com/hashicorp/terraform-provider-vault/pull/1550))
+ ([#1543](https://github.com/hashicorp/terraform-provider-vault/pull/1543))
+* Properly set the `base64_pem` in Vault for Couchbase:
+ ([#1545](https://github.com/hashicorp/terraform-provider-vault/pull/1545))
+* Fix bug where some rabbitmq config changes trigger erroneous mount recreation:
+ ([#1542](https://github.com/hashicorp/terraform-provider-vault/pull/1542))
+* Update `*kv_secrets*` resources to support namespaces: 
+ ([#1529](https://github.com/hashicorp/terraform-provider-vault/pull/1529))
+* Do not validate JSON on OIDC scope template:
+ ([#1547](https://github.com/hashicorp/terraform-provider-vault/pull/1547))
+
+## 3.7.0 (June 15, 2022)
+FEATURES: 
+* Support setting `namespace` by resource
+ ([#1305](https://github.com/hashicorp/terraform-provider-vault/pull/1305)) 
+ ([#1479](https://github.com/hashicorp/terraform-provider-vault/pull/1479))
+* Add dedicated KV (v1/v2) secret engine resources, and data sources, supersedes `vault_generic_secret`
+ ([#1457](https://github.com/hashicorp/terraform-provider-vault/pull/1457))
+ 
+IMPROVEMENTS:
+* Update vault libs to v1.10.3
+ ([#1483](https://github.com/hashicorp/terraform-provider-vault/pull/1483))
+* Drop debug log calls containing the full vault response
+ ([#1477](https://github.com/hashicorp/terraform-provider-vault/pull/1477))
+* `resource/token`: Add `metadata` support
+ ([#1470](https://github.com/hashicorp/terraform-provider-vault/pull/1470))
+* `resource/vault_ldap_auth_backend`: support LDAP `username_as_alias` attribute:
+ ([#1460](https://github.com/hashicorp/terraform-provider-vault/pull/1460))
+* `resource/vault_quota_rate_limit`: Add support for `interval` and `block_interval`:
+ ([#1084](https://github.com/hashicorp/terraform-provider-vault/pull/1084))
+* ci: Test against vault-enterprise 1.10.3-ent:
+  ([#1461](https://github.com/hashicorp/terraform-provider-vault/pull/1461))
+ 
+BUGS:
+* `resource/auth_backend`: validate `path`, disallowing leading/trailing /
+ ([#1471](https://github.com/hashicorp/terraform-provider-vault/pull/1471))
+* `resource/vault_jwt_auth_backend_role`: fix `bound_claims` not being unset when empty
+ ([#1469](https://github.com/hashicorp/terraform-provider-vault/pull/1469))
+* `resource/cert_auth_backend`: add the correct field name: `allowed_organizational_units`
+  ([#1496](https://github.com/hashicorp/terraform-provider-vault/pull/1496))
+ 
+## 3.6.0 (May 18, 2022)
+IMPROVEMENTS:
+* `resource/pki_secret_backend_root_cert`: Force new root CA resource creation on out-of-band changes.  
+  ([#1428](https://github.com/hashicorp/terraform-provider-vault/pull/1428))
+* `resource/pki_secret_backend_intermediate_set_signed`: Document complete usage example.  
+  ([#1452](https://github.com/hashicorp/terraform-provider-vault/pull/1452))
+* `resource/pki_secret_backend_config_urls`: Add support for importing PKI config URLs  
+  ([#1451](https://github.com/hashicorp/terraform-provider-vault/pull/1451))
+* `vault/resource_pki_secret_backend*`: Extend revocation support to other resources    
+  ([#1446](https://github.com/hashicorp/terraform-provider-vault/pull/1446))
+* `vault/resource_pki_secret_backend*`: Force new root CA/cert resource creation on out-of-band changes.  
+  ([#1432](https://github.com/hashicorp/terraform-provider-vault/pull/1432))
+* `datasource/generic_secret`: Improve documentation.  
+  ([#1390](https://github.com/hashicorp/terraform-provider-vault/pull/1390))
+* `resource/ldap_auth_backend`: Support setting `userfilter`.  
+  ([#1378](https://github.com/hashicorp/terraform-provider-vault/pull/1378))
+* `resource/aws_auth_backend_role`: Add `role_id` as a computed field.   
+  ([#1377](https://github.com/hashicorp/terraform-provider-vault/pull/1377))
+* Auth: Handle CIDR prefix being stripped for hosts in `token_bound_cidrs`  
+  ([#1346](https://github.com/hashicorp/terraform-provider-vault/pull/1346))
+* Add `allowed_serial_numbers` support  
+  ([#1119](https://github.com/hashicorp/terraform-provider-vault/pull/1119))
+* `resource/pki_secret_backend_role`: Allow `key_type` to be set to `any`.   
+  ([#791](https://github.com/hashicorp/terraform-provider-vault/pull/791))
+* `resource/aws_secret_backend_role`: Add `user_path` and `permissions_boundary_arn` arguments.  
+  ([#781](https://github.com/hashicorp/terraform-provider-vault/pull/781))
+
+BUGS:
+* `resource/pki_secret_backend_root_sign_intermediate`: Ensure that the `certificate_bundle`, and `ca_chain` 
+  do not contain duplicate certificates.  
+  ([#1428](https://github.com/hashicorp/terraform-provider-vault/pull/1428))
+* `resource/identity_entity_alias`: Serialize create, update, and delete operations in order to prevent alias 
+  mismatches.  
+  ([#1429](https://github.com/hashicorp/terraform-provider-vault/pull/1429))
+* `database_secret*`: Ignore mongodb-atlas `private_key` on read from Vault.
+  mismatches.  
+  ([#1438](https://github.com/hashicorp/terraform-provider-vault/issues/1438))
+* `resource/auth_backend`: Remove `ForceNew` behavior when updating `description`.  
+  ([#1439](https://github.com/hashicorp/terraform-provider-vault/pull/1439))
+* `resource/identity_group_member_entity_ids`: Properly handle nil `member_entity_ids` in response.  
+  ([#1448](https://github.com/hashicorp/terraform-provider-vault/pull/1448))  
+* `resource/pki_secret_backend_role`: Fix TTL handling in PKI role.  
+  ([#1447](https://github.com/hashicorp/terraform-provider-vault/pull/1447))
+* `resource/pki_secret_backend_role`: `key_usage` value should be computed.  
+  ([#1443](https://github.com/hashicorp/terraform-provider-vault/pull/1443))
+* `resource/vault_pki_secret_backend_{cert,sign}`: Properly force a new resource whenever the cert is near expiry.  
+  ([#1440](https://github.com/hashicorp/terraform-provider-vault/pull/1440))
+* `resource/identity_entity_alias`: Remove read operation on entity alias update.  
+  ([#1434](https://github.com/hashicorp/terraform-provider-vault/pull/1434))
+
+## 3.5.0 (April 20, 2022)
+FEATURES:
+* Add MFA support: new resources `vault_mfa_okta`, `vault_mfa_totp`, `vault_mfa_pingid` ([#1395](https://github.com/hashicorp/terraform-provider-vault/pull/1395))
+* *New* `resource/database_secrets_mount`: Configures any number of database secrets engines under 
+ a single, dedicated mount resource
+ ([#1400](https://github.com/terraform-providers/terraform-provider-vault/pull/1400))
+
+IMPROVEMENTS:
+* `data/vault_generic_secret`: Add new field `with_lease_start_time` to `vault_generic_secret` datasource 
+  ([#1414](https://github.com/hashicorp/terraform-provider-vault/pull/1414))
+* `resource/vault_ssh_secret_backend_role`: support configuring multiple public SSH key lengths in vault-1.10+
+  ([#1413](https://github.com/terraform-providers/terraform-provider-vault/pull/1413))
+* `resource/database_secret*`: Add support for configuring TLS, and the `username_template` field for the ElasticSearch.  
+* `resource/pki_secret_backend_cert`: Add support for optionally revoking the certificate upon resource destruction.
+  ([#1411](https://github.com/terraform-providers/terraform-provider-vault/pull/1411))
+* `provider`: Add support for setting the `tls_server_name` to use as the SNI host when connecting via TLS.
+  ([#1145](https://github.com/terraform-providers/terraform-provider-vault/pull/1145)
+* `docs`: Add links to Learn Tutorials.
+  ([#1399](https://github.com/terraform-providers/terraform-provider-vault/pull/1399))
+ 
+BUGS:
+* `resource/identity_group`: Fix issue where the group's `member_entity_ids` were being unset in error on update.
+  ([#1409](https://github.com/terraform-providers/terraform-provider-vault/pull/1409))
+* `resource/transit_secret_backend_key`: Add `auto_rotate_period` field which deprecates `auto_rotate_interval`.
+  ([#1402](https://github.com/hashicorp/terraform-provider-vault/pull/1402))
+
+## 3.4.1 (March 31, 2022)
+BUGS:
+* `data/azure_access_credentials`: Fix panic when `tenant_id` and `subscription_id` are specified together; add new `environment` override field
+  ([#1391](https://github.com/terraform-providers/terraform-provider-vault/pull/1391)).
+
+IMPROVEMENTS:
+* `resource/rabbitmq_secret_backend`: Add support for the `password_policy` and `username_template` fields
+  ([#1276](https://github.com/terraform-providers/terraform-provider-vault/pull/1276))
+
+## 3.4.0 (March 24, 2022)
+FEATURES:
+* `data/azure_access_credentials` Add `subscription_id` and `tenant_id` fields to used during credential validation ([#1384](https://github.com/terraform-providers/terraform-provider-vault/pull/1384))
+* Add OIDC Provider support: new resources `vault_identity_oidc_scope`, `vault_identity_oidc_assignment`, `vault_identity_oidc_client` 
+ , `vault_identity_oidc_provider`, `vault_identity_oidc_public_keys`, `vault_identity_oidc_openid_config` ([#1363](https://github.com/hashicorp/terraform-provider-vault/pull/1363))
+
+BUGS:
+* `data/azure_access_credentials`: Fix credential validation ([#1381](https://github.com/terraform-providers/terraform-provider-vault/pull/1381)).
+
+IMPROVEMENTS:
+* `resource/database_secret_backend_connection`: Add `disable_escaping` parameter support to Redshift, HanaDB, Postgres and MSSQL ([#1321](https://github.com/hashicorp/terraform-provider-vault/pull/1321))
+* `resource/transit_secret_backend_key`: Add `auto_rotate_interval` parameter support to Transit Key Backend ([#1345](https://github.com/hashicorp/terraform-provider-vault/pull/1345))
+* `resource/consul_secret_backend_role`: Add support for Consul role ([#1366](https://github.com/hashicorp/terraform-provider-vault/pull/1366))
+* `resource/consul_secret_backend_role`: Add support for Consul namespaces and partitions ([#1367](https://github.com/hashicorp/terraform-provider-vault/pull/1367))
+* `resource/github_auth_backend`: Add support for `organization_id` field ([#1296](https://github.com/hashicorp/terraform-provider-vault/pull/1296))
+* `resource/approle_auth_backend_role_secret_id`: Add `with_wrapped_accessor` to control how the resource ID is set ([#1166](https://github.com/hashicorp/terraform-provider-vault/pull/1166))
+
+## 3.3.1 (February 25, 2022)
+BUGS:
+* `resource/identity_group`: Report an error upon duplicate resource creation failure. Document group name caveats. ([#1352](https://github.com/hashicorp/terraform-provider-vault/pull/1352))
+* `resource/pki_secret_backend_root_sign_intermediate`: Fix panic when reading `ca_chain` from Vault ([#1357](https://github.com/hashicorp/terraform-provider-vault/issues/1357))
+* `resource/raft_snapshot_agent_config`: Properly handle nil response on read ([#1360](https://github.com/hashicorp/terraform-provider-vault/pull/1360))
+* `resource/identity_*`: Ensure non-existent entities are handled properly ([#1361](https://github.com/hashicorp/terraform-provider-vault/pull/1361))
+* `resource/dentity_group_member_entity_ids`: Properly handle nil `member_identity_ids` on read ([#1356](https://github.com/hashicorp/terraform-provider-vault/pull/1356))
+
+## 3.3.0 (February 17, 2022)
+FEATURES:
+* Add KMIP support: new resources `vault_kmip_secret_backend`, `vault_kmip_secret_scope` and `vault_kmip_secret_role` ([#1339](https://github.com/hashicorp/terraform-provider-vault/pull/1339))
+
+BUGS:
+* `resource/kubernetes_auth_backend_config`: Ensure `disable_iss_validation` is honored in all cases ([#1315](https://github.com/hashicorp/terraform-provider-vault/pull/1315))
+* `resource/database_secret_backend_connection`: Add error handling for unrecognized plugins on read ([#1325](https://github.com/hashicorp/terraform-provider-vault/pull/1325))
+* `resource/kubernetes_auth_backend_config`: Prevent persistent diff for `kubernetes_ca_cert` when it is loaded by the backend ([#1337](https://github.com/hashicorp/terraform-provider-vault/pull/1337))
+
+IMPROVEMENTS:
+* `resource/token_auth_backend_role`: Add `allowed_policies_glob` and `disallowed_polices_glob` ([#1316](https://github.com/hashicorp/terraform-provider-vault/pull/1316))
+* `resource/database_secret_backend_connection`: Add support for configuring the secret engine's `plugin_name` ([#1320](https://github.com/hashicorp/terraform-provider-vault/pull/1320))
+* `resource/pki_secret_backend_root_sign_intermediate`: Update schema for `ca_chain` from string to a list of   
+  `issuing_ca` and `certificate`, add new `certificate_bundle` attribute that provides the concatenation of the   
+  intermediate and issuing CA certificates (PEM encoded) ([#1330](https://github.com/hashicorp/terraform-provider-vault/pull/1330))
+* `resource/azure_secret_backend`: Add support for setting `use_microsoft_graph_api` ([#1335](https://github.com/hashicorp/terraform-provider-vault/pull/1335))
+* `r/d/kubernetes_auth_backend_role`: Add support for setting and getting `alias_name_source` ([#1336](https://github.com/hashicorp/terraform-provider-vault/pull/1336))
+* `resource/database_secret_backend_connection`: Add `username` and `password` fields to all DB Engines that support them ([#1331](https://github.com/hashicorp/terraform-provider-vault/pull/1331))
+* `resource/token_auth_backend_role`: Add support for setting `allowed_entity_aliases` ([#1126](https://github.com/hashicorp/terraform-provider-vault/pull/1126))
+* `resource/ad_secret_backend`:  Restore deprecated `formatter`, and `length` fields. ([#1341](https://github.com/hashicorp/terraform-provider-vault/pull/1341))
+* `resource/ldap_auth_backend`: Add support for setting `case_sensitive_names` ([#1176](https://github.com/hashicorp/terraform-provider-vault/pull/1176))
+
+## 3.2.1 (January 20, 2022)
+BUGS:
+* `resource/rabbitmq_secret_backend_role`: Add nil check when reading RabbitMQ role from Vault ([#1312](https://github.com/hashicorp/terraform-provider-vault/pull/1312))
+
+## 3.2.0 (January 19, 2022)
+BUGS:
+* `resource/aws_secret_backend_role`: Ensure all updated fields are applied ([#1277](https://github.com/hashicorp/terraform-provider-vault/pull/1277))
+
+IMPROVEMENTS:
+* `resource/database_secret_backend_connection`: Add support for configuring Redshift databases ([#1279](https://github.com/hashicorp/terraform-provider-vault/pull/1279))
+* `resource/pki_secret_backend_intermediate_cert_request`: Add support for the `ed25519` key_type ([#1278](https://github.com/hashicorp/terraform-provider-vault/pull/1278))
+* `resource/rabbitmq_secret_backend_role`: Add support for `vhost_topics` ([#1246](https://github.com/hashicorp/terraform-provider-vault/pull/1246))
+* `resource/vault_mount`: Add support for `audit_non_hmac_request_keys` and `audit_non_hmac_response_keys` ([#1297](https://github.com/hashicorp/terraform-provider-vault/pull/1297))
+* `resource/vault_aws_secret_backend`: Add support for `username_template` ([#1292](https://github.com/hashicorp/terraform-provider-vault/pull/1292))
+
+## 3.1.1 (December 22, 2021)
+BUGS:
+* Prevent new `entity` read failures when the `VAULT_TOKEN` environment variable is not set ([#1270](https://github.com/hashicorp/terraform-provider-vault/pull/1270))
+
+## 3.1.0 (December 22, 2021)
+FEATURES:
+* `provider`: Add support retrying entity reads for `Client Controlled Consistency` type operations ([#1263](https://github.com/hashicorp/terraform-provider-vault/pull/1263))
+* `provider`: Add support for optionally creating a batch child token via the `skip_child_token` option ([#775](https://github.com/hashicorp/terraform-provider-vault/pull/775))
 
 IMPROVEMENTS:
 * `data/policy_document`: Add support for `patch` capability for vault-1.9+. ([#1238](https://github.com/hashicorp/terraform-provider-vault/pull/1238))
 * `resource/database_secret_backend_connection`: Add support for InfluxDB connections ([#1121](https://github.com/hashicorp/terraform-provider-vault/pull/1121))
+* `resource/generic_secret`: Add support for deleting all version data for a KV-V2 secret ([#1254](https://github.com/hashicorp/terraform-provider-vault/pull/1254))
+* `resource/database_secret_backend_connection`: Add support configuring `Contained Databases` for `mssql` ([#1259](https://github.com/hashicorp/terraform-provider-vault/pull/1259))
+* `resource/vault_jwt_auth_backend`: Add `oidc_response_mode`, `oidc_response_types`, and `namespace_in_state` fields ([#1244](https://github.com/hashicorp/terraform-provider-vault/pull/1244))
+* Add better error reporting whenever invalid JSON `metadata` is encountered ([#1262](https://github.com/hashicorp/terraform-provider-vault/pull/1262))
+* `resource/vault_identity_entity_alias`: Add `custom_metadata` support for entity aliases ([#1235](https://github.com/hashicorp/terraform-provider-vault/pull/1235))
+* `resource/approle_auth_backend_role_secret_id`: Update Vault provider to be compatible with Vault 1.9 changes ([#1242](https://github.com/hashicorp/terraform-provider-vault/pull/1242))
+* `provider`: Encrypt logged HTTP secret header values ([#1250](https://github.com/hashicorp/terraform-provider-vault/pull/1250))
+* `provider`: Optionally log request and response bodies ([#1251](https://github.com/hashicorp/terraform-provider-vault/pull/1251))
+
+BUGS:
+* `resource/identity_group_policies`: Fix potential `nil` panic in type conversion for API policies ([#1245](https://github.com/hashicorp/terraform-provider-vault/pull/1245))
+* `resource/aws_secret_backend_role`: Fix for properly detecting changes in the JSON policy document ([#1014](https://github.com/hashicorp/terraform-provider-vault/pull/1014))
 
 ## 3.0.1 (November 23, 2021)
 
@@ -22,6 +341,7 @@ IMPROVEMENTS:
 * `resource/jwt_auth_backend_role`: Add field `disable_bound_claims_parsing` to disable bound claim value parsing, which is useful when values contain commas ([#1200](https://github.com/hashicorp/terraform-provider-vault/pull/1200))
 * `resource/transform_template`: Add `encode_format` and `decode_formats` fields for `Vault Enterprise` with the `Advanced Data Protection Transform Module` ([#1214](https://github.com/hashicorp/terraform-provider-vault/pull/1214))
 * `data/generic_secret`: Store `lease_start_time` UTC. ([#1216](https://github.com/hashicorp/terraform-provider-vault/pull/1216))
+* `resource/identity_entity_alias`: Add support for configuring `custom_metadata`. ([#1235](https://github.com/hashicorp/terraform-provider-vault/pull/1235))
 
 BUGS:
 * `data/gcp_auth_backend_role`: Report an error when attempting to access a nonexistent role. ([#1184](https://github.com/hashicorp/terraform-provider-vault/pull/1184))
@@ -700,5 +1020,3 @@ BUG FIXES:
 ## 0.1.0 (June 21, 2017)
 
 NOTES:
-
-* Same functionality as that of Terraform 0.9.8. Repacked as part of [Provider Splitout](https://www.hashicorp.com/blog/upcoming-provider-changes-in-terraform-0-10/)

@@ -6,6 +6,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccAppRoleAuthBackendLogin_basic(t *testing.T) {
@@ -13,7 +16,7 @@ func TestAccAppRoleAuthBackendLogin_basic(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
@@ -36,7 +39,7 @@ func TestAccAppRoleAuthBackendLogin_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
 						"renewable"),
 					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
-						"lease_duration"),
+						consts.FieldLeaseDuration),
 					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",
 						"lease_started"),
 					resource.TestCheckResourceAttrSet("vault_approle_auth_backend_login.test",

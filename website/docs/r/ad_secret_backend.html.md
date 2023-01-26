@@ -35,8 +35,16 @@ resource "vault_ad_secret_backend" "config" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `backend` - (Optional) The unique path this backend should be mounted at. Must
 not begin or end with a `/`. Defaults to `ad`.
+
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
 
 * `anonymous_group_search` - (Optional) Use anonymous binds when performing LDAP group searches
 (if true the initial credentials will still be used for the initial connection test).
@@ -64,8 +72,7 @@ defaults to true.
 
 * `discoverdn` - (Optional) Use anonymous bind to discover the bind Distinguished Name of a user.
 
-* `formatter` - (Optional) Text to insert the password into, ex. "customPrefix{{PASSWORD}}customSuffix". This
-setting is deprecated and should instead use `password_policy`.
+* `formatter` - (Optional)  **Deprecated** use `password_policy`. Text to insert the password into, ex. "customPrefix{{PASSWORD}}customSuffix".
 
 * `groupattr` - (Optional) LDAP attribute to follow on objects returned by <groupfilter> in order to enumerate
 user group membership. Examples: `cn` or `memberOf`, etc. Defaults to `cn`.
@@ -81,8 +88,8 @@ Defaults to `false`.
 * `last_rotation_tolerance` - (Optional) The number of seconds after a Vault rotation where, if Active Directory
 shows a later rotation, it should be considered out-of-band
 
-* `length` - (Optional) The desired length of passwords that Vault generates. This
-setting is deprecated and should instead use `password_policy`.
+* `length` - (Optional) **Deprecated** use `password_policy`. The desired length of passwords that Vault generates.
+  *Mutually exclusive with `password_policy` on vault-1.11+*
 
 * `local` - (Optional) Mark the secrets engine as local-only. Local engines are not replicated or removed by
 replication.Tolerance duration to use when checking the last rotation time.

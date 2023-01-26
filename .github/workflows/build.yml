@@ -1,0 +1,135 @@
+name: Build
+
+on: push
+
+jobs:
+  gh-api-quota-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: get GH rate-limit config
+        run: |
+          curl -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/rate_limit
+  go-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.go-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: go-version
+        run: echo "version=$(cat .go-version)" >> $GITHUB_OUTPUT
+  build:
+    needs: [go-version]
+    runs-on: ubuntu-latest
+    container:
+      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build
+        run: |
+          make build
+      - name: Run unit tests
+        # here to short-circuit the acceptance tests, in the case of a failure.
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          make test
+  acceptance:
+    needs: [go-version, build]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # TODO: enable 1.9 job once the provider is Vault version aware
+        image:
+        - "vault-enterprise:1.10.6-ent"
+        - "vault-enterprise:1.11.4-ent"
+        - "vault-enterprise:1.12.0-ent"
+    container:
+      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
+    services:
+      vault:
+        image: hashicorp/${{ matrix.image }}
+        env:
+          VAULT_DEV_ROOT_TOKEN_ID: root
+          VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
+        options: >-
+          --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
+          --health-interval 1s
+          --health-timeout 5s
+          --health-retries 5
+      mysql:
+        image: docker.mirror.hashicorp.services/mysql:latest
+        env:
+          MYSQL_ROOT_PASSWORD: mysql
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
+      mongo:
+        image: docker.mirror.hashicorp.services/mongo:latest
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: mongodb
+          MONGO_INITDB_DATABASE: admin
+      postgres:
+        image: docker.mirror.hashicorp.services/postgres:latest
+        env:
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: database
+      couchbase:
+        image: docker.io/couchbase/server-sandbox:7.1.1
+        ports:
+          - 8091:8091
+          - 8092:8092
+          - 8093:8093
+          - 8094:8094
+          - 11207:11207
+          - 11210:11210
+          - 18091:18091
+          - 18092:18092
+          - 18093:18093
+          - 18094:18094
+        options: >-
+          --health-cmd "curl -f http://Administrator:password@127.0.0.1:8091/sampleBuckets"
+          --health-interval 1s
+          --health-timeout 5s
+          --health-retries 60
+      consul:
+        image: docker.mirror.hashicorp.services/consul:latest
+        env:
+          CONSUL_LOCAL_CONFIG: "{\"acl\":{\"enabled\":true}}"
+        ports:
+        - 8500:8500
+        - 8600:8600
+        options: >-
+          --health-cmd "curl -f 'http://127.0.0.1:8500/v1/health/node/server-1'"
+          --health-interval 1s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v3
+      - name: Acceptance Tests
+        env:
+          VAULT_TOKEN: "root"
+          VAULT_ADDR: "http://vault:8200"
+          MYSQL_URL: "root:mysql@tcp(mysql:3306)/"
+          MYSQL_CONNECTION_URL: "{{username}}:{{password}}@tcp(mysql:3306)/"
+          MYSQL_CONNECTION_USERNAME: "root"
+          MYSQL_CONNECTION_PASSWORD: "mysql"
+          MONGODB_URL: "mongodb://root:mongodb@mongo:27017/admin?ssl=false"
+          MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
+          POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
+          COUCHBASE_HOST: couchbase
+          COUCHBASE_USERNAME: Administrator
+          COUCHBASE_PASSWORD: password
+          CONSUL_HTTP_ADDR: "consul:8500"
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
+      - name: "Generate Vault API Path Coverage Report"
+        run: |
+          go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -40,7 +41,7 @@ var allowedCapabilities = []string{
 
 func policyDocumentDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: policyDocumentDataSourceRead,
+		Read: ReadWrapper(policyDocumentDataSourceRead),
 		Schema: map[string]*schema.Schema{
 			"rule": {
 				Type:        schema.TypeList,
@@ -49,7 +50,7 @@ func policyDocumentDataSource() *schema.Resource {
 				Description: "The policy rule",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"path": {
+						consts.FieldPath: {
 							Type:     schema.TypeString,
 							Required: true,
 						},

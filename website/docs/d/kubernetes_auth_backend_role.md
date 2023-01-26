@@ -29,6 +29,11 @@ output "policies" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
+  *Available only for Vault Enterprise*.
+
 * `role_name` - (Required) The name of the role to retrieve the Role attributes for.
 
 * `backend` - (Optional) The unique name for the Kubernetes backend the role to
@@ -42,7 +47,9 @@ In addition to the above arguments, the following attributes are exported:
 
 * `bound_service_account_namespaces` - List of namespaces allowed to access this role. If set to "*" all namespaces are allowed, both this and bound_service_account_names can not be set to "*".
 
-* `audience` - (Optional) Audience claim to verify in the JWT.
+* `audience` - Audience claim to verify in the JWT.
+
+* `alias_name_source` - Method used for generating identity aliases. (vault-1.9+)
 
 ### Common Token Attributes
 

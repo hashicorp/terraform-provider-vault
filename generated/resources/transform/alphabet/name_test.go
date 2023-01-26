@@ -8,17 +8,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	sdk_schema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/schema"
-	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
 var nameTestProvider = func() *schema.Provider {
 	p := schema.NewProvider(vault.Provider())
-	p.RegisterResource("vault_mount", vault.MountResource())
-	p.RegisterResource("vault_transform_alphabet_name", NameResource())
+	p.RegisterResource("vault_mount", vault.UpdateSchemaResource(vault.MountResource()))
+	p.RegisterResource("vault_transform_alphabet_name", vault.UpdateSchemaResource(NameResource()))
 	return p
 }()
 
@@ -26,7 +26,7 @@ func TestAlphabetName(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { util.TestEntPreCheck(t) },
+		PreCheck: func() { testutil.TestEntPreCheck(t) },
 		Providers: map[string]*sdk_schema.Provider{
 			"vault": nameTestProvider.SchemaProvider(),
 		},
@@ -58,7 +58,7 @@ func TestAlphabetName(t *testing.T) {
 }
 
 func destroy(s *terraform.State) error {
-	client := nameTestProvider.SchemaProvider().Meta().(*api.Client)
+	client := nameTestProvider.SchemaProvider().Meta().(*provider.ProviderMeta).GetClient()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_transform_alphabet_name" {
@@ -81,9 +81,10 @@ resource "vault_mount" "mount_transform" {
   path = "%s"
   type = "transform"
 }
+
 resource "vault_transform_alphabet_name" "test" {
-  path = vault_mount.mount_transform.path
-  name = "%s"
+  path     = vault_mount.mount_transform.path
+  name     = "%s"
   alphabet = "%s"
 }
 `, path, name, alphabet)

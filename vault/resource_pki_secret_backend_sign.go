@@ -1,23 +1,33 @@
 package vault
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func pkiSecretBackendSignResource() *schema.Resource {
 	return &schema.Resource{
-		Create:        pkiSecretBackendSignCreate,
-		Read:          pkiSecretBackendSignRead,
-		Update:        pkiSecretBackendSignUpdate,
-		Delete:        pkiSecretBackendSignDelete,
-		CustomizeDiff: pkiSecretBackendSignDiff,
+		Create: pkiSecretBackendSignCreate,
+		Delete: pkiSecretBackendSignDelete,
+		Update: func(data *schema.ResourceData, i interface{}) error {
+			return nil
+		},
+		Read: ReadWrapper(pkiSecretBackendCertRead),
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    pkiSecretSerialNumberResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: pkiSecretSerialNumberUpgradeV0,
+			},
+		},
+		SchemaVersion: 1,
+		CustomizeDiff: pkiCertAutoRenewCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -74,7 +84,7 @@ func pkiSecretBackendSignResource() *schema.Resource {
 			"uri_sans": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "List of alterative URIs.",
+				Description: "List of alternative URIs.",
 				ForceNew:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -131,19 +141,34 @@ func pkiSecretBackendSignResource() *schema.Resource {
 			"serial": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The serial.",
+				Deprecated:  "Use serial_number instead",
+				Description: "The serial number.",
+			},
+			"serial_number": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The certificate's serial number, hex formatted.",
 			},
 			"expiration": {
 				Type:        schema.TypeInt,
 				Computed:    true,
-				Description: "The certificate expiration.",
+				Description: "The certificate expiration as a Unix-style timestamp.",
+			},
+			"renew_pending": {
+				Type:     schema.TypeBool,
+				Computed: true,
+				Description: "Initially false, and then set to true during refresh once " +
+					"the expiration is less than min_seconds_remaining in the future.",
 			},
 		},
 	}
 }
 
 func pkiSecretBackendSignCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	name := d.Get("name").(string)
@@ -214,48 +239,16 @@ func pkiSecretBackendSignCreate(d *schema.ResourceData, meta interface{}) error 
 	d.Set("issuing_ca", resp.Data["issuing_ca"])
 	d.Set("ca_chain", resp.Data["ca_chain"])
 	d.Set("serial", resp.Data["serial_number"])
+	d.Set("serial_number", resp.Data["serial_number"])
 	d.Set("expiration", resp.Data["expiration"])
 
+	if err := pkiSecretBackendCertSynchronizeRenewPending(d); err != nil {
+		return err
+	}
+
 	d.SetId(fmt.Sprintf("%s/%s/%s", backend, name, commonName))
-	return pkiSecretBackendSignRead(d, meta)
-}
 
-func pkiSecretBackendSignDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
-	if d.Id() == "" {
-		return nil
-	}
-
-	minSeconds := 0
-	if v, ok := d.GetOk("min_seconds_remaining"); ok {
-		minSeconds = v.(int)
-	}
-
-	if pkiSecretBackendCertNeedsRenewed(d.Get("auto_renew").(bool), d.Get("expiration").(int), minSeconds) {
-		log.Printf("[DEBUG] certificate %q is due for renewal", d.Id())
-		if err := d.SetNewComputed("certificate"); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	log.Printf("[DEBUG] certificate %q is not due for renewal", d.Id())
-	return nil
-}
-
-func pkiSecretBackendSignRead(d *schema.ResourceData, meta interface{}) error {
-	return nil
-}
-
-func pkiSecretBackendSignUpdate(d *schema.ResourceData, m interface{}) error {
-	minSeconds := 0
-	if v, ok := d.GetOk("min_seconds_remaining"); ok {
-		minSeconds = v.(int)
-	}
-
-	if pkiSecretBackendCertNeedsRenewed(d.Get("auto_renew").(bool), d.Get("expiration").(int), minSeconds) {
-		return pkiSecretBackendSignCreate(d, m)
-	}
-	return nil
+	return pkiSecretBackendCertRead(d, meta)
 }
 
 func pkiSecretBackendSignDelete(d *schema.ResourceData, meta interface{}) error {

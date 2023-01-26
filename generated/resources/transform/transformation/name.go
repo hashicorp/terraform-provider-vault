@@ -9,8 +9,10 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/terraform-provider-vault/vault"
 )
 
 const nameEndpoint = "/transform/transformation/{name}"
@@ -65,11 +67,18 @@ func NameResource() *schema.Resource {
 			Optional:    true,
 			Description: `The type of transformation to perform.`,
 		},
+		"deletion_allowed": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+			Description: `If true, this transform can be deleted. ` +
+				`Otherwise deletion is blocked while this value remains false.`,
+		},
 	}
 	return &schema.Resource{
 		Create: createNameResource,
 		Update: updateNameResource,
-		Read:   readNameResource,
+		Read:   vault.ReadWrapper(readNameResource),
 		Exists: resourceNameExists,
 		Delete: deleteNameResource,
 		Importer: &schema.ResourceImporter{
@@ -78,8 +87,13 @@ func NameResource() *schema.Resource {
 		Schema: fields,
 	}
 }
+
 func createNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	path := d.Get("path").(string)
 	vaultPath := util.ParsePath(path, nameEndpoint, d)
 	log.Printf("[DEBUG] Creating %q", vaultPath)
@@ -102,6 +116,10 @@ func createNameResource(d *schema.ResourceData, meta interface{}) error {
 		data["type"] = v
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		data["deletion_allowed"] = d.Get("deletion_allowed")
+	}
+
 	log.Printf("[DEBUG] Writing %q", vaultPath)
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
 		return fmt.Errorf("error writing %q: %s", vaultPath, err)
@@ -112,7 +130,11 @@ func createNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func readNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Reading %q", vaultPath)
 
@@ -165,11 +187,20 @@ func readNameResource(d *schema.ResourceData, meta interface{}) error {
 			return fmt.Errorf("error setting state key 'type': %s", err)
 		}
 	}
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if err := d.Set("deletion_allowed", resp.Data["deletion_allowed"]); err != nil {
+			return fmt.Errorf("error setting state key 'deletion_allowed': %s", err)
+		}
+	}
 	return nil
 }
 
 func updateNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Updating %q", vaultPath)
 
@@ -189,15 +220,24 @@ func updateNameResource(d *schema.ResourceData, meta interface{}) error {
 	if raw, ok := d.GetOk("type"); ok {
 		data["type"] = raw
 	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		data["deletion_allowed"] = d.Get("deletion_allowed")
+	}
+
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
 		return fmt.Errorf("error updating template auth backend role %q: %s", vaultPath, err)
 	}
+
 	log.Printf("[DEBUG] Updated %q", vaultPath)
 	return readNameResource(d, meta)
 }
 
 func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Deleting %q", vaultPath)
 
@@ -213,7 +253,10 @@ func deleteNameResource(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceNameExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", vaultPath)
 

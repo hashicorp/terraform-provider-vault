@@ -7,15 +7,20 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-func gcpSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
-		Create: gcpSecretBackendCreate,
-		Read:   gcpSecretBackendRead,
-		Update: gcpSecretBackendUpdate,
-		Delete: gcpSecretBackendDelete,
-		Exists: gcpSecretBackendExists,
+func gcpSecretBackendResource(name string) *schema.Resource {
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
+		Create:        gcpSecretBackendCreate,
+		Read:          ReadWrapper(gcpSecretBackendRead),
+		Update:        gcpSecretBackendUpdate,
+		Delete:        gcpSecretBackendDelete,
+		Exists:        gcpSecretBackendExists,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -24,8 +29,7 @@ func gcpSecretBackendResource() *schema.Resource {
 			"path": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
-				Default:     "gcp",
+				Default:     consts.MountTypeGCP,
 				Description: "Path to mount the backend at.",
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
 					value := v.(string)
@@ -47,13 +51,12 @@ func gcpSecretBackendResource() *schema.Resource {
 				// string. This makes terraform not want to change when an extra
 				// space is included in the JSON string. It is also necesarry
 				// when disable_read is false for comparing values.
-				StateFunc:    NormalizeDataJSON,
-				ValidateFunc: ValidateDataJSON,
+				StateFunc:    NormalizeDataJSONFunc(name),
+				ValidateFunc: ValidateDataJSONFunc(name),
 			},
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
 			"default_lease_ttl_seconds": {
@@ -77,11 +80,14 @@ func gcpSecretBackendResource() *schema.Resource {
 				Description: "Local mount flag that can be explicitly set to true to enforce local mount in HA environment",
 			},
 		},
-	}
+	})
 }
 
 func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Get("path").(string)
 	description := d.Get("description").(string)
@@ -95,7 +101,7 @@ func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting GCP backend at %q", path)
 	err := client.Sys().Mount(path, &api.MountInput{
-		Type:        "gcp",
+		Type:        consts.MountTypeGCP,
 		Description: description,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
@@ -127,7 +133,10 @@ func gcpSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -157,10 +166,19 @@ func gcpSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 	d.Partial(true)
+
+	path, err := util.Remount(d, client, consts.FieldPath, false)
+	if err != nil {
+		return err
+	}
+
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		config := api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", d.Get("default_lease_ttl_seconds")),
@@ -190,7 +208,10 @@ func gcpSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	path := d.Id()
 
@@ -204,7 +225,11 @@ func gcpSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func gcpSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
+
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if GCP backend exists at %q", path)
 	mounts, err := client.Sys().ListMounts()

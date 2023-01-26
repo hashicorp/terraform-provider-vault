@@ -34,6 +34,11 @@ resource "vault_kubernetes_auth_backend_role" "example" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `role_name` - (Required) Name of the role.
 
 * `bound_service_account_names` - (Required) List of service account names able to access this role. If set to `["*"]` all names are allowed, both this and bound_service_account_namespaces can not be "*".
@@ -44,11 +49,16 @@ The following arguments are supported:
 
 * `audience` - (Optional) Audience claim to verify in the JWT.
 
+~> Please see [alias_name_source](https://www.vaultproject.io/api-docs/auth/kubernetes#alias_name_source)
+before setting this to something other its default value. There are **important** security
+implications to be aware of.
+ 
+* `alias_name_source` - (Optional, default: `serviceaccount_uid`) Configures how identity aliases are generated.
+   Valid choices are: `serviceaccount_uid`, `serviceaccount_name`. (vault-1.9+)
+
 ### Common Token Arguments
 
 These arguments are common across several Authentication Token resources since Vault 1.2.
-
-* `token_ttl` - (Optional) The incremental lifetime for generated tokens in number of seconds.
   Its current value will be referenced at renewal time.
 
 * `token_max_ttl` - (Optional) The maximum lifetime for generated tokens in number of seconds.
@@ -74,9 +84,8 @@ These arguments are common across several Authentication Token resources since V
 * `token_no_default_policy` - (Optional) If set, the default policy will not be set on
   generated tokens; otherwise it will be added to the policies set in token_policies.
 
-* `token_num_uses` - (Optional) The
-  [period](https://www.vaultproject.io/docs/concepts/tokens.html#token-time-to-live-periodic-tokens-and-explicit-max-ttls),
-  if any, in number of seconds to set on the token.
+* `token_num_uses` - (Optional) The [maximum number](https://www.vaultproject.io/api-docs/kubernetes#token_num_uses)
+   of times a generated token may be used (within its lifetime); 0 means unlimited.
 
 * `token_type` - (Optional) The type of token that should be generated. Can be `service`,
   `batch`, or `default` to use the mount's tuned default (which unless changed will be

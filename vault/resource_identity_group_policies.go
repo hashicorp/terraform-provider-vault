@@ -5,15 +5,17 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
-	"github.com/hashicorp/vault/api"
 )
 
 func identityGroupPoliciesResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityGroupPoliciesUpdate,
 		Update: identityGroupPoliciesUpdate,
-		Read:   identityGroupPoliciesRead,
+		Read:   ReadWrapper(identityGroupPoliciesRead),
 		Delete: identityGroupPoliciesDelete,
 
 		Schema: map[string]*schema.Schema{
@@ -49,14 +51,18 @@ func identityGroupPoliciesResource() *schema.Resource {
 }
 
 func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Get("group_id").(string)
 
 	log.Printf("[DEBUG] Updating IdentityGroupPolicies %q", id)
-	path := identityGroupIDPath(id)
+	path := group.IdentityGroupIDPath(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := make(map[string]interface{})
 	policies := d.Get("policies").(*schema.Set).List()
@@ -64,7 +70,7 @@ func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error
 	if d.Get("exclusive").(bool) {
 		data["policies"] = policies
 	} else {
-		apiPolicies, err := readIdentityGroupPolicies(client, id)
+		apiPolicies, err := readIdentityGroupPolicies(client, id, d.IsNewResource())
 		if err != nil {
 			return err
 		}
@@ -93,22 +99,30 @@ func identityGroupPoliciesUpdate(d *schema.ResourceData, meta interface{}) error
 }
 
 func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Id()
 
-	resp, err := readIdentityGroup(client, id)
+	log.Printf("[DEBUG] Read IdentityGroupPolicies %s", id)
+	resp, err := group.ReadIdentityGroup(client, id, d.IsNewResource())
 	if err != nil {
+		if group.IsIdentityNotFoundError(err) {
+			log.Printf("[WARN] IdentityGroupPolicies %q not found, removing from state", id)
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
-	log.Printf("[DEBUG] Read IdentityGroupPolicies %s", id)
-	if resp == nil {
-		log.Printf("[WARN] IdentityGroupPolicies %q not found, removing from state", id)
-		d.SetId("")
-		return nil
-	}
 
-	d.Set("group_id", id)
-	d.Set("group_name", resp.Data["name"])
+	if err := d.Set("group_id", id); err != nil {
+		return err
+	}
+	if err := d.Set("group_name", resp.Data["name"]); err != nil {
+		return err
+	}
 
 	if d.Get("exclusive").(bool) {
 		if err = d.Set("policies", resp.Data["policies"]); err != nil {
@@ -117,7 +131,13 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 	} else {
 		userPolicies := d.Get("policies").(*schema.Set).List()
 		newPolicies := make([]string, 0)
-		apiPolicies := resp.Data["policies"].([]interface{})
+
+		var apiPolicies []interface{}
+		if val, ok := resp.Data["policies"]; ok && val != nil {
+			apiPolicies = val.([]interface{})
+		} else {
+			apiPolicies = make([]interface{}, 0)
+		}
 
 		for _, policy := range userPolicies {
 			if found, _ := util.SliceHasElement(apiPolicies, policy); found {
@@ -132,21 +152,25 @@ func identityGroupPoliciesRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func identityGroupPoliciesDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
 	id := d.Get("group_id").(string)
 
 	log.Printf("[DEBUG] Deleting IdentityGroupPolicies %q", id)
-	path := identityGroupIDPath(id)
+	path := group.IdentityGroupIDPath(id)
 
-	vaultMutexKV.Lock(path)
-	defer vaultMutexKV.Unlock(path)
+	provider.VaultMutexKV.Lock(path)
+	defer provider.VaultMutexKV.Unlock(path)
 
 	data := make(map[string]interface{})
 
 	if d.Get("exclusive").(bool) {
 		data["policies"] = make([]string, 0)
 	} else {
-		apiPolicies, err := readIdentityGroupPolicies(client, id)
+		apiPolicies, err := readIdentityGroupPolicies(client, id, false)
 		if err != nil {
 			return err
 		}

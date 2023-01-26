@@ -23,7 +23,7 @@ Requirements
 ------------
 
 - [Terraform](https://www.terraform.io/downloads.html) 0.12.x and above, we recommend using the latest stable release whenever possible.
-- [Go](https://golang.org/doc/install) 1.17 (to build the provider plugin)
+- [Go](https://golang.org/doc/install) 1.19 (to build the provider plugin)
 
 Building The Provider
 ---------------------
@@ -42,13 +42,10 @@ $ cd $GOPATH/src/github.com/hashicorp/terraform-provider-vault
 $ make build
 ```
 
-Using the provider
-----------------------
-
 Developing the Provider
 ---------------------------
 
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.16+ is *required*). You'll also need to correctly setup a [GOPATH](http://golang.org/doc/code.html#GOPATH), as well as adding `$GOPATH/bin` to your `$PATH`.
+If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.19+ is *required*). You'll also need to correctly setup a [GOPATH](http://golang.org/doc/code.html#GOPATH), as well as adding `$GOPATH/bin` to your `$PATH`.
 
 To compile the provider, run `make build`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
 
@@ -77,8 +74,7 @@ In order to run the full suite of Acceptance tests, you will need the following:
 There may be additional variables for specific tests. Consult the specific test(s) for more information.
     - `AWS_ACCESS_KEY_ID`
     - `AWS_SECRET_ACCESS_KEY`
-    - `GOOGLE_CREDENTIALS`
-    - `GOOGLE_PROJECT`
+    - `GOOGLE_CREDENTIALS` the contents of a GCP creds JSON, alternatively read from `GOOGLE_CREDENTIALS_FILE`
     - `RMQ_CONNECTION_URI`
     - `RMQ_USERNAME`
     - `RMQ_PASSWORD`
@@ -94,3 +90,35 @@ If you wish to run specific tests, use the `TESTARGS` environment variable:
 ```sh
 TESTARGS="--run DataSourceAWSAccessCredentials" make testacc
 ```
+
+Using a local development build
+----------------------
+
+It's possible to use a local build of the Vault provider with Terraform directly.
+This is useful when testing the provider outside the acceptance test framework.
+
+Configure Terraform to use the development build of the provider.
+
+> **warning**: backup your `~/.terraformrc` before running this command:
+ 
+```shell
+cat > ~/.terraformrc <<HERE
+provider_installation {
+  dev_overrides {
+    "hashicorp/vault" = "$HOME/.terraform.d/plugins"
+  }
+  
+  # For all other providers, install them directly from their origin provider
+  # registries as normal. If you omit this, Terraform will _only_ use
+  # the dev_overrides block, and so no other providers will be available.
+  direct {}
+}
+HERE
+```
+
+Then execute the `dev` make target from the project root.
+```shell
+make dev
+```
+Now Terraform is set up to use the `dev` provider build instead of the provider 
+from the HashiCorp registry.

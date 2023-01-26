@@ -1,19 +1,21 @@
 package util
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
+	"net/http"
 	"reflect"
 	"regexp"
 	"strings"
-	"testing"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 func JsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
@@ -26,7 +28,7 @@ func JsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
 	err = json.Unmarshal([]byte(new), &newJSON)
 	if err != nil {
 		log.Printf("[WARN] Version of %q in config is not valid JSON: %s", k, err)
-		return true
+		return false
 	}
 	return reflect.DeepEqual(oldJSON, newJSON)
 }
@@ -42,21 +44,34 @@ func ToStringArray(input []interface{}) []string {
 }
 
 func Is404(err error) bool {
-	return strings.Contains(err.Error(), "Code: 404")
+	return ErrorContainsHTTPCode(err, http.StatusNotFound)
 }
 
-func CalculateConflictsWith(self string, group []string) []string {
-	if len(group) < 2 {
-		return []string{}
+func ErrorContainsHTTPCode(err error, codes ...int) bool {
+	for _, code := range codes {
+		if strings.Contains(err.Error(), fmt.Sprintf("Code: %d", code)) {
+			return true
+		}
 	}
-	results := make([]string, 0, len(group)-2)
+	return false
+}
+
+// CalculateConflictsWith returns a slice of field names that conflict with
+// a single field (self).
+func CalculateConflictsWith(self string, group []string) []string {
+	result := make([]string, 0)
+	seen := map[string]bool{
+		self: true,
+	}
 	for _, item := range group {
-		if item == self {
+		if _, ok := seen[item]; ok {
 			continue
 		}
-		results = append(results, item)
+
+		seen[item] = true
+		result = append(result, item)
 	}
-	return results
+	return result
 }
 
 func ArrayToTerraformList(values []string) string {
@@ -95,96 +110,6 @@ func IsExpiredTokenErr(err error) bool {
 		return true
 	}
 	return false
-}
-
-func TestAccPreCheck(t *testing.T) {
-	if v := os.Getenv("VAULT_ADDR"); v == "" {
-		t.Fatal("VAULT_ADDR must be set for acceptance tests")
-	}
-	if v := os.Getenv("VAULT_TOKEN"); v == "" {
-		t.Fatal("VAULT_TOKEN must be set for acceptance tests")
-	}
-}
-
-func TestEntPreCheck(t *testing.T) {
-	isEnterprise := os.Getenv("TF_ACC_ENTERPRISE")
-	if isEnterprise == "" {
-		t.Skip("TF_ACC_ENTERPRISE is not set, test is applicable only for Enterprise version of Vault")
-	}
-	if v := os.Getenv("VAULT_ADDR"); v == "" {
-		t.Fatal("VAULT_ADDR must be set for acceptance tests")
-	}
-	if v := os.Getenv("VAULT_TOKEN"); v == "" {
-		t.Fatal("VAULT_TOKEN must be set for acceptance tests")
-	}
-}
-
-func GetTestADCreds(t *testing.T) (string, string, string) {
-	adBindDN := os.Getenv("AD_BINDDN")
-	adBindPass := os.Getenv("AD_BINDPASS")
-	adURL := os.Getenv("AD_URL")
-
-	if adBindDN == "" {
-		t.Skip("AD_BINDDN not set")
-	}
-	if adBindPass == "" {
-		t.Skip("AD_BINDPASS not set")
-	}
-	if adURL == "" {
-		t.Skip("AD_URL not set")
-	}
-	return adBindDN, adBindPass, adURL
-}
-
-func GetTestNomadCreds(t *testing.T) (string, string) {
-	address := os.Getenv("NOMAD_ADDR")
-	token := os.Getenv("NOMAD_TOKEN")
-
-	if address == "" {
-		t.Skip("NOMAD_ADDR not set")
-	}
-	if token == "" {
-		t.Skip("NOMAD_TOKEN not set")
-	}
-
-	return address, token
-}
-
-func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		resourceState, ok := s.RootModule().Resources[name]
-		if !ok {
-			return fmt.Errorf("not found: %q", name)
-		}
-		instanceState := resourceState.Primary
-		if instanceState == nil {
-			return fmt.Errorf("%q has no primary instance state", name)
-		}
-		v, ok := instanceState.Attributes[key]
-		if !ok {
-			return fmt.Errorf("%s: attribute not found %q", name, key)
-		}
-		if expectedValue == "" && v == expectedValue {
-			return nil
-		}
-		if v == "" {
-			return fmt.Errorf("%s: attribute %q expected %#v, got %#v", name, key, expectedValue, v)
-		}
-
-		var stateJSON, expectedJSON interface{}
-		err := json.Unmarshal([]byte(v), &stateJSON)
-		if err != nil {
-			return fmt.Errorf("%s: attribute %q not JSON: %s", name, key, err)
-		}
-		err = json.Unmarshal([]byte(expectedValue), &expectedJSON)
-		if err != nil {
-			return fmt.Errorf("expected value %q not JSON: %s", expectedValue, err)
-		}
-		if !reflect.DeepEqual(stateJSON, expectedJSON) {
-			return fmt.Errorf("%s: attribute %q expected %#v, got %#v", name, key, expectedJSON, stateJSON)
-		}
-		return nil
-	}
 }
 
 func ShortDur(d time.Duration) string {
@@ -327,4 +252,172 @@ func PathParameters(endpoint, vaultPath string) (map[string]string, error) {
 		result[fieldName] = match[i]
 	}
 	return result, nil
+}
+
+// StatusCheckRetry for any response having a status code in statusCode.
+func StatusCheckRetry(statusCodes ...int) retryablehttp.CheckRetry {
+	return func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		// ensure that the client controlled consistency policy is honoured.
+		if retry, err := api.DefaultRetryPolicy(ctx, resp, err); err != nil || retry {
+			return retry, err
+		}
+
+		if resp != nil {
+			for _, code := range statusCodes {
+				if code == resp.StatusCode {
+					return true, nil
+				}
+			}
+		}
+		return false, nil
+	}
+}
+
+// SetupCCCRetryClient for handling Client Controlled Consistency related
+// requests.
+func SetupCCCRetryClient(client *api.Client, maxRetry int) {
+	client.SetReadYourWrites(true)
+	client.SetMaxRetries(maxRetry)
+	client.SetCheckRetry(StatusCheckRetry(http.StatusNotFound))
+
+	// ensure that the clone has the reasonable backoff min/max durations set.
+	if client.MinRetryWait() == 0 {
+		client.SetMinRetryWait(time.Millisecond * 1000)
+	}
+	if client.MaxRetryWait() == 0 {
+		client.SetMaxRetryWait(time.Millisecond * 1500)
+	}
+	if client.MaxRetryWait() < client.MinRetryWait() {
+		client.SetMaxRetryWait(client.MinRetryWait())
+	}
+
+	bo := retryablehttp.LinearJitterBackoff
+	client.SetBackoff(bo)
+
+	to := time.Duration(0)
+	for i := 0; i < client.MaxRetries(); i++ {
+		to += bo(client.MaxRetryWait(), client.MaxRetryWait(), i, nil)
+	}
+	client.SetClientTimeout(to + time.Second*30)
+}
+
+// SetResourceData from a data map.
+func SetResourceData(d *schema.ResourceData, data map[string]interface{}) error {
+	for k := range data {
+		if err := d.Set(k, data[k]); err != nil {
+			return fmt.Errorf("error setting resource data for key %q, err=%w", k, err)
+		}
+	}
+
+	return nil
+}
+
+// NormalizeMountPath to be in a form valid for accessing values from api.MountOutput
+func NormalizeMountPath(path string) string {
+	return TrimSlashes(path) + consts.PathDelim
+}
+
+// TrimSlashes from path.
+func TrimSlashes(path string) string {
+	return strings.Trim(path, consts.PathDelim)
+}
+
+// CheckMountEnabled in Vault, path must contain a trailing '/',
+func CheckMountEnabled(client *api.Client, path string) (bool, error) {
+	mounts, err := client.Sys().ListMounts()
+	if err != nil {
+		return false, err
+	}
+
+	_, ok := mounts[NormalizeMountPath(path)]
+
+	return ok, nil
+}
+
+// GetAPIRequestDataWithMap to pass to Vault from schema.ResourceData.
+// The fieldMap specifies the schema field to its vault constituent.
+// If the vault field is empty, then two fields are mapped 1:1.
+func GetAPIRequestDataWithMap(d *schema.ResourceData, fieldMap map[string]string) map[string]interface{} {
+	data := make(map[string]interface{})
+	for k1, k2 := range fieldMap {
+		if k2 == "" {
+			k2 = k1
+		}
+
+		data[k2] = getAPIRequestValue(d, k1)
+	}
+
+	return data
+}
+
+// GetAPIRequestDataWithSlice to pass to Vault from schema.ResourceData.
+func GetAPIRequestDataWithSlice(d *schema.ResourceData, fields []string) map[string]interface{} {
+	data := make(map[string]interface{})
+	for _, k := range fields {
+		data[k] = getAPIRequestValue(d, k)
+	}
+
+	return data
+}
+
+// GetAPIRequestDataWithSliceOk to pass to Vault from schema.ResourceData.
+// Only field values that are set in schema.ResourceData will be returned
+func GetAPIRequestDataWithSliceOk(d *schema.ResourceData, fields []string) map[string]interface{} {
+	data := make(map[string]interface{})
+	for _, k := range fields {
+		if v, ok := getAPIRequestValueOk(d, k); ok {
+			data[k] = v
+		}
+	}
+
+	return data
+}
+
+func getAPIRequestValue(d *schema.ResourceData, k string) interface{} {
+	return getAPIValue(d.Get(k))
+}
+
+func getAPIValue(i interface{}) interface{} {
+	switch s := i.(type) {
+	case *schema.Set:
+		return s.List()
+	default:
+		return s
+	}
+}
+
+func getAPIRequestValueOk(d *schema.ResourceData, k string) (interface{}, bool) {
+	sv, ok := d.GetOk(k)
+	if !ok {
+		return nil, ok
+	}
+
+	return getAPIValue(sv), ok
+}
+
+func Remount(d *schema.ResourceData, client *api.Client, mountField string, isAuthMount bool) (string, error) {
+	ret := d.Get(mountField).(string)
+
+	if d.HasChange(mountField) {
+		// since this function is only called within Update
+		// we know that remount is enabled
+		o, n := d.GetChange(mountField)
+		oldPath := o.(string)
+		newPath := n.(string)
+
+		if isAuthMount {
+			oldPath = "auth/" + oldPath
+			newPath = "auth/" + newPath
+		}
+
+		err := client.Sys().Remount(oldPath, newPath)
+		if err != nil {
+			return "", fmt.Errorf("error remounting to %q: %w", newPath, err)
+		}
+
+		// ID for Auth backends only contains mount path
+		d.SetId(ret)
+	}
+
+	return ret, nil
 }

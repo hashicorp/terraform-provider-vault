@@ -7,7 +7,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAlicloudAuthBackendRole_basic(t *testing.T) {
@@ -16,7 +18,7 @@ func TestAlicloudAuthBackendRole_basic(t *testing.T) {
 	arn := acctest.RandomWithPrefix("acs:ram:123456:tf:role/")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAlicloudAuthBackedRoleDestroy,
 		Steps: []resource.TestStep{
@@ -48,12 +50,16 @@ func TestAlicloudAuthBackendRole_basic(t *testing.T) {
 }
 
 func testAlicloudAuthBackedRoleDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_alicloud_auth_backend_role" {
 			continue
 		}
+
+		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
+		if e != nil {
+			return e
+		}
+
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("Error checking for AliCloud Auth Backend role %q: %s", rs.Primary.ID, err)
@@ -66,7 +72,6 @@ func testAlicloudAuthBackedRoleDestroy(s *terraform.State) error {
 }
 
 func testAlicloudAuthBackedRoleConfig_basic(backend, name, arn string) string {
-
 	return fmt.Sprintf(`
 
 resource "vault_auth_backend" "alicloud" {

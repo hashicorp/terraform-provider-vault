@@ -50,6 +50,11 @@ EOT
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `backend` - (Required) The path the AWS secret backend is mounted at,
   with no leading or trailing `/`s.
 
@@ -94,6 +99,14 @@ The following arguments are supported:
 * `max_sts_ttl` - (Optional) The max allowed TTL in seconds for STS credentials
   (credentials TTL are capped to `max_sts_ttl`). Valid only when `credential_type` is
   one of `assumed_role` or `federation_token`.
+
+* `user_path` - (Optional) The path for the user name. Valid only when 
+`credential_type` is `iam_user`. Default is `/`.
+
+* `permissions_boundary_arn` - (Optional) The ARN of the AWS Permissions 
+Boundary to attach to IAM users created in the role. Valid only when 
+`credential_type` is `iam_user`. If not specified, then no permissions boundary 
+policy will be attached.
 
 ## Attributes Reference
 

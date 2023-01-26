@@ -35,7 +35,15 @@ resource "vault_okta_auth_backend" "example" {
 
 The following arguments are supported:
 
-* `path` - (Required) Path to mount the Okta auth backend
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
+* `path` - (Optional) Path to mount the Okta auth backend. Default to path `okta`.
+
+* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
+  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
 
 * `description` - (Optional) The description of the auth backend
 
