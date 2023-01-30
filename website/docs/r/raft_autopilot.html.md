@@ -30,6 +30,11 @@ resource "vault_raft_autopilot" "autopilot" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 - `cleanup_dead_servers` – (Optional) Specifies whether to remove dead server nodes
 periodically or when a new server joins. This requires that `min-quorum` is also set.
 
@@ -50,6 +55,16 @@ voting nodes.
 - `server_stabilization_time` - (Optional) Minimum amount of time a server must be 
 stable in the 'healthy' state before being added to the cluster.
 
+- `disable_upgrade_migration` – (Optional) Disables automatically upgrading Vault using autopilot. (Enterprise-only)
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+Raft Autopilot config can be imported using the ID, e.g.
+
+```
+$ terraform import vault_raft_autopilot.autopilot sys/storage/raft/autopilot/configuration
+```

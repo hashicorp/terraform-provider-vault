@@ -2,29 +2,42 @@ package vault
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccKMIPSecretRole_basic(t *testing.T) {
+	testutil.SkipTestAccEnt(t)
+
 	path := acctest.RandomWithPrefix("tf-test-kmip")
-	resourceName := "vault_kmip_secret_role.test"
+	resourceType := "vault_kmip_secret_role"
+	resourceName := resourceType + ".test"
+
+	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = closer(); err != nil {
+		t.Fatal(err)
+	}
+
+	addr1 := lns[0].Addr().String()
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy: testAccKMIPSecretRoleCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testKMIPSecretRole_initialConfig(path),
+				Config: testKMIPSecretRole_initialConfig(path, addr1),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "scope", "scope-1"),
 					resource.TestCheckResourceAttr(resourceName, "role", "test"),
 					resource.TestCheckResourceAttr(resourceName, fieldTLSClientKeyType, "ec"),
@@ -46,9 +59,9 @@ func TestAccKMIPSecretRole_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testKMIPSecretRole_updatedConfig(path),
+				Config: testKMIPSecretRole_updatedConfig(path, addr1),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "scope", "scope-1"),
 					resource.TestCheckResourceAttr(resourceName, "role", "test"),
 					resource.TestCheckResourceAttr(resourceName, fieldTLSClientKeyType, "rsa"),
@@ -74,18 +87,32 @@ func TestAccKMIPSecretRole_basic(t *testing.T) {
 }
 
 func TestAccKMIPSecretRole_remount(t *testing.T) {
+	testutil.SkipTestAccEnt(t)
+
+	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = closer(); err != nil {
+		t.Fatal(err)
+	}
+
+	addr1 := lns[0].Addr().String()
+
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	remountPath := acctest.RandomWithPrefix("tf-test-kmip-remount")
-	resourceName := "vault_kmip_secret_role.test"
+	resourceType := "vault_kmip_secret_role"
+	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy: testAccKMIPSecretRoleCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testKMIPSecretRole_initialConfig(path),
+				Config: testKMIPSecretRole_initialConfig(path, addr1),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "scope", "scope-1"),
 					resource.TestCheckResourceAttr(resourceName, "role", "test"),
 					resource.TestCheckResourceAttr(resourceName, fieldTLSClientKeyType, "ec"),
@@ -107,9 +134,9 @@ func TestAccKMIPSecretRole_remount(t *testing.T) {
 				),
 			},
 			{
-				Config: testKMIPSecretRole_initialConfig(remountPath),
+				Config: testKMIPSecretRole_initialConfig(remountPath, addr1),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", remountPath),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, remountPath),
 					resource.TestCheckResourceAttr(resourceName, "scope", "scope-1"),
 					resource.TestCheckResourceAttr(resourceName, "role", "test"),
 					resource.TestCheckResourceAttr(resourceName, fieldTLSClientKeyType, "ec"),
@@ -134,35 +161,11 @@ func TestAccKMIPSecretRole_remount(t *testing.T) {
 	})
 }
 
-func testAccKMIPSecretRoleCheckDestroy(s *terraform.State) error {
-	client := testProvider.Meta().(*api.Client)
-
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		return err
-	}
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_kmip_secret_role" {
-			continue
-		}
-
-		for path, mount := range mounts {
-			path = strings.Trim(path, "/")
-			rsPath := strings.Trim(rs.Primary.Attributes["path"], "/")
-			if mount.Type == "kmip" && path == rsPath {
-				return fmt.Errorf("mount %q still exists", path)
-			}
-		}
-	}
-
-	return nil
-}
-
-func testKMIPSecretRole_initialConfig(path string) string {
+func testKMIPSecretRole_initialConfig(path string, listenAddr string) string {
 	return fmt.Sprintf(`
 resource "vault_kmip_secret_backend" "kmip" {
   path = "%s"
+  listen_addrs = ["%s"]
   description = "test description"
 }
 
@@ -181,13 +184,14 @@ resource "vault_kmip_secret_role" "test" {
     operation_get = true
     operation_get_attributes = true
 }
-`, path)
+`, path, listenAddr)
 }
 
-func testKMIPSecretRole_updatedConfig(path string) string {
+func testKMIPSecretRole_updatedConfig(path string, listenAddr string) string {
 	return fmt.Sprintf(`
 resource "vault_kmip_secret_backend" "kmip" {
   path = "%s"
+  listen_addrs = ["%s"]
   description = "test description"
 }
 
@@ -209,5 +213,5 @@ resource "vault_kmip_secret_role" "test" {
 	operation_create = true
 	operation_destroy = true
 }
-`, path)
+`, path, listenAddr)
 }

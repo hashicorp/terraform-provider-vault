@@ -18,6 +18,12 @@ Protect these artifacts accordingly. See
 [the main provider documentation](../index.html)
 for more details.
 
+~> **Note**
+When using the outputs of this data source to authenticate with the [Terraform Provider for AWS](https://registry.terraform.io/providers/hashicorp/aws/latest/docs) or
+the [Terraform Provider for AWS Cloud Control](https://registry.terraform.io/providers/hashicorp/awscc/latest/docs),
+the credentials leased from Vault cannnot be renewed.
+Ensure that the lease is long enough for Terraform to complete.
+
 ## Example Usage
 
 ```hcl
@@ -59,6 +65,11 @@ provider "aws" {
 ## Argument Reference
 
 The following arguments are supported:
+
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The path to the AWS secret backend to
 read credentials from, with no leading or trailing `/`s.

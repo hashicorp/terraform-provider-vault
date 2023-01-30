@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func authMountTuneSchema() *schema.Schema {
@@ -23,13 +25,13 @@ func authMountTuneSchema() *schema.Schema {
 					Type:         schema.TypeString,
 					Optional:     true,
 					Description:  "Specifies the default time-to-live duration. This overrides the global default. A value of 0 is equivalent to the system default TTL",
-					ValidateFunc: validateDuration,
+					ValidateFunc: provider.ValidateDuration,
 				},
 				"max_lease_ttl": {
 					Type:         schema.TypeString,
 					Optional:     true,
 					Description:  "Specifies the maximum time-to-live duration. This overrides the global default. A value of 0 are equivalent and set to the system max TTL.",
-					ValidateFunc: validateDuration,
+					ValidateFunc: provider.ValidateDuration,
 				},
 				"audit_non_hmac_request_keys": {
 					Type:        schema.TypeList,
@@ -86,9 +88,13 @@ func authMountInfoGet(client *api.Client, path string) (*api.AuthMount, error) {
 }
 
 func authMountTune(client *api.Client, path string, configured interface{}) error {
-	tune := expandAuthMethodTune(configured.(*schema.Set).List())
+	input := expandAuthMethodTune(configured.(*schema.Set).List())
 
-	err := client.Sys().TuneMount(path, tune)
+	return tuneMount(client, path, input)
+}
+
+func tuneMount(client *api.Client, path string, input api.MountConfigInput) error {
+	err := client.Sys().TuneMount(path, input)
 	if err != nil {
 		return err
 	}
@@ -125,7 +131,6 @@ func getAuthMountIfPresent(client *api.Client, path string) (*api.AuthMount, err
 	configuredPath := path + "/"
 
 	for authBackendPath, auth := range auths {
-
 		if authBackendPath == configuredPath {
 			return auth, nil
 		}

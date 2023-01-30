@@ -7,15 +7,20 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func terraformCloudSecretBackendResource() *schema.Resource {
-	return &schema.Resource{
-		Create: terraformCloudSecretBackendCreate,
-		Read:   terraformCloudSecretBackendRead,
-		Update: terraformCloudSecretBackendUpdate,
-		Delete: terraformCloudSecretBackendDelete,
-		Exists: terraformCloudSecretBackendExists,
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
+		Create:        terraformCloudSecretBackendCreate,
+		Read:          ReadWrapper(terraformCloudSecretBackendRead),
+		Update:        terraformCloudSecretBackendUpdate,
+		Delete:        terraformCloudSecretBackendDelete,
+		Exists:        terraformCloudSecretBackendExists,
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -24,8 +29,7 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 			"backend": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
-				Default:     "terraform",
+				Default:     consts.MountTypeTerraform,
 				Description: "Unique name of the Vault Terraform Cloud mount to configure",
 				StateFunc: func(s interface{}) string {
 					return strings.Trim(s.(string), "/")
@@ -55,7 +59,6 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "Human-friendly description of the mount for the backend.",
 			},
 			"default_lease_ttl_seconds": {
@@ -71,11 +74,14 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 				Description: "Maximum possible lease duration for secrets in seconds",
 			},
 		},
-	}
+	})
 }
 
 func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Get("backend").(string)
 	address := d.Get("address").(string)
@@ -88,7 +94,7 @@ func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{})
 	configPath := terraformCloudSecretBackendConfigPath(backend)
 
 	info := &api.MountInput{
-		Type:        "terraform",
+		Type:        consts.MountTypeTerraform,
 		Description: description,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultLeaseTTL),
@@ -128,7 +134,10 @@ func terraformCloudSecretBackendCreate(d *schema.ResourceData, meta interface{})
 }
 
 func terraformCloudSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Id()
 	configPath := terraformCloudSecretBackendConfigPath(backend)
@@ -161,8 +170,6 @@ func terraformCloudSecretBackendRead(d *schema.ResourceData, meta interface{}) e
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
-	log.Printf("[DEBUG] secret: %#v", secret)
-
 	// token, sadly, we can't read out
 	// the API doesn't support it
 	// So... if it drifts, it drift.
@@ -173,10 +180,18 @@ func terraformCloudSecretBackendRead(d *schema.ResourceData, meta interface{}) e
 }
 
 func terraformCloudSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Id()
 	configPath := terraformCloudSecretBackendConfigPath(backend)
+
+	backend, e = util.Remount(d, client, consts.FieldBackend, false)
+	if e != nil {
+		return e
+	}
 
 	if d.HasChange("default_lease_ttl_seconds") || d.HasChange("max_lease_ttl_seconds") {
 		defaultLeaseTTL := d.Get("default_lease_ttl_seconds")
@@ -213,7 +228,10 @@ func terraformCloudSecretBackendUpdate(d *schema.ResourceData, meta interface{})
 }
 
 func terraformCloudSecretBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
 
 	backend := d.Id()
 
@@ -227,7 +245,10 @@ func terraformCloudSecretBackendDelete(d *schema.ResourceData, meta interface{})
 }
 
 func terraformCloudSecretBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return false, e
+	}
 
 	backend := d.Id()
 

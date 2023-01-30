@@ -31,6 +31,11 @@ resource "vault_transit_secret_backend_key" "key" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `backend` - (Required) The path the transit secret backend is mounted at, with no leading or trailing `/`s.
 
 * `name` - (Required) The name to identify this key within the backend. Must be unique within the backend.
@@ -52,6 +57,9 @@ The following arguments are supported:
 * `min_decryption_version` - (Optional) Minimum key version to use for decryption.
 
 * `min_encryption_version` - (Optional) Minimum key version to use for encryption
+
+* `auto_rotate_period` - (Optional) Amount of time the key should live before being automatically rotated.
+  A value of 0 disables automatic rotation for the key.
 
 ## Attributes Reference
 
@@ -75,6 +83,9 @@ The following arguments are supported:
 * `supports_signing` - Whether or not the key supports signing, based on key type.
 
 
+## Deprecations
+
+* `auto_rotate_interval` - Replaced by `auto_rotate_period`.
 
 ## Import
 

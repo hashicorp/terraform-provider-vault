@@ -40,9 +40,15 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `backend` - (Required) The PKI secret backend the resource belongs to.
 
-* `type` - (Required) Type of intermediate to create. Must be either \"exported\" or \"internal\"
+* `type` - (Required) Type of intermediate to create. Must be either \"exported\", \"internal\"
+  or \"kms\"
 
 * `common_name` - (Required) CN of intermediate to create
 
@@ -84,12 +90,21 @@ The following arguments are supported:
 
 * `postal_code` - (Optional) The postal code
 
+* `managed_key_name` - (Optional) The name of the previously configured managed key. This field is
+ required if `type` is `kms`  and it conflicts with `managed_key_id`
+
+* `managed_key_id` - (Optional) The ID of the previously configured managed key. This field is
+  required if `type` is `kms` and it conflicts with `managed_key_name`
+
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
 
-* `certificate` - The certificate
+* `certificate` - The certificate.
 
-* `issuing_ca` - The issuing CA
+* `issuing_ca` - The issuing CA certificate.
 
-* `serial` - The serial
+* `serial` - Deprecated, use `serial_number` instead.
+ 
+* `serial_number` - The certificate's serial number, hex formatted.

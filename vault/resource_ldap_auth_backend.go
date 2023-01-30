@@ -1,13 +1,18 @@
 package vault
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const ldapAuthType string = "ldap"
@@ -72,6 +77,11 @@ func ldapAuthBackendResource() *schema.Resource {
 				return strings.ToLower(v.(string))
 			},
 		},
+		"userfilter": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Computed: true,
+		},
 		"discoverdn": {
 			Type:     schema.TypeBool,
 			Optional: true,
@@ -102,6 +112,12 @@ func ldapAuthBackendResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
+		"username_as_alias": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+			Description: "Force the auth method to use the username passed by the user as the alias name.",
+		},
 		"use_token_groups": {
 			Type:     schema.TypeBool,
 			Optional: true,
@@ -114,10 +130,9 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed: true,
 		},
 
-		"path": {
+		consts.FieldPath: {
 			Type:     schema.TypeString,
 			Optional: true,
-			ForceNew: true,
 			Default:  "ldap",
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
@@ -150,27 +165,30 @@ func ldapAuthBackendResource() *schema.Resource {
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
-	return &schema.Resource{
+	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		SchemaVersion: 1,
 
-		Create: ldapAuthBackendWrite,
-		Update: ldapAuthBackendUpdate,
-		Read:   ldapAuthBackendRead,
-		Delete: ldapAuthBackendDelete,
-		Exists: ldapAuthBackendExists,
+		CreateContext: ldapAuthBackendWrite,
+		UpdateContext: ldapAuthBackendUpdate,
+		ReadContext:   ReadContextWrapper(ldapAuthBackendRead),
+		DeleteContext: ldapAuthBackendDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
-		Schema: fields,
-	}
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
+		Schema:        fields,
+	})
 }
 
 func ldapAuthBackendConfigPath(path string) string {
 	return "auth/" + strings.Trim(path, "/") + "/config"
 }
 
-func ldapAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func ldapAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	path := d.Get("path").(string)
 	options := &api.EnableAuthOptions{
@@ -182,19 +200,32 @@ func ldapAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Enabling LDAP auth backend %q", path)
 	err := client.Sys().EnableAuthWithOptions(path, options)
 	if err != nil {
-		return fmt.Errorf("error enabling ldap auth backend %q: %s", path, err)
+		return diag.Errorf("error enabling ldap auth backend %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Enabled LDAP auth backend %q", path)
 
 	d.SetId(path)
 
-	return ldapAuthBackendUpdate(d, meta)
+	return ldapAuthBackendUpdate(ctx, d, meta)
 }
 
-func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	path := ldapAuthBackendConfigPath(d.Id())
+
+	if !d.IsNewResource() {
+		newMount, err := util.Remount(d, client, consts.FieldPath, true)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		path = ldapAuthBackendConfigPath(newMount)
+	}
+
 	data := map[string]interface{}{}
 
 	if v, ok := d.GetOk("url"); ok {
@@ -240,6 +271,10 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["userattr"] = v.(string)
 	}
 
+	if v, ok := d.GetOk("userfilter"); ok {
+		data["userfilter"] = v.(string)
+	}
+
 	if v, ok := d.GetOkExists("discoverdn"); ok {
 		data["discoverdn"] = v.(bool)
 	}
@@ -264,6 +299,10 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["groupattr"] = v.(string)
 	}
 
+	if v, ok := d.GetOkExists("username_as_alias"); ok {
+		data["username_as_alias"] = v.(bool)
+	}
+
 	if v, ok := d.GetOkExists("use_token_groups"); ok {
 		data["use_token_groups"] = v.(bool)
 	}
@@ -280,30 +319,32 @@ func ldapAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Writing LDAP config %q", path)
 	_, err := client.Logical().Write(path, data)
-
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("error writing ldap config %q: %s", path, err)
+		return diag.Errorf("error writing ldap config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Wrote LDAP config %q", path)
 
-	return ldapAuthBackendRead(d, meta)
+	return ldapAuthBackendRead(ctx, d, meta)
 }
 
-func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func ldapAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 
 	path := d.Id()
 	auths, err := client.Sys().ListAuth()
 	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+		return diag.Errorf("error reading from Vault: %s", err)
 	}
 
 	d.Set("path", path)
 
 	authMount := auths[strings.Trim(path, "/")+"/"]
 	if authMount == nil {
-		return fmt.Errorf("auth mount %s not present", path)
+		return diag.Errorf("auth mount %s not present", path)
 	}
 
 	d.Set("description", authMount.Description)
@@ -315,7 +356,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Reading LDAP auth backend config %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading ldap auth backend config %q: %s", path, err)
+		return diag.Errorf("error reading ldap auth backend config %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read LDAP auth backend config %q", path)
 
@@ -326,7 +367,7 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if err := readTokenFields(d, resp); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("url", resp.Data["url"])
@@ -339,44 +380,37 @@ func ldapAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("case_sensitive_names", resp.Data["case_sensitive_names"])
 	d.Set("userdn", resp.Data["userdn"])
 	d.Set("userattr", resp.Data["userattr"])
+	d.Set("userfilter", resp.Data["userfilter"])
 	d.Set("discoverdn", resp.Data["discoverdn"])
 	d.Set("deny_null_bind", resp.Data["deny_null_bind"])
 	d.Set("upndomain", resp.Data["upndomain"])
 	d.Set("groupfilter", resp.Data["groupfilter"])
 	d.Set("groupdn", resp.Data["groupdn"])
 	d.Set("groupattr", resp.Data["groupattr"])
+	d.Set("username_as_alias", resp.Data["username_as_alias"])
 	d.Set("use_token_groups", resp.Data["use_token_groups"])
 
 	// `bindpass`, `client_tls_cert` and `client_tls_key` cannot be read out from the API
 	// So... if they drift, they drift.
 
-	return nil
+	diags := checkCIDRs(d, TokenFieldBoundCIDRs)
+
+	return diags
 }
 
-func ldapAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
-	client := meta.(*api.Client)
+func ldapAuthBackendDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
 	path := d.Id()
 
 	log.Printf("[DEBUG] Deleting LDAP auth backend %q", path)
 	err := client.Sys().DisableAuth(path)
 	if err != nil {
-		return fmt.Errorf("error deleting ldap auth backend %q: %q", path, err)
+		return diag.Errorf("error deleting ldap auth backend %q: %q", path, err)
 	}
 	log.Printf("[DEBUG] Deleted LDAP auth backend %q", path)
 
 	return nil
-}
-
-func ldapAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client := meta.(*api.Client)
-	path := ldapAuthBackendConfigPath(d.Id())
-
-	log.Printf("[DEBUG] Checking if LDAP auth backend %q exists", path)
-	resp, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking for existence of ldap config %q: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if LDAP auth backend %q exists", path)
-
-	return resp != nil, nil
 }

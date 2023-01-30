@@ -11,7 +11,7 @@ func rgpPolicyResource() *schema.Resource {
 		Create: rgpPolicyWrite,
 		Update: rgpPolicyWrite,
 		Delete: rgpPolicyDelete,
-		Read:   rgpPolicyRead,
+		Read:   ReadWrapper(rgpPolicyRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

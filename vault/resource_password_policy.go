@@ -11,7 +11,7 @@ func passwordPolicyResource() *schema.Resource {
 		Create: resourcePasswordPolicyWrite,
 		Update: resourcePasswordPolicyWrite,
 		Delete: resourcePasswordPolicyDelete,
-		Read:   resourcePasswordPolicyRead,
+		Read:   ReadWrapper(resourcePasswordPolicyRead),
 
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

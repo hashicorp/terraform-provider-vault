@@ -39,6 +39,11 @@ resource "vault_ssh_secret_backend_role" "bar" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+   *Available only for Vault Enterprise*.
+
 * `name` - (Required) Specifies the name of the role to create.
 
 * `backend` - (Required) The path where the SSH secret backend is mounted.
@@ -71,17 +76,51 @@ The following arguments are supported:
 
 * `allowed_users` - (Optional) Specifies a comma-separated list of usernames that are to be allowed, only if certain usernames are to be allowed.
 
+* `default_user_template` - (Optional) If set, `default_users` can be specified using identity template values. A non-templated user is also permitted.
+
 * `default_user` - (Optional) Specifies the default username for which a credential will be generated.
 
 * `key_id_format` - (Optional) Specifies a custom format for the key id of a signed certificate.
 
 * `algorithm_signer` - (Optional) When supplied, this value specifies a signing algorithm for the key. Possible values: ssh-rsa, rsa-sha2-256, rsa-sha2-512.
 
-* `allowed_user_key_lengths` - (Optional) Specifies a map of ssh key types and their expected sizes which are allowed to be signed by the CA type.
+* `allowed_user_key_config` - (Optional) Set of configuration blocks to define allowed  
+  user key configuration, like key type and their lengths. Can be specified multiple times.  
+  *See [Configuration-Options](#allowed-user-key-configuration) for more info*
+ 
+* `allowed_user_key_lengths` - (Optional) Specifies a map of ssh key types and their expected sizes which 
+ are allowed to be signed by the CA type.  
+ *Deprecated: use* [allowed_user_key_config](#allowed_user_key_config) *instead*
 
 * `max_ttl` - (Optional) Specifies the maximum Time To Live value.
 
 * `ttl` - (Optional) Specifies the Time To Live value.
+
+
+### Allowed User Key Configuration
+* `type` - (Required) The SSH public key type.  
+  *Supported key types are:*  
+  `rsa`, `ecdsa`, `ec`, `dsa`, `ed25519`, `ssh-rsa`, `ssh-dss`, `ssh-ed25519`,
+  `ecdsa-sha2-nistp256`, `ecdsa-sha2-nistp384`, `ecdsa-sha2-nistp521`
+
+* `lengths` - (Required) A list of allowed key lengths as integers. 
+  For key types that do not support setting the length a value of `[0]` should be used.
+  Setting multiple lengths is only supported on Vault 1.10+. For prior releases `length`
+  must be set to a single element list.
+
+Example configuration blocks that might be included in the `vault_ssh_secret_backend_role`
+
+```hcl
+  allowed_user_key_config {
+    type    = "rsa"
+    lengths = [2048, 4096]
+  }
+
+  allowed_user_key_config {
+    type    = "dss"
+    lengths = [2048, 4096]
+  }
+```
 
 
 ## Attributes Reference

@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -34,7 +35,7 @@ func TestAccDataSourceAWSAccessCredentials_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
 					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "security_token", ""),
 					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "creds"),
-					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "lease_id"),
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", consts.FieldLeaseID),
 					testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region),
 				),
 			},
@@ -116,7 +117,7 @@ func TestAccDataSourceAWSAccessCredentials_sts(t *testing.T) {
 							resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
 							resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "security_token"),
 							resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "sts"),
-							resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "lease_id"),
+							resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", consts.FieldLeaseID),
 							testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region),
 						),
 					},
@@ -143,7 +144,7 @@ func TestAccDataSourceAWSAccessCredentials_sts_ttl(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "secret_key"),
 					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "security_token"),
 					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "sts"),
-					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "lease_id"),
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", consts.FieldLeaseID),
 					testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region),
 				),
 			},
@@ -155,7 +156,7 @@ func TestAccDataSourceAWSAccessCredentials_sts_ttl(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "security_token"),
 					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "type", "sts"),
 					resource.TestCheckResourceAttr("data.vault_aws_access_credentials.test", "ttl", ttl),
-					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", "lease_id"),
+					resource.TestCheckResourceAttrSet("data.vault_aws_access_credentials.test", consts.FieldLeaseID),
 					testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region),
 				),
 			},

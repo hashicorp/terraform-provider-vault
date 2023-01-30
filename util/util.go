@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 func JsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
@@ -42,21 +44,34 @@ func ToStringArray(input []interface{}) []string {
 }
 
 func Is404(err error) bool {
-	return strings.Contains(err.Error(), "Code: 404")
+	return ErrorContainsHTTPCode(err, http.StatusNotFound)
 }
 
-func CalculateConflictsWith(self string, group []string) []string {
-	if len(group) < 2 {
-		return []string{}
+func ErrorContainsHTTPCode(err error, codes ...int) bool {
+	for _, code := range codes {
+		if strings.Contains(err.Error(), fmt.Sprintf("Code: %d", code)) {
+			return true
+		}
 	}
-	results := make([]string, 0, len(group)-2)
+	return false
+}
+
+// CalculateConflictsWith returns a slice of field names that conflict with
+// a single field (self).
+func CalculateConflictsWith(self string, group []string) []string {
+	result := make([]string, 0)
+	seen := map[string]bool{
+		self: true,
+	}
 	for _, item := range group {
-		if item == self {
+		if _, ok := seen[item]; ok {
 			continue
 		}
-		results = append(results, item)
+
+		seen[item] = true
+		result = append(result, item)
 	}
-	return results
+	return result
 }
 
 func ArrayToTerraformList(values []string) string {
@@ -284,4 +299,125 @@ func SetupCCCRetryClient(client *api.Client, maxRetry int) {
 		to += bo(client.MaxRetryWait(), client.MaxRetryWait(), i, nil)
 	}
 	client.SetClientTimeout(to + time.Second*30)
+}
+
+// SetResourceData from a data map.
+func SetResourceData(d *schema.ResourceData, data map[string]interface{}) error {
+	for k := range data {
+		if err := d.Set(k, data[k]); err != nil {
+			return fmt.Errorf("error setting resource data for key %q, err=%w", k, err)
+		}
+	}
+
+	return nil
+}
+
+// NormalizeMountPath to be in a form valid for accessing values from api.MountOutput
+func NormalizeMountPath(path string) string {
+	return TrimSlashes(path) + consts.PathDelim
+}
+
+// TrimSlashes from path.
+func TrimSlashes(path string) string {
+	return strings.Trim(path, consts.PathDelim)
+}
+
+// CheckMountEnabled in Vault, path must contain a trailing '/',
+func CheckMountEnabled(client *api.Client, path string) (bool, error) {
+	mounts, err := client.Sys().ListMounts()
+	if err != nil {
+		return false, err
+	}
+
+	_, ok := mounts[NormalizeMountPath(path)]
+
+	return ok, nil
+}
+
+// GetAPIRequestDataWithMap to pass to Vault from schema.ResourceData.
+// The fieldMap specifies the schema field to its vault constituent.
+// If the vault field is empty, then two fields are mapped 1:1.
+func GetAPIRequestDataWithMap(d *schema.ResourceData, fieldMap map[string]string) map[string]interface{} {
+	data := make(map[string]interface{})
+	for k1, k2 := range fieldMap {
+		if k2 == "" {
+			k2 = k1
+		}
+
+		data[k2] = getAPIRequestValue(d, k1)
+	}
+
+	return data
+}
+
+// GetAPIRequestDataWithSlice to pass to Vault from schema.ResourceData.
+func GetAPIRequestDataWithSlice(d *schema.ResourceData, fields []string) map[string]interface{} {
+	data := make(map[string]interface{})
+	for _, k := range fields {
+		data[k] = getAPIRequestValue(d, k)
+	}
+
+	return data
+}
+
+// GetAPIRequestDataWithSliceOk to pass to Vault from schema.ResourceData.
+// Only field values that are set in schema.ResourceData will be returned
+func GetAPIRequestDataWithSliceOk(d *schema.ResourceData, fields []string) map[string]interface{} {
+	data := make(map[string]interface{})
+	for _, k := range fields {
+		if v, ok := getAPIRequestValueOk(d, k); ok {
+			data[k] = v
+		}
+	}
+
+	return data
+}
+
+func getAPIRequestValue(d *schema.ResourceData, k string) interface{} {
+	return getAPIValue(d.Get(k))
+}
+
+func getAPIValue(i interface{}) interface{} {
+	switch s := i.(type) {
+	case *schema.Set:
+		return s.List()
+	default:
+		return s
+	}
+}
+
+func getAPIRequestValueOk(d *schema.ResourceData, k string) (interface{}, bool) {
+	sv, ok := d.GetOk(k)
+	if !ok {
+		return nil, ok
+	}
+
+	return getAPIValue(sv), ok
+}
+
+func Remount(d *schema.ResourceData, client *api.Client, mountField string, isAuthMount bool) (string, error) {
+	ret := d.Get(mountField).(string)
+
+	if d.HasChange(mountField) {
+		// since this function is only called within Update
+		// we know that remount is enabled
+		o, n := d.GetChange(mountField)
+		oldPath := o.(string)
+		newPath := n.(string)
+
+		if isAuthMount {
+			oldPath = "auth/" + oldPath
+			newPath = "auth/" + newPath
+		}
+
+		err := client.Sys().Remount(oldPath, newPath)
+		if err != nil {
+			return "", fmt.Errorf("error remounting to %q: %w", newPath, err)
+		}
+
+		// ID for Auth backends only contains mount path
+		d.SetId(ret)
+	}
+
+	return ret, nil
 }

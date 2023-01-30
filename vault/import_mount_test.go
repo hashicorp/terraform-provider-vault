@@ -11,7 +11,7 @@ import (
 
 func TestAccMount_importBasic(t *testing.T) {
 	path := "test-" + acctest.RandString(10)
-	cfg := mountConfig{
+	cfg := testMountConfig{
 		path:      path,
 		mountType: "kv",
 		version:   "1",
