@@ -1,12 +1,15 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -17,17 +20,16 @@ var (
 
 func gcpSecretImpersonatedAccountResource() *schema.Resource {
 	return &schema.Resource{
-		Create: gcpSecretImpersonatedAccountCreate,
-		Read:   gcpSecretImpersonatedAccountRead,
-		Update: gcpSecretImpersonatedAccountUpdate,
-		Delete: gcpSecretImpersonatedAccountDelete,
-		Exists: gcpSecretImpersonatedAccountExists,
+		CreateContext: gcpSecretImpersonatedAccountCreate,
+		ReadContext:   ReadContextWrapper(gcpSecretImpersonatedAccountRead),
+		UpdateContext: gcpSecretImpersonatedAccountUpdate,
+		DeleteContext: gcpSecretImpersonatedAccountDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Path where the GCP secrets engine is mounted.",
@@ -66,13 +68,13 @@ func gcpSecretImpersonatedAccountResource() *schema.Resource {
 	}
 }
 
-func gcpSecretImpersonatedAccountCreate(d *schema.ResourceData, meta interface{}) error {
+func gcpSecretImpersonatedAccountCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	backend := d.Get("backend").(string)
+	backend := d.Get(consts.FieldBackend).(string)
 	impersonatedAccount := d.Get("impersonated_account").(string)
 
 	path := gcpSecretImpersonatedAccountPath(backend, impersonatedAccount)
@@ -81,39 +83,39 @@ func gcpSecretImpersonatedAccountCreate(d *schema.ResourceData, meta interface{}
 
 	data := map[string]interface{}{}
 	gcpSecretImpersonatedAccountUpdateFields(d, data)
-	d.SetId(path)
 	_, err = client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("error writing GCP Secrets backend impersonated account %q: %s", path, err)
+		return diag.Errorf("error writing GCP Secrets backend impersonated account %q: %s", path, err)
 	}
+	d.SetId(path)
 	log.Printf("[DEBUG] Wrote GCP Secrets backend impersonated account %q", path)
 
-	return gcpSecretImpersonatedAccountRead(d, meta)
+	return gcpSecretImpersonatedAccountRead(ctx, d, meta)
 }
 
-func gcpSecretImpersonatedAccountRead(d *schema.ResourceData, meta interface{}) error {
+func gcpSecretImpersonatedAccountRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	path := d.Id()
 
 	backend, err := gcpSecretImpersonatedAccountBackendFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for GCP secrets backend impersonated account: %s", path, err)
+		return diag.Errorf("invalid path %q for GCP secrets backend impersonated account: %s", path, err)
 	}
 
 	impersonatedAccount, err := gcpSecretImpersonatedAccountNameFromPath(path)
 	if err != nil {
-		return fmt.Errorf("invalid path %q for GCP Secrets backend impersonated account: %s", path, err)
+		return diag.Errorf("invalid path %q for GCP Secrets backend impersonated account: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading GCP Secrets backend impersonated account %q", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading GCP Secrets backend impersonated account %q: %s", path, err)
+		return diag.Errorf("error reading GCP Secrets backend impersonated account %q: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Read GCP Secrets backend impersonated account %q", path)
@@ -123,18 +125,18 @@ func gcpSecretImpersonatedAccountRead(d *schema.ResourceData, meta interface{}) 
 		return nil
 	}
 
-	if err := d.Set("backend", backend); err != nil {
-		return err
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
+		return diag.FromErr(err)
 	}
 	if err := d.Set("impersonated_account", impersonatedAccount); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	for _, k := range []string{"token_scopes", "service_account_email", "service_account_project"} {
 		v, ok := resp.Data[k]
 		if ok {
 			if err := d.Set(k, v); err != nil {
-				return fmt.Errorf("error reading %s for GCP Secrets backend impersonated account %q: %q", k, path, err)
+				return diag.Errorf("error reading %s for GCP Secrets backend impersonated account %q: %q", k, path, err)
 			}
 		}
 	}
@@ -142,10 +144,10 @@ func gcpSecretImpersonatedAccountRead(d *schema.ResourceData, meta interface{}) 
 	return nil
 }
 
-func gcpSecretImpersonatedAccountUpdate(d *schema.ResourceData, meta interface{}) error {
+func gcpSecretImpersonatedAccountUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	path := d.Id()
@@ -157,17 +159,17 @@ func gcpSecretImpersonatedAccountUpdate(d *schema.ResourceData, meta interface{}
 
 	_, err = client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error updating GCP Secrets backend impersonated account %q: %s", path, err)
+		return diag.Errorf("error updating GCP Secrets backend impersonated account %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated GCP Secrets backend impersonated account %q", path)
 
-	return gcpSecretImpersonatedAccountRead(d, meta)
+	return gcpSecretImpersonatedAccountRead(ctx, d, meta)
 }
 
-func gcpSecretImpersonatedAccountDelete(d *schema.ResourceData, meta interface{}) error {
+func gcpSecretImpersonatedAccountDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	path := d.Id()
@@ -175,7 +177,7 @@ func gcpSecretImpersonatedAccountDelete(d *schema.ResourceData, meta interface{}
 	log.Printf("[DEBUG] Deleting GCP secrets backend impersonated account %q", path)
 	_, err = client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("error deleting GCP secrets backend impersonated account %q", path)
+		return diag.Errorf("error deleting GCP secrets backend impersonated account %q", path)
 	}
 	log.Printf("[DEBUG] Deleted GCP secrets backend impersonated account %q", path)
 
@@ -187,25 +189,13 @@ func gcpSecretImpersonatedAccountUpdateFields(d *schema.ResourceData, data map[s
 		data["service_account_email"] = v.(string)
 	}
 
+	if v, ok := d.GetOk("service_account_project"); ok {
+		data["service_account_project"] = v.(string)
+	}
+
 	if v, ok := d.GetOk("token_scopes"); ok {
 		data["token_scopes"] = v.(*schema.Set).List()
 	}
-}
-
-func gcpSecretImpersonatedAccountExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, err := provider.GetClient(d, meta)
-	if err != nil {
-		return false, err
-	}
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if %q exists", path)
-	secret, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if %q exists", path)
-	return secret != nil, nil
 }
 
 func gcpSecretImpersonatedAccountPath(backend, impersonatedAccount string) string {

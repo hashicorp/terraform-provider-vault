@@ -42,7 +42,7 @@ The following arguments are supported:
 
 * `impersonated_account` - (Required, Forces new resource) Name of the Impersonated Account to create
 
-* `service_account_email` - (Required, Forces new resource) Email of the GCP service account to manage.
+* `service_account_email` - (Required, Forces new resource) Email of the GCP service account to impersonate.
 
 * `token_scopes` - (Required) List of OAuth scopes to assign to access tokens generated under this impersonated account.
 
