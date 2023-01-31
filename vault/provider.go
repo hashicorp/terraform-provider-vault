@@ -308,6 +308,10 @@ var (
 			Resource:      UpdateSchemaResource(identityOIDCOpenIDConfigDataSource()),
 			PathInventory: []string{"/identity/oidc/provider/{name}/.well-known/openid-configuration"},
 		},
+		"vault_internal_counters_activity": {
+			Resource:      UpdateSchemaResource(internalCountersActivityStateDataSource()),
+			PathInventory: []string{"/sys/internal/counters/activity"},
+		},
 		"vault_kv_secret": {
 			Resource:      UpdateSchemaResource(kvSecretDataSource()),
 			PathInventory: []string{"/secret/{path}"},

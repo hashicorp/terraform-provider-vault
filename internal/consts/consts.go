@@ -201,6 +201,16 @@ const (
 	FieldIAMMetadata                = "iam_metadata"
 	FieldEC2Alias                   = "ec2_alias"
 	FieldEC2Metadata                = "ec2_metadata"
+	FieldByNamespace                = "by_namespace"
+	FieldByNamespaceJSON            = "by_namespace_json"
+	FieldEndTime                    = "end_time"
+	FieldStartTime                  = "start_time"
+	FieldNamespaceId                = "namespace_id"
+	FieldCounts                     = "field_counts"
+	FieldCountsJSON                 = "field_counts_json"
+	FieldMonths                     = "field_months"
+	FieldMonthsJSON                 = "field_months_json"
+	FieldMounts                     = "field_mounts"
 
 	/*
 		common environment variables
