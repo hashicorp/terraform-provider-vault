@@ -406,6 +406,11 @@ func setChildToken(d *schema.ResourceData, c *api.Client) error {
 	if err != nil {
 		return err
 	}
+
+	if tokenInfo == nil {
+		return fmt.Errorf("failed to lookup self token")
+	}
+
 	if tokenNamespaceRaw, ok := tokenInfo.Data["namespace_path"]; ok {
 		tokenNamespace := tokenNamespaceRaw.(string)
 		if tokenNamespace != "" {
