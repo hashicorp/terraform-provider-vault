@@ -1310,7 +1310,7 @@ func getConnectionDetailsFromResponseWithUserPass(d *schema.ResourceData, prefix
 	if v, ok := details["username"]; ok {
 		result["username"] = v.(string)
 	} else {
-		if v, ok := details["username"]; ok {
+		if v, ok := d.GetOk(prefix + "username"); ok {
 			result["username"] = v.(string)
 		}
 	}
