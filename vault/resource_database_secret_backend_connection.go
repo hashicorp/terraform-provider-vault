@@ -1020,8 +1020,7 @@ func getConnectionDetailsFromResponseWithDisableEscaping(d *schema.ResourceData,
 		return nil
 	}
 
-	details := resp.Data["connection_details"].(map[string]interface{})
-	if v, ok := details["disable_escaping"]; ok {
+	if v, ok := d.GetOk(prefix + "disable_esaping"); ok {
 		result["disable_escaping"] = v.(bool)
 	}
 
