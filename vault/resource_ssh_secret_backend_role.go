@@ -100,6 +100,10 @@ func sshSecretBackendRoleResource() *schema.Resource {
 			Type:     schema.TypeString,
 			Optional: true,
 		},
+		"default_user_template": {
+			Type:     schema.TypeBool,
+			Optional: true,
+		},
 		"key_id_format": {
 			Type:     schema.TypeString,
 			Optional: true,
@@ -247,6 +251,12 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		data["default_user"] = v.(string)
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if v, ok := d.GetOk("default_user_template"); ok {
+			data["default_user_template"] = v.(bool)
+		}
+	}
+
 	if v, ok := d.GetOk("key_id_format"); ok {
 		data["key_id_format"] = v.(string)
 	}
@@ -367,6 +377,12 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		"max_ttl", "ttl", "algorithm_signer",
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		fields = append(fields, []string{"default_user_template"}...)
+	}
+
+	// cidr_list cannot be read from the API
+	// potential for drift here
 	for _, k := range fields {
 		if err := d.Set(k, role.Data[k]); err != nil {
 			return err
