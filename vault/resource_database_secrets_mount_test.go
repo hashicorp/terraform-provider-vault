@@ -15,7 +15,7 @@ import (
 )
 
 func TestAccDatabaseSecretsMount_mssql(t *testing.T) {
-	MaybeSkipDBTests(t, dbEngineMSSQL)
+	//MaybeSkipDBTests(t, dbEngineMSSQL)
 
 	cleanupFunc, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 

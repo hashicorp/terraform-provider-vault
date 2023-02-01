@@ -1020,8 +1020,13 @@ func getConnectionDetailsFromResponseWithDisableEscaping(d *schema.ResourceData,
 		return nil
 	}
 
-	if v, ok := d.GetOk(prefix + "disable_esaping"); ok {
+	details := resp.Data["connection_details"].(map[string]interface{})
+	if v, ok := details["disable_escaping"]; ok {
 		result["disable_escaping"] = v.(bool)
+	} else {
+		if v, ok := d.GetOk(prefix + "disable_escaping"); ok {
+			result["disable_escaping"] = v.(bool)
+		}
 	}
 
 	return result
@@ -1301,9 +1306,15 @@ func getConnectionDetailsFromResponseWithUserPass(d *schema.ResourceData, prefix
 		return nil
 	}
 
-	if v, ok := d.GetOk(prefix + "username"); ok {
+	details := resp.Data["connection_details"].(map[string]interface{})
+	if v, ok := details["username"]; ok {
 		result["username"] = v.(string)
+	} else {
+		if v, ok := details["username"]; ok {
+			result["username"] = v.(string)
+		}
 	}
+
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		result["password"] = v.(string)
 	}
