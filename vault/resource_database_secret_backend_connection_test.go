@@ -1481,13 +1481,13 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
 
   postgresql {
-	  connection_url          = "%s"
+      connection_url          = "%s"
       max_open_connections    = "%s"
       max_idle_connections    = "%s"
       max_connection_lifetime = "%s"
       username                = "%s"
       password                = "%s"
-	  username_template       = "%s"
+      username_template       = "%s"
       disable_escaping        = true
   }
 }
