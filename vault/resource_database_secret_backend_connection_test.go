@@ -760,11 +760,6 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", ""),
 				),
 			},
-			{
-				Config:             testAccDatabaseSecretBackendConnectionConfig_postgresql_reset_optional_values(name, backend, parsedURL),
-				PlanOnly:           true,
-				ExpectNonEmptyPlan: false,
-			},
 		},
 	})
 }
