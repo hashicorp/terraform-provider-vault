@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -20,7 +21,7 @@ var (
 
 func gcpSecretImpersonatedAccountResource() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: gcpSecretImpersonatedAccountCreate,
+		CreateContext: MountCreateContextWrapper(gcpSecretImpersonatedAccountCreate, provider.VaultVersion113),
 		ReadContext:   ReadContextWrapper(gcpSecretImpersonatedAccountRead),
 		UpdateContext: gcpSecretImpersonatedAccountUpdate,
 		DeleteContext: gcpSecretImpersonatedAccountDelete,
