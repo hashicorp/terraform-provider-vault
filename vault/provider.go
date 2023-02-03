@@ -490,6 +490,10 @@ var (
 			Resource:      UpdateSchemaResource(gcpSecretBackendResource("vault_gcp_secret_backend")),
 			PathInventory: []string{"/gcp/config"},
 		},
+		"vault_gcp_secret_impersonated_account": {
+			Resource:      UpdateSchemaResource(gcpSecretImpersonatedAccountResource()),
+			PathInventory: []string{"/gcp/impersonated-account/{name}"},
+		},
 		"vault_gcp_secret_roleset": {
 			Resource:      UpdateSchemaResource(gcpSecretRolesetResource()),
 			PathInventory: []string{"/gcp/roleset/{name}"},
