@@ -1306,6 +1306,7 @@ func getConnectionDetailsFromResponseWithUserPass(d *schema.ResourceData, prefix
 	if v, ok := details["username"]; ok {
 		result["username"] = v.(string)
 	}
+
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		result["password"] = v.(string)
 	}
@@ -1503,9 +1504,9 @@ func setInfluxDBDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 
 func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionData(d, prefix, data)
-	if v, ok := d.GetOk(prefix + "username"); ok {
-		data["username"] = v.(string)
-	}
+
+	data["username"] = d.Get(prefix + "username")
+
 	if v, ok := d.GetOk(prefix + "password"); ok {
 		data["password"] = v.(string)
 	}
@@ -1514,9 +1515,7 @@ func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string
 func setDatabaseConnectionDataWithDisableEscaping(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionDataWithUserPass(d, prefix, data)
 
-	if v, ok := d.GetOk(prefix + "disable_escaping"); ok {
-		data["disable_escaping"] = v.(bool)
-	}
+	data["disable_escaping"] = d.Get(prefix + "disable_escaping")
 }
 
 func databaseSecretBackendConnectionCreateOrUpdate(
