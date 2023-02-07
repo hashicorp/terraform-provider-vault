@@ -33,6 +33,7 @@ func TestAccKVSecretV2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.version", "1"),
 				),
 			},
 			{
@@ -51,6 +52,7 @@ func TestAccKVSecretV2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.pizza", "please"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.delete_version_after", "0"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.max_versions", "5"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.version", "2"),
 				),
 			},
 			{
@@ -74,10 +76,16 @@ func testKVSecretV2Config_initial(mount, name string) string {
 `, kvV2MountConfig(mount))
 
 	ret += fmt.Sprintf(`
+resource "vault_kv_secret_backend_v2" "test" {
+	mount        = vault_mount.kvv2.path
+	cas_required = true
+}
+
 resource "vault_kv_secret_v2" "test" {
-  mount               = vault_mount.kvv2.path
+  mount               = vault_kv_secret_backend_v2.test.mount
   name                = "%s"
   delete_all_versions = true
+  cas                 = 0
   data_json = jsonencode(
     {
       zip  = "zap",
@@ -97,10 +105,16 @@ func testKVSecretV2Config_updated(mount, name string) string {
 `, kvV2MountConfig(mount))
 
 	ret += fmt.Sprintf(`
+resource "vault_kv_secret_backend_v2" "test" {
+	mount        = vault_mount.kvv2.path
+	cas_required = true
+}
+
 resource "vault_kv_secret_v2" "test" {
-  mount               = vault_mount.kvv2.path
+  mount               =  vault_kv_secret_backend_v2.test.mount
   name                = "%s"
   delete_all_versions = true
+  cas                 = 1
   data_json = jsonencode(
     {
       zip  = "zoop",
