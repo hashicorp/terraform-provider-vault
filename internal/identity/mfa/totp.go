@@ -46,6 +46,7 @@ var (
 		consts.FieldQRSize: {
 			Type:        schema.TypeInt,
 			Computed:    true,
+			Optional:    true,
 			Description: `The pixel size of the generated square QR code.`,
 		},
 		consts.FieldAlgorithm: {
@@ -78,6 +79,7 @@ var (
 	}
 )
 
+// GetTOTPSchemaResource returns the resource needed to provision an identity/mfa/totp resource.
 func GetTOTPSchemaResource() (*schema.Resource, error) {
 	config, err := NewContextFuncConfig(MethodTypeTOTP, PathTypeMethodID, nil, nil, nil)
 	if err != nil {

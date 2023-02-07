@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const (
@@ -44,6 +45,7 @@ var oktaSchemaMap = map[string]*schema.Schema{
 	},
 }
 
+// GetOKTASchemaResource returns the resource needed to provision an identity/mfa/okta resource.
 func GetOKTASchemaResource() (*schema.Resource, error) {
 	config, err := NewContextFuncConfig(MethodTypeOKTA, PathTypeMethodID, nil, nil, nil)
 	// TODO: the primary_email field is not included in the response
@@ -53,6 +55,8 @@ func GetOKTASchemaResource() (*schema.Resource, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	config.setAPIValueGetter(consts.FieldUsernameFormat, util.GetAPIRequestValue)
 
 	return getMethodSchemaResource(oktaSchemaMap, config), nil
 }

@@ -155,15 +155,17 @@ func joinPath(root string, parts ...string) string {
 // contextFuncConfig provides the necessary configuration that is required by any of
 // any Get*ContextFunc factory functions.
 type contextFuncConfig struct {
-	mu           sync.Mutex
-	method       string
-	m            map[string]*schema.Schema
-	computedOnly []string
-	quirksMap    map[string]string
-	copyQuirks   []string
-	requireLock  bool
-	requestPath  string
-	pt           PathType
+	mu                    sync.Mutex
+	method                string
+	m                     map[string]*schema.Schema
+	apiValueGetters       map[string]util.VaultAPIValueGetter
+	defaultAPIValueGetter util.VaultAPIValueGetter
+	computedOnly          []string
+	quirksMap             map[string]string
+	copyQuirks            []string
+	requireLock           bool
+	requestPath           string
+	pt                    PathType
 }
 
 // GetRequestData needed for a Vault request. Only those fields provided by
@@ -251,7 +253,38 @@ func (c *contextFuncConfig) GetSecretFields() []string {
 // GetRequestData needed for a Vault request. Only those fields provided by
 // GetWriteFields() will be included in the request data.
 func (c *contextFuncConfig) GetRequestData(d *schema.ResourceData) map[string]interface{} {
-	return util.GetAPIRequestDataWithSlice(d, c.GetWriteFields())
+	result := make(map[string]interface{})
+	for _, k := range c.GetWriteFields() {
+		getter := c.getAPIValueGetterFunc(k)
+		if getter == nil {
+			getter = c.getDefaultAPIValueGetterFunc()
+		}
+		if v, ok := getter(d, k); ok {
+			result[k] = v
+		}
+	}
+	return result
+}
+
+func (c *contextFuncConfig) getDefaultAPIValueGetterFunc() util.VaultAPIValueGetter {
+	if c.defaultAPIValueGetter == nil {
+		return util.GetAPIRequestValueOk
+	} else {
+		return c.defaultAPIValueGetter
+	}
+}
+
+func (c *contextFuncConfig) getAPIValueGetterFunc(k string) util.VaultAPIValueGetter {
+	if c.apiValueGetters != nil {
+		if f, ok := c.apiValueGetters[k]; ok {
+			return f
+		}
+	}
+	if c.defaultAPIValueGetter == nil {
+		return util.GetAPIRequestValueOk
+	} else {
+		return c.defaultAPIValueGetter
+	}
 }
 
 func (c *contextFuncConfig) Method() string {
@@ -345,6 +378,20 @@ func (c *contextFuncConfig) GetIDFromResourceData(d *schema.ResourceData) (strin
 	return c.id(idField, v)
 }
 
+func (c *contextFuncConfig) setAPIValueGetter(k string, getterFunc util.VaultAPIValueGetter) {
+	if c.apiValueGetters == nil {
+		c.apiValueGetters = make(map[string]util.VaultAPIValueGetter)
+	}
+	c.apiValueGetters[k] = getterFunc
+}
+
+func (c *contextFuncConfig) getAPIValueGetter(k string) util.VaultAPIValueGetter {
+	if c.apiValueGetters == nil {
+		return nil
+	}
+	return c.apiValueGetters[k]
+}
+
 func (c *contextFuncConfig) id(f string, v interface{}) (string, error) {
 	id, ok := v.(string)
 	if !ok || id == "" {
@@ -397,10 +444,10 @@ func getSchemaResource(s map[string]*schema.Schema, config *contextFuncConfig, a
 
 	r := &schema.Resource{
 		Schema:        m,
-		CreateContext: GetCreateContextFunc(config),
-		UpdateContext: GetUpdateContextFunc(config),
-		ReadContext:   GetReadContextFunc(config),
-		DeleteContext: GetDeleteContextFunc(config),
+		CreateContext: NewCreateContextFunc(config),
+		UpdateContext: NewUpdateContextFunc(config),
+		ReadContext:   NewReadContextFunc(config),
+		DeleteContext: NewDeleteContextFunc(config),
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -416,14 +463,25 @@ func getSchemaResource(s map[string]*schema.Schema, config *contextFuncConfig, a
 		r = f(r)
 	}
 
+	for k, s := range m {
+		if s.Computed {
+			continue
+		}
+		switch s.Type {
+		case schema.TypeInt, schema.TypeBool:
+			if f := config.getAPIValueGetter(k); f == nil {
+				config.setAPIValueGetter(k, util.GetAPIRequestValueOkExists)
+			}
+		}
+	}
 	config.m = r.Schema
 
 	return r
 }
 
-// GetCreateContextFunc for a contextFuncConfig.
+// NewCreateContextFunc for a contextFuncConfig.
 // The return function supports the path types: PathTypeName, and PathTypeMethodID
-func GetCreateContextFunc(config *contextFuncConfig) schema.CreateContextFunc {
+func NewCreateContextFunc(config *contextFuncConfig) schema.CreateContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		config.Lock()
 		defer config.Unlock()
@@ -477,13 +535,13 @@ func GetCreateContextFunc(config *contextFuncConfig) schema.CreateContextFunc {
 
 		d.SetId(rid)
 
-		return GetReadContextFunc(config)(ctx, d, meta)
+		return NewReadContextFunc(config)(ctx, d, meta)
 	}
 }
 
-// GetUpdateContextFunc for a contextFuncConfig.
+// NewUpdateContextFunc for a contextFuncConfig.
 // The return function supports the path types: PathTypeName, and PathTypeMethodID
-func GetUpdateContextFunc(config *contextFuncConfig) schema.UpdateContextFunc {
+func NewUpdateContextFunc(config *contextFuncConfig) schema.UpdateContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		config.Lock()
 		defer config.Unlock()
@@ -509,13 +567,13 @@ func GetUpdateContextFunc(config *contextFuncConfig) schema.UpdateContextFunc {
 			return diag.FromErr(err)
 		}
 
-		return GetReadContextFunc(config)(ctx, d, meta)
+		return NewReadContextFunc(config)(ctx, d, meta)
 	}
 }
 
-// GetReadContextFunc for a contextFuncConfig.
+// NewReadContextFunc for a contextFuncConfig.
 // The return function supports the path types: PathTypeName, and PathTypeMethodID
-func GetReadContextFunc(config *contextFuncConfig) schema.ReadContextFunc {
+func NewReadContextFunc(config *contextFuncConfig) schema.ReadContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		c, dg := provider.GetClientDiag(d, meta)
 		if dg != nil {
@@ -592,9 +650,9 @@ func GetReadContextFunc(config *contextFuncConfig) schema.ReadContextFunc {
 	}
 }
 
-// GetDeleteContextFunc for a contextFuncConfig.
+// NewDeleteContextFunc for a contextFuncConfig.
 // The return function supports the path types: PathTypeName, and PathTypeMethodID
-func GetDeleteContextFunc(config *contextFuncConfig) schema.DeleteContextFunc {
+func NewDeleteContextFunc(config *contextFuncConfig) schema.DeleteContextFunc {
 	return func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 		c, dg := provider.GetClientDiag(d, meta)
 		if dg != nil {

@@ -65,6 +65,7 @@ var pingIDSchemaMap = map[string]*schema.Schema{
 	},
 }
 
+// GetPingIDSchemaResource returns the resource needed to provision an identity/mfa/pingid resource.
 func GetPingIDSchemaResource() (*schema.Resource, error) {
 	config, err := NewContextFuncConfig(MethodTypePingID, PathTypeMethodID, nil, []string{
 		consts.FieldType,
