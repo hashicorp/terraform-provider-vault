@@ -45,7 +45,8 @@ var (
 		},
 		consts.FieldQRSize: {
 			Type:        schema.TypeInt,
-			Computed:    true,
+			Optional:    true,
+			Default:     200,
 			Description: `The pixel size of the generated square QR code.`,
 		},
 		consts.FieldAlgorithm: {

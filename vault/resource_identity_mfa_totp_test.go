@@ -43,7 +43,7 @@ resource "%s" "test" {
 						resource.TestCheckResourceAttr(resourceName, consts.FieldIssuer, "issuer1"),
 						resource.TestCheckResourceAttr(resourceName, consts.FieldPeriod, "30"),
 						resource.TestCheckResourceAttr(resourceName, consts.FieldKeySize, "20"),
-						resource.TestCheckResourceAttr(resourceName, consts.FieldQRSize, "0"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldQRSize, "200"),
 						resource.TestCheckResourceAttr(resourceName, consts.FieldAlgorithm, "SHA256"),
 						resource.TestCheckResourceAttr(resourceName, consts.FieldDigits, "6"),
 						resource.TestCheckResourceAttr(resourceName, consts.FieldSkew, "1"),
@@ -61,6 +61,7 @@ resource "%s" "test" {
   digits                  = 8
   skew                    = 0
   max_validation_attempts = 10
+  qr_size				  = 500
 }
 `, mfa.ResourceNameTOTP),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -68,7 +69,7 @@ resource "%s" "test" {
 						resource.TestCheckResourceAttr(resourceName, consts.FieldIssuer, "issuer2"),
 						resource.TestCheckResourceAttr(resourceName, consts.FieldPeriod, "60"),
 						resource.TestCheckResourceAttr(resourceName, consts.FieldKeySize, "30"),
-						resource.TestCheckResourceAttr(resourceName, consts.FieldQRSize, "0"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldQRSize, "500"),
 						resource.TestCheckResourceAttr(resourceName, consts.FieldAlgorithm, "SHA512"),
 						resource.TestCheckResourceAttr(resourceName, consts.FieldDigits, "8"),
 						resource.TestCheckResourceAttr(resourceName, consts.FieldSkew, "0"),
