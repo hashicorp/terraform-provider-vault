@@ -255,7 +255,7 @@ func (c *contextFuncConfig) GetSecretFields() []string {
 func (c *contextFuncConfig) GetRequestData(d *schema.ResourceData) map[string]interface{} {
 	result := make(map[string]interface{})
 	for _, k := range c.GetWriteFields() {
-		getter := c.getAPIValueGetterFunc(k)
+		getter := c.getAPIValueGetter(k)
 		if getter == nil {
 			getter = c.getDefaultAPIValueGetterFunc()
 		}
@@ -267,19 +267,6 @@ func (c *contextFuncConfig) GetRequestData(d *schema.ResourceData) map[string]in
 }
 
 func (c *contextFuncConfig) getDefaultAPIValueGetterFunc() util.VaultAPIValueGetter {
-	if c.defaultAPIValueGetter == nil {
-		return util.GetAPIRequestValueOk
-	} else {
-		return c.defaultAPIValueGetter
-	}
-}
-
-func (c *contextFuncConfig) getAPIValueGetterFunc(k string) util.VaultAPIValueGetter {
-	if c.apiValueGetters != nil {
-		if f, ok := c.apiValueGetters[k]; ok {
-			return f
-		}
-	}
 	if c.defaultAPIValueGetter == nil {
 		return util.GetAPIRequestValueOk
 	} else {
