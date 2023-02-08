@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const (
@@ -85,6 +86,9 @@ func GetTOTPSchemaResource() (*schema.Resource, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// ensure that the qr_size field can be set to 0
+	config.setAPIValueGetter(consts.FieldQRSize, util.GetAPIRequestValueOkExists)
 
 	return getMethodSchemaResource(totpSchemaMap, config), nil
 }

@@ -257,7 +257,7 @@ func (c *contextFuncConfig) GetRequestData(d *schema.ResourceData) map[string]in
 	for _, k := range c.GetWriteFields() {
 		getter := c.getAPIValueGetter(k)
 		if getter == nil {
-			getter = c.getDefaultAPIValueGetterFunc()
+			getter = c.getDefaultAPIValueGetter()
 		}
 		if v, ok := getter(d, k); ok {
 			result[k] = v
@@ -266,7 +266,7 @@ func (c *contextFuncConfig) GetRequestData(d *schema.ResourceData) map[string]in
 	return result
 }
 
-func (c *contextFuncConfig) getDefaultAPIValueGetterFunc() util.VaultAPIValueGetter {
+func (c *contextFuncConfig) getDefaultAPIValueGetter() util.VaultAPIValueGetter {
 	if c.defaultAPIValueGetter == nil {
 		return util.GetAPIRequestValueOk
 	} else {
