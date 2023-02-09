@@ -109,8 +109,9 @@ These arguments are common across several Authentication Token resources since V
 
 ## Attribute Reference
 
-No additional attributes are exposed by this resource.
+In addition to the above arguments, the following attributes are exported:
 
+* `role_id` - The RoleID of the GCP role.
 
 ## Import
 
