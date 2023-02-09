@@ -45,7 +45,7 @@ vet:
 fmt:
 	gofmt -s -w $(GOFMT_FILES)
 
-fmtcheck:
+fmtcheck: terraform
 	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 errcheck:
@@ -58,6 +58,24 @@ test-compile:
 		exit 1; \
 	fi
 	go test -c $(TEST) $(TESTARGS)
+
+.PHONY: terraform
+TERRAFORM = ./bin/terraform
+terraform: ## Download terraform locally if necessary.
+ifeq (,$(wildcard $(TERRAFORM)))
+ifeq (,$(shell which $(notdir $(TERRAFORM)) 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(TERRAFORM)) ;\
+	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	curl -sfSLo $(TERRAFORM).zip https://releases.hashicorp.com/terraform/$(TERRAFORM_VERSION)/terraform_$(TERRAFORM_VERSION)_$${OS}_$${ARCH}.zip ; \
+	unzip $(TERRAFORM).zip -d $(dir $(TERRAFORM)) $(notdir $(TERRAFORM)) ;\
+	rm -f $(TERRAFORM).zip ; \
+	}
+else
+TERRAFORM = $(shell which terraform)
+endif
+endif
 
 website:
 ifeq (,$(wildcard $(GOPATH)/src/$(WEBSITE_REPO)))
