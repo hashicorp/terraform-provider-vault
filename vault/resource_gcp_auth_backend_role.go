@@ -96,6 +96,11 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
+		"role_id": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "The Vault generated role ID.",
+		},
 		"backend": {
 			Type:     schema.TypeString,
 			Optional: true,
@@ -270,6 +275,8 @@ func gcpAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interfa
 			return diag.Errorf("error setting bound_labels for GCP auth backend role: %q", err)
 		}
 	}
+
+	d.Set("role_id", resp.Data["role_id"])
 
 	// These checks are done for backwards compatibility. The 'type' key used to be
 	// 'role_type' and was changed to 'role' errorneously before being corrected
