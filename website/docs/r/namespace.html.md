@@ -80,13 +80,14 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
    *Available only for Vault Enterprise*.
 
-* `path` - (Required) The path of the namespace. Must not have a trailing `/`
+* `path` - (Required) The path of the namespace. Must not have a trailing `/`.
 
 ## Attributes Reference
 
 * `namespace_id` - ID of the namespace.
 
 * `path_fq` - The fully qualified path to the namespace. Useful when provisioning resources in a child `namespace`.
+  The path is relative to the provider's `namespace` argument.
 
 ## Import
 
