@@ -84,7 +84,7 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-* `id` - ID of the namespace.
+* `namespace_id` - ID of the namespace.
 
 * `path_fq` - The fully qualified path to the namespace. Useful when provisioning resources in a child `namespace`.
 
