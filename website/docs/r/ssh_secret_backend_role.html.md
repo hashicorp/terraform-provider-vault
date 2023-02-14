@@ -76,6 +76,8 @@ The following arguments are supported:
 
 * `allowed_users` - (Optional) Specifies a comma-separated list of usernames that are to be allowed, only if certain usernames are to be allowed.
 
+* `default_user_template` - (Optional) If set, `default_users` can be specified using identity template values. A non-templated user is also permitted.
+
 * `default_user` - (Optional) Specifies the default username for which a credential will be generated.
 
 * `key_id_format` - (Optional) Specifies a custom format for the key id of a signed certificate.

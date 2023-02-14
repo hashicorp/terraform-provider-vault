@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -28,11 +31,13 @@ func adAccessCredentialsDataSource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Password for the service account.",
+				Sensitive:   true,
 			},
 			"last_password": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Last known password for the service account.",
+				Sensitive:   true,
 			},
 			"username": {
 				Type:        schema.TypeString,

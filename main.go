@@ -1,6 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package main
 
 import (
+	"flag"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
 
 	"github.com/hashicorp/terraform-provider-vault/generated"
@@ -16,7 +21,19 @@ func main() {
 	for name, resource := range generated.ResourceRegistry {
 		p.RegisterResource(name, vault.UpdateSchemaResource(resource))
 	}
-	plugin.Serve(&plugin.ServeOpts{
+
+	serveOpts := &plugin.ServeOpts{
 		ProviderFunc: p.SchemaProvider,
-	})
+	}
+
+	var debug bool
+	flag.BoolVar(&debug, "debug", false, "set to true to run the provider with support for debuggers like delve")
+	flag.Parse()
+
+	if debug {
+		serveOpts.Debug = debug
+		serveOpts.ProviderAddr = "hashicorp/vault"
+	}
+
+	plugin.Serve(serveOpts)
 }

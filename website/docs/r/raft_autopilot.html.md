@@ -60,3 +60,11 @@ stable in the 'healthy' state before being added to the cluster.
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+Raft Autopilot config can be imported using the ID, e.g.
+
+```
+$ terraform import vault_raft_autopilot.autopilot sys/storage/raft/autopilot/configuration
+```

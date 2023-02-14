@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -389,6 +392,10 @@ var (
 		"vault_aws_auth_backend_client": {
 			Resource:      UpdateSchemaResource(awsAuthBackendClientResource()),
 			PathInventory: []string{"/auth/aws/config/client"},
+		},
+		"vault_aws_auth_backend_config_identity": {
+			Resource:      awsAuthBackendConfigIdentityResource(),
+			PathInventory: []string{"/auth/aws/config/identity"},
 		},
 		"vault_aws_auth_backend_identity_whitelist": {
 			Resource:      UpdateSchemaResource(awsAuthBackendIdentityWhitelistResource()),

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package helper
 
 // Customized copy of github.com/hashicorp/terraform-plugin-sdk/helper/logging/transport.go (v2)

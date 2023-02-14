@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package consts
 
 const (
@@ -197,6 +200,10 @@ const (
 	FieldDeleteVersionAfter         = "delete_version_after"
 	FieldCustomMetadata             = "custom_metadata"
 	FieldCustomMetadataJSON         = "custom_metadata_json"
+	FieldIAMAlias                   = "iam_alias"
+	FieldIAMMetadata                = "iam_metadata"
+	FieldEC2Alias                   = "ec2_alias"
+	FieldEC2Metadata                = "ec2_metadata"
 
 	/*
 		common environment variables
