@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -41,6 +42,22 @@ func sshSecretBackendCAResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Whether Vault should generate the signing key pair internally.",
 			},
+			"key_bits": {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				ForceNew:     true,
+				Computed:     true,
+				ValidateFunc: validation.IntInSlice([]int{0, 2048, 4096, 256, 384, 521}),
+				Description:  "Key bit size of the SSH CA key pair when generate_signing_key is true. If 0 is chosen, the default for the provided key_type will be selected.",
+			},
+			"key_type": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Computed:     true,
+				ValidateFunc: validation.StringInSlice([]string{"ssh-rsa", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521", "ssh-ed25519", "rsa", "ec", "ed25519"}, false),
+				Description:  "Key type of the SSH CA key pair when generate_signing_key is true.",
+			},
 			"private_key": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -72,11 +89,17 @@ func sshSecretBackendCACreate(d *schema.ResourceData, meta interface{}) error {
 	if generateSigningKey, ok := d.Get("generate_signing_key").(bool); ok {
 		data["generate_signing_key"] = generateSigningKey
 	}
-	if privateKey, ok := d.Get("private_key").(string); ok {
-		data["private_key"] = privateKey
+	if keyBits, ok := d.GetOk("key_bits"); ok {
+		data["key_bits"] = keyBits.(int)
 	}
-	if publicKey, ok := d.Get("public_key").(string); ok {
-		data["public_key"] = publicKey
+	if keyType, ok := d.GetOk("key_type"); ok {
+		data["key_type"] = keyType.(string)
+	}
+	if privateKey, ok := d.GetOk("private_key"); ok {
+		data["private_key"] = privateKey.(string)
+	}
+	if publicKey, ok := d.GetOk("public_key"); ok {
+		data["public_key"] = publicKey.(string)
 	}
 
 	log.Printf("[DEBUG] Writing CA information on SSH backend %q", backend)
