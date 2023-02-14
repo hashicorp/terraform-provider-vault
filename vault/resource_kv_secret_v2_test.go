@@ -22,6 +22,8 @@ func TestAccKVSecretV2(t *testing.T) {
 	updatedMount := acctest.RandomWithPrefix("tf-cloud-metadata")
 	updatedName := acctest.RandomWithPrefix("tf-database-creds")
 
+	customMetadata := `{"extra":"cheese","pizza":"please"}`
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
@@ -41,6 +43,11 @@ func TestAccKVSecretV2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.delete_version_after", "0"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.max_versions", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "5"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.version", "1"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.destroyed", "false"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.deletion_time", ""),
+					resource.TestCheckResourceAttr(resourceName, "metadata.custom_metadata", "null"),
 				),
 			},
 			{
@@ -60,6 +67,11 @@ func TestAccKVSecretV2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.pizza", "please"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.delete_version_after", "0"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.max_versions", "5"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "5"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.version", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.destroyed", "false"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.deletion_time", ""),
+					resource.TestCheckResourceAttr(resourceName, "metadata.custom_metadata", customMetadata),
 				),
 			},
 			{
