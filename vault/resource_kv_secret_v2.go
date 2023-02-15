@@ -232,6 +232,9 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 	// limit substrings to 3 in case name has '/'
 	// in it or if it's a nested secret
 	parsedPath := strings.SplitN(path, "/", 3)
+	if len(parsedPath) != 3 {
+		return diag.Errorf("invalid format for KV secret path %s", path)
+	}
 
 	mount := parsedPath[0]
 	name := parsedPath[2]
