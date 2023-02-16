@@ -137,8 +137,10 @@ func kvSecretV2DataSourceRead(_ context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set(consts.FieldData, serializeDataMapToString(data.(map[string]interface{}))); err != nil {
-		return diag.FromErr(err)
+	if v, ok := data.(map[string]interface{}); ok {
+		if err := d.Set(consts.FieldData, serializeDataMapToString(v)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	if v, ok := secret.Data["metadata"]; ok {
