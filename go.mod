@@ -14,7 +14,7 @@ require (
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aws/aws-sdk-go v1.44.106
 	github.com/cenkalti/backoff/v4 v4.1.2
-	github.com/containerd/containerd v1.6.6 // indirect
+	github.com/containerd/containerd v1.6.18 // indirect
 	github.com/coreos/go-oidc/v3 v3.4.0 // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
 	github.com/denisenkom/go-mssqldb v0.12.0
