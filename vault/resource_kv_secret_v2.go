@@ -220,12 +220,36 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 	shouldRead := !d.Get("disable_read").(bool)
 
 	path := d.Id()
+	if path == "" {
+		return nil
+	}
 
 	if err := d.Set(consts.FieldPath, path); err != nil {
 		return diag.FromErr(err)
 	}
 
+	// id should be of the form "mount/data/name"
+	// limit substrings to 3 in case name has '/'
+	// in it or if it's a nested secret
+	parsedPath := strings.SplitN(path, "/", 3)
+	if len(parsedPath) != 3 {
+		return diag.Errorf("invalid format for KV secret path %s", path)
+	}
+
+	mount := parsedPath[0]
+	name := parsedPath[2]
+
+	// Set mount and name fields
+	if err := d.Set(consts.FieldMount, mount); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldName, name); err != nil {
+		return diag.FromErr(err)
+	}
+
 	if shouldRead {
+
 		client, e := provider.GetClient(d, meta)
 		if e != nil {
 			return diag.FromErr(e)
@@ -260,7 +284,10 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 
 				// Read & Set custom metadata
 				if _, ok := v[consts.FieldCustomMetadata]; ok {
-					cm, err := readKVV2Metadata(d, client)
+					// construct metadata path
+					parsedPath[1] = "metadata"
+					metadataPath := strings.Join(parsedPath, "/")
+					cm, err := readKVV2Metadata(client, metadataPath)
 					if err != nil {
 						return diag.FromErr(err)
 					}
@@ -277,9 +304,7 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 	return nil
 }
 
-func readKVV2Metadata(d *schema.ResourceData, client *api.Client) (map[string]interface{}, error) {
-	path := strings.Replace(d.Id(), consts.FieldData, consts.FieldMetadata, 1)
-
+func readKVV2Metadata(client *api.Client, path string) (map[string]interface{}, error) {
 	log.Printf("[DEBUG] Reading metadata for KVV2 secret at %s", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {

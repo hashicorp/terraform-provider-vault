@@ -19,6 +19,11 @@ func TestAccKVSecretV2(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-kvv2")
 	name := acctest.RandomWithPrefix("tf-secret")
 
+	updatedMount := acctest.RandomWithPrefix("tf-cloud-metadata")
+	updatedName := acctest.RandomWithPrefix("tf-database-creds")
+
+	customMetadata := `{"extra":"cheese","pizza":"please"}`
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
@@ -33,6 +38,16 @@ func TestAccKVSecretV2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.cas_required", "false"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.delete_version_after", "0"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.max_versions", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "5"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.version", "1"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.destroyed", "false"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.deletion_time", ""),
+					resource.TestCheckResourceAttr(resourceName, "metadata.custom_metadata", "null"),
 				),
 			},
 			{
@@ -45,12 +60,18 @@ func TestAccKVSecretV2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.zip", "zoop"),
 					resource.TestCheckResourceAttr(resourceName, "data.foo", "baz"),
 					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.cas_required", "false"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.extra", "cheese"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.pizza", "please"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.delete_version_after", "0"),
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.max_versions", "5"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "5"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.version", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.destroyed", "false"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.deletion_time", ""),
+					resource.TestCheckResourceAttr(resourceName, "metadata.custom_metadata", customMetadata),
 				),
 			},
 			{
@@ -59,8 +80,33 @@ func TestAccKVSecretV2(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"data_json", "disable_read",
-					"delete_all_versions", "mount",
-					"name", "cas",
+					"delete_all_versions",
+				},
+			},
+			{
+				Config: testKVSecretV2Config_initial(updatedMount, updatedName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, updatedMount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, updatedName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", updatedMount, updatedName)),
+					resource.TestCheckResourceAttr(resourceName, "delete_all_versions", "true"),
+					resource.TestCheckResourceAttr(resourceName, "data.zip", "zap"),
+					resource.TestCheckResourceAttr(resourceName, "data.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "data.flag", "false"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.cas_required", "false"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.delete_version_after", "0"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.max_versions", "0"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"data_json", "disable_read",
+					"delete_all_versions",
 				},
 			},
 		},
