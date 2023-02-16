@@ -481,6 +481,14 @@ var (
 			Resource:      UpdateSchemaResource(nomadSecretBackendRoleResource()),
 			PathInventory: []string{"/nomad/role/{role}"},
 		},
+		"vault_oci_auth_backend_config": {
+			Resource:      UpdateSchemaResource(ociAuthBackendConfigResource()),
+			PathInventory: []string{"/auth/oci/config"},
+		},
+		"vault_oci_auth_backend_role": {
+			Resource:      UpdateSchemaResource(ociAuthBackendRoleResource()),
+			PathInventory: []string{"/auth/oci/role/{role}"},
+		},
 		"vault_policy": {
 			Resource:      UpdateSchemaResource(policyResource()),
 			PathInventory: []string{"/sys/policy/{name}"},
