@@ -3,7 +3,6 @@ package testutil
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -11,11 +10,9 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/coreos/pkg/multierror"
-	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
@@ -26,6 +23,13 @@ import (
 
 const (
 	EnvVarSkipVaultNext = "SKIP_VAULT_NEXT_TESTS"
+)
+
+// as of vault-1.10 github-auth acceptance tests should use a valid GitHub
+// organization where applicable.
+const (
+	TestGHOrg   = "hashicorp"
+	TestGHOrgID = 761456
 )
 
 func TestAccPreCheck(t *testing.T) {
@@ -228,89 +232,6 @@ func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestChe
 		}
 		return nil
 	}
-}
-
-// GHOrgResponse provides access to a subset of the GH API's 'orgs' response data.
-type GHOrgResponse struct {
-	// Login is the GH organization's name
-	Login string `json:"login"`
-	// ID of the GH organization
-	ID int `json:"id"`
-}
-
-// cache GH API responses to avoid triggering the GH request rate limiter
-var ghOrgResponseCache = sync.Map{}
-
-// GetGHOrgResponse returns the GH org's meta configuration.
-func GetGHOrgResponse(t *testing.T, org string) *GHOrgResponse {
-	t.Helper()
-
-	client := newGHRESTClient()
-	if v, ok := ghOrgResponseCache.Load(org); ok {
-		return v.(*GHOrgResponse)
-	}
-
-	result := &GHOrgResponse{}
-	if err := client.get(fmt.Sprintf("orgs/%s", org), result); err != nil {
-		t.Fatal(err)
-	}
-
-	if org != result.Login {
-		t.Fatalf("expected org %q from GH API response, actual %q", org, result.Login)
-	}
-
-	ghOrgResponseCache.Store(org, result)
-
-	return result
-}
-
-func newGHRESTClient() *ghRESTClient {
-	client := retryablehttp.NewClient()
-	client.Logger = nil
-	return &ghRESTClient{
-		client: client,
-	}
-}
-
-type ghRESTClient struct {
-	client *retryablehttp.Client
-}
-
-func (c *ghRESTClient) get(path string, v interface{}) error {
-	return c.do(http.MethodGet, path, v)
-}
-
-func (c *ghRESTClient) do(method, path string, v interface{}) error {
-	url := fmt.Sprintf("https://api.github.com/%s", path)
-	req, err := retryablehttp.NewRequest(method, url, nil)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
-	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("invalid response for req=%#v, resp=%#v", req, resp)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	if err := json.Unmarshal(body, v); err != nil {
-		return err
-	}
-	return nil
 }
 
 // testHTTPServer creates a test HTTP server that handles requests until

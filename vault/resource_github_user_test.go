@@ -118,5 +118,5 @@ resource "vault_github_user" "user" {
 	user = "%s"
 	policies = %s
 }
-`, backend, testGHOrgID, user, p)
+`, backend, testutil.TestGHOrgID, user, p)
 }

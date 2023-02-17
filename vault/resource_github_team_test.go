@@ -136,5 +136,5 @@ resource "vault_github_team" "team" {
 	team = "%s"
 	policies = %s
 }
-`, backend, testGHOrgID, team, p)
+`, backend, testutil.TestGHOrgID, team, p)
 }
