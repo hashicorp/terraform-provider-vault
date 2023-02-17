@@ -19,6 +19,10 @@ Provides a resource to manage [Namespaces](https://www.vaultproject.io/docs/ente
 ```hcl
 resource "vault_namespace" "ns1" {
   path = "ns1"
+
+  custom_metadata = {
+    foo = "abc"
+  }
 }
 ```
 
@@ -81,6 +85,9 @@ The following arguments are supported:
    *Available only for Vault Enterprise*.
 
 * `path` - (Required) The path of the namespace. Must not have a trailing `/`
+
+* `custom_metadata` - (Optional) A map of strings containing arbitrary metadata for the namespace.
+  *Requires Vault 1.12+.*
 
 ## Attributes Reference
 

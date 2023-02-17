@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -26,7 +27,7 @@ const (
 func namespaceResource() *schema.Resource {
 	return &schema.Resource{
 		Create: namespaceCreate,
-		Update: namespaceCreate,
+		Update: namespaceUpdate,
 		Delete: namespaceDelete,
 		Read:   ReadWrapper(namespaceRead),
 		Importer: &schema.ResourceImporter{
@@ -52,6 +53,14 @@ func namespaceResource() *schema.Resource {
 				Optional:    true,
 				Description: "The fully qualified namespace path.",
 			},
+			consts.FieldCustomMetadata: {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "Metadata associated with this namespace.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -64,9 +73,49 @@ func namespaceCreate(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Get(consts.FieldPath).(string)
 
+	var data map[string]interface{}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		data = map[string]interface{}{}
+		if v, ok := d.GetOk(consts.FieldCustomMetadata); ok {
+			data["custom_metadata"] = v
+		}
+	}
+
 	log.Printf("[DEBUG] Creating namespace %s in Vault", path)
-	_, err := client.Logical().Write(SysNamespaceRoot+path, nil)
-	if err != nil {
+	if _, err := client.Logical().Write(SysNamespaceRoot+path, data); err != nil {
+		return fmt.Errorf("error writing to Vault: %s", err)
+	}
+
+	return namespaceRead(d, meta)
+}
+
+func namespaceUpdate(d *schema.ResourceData, meta interface{}) error {
+	if !provider.IsAPISupported(meta, provider.VaultVersion112) {
+		currentVersion := meta.(*provider.ProviderMeta).GetVaultVersion()
+
+		log.Printf("[WARN] Updating namespace not supported on current Vault version (%s), "+
+			"%s required", currentVersion, provider.VaultVersion112)
+
+		return namespaceRead(d, meta)
+	}
+
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	path := d.Get(consts.FieldPath).(string)
+
+	data := map[string]interface{}{}
+
+	if d.HasChange(consts.FieldCustomMetadata) {
+		o, n := d.GetChange(consts.FieldCustomMetadata)
+		data["custom_metadata"] = buildMergePatch(o, n)
+	}
+
+	log.Printf("[DEBUG] Updating namespace %s in Vault", path)
+	if _, err := client.Logical().JSONMergePatch(context.Background(), SysNamespaceRoot+path, data); err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
 
@@ -156,6 +205,12 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	toSet[consts.FieldPathFQ] = pathFQ
 
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if v, ok := resp.Data["custom_metadata"]; ok {
+			toSet[consts.FieldCustomMetadata] = v
+		}
+	}
+
 	if err := util.SetResourceData(d, toSet); err != nil {
 		return err
 	}
@@ -174,4 +229,18 @@ func upgradeNonPathdNamespaceID(d *schema.ResourceData) {
 		log.Printf("[DEBUG] Setting namespace_id to old ID - %s", oldID)
 		d.Set(consts.FieldNamespaceID, oldID)
 	}
+}
+
+func buildMergePatch(old interface{}, new interface{}) interface{} {
+	// Take all the values from the new configuration
+	patch := new.(map[string]interface{})
+
+	// Delete existing keys which are not configured any more
+	for k := range old.(map[string]interface{}) {
+		if _, found := patch[k]; !found {
+			patch[k] = nil
+		}
+	}
+
+	return patch
 }

@@ -97,6 +97,40 @@ func TestAccNamespace(t *testing.T) {
 	})
 }
 
+func TestAccNamespace_update(t *testing.T) {
+	namespacePath := acctest.RandomWithPrefix("tf-ns")
+	resourceName := "vault_namespace.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+		},
+		Providers:    testProviders,
+		CheckDestroy: testNamespaceDestroy(namespacePath),
+		Steps: []resource.TestStep{
+			{
+				Config: testNamespaceConfig_initial(namespacePath),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, namespacePath),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.foo", "abc"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.zip", "zap"),
+				),
+			},
+			{
+				Config: testNamespaceConfig_updated(namespacePath),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, namespacePath),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "custom_metadata.baz", "asdf"),
+				),
+			},
+		},
+	})
+}
+
 func testNamespaceCheckAttrs() resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_namespace.test"]
@@ -132,7 +166,7 @@ func testNamespaceDestroy(path string) resource.TestCheckFunc {
 func testNamespaceConfig(path string) string {
 	return fmt.Sprintf(`
 resource "vault_namespace" "test" {
-  path                   = %q
+  path = %q
 }
 `, path)
 }
@@ -148,7 +182,7 @@ variable "child_count" {
 }
 
 resource "vault_namespace" "parent" {
-  path = "%s"
+  path = %q
 }
 
 resource "vault_namespace" "child" {
@@ -159,4 +193,28 @@ resource "vault_namespace" "child" {
 `, count, ns)
 
 	return config
+}
+
+func testNamespaceConfig_initial(path string) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = %q
+  custom_metadata = {
+    foo = "abc"
+    zip = "zap"
+  }
+}
+`, path)
+}
+
+func testNamespaceConfig_updated(path string) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = %q
+  custom_metadata = {
+    foo = "bar"
+    baz = "asdf"
+  }
+}
+`, path)
 }
