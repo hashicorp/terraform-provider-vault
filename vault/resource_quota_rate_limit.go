@@ -4,9 +4,10 @@
 package vault
 
 import (
-	"fmt"
+	"context"
 	"log"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
@@ -19,13 +20,12 @@ func quotaRateLimitPath(name string) string {
 
 func quotaRateLimitResource() *schema.Resource {
 	return &schema.Resource{
-		Create: quotaRateLimitCreate,
-		Read:   ReadWrapper(quotaRateLimitRead),
-		Update: quotaRateLimitUpdate,
-		Delete: quotaRateLimitDelete,
-		Exists: quotaRateLimitExists,
+		CreateContext: quotaRateLimitCreate,
+		ReadContext:   ReadContextWrapper(quotaRateLimitRead),
+		UpdateContext: quotaRateLimitUpdate,
+		DeleteContext: quotaRateLimitDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -64,10 +64,10 @@ func quotaRateLimitResource() *schema.Resource {
 	}
 }
 
-func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
+func quotaRateLimitCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	name := d.Get("name").(string)
@@ -88,29 +88,29 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 		data["block_interval"] = v
 	}
 
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error creating Resource Rate Limit Quota %s: %s", name, err)
+		return diag.Errorf("Error creating Resource Rate Limit Quota %s: %s", name, err)
 	}
 	log.Printf("[DEBUG] Created Resource Rate Limit Quota %s", name)
 
-	return quotaRateLimitRead(d, meta)
+	return quotaRateLimitRead(ctx, d, meta)
 }
 
-func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
+func quotaRateLimitRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	name := d.Id()
 	path := quotaRateLimitPath(name)
 
 	log.Printf("[DEBUG] Reading Resource Rate Limit Quota %s", name)
-	resp, err := client.Logical().Read(path)
+	resp, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error reading Resource Rate Limit Quota %s: %s", name, err)
+		return diag.Errorf("error reading Resource Rate Limit Quota %s: %s", name, err)
 	}
 
 	if resp == nil {
@@ -123,7 +123,7 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 		v, ok := resp.Data[k]
 		if ok {
 			if err := d.Set(k, v); err != nil {
-				return fmt.Errorf("error setting %s for Resource Rate Limit Quota %s: %q", k, name, err)
+				return diag.Errorf("error setting %s for Resource Rate Limit Quota %s: %q", k, name, err)
 			}
 		}
 	}
@@ -131,10 +131,10 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
+func quotaRateLimitUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	name := d.Id()
@@ -154,51 +154,31 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["block_interval"] = v
 	}
 
-	_, err := client.Logical().Write(path, data)
+	_, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error updating Resource Rate Limit Quota %s: %s", name, err)
+		return diag.Errorf("Error updating Resource Rate Limit Quota %s: %s", name, err)
 	}
 	log.Printf("[DEBUG] Updated Resource Rate Limit Quota %s", name)
 
-	return quotaRateLimitRead(d, meta)
+	return quotaRateLimitRead(ctx, d, meta)
 }
 
-func quotaRateLimitDelete(d *schema.ResourceData, meta interface{}) error {
+func quotaRateLimitDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	name := d.Id()
 	path := quotaRateLimitPath(name)
 
 	log.Printf("[DEBUG] Deleting Resource Rate Limit Quota %s", name)
-	_, err := client.Logical().Delete(path)
+	_, err := client.Logical().DeleteWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("Error deleting Resource Rate Limit Quota %s", name)
+		return diag.Errorf("Error deleting Resource Rate Limit Quota %s", name)
 	}
 	log.Printf("[DEBUG] Deleted Resource Rate Limit Quota %s", name)
 
 	return nil
-}
-
-func quotaRateLimitExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	name := d.Id()
-	path := quotaRateLimitPath(name)
-
-	log.Printf("[DEBUG] Checking if Resource Rate Limit Quota %s exists", name)
-
-	secret, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if Resource Rate Limit Quota %s exists: %s", name, err)
-	}
-
-	log.Printf("[DEBUG] Checked if Resource Rate Limit Quota %s exists", name)
-	return secret != nil, nil
 }
