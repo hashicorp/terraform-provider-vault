@@ -60,6 +60,11 @@ func quotaRateLimitResource() *schema.Resource {
 				Description:  "If set, when a client reaches a rate limit threshold, the client will be prohibited from any further requests until after the 'block_interval' in seconds has elapsed.",
 				ValidateFunc: validation.IntAtLeast(0),
 			},
+			"role": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "If set on a quota where path is set to an auth mount with a concept of roles (such as '/auth/approle/'), this will make the quota restrict login requests to that mount that are made with the specified role. The request will fail if the auth mount does not have a concept of roles, or path is not an auth mount.",
+			},
 		},
 	}
 }
@@ -79,6 +84,7 @@ func quotaRateLimitCreate(ctx context.Context, d *schema.ResourceData, meta inte
 	data := map[string]interface{}{}
 	data["path"] = d.Get("path").(string)
 	data["rate"] = d.Get("rate").(float64)
+	data["role"] = d.Get("role").(string)
 
 	if v, ok := d.GetOk("interval"); ok {
 		data["interval"] = v
@@ -119,7 +125,7 @@ func quotaRateLimitRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return nil
 	}
 
-	for _, k := range []string{"path", "rate", "interval", "block_interval"} {
+	for _, k := range []string{"path", "rate", "interval", "block_interval", "role"} {
 		v, ok := resp.Data[k]
 		if ok {
 			if err := d.Set(k, v); err != nil {
@@ -145,6 +151,7 @@ func quotaRateLimitUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 	data := map[string]interface{}{}
 	data["path"] = d.Get("path").(string)
 	data["rate"] = d.Get("rate").(float64)
+	data["role"] = d.Get("role").(string)
 
 	if v, ok := d.GetOk("interval"); ok {
 		data["interval"] = v

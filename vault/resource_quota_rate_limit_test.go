@@ -29,39 +29,54 @@ func TestQuotaRateLimit(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test")
 	rateLimit := randomQuotaRateString()
 	newRateLimit := randomQuotaRateString()
+	role := name
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testQuotaRateLimitCheckDestroy([]string{rateLimit, newRateLimit}),
 		Steps: []resource.TestStep{
 			{
-				Config: testQuotaRateLimit_Config(name, "", rateLimit, 1, 0),
+				Config: testQuotaRateLimit_Config(name, "", rateLimit, 1, 0, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", ""),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "rate", rateLimit),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "interval", "1"),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "block_interval", "0"),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "role", ""),
 				),
 			},
 			{
-				Config: testQuotaRateLimit_Config(name, "", newRateLimit, 60, 120),
+				Config: testQuotaRateLimit_Config(name, "", newRateLimit, 60, 120, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", ""),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "rate", newRateLimit),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "interval", "60"),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "block_interval", "120"),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "role", ""),
 				),
 			},
 			{
-				Config: testQuotaRateLimit_Config(name, "sys/", newRateLimit, 60, 120),
+				Config: testQuotaRateLimit_Config(name, "sys/", newRateLimit, 60, 120, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", "sys/"),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "rate", newRateLimit),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "interval", "60"),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "block_interval", "120"),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "role", ""),
+				),
+			},
+			{
+				Config: testQuotaRateLimit_Config(name, "auth/approle/", newRateLimit, 60, 120, role),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", "auth/approle/"),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "rate", newRateLimit),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "interval", "60"),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "block_interval", "120"),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "role", role),
 				),
 			},
 		},
@@ -88,14 +103,20 @@ func testQuotaRateLimitCheckDestroy(rateLimits []string) resource.TestCheckFunc 
 }
 
 // Caution: Don't set test rate values too low or other tests running concurrently might fail
-func testQuotaRateLimit_Config(name, path, rate string, interval, blockInterval int) string {
+func testQuotaRateLimit_Config(name, path, rate string, interval, blockInterval int, role string) string {
 	return fmt.Sprintf(`
+resource "vault_auth_backend" "approle" {
+  type = "approle"
+  path = "approle"
+}
+
 resource "vault_quota_rate_limit" "foobar" {
   name = "%s"
   path = "%s"
   rate = %s
   interval = %d
   block_interval = %d
+  role = "%s"
 }
-`, name, path, rate, interval, blockInterval)
+`, name, path, rate, interval, blockInterval, role)
 }
