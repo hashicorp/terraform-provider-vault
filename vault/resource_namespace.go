@@ -205,10 +205,8 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	toSet[consts.FieldPathFQ] = pathFQ
 
-	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		if v, ok := resp.Data["custom_metadata"]; ok {
-			toSet[consts.FieldCustomMetadata] = v
-		}
+	if v, ok := resp.Data["custom_metadata"]; ok {
+		toSet[consts.FieldCustomMetadata] = v
 	}
 
 	if err := util.SetResourceData(d, toSet); err != nil {
