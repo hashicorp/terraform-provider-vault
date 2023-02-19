@@ -255,6 +255,11 @@ var (
 			Resource:      UpdateSchemaResource(kubernetesAuthBackendRoleDataSource()),
 			PathInventory: []string{"/auth/kubernetes/role/{name}"},
 		},
+		"vault_namespace": {
+			Resource:       UpdateSchemaResource(namespaceDataSource()),
+			PathInventory:  []string{"/sys/namespaces/{path}"},
+			EnterpriseOnly: true,
+		},
 		"vault_ad_access_credentials": {
 			Resource:      UpdateSchemaResource(adAccessCredentialsDataSource()),
 			PathInventory: []string{"/ad/creds/{role}"},
