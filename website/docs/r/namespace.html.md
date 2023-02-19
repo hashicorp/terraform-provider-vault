@@ -81,10 +81,14 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-* `namespace_id` - ID of the namespace.
+In addition to the above arguments, the following attributes are exported:
+
+* `id` - The fully qualified path to the namespace, including the provider `namespace` and a trailing slash.
 
 * `path_fq` - The fully qualified path to the namespace. Useful when provisioning resources in a child `namespace`.
   The path is relative to the provider's `namespace` argument.
+
+* `namespace_id` - Vault server's internal ID of the namespace.
 
 ## Import
 
