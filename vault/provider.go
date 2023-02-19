@@ -259,6 +259,11 @@ var (
 			Resource:      UpdateSchemaResource(adAccessCredentialsDataSource()),
 			PathInventory: []string{"/ad/creds/{role}"},
 		},
+		"vault_namespaces": {
+			Resource:       UpdateSchemaResource(namespacesDataSource()),
+			PathInventory:  []string{"/sys/namespaces"},
+			EnterpriseOnly: true,
+		},
 		"vault_nomad_access_token": {
 			Resource:      UpdateSchemaResource(nomadAccessCredentialsDataSource()),
 			PathInventory: []string{"/nomad/creds/{role}"},
