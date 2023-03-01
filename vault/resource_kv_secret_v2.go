@@ -233,26 +233,6 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 		return diag.FromErr(err)
 	}
 
-	// id should be of the form "mount/data/name"
-	// limit substrings to 3 in case name has '/'
-	// in it or if it's a nested secret
-	//parsedPath := strings.SplitN(path, "/", 3)
-	//if len(parsedPath) != 3 {
-	//	return diag.Errorf("invalid format for KV secret path %s", path)
-	//}
-	//
-	//mount := parsedPath[0]
-	//name := parsedPath[2]
-	//
-	//// Set mount and name fields
-	//if err := d.Set(consts.FieldMount, mount); err != nil {
-	//	return diag.FromErr(err)
-	//}
-	//
-	//if err := d.Set(consts.FieldName, name); err != nil {
-	//	return diag.FromErr(err)
-	//}
-
 	mount, err := getKVV2SecretMountFromPath(path)
 	if err != nil {
 		return diag.Errorf("unable to read mount from ID %s, err=%s", path, err)
