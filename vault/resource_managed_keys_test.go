@@ -158,6 +158,42 @@ func TestManagedKeys(t *testing.T) {
 	})
 }
 
+func TestManagedKeysPKCS(t *testing.T) {
+	name := acctest.RandomWithPrefix("pkcs-keys")
+	resourceName := "vault_managed_keys.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testManagedKeysConfig_pkcs(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "pkcs.#", "1"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "pkcs.*",
+						map[string]string{
+							consts.FieldName:      name,
+							consts.FieldLibrary:   "softhsm",
+							consts.FieldKeyLabel:  "kms-intermediate",
+							consts.FieldKeyID:     "kms-intermediate",
+							consts.FieldKeyBits:   "4096",
+							consts.FieldSlot:      "586615635",
+							consts.FieldPin:       "1234",
+							consts.FieldMechanism: "0x000d",
+						},
+					),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
+		},
+	})
+}
+
 func testManagedKeysConfig_basic(name0, name1 string) string {
 	return fmt.Sprintf(`
 resource "vault_managed_keys" "test" {
@@ -192,6 +228,23 @@ resource "vault_managed_keys" "test" {
     key_bits   = "4096"
     key_type   = "RSA"
     kms_key    = "alias/test_identifier_string_2"
+  }
+}
+`, name)
+}
+
+func testManagedKeysConfig_pkcs(name string) string {
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  pkcs {
+    name               = "%s"
+    library            = "softhsm"
+    key_label          = "kms-intermediate"
+    key_id             = "kms-intermediate"
+    key_bits           = "4096"
+    slot               = "586615635"
+    pin                = "1234"
+    mechanism          = "0x000d"
   }
 }
 `, name)

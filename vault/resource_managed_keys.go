@@ -371,6 +371,12 @@ func getManagedKeysConfigData(config map[string]interface{}, sm schemaMap) (stri
 
 	for blockKey := range sm {
 		if v, ok := config[blockKey]; ok {
+			// ensure empty strings are not written
+			// to vault as part of the data
+			if s, ok := v.(string); ok && s == "" {
+				continue
+			}
+
 			data[blockKey] = v
 
 			if blockKey == consts.FieldName {
