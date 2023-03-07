@@ -103,7 +103,8 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 	t.Run("vault-1.12", func(t *testing.T) {
 		setupCRLConfigTest(t, func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLTE(t, testProvider.Meta(), provider.VaultVersion113)
+			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion113)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		},
 			"cross_cluster_revocation",
 			"unified_crl",
