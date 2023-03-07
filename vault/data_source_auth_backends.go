@@ -1,0 +1,77 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+package vault
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+)
+
+func authBackendsDataSource() *schema.Resource {
+	return &schema.Resource{
+		Read: ReadWrapper(authBackendsDataSourceRead),
+		Schema: map[string]*schema.Schema{
+			"paths": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Description: "The auth backend mount points.",
+			},
+			"type": {
+				Type:        schema.TypeString,
+				Required:    false,
+				Description: "The name of the auth backend.",
+			},
+			"accessors": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Description: "The accessors of the auth backends.",
+			},
+		},
+	}
+}
+
+func authBackendsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	targetType := d.Get("type").(string)
+
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		return fmt.Errorf("error reading from Vault: %s", err)
+	}
+
+	var paths, accessors []string
+
+	for path, auth := range auths {
+		path = strings.TrimSuffix(path, "/")
+
+		// If we only want matching mount types
+		if auth.Type == targetType {
+			paths = append(paths, path)
+			accessors = append(accessors, auth.Accessor)
+			return nil
+			// If we want all mount types
+		} else {
+			paths = append(paths, path)
+			accessors = append(accessors, auth.Accessor)
+			return nil
+		}
+	}
+
+	// d.SetId() What ID should I set here?
+	d.SetId(d.Get("FieldAddress").(string))
+	d.Set("paths", paths)
+	d.Set("type", targetType)
+	d.Set("accessors", accessors)
+
+	// If we fell out here then we didn't find our Auth in the list.
+	return nil
+}

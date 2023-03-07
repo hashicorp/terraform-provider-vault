@@ -287,6 +287,10 @@ var (
 			Resource:      UpdateSchemaResource(authBackendDataSource()),
 			PathInventory: []string{"/sys/auth"},
 		},
+		"vault_auth_backends": {
+			Resource:      UpdateSchemaResource(authBackendsDataSource()),
+			PathInventory: []string{"/sys/auth"},
+		},
 		"vault_transit_encrypt": {
 			Resource:      UpdateSchemaResource(transitEncryptDataSource()),
 			PathInventory: []string{"/transit/encrypt/{name}"},
