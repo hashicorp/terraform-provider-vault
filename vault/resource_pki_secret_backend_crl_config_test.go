@@ -99,11 +99,23 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 		)
 	})
 
-	// test against vault-1.12 and above
-	t.Run("vault-1.12-and-above", func(t *testing.T) {
+	// test against vault-1.12
+	t.Run("vault-1.12", func(t *testing.T) {
 		setupCRLConfigTest(t, func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+			SkipIfAPIVersionLTE(t, testProvider.Meta(), provider.VaultVersion113)
+		},
+			"cross_cluster_revocation",
+			"unified_crl",
+			"unified_crl_on_existing_paths",
+		)
+	})
+
+	// test against vault-1.13 and above
+	t.Run("vault-1.13-and-above", func(t *testing.T) {
+		setupCRLConfigTest(t, func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
 		},
 		)
 	})
