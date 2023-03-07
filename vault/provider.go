@@ -62,7 +62,7 @@ func Provider() *schema.Provider {
 		Schema: map[string]*schema.Schema{
 			consts.FieldAddress: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultAddress, nil),
 				Description: "URL of the root of the target Vault server.",
 			},
@@ -71,6 +71,24 @@ func Provider() *schema.Provider {
 				Optional:    true,
 				Default:     false,
 				Description: "If true, adds the value of the `address` argument to the Terraform process environment.",
+			},
+			"hcp_vault_cluster": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     false,
+				Description: "ID of the HCP Vault cluster to connect to.",
+			},
+			"hcp_organization": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("HCP_ORGANIZATION_ID", nil),
+				Description: "Organization ID of the HCP Vault cluster to connect to.",
+			},
+			"hcp_project": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("HCP_PROJECTJ_ID", nil),
+				Description: "Project ID of the HCP Vault cluster to connect to.",
 			},
 			"token": {
 				Type:        schema.TypeString,

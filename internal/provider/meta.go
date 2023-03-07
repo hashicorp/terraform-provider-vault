@@ -14,6 +14,12 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-version"
+	"golang.org/x/oauth2"
+
+	hcpv "github.com/hashicorp/hcp-sdk-go/clients/cloud-vault-service/stable/2020-11-25/client/vault_service"
+	hconfig "github.com/hashicorp/hcp-sdk-go/config"
+	"github.com/hashicorp/hcp-sdk-go/httpclient"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -137,14 +143,118 @@ func (p *ProviderMeta) validate() error {
 	return nil
 }
 
+func GetHCPVaultProxyAddress(d *schema.ResourceData) (string, error) {
+	cfg, err := hconfig.NewHCPConfig(hconfig.FromEnv())
+	if err != nil {
+		return "", err
+	}
+
+	hcpClient, err := httpclient.New(httpclient.Config{HCPConfig: cfg})
+	if err != nil {
+		return "", err
+	}
+
+	hcpvClient := hcpv.New(hcpClient, nil)
+
+	// Get the cluster
+	getParams := hcpv.NewGetParams().
+		WithClusterID(d.Get("hcp_vault_cluster").(string)).
+		WithLocationOrganizationID(d.Get("hcp_organization").(string)).
+		WithLocationProjectID(d.Get("hcp_project").(string))
+
+	resp, err := hcpvClient.Get(getParams, nil)
+	if err != nil {
+		return "", fmt.Errorf("Failed to lookup HCP Vault cluster details: %v", err)
+	}
+
+	return resp.Payload.Cluster.DNSNames.Proxy, nil
+}
+
+type hcpAuthRoundTripper struct {
+	// Source supplies the token to add to outgoing requests'
+	// Authorization headers.
+	Source oauth2.TokenSource
+
+	// Base is the base RoundTripper used to make HTTP requests.
+	// If nil, http.DefaultTransport is used.
+	Base http.RoundTripper
+}
+
+func (a *hcpAuthRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	reqBodyClosed := false
+	if req.Body != nil {
+		defer func() {
+			if !reqBodyClosed {
+				req.Body.Close()
+			}
+		}()
+	}
+
+	if a.Source == nil {
+		return nil, errors.New("oauth2: Transport's Source is nil")
+	}
+	token, err := a.Source.Token()
+	if err != nil {
+		return nil, err
+	}
+
+	req2 := cloneRequest(req) // per RoundTripper contract
+
+	cookie := &http.Cookie{
+		//Domain:  domain,
+		Name:    "hcp_access_token",
+		Value:   token.AccessToken,
+		Expires: token.Expiry,
+	}
+	req2.AddCookie(cookie)
+
+	// req.Body is assumed to be closed by the base RoundTripper.
+	reqBodyClosed = true
+	return a.Base.RoundTrip(req2)
+}
+
+// cloneRequest returns a clone of the provided *http.Request.
+// The clone is a shallow copy of the struct and its Header map.
+func cloneRequest(r *http.Request) *http.Request {
+	// shallow copy of the struct
+	r2 := new(http.Request)
+	*r2 = *r
+	// deep copy of the Header
+	r2.Header = make(http.Header, len(r.Header))
+	for k, s := range r.Header {
+		r2.Header[k] = append([]string(nil), s...)
+	}
+	return r2
+}
+
+func HCPProxyRoundTripper(base http.RoundTripper) (http.RoundTripper, error) {
+	cfg, err := hconfig.NewHCPConfig(hconfig.FromEnv())
+	if err != nil {
+		return nil, fmt.Errorf("failed retrieving HCP config: %v", err)
+	}
+
+	rt := &hcpAuthRoundTripper{
+		Source: cfg,
+		Base:   base,
+	}
+
+	return rt, nil
+}
+
 // NewProviderMeta sets up the Provider to service Vault requests.
 // It is meant to be used as a schema.ConfigureFunc.
 func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	clientConfig := api.DefaultConfig()
 	addr := d.Get(consts.FieldAddress).(string)
+	hcpV := d.Get("hcp_vault_cluster").(string)
+	if hcpV == "" && addr == "" {
+		return nil, fmt.Errorf("address must be set if not connecting to an HCP Vault cluster")
+	}
 	if addr != "" {
 		clientConfig.Address = addr
 	}
+
+	// If we are connecting to an HCP Vault cluster, retrieve the proxy adddress
 
 	clientAuthI := d.Get(consts.FieldClientAuth).([]interface{})
 	if len(clientAuthI) > 1 {
@@ -183,6 +293,23 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 
 	// set default MaxRetries
 	clientConfig.MaxRetries = DefaultMaxHTTPRetries
+
+	// Connect to the HCP Vault cluster instead
+	if hcpV != "" {
+		proxyAddr, err := GetHCPVaultProxyAddress(d)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve HCP Vault cluster's proxy address: %s", err)
+		}
+
+		clientConfig.Address = "https://" + proxyAddr
+
+		rt, err := HCPProxyRoundTripper(clientConfig.HttpClient.Transport)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create HCP Vault cluster proxy client: %s", err)
+		}
+
+		clientConfig.HttpClient.Transport = rt
+	}
 
 	client, err := api.NewClient(clientConfig)
 	if err != nil {
