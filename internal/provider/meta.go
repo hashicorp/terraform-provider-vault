@@ -113,6 +113,9 @@ func (p *ProviderMeta) IsAPISupported(minVersion *version.Version) bool {
 // features.
 func (p *ProviderMeta) IsEnterpriseSupported() bool {
 	ver := p.GetVaultVersion()
+	if ver == nil {
+		return false
+	}
 	return strings.Contains(ver.Metadata(), enterpriseMetadata)
 }
 
