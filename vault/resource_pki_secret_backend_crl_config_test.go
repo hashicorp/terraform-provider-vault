@@ -48,9 +48,9 @@ func getCRLConfigChecks(resourceName string, isUpdate bool) resource.TestCheckFu
 	}
 
 	v113UpdateChecks := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, "cross_cluster_revocation", "false"),
-		resource.TestCheckResourceAttr(resourceName, "unified_crl", "false"),
-		resource.TestCheckResourceAttr(resourceName, "unified_crl_on_existing_paths", "false"),
+		resource.TestCheckResourceAttr(resourceName, "cross_cluster_revocation", "true"),
+		resource.TestCheckResourceAttr(resourceName, "unified_crl", "true"),
+		resource.TestCheckResourceAttr(resourceName, "unified_crl_on_existing_paths", "true"),
 	}
 
 	return func(state *terraform.State) error {
@@ -177,15 +177,18 @@ func testPkiSecretBackendCrlConfigConfig_explicit(rootPath string) string {
 %s
 
 resource "vault_pki_secret_backend_crl_config" "test" {
-  backend                   = vault_pki_secret_backend_root_cert.test-ca.backend
-  expiry                    = "72h"
-  disable                   = true
-  ocsp_disable              = false
-  ocsp_expiry               = "23h"
-  auto_rebuild              = true
-  auto_rebuild_grace_period = "24h"
-  enable_delta              = true
-  delta_rebuild_interval    = "18m"
+  backend                   	= vault_pki_secret_backend_root_cert.test-ca.backend
+  expiry                    	= "72h"
+  disable                   	= true
+  ocsp_disable              	= false
+  ocsp_expiry               	= "23h"
+  auto_rebuild              	= true
+  auto_rebuild_grace_period 	= "24h"
+  enable_delta              	= true
+  delta_rebuild_interval   		= "18m"
+  cross_cluster_revocation  	= true
+  unified_crl					= true
+  unified_crl_on_existing_paths = true
 }
 `, testPkiSecretBackendCrlConfigConfig_base(rootPath))
 }

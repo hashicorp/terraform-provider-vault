@@ -213,6 +213,14 @@ func pkiSecretBackendCrlConfigUpdate(d *schema.ResourceData, meta interface{}) e
 		}...)
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
+		fields = append(fields, []string{
+			"cross_cluster_revocation",
+			"unified_crl",
+			"unified_crl_on_existing_paths",
+		}...)
+	}
+
 	data := util.GetAPIRequestDataWithSliceOk(d, fields)
 	log.Printf("[DEBUG] Updating CRL config on PKI secret path %q", path)
 	_, err := client.Logical().Write(path, data)
