@@ -301,21 +301,23 @@ func pkiSecretBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 	if e != nil {
 		return e
 	}
-	path := d.Get("backend").(string)
-	enabled, err := util.CheckMountEnabled(client, path)
+
+	backend := d.Get("backend").(string)
+	name := d.Get("name").(string)
+
+	path := pkiSecretBackendCertPath(backend, name)
+
+	ok, err := util.CheckPathHasUpdateCapability(client, path)
 	if err != nil {
-		log.Printf("[WARN] Failed to check if mount %q exist, preempting the read operation", path)
-		return nil
+		return err
 	}
 
-	if enabled {
+	if ok {
 		if err := pkiSecretBackendCertSynchronizeRenewPending(d); err != nil {
 			return err
 		}
 	} else {
-		// trigger a resource re-creation whenever the engine's mount has disappeared
-		log.Printf("[WARN] Mount %q does not exist, setting resource for re-creation", path)
-		d.SetId("")
+		return fmt.Errorf("no update capability available on %q", path)
 	}
 
 	return nil

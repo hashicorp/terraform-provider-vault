@@ -337,6 +337,24 @@ func CheckMountEnabled(client *api.Client, path string) (bool, error) {
 	return ok, nil
 }
 
+// CheckPathHasUpdateCapability in Vault.
+func CheckPathHasUpdateCapability(client *api.Client, path string) (bool, error) {
+	capabilities, err := client.Sys().CapabilitiesSelf(path)
+	if err != nil {
+		return false, err
+	}
+
+	var found bool
+	for _, p := range capabilities {
+		if p == "update" {
+			found = true
+			break
+		}
+	}
+
+	return found, nil
+}
+
 // GetAPIRequestDataWithMap to pass to Vault from schema.ResourceData.
 // The fieldMap specifies the schema field to its vault constituent.
 // If the vault field is empty, then two fields are mapped 1:1.
