@@ -19,16 +19,20 @@ func authBackendsDataSource() *schema.Resource {
 			"paths": {
 				Type:        schema.TypeList,
 				Computed:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "The auth backend mount points.",
 			},
+
 			"type": {
 				Type:        schema.TypeString,
-				Required:    false,
+				Optional:    true,
 				Description: "The name of the auth backend.",
 			},
+
 			"accessors": {
 				Type:        schema.TypeList,
 				Computed:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "The accessors of the auth backends.",
 			},
 		},

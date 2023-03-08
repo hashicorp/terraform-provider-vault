@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	r "github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
@@ -15,7 +14,8 @@ import (
 )
 
 func TestDataSourceAuthBackends(t *testing.T) {
-	path := acctest.RandomWithPrefix("foo")
+	typ := []string{"userpass", "userpass", "approle", "approle"}
+	path := []string{"foo", "bar", "baz", "boo"}
 	r.Test(t, r.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
@@ -25,7 +25,7 @@ func TestDataSourceAuthBackends(t *testing.T) {
 				Check:  testDataSourceAuthBackends_check,
 			},
 			{
-				Config: testDataSourceAuthBackends_config(path),
+				Config: testDataSourceAuthBackends_config(typ, path),
 				Check:  testDataSourceAuthBackends_check,
 			},
 		},
@@ -59,17 +59,32 @@ data "vault_auth_backends" "test" { }
 `
 
 /* Some work to be done here */
-func testDataSourceAuthBackends_config(path string) string {
+func testDataSourceAuthBackends_config(typ []string, path []string) string {
 	return fmt.Sprintf(`
-resource "vault_auth_backend" "test" {
+resource "vault_auth_backend" "test1" {
 	path = "%s"
-	type = "userpass"
+	type = "%s"
 }
 
-data "vault_auth_backend" "test" {
+resource "vault_auth_backend" "test2" {
+	path = "%s"
+	type = "%s"
+}
+
+resource "vault_auth_backend" "test3" {
+	path = "%s"
+	type = "%s"
+}
+
+resource "vault_auth_backend" "test4" {
+	path = "%s"
+	type = "%s"
+}
+
+data "vault_auth_backends" "test" {
 	path = vault_auth_backend.test.path
 }
-`, path)
+`, typ[0], path[0], typ[1], path[1], typ[2], path[2], typ[3], path[3])
 }
 
 func testDataSourceAuthBackends_check(s *terraform.State) error {
@@ -125,11 +140,19 @@ func testDataSourceAuthBackends_check(s *terraform.State) error {
 		return fmt.Errorf("resource has no primary instance")
 	}
 
-	/* Need to add a test verifying that `type` filter returns only matching types
-	if got, want := iState.Attributes["type"], "userpass"; got != want {
-		return fmt.Errorf("type contains %s; want %s", got, want)
+	if got, want := len(iState.Attributes["paths"]), len(iState.Attributes["accessors"]); got != want {
+		return fmt.Errorf("length of paths is %d; length of accessors is %d; must match", got, want)
 	}
-	*/
+
+	if iState.Attributes["type"] == "" {
+		if got, want := len(iState.Attributes["paths"]), 4; got != want {
+			return fmt.Errorf("length of paths is %d; want %d", got, want)
+		}
+	} else {
+		if got, want := len(iState.Attributes["paths"]), 2; got != want {
+			return fmt.Errorf("length of paths is %d; want %d", got, want)
+		}
+	}
 
 	return nil
 }
