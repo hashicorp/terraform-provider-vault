@@ -46,7 +46,8 @@ jobs:
         image:
         - "vault-enterprise:1.10.6-ent"
         - "vault-enterprise:1.11.4-ent"
-        - "vault-enterprise:1.12.0-ent"
+        - "vault-enterprise:1.12.4-ent"
+        - "vault-enterprise:1.13.0-ent"
     container:
       image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     services:
