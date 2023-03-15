@@ -4,28 +4,28 @@
 package vault
 
 import (
-	"fmt"
+	"log"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"golang.org/x/net/context"
-	"log"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var mongodbAtlasAPIFields = []string{
-	"public_key",
-	"private_key",
+	consts.FieldPublicKey,
+	consts.FieldPrivateKey,
 }
 
 func mongodbAtlasSecretBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
-		CreateContext: mongodbAtlasSecretBackendCreate,
+		CreateContext: mongodbAtlasSecretBackendCreateUpdate,
 		ReadContext:   ReadContextWrapper(mongodbAtlasSecretBackendRead),
-		UpdateContext: mongodbAtlasSecretBackendUpdate,
+		UpdateContext: mongodbAtlasSecretBackendCreateUpdate,
 		DeleteContext: mongodbAtlasSecretBackendDelete,
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Importer: &schema.ResourceImporter{
@@ -33,122 +33,56 @@ func mongodbAtlasSecretBackendResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"path": {
+			consts.FieldBackend: {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Path where MongoDB Atlas secret backend will be mounted",
 				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 			},
-			"public_key": {
+			consts.FieldPath: {
 				Type:        schema.TypeString,
-				Optional:    true,
 				Computed:    true,
+				Description: "Path where MongoDB Atlas configuration is located",
+			},
+			consts.FieldPublicKey: {
+				Type:        schema.TypeString,
+				Required:    true,
 				Description: "The Public Programmatic API Key used to authenticate with the MongoDB Atlas API",
 			},
-			"private_key": {
+			consts.FieldPrivateKey: {
 				Type:        schema.TypeString,
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
 				Description: "The Private Programmatic API Key used to connect with MongoDB Atlas API",
 			},
 		},
 	})
 }
 
-func mongodbAtlasSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func mongodbAtlasSecretBackendCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
-	path := d.Get("path").(string)
 
-	data := make(map[string]interface{})
-	if privateKey, ok := d.Get("private_key").(string); ok {
-		data["private_key"] = privateKey
-	}
-	if publicKey, ok := d.Get("public_key").(string); ok {
-		data["public_key"] = publicKey
+	backend := d.Get(consts.FieldBackend).(string)
+	privateKey := d.Get(consts.FieldPrivateKey).(string)
+	publicKey := d.Get(consts.FieldPublicKey).(string)
+
+	data := map[string]interface{}{
+		consts.FieldPrivateKey: privateKey,
+		consts.FieldPublicKey:  publicKey,
 	}
 
-	log.Printf("[DEBUG] Mounting MongoDB Atlas backend at %q", path)
-	_, err := client.Logical().Write(path+"/config", data)
+	path := backend + "/config"
+	log.Printf("[DEBUG] Writing MongoDB Atlas config at %q", path)
+
+	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return diag.Errorf("error mounting to %q, err=%w", path, err)
+		return diag.Errorf("error writing to %q, err=%s", path, err)
 	}
 
 	log.Printf("[DEBUG] Mounted MongoDB Atlas backend at %q", path)
 	d.SetId(path)
-
-	return mongodbAtlasSecretBackendUpdate(ctx, d, meta)
-}
-
-func mongodbAtlasSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return diag.FromErr(e)
-	}
-	path := d.Id()
-
-	if !d.IsNewResource() && d.HasChange("path") {
-		src := path
-		dest := d.Get("path").(string)
-
-		log.Printf("[DEBUG] Remount %s to %s in Vault", src, dest)
-
-		err := client.Sys().Remount(src, dest)
-		if err != nil {
-			return diag.Errorf("error remounting in Vault: %s", err)
-		}
-
-		// There is something similar in resource_mount.go, but in the call to TuneMount().
-		var tries int
-		for {
-			if tries > 10 {
-				return diag.Errorf(
-					"mount %q did did not become available after %d tries, interval=1s", dest, tries)
-			}
-
-			enabled, err := util.CheckMountEnabled(client, dest)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-			if !enabled {
-				tries++
-				time.Sleep(1 * time.Second)
-				continue
-			}
-
-			break
-		}
-
-		path = dest
-		d.SetId(path)
-	}
-
-	log.Printf("[DEBUG] Updating mount %s in Vault", path)
-
-	data := map[string]interface{}{}
-	configPath := fmt.Sprintf("%s/config", path)
-	log.Printf("[DEBUG] Updating %q", configPath)
-
-	for _, k := range mongodbAtlasAPIFields {
-		if d.HasChange(k) {
-			if v, ok := d.GetOk(k); ok {
-				switch v.(type) {
-				case *schema.Set:
-					data[k] = util.TerraformSetToStringArray(v)
-				default:
-					data[k] = v
-				}
-			}
-		}
-	}
-
-	if _, err := client.Logical().Write(configPath, data); err != nil {
-		return diag.Errorf("error updating MongoDB Atlas config %q, err=%w", configPath, err)
-	}
-
-	log.Printf("[DEBUG] Updated %q", configPath)
 
 	return mongodbAtlasSecretBackendRead(ctx, d, meta)
 }
@@ -160,10 +94,19 @@ func mongodbAtlasSecretBackendRead(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	path := d.Id()
-	log.Printf("[DEBUG] Reading MongoDB Atlas config at %s/config", path)
-	resp, err := client.Logical().Read(path + "/config")
+	if err := d.Set(consts.FieldPath, path); err != nil {
+		return diag.FromErr(err)
+	}
+
+	backend := strings.Trim(path, "/config")
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
+		return diag.FromErr(err)
+	}
+
+	log.Printf("[DEBUG] Reading MongoDB Atlas config at %s", path)
+	resp, err := client.Logical().Read(path)
 	if err != nil {
-		return diag.Errorf("error reading MongoDB Atlas config at %q/config: err=%w", path, err)
+		return diag.Errorf("error reading MongoDB Atlas config at %q/config: err=%s", path, err)
 	}
 
 	if resp == nil {
@@ -173,35 +116,19 @@ func mongodbAtlasSecretBackendRead(ctx context.Context, d *schema.ResourceData, 
 		return nil
 	}
 
-	for _, k := range mongodbAtlasAPIFields {
-		if err := d.Set(k, resp.Data[k]); err != nil {
-			return diag.Errorf("error setting state key %q on MongoDB Atlas config, err=%w", k, err)
-		}
+	if err := d.Set(consts.FieldPublicKey, resp.Data[consts.FieldPublicKey]); err != nil {
+		return diag.Errorf("error setting state key %q on MongoDB Atlas config, err=%s", consts.FieldPublicKey, err)
+	}
+
+	// set private key from TF config since it won't be returned from Vault
+	pKey := d.Get(consts.FieldPrivateKey).(string)
+	if err := d.Set(consts.FieldPrivateKey, pKey); err != nil {
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
 func mongodbAtlasSecretBackendDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return diag.FromErr(e)
-	}
-	path := d.Id()
-	log.Printf("[DEBUG] Unmounting MongoDB Atlas backend %q", path)
-
-	if err := client.Sys().Unmount(path); err != nil {
-		if util.Is404(err) {
-			log.Printf("[WARN] %q not found, removing from state", path)
-			d.SetId("")
-
-			return diag.Errorf("error unmounting MongoDB Atlas backend from %q, err=%w", path, err)
-		}
-
-		return diag.Errorf("error unmounting MongoDB Atlas backend from %q, err=%w", path, err)
-	}
-
-	log.Printf("[DEBUG] Unmounted MongoDB Atlas backend %q", path)
-
 	return nil
 }

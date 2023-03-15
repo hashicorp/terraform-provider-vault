@@ -9,97 +9,48 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccMongoDBAtlasSecretBackend_basic(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-mongodbatlas")
+	mount := acctest.RandomWithPrefix("tf-test-mongodbatlas")
 	resourceType := "vault_mongodbatlas_secret_backend"
 	resourceName := resourceType + ".test"
-	publicKey, privateKey := testutil.GetTestMDBACreds(t)
+	privateKey, publicKey := testutil.GetTestMDBACreds(t)
+
+	updatedPrivateKey := "905ae89e-6ee8-40rd-ab12-613t8e3fe836"
+	updatedPublicKey := "klpruxce"
+
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeMongoDBAtlas, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccMongoDBAtlasSecretBackendConfig_basic(path, privateKey, publicKey),
+				Config: testAccMongoDBAtlasSecretBackendConfig_basic(mount, privateKey, publicKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "private_key", "2c130c23-e6b6-4da8-a93f-a8bf33218830"),
-					resource.TestCheckResourceAttr(resourceName, "public_key", "yhltsvan"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/config", mount)),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKey, privateKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPublicKey, publicKey),
 				),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccMongoDBAtlasSecretBackendConfig_updated(path, privateKey, publicKey),
+				Config: testAccMongoDBAtlasSecretBackendConfig_basic(mount, updatedPrivateKey, updatedPublicKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "private_key", "905ae89e-6ee8-40rd-ab12-613t8e3fe836"),
-					resource.TestCheckResourceAttr(resourceName, "public_key", "klpruxce"),
-				),
-			},
-		},
-	})
-}
-
-func TestAccMongoDBAtlasSecretBackend_template(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-mongodbatlas")
-	resourceType := "vault_mongodbatlas_secret_backend"
-	resourceName := resourceType + ".test"
-	privateKey, publicKey := testutil.GetTestMDBACreds(t)
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeMongoDBAtlas, consts.FieldPath),
-		Steps: []resource.TestStep{
-			{
-				Config: testAccMongoDBAtlasSecretBackendTemplateConfig(path, privateKey, publicKey),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "private_key", privateKey),
-					resource.TestCheckResourceAttr(resourceName, "public_key", publicKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/config", mount)),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKey, updatedPrivateKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPublicKey, updatedPublicKey),
 				),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
-func TestMongoDBAtlasSecretBackend_remount(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-mongodbatlas")
-	updatedPath := acctest.RandomWithPrefix("tf-test-mongodbatlas-updated")
-
-	resourceName := "vault_mongodbatlas_secret_backend.test"
-	privateKey, publicKey := testutil.GetTestMDBACreds(t)
-
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		Steps: []resource.TestStep{
-			{
-				Config: testAccMongoDBAtlasSecretBackendConfig_basic(path, privateKey, publicKey),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", path),
-					resource.TestCheckResourceAttr(resourceName, "private_key", privateKey),
-					resource.TestCheckResourceAttr(resourceName, "public_key", publicKey),
-				),
-			},
-			{
-				Config: testAccMongoDBAtlasSecretBackendConfig_updated(updatedPath, privateKey, publicKey),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
-					resource.TestCheckResourceAttr(resourceName, "private_key", privateKey),
-					resource.TestCheckResourceAttr(resourceName, "public_key", publicKey),
-				),
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldDisableRemount, consts.FieldPrivateKey},
 			},
 		},
 	})
@@ -107,27 +58,15 @@ func TestMongoDBAtlasSecretBackend_remount(t *testing.T) {
 
 func testAccMongoDBAtlasSecretBackendConfig_basic(path, privateKey, publicKey string) string {
 	return fmt.Sprintf(`
-resource "vault_mongodbatlas_secret_backend" "test" {
-  path = "%s"
-  private_key = "%s"
-  public_key = "%s"
-}`, path, privateKey, publicKey)
+resource "vault_mount" "mongo" {
+	path        = "%s"
+	type        = "mongodbatlas"
+    description = "MongoDB Atlas secret engine mount"
 }
 
-func testAccMongoDBAtlasSecretBackendConfig_updated(path, privateKey, publicKey string) string {
-	return fmt.Sprintf(`
 resource "vault_mongodbatlas_secret_backend" "test" {
-  path = "%s"
+  backend = vault_mount.mongo.path
   private_key = "%s"
   public_key = "%s"
-}`, path, privateKey, publicKey)
-}
-
-func testAccMongoDBAtlasSecretBackendTemplateConfig(path, privateKey, publicKey string) string {
-	return fmt.Sprintf(`
-resource "vault_mongodbatlas_secret_backend" "test" {
-  path           = "%s"
-  private_key    = "%s"
-  public_key     = "%s"
 }`, path, privateKey, publicKey)
 }

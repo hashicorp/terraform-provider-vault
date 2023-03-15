@@ -204,6 +204,8 @@ const (
 	FieldIAMMetadata                = "iam_metadata"
 	FieldEC2Alias                   = "ec2_alias"
 	FieldEC2Metadata                = "ec2_metadata"
+	FieldPublicKey                  = "public_key"
+	FieldPrivateKey                 = "private_key"
 
 	/*
 		common environment variables
