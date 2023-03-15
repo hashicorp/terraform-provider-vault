@@ -186,6 +186,11 @@ func GetTestRMQCreds(t *testing.T) (string, string, string) {
 	return v[0], v[1], v[2]
 }
 
+func GetTestMDBACreds(t *testing.T) (string, string) {
+	v := SkipTestEnvUnset(t, "PRIVATE_KEY", "PUBLIC_KEY")
+	return v[0], v[1]
+}
+
 func GetTestADCreds(t *testing.T) (string, string, string) {
 	v := SkipTestEnvUnset(t, "AD_BINDDN", "AD_BINDPASS", "AD_URL")
 	return v[0], v[1], v[2]
