@@ -204,6 +204,10 @@ const (
 	FieldIAMMetadata                = "iam_metadata"
 	FieldEC2Alias                   = "ec2_alias"
 	FieldEC2Metadata                = "ec2_metadata"
+	FieldImpersonatedAccount        = "impersonated_account"
+	FieldServiceAccountEmail        = "service_account_email"
+	FieldTokenScopes                = "token_scopes"
+	FieldServiceAccountProject      = "service_account_project"
 
 	/*
 		common environment variables
