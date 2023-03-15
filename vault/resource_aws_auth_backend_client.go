@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
@@ -74,6 +75,12 @@ func awsAuthBackendClientResource() *schema.Resource {
 				Optional:    true,
 				Description: "The value to require in the X-Vault-AWS-IAM-Server-ID header as part of GetCallerIdentity requests that are used in the iam auth method.",
 			},
+			"max_retries": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "Number of max retries the client should use for recoverable errors.",
+				Default:     -1,
+			},
 		},
 	}
 }
@@ -91,6 +98,7 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 	iamEndpoint := d.Get("iam_endpoint").(string)
 	stsEndpoint := d.Get("sts_endpoint").(string)
 	stsRegion := d.Get("sts_region").(string)
+	maxRetries := d.Get("max_retries").(int)
 
 	iamServerIDHeaderValue := d.Get("iam_server_id_header_value").(string)
 
@@ -102,6 +110,7 @@ func awsAuthBackendWrite(d *schema.ResourceData, meta interface{}) error {
 		"sts_endpoint":               stsEndpoint,
 		"sts_region":                 stsRegion,
 		"iam_server_id_header_value": iamServerIDHeaderValue,
+		"max_retries":                maxRetries,
 	}
 
 	if d.HasChange("access_key") || d.HasChange("secret_key") {
@@ -159,6 +168,16 @@ func awsAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("sts_endpoint", secret.Data["sts_endpoint"])
 	d.Set("sts_region", secret.Data["sts_region"])
 	d.Set("iam_server_id_header_value", secret.Data["iam_server_id_header_value"])
+
+	maxRetries := int64(-1)
+	if v, ok := secret.Data["max_retries"]; ok {
+		maxRetries, err = v.(json.Number).Int64()
+		if err != nil {
+			return fmt.Errorf("unexpected value %q for max_retries of %q", v, d.Id())
+		}
+	}
+	d.Set("max_retries", maxRetries)
+
 	return nil
 }
 
