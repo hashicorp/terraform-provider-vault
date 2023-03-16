@@ -168,6 +168,15 @@ func pkiSecretBackendCertResource() *schema.Resource {
 				Default:     false,
 				Description: "Revoke the certificate upon resource destruction.",
 			},
+			"user_ids": {
+				Type:        schema.TypeList,
+				Required:    false,
+				Optional:    true,
+				Description: "User IDs",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -216,6 +225,7 @@ func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error 
 		"format":               d.Get("format").(string),
 		"private_key_format":   d.Get("private_key_format").(string),
 		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
+		"user_ids":             d.Get("user_ids"),
 	}
 
 	if len(altNames) > 0 {

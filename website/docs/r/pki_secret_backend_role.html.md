@@ -71,6 +71,8 @@ The following arguments are supported:
 
 * `allowed_other_sans` - (Optional) Defines allowed custom SANs
 
+* `allowed_user_ids` - (Optional) Defines allowed user IDs
+
 * `server_flag` - (Optional) Flag to specify certificates for server use
 
 * `client_flag` - (Optional) Flag to specify certificates for client use

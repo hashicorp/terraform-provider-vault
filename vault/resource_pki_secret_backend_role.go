@@ -348,6 +348,15 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"allowed_user_ids": {
+				Type:        schema.TypeList,
+				Required:    false,
+				Optional:    true,
+				Description: "Defines allowed user IDs",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -426,6 +435,7 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 		"require_cn":                         d.Get("require_cn"),
 		"basic_constraints_valid_for_non_ca": d.Get("basic_constraints_valid_for_non_ca"),
 		"not_before_duration":                d.Get("not_before_duration"),
+		"allowed_user_ids":                   d.Get("allowed_user_ids"),
 	}
 
 	if len(allowedDomains) > 0 {
@@ -580,6 +590,7 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("basic_constraints_valid_for_non_ca", secret.Data["basic_constraints_valid_for_non_ca"])
 	d.Set("not_before_duration", notBeforeDuration)
 	d.Set("allowed_serial_numbers", allowedSerialNumbers)
+	d.Set("allowed_user_ids", secret.Data["allowed_user_ids"])
 
 	return nil
 }
@@ -650,6 +661,7 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 		"require_cn":                         d.Get("require_cn"),
 		"basic_constraints_valid_for_non_ca": d.Get("basic_constraints_valid_for_non_ca"),
 		"not_before_duration":                d.Get("not_before_duration"),
+		"allowed_user_ids":                   d.Get("allowed_user_ids"),
 	}
 
 	if len(allowedDomains) > 0 {

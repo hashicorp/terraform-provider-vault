@@ -53,6 +53,8 @@ The following arguments are supported:
 
 * `other_sans` - (Optional) List of other SANs
 
+* `user_ids` - (Optional) List of Subject User IDs
+
 * `ttl` - (Optional) Time to live
 
 * `format` - (Optional) The format of data

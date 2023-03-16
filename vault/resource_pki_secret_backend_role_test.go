@@ -75,6 +75,7 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "require_cn", "true"),
 		resource.TestCheckResourceAttr(resourceName, "basic_constraints_valid_for_non_ca", "false"),
 		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_user_ids.0", "45m"),
 	}
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -326,6 +327,7 @@ resource "vault_pki_secret_backend_role" "test" {
   basic_constraints_valid_for_non_ca = false
   not_before_duration                = "45m"
   allowed_serial_numbers             = ["*"]
+	allowed_user_ids                   = ["*"]
 }
 `, path, name, roleTTL, maxTTL, policyIdentifiers)
 }
@@ -378,6 +380,7 @@ resource "vault_pki_secret_backend_role" "test" {
   basic_constraints_valid_for_non_ca = false
   not_before_duration = "45m"
   allowed_serial_numbers = ["*"]
+	allowed_user_ids = ["*"]
 }`, path, name, policyIdentifiers)
 }
 
