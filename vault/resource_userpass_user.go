@@ -31,12 +31,14 @@ func userpassUserResource() *schema.Resource {
 			Required:    true,
 			ForceNew:    true,
 			Description: "Username part of userpass.",
+			ValidateFunc: provider.ValidateStringSlug,
 		},
 		"password": {
 			Type:        schema.TypeString,
-			Required:    true,
+			Optional:    true,
 			ForceNew:    true,
 			Description: "Password part of userpass.",
+			Sensitive:   true,
 		},
 	}
 
@@ -72,6 +74,10 @@ func userpassUserCreate(d *schema.ResourceData, meta interface{}) error {
 	id := userPath(d.Get("backend").(string), d.Get("username").(string))
 	d.SetId(id)
 	d.MarkNewResource()
+
+	if v, ok := d.GetOk("password"); !ok || v == "" {
+		return fmt.Errorf("cannot create user with empty password")
+	}
 
 	log.Printf("[INFO] Creating new user at '%v'", id)
 	return userpassUserUpdate(d, meta)
