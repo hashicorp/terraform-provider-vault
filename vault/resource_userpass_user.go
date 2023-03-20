@@ -27,10 +27,10 @@ func userpassUserResource() *schema.Resource {
 			},
 		},
 		"username": {
-			Type:        schema.TypeString,
-			Required:    true,
-			ForceNew:    true,
-			Description: "Username part of userpass.",
+			Type:         schema.TypeString,
+			Required:     true,
+			ForceNew:     true,
+			Description:  "Username part of userpass.",
 			ValidateFunc: provider.ValidateStringSlug,
 		},
 		"password": {
@@ -65,7 +65,7 @@ func usernameFromPath(userId string) string {
 }
 
 func backendFromPath(userId string) string {
-	userPath := "/users" + usernameFromPath(userId)
+	userPath := "/users/" + usernameFromPath(userId)
 	s := strings.Replace(userId, userPath, "", -1)
 	return strings.Replace(s, "auth/", "", -1)
 }
@@ -96,16 +96,17 @@ func userpassUserUpdate(d *schema.ResourceData, meta interface{}) error {
 	updateTokenFields(d, data, false)
 
 	if v, ok := d.GetOk("username"); ok {
-		data["username"] = v.(int)
+		data["username"] = v.(string)
 	}
 
 	if v, ok := d.GetOk("password"); ok {
-		data["password"] = v.(int)
+		data["password"] = v.(string)
 	}
 
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
+		log.Printf("[ERROR] Error writing user at '%s'", path)
 		return err
 	}
 
