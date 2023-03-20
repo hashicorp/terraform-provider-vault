@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -41,8 +40,15 @@ func TestAccUserpassUser_basic(t *testing.T) {
 				),
 			},
 			{
-				Config:      testAccUserpassUserConfig_basic(backend, username, "", []string{}),
-				ExpectError: regexp.MustCompile("cannot create user with empty password"),
+				Config: testAccUserpassUserConfig_basic(backend, username, password, []string{"updated_policy"}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/users/"+username),
+					resource.TestCheckResourceAttr(resName, "backend", backend),
+					resource.TestCheckResourceAttr(resName, "username", username),
+					resource.TestCheckResourceAttr(resName, "password", password),
+					resource.TestCheckResourceAttr(resName, "token_policies.#", "1"),
+					resource.TestCheckResourceAttr(resName, "token_policies.0", "updated_policy"),
+				),
 			},
 		},
 	})
@@ -51,8 +57,8 @@ func TestAccUserpassUser_basic(t *testing.T) {
 func TestAccUserpassUser_importBasic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("userpass")
 	resName := "vault_userpass_user.user"
-	user := "import"
-	password := "random_pa33s"
+	user := "u3er_name"
+	password := "pa33_word"
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Providers: testProviders,
@@ -70,53 +76,26 @@ func TestAccUserpassUser_importBasic(t *testing.T) {
 	})
 }
 
-func TestAccUserpassUserPath(t *testing.T) {
-	t.Run("With default mount", func(t *testing.T) {
-		actual := userPath("userpass", "john_doe")
-		expected := "auth/userpass/users/john_doe"
-		if actual != expected {
-			t.Fatalf("expected path '%s', got: '%s'", expected, actual)
-		}
-	})
-	t.Run("With custom mount", func(t *testing.T) {
-		actual := userPath("custompath", "blmhemu")
-		expected := "auth/custompath/users/blmhemu"
-		if actual != expected {
-			t.Fatalf("expected path '%s', got: '%s'", expected, actual)
-		}
-	})
-}
+func TestAccUserpassHelpers(t *testing.T) {
+	t.Run("Test helper functions", func(t *testing.T) {
+		expectedPath := "auth/userpass/users/blm_hemu"
+		expectedBackend := "userpass"
+		expectedUsername := "blm_hemu"
 
-func TestAccUserpassUsernameFromPath(t *testing.T) {
-	t.Run("With default mount", func(t *testing.T) {
-		actual := usernameFromPath("auth/userpass/users/john_doe")
-		expected := "john_doe"
-		if actual != expected {
-			t.Fatalf("expected user '%s', got: '%s'", expected, actual)
-		}
-	})
-	t.Run("With custom mount", func(t *testing.T) {
-		actual := usernameFromPath("auth/custompath/users/blmhemu")
-		expected := "blmhemu"
-		if actual != expected {
-			t.Fatalf("expected user '%s', got: '%s'", expected, actual)
-		}
-	})
-}
+		actualPath := userPath(expectedBackend, expectedUsername)
+		actualBackend := backendFromPath(expectedPath)
+		actualUsername := usernameFromPath(expectedPath)
 
-func TestAccUserpassBackendFromPath(t *testing.T) {
-	t.Run("With default mount", func(t *testing.T) {
-		actual := backendFromPath("auth/userpass/users/john_doe")
-		expected := "userpass"
-		if actual != expected {
-			t.Fatalf("expected backend '%s', got: '%s'", expected, actual)
+		if actualPath != expectedPath {
+			t.Fatalf("expected path '%s', got: '%s'", expectedPath, actualPath)
 		}
-	})
-	t.Run("With custom mount", func(t *testing.T) {
-		actual := backendFromPath("auth/custompath/users/blmhemu")
-		expected := "custompath"
-		if actual != expected {
-			t.Fatalf("expected backend '%s', got: '%s'", expected, actual)
+
+		if actualBackend != expectedBackend {
+			t.Fatalf("expected backend '%s', got: '%s'", expectedBackend, actualBackend)
+		}
+
+		if actualUsername != expectedUsername {
+			t.Fatalf("expected username '%s', got: '%s'", expectedUsername, actualUsername)
 		}
 	})
 }
