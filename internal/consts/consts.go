@@ -206,6 +206,10 @@ const (
 	FieldEC2Metadata                = "ec2_metadata"
 	FieldPublicKey                  = "public_key"
 	FieldPrivateKey                 = "private_key"
+	FieldImpersonatedAccount        = "impersonated_account"
+	FieldServiceAccountEmail        = "service_account_email"
+	FieldTokenScopes                = "token_scopes"
+	FieldServiceAccountProject      = "service_account_project"
 
 	/*
 		common environment variables
