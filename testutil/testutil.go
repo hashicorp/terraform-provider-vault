@@ -196,6 +196,11 @@ func GetTestNomadCreds(t *testing.T) (string, string) {
 	return v[0], v[1]
 }
 
+func GetTestPKCSCreds(t *testing.T) (string, string, string) {
+	v := SkipTestEnvUnset(t, "PKCS_KEY_LIBRARY", "PKCS_KEY_SLOT", "PKCS_KEY_PIN")
+	return v[0], v[1], v[2]
+}
+
 func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState, ok := s.RootModule().Resources[name]
