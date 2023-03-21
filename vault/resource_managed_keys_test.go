@@ -158,37 +158,48 @@ func TestManagedKeys(t *testing.T) {
 	})
 }
 
+// The following test requires a Vault server to be set up with a specific server configuration
+// (kms_library needs to be defined). We need not dedicate an entire server setup just for one
+// test, and hence this test is meant to be run locally
+//
+// The following test requires a PKCS#11 key to be set up and needs the following
+// environment variables to operate successfully:
+// * PKCS_KEY_LIBRARY
+// * PKCS_KEY_SLOT
+// * PKCS_KEY_PIN
+// * TF_ACC_LOCAL=1
+//
+// The final variable specifies that this test can only be run locally
 func TestManagedKeysPKCS(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
 	name := acctest.RandomWithPrefix("pkcs-keys")
 	resourceName := "vault_managed_keys.test"
+
+	library, slot, pin := testutil.GetTestPKCSCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestEntPreCheck(t) },
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testManagedKeysConfig_pkcs(name),
+				Config: testManagedKeysConfig_pkcs(name, library, slot, pin),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "pkcs.#", "1"),
-					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "pkcs.*",
-						map[string]string{
-							consts.FieldName:      name,
-							consts.FieldLibrary:   "softhsm",
-							consts.FieldKeyLabel:  "kms-intermediate",
-							consts.FieldKeyID:     "kms-intermediate",
-							consts.FieldKeyBits:   "4096",
-							consts.FieldSlot:      "586615635",
-							consts.FieldPin:       "1234",
-							consts.FieldMechanism: "0x000d",
-						},
-					),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.library", library),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_label", "kms-intermediate"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_id", "kms-intermediate"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.key_bits", "4096"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.slot", slot),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.pin", pin),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.mechanism", "1"),
 				),
 			},
 			{
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{},
+				ImportStateVerifyIgnore: []string{"pkcs.0.pin", "pkcs.0.key_id"},
 			},
 		},
 	})
@@ -233,19 +244,19 @@ resource "vault_managed_keys" "test" {
 `, name)
 }
 
-func testManagedKeysConfig_pkcs(name string) string {
+func testManagedKeysConfig_pkcs(name, library, slot, pin string) string {
 	return fmt.Sprintf(`
 resource "vault_managed_keys" "test" {
   pkcs {
     name               = "%s"
-    library            = "softhsm"
+    library            = "%s"
     key_label          = "kms-intermediate"
     key_id             = "kms-intermediate"
     key_bits           = "4096"
-    slot               = "586615635"
-    pin                = "1234"
-    mechanism          = "0x000d"
+    slot               = "%s"
+    pin                = "%s"
+    mechanism          = "0x0001"
   }
 }
-`, name)
+`, name, library, slot, pin)
 }
