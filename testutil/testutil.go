@@ -187,7 +187,7 @@ func GetTestRMQCreds(t *testing.T) (string, string, string) {
 }
 
 func GetTestMDBACreds(t *testing.T) (string, string) {
-	v := SkipTestEnvUnset(t, "PRIVATE_KEY", "PUBLIC_KEY")
+	v := SkipTestEnvUnset(t, "MONGODB_ATLAS_PRIVATE_KEY", "MONGODB_ATLAS_PUBLIC_KEY")
 	return v[0], v[1]
 }
 
