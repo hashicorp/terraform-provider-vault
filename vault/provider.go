@@ -783,10 +783,6 @@ var (
 			Resource:      UpdateSchemaResource(mongodbAtlasSecretBackendResource()),
 			PathInventory: []string{"/mongodbatlas/config"},
 		},
-		//"vault_mongodbatlas_secret_role": {
-		//	Resource:      UpdateSchemaResource(mongodbAtlasSecretRoleResource()),
-		//	PathInventory: []string{"/mongodbatlas/roles/{name}"},
-		//},
 		"vault_identity_oidc_scope": {
 			Resource:      UpdateSchemaResource(identityOIDCScopeResource()),
 			PathInventory: []string{"/identity/oidc/scope/{scope}"},
