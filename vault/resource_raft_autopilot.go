@@ -137,6 +137,11 @@ func readAutopilotConfigResource(d *schema.ResourceData, meta interface{}) error
 	if err != nil {
 		return fmt.Errorf("error reading %q: %s", autopilotPath, err)
 	}
+	if resp == nil {
+		log.Printf("[WARN] Autopilot configuration %q not found, removing it from state", autopilotPath)
+		d.SetId("")
+		return nil
+	}
 
 	if val, ok := resp.Data["cleanup_dead_servers"]; ok {
 		if err := d.Set("cleanup_dead_servers", val); err != nil {

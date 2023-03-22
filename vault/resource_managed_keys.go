@@ -371,6 +371,12 @@ func getManagedKeysConfigData(config map[string]interface{}, sm schemaMap) (stri
 
 	for blockKey := range sm {
 		if v, ok := config[blockKey]; ok {
+			// ensure empty strings are not written
+			// to vault as part of the data
+			if s, ok := v.(string); ok && s == "" {
+				continue
+			}
+
 			data[blockKey] = v
 
 			if blockKey == consts.FieldName {
@@ -605,7 +611,7 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 }
 
 func readAWSManagedKeys(d *schema.ResourceData, client *api.Client) error {
-	redacted := []string{"access_key", "secret_key"}
+	redacted := []string{consts.FieldAccessKey, consts.FieldSecretKey}
 	if err := readAndSetManagedKeys(d, client, consts.FieldAWS,
 		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
@@ -625,7 +631,7 @@ func readAzureManagedKeys(d *schema.ResourceData, client *api.Client) error {
 }
 
 func readPKCSManagedKeys(d *schema.ResourceData, client *api.Client) error {
-	redacted := []string{"pin"}
+	redacted := []string{consts.FieldPin, consts.FieldKeyID}
 	if err := readAndSetManagedKeys(d, client, consts.FieldPKCS,
 		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err

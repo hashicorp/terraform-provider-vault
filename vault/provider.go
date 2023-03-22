@@ -497,6 +497,10 @@ var (
 			Resource:      UpdateSchemaResource(gcpSecretBackendResource("vault_gcp_secret_backend")),
 			PathInventory: []string{"/gcp/config"},
 		},
+		"vault_gcp_secret_impersonated_account": {
+			Resource:      UpdateSchemaResource(gcpSecretImpersonatedAccountResource()),
+			PathInventory: []string{"/gcp/impersonated-account/{name}"},
+		},
 		"vault_gcp_secret_roleset": {
 			Resource:      UpdateSchemaResource(gcpSecretRolesetResource()),
 			PathInventory: []string{"/gcp/roleset/{name}"},
@@ -615,6 +619,10 @@ var (
 		"vault_audit": {
 			Resource:      UpdateSchemaResource(auditResource()),
 			PathInventory: []string{"/sys/audit/{path}"},
+		},
+		"vault_audit_request_header": {
+			Resource:      UpdateSchemaResource(auditRequestHeaderResource()),
+			PathInventory: []string{"/sys/config/auditing/request-headers/{path}"},
 		},
 		"vault_ssh_secret_backend_ca": {
 			Resource:      UpdateSchemaResource(sshSecretBackendCAResource()),

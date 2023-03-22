@@ -19,7 +19,7 @@ func TestAccKVSecretV2(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-kvv2")
 	name := acctest.RandomWithPrefix("tf-secret")
 
-	updatedMount := acctest.RandomWithPrefix("tf-cloud-metadata")
+	updatedMount := acctest.RandomWithPrefix("random-prefix/tf-cloud-metadata")
 	updatedName := acctest.RandomWithPrefix("tf-database-creds")
 
 	customMetadata := `{"extra":"cheese","pizza":"please"}`
