@@ -498,6 +498,14 @@ func TestIsEnterpriseSupported(t *testing.T) {
 				vaultVersion: VaultVersion12,
 			},
 		},
+		{
+			name:     "unsupported unset",
+			expected: false,
+			meta: &ProviderMeta{
+				client:       rootClient,
+				vaultVersion: nil,
+			},
+		},
 	}
 
 	for _, tt := range testCases {

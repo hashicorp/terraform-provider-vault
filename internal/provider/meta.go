@@ -37,6 +37,7 @@ var (
 	VaultVersion110 = version.Must(version.NewSemver(consts.VaultVersion110))
 	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion111))
 	VaultVersion112 = version.Must(version.NewSemver(consts.VaultVersion112))
+	VaultVersion113 = version.Must(version.NewSemver(consts.VaultVersion113))
 )
 
 // ProviderMeta provides resources with access to the Vault client and
@@ -113,6 +114,9 @@ func (p *ProviderMeta) IsAPISupported(minVersion *version.Version) bool {
 // features.
 func (p *ProviderMeta) IsEnterpriseSupported() bool {
 	ver := p.GetVaultVersion()
+	if ver == nil {
+		return false
+	}
 	return strings.Contains(ver.Metadata(), enterpriseMetadata)
 }
 

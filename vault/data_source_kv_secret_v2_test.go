@@ -9,8 +9,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -54,6 +56,60 @@ func TestDataSourceKVV2Secret(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.baz", "{\"riff\":\"raff\"}"),
 					testutil.CheckJSONData(resourceName, consts.FieldDataJSON, expectedSubkeys),
 				),
+			},
+		},
+	})
+}
+
+func TestDataSourceKVV2Secret_deletedSecret(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-kv")
+	name := acctest.RandomWithPrefix("foo")
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+
+					err := client.Sys().Mount(mount, &api.MountInput{
+						Type:        "kv-v2",
+						Description: "Mount for testing KV datasource",
+					})
+					if err != nil {
+						t.Fatalf(fmt.Sprintf("error mounting kvv2 engine; err=%s", err))
+					}
+
+					m := map[string]interface{}{
+						"foo": "bar",
+						"baz": "qux",
+					}
+
+					data := map[string]interface{}{
+						consts.FieldData: m,
+					}
+
+					// Write data at path
+					path := fmt.Sprintf("%s/data/%s", mount, name)
+					resp, err := client.Logical().Write(path, data)
+					if err != nil {
+						t.Fatalf(fmt.Sprintf("error writing to Vault; err=%s", err))
+					}
+
+					if resp == nil {
+						t.Fatalf("empty response")
+					}
+
+					// Soft Delete KV V2 secret at path
+					// Secret data returned from Vault is nil
+					// confirm that plan does not result in panic
+					_, err = client.Logical().Delete(path)
+					if err != nil {
+					}
+				},
+				Config:   kvV2DatasourceConfig(mount, name),
+				PlanOnly: true,
 			},
 		},
 	})
@@ -112,4 +168,13 @@ data "vault_kv_secret_v2" "test" {
   name  = vault_kv_secret_v2.test.name
   version = 1
 }`, kvV2MountConfig(mount), name)
+}
+
+func kvV2DatasourceConfig(mount, name string) string {
+	return fmt.Sprintf(`
+data "vault_kv_secret_v2" "test" {
+  mount = "%s"
+  name  = "%s"
+}
+`, mount, name)
 }
