@@ -82,7 +82,7 @@ var (
 
 // GetTOTPSchemaResource returns the resource needed to provision an identity/mfa/totp resource.
 func GetTOTPSchemaResource() (*schema.Resource, error) {
-	config, err := NewContextFuncConfig(MethodTypeTOTP, PathTypeMethodID, nil, nil, nil)
+	config, err := NewContextFuncConfig(MethodTypeTOTP, PathTypeMethodID, nil, nil, nil, nil)
 	if err != nil {
 		return nil, err
 	}

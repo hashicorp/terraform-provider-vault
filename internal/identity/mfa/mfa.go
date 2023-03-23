@@ -257,21 +257,13 @@ func (c *contextFuncConfig) GetRequestData(d *schema.ResourceData) map[string]in
 	for _, k := range c.GetWriteFields() {
 		getter := c.getAPIValueGetter(k)
 		if getter == nil {
-			getter = c.getDefaultAPIValueGetter()
+			getter = c.defaultAPIValueGetter
 		}
 		if v, ok := getter(d, k); ok {
 			result[k] = v
 		}
 	}
 	return result
-}
-
-func (c *contextFuncConfig) getDefaultAPIValueGetter() util.VaultAPIValueGetter {
-	if c.defaultAPIValueGetter == nil {
-		return util.GetAPIRequestValueOk
-	} else {
-		return c.defaultAPIValueGetter
-	}
 }
 
 func (c *contextFuncConfig) Method() string {
@@ -388,7 +380,9 @@ func (c *contextFuncConfig) id(f string, v interface{}) (string, error) {
 }
 
 // NewContextFuncConfig setups a contextFuncConfig that is supported by any of any Get*ContextFunc factory functions.
-func NewContextFuncConfig(method string, pt PathType, m map[string]*schema.Schema, computedOnly []string, quirksMap map[string]string) (*contextFuncConfig, error) {
+func NewContextFuncConfig(method string, pt PathType, m map[string]*schema.Schema,
+	computedOnly []string, quirksMap map[string]string, defaultAPIValueGetter util.VaultAPIValueGetter,
+) (*contextFuncConfig, error) {
 	if len(computedOnly) == 0 {
 		computedOnly = defaultComputedOnlyFields
 	}
@@ -407,13 +401,18 @@ func NewContextFuncConfig(method string, pt PathType, m map[string]*schema.Schem
 		return nil, fmt.Errorf("unsupported path type %s", pt)
 	}
 
+	if defaultAPIValueGetter == nil {
+		defaultAPIValueGetter = util.GetAPIRequestValueOk
+	}
+
 	config := &contextFuncConfig{
-		method:       method,
-		pt:           pt,
-		m:            m,
-		computedOnly: computedOnly,
-		quirksMap:    quirksMap,
-		requireLock:  true,
+		method:                method,
+		pt:                    pt,
+		m:                     m,
+		computedOnly:          computedOnly,
+		quirksMap:             quirksMap,
+		requireLock:           true,
+		defaultAPIValueGetter: defaultAPIValueGetter,
 	}
 
 	return config, nil

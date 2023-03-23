@@ -74,7 +74,7 @@ func GetPingIDSchemaResource() (*schema.Resource, error) {
 		consts.FieldAdminURL,
 		consts.FieldAuthenticatorURL,
 		consts.FieldOrgAlias,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		return nil, err
 	}

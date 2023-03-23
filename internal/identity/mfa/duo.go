@@ -56,7 +56,7 @@ func GetDuoSchemaResource() (*schema.Resource, error) {
 	config, _ := NewContextFuncConfig(MethodTypeDuo, PathTypeMethodID, nil, nil, map[string]string{
 		// API is inconsistent between create/update and read.
 		"pushinfo": consts.FieldPushInfo,
-	})
+	}, nil)
 
 	config.setAPIValueGetter(consts.FieldUsernameFormat, util.GetAPIRequestValue)
 
