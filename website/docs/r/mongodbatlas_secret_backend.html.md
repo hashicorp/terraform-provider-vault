@@ -21,9 +21,9 @@ for more details.
 
 ```hcl
 resource "vault_mongodbatlas_secret_backend" "config" {
-  backend           = "vault_mount.mongo.path"
-  private_key       = "privateKey"
-  public_key        = "publicKey"
+  backend        = "vault_mount.mongo.path"
+  private_key    = "privateKey"
+  public_key     = "publicKey"
 }
 ```
 
