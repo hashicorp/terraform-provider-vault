@@ -49,7 +49,7 @@ func TestAccMongoDBAtlasSecretBackend_basic(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{consts.FieldDisableRemount, consts.FieldPrivateKey},
+				ImportStateVerifyIgnore: []string{consts.FieldPrivateKey},
 			},
 		},
 	})
