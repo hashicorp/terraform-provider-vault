@@ -14,13 +14,8 @@ import (
 	"golang.org/x/net/context"
 )
 
-var mongodbAtlasAPIFields = []string{
-	consts.FieldPublicKey,
-	consts.FieldPrivateKey,
-}
-
 func mongodbAtlasSecretBackendResource() *schema.Resource {
-	&schema.Resource{
+	return &schema.Resource{
 		CreateContext: mongodbAtlasSecretBackendCreateUpdate,
 		ReadContext:   ReadContextWrapper(mongodbAtlasSecretBackendRead),
 		UpdateContext: mongodbAtlasSecretBackendCreateUpdate,
@@ -53,7 +48,7 @@ func mongodbAtlasSecretBackendResource() *schema.Resource {
 				Description: "The Private Programmatic API Key used to connect with MongoDB Atlas API",
 			},
 		},
-	})
+	}
 }
 
 func mongodbAtlasSecretBackendCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -119,8 +114,7 @@ func mongodbAtlasSecretBackendRead(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	// set private key from TF config since it won't be returned from Vault
-	pKey := d.Get(consts.FieldPrivateKey).(string)
-	if err := d.Set(consts.FieldPrivateKey, pKey); err != nil {
+	if err := d.Set(consts.FieldPrivateKey, d.Get(consts.FieldPrivateKey).(string)); err != nil {
 		return diag.FromErr(err)
 	}
 
