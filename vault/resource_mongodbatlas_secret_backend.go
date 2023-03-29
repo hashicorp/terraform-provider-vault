@@ -20,7 +20,7 @@ var mongodbAtlasAPIFields = []string{
 }
 
 func mongodbAtlasSecretBackendResource() *schema.Resource {
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	&schema.Resource{
 		CreateContext: mongodbAtlasSecretBackendCreateUpdate,
 		ReadContext:   ReadContextWrapper(mongodbAtlasSecretBackendRead),
 		UpdateContext: mongodbAtlasSecretBackendCreateUpdate,
