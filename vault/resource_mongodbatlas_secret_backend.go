@@ -96,7 +96,7 @@ func mongodbAtlasSecretBackendRead(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	backend := strings.Trim(path, "/config")
+	backend := strings.TrimSuffix(path, "/config")
 	if err := d.Set(consts.FieldBackend, backend); err != nil {
 		return diag.FromErr(err)
 	}
