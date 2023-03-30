@@ -29,7 +29,7 @@ func mongodbAtlasSecretBackendResource() *schema.Resource {
 			consts.FieldBackend: {
 				Type:         schema.TypeString,
 				Required:     true,
-				Description:  "Path where MongoDB Atlas secret backend will be mounted",
+				Description:  "Path where MongoDB Atlas secret backend is mounted",
 				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 			},
 			consts.FieldPath: {
