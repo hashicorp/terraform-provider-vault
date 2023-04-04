@@ -22,13 +22,11 @@ func authBackendsDataSource() *schema.Resource {
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "The auth backend mount points.",
 			},
-
 			"type": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The name of the auth backend.",
 			},
-
 			"accessors": {
 				Type:        schema.TypeList,
 				Computed:    true,
@@ -57,13 +55,13 @@ func authBackendsDataSourceRead(d *schema.ResourceData, meta interface{}) error 
 	for path, auth := range auths {
 		path = strings.TrimSuffix(path, "/")
 
-		// If we only want matching mount types
 		if auth.Type == targetType {
+			// If we only want matching mount types
 			paths = append(paths, path)
 			accessors = append(accessors, auth.Accessor)
 			return nil
-			// If we want all mount types
 		} else {
+			// If we want all mount types
 			paths = append(paths, path)
 			accessors = append(accessors, auth.Accessor)
 			return nil
@@ -71,7 +69,8 @@ func authBackendsDataSourceRead(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	// d.SetId() What ID should I set here?
-	d.SetId(d.Get("FieldAddress").(string))
+	d.SetId("default")
+	//d.SetId(*meta.().(string))
 	d.Set("paths", paths)
 	d.Set("type", targetType)
 	d.Set("accessors", accessors)
