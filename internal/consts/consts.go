@@ -265,6 +265,7 @@ const (
 	MountTypeAzure        = "azure"
 	MountTypeGitHub       = "github"
 	MountTypeAD           = "ad"
+	MountTypeLDAP         = "ldap"
 	MountTypeConsul       = "consul"
 	MountTypeTerraform    = "terraform"
 

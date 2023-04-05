@@ -557,6 +557,10 @@ var (
 			Resource:      UpdateSchemaResource(ldapAuthBackendGroupResource()),
 			PathInventory: []string{"/auth/ldap/groups/{name}"},
 		},
+		"vault_ldap_secret_backend": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendResource()),
+			PathInventory: []string{"/ldap/config"},
+		},
 		"vault_nomad_secret_backend": {
 			Resource: UpdateSchemaResource(nomadSecretAccessBackendResource()),
 			PathInventory: []string{
