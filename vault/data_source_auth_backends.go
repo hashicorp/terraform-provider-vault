@@ -53,24 +53,20 @@ func authBackendsDataSourceRead(d *schema.ResourceData, meta interface{}) error 
 	var paths, accessors []string
 
 	for path, auth := range auths {
+
 		path = strings.TrimSuffix(path, "/")
 
-		if auth.Type == targetType {
-			// If we only want matching mount types
+		if targetType == "" {
 			paths = append(paths, path)
 			accessors = append(accessors, auth.Accessor)
-			return nil
-		} else {
-			// If we want all mount types
+		} else if auth.Type == targetType {
 			paths = append(paths, path)
 			accessors = append(accessors, auth.Accessor)
-			return nil
 		}
 	}
 
-	// d.SetId() What ID should I set here?
+	// Single instance data source - defaulting ID to 'default'
 	d.SetId("default")
-	//d.SetId(*meta.().(string))
 	d.Set("paths", paths)
 	d.Set("type", targetType)
 	d.Set("accessors", accessors)
