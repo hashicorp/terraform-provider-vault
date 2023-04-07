@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -20,10 +21,12 @@ func TestLDAPSecretBackend(t *testing.T) {
 	resourceType := "vault_ldap_secret_backend"
 	resourceName := resourceType + ".test"
 	resource.Test(t, resource.TestCase{
-		ProviderFactories:         providerFactories,
-		PreCheck:                  func() { testutil.TestAccPreCheck(t) },
-		PreventPostDestroyRefresh: true,
-		CheckDestroy:              testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldBackend),
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+		}, PreventPostDestroyRefresh: true,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPSecretBackend_initialConfig(backend, bindDN, bindPass, url),

@@ -5,6 +5,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"testing"
 )
@@ -17,8 +18,10 @@ func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 	resourceName := resourceType + ".role"
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldBackend),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+		}, CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldBackend),
 
 		Steps: []resource.TestStep{
 			{
