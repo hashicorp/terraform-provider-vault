@@ -133,10 +133,12 @@ func deleteLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, m
 	_, err = client.Logical().DeleteWithContext(ctx, rolePath)
 	if err != nil {
 		if util.Is404(err) {
+			d.SetId("")
 			return nil
 		}
 
 		return diag.FromErr(fmt.Errorf("error deleting static role %q: %w", rolePath, err))
 	}
+
 	return nil
 }

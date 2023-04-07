@@ -50,8 +50,6 @@ func testLDAPSecretBackendStaticRoleConfig(backend, bindDN, bindPass, url, usern
 resource "vault_ldap_secret_backend" "test" {
   backend                   = "%s"
   description               = "test description"
-  default_lease_ttl_seconds = "3600"
-  max_lease_ttl_seconds     = "7200"
   binddn                    = "%s"
   bindpass                  = "%s"
   url                       = "%s"

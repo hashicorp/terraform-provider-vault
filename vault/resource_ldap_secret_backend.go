@@ -670,12 +670,13 @@ func deleteLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 	vaultPath := d.Id()
 	log.Printf("[DEBUG] Unmounting LDAP backend %q", vaultPath)
 
-	err = client.Sys().Unmount(vaultPath)
-	if err != nil && util.Is404(err) {
-		log.Printf("[WARN] %q not found, removing from state", vaultPath)
-		d.SetId("")
-		return diag.FromErr(fmt.Errorf("error unmounting LDAP backend from %q: %s", vaultPath, err))
-	} else if err != nil {
+	err = client.Sys().UnmountWithContext(ctx, vaultPath)
+	if err != nil {
+		if util.Is404(err) {
+			log.Printf("[WARN] %q not found, removing from state", vaultPath)
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(fmt.Errorf("error unmounting LDAP backend from %q: %s", vaultPath, err))
 	}
 	log.Printf("[DEBUG] Unmounted LDAP backend %q", vaultPath)
