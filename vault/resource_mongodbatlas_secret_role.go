@@ -7,12 +7,15 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
+
+var mongodbAtlasSecretBackendFromPathRegex = regexp.MustCompile("^(.+)/roles/.+$")
 
 func mongodbAtlasSecretRoleResource() *schema.Resource {
 	return &schema.Resource{
@@ -37,23 +40,23 @@ func mongodbAtlasSecretRoleResource() *schema.Resource {
 				Description:  "Path where MongoDB Atlas backend is mounted",
 				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 			},
-			"name": {
+			consts.FieldName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Name of the role",
 			},
-			"organization_id": {
+			consts.FieldOrganizationID: {
 				Type:        schema.TypeString,
-				Required:    false,
+				Optional:    true,
 				Description: "ID for the organization to which the target API Key belongs",
 			},
-			"project_id": {
+			consts.FieldProjectID: {
 				Type:        schema.TypeString,
-				Required:    false,
+				Optional:    true,
 				Description: "ID for the project to which the target API Key belongs",
 			},
-			"roles": {
+			consts.FieldRoles: {
 				Type:        schema.TypeList,
 				Required:    true,
 				Description: "List of roles that the API Key needs to have",
@@ -61,7 +64,7 @@ func mongodbAtlasSecretRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"id_addresses": {
+			consts.FieldIPAddresses: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Description: "IP address to be added to the whitelist for the API key",
@@ -69,7 +72,7 @@ func mongodbAtlasSecretRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"cidr_blocks": {
+			consts.FieldCIDRBlocks: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Description: "Whitelist entry in CIDR notation to be added for the API key",
@@ -77,7 +80,7 @@ func mongodbAtlasSecretRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"project_roles": {
+			consts.FieldProjectRoles: {
 				Type:        schema.TypeList,
 				Required:    false,
 				Description: "Roles assigned when an org API key is assigned to a project API key",
@@ -85,15 +88,13 @@ func mongodbAtlasSecretRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ttl": {
+			consts.FieldTTL: {
 				Type:        schema.TypeString,
-				Optional:    true,
 				Computed:    true,
 				Description: "Duration in seconds after which the issued credential should expire",
 			},
-			"max_ttl": {
+			consts.FieldMaxTTL: {
 				Type:        schema.TypeString,
-				Optional:    true,
 				Computed:    true,
 				Description: "The maximum allowed lifetime of credentials issued using this role",
 			},
@@ -108,35 +109,26 @@ func mongodbAtlasSecretRoleCreateUpdate(ctx context.Context, d *schema.ResourceD
 	}
 
 	backend := d.Get(consts.FieldBackend).(string)
-	name := d.Get("name").(string)
+	name := d.Get(consts.FieldName).(string)
 
 	path := backend + "/roles/" + name
 	log.Printf("[DEBUG] Creating role %q in MongoDB Atlas", name)
 
 	data := map[string]interface{}{}
-	if v, ok := d.GetOk("organization_id"); ok {
-		data["organization_id"] = v
+	fields := []string{
+		consts.FieldOrganizationID,
+		consts.FieldProjectID,
+		consts.FieldRoles,
+		consts.FieldIPAddresses,
+		consts.FieldCIDRBlocks,
+		consts.FieldProjectRoles,
+		consts.FieldTTL,
+		consts.FieldMaxTTL,
 	}
-	if v, ok := d.GetOk("project_id"); ok {
-		data["project_id"] = v
-	}
-	if v, ok := d.GetOk("roles"); ok {
-		data["roles"] = v
-	}
-	if v, ok := d.GetOk("ip_addresses"); ok {
-		data["ip_addresses"] = v
-	}
-	if v, ok := d.GetOk("cidr_blocks"); ok {
-		data["cidr_blocks"] = v
-	}
-	if v, ok := d.GetOk("project_roles"); ok {
-		data["project_roles"] = v
-	}
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v
-	}
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v
+	for _, k := range fields {
+		if d.HasChange(k) {
+			data[k] = d.Get(k)
+		}
 	}
 
 	if _, err := client.Logical().Write(path, data); err != nil {
@@ -155,11 +147,6 @@ func mongodbAtlasSecretRoleRead(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	path := d.Id()
-	if err := d.Set(consts.FieldPath, path); err != nil {
-		return diag.FromErr(err)
-	}
-	log.Printf("[DEBUG] Reading MongoDB Atlas role at %q", path)
-
 	resp, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
 		return diag.FromErr(fmt.Errorf("error reading MongoDB Atlas role at %s, err=%w", path, err))
@@ -167,53 +154,32 @@ func mongodbAtlasSecretRoleRead(ctx context.Context, d *schema.ResourceData, met
 	if resp == nil {
 		log.Printf("[WARN] MongoDB Atlas role not found, removing from state")
 		d.SetId("")
-
-		return diag.FromErr(fmt.Errorf("expected role at %s, no role found", path))
+		return nil
 	}
 
-	if v, ok := resp.Data["name"]; ok {
-		if err := d.Set("name", v); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'name': %s", err))
-		}
+	backend, err := mongodbAtlasSecretBackendFromPath(path)
+	if err != nil {
+		return diag.FromErr(err)
 	}
-	if v, ok := resp.Data["organization_id"]; ok {
-		if err := d.Set("organization_id", v); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'organization_id': %s", err))
-		}
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
+		return diag.FromErr(err)
 	}
-	if v, ok := resp.Data["project_id"]; ok {
-		if err := d.Set("project_id", v); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'project_id': %s", err))
-		}
+
+	fields := []string{
+		consts.FieldName,
+		consts.FieldOrganizationID,
+		consts.FieldProjectID,
+		consts.FieldRoles,
+		consts.FieldIPAddresses,
+		consts.FieldCIDRBlocks,
+		consts.FieldProjectRoles,
+		consts.FieldTTL,
+		consts.FieldMaxTTL,
 	}
-	if v, ok := resp.Data["roles"]; ok {
-		if err := d.Set("roles", v); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'roles': %s", err))
-		}
-	}
-	if v, ok := resp.Data["ip_addresses"]; ok {
-		if err := d.Set("ip_addresses", v); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'ip_addresses': %s", err))
-		}
-	}
-	if v, ok := resp.Data["cidr_blocks"]; ok {
-		if err := d.Set("cidr_blocks", v); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'cidr_blocks': %s", err))
-		}
-	}
-	if v, ok := resp.Data["project_roles"]; ok {
-		if err := d.Set("project_roles", v); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'project_roles': %s", err))
-		}
-	}
-	if v, ok := resp.Data["ttl"]; ok {
-		if err := d.Set("ttl", v); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'ttl': %s", err))
-		}
-	}
-	if v, ok := resp.Data["max_ttl"]; ok {
-		if err := d.Set("max_ttl", v); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'max_ttl': %s", err))
+	for _, k := range fields {
+		if err := d.Set(k, resp.Data[k]); err != nil {
+			return diag.Errorf("error setting state key %q on Kubernetes backend role, err=%s",
+				k, err)
 		}
 	}
 
@@ -235,4 +201,15 @@ func mongodbAtlasSecretRoleDelete(ctx context.Context, d *schema.ResourceData, m
 	log.Printf("[DEBUG] Deleted MongoDB Atlas role %q", path)
 
 	return nil
+}
+
+func mongodbAtlasSecretBackendFromPath(path string) (string, error) {
+	if !mongodbAtlasSecretBackendFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no backend found")
+	}
+	res := mongodbAtlasSecretBackendFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
+	}
+	return res[1], nil
 }
