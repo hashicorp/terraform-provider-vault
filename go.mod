@@ -7,8 +7,8 @@ require (
 	cloud.google.com/go/iam v0.3.0
 	cloud.google.com/go/kms v1.4.0 // indirect
 	cloud.google.com/go/monitoring v1.6.0 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.22.0
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.13.2
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.4.0
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.2.2
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v0.3.1
 	github.com/Azure/go-autorest/autorest v0.11.24
 	github.com/armon/go-metrics v0.4.1 // indirect
@@ -46,7 +46,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mitchellh/pointerstructure v1.2.1 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
-	golang.org/x/crypto v0.0.0-20221012134737-56aed061732a
+	golang.org/x/crypto v0.6.0
 	golang.org/x/net v0.7.0
 	golang.org/x/oauth2 v0.0.0-20221006150949-b44042a4b9c1
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
