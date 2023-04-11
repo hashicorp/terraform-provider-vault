@@ -883,7 +883,18 @@ func MountCreateContextWrapper(f schema.CreateContextFunc, minVersion *version.V
 func importNamespace(d *schema.ResourceData) error {
 	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
 		s := d.State()
-		if _, ok := s.Attributes[consts.FieldNamespace]; !ok {
+		var attemptNamespaceImport bool
+		if s == nil {
+			// state does not yet exist
+			// import is acceptable
+			attemptNamespaceImport = true
+		} else {
+			// only import if namespace
+			// is not already set in state
+			_, ok := s.Attributes[consts.FieldNamespace]
+			attemptNamespaceImport = !ok
+		}
+		if attemptNamespaceImport {
 			log.Printf(`[INFO] Environment variable %s set, `+
 				`attempting TF state import "%s=%s"`,
 				consts.EnvVarVaultNamespaceImport, consts.FieldNamespace, ns)
