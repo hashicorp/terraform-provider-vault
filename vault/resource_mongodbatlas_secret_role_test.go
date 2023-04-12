@@ -17,7 +17,27 @@ func TestAccMongoDBAtlasSecretRole_basic(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-test-mongodbatlas")
 	resourceType := "vault_mongodbatlas_secret_role"
 	resourceName := resourceType + ".role"
+
 	privateKey, publicKey := testutil.GetTestMDBACreds(t)
+	name := "tf-test-role"
+	organizationID := "7cf5a45a9ccf6400e60981b7"
+	projectID := "5cf5a45a9ccf6400e60981b6"
+	roles := "ORG_MEMBER"
+	ipAddresses := "192.168.1.3, 192.168.1.4"
+	cidrBlocks := "192.168.1.3/32"
+	projectRoles := "GROUP_CLUSTER_MANAGER"
+	ttl := "30"
+	maxTtl := "60"
+
+	updatedName := "tf-test-role-updated"
+	updatedOrganizationID := "7cf5a45a9ccf6400e60981a8"
+	updatedProjectID := "5cf5a45a9ccf6400e60981a67"
+	updatedRoles := "ORG_READ_ONLY"
+	updatedIpAddresses := "192.168.1.5, 192.168.1.6"
+	updatedCidrBlocks := "192.168.1.3/35"
+	updatedProjectRoles := "GROUP_READ_ONLY"
+	updatedTtl := "60"
+	updatedMaxTtl := "120"
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -25,52 +45,46 @@ func TestAccMongoDBAtlasSecretRole_basic(t *testing.T) {
 		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeMongoDBAtlas, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccMongoDBAtlasSecretBackendRole_basic(mount, privateKey, publicKey, "tf-test-role",
-					"7cf5a45a9ccf6400e60981b7", "5cf5a45a9ccf6400e60981b6", "ORG_MEMBER",
-					"192.168.1.3, 192.168.1.4", "192.168.1.3/32",
-					"GROUP_CLUSTER_MANAGER", "30", "60"),
+				Config: testAccMongoDBAtlasSecretBackendRole_basic(mount, privateKey, publicKey, name, organizationID,
+					projectID, roles, ipAddresses, cidrBlocks, projectRoles, ttl, maxTtl),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, "tf-test-role"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldOrganizationID,
-						"7cf5a45a9ccf6400e60981b7"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, "5cf5a45a9ccf6400e60981b6"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOrganizationID, organizationID),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, projectID),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRoles+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRoles+".0", "ORG_MEMBER"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoles+".0", roles),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIPAddresses+".#", "2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIPAddresses+".0", "192.168.1.3"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIPAddresses+".1", "192.168.1.4"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCIDRBlocks+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCIDRBlocks+".0", "192.168.1.3/32"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCIDRBlocks+".0", cidrBlocks),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectRoles+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectRoles+".0",
-						"GROUP_CLUSTER_MANAGER"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "30"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "60"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectRoles+".0", projectRoles),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, ttl),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, maxTtl),
 				),
 			},
 			{
-				Config: testAccMongoDBAtlasSecretBackendRole_basic(mount, privateKey, publicKey,
-					"tf-test-role-updated", "7cf5a45a9ccf6400e60981b7",
-					"5cf5a45a9ccf6400e60981b6", "ORG_READ_ONLY", "192.168.1.5, 192.168.1.6",
-					"192.168.1.3/35", "GROUP_READ_ONLY", "60", "120"),
+				Config: testAccMongoDBAtlasSecretBackendRole_basic(mount, privateKey, publicKey, updatedName,
+					updatedOrganizationID, updatedProjectID, updatedRoles, updatedIpAddresses, updatedCidrBlocks,
+					updatedProjectRoles, updatedTtl, updatedMaxTtl),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, "tf-test-role-updated"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldOrganizationID,
-						"7cf5a45a9ccf6400e60981b7"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, "5cf5a45a9ccf6400e60981b6"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOrganizationID, updatedOrganizationID),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, updatedProjectID),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRoles+"#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRoles+".0", "ORG_READ_ONLY"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoles+".0", updatedRoles),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIPAddresses+"#", "2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIPAddresses+".0", "192.168.1.5"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIPAddresses+".1", "192.168.1.6"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCIDRBlocks+"#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCIDRBlocks+".0", "192.168.1.3/35"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCIDRBlocks+".0", updatedCidrBlocks),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectRoles+"#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectRoles+".0", "GROUP_READ_ONLY"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "60"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "120"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectRoles+".0", updatedProjectRoles),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, updatedTtl),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, updatedMaxTtl),
 				),
 			},
 			{

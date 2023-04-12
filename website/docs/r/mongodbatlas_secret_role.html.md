@@ -26,6 +26,12 @@ resource "vault_mongodbatlas_secret_backend" "config" {
   public_key     = "publicKey"
 }
 
+resource "vault_mount" "mongo" {
+  path        = "%s"
+  type        = "mongodbatlas"
+  description = "MongoDB Atlas secret engine mount"
+}
+
 resource "vault_mongodbatlas_secret_role" "role" {
   backend = vault_mount.mongo.path
   name              = "tf-test-role"
