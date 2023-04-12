@@ -66,7 +66,7 @@ func mongodbAtlasSecretRoleResource() *schema.Resource {
 			},
 			consts.FieldIPAddresses: {
 				Type:        schema.TypeList,
-				Required:    false,
+				Optional:    true,
 				Description: "IP address to be added to the whitelist for the API key",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -74,7 +74,7 @@ func mongodbAtlasSecretRoleResource() *schema.Resource {
 			},
 			consts.FieldCIDRBlocks: {
 				Type:        schema.TypeList,
-				Required:    false,
+				Optional:    true,
 				Description: "Whitelist entry in CIDR notation to be added for the API key",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -82,7 +82,7 @@ func mongodbAtlasSecretRoleResource() *schema.Resource {
 			},
 			consts.FieldProjectRoles: {
 				Type:        schema.TypeList,
-				Required:    false,
+				Optional:    true,
 				Description: "Roles assigned when an org API key is assigned to a project API key",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,

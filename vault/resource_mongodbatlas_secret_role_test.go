@@ -28,7 +28,7 @@ func TestAccMongoDBAtlasSecretRole_basic(t *testing.T) {
 				Config: testAccMongoDBAtlasSecretBackendRole_basic(mount, privateKey, publicKey, "tf-test-role",
 					"7cf5a45a9ccf6400e60981b7", "5cf5a45a9ccf6400e60981b6", "ORG_MEMBER",
 					"192.168.1.3, 192.168.1.4", "192.168.1.3/32",
-					"GROUP_CLUSTER_MANAGER", "30min", "1hr"),
+					"GROUP_CLUSTER_MANAGER", "30", "60"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, "tf-test-role"),
@@ -53,7 +53,7 @@ func TestAccMongoDBAtlasSecretRole_basic(t *testing.T) {
 				Config: testAccMongoDBAtlasSecretBackendRole_basic(mount, privateKey, publicKey,
 					"tf-test-role-updated", "7cf5a45a9ccf6400e60981b7",
 					"5cf5a45a9ccf6400e60981b6", "ORG_READ_ONLY", "192.168.1.5, 192.168.1.6",
-					"192.168.1.3/35", "GROUP_READ_ONLY", "30min", "1hr"),
+					"192.168.1.3/35", "GROUP_READ_ONLY", "60", "120"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, "tf-test-role-updated"),
