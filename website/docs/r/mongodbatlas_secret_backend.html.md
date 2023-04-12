@@ -20,6 +20,12 @@ for more details.
 ## Example Usage
 
 ```hcl
+resource "vault_mount" "mongo" {
+  path        = "%s"
+  type        = "mongodbatlas"
+  description = "MongoDB Atlas secret engine mount"
+}
+
 resource "vault_mongodbatlas_secret_backend" "config" {
   backend        = "vault_mount.mongo.path"
   private_key    = "privateKey"
