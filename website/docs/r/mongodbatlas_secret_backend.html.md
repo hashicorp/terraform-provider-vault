@@ -3,7 +3,7 @@ layout: "vault"
 page_title: "Vault: vault_mongodbatlas_secret_backend resource"
 sidebar_current: "docs-vault-resource-mongodbatlas-secret-backend"
 description: |-
-Creates a MongoDB Atlas secret backend for Vault.
+  Creates a MongoDB Atlas secret backend for Vault.
 ---
 
 # vault\_mongodbatlas\_secret\_backend

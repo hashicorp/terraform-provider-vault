@@ -34,12 +34,6 @@ func mongodbAtlasSecretRoleResource() *schema.Resource {
 				Description:  "Path where MongoDB Atlas secret backend is mounted",
 				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 			},
-			consts.FieldPath: {
-				Type:         schema.TypeString,
-				Required:     true,
-				Description:  "Path where MongoDB Atlas backend is mounted",
-				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
-			},
 			consts.FieldName: {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -131,7 +125,7 @@ func mongodbAtlasSecretRoleCreateUpdate(ctx context.Context, d *schema.ResourceD
 		}
 	}
 
-	if _, err := client.Logical().Write(path, data); err != nil {
+	if _, err := client.Logical().WriteWithContext(ctx, path, data); err != nil {
 		return diag.Errorf("error updating MongoDB Atlas role %q, err=%s", name, err)
 	}
 
