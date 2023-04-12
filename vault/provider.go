@@ -884,13 +884,15 @@ func importNamespace(d *schema.ResourceData) error {
 	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
 		s := d.State()
 		var attemptNamespaceImport bool
-		if s == nil {
-			// state does not yet exist
+		if s.Empty() {
+			// state does not yet exist or is empty
 			// import is acceptable
 			attemptNamespaceImport = true
 		} else {
 			// only import if namespace
 			// is not already set in state
+			s.Lock()
+			defer s.Unlock()
 			_, ok := s.Attributes[consts.FieldNamespace]
 			attemptNamespaceImport = !ok
 		}
