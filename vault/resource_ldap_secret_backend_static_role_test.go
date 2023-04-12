@@ -24,23 +24,23 @@ func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
-		}, CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldBackend),
-
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPSecretBackendStaticRoleConfig(backend, bindDN, bindPass, url, "alice", "cn=alice,ou=users,dc=example,dc=org", "alice", 60),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "dn", "cn=alice,ou=users,dc=example,dc=org"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDN, "cn=alice,ou=users,dc=example,dc=org"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "alice"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_period", "60"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "60"),
 				),
 			},
 			{
 				Config: testLDAPSecretBackendStaticRoleConfig(backend, bindDN, bindPass, url, "bob", "cn=bob,ou=users,dc=example,dc=org", "bob", 120),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "dn", "cn=bob,ou=users,dc=example,dc=org"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDN, "cn=bob,ou=users,dc=example,dc=org"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "bob"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_period", "120"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "120"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldBackend, consts.FieldRole, consts.FieldDisableRemount),

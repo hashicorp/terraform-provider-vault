@@ -20,27 +20,27 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 			Type:         schema.TypeString,
 			Default:      consts.MountTypeLDAP,
 			Optional:     true,
-			Description:  `The mount path for a backend, for example, the path given in "$ vault secrets enable -path=my-ldap openldap".`,
+			Description:  "The path where the LDAP secrets backend is mounted.",
 			ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 		},
 		consts.FieldRole: {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: `Name of the role.`,
+			Description: "Name of the role.",
 			ForceNew:    true,
 		},
 		consts.FieldUsername: {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: `The username of the existing LDAP entry to manage password rotation for.`,
+			Description: "The username of the existing LDAP entry to manage password rotation for.",
 			ForceNew:    true,
 		},
-		"dn": {
+		consts.FieldDN: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "Distinguished name (DN) of the existing LDAP entry to manage password rotation for.",
 		},
-		"rotation_period": {
+		consts.FieldRotationPeriod: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "How often Vault should rotate the password of the user entry.",
@@ -70,14 +70,15 @@ func createLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, m
 	rolePath := fmt.Sprintf("%s/static-role/%s", backend, role)
 	log.Printf("[DEBUG] Creating LDAP static role at %q", rolePath)
 	data := map[string]interface{}{}
-	if v, ok := d.GetOk(consts.FieldUsername); ok {
-		data[consts.FieldUsername] = v
+	fields := []string{
+		consts.FieldUsername,
+		consts.FieldDN,
+		consts.FieldRotationPeriod,
 	}
-	if v, ok := d.GetOk("dn"); ok {
-		data["dn"] = v
-	}
-	if v, ok := d.GetOk("rotation_period"); ok {
-		data["rotation_period"] = v
+	for _, field := range fields {
+		if v, ok := d.GetOk(field); ok {
+			data[field] = v
+		}
 	}
 
 	if _, err := client.Logical().WriteWithContext(ctx, rolePath, data); err != nil {
@@ -104,19 +105,18 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 		d.SetId("")
 		return nil
 	}
-	if val, ok := resp.Data[consts.FieldUsername]; ok {
-		if err := d.Set(consts.FieldUsername, val); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key '%s': %s", consts.FieldUsername, err))
-		}
+
+	fields := []string{
+		consts.FieldUsername,
+		consts.FieldDN,
+		consts.FieldRotationPeriod,
 	}
-	if val, ok := resp.Data["dn"]; ok {
-		if err := d.Set("dn", val); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'dn': %s", err))
-		}
-	}
-	if val, ok := resp.Data["rotation_period"]; ok {
-		if err := d.Set("rotation_period", val); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'rotation_period': %s", err))
+
+	for _, field := range fields {
+		if val, ok := resp.Data[field]; ok {
+			if err := d.Set(field, val); err != nil {
+				return diag.FromErr(fmt.Errorf("error setting state key '%s': %s", field, err))
+			}
 		}
 	}
 
