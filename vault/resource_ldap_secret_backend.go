@@ -24,11 +24,6 @@ func ldapSecretBackendResource() *schema.Resource {
 			Description:  `The mount path for a backend, for example, the path given in "$ vault secrets enable -path=my-ldap openldap".`,
 			ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 		},
-		"anonymous_group_search": {
-			Type:        schema.TypeBool,
-			Optional:    true,
-			Description: `Use anonymous binds when performing LDAP group searches (if true the initial credentials will still be used for the initial connection test).`,
-		},
 		"binddn": {
 			Type:        schema.TypeString,
 			Required:    true,
@@ -42,7 +37,7 @@ func ldapSecretBackendResource() *schema.Resource {
 		},
 		"case_sensitive_names": {
 			Type:        schema.TypeBool,
-			Optional:    true,
+			Computed:    true,
 			Description: `If true, case sensitivity will be used when comparing usernames and groups for matching policies.`,
 		},
 		"certificate": {
@@ -62,63 +57,22 @@ func ldapSecretBackendResource() *schema.Resource {
 			Sensitive:   true,
 			Description: `Client certificate key to provide to the LDAP server, must be x509 PEM encoded.`,
 		},
-		"default_lease_ttl_seconds": {
+		consts.FieldDefaultLeaseTTL: {
 			Type:        schema.TypeInt,
 			Optional:    true,
 			Computed:    true,
 			Description: "Default lease duration for secrets in seconds",
-		},
-		"deny_null_bind": {
-			Type:        schema.TypeBool,
-			Default:     true,
-			Optional:    true,
-			Description: `Denies an unauthenticated LDAP bind request if the user's password is empty; defaults to true`,
 		},
 		"description": {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "Human-friendly description of the mount for the backend.",
 		},
-		"discoverdn": {
-			Type:        schema.TypeBool,
-			Optional:    true,
-			Description: `Use anonymous bind to discover the bind DN of a user.`,
-		},
-		"formatter": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			Computed:      true,
-			Deprecated:    `Formatter is deprecated and password_policy should be used with Vault >= 1.5.`,
-			Description:   `Text to insert the password into, ex. "customPrefix{{PASSWORD}}customSuffix".`,
-			ConflictsWith: []string{"password_policy"},
-		},
-		"groupattr": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Default:     "cn",
-			Description: `LDAP attribute to follow on objects returned by <groupfilter> in order to enumerate user group membership. Examples: "cn" or "memberOf", etc. Default: cn`,
-		},
-		"groupdn": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: `LDAP search base to use for group membership search (eg: ou=Groups,dc=example,dc=org)`,
-		},
-		"groupfilter": {
-			Type:        schema.TypeString,
-			Default:     "(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))",
-			Optional:    true,
-			Description: `Go template for querying group membership of user. The template can access the following context variables: UserDN, Username Example: (&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}})) Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`,
-		},
 		"insecure_tls": {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Description: `Skip LDAP server SSL Certificate verification - insecure and not recommended for production use.`,
-		},
-		"last_rotation_tolerance": {
-			Type:        schema.TypeInt,
-			Optional:    true,
 			Computed:    true,
-			Description: `The number of seconds after a Vault rotation where, if Active Directory shows a later rotation, it should be considered out-of-band.`,
+			Description: `Skip LDAP server SSL Certificate verification - insecure and not recommended for production use.`,
 		},
 		"length": {
 			Type:        schema.TypeInt,
@@ -127,13 +81,7 @@ func ldapSecretBackendResource() *schema.Resource {
 			Deprecated:  `Length is deprecated and password_policy should be used with Vault >= 1.5.`,
 			Description: `The desired length of passwords that Vault generates.`,
 		},
-		"local": {
-			Type:        schema.TypeBool,
-			Required:    false,
-			Optional:    true,
-			Description: "Mark the secrets engine as local-only. Local engines are not replicated or removed by replication.Tolerance duration to use when checking the last rotation time.",
-		},
-		"max_lease_ttl_seconds": {
+		consts.FieldMaxLeaseTTL: {
 			Type:        schema.TypeInt,
 			Optional:    true,
 			Computed:    true,
@@ -149,6 +97,12 @@ func ldapSecretBackendResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: `Name of the password policy to use to generate passwords.`,
+		},
+		"schema": {
+			Type:        schema.TypeString,
+			Default:     "openldap",
+			Optional:    true,
+			Description: `The LDAP schema to use when storing entry passwords. Valid schemas include openldap, ad, and racf.`,
 		},
 		"request_timeout": {
 			Type:        schema.TypeInt,
@@ -191,17 +145,6 @@ func ldapSecretBackendResource() *schema.Resource {
 			Optional:    true,
 			Description: `LDAP URL to connect to (default: ldap://127.0.0.1). Multiple URLs can be specified by concatenating them with commas; they will be tried in-order.`,
 		},
-		"use_pre111_group_cn_behavior": {
-			Type:        schema.TypeBool,
-			Optional:    true,
-			Computed:    true,
-			Description: `In Vault 1.1.1 a fix for handling group CN values of different cases unfortunately introduced a regression that could cause previously defined groups to not be found due to a change in the resulting name. If set true, the pre-1.1.1 behavior for matching group CNs will be used. This is only needed in some upgrade scenarios for backwards compatibility. It is enabled by default if the config is upgraded but disabled by default on new configurations.`,
-		},
-		"use_token_groups": {
-			Type:        schema.TypeBool,
-			Optional:    true,
-			Description: `If true, use the Active Directory tokenGroups constructed attribute of the user to find the group memberships. This will find all security groups including nested ones.`,
-		},
 		"userattr": {
 			Type:        schema.TypeString,
 			Default:     "cn",
@@ -235,15 +178,13 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 
 	backend := d.Get(consts.FieldBackend).(string)
 	description := d.Get("description").(string)
-	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
-	local := d.Get("local").(bool)
-	maxTTL := d.Get("max_lease_ttl_seconds").(int)
+	defaultTTL := d.Get(consts.FieldDefaultLeaseTTL).(int)
+	maxTTL := d.Get(consts.FieldMaxLeaseTTL).(int)
 
 	log.Printf("[DEBUG] Mounting LDAP backend at %q", backend)
 	err = client.Sys().Mount(backend, &api.MountInput{
 		Type:        consts.MountTypeLDAP,
 		Description: description,
-		Local:       local,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
@@ -257,9 +198,6 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 	d.SetId(backend)
 
 	data := map[string]interface{}{}
-	if v, ok := d.GetOk("anonymous_group_search"); ok {
-		data["anonymous_group_search"] = v
-	}
 	if v, ok := d.GetOk("binddn"); ok {
 		data["binddn"] = v
 	}
@@ -278,23 +216,8 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 	if v, ok := d.GetOk("client_tls_key"); ok {
 		data["client_tls_key"] = v
 	}
-	if v, ok := d.GetOk("deny_null_bind"); ok {
-		data["deny_null_bind"] = v
-	}
-	if v, ok := d.GetOk("discoverdn"); ok {
-		data["discoverdn"] = v
-	}
-	if v, ok := d.GetOk("formatter"); ok {
-		data["formatter"] = v
-	}
-	if v, ok := d.GetOk("groupattr"); ok {
-		data["groupattr"] = v
-	}
 	if v, ok := d.GetOk("groupdn"); ok {
 		data["groupdn"] = v
-	}
-	if v, ok := d.GetOk("groupfilter"); ok {
-		data["groupfilter"] = v
 	}
 	if v, ok := d.GetOk("insecure_tls"); ok {
 		data["insecure_tls"] = v
@@ -331,9 +254,6 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 	}
 	if v, ok := d.GetOk("url"); ok {
 		data["url"] = v
-	}
-	if v, ok := d.GetOk("use_pre111_group_cn_behavior"); ok {
-		data["use_pre111_group_cn_behavior"] = v
 	}
 	if v, ok := d.GetOk("use_token_groups"); ok {
 		data["use_token_groups"] = v
@@ -374,13 +294,13 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 
 	d.Set(consts.FieldBackend, d.Id())
 
-	d.Set("default_lease_ttl_seconds", mountResp.DefaultLeaseTTL)
-	d.Set("max_lease_ttl_seconds", mountResp.MaxLeaseTTL)
+	d.Set(consts.FieldDefaultLeaseTTL, mountResp.DefaultLeaseTTL)
+	d.Set(consts.FieldMaxLeaseTTL, mountResp.MaxLeaseTTL)
 
 	configPath := fmt.Sprintf("%s/config", d.Id())
 	log.Printf("[DEBUG] Reading %q", configPath)
 
-	resp, err := client.Logical().Read(configPath)
+	resp, err := client.Logical().ReadWithContext(ctx, configPath)
 	if err != nil {
 		return diag.FromErr(fmt.Errorf("error reading %q: %s", configPath, err))
 	}
@@ -391,11 +311,6 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 		return nil
 	}
 
-	if val, ok := resp.Data["anonymous_group_search"]; ok {
-		if err := d.Set("anonymous_group_search", val); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'anonymous_group_search': %s", err))
-		}
-	}
 	if val, ok := resp.Data["binddn"]; ok {
 		if err := d.Set("binddn", val); err != nil {
 			return diag.FromErr(fmt.Errorf("error setting state key 'binddn': %s", err))
@@ -416,44 +331,9 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 			return diag.FromErr(fmt.Errorf("error setting state key 'client_tls_key': %s", err))
 		}
 	}
-	if val, ok := resp.Data["deny_null_bind"]; ok {
-		if err := d.Set("deny_null_bind", val); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'deny_null_bind': %s", err))
-		}
-	}
-	if val, ok := resp.Data["discoverdn"]; ok {
-		if err := d.Set("discoverdn", val); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'discoverdn': %s", err))
-		}
-	}
-	if val, ok := resp.Data["formatter"]; ok {
-		if err := d.Set("formatter", val); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'formatter': %s", err))
-		}
-	}
-	if val, ok := resp.Data["groupattr"]; ok {
-		if err := d.Set("groupattr", val); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'groupattr': %s", err))
-		}
-	}
-	if val, ok := resp.Data["groupdn"]; ok {
-		if err := d.Set("groupdn", val); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'groupdn': %s", err))
-		}
-	}
-	if val, ok := resp.Data["groupfilter"]; ok {
-		if err := d.Set("groupfilter", val); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'groupfilter': %s", err))
-		}
-	}
 	if val, ok := resp.Data["insecure_tls"]; ok {
 		if err := d.Set("insecure_tls", val); err != nil {
 			return diag.FromErr(fmt.Errorf("error setting state key 'insecure_tls': %s", err))
-		}
-	}
-	if val, ok := resp.Data["last_rotation_tolerance"]; ok {
-		if err := d.Set("last_rotation_tolerance", val); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'last_rotation_tolerance': %s", err))
 		}
 	}
 	if val, ok := resp.Data["length"]; ok {
@@ -506,16 +386,6 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 			return diag.FromErr(fmt.Errorf("error setting state key 'url': %s", err))
 		}
 	}
-	if val, ok := resp.Data["use_pre111_group_cn_behavior"]; ok {
-		if err := d.Set("use_pre111_group_cn_behavior", val); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'use_pre111_group_cn_behavior': %s", err))
-		}
-	}
-	if val, ok := resp.Data["use_token_groups"]; ok {
-		if err := d.Set("use_token_groups", val); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key 'use_token_groups': %s", err))
-		}
-	}
 	if val, ok := resp.Data["userattr"]; ok {
 		if err := d.Set("userattr", val); err != nil {
 			return diag.FromErr(fmt.Errorf("error setting state key 'userattr': %s", err))
@@ -542,19 +412,19 @@ func updateLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 		return diag.FromErr(err)
 	}
 
-	defaultTTL := d.Get("default_lease_ttl_seconds").(int)
-	maxTTL := d.Get("max_lease_ttl_seconds").(int)
+	defaultTTL := d.Get(consts.FieldDefaultLeaseTTL).(int)
+	maxTTL := d.Get(consts.FieldMaxLeaseTTL).(int)
 	tune := api.MountConfigInput{}
 	data := map[string]interface{}{}
 
 	if defaultTTL != 0 {
 		tune.DefaultLeaseTTL = fmt.Sprintf("%ds", defaultTTL)
-		data["default_lease_ttl_seconds"] = defaultTTL
+		data[consts.FieldDefaultLeaseTTL] = defaultTTL
 	}
 
 	if maxTTL != 0 {
 		tune.MaxLeaseTTL = fmt.Sprintf("%ds", maxTTL)
-		data["max_lease_ttl_seconds"] = maxTTL
+		data[consts.FieldMaxLeaseTTL] = maxTTL
 	}
 
 	if tune.DefaultLeaseTTL != "0" || tune.MaxLeaseTTL != "0" {
@@ -567,9 +437,6 @@ func updateLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 	vaultPath := fmt.Sprintf("%s/config", backend)
 	log.Printf("[DEBUG] Updating %q", vaultPath)
 
-	if raw, ok := d.GetOk("anonymous_group_search"); ok {
-		data["anonymous_group_search"] = raw
-	}
 	if raw, ok := d.GetOk("binddn"); ok {
 		data["binddn"] = raw
 	}
@@ -588,29 +455,11 @@ func updateLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 	if raw, ok := d.GetOk("client_tls_key"); ok {
 		data["client_tls_key"] = raw
 	}
-	if raw, ok := d.GetOk("deny_null_bind"); ok {
-		data["deny_null_bind"] = raw
-	}
-	if raw, ok := d.GetOk("discoverdn"); ok {
-		data["discoverdn"] = raw
-	}
-	if raw, ok := d.GetOk("formatter"); ok {
-		data["formatter"] = raw
-	}
-	if raw, ok := d.GetOk("groupattr"); ok {
-		data["groupattr"] = raw
-	}
-	if raw, ok := d.GetOk("groupdn"); ok {
-		data["groupdn"] = raw
-	}
 	if raw, ok := d.GetOk("groupfilter"); ok {
 		data["groupfilter"] = raw
 	}
 	if raw, ok := d.GetOk("insecure_tls"); ok {
 		data["insecure_tls"] = raw
-	}
-	if raw, ok := d.GetOk("last_rotation_tolerance"); ok {
-		data["last_rotation_tolerance"] = raw
 	}
 	if raw, ok := d.GetOk("length"); ok {
 		data["length"] = raw
@@ -644,9 +493,6 @@ func updateLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 	}
 	if raw, ok := d.GetOk("use_pre111_group_cn_behavior"); ok {
 		data["use_pre111_group_cn_behavior"] = raw
-	}
-	if raw, ok := d.GetOk("use_token_groups"); ok {
-		data["use_token_groups"] = raw
 	}
 	if raw, ok := d.GetOk("userattr"); ok {
 		data["userattr"] = raw

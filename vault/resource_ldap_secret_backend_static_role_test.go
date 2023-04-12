@@ -31,7 +31,7 @@ func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 				Config: testLDAPSecretBackendStaticRoleConfig(backend, bindDN, bindPass, url, "alice", "cn=alice,ou=users,dc=example,dc=org", "alice", 60),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "dn", "cn=alice,ou=users,dc=example,dc=org"),
-					resource.TestCheckResourceAttr(resourceName, "username", "alice"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "alice"),
 					resource.TestCheckResourceAttr(resourceName, "rotation_period", "60"),
 				),
 			},
@@ -39,11 +39,11 @@ func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 				Config: testLDAPSecretBackendStaticRoleConfig(backend, bindDN, bindPass, url, "bob", "cn=bob,ou=users,dc=example,dc=org", "bob", 120),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "dn", "cn=bob,ou=users,dc=example,dc=org"),
-					resource.TestCheckResourceAttr(resourceName, "username", "bob"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "bob"),
 					resource.TestCheckResourceAttr(resourceName, "rotation_period", "120"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "backend", "role", "disable_remount"),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldBackend, consts.FieldRole, consts.FieldDisableRemount),
 		},
 	})
 }

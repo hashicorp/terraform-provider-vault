@@ -23,7 +23,7 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 			Description:  `The mount path for a backend, for example, the path given in "$ vault secrets enable -path=my-ldap openldap".`,
 			ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 		},
-		"role": {
+		consts.FieldRole: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: `Name of the role.`,
@@ -66,7 +66,7 @@ func createLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	backend := d.Get(consts.FieldBackend).(string)
-	role := d.Get("role").(string)
+	role := d.Get(consts.FieldRole).(string)
 	rolePath := fmt.Sprintf("%s/static-role/%s", backend, role)
 	log.Printf("[DEBUG] Creating LDAP static role at %q", rolePath)
 	data := map[string]interface{}{}

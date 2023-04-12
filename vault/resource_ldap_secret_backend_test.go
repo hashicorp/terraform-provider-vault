@@ -31,10 +31,10 @@ func TestLDAPSecretBackend(t *testing.T) {
 			{
 				Config: testLDAPSecretBackend_initialConfig(backend, bindDN, bindPass, url),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
-					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
-					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "7200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "7200"),
 					resource.TestCheckResourceAttr(resourceName, "binddn", bindDN),
 					resource.TestCheckResourceAttr(resourceName, "bindpass", bindPass),
 					resource.TestCheckResourceAttr(resourceName, "url", url),
@@ -44,10 +44,10 @@ func TestLDAPSecretBackend(t *testing.T) {
 			{
 				Config: testLDAPSecretBackend_updateConfig(backend, bindDN, bindPass, url),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "description", "new test description"),
-					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "7200"),
-					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "14400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "new test description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "7200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "14400"),
 					resource.TestCheckResourceAttr(resourceName, "binddn", bindDN),
 					resource.TestCheckResourceAttr(resourceName, "bindpass", bindPass),
 					resource.TestCheckResourceAttr(resourceName, "url", url),
@@ -55,7 +55,7 @@ func TestLDAPSecretBackend(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				"bindpass", "description", "disable_remount"),
+				"bindpass", "schema", consts.FieldDescription, consts.FieldDisableRemount),
 		},
 	})
 }
