@@ -39,6 +39,8 @@ func TestLDAPSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPass, bindPass),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserDN, "CN=Users,DC=corp,DC=example,DC=net"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCaseSensitiveNames, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldInsecureTLS, "true"),
 				),
 			},
 			{
@@ -52,6 +54,8 @@ func TestLDAPSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPass, bindPass),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserDN, "CN=Users,DC=corp,DC=hashicorp,DC=com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCaseSensitiveNames, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldInsecureTLS, "false"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
@@ -71,6 +75,7 @@ resource "vault_ldap_secret_backend" "test" {
   bindpass                  = "%s"
   url                       = "%s"
   userdn                    = "CN=Users,DC=corp,DC=example,DC=net"
+  insecure_tls              = true
 }
 `, backend, bindDN, bindPass, url)
 }
@@ -86,6 +91,7 @@ resource "vault_ldap_secret_backend" "test" {
   bindpass                  = "%s"
   url                       = "%s"
   userdn                    = "CN=Users,DC=corp,DC=hashicorp,DC=com"
+  insecure_tls              = false
 }
 `, backend, bindDN, bindPass, url)
 }

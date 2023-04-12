@@ -188,11 +188,9 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 	fields := []string{
 		consts.FieldBindDN,
 		consts.FieldBindPass,
-		consts.FieldCaseSensitiveNames,
 		consts.FieldCertificate,
 		consts.FieldClientTLSCert,
 		consts.FieldClientTLSKey,
-		consts.FieldInsecureTLS,
 		consts.FieldLength,
 		consts.FieldMaxTTL,
 		consts.FieldPasswordPolicy,
@@ -206,6 +204,16 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 		consts.FieldUserAttr,
 		consts.FieldUserDN,
 	}
+
+	booleanFields := []string{
+		consts.FieldInsecureTLS,
+	}
+
+	// use d.Get() for boolean fields
+	for _, field := range booleanFields {
+		data[field] = d.Get(field)
+	}
+
 	for _, field := range fields {
 		if v, ok := d.GetOk(field); ok {
 			data[field] = v
