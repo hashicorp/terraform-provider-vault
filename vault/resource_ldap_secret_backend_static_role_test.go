@@ -15,11 +15,18 @@ import (
 )
 
 func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-ldap-static-role")
-	bindDN, bindPass, url := testutil.GetTestLDAPCreds(t)
-
-	resourceType := "vault_ldap_secret_backend_static_role"
-	resourceName := resourceType + ".role"
+	var (
+		backend               = acctest.RandomWithPrefix("tf-test-ldap-static-role")
+		bindDN, bindPass, url = testutil.GetTestLDAPCreds(t)
+		resourceType          = "vault_ldap_secret_backend_static_role"
+		resourceName          = resourceType + ".role"
+		username              = "alice"
+		dn                    = "cn=alice,ou=users,dc=example,dc=org"
+		rotationPeriod        = "60"
+		updatedUsername       = "bob"
+		updatedDN             = "cn=bob,ou=users,dc=example,dc=org"
+		updatedRotationPeriod = "120"
+	)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
@@ -29,19 +36,19 @@ func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPSecretBackendStaticRoleConfig(backend, bindDN, bindPass, url, "alice", "cn=alice,ou=users,dc=example,dc=org", "alice", 60),
+				Config: testLDAPSecretBackendStaticRoleConfig(backend, bindDN, bindPass, url, username, dn, username, rotationPeriod),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDN, "cn=alice,ou=users,dc=example,dc=org"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "alice"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "60"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDN, dn),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, username),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, rotationPeriod),
 				),
 			},
 			{
-				Config: testLDAPSecretBackendStaticRoleConfig(backend, bindDN, bindPass, url, "bob", "cn=bob,ou=users,dc=example,dc=org", "bob", 120),
+				Config: testLDAPSecretBackendStaticRoleConfig(backend, bindDN, bindPass, url, updatedUsername, updatedDN, updatedUsername, updatedRotationPeriod),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDN, "cn=bob,ou=users,dc=example,dc=org"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "bob"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "120"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDN, updatedDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, updatedUsername),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, updatedRotationPeriod),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldBackend, consts.FieldRole, consts.FieldDisableRemount),
@@ -49,7 +56,7 @@ func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 	})
 }
 
-func testLDAPSecretBackendStaticRoleConfig(backend, bindDN, bindPass, url, username, dn, role string, rotationPeriod int) string {
+func testLDAPSecretBackendStaticRoleConfig(backend, bindDN, bindPass, url, username, dn, role, rotationPeriod string) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_secret_backend" "test" {
   backend                   = "%s"
@@ -65,7 +72,7 @@ resource "vault_ldap_secret_backend_static_role" "role" {
     username = "%s"
     dn = "%s"
     role = "%s"
-    rotation_period = %d
+    rotation_period = %s
 }
 `, backend, bindDN, bindPass, url, username, dn, role, rotationPeriod)
 }
