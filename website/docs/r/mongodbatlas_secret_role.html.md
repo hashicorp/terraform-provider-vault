@@ -27,13 +27,13 @@ resource "vault_mount" "mongo" {
 }
 
 resource "vault_mongodbatlas_secret_backend" "config" {
-  backend        = "vault_mount.mongo.path"
-  private_key    = "privateKey"
-  public_key     = "publicKey"
+  mount        = "vault_mount.mongo.path"
+  private_key  = "privateKey"
+  public_key   = "publicKey"
 }
 
 resource "vault_mongodbatlas_secret_role" "role" {
-  backend = vault_mount.mongo.path
+  mount             = vault_mount.mongo.path
   name              = "tf-test-role"
   organization_id   = "7cf5a45a9ccf6400e60981b7"
   project_id        = "5cf5a45a9ccf6400e60981b6"
@@ -55,7 +55,7 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
   *Available only for Vault Enterprise*.
 
-* `backend` - (Required) Path where the MongoDB Atlas Secrets Engine is mounted.
+* `mount` - (Required) Path where the MongoDB Atlas Secrets Engine is mounted.
 
 * `name` - (Required) The name of the role.
 
@@ -84,7 +84,7 @@ No additional attributes are exported by this resource.
 ## Import
 
 The MongoDB Atlas secret role can be imported using the full path to the role
-of the form: `<backend_path>/roles/<role_name>` e.g.
+of the form: `<mount_path>/roles/<role_name>` e.g.
 
 ```
 $ terraform import vault_mongodbatlas_secret_role.example mongodbatlas/roles/example-role

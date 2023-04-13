@@ -27,9 +27,9 @@ resource "vault_mount" "mongo" {
 }
 
 resource "vault_mongodbatlas_secret_backend" "config" {
-  backend        = "vault_mount.mongo.path"
-  private_key    = "privateKey"
-  public_key     = "publicKey"
+  mount        = "vault_mount.mongo.path"
+  private_key  = "privateKey"
+  public_key   = "publicKey"
 }
 ```
 
@@ -42,7 +42,7 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
   *Available only for Vault Enterprise*.
 
-* `backend` - (Required) Path where the MongoDB Atlas Secrets Engine is mounted.
+* `mount` - (Required) Path where the MongoDB Atlas Secrets Engine is mounted.
 
 * `private_key` - (Required) Specifies the Private API Key used to authenticate with the MongoDB Atlas API.
 

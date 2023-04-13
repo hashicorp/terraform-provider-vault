@@ -48,7 +48,7 @@ func TestAccMongoDBAtlasSecretRole_basic(t *testing.T) {
 				Config: testAccMongoDBAtlasSecretBackendRole_basic(mount, privateKey, publicKey, name, organizationID,
 					projectID, roles, ipAddresses, cidrBlocks, projectRoles, ttl, maxTtl),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldOrganizationID, organizationID),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, projectID),
@@ -70,7 +70,7 @@ func TestAccMongoDBAtlasSecretRole_basic(t *testing.T) {
 					updatedOrganizationID, updatedProjectID, updatedRoles, updatedIpAddresses, updatedCidrBlocks,
 					updatedProjectRoles, updatedTtl, updatedMaxTtl),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldOrganizationID, updatedOrganizationID),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, updatedProjectID),
@@ -107,7 +107,7 @@ resource "vault_mount" "mongo" {
   	public_key 	= "%s"
 }
 resource "vault_mongodbatlas_secret_role" "role" {
-  backend = vault_mount.mongo.path
+  mount = vault_mount.mongo.path
   name              = "%s"
   organization_id   = "%s"
   project_id        = "%s"

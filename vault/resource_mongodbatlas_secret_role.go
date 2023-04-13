@@ -28,7 +28,7 @@ func mongodbAtlasSecretRoleResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			consts.FieldBackend: {
+			consts.FieldMount: {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Path where MongoDB Atlas secret backend is mounted",
@@ -102,10 +102,10 @@ func mongodbAtlasSecretRoleCreateUpdate(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 
-	backend := d.Get(consts.FieldBackend).(string)
+	mount := d.Get(consts.FieldMount).(string)
 	name := d.Get(consts.FieldName).(string)
 
-	path := backend + "/roles/" + name
+	path := mount + "/roles/" + name
 	log.Printf("[DEBUG] Creating role %q in MongoDB Atlas", name)
 
 	data := map[string]interface{}{}
@@ -151,11 +151,11 @@ func mongodbAtlasSecretRoleRead(ctx context.Context, d *schema.ResourceData, met
 		return nil
 	}
 
-	backend, err := mongodbAtlasSecretBackendFromPath(path)
+	mount, err := mongodbAtlasSecretBackendFromPath(path)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set(consts.FieldBackend, backend); err != nil {
+	if err := d.Set(consts.FieldMount, mount); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -172,7 +172,7 @@ func mongodbAtlasSecretRoleRead(ctx context.Context, d *schema.ResourceData, met
 	}
 	for _, k := range fields {
 		if err := d.Set(k, resp.Data[k]); err != nil {
-			return diag.Errorf("error setting state key %q on Kubernetes backend role, err=%s",
+			return diag.Errorf("error setting state key %q on MongoDB Atlas backend role, err=%s",
 				k, err)
 		}
 	}
