@@ -17,7 +17,7 @@ import (
 
 func ldapSecretBackendStaticRoleResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		consts.FieldBackend: {
+		consts.FieldMount: {
 			Type:         schema.TypeString,
 			Default:      consts.MountTypeLDAP,
 			Optional:     true,
@@ -55,7 +55,7 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldMount),
 		Schema:        fields,
 	})
 }
@@ -66,9 +66,9 @@ func createLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	backend := d.Get(consts.FieldBackend).(string)
+	mount := d.Get(consts.FieldMount).(string)
 	role := d.Get(consts.FieldRole).(string)
-	rolePath := fmt.Sprintf("%s/static-role/%s", backend, role)
+	rolePath := fmt.Sprintf("%s/static-role/%s", mount, role)
 	log.Printf("[DEBUG] Creating LDAP static role at %q", rolePath)
 	data := map[string]interface{}{}
 	fields := []string{

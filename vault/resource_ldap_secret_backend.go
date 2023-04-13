@@ -17,7 +17,7 @@ import (
 
 func ldapSecretBackendResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		consts.FieldBackend: {
+		consts.FieldMount: {
 			Type:         schema.TypeString,
 			Default:      consts.MountTypeLDAP,
 			Optional:     true,
@@ -154,7 +154,7 @@ func ldapSecretBackendResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldMount),
 		Schema:        fields,
 	})
 
@@ -169,10 +169,10 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 		return diag.FromErr(err)
 	}
 
-	backend := d.Get(consts.FieldBackend).(string)
-	log.Printf("[DEBUG] Mounting LDAP backend at %q", backend)
+	mount := d.Get(consts.FieldMount).(string)
+	log.Printf("[DEBUG] Mounting LDAP mount at %q", mount)
 	if d.IsNewResource() {
-		if err := createMount(d, client, backend, consts.MountTypeLDAP); err != nil {
+		if err := createMount(d, client, mount, consts.MountTypeLDAP); err != nil {
 			return diag.FromErr(err)
 		}
 	} else {
@@ -181,8 +181,8 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 		}
 	}
 
-	log.Printf("[DEBUG] Mounted LDAP backend at %q", backend)
-	d.SetId(backend)
+	log.Printf("[DEBUG] Mounted LDAP mount at %q", mount)
+	d.SetId(mount)
 
 	data := map[string]interface{}{}
 	fields := []string{
@@ -220,7 +220,7 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 		}
 	}
 
-	configPath := fmt.Sprintf("%s/config", backend)
+	configPath := fmt.Sprintf("%s/config", mount)
 	log.Printf("[DEBUG] Writing %q", configPath)
 	if _, err := client.Logical().Write(configPath, data); err != nil {
 		return diag.FromErr(fmt.Errorf("error writing %q: %s", configPath, err))
@@ -247,7 +247,7 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 		return diag.FromErr(fmt.Errorf("error reading %q: %s", path, err))
 	}
 
-	d.Set(consts.FieldBackend, d.Id())
+	d.Set(consts.FieldMount, d.Id())
 	d.Set(consts.FieldDefaultLeaseTTL, mountResp.DefaultLeaseTTL)
 	d.Set(consts.FieldMaxLeaseTTL, mountResp.MaxLeaseTTL)
 
