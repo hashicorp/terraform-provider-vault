@@ -40,11 +40,6 @@ func ldapSecretBackendResource() *schema.Resource {
 			Sensitive:   true,
 			Description: "LDAP password for searching for the user DN.",
 		},
-		consts.FieldCaseSensitiveNames: {
-			Type:        schema.TypeBool,
-			Computed:    true,
-			Description: "If true, case sensitivity will be used when comparing usernames and groups for matching policies.",
-		},
 		consts.FieldCertificate: {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -75,12 +70,6 @@ func ldapSecretBackendResource() *schema.Resource {
 			Deprecated:  "Length is deprecated and password_policy should be used with Vault >= 1.5.",
 			Description: "The desired length of passwords that Vault generates.",
 		},
-		consts.FieldMaxTTL: {
-			Type:        schema.TypeInt,
-			Optional:    true,
-			Computed:    true,
-			Description: "In seconds, the maximum password time-to-live.",
-		},
 		consts.FieldPasswordPolicy: {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -103,24 +92,6 @@ func ldapSecretBackendResource() *schema.Resource {
 			Optional:    true,
 			Computed:    true,
 			Description: "Issue a StartTLS command after establishing unencrypted connection.",
-		},
-		consts.FieldTLSMaxVersion: {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Computed:    true,
-			Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Defaults to 'tls12'",
-		},
-		consts.FieldTLSMinVersion: {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Computed:    true,
-			Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Defaults to 'tls12'",
-		},
-		consts.FieldTTL: {
-			Type:        schema.TypeInt,
-			Optional:    true,
-			Computed:    true,
-			Description: "In seconds, the default password time-to-live.",
 		},
 		consts.FieldUPNDomain: {
 			Type:        schema.TypeString,
@@ -192,13 +163,8 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 		consts.FieldClientTLSCert,
 		consts.FieldClientTLSKey,
 		consts.FieldLength,
-		consts.FieldMaxTTL,
 		consts.FieldPasswordPolicy,
 		consts.FieldRequestTimeout,
-		consts.FieldStartTLS,
-		consts.FieldTLSMaxVersion,
-		consts.FieldTLSMinVersion,
-		consts.FieldTTL,
 		consts.FieldUPNDomain,
 		consts.FieldURL,
 		consts.FieldUserAttr,
@@ -207,6 +173,7 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 
 	booleanFields := []string{
 		consts.FieldInsecureTLS,
+		consts.FieldStartTLS,
 	}
 
 	// use d.Get() for boolean fields
@@ -267,18 +234,13 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 
 	fields := []string{
 		consts.FieldBindDN,
-		consts.FieldCaseSensitiveNames,
 		consts.FieldClientTLSCert,
 		consts.FieldClientTLSKey,
 		consts.FieldInsecureTLS,
 		consts.FieldLength,
-		consts.FieldMaxTTL,
 		consts.FieldPasswordPolicy,
 		consts.FieldRequestTimeout,
 		consts.FieldStartTLS,
-		consts.FieldTLSMaxVersion,
-		consts.FieldTLSMinVersion,
-		consts.FieldTTL,
 		consts.FieldUPNDomain,
 		consts.FieldURL,
 		consts.FieldUserAttr,
