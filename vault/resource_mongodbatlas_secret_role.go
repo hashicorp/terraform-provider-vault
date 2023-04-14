@@ -11,11 +11,15 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-var mongodbAtlasSecretBackendFromPathRegex = regexp.MustCompile("^(.+)/roles/.+$")
+var (
+	mongodbAtlasSecretMountFromPathRegex    = regexp.MustCompile("^(.+)/roles/.+$")
+	mongodbAtlasSecretRoleNameFromPathRegex = regexp.MustCompile("^.+/roles/(.+)$")
+)
 
 func mongodbAtlasSecretRoleResource() *schema.Resource {
 	return &schema.Resource{
@@ -84,12 +88,12 @@ func mongodbAtlasSecretRoleResource() *schema.Resource {
 			},
 			consts.FieldTTL: {
 				Type:        schema.TypeString,
-				Computed:    true,
+				Optional:    true,
 				Description: "Duration in seconds after which the issued credential should expire",
 			},
 			consts.FieldMaxTTL: {
 				Type:        schema.TypeString,
-				Computed:    true,
+				Optional:    true,
 				Description: "The maximum allowed lifetime of credentials issued using this role",
 			},
 		},
@@ -151,7 +155,7 @@ func mongodbAtlasSecretRoleRead(ctx context.Context, d *schema.ResourceData, met
 		return nil
 	}
 
-	mount, err := mongodbAtlasSecretBackendFromPath(path)
+	mount, err := mongodbAtlasSecretMountFromPath(path)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -159,8 +163,15 @@ func mongodbAtlasSecretRoleRead(ctx context.Context, d *schema.ResourceData, met
 		return diag.FromErr(err)
 	}
 
+	name, err := mongodbAtlasSecretRoleNameFromPath(path)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldName, name); err != nil {
+		return diag.FromErr(err)
+	}
+
 	fields := []string{
-		consts.FieldName,
 		consts.FieldOrganizationID,
 		consts.FieldProjectID,
 		consts.FieldRoles,
@@ -197,13 +208,24 @@ func mongodbAtlasSecretRoleDelete(ctx context.Context, d *schema.ResourceData, m
 	return nil
 }
 
-func mongodbAtlasSecretBackendFromPath(path string) (string, error) {
-	if !mongodbAtlasSecretBackendFromPathRegex.MatchString(path) {
+func mongodbAtlasSecretMountFromPath(path string) (string, error) {
+	if !mongodbAtlasSecretMountFromPathRegex.MatchString(path) {
 		return "", fmt.Errorf("no backend found")
 	}
-	res := mongodbAtlasSecretBackendFromPathRegex.FindStringSubmatch(path)
+	res := mongodbAtlasSecretMountFromPathRegex.FindStringSubmatch(path)
 	if len(res) != 2 {
 		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
+	}
+	return res[1], nil
+}
+
+func mongodbAtlasSecretRoleNameFromPath(path string) (string, error) {
+	if !mongodbAtlasSecretRoleNameFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no name found")
+	}
+	res := mongodbAtlasSecretRoleNameFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for name", len(res))
 	}
 	return res[1], nil
 }
