@@ -27,7 +27,7 @@ Then export the following environment variables:
 */
 func TestLDAPSecretBackend(t *testing.T) {
 	var (
-		mount                 = acctest.RandomWithPrefix("tf-test-ldap")
+		path                  = acctest.RandomWithPrefix("tf-test-ldap")
 		bindDN, bindPass, url = testutil.GetTestLDAPCreds(t)
 		resourceType          = "vault_ldap_secret_backend"
 		resourceName          = resourceType + ".test"
@@ -42,12 +42,12 @@ func TestLDAPSecretBackend(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		}, PreventPostDestroyRefresh: true,
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldMount),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPSecretBackendConfig(mount, description, bindDN, bindPass, url, userDN, true),
+				Config: testLDAPSecretBackendConfig(path, description, bindDN, bindPass, url, userDN, true),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, description),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "7200"),
@@ -59,9 +59,9 @@ func TestLDAPSecretBackend(t *testing.T) {
 				),
 			},
 			{
-				Config: testLDAPSecretBackendConfig(mount, updatedDescription, bindDN, bindPass, url, updatedUserDN, false),
+				Config: testLDAPSecretBackendConfig(path, updatedDescription, bindDN, bindPass, url, updatedUserDN, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, updatedDescription),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "7200"),
@@ -81,7 +81,7 @@ func TestLDAPSecretBackend(t *testing.T) {
 func testLDAPSecretBackendConfig(mount, description, bindDN, bindPass, url, userDN string, insecureTLS bool) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_secret_backend" "test" {
-  mount                     = "%s"
+  path                      = "%s"
   description               = "%s"
   default_lease_ttl_seconds = "3600"
   max_lease_ttl_seconds     = "7200"
