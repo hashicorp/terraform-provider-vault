@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -21,7 +22,10 @@ func TestAccDataSourceLDAPStaticRoleCredentials(t *testing.T) {
 	dataName := "data.vault_ldap_static_credentials.creds"
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPStaticRoleDataSource(backend, bindDN, bindPass, url, username, dn),
