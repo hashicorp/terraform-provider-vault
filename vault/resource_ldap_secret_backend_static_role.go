@@ -60,6 +60,12 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 	})
 }
 
+var ldapSecretBackendStaticRoleFields = []string{
+	consts.FieldUsername,
+	consts.FieldDN,
+	consts.FieldRotationPeriod,
+}
+
 func createLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
@@ -71,12 +77,7 @@ func createLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, m
 	rolePath := fmt.Sprintf("%s/static-role/%s", mount, role)
 	log.Printf("[DEBUG] Creating LDAP static role at %q", rolePath)
 	data := map[string]interface{}{}
-	fields := []string{
-		consts.FieldUsername,
-		consts.FieldDN,
-		consts.FieldRotationPeriod,
-	}
-	for _, field := range fields {
+	for _, field := range ldapSecretBackendStaticRoleFields {
 		if v, ok := d.GetOk(field); ok {
 			data[field] = v
 		}
@@ -107,13 +108,7 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 		return nil
 	}
 
-	fields := []string{
-		consts.FieldUsername,
-		consts.FieldDN,
-		consts.FieldRotationPeriod,
-	}
-
-	for _, field := range fields {
+	for _, field := range ldapSecretBackendStaticRoleFields {
 		if val, ok := resp.Data[field]; ok {
 			if err := d.Set(field, val); err != nil {
 				return diag.FromErr(fmt.Errorf("error setting state key '%s': %s", field, err))
