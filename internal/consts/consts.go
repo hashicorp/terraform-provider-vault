@@ -352,6 +352,7 @@ const (
 	FieldCredentialType                = "credential_type"
 	FieldFilename                      = "filename"
 	FieldDefault                       = "default"
+	FieldCnValidations                 = "cn_validations"
 	/*
 		common environment variables
 	*/
