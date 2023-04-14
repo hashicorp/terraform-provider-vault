@@ -21,7 +21,7 @@ for more details.
 
 ```hcl
 resource "vault_mount" "mongo" {
-  path        = "%s"
+  path        = "mongodbatlas"
   type        = "mongodbatlas"
   description = "MongoDB Atlas secret engine mount"
 }
@@ -57,5 +57,5 @@ No additional attributes are exported by this resource.
 MongoDB Atlas secret backends can be imported using the `${mount}/config`, e.g.
 
 ```
-$ terraform import vault_mongodbatlas_secret_backend.example mongodbatlas/config
+$ terraform import vault_mongodbatlas_secret_backend.config mongodbatlas/config
 ```
