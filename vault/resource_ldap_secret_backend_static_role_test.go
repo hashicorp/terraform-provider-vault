@@ -27,7 +27,6 @@ func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 		updatedDN             = "cn=bob,ou=users,dc=example,dc=org"
 		updatedRotationPeriod = "120"
 	)
-	fmt.Println(testLDAPSecretBackendStaticRoleConfig(mount, bindDN, bindPass, url, username, dn, username, rotationPeriod))
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
