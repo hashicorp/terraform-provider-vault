@@ -54,6 +54,8 @@ const (
 	FieldMaxLeaseTTL                = "max_lease_ttl_seconds"
 	FieldAuditNonHMACRequestKeys    = "audit_non_hmac_request_keys"
 	FieldAuditNonHMACResponseKeys   = "audit_non_hmac_response_keys"
+	FieldLastPassword               = "last_password"
+	FieldLastVaultRotation          = "last_vault_rotation"
 	FieldLocal                      = "local"
 	FieldSealWrap                   = "seal_wrap"
 	FieldExternalEntropyAccess      = "external_entropy_access"

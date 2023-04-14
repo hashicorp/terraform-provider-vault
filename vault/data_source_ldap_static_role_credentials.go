@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/vault/api"
 )
@@ -19,51 +20,51 @@ func ldapStaticCredDataSource() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: ReadContextWrapper(readLDAPStaticCreds),
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldMount: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "LDAP Secret Backend to read credentials from.",
 			},
-			"role": {
+			consts.FieldRole: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Name of the role.",
 			},
-			"dn": {
+			consts.FieldDN: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Distinguished name (DN) of the existing LDAP entry to manage password rotation for.",
 			},
-			"last_vault_rotation": {
+			consts.FieldLastVaultRotation: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Last time Vault rotated this service account's password.",
 			},
-			"password": {
+			consts.FieldPassword: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Password for the service account.",
 				Sensitive:   true,
 			},
-			"last_password": {
+			consts.FieldLastPassword: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Last known password for the service account.",
 				Sensitive:   true,
 			},
-			"rotation_period": {
+			consts.FieldRotationPeriod: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "How often Vault should rotate the password of the user entry.",
 				Sensitive:   true,
 			},
-			"ttl": {
+			consts.FieldTTL: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The maximum amount of time a single check-out lasts before Vault automatically checks it back in.",
 			},
-			"username": {
+			consts.FieldUsername: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Name of the service account.",
@@ -78,8 +79,8 @@ func readLDAPStaticCreds(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 
-	backend := d.Get("backend").(string)
-	role := d.Get("role").(string)
+	backend := d.Get(consts.FieldMount).(string)
+	role := d.Get(consts.FieldRole).(string)
 	path := fmt.Sprintf("%s/static-cred/%s", backend, role)
 
 	secret, err := client.Logical().ReadWithContext(ctx, path)
@@ -97,13 +98,13 @@ func readLDAPStaticCreds(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 
 	d.SetId(response.username)
-	d.Set("dn", response.dn)
-	d.Set("last_password", response.lastPassword)
-	d.Set("last_vault_rotation", response.lastVaultRotation)
-	d.Set("password", response.password)
-	d.Set("rotation_period", response.rotationPeriod)
-	d.Set("ttl", response.ttl)
-	d.Set("username", response.username)
+	d.Set(consts.FieldDN, response.dn)
+	d.Set(consts.FieldLastPassword, response.lastPassword)
+	d.Set(consts.FieldLastVaultRotation, response.lastVaultRotation)
+	d.Set(consts.FieldPassword, response.password)
+	d.Set(consts.FieldRotationPeriod, response.rotationPeriod)
+	d.Set(consts.FieldTTL, response.ttl)
+	d.Set(consts.FieldUsername, response.username)
 	return nil
 }
 
@@ -125,32 +126,32 @@ func parseLDAPStaticCredSecret(secret *api.Secret) (lDAPStaticCredResponse, erro
 		rotationPeriod    string
 		ttl               string
 	)
-	if dnRaw, ok := secret.Data["dn"]; ok {
+	if dnRaw, ok := secret.Data[consts.FieldDN]; ok {
 		dn = dnRaw.(string)
 	}
 
-	if lastPasswordRaw, ok := secret.Data["last_password"]; ok {
+	if lastPasswordRaw, ok := secret.Data[consts.FieldLastPassword]; ok {
 		lastPassword = lastPasswordRaw.(string)
 	}
 
-	if lastVaultRotationRaw, ok := secret.Data["last_vault_rotation"]; ok {
+	if lastVaultRotationRaw, ok := secret.Data[consts.FieldLastVaultRotation]; ok {
 		lastVaultRotation = lastVaultRotationRaw.(string)
 	}
 
-	if rotationPeriodRaw, ok := secret.Data["rotation_period"]; ok {
+	if rotationPeriodRaw, ok := secret.Data[consts.FieldRotationPeriod]; ok {
 		rotationPeriod = rotationPeriodRaw.(json.Number).String()
 	}
 
-	if ttlRaw, ok := secret.Data["ttl"]; ok {
+	if ttlRaw, ok := secret.Data[consts.FieldTTL]; ok {
 		ttl = ttlRaw.(json.Number).String()
 	}
 
-	username := secret.Data["username"].(string)
+	username := secret.Data[consts.FieldUsername].(string)
 	if username == "" {
 		return lDAPStaticCredResponse{}, fmt.Errorf("username is not set in response")
 	}
 
-	password := secret.Data["password"].(string)
+	password := secret.Data[consts.FieldPassword].(string)
 	if password == "" {
 		return lDAPStaticCredResponse{}, fmt.Errorf("password is not set in response")
 	}
