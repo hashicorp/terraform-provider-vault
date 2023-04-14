@@ -15,77 +15,72 @@ import (
 )
 
 func TestLDAPSecretBackend(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-ldap")
-	bindDN, bindPass, url := testutil.GetTestLDAPCreds(t)
-
-	resourceType := "vault_ldap_secret_backend"
-	resourceName := resourceType + ".test"
+	var (
+		mount                 = acctest.RandomWithPrefix("tf-test-ldap")
+		bindDN, bindPass, url = testutil.GetTestLDAPCreds(t)
+		resourceType          = "vault_ldap_secret_backend"
+		resourceName          = resourceType + ".test"
+		description           = "test description"
+		updatedDescription    = "new test description"
+		userDN                = "CN=Users,DC=corp,DC=example,DC=net"
+		updatedUserDN         = "CN=Users,DC=corp,DC=hashicorp,DC=com"
+	)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		}, PreventPostDestroyRefresh: true,
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldBackend),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldMount),
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPSecretBackend_initialConfig(backend, bindDN, bindPass, url),
+				Config: testLDAPSecretBackendConfig(mount, description, bindDN, bindPass, url, userDN, true),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "description", "test description"),
-					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "3600"),
-					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "7200"),
-					resource.TestCheckResourceAttr(resourceName, "binddn", bindDN),
-					resource.TestCheckResourceAttr(resourceName, "bindpass", bindPass),
-					resource.TestCheckResourceAttr(resourceName, "url", url),
-					resource.TestCheckResourceAttr(resourceName, "userdn", "CN=Users,DC=corp,DC=example,DC=net"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, description),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "7200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPass, bindPass),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUserDN, userDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCaseSensitiveNames, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldInsecureTLS, "true"),
 				),
 			},
 			{
-				Config: testLDAPSecretBackend_updateConfig(backend, bindDN, bindPass, url),
+				Config: testLDAPSecretBackendConfig(mount, updatedDescription, bindDN, bindPass, url, updatedUserDN, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "description", "new test description"),
-					resource.TestCheckResourceAttr(resourceName, "default_lease_ttl_seconds", "7200"),
-					resource.TestCheckResourceAttr(resourceName, "max_lease_ttl_seconds", "14400"),
-					resource.TestCheckResourceAttr(resourceName, "binddn", bindDN),
-					resource.TestCheckResourceAttr(resourceName, "bindpass", bindPass),
-					resource.TestCheckResourceAttr(resourceName, "url", url),
-					resource.TestCheckResourceAttr(resourceName, "userdn", "CN=Users,DC=corp,DC=hashicorp,DC=com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, updatedDescription),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "7200"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPass, bindPass),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUserDN, updatedUserDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCaseSensitiveNames, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldInsecureTLS, "false"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				"bindpass", "description", "disable_remount"),
+				"bindpass", "schema", consts.FieldDescription, consts.FieldDisableRemount),
 		},
 	})
 }
 
-func testLDAPSecretBackend_initialConfig(backend, bindDN, bindPass, url string) string {
+func testLDAPSecretBackendConfig(mount, description, bindDN, bindPass, url, userDN string, insecureTLS bool) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_secret_backend" "test" {
-  backend                   = "%s"
-  description               = "test description"
+  mount                     = "%s"
+  description               = "%s"
   default_lease_ttl_seconds = "3600"
   max_lease_ttl_seconds     = "7200"
   binddn                    = "%s"
   bindpass                  = "%s"
   url                       = "%s"
-  userdn                    = "CN=Users,DC=corp,DC=example,DC=net"
+  userdn                    = "%s"
+  insecure_tls              = %v
 }
-`, backend, bindDN, bindPass, url)
-}
-
-func testLDAPSecretBackend_updateConfig(backend, bindDN, bindPass, url string) string {
-	return fmt.Sprintf(`
-resource "vault_ldap_secret_backend" "test" {
-  backend                   = "%s"
-  description               = "new test description"
-  default_lease_ttl_seconds = "7200"
-  max_lease_ttl_seconds     = "14400"
-  binddn                    = "%s"
-  bindpass                  = "%s"
-  url                       = "%s"
-  userdn                    = "CN=Users,DC=corp,DC=hashicorp,DC=com"
-}
-`, backend, bindDN, bindPass, url)
+`, mount, description, bindDN, bindPass, url, userDN, insecureTLS)
 }
