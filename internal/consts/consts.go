@@ -27,8 +27,10 @@ const (
 	FieldDepth                      = "depth"
 	FieldDataJSON                   = "data_json"
 	FieldRole                       = "role"
+	FieldRoles                      = "roles"
 	FieldDescription                = "description"
 	FieldTTL                        = "ttl"
+	FieldMaxTTL                     = "max_ttl"
 	FieldDefaultLeaseTTL            = "default_lease_ttl_seconds"
 	FieldMaxLeaseTTL                = "max_lease_ttl_seconds"
 	FieldAuditNonHMACRequestKeys    = "audit_non_hmac_request_keys"
@@ -210,6 +212,11 @@ const (
 	FieldServiceAccountEmail        = "service_account_email"
 	FieldTokenScopes                = "token_scopes"
 	FieldServiceAccountProject      = "service_account_project"
+	FieldOrganizationID             = "organization_id"
+	FieldProjectID                  = "project_id"
+	FieldIPAddresses                = "ip_addresses"
+	FieldCIDRBlocks                 = "cidr_blocks"
+	FieldProjectRoles               = "project_roles"
 
 	/*
 		common environment variables

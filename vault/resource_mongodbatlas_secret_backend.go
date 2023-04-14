@@ -26,7 +26,7 @@ func mongodbAtlasSecretBackendResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			consts.FieldBackend: {
+			consts.FieldMount: {
 				Type:         schema.TypeString,
 				Required:     true,
 				Description:  "Path where MongoDB Atlas secret backend is mounted",
@@ -57,7 +57,7 @@ func mongodbAtlasSecretBackendCreateUpdate(ctx context.Context, d *schema.Resour
 		return diag.FromErr(e)
 	}
 
-	backend := d.Get(consts.FieldBackend).(string)
+	mount := d.Get(consts.FieldMount).(string)
 	privateKey := d.Get(consts.FieldPrivateKey).(string)
 	publicKey := d.Get(consts.FieldPublicKey).(string)
 
@@ -66,7 +66,7 @@ func mongodbAtlasSecretBackendCreateUpdate(ctx context.Context, d *schema.Resour
 		consts.FieldPublicKey:  publicKey,
 	}
 
-	path := backend + "/config"
+	path := mount + "/config"
 	log.Printf("[DEBUG] Writing MongoDB Atlas config at %q", path)
 
 	_, err := client.Logical().Write(path, data)
@@ -91,8 +91,8 @@ func mongodbAtlasSecretBackendRead(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	backend := strings.TrimSuffix(path, "/config")
-	if err := d.Set(consts.FieldBackend, backend); err != nil {
+	mount := strings.TrimSuffix(path, "/config")
+	if err := d.Set(consts.FieldMount, mount); err != nil {
 		return diag.FromErr(err)
 	}
 
