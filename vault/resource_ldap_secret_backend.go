@@ -48,7 +48,6 @@ func ldapSecretBackendResource() *schema.Resource {
 		consts.FieldInsecureTLS: {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Computed:    true,
 			Description: "Skip LDAP server SSL Certificate verification - insecure and not recommended for production use.",
 		},
 		consts.FieldLength: {
