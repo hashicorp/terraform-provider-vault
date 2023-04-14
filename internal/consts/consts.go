@@ -444,7 +444,7 @@ const (
 	FieldDefaultDirectoryPolicy        = "default_directory_policy"
 	FieldDnsResolver                   = "dns_resolver"
 	FieldEabPolicy                     = "eab_policy"
-
+	FieldCnValidations                 = "cn_validations"
 	/*
 		common environment variables
 	*/
