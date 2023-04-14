@@ -14,6 +14,17 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+/*
+To test, run the openldap service provided in the docker-compose.yaml file:
+
+	docker compose up -d openldap
+
+Then export the following environment variables:
+
+	LDAP_BINDDN=cn=admin,dc=example,dc=org
+	LDAP_BINDPASS=adminpassword
+	LDAP_URL=ldap://localhost:1389
+*/
 func TestLDAPSecretBackend(t *testing.T) {
 	var (
 		mount                 = acctest.RandomWithPrefix("tf-test-ldap")
