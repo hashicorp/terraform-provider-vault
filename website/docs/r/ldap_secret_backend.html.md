@@ -3,7 +3,7 @@ layout: "vault"
 page_title: "Vault: vault_ldap_secret_backend resource"
 sidebar_current: "docs-vault-resource-ldap-secret-backend"
 description: |-
-Creates a LDAP secret backend for Vault.
+  Creates a LDAP secret backend for Vault.
 ---
 
 # vault\_ldap\_secret\_backend

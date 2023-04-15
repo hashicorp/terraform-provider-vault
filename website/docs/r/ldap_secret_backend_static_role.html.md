@@ -3,7 +3,7 @@ layout: "vault"
 page_title: "Vault: vault_ldap_secret_backend_static_role resource"
 sidebar_current: "docs-vault-resource-ldap-secret-backend-static-role"
 description: |-
-Creates a static role for the LDAP secret backend for Vault.
+  Creates a static role for the LDAP secret backend for Vault.
 ---
 
 # vault\_ldap\_secret\_backend\_static\_role
