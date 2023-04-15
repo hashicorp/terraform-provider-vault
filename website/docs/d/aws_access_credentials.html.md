@@ -86,6 +86,8 @@ in addition to the keys.
 from the configured role. If the role does not have multiple ARNs, this does
 not need to be specified.
 
+* `region` - (Required when reading from AWS GovCloud) The region the read credentials belong to.
+
 * `ttl` - (Optional) Specifies the TTL for the use of the STS token. This
 is specified as a string with a duration suffix. Valid only when
 `credential_type` is `assumed_role` or `federation_token`
