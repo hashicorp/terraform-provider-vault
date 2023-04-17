@@ -43,10 +43,10 @@ func TestAccDataSourceLDAPStaticRoleCredentials(t *testing.T) {
 	})
 }
 
-func testLDAPStaticRoleDataSource(mount, bindDN, bindPass, url, username, dn string) string {
+func testLDAPStaticRoleDataSource(path, bindDN, bindPass, url, username, dn string) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_secret_backend" "test" {
-  mount                     = "%s"
+  path                      = "%s"
   description               = "test description"
   binddn                    = "%s"
   bindpass                  = "%s"
@@ -54,7 +54,7 @@ resource "vault_ldap_secret_backend" "test" {
 }
 
 resource "vault_ldap_secret_backend_static_role" "role" {
-    mount = vault_ldap_secret_backend.test.mount
+    path = vault_ldap_secret_backend.test.path
     username = "%s"
     dn = "%s"
     role = "%s"
@@ -62,8 +62,8 @@ resource "vault_ldap_secret_backend_static_role" "role" {
 }
 
 data "vault_ldap_static_credentials" "creds" {
-  mount = vault_ldap_secret_backend.test.mount
+  path = vault_ldap_secret_backend.test.path
   role  = vault_ldap_secret_backend_static_role.role.role
 }
-`, mount, bindDN, bindPass, url, username, dn, username)
+`, path, bindDN, bindPass, url, username, dn, username)
 }
