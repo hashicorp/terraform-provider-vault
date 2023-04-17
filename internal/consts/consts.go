@@ -7,6 +7,22 @@ const (
 	/*
 		common field names
 	*/
+	FieldBindDN                     = "binddn"
+	FieldBindPass                   = "bindpass"
+	FieldCertificate                = "certificate"
+	FieldClientTLSCert              = "client_tls_cert"
+	FieldClientTLSKey               = "client_tls_key"
+	FieldUPNDomain                  = "upndomain"
+	FieldStartTLS                   = "starttls"
+	FieldRequestTimeout             = "request_timeout"
+	FieldSchema                     = "schema"
+	FieldPasswordPolicy             = "password_policy"
+	FieldLength                     = "length"
+	FieldInsecureTLS                = "insecure_tls"
+	FieldURL                        = "url"
+	FieldUserAttr                   = "userattr"
+	FieldUserDN                     = "userdn"
+	FieldRotationPeriod             = "rotation_period"
 	FieldPath                       = "path"
 	FieldParameters                 = "parameters"
 	FieldMethod                     = "method"
@@ -26,6 +42,7 @@ const (
 	FieldLeaseRenewable             = "lease_renewable"
 	FieldDepth                      = "depth"
 	FieldDataJSON                   = "data_json"
+	FieldDN                         = "dn"
 	FieldRole                       = "role"
 	FieldRoles                      = "roles"
 	FieldDescription                = "description"
@@ -272,6 +289,7 @@ const (
 	MountTypeAzure        = "azure"
 	MountTypeGitHub       = "github"
 	MountTypeAD           = "ad"
+	MountTypeLDAP         = "ldap"
 	MountTypeConsul       = "consul"
 	MountTypeTerraform    = "terraform"
 

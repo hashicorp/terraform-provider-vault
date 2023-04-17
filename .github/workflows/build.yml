@@ -112,6 +112,16 @@ jobs:
           --health-interval 1s
           --health-timeout 5s
           --health-retries 5
+      openldap:
+        image: docker.io/bitnami/openldap:2.6
+        ports:
+        - '1389:1389'
+        - '1636:1636'
+        env:
+          LDAP_ADMIN_USERNAME: "admin"
+          LDAP_ADMIN_PASSWORD: "adminpassword"
+          LDAP_USERS: "alice,bob"
+          LDAP_PASSWORDS: "password1,password2"
     steps:
       - uses: actions/checkout@v3
       - name: Acceptance Tests
@@ -130,6 +140,9 @@ jobs:
           COUCHBASE_PASSWORD: password
           CONSUL_HTTP_ADDR: "consul:8500"
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          LDAP_BINDDN: "cn=admin,dc=example,dc=org"
+          LDAP_BINDPASS: "adminpassword"
+          LDAP_URL: "ldap://openldap:1389"
         run: |
           make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"
