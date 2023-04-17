@@ -17,7 +17,7 @@ import (
 
 func ldapSecretBackendStaticRoleResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		consts.FieldMount: {
+		consts.FieldPath: {
 			Type:         schema.TypeString,
 			Default:      consts.MountTypeLDAP,
 			Optional:     true,
@@ -47,17 +47,16 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 			Description: "How often Vault should rotate the password of the user entry.",
 		},
 	}
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
-		CreateContext: createLDAPStaticRoleResource,
-		UpdateContext: createLDAPStaticRoleResource,
+	return &schema.Resource{
+		CreateContext: createUpdateLDAPStaticRoleResource,
+		UpdateContext: createUpdateLDAPStaticRoleResource,
 		ReadContext:   ReadContextWrapper(readLDAPStaticRoleResource),
 		DeleteContext: deleteLDAPStaticRoleResource,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldMount),
-		Schema:        fields,
-	})
+		Schema: fields,
+	}
 }
 
 var ldapSecretBackendStaticRoleFields = []string{
@@ -66,15 +65,15 @@ var ldapSecretBackendStaticRoleFields = []string{
 	consts.FieldRotationPeriod,
 }
 
-func createLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	mount := d.Get(consts.FieldMount).(string)
+	path := d.Get(consts.FieldPath).(string)
 	role := d.Get(consts.FieldRole).(string)
-	rolePath := fmt.Sprintf("%s/static-role/%s", mount, role)
+	rolePath := fmt.Sprintf("%s/static-role/%s", path, role)
 	log.Printf("[DEBUG] Creating LDAP static role at %q", rolePath)
 	data := map[string]interface{}{}
 	for _, field := range ldapSecretBackendStaticRoleFields {

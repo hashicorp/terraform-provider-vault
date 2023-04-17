@@ -17,18 +17,6 @@ import (
 
 func ldapSecretBackendResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		consts.FieldMount: {
-			Type:         schema.TypeString,
-			Default:      consts.MountTypeLDAP,
-			Optional:     true,
-			Description:  "The path where the LDAP secrets backend is mounted.",
-			ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
-		},
-		consts.FieldPath: {
-			Type:        schema.TypeString,
-			Computed:    true,
-			Description: "Path where LDAP configuration is located",
-		},
 		consts.FieldBindDN: {
 			Type:        schema.TypeString,
 			Required:    true,
@@ -39,11 +27,6 @@ func ldapSecretBackendResource() *schema.Resource {
 			Required:    true,
 			Sensitive:   true,
 			Description: "LDAP password for searching for the user DN.",
-		},
-		consts.FieldCaseSensitiveNames: {
-			Type:        schema.TypeBool,
-			Computed:    true,
-			Description: "If true, case sensitivity will be used when comparing usernames and groups for matching policies.",
 		},
 		consts.FieldCertificate: {
 			Type:        schema.TypeString,
@@ -65,7 +48,6 @@ func ldapSecretBackendResource() *schema.Resource {
 		consts.FieldInsecureTLS: {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Computed:    true,
 			Description: "Skip LDAP server SSL Certificate verification - insecure and not recommended for production use.",
 		},
 		consts.FieldLength: {
@@ -74,12 +56,6 @@ func ldapSecretBackendResource() *schema.Resource {
 			Computed:    true,
 			Deprecated:  "Length is deprecated and password_policy should be used with Vault >= 1.5.",
 			Description: "The desired length of passwords that Vault generates.",
-		},
-		consts.FieldMaxTTL: {
-			Type:        schema.TypeInt,
-			Optional:    true,
-			Computed:    true,
-			Description: "In seconds, the maximum password time-to-live.",
 		},
 		consts.FieldPasswordPolicy: {
 			Type:        schema.TypeString,
@@ -103,24 +79,6 @@ func ldapSecretBackendResource() *schema.Resource {
 			Optional:    true,
 			Computed:    true,
 			Description: "Issue a StartTLS command after establishing unencrypted connection.",
-		},
-		consts.FieldTLSMaxVersion: {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Computed:    true,
-			Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Defaults to 'tls12'",
-		},
-		consts.FieldTLSMinVersion: {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Computed:    true,
-			Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Defaults to 'tls12'",
-		},
-		consts.FieldTTL: {
-			Type:        schema.TypeInt,
-			Optional:    true,
-			Computed:    true,
-			Description: "In seconds, the default password time-to-live.",
 		},
 		consts.FieldUPNDomain: {
 			Type:        schema.TypeString,
@@ -147,32 +105,32 @@ func ldapSecretBackendResource() *schema.Resource {
 		},
 	}
 	resource := provider.MustAddMountMigrationSchema(&schema.Resource{
-		CreateContext: createLDAPConfigResource,
-		UpdateContext: createLDAPConfigResource,
+		CreateContext: createUpdateLDAPConfigResource,
+		UpdateContext: createUpdateLDAPConfigResource,
 		ReadContext:   ReadContextWrapper(readLDAPConfigResource),
 		DeleteContext: deleteLDAPConfigResource,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldMount),
+		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema:        fields,
 	})
 
 	// Add common mount schema to the resource
-	provider.MustAddSchema(resource, getMountSchema("path", "type"))
+	provider.MustAddSchema(resource, getMountSchema("type"))
 	return resource
 }
 
-func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	mount := d.Get(consts.FieldMount).(string)
-	log.Printf("[DEBUG] Mounting LDAP mount at %q", mount)
+	path := d.Get(consts.FieldPath).(string)
+	log.Printf("[DEBUG] Mounting LDAP mount at %q", path)
 	if d.IsNewResource() {
-		if err := createMount(d, client, mount, consts.MountTypeLDAP); err != nil {
+		if err := createMount(d, client, path, consts.MountTypeLDAP); err != nil {
 			return diag.FromErr(err)
 		}
 	} else {
@@ -181,8 +139,8 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 		}
 	}
 
-	log.Printf("[DEBUG] Mounted LDAP mount at %q", mount)
-	d.SetId(mount)
+	log.Printf("[DEBUG] Mounted LDAP mount at %q", path)
+	d.SetId(path)
 
 	data := map[string]interface{}{}
 	fields := []string{
@@ -192,13 +150,8 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 		consts.FieldClientTLSCert,
 		consts.FieldClientTLSKey,
 		consts.FieldLength,
-		consts.FieldMaxTTL,
 		consts.FieldPasswordPolicy,
 		consts.FieldRequestTimeout,
-		consts.FieldStartTLS,
-		consts.FieldTLSMaxVersion,
-		consts.FieldTLSMinVersion,
-		consts.FieldTTL,
 		consts.FieldUPNDomain,
 		consts.FieldURL,
 		consts.FieldUserAttr,
@@ -207,6 +160,7 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 
 	booleanFields := []string{
 		consts.FieldInsecureTLS,
+		consts.FieldStartTLS,
 	}
 
 	// use d.Get() for boolean fields
@@ -220,7 +174,7 @@ func createLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta 
 		}
 	}
 
-	configPath := fmt.Sprintf("%s/config", mount)
+	configPath := fmt.Sprintf("%s/config", path)
 	log.Printf("[DEBUG] Writing %q", configPath)
 	if _, err := client.Logical().Write(configPath, data); err != nil {
 		return diag.FromErr(fmt.Errorf("error writing %q: %s", configPath, err))
@@ -236,22 +190,7 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 	}
 
 	path := d.Id()
-	log.Printf("[DEBUG] Reading %q", path)
-
-	mountResp, err := client.Sys().MountConfig(path)
-	if err != nil && util.Is404(err) {
-		log.Printf("[WARN] %q not found, removing from state", path)
-		d.SetId("")
-		return nil
-	} else if err != nil {
-		return diag.FromErr(fmt.Errorf("error reading %q: %s", path, err))
-	}
-
-	d.Set(consts.FieldMount, d.Id())
-	d.Set(consts.FieldDefaultLeaseTTL, mountResp.DefaultLeaseTTL)
-	d.Set(consts.FieldMaxLeaseTTL, mountResp.MaxLeaseTTL)
-
-	configPath := fmt.Sprintf("%s/config", d.Id())
+	configPath := fmt.Sprintf("%s/config", path)
 	log.Printf("[DEBUG] Reading %q", configPath)
 
 	resp, err := client.Logical().ReadWithContext(ctx, configPath)
@@ -267,18 +206,13 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 
 	fields := []string{
 		consts.FieldBindDN,
-		consts.FieldCaseSensitiveNames,
 		consts.FieldClientTLSCert,
 		consts.FieldClientTLSKey,
 		consts.FieldInsecureTLS,
 		consts.FieldLength,
-		consts.FieldMaxTTL,
 		consts.FieldPasswordPolicy,
 		consts.FieldRequestTimeout,
 		consts.FieldStartTLS,
-		consts.FieldTLSMaxVersion,
-		consts.FieldTLSMinVersion,
-		consts.FieldTTL,
 		consts.FieldUPNDomain,
 		consts.FieldURL,
 		consts.FieldUserAttr,
