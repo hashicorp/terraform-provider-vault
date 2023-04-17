@@ -30,7 +30,7 @@ func TestAccMongoDBAtlasSecretBackend_basic(t *testing.T) {
 			{
 				Config: testAccMongoDBAtlasSecretBackendConfig_basic(mount, privateKey, publicKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/config", mount)),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKey, privateKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPublicKey, publicKey),
@@ -39,7 +39,7 @@ func TestAccMongoDBAtlasSecretBackend_basic(t *testing.T) {
 			{
 				Config: testAccMongoDBAtlasSecretBackendConfig_basic(mount, updatedPrivateKey, updatedPublicKey),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/config", mount)),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKey, updatedPrivateKey),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPublicKey, updatedPublicKey),
@@ -64,8 +64,8 @@ resource "vault_mount" "mongo" {
 }
 
 resource "vault_mongodbatlas_secret_backend" "test" {
-  backend = vault_mount.mongo.path
-  private_key = "%s"
-  public_key = "%s"
+  mount 	   = vault_mount.mongo.path
+  private_key  = "%s"
+  public_key   = "%s"
 }`, path, privateKey, publicKey)
 }
