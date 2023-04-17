@@ -39,18 +39,18 @@ func ldapStaticCredDataSource() *schema.Resource {
 			consts.FieldLastVaultRotation: {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Last time Vault rotated this service account's password.",
+				Description: "Last time Vault rotated this static role's password.",
 			},
 			consts.FieldPassword: {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Password for the service account.",
+				Description: "Password for the static role.",
 				Sensitive:   true,
 			},
 			consts.FieldLastPassword: {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Last known password for the service account.",
+				Description: "Last known password for the static role.",
 				Sensitive:   true,
 			},
 			consts.FieldRotationPeriod: {
@@ -62,12 +62,12 @@ func ldapStaticCredDataSource() *schema.Resource {
 			consts.FieldTTL: {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The maximum amount of time a single check-out lasts before Vault automatically checks it back in.",
+				Description: "Duration in seconds after which the issued credential should expire.",
 			},
 			consts.FieldUsername: {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Name of the service account.",
+				Description: "Name of the static role.",
 			},
 		},
 	}
