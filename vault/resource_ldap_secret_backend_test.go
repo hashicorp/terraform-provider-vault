@@ -73,7 +73,7 @@ func TestLDAPSecretBackend(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				"bindpass", "schema", consts.FieldDescription, consts.FieldDisableRemount),
+				consts.FieldBindPass, consts.FieldSchema, consts.FieldDescription, consts.FieldDisableRemount),
 		},
 	})
 }

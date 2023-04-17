@@ -47,7 +47,7 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 			Description: "How often Vault should rotate the password of the user entry.",
 		},
 	}
-	return provider.MustAddMountMigrationSchema(&schema.Resource{
+	return &schema.Resource{
 		CreateContext: createUpdateLDAPStaticRoleResource,
 		UpdateContext: createUpdateLDAPStaticRoleResource,
 		ReadContext:   ReadContextWrapper(readLDAPStaticRoleResource),
@@ -55,9 +55,8 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
-		Schema:        fields,
-	})
+		Schema: fields,
+	}
 }
 
 var ldapSecretBackendStaticRoleFields = []string{

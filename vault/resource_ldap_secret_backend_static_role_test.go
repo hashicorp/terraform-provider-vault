@@ -51,7 +51,7 @@ func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, updatedRotationPeriod),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldPath, consts.FieldRole, consts.FieldDisableRemount),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldPath, consts.FieldRole),
 		},
 	})
 }
