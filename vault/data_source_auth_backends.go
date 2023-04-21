@@ -45,7 +45,6 @@ func authBackendsDataSourceRead(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	targetType := d.Get("type").(string)
-	fmt.Printf("\n\n%#+v\n\n", targetType)
 
 	auths, err := client.Sys().ListAuth()
 	if err != nil {
