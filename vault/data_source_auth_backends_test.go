@@ -107,23 +107,39 @@ func testDataSourceAuthBackends_check(s *terraform.State) error {
 		return fmt.Errorf("resource has no primary instance")
 	}
 
+	// Debug message lines
+	fmt.Println("-----------------------")
+	fmt.Println(resourceState.Primary.Attributes["paths"])
+	fmt.Println(iState.Attributes)
+	fmt.Println(iState.Attributes["paths"])
+	fmt.Println(iState.Attributes["id"])
+	fmt.Println("-----------------------")
+
+	// len(paths) == len(accessors) always
 	if got, want := len(iState.Attributes["paths"]), len(iState.Attributes["accessors"]); got != want {
 		return fmt.Errorf("length of paths is %d; length of accessors is %d; must match", got, want)
 	}
 
-	fmt.Printf("Length of paths is %d\nType is %s", len(iState.Attributes["paths"]), iState.Attributes["type"])
+	if got, want := iState.Attributes["id"], "default"; got != want {
+		return fmt.Errorf("id contains %s; want %s", got, want)
+	}
 
-	// These are not working as expected
-	/*
-		if iState.Attributes["type"] == "userpass" {
-			if got, want := len(iState.Attributes["paths"]), 1; got != want {
-				return fmt.Errorf("2 length of paths is %d; want %d", got, want)
-			}
-		} else {
-			if got, want := len(iState.Attributes["paths"]), 3; got != want {
-				return fmt.Errorf("3 length of paths is %d; want %d", got, want)
-			}
+	if got := len(iState.Attributes["paths"]); got < 1 {
+		return fmt.Errorf("There should be more than 0 paths, got %d; %s", got, iState.Attributes["paths"])
+	}
+
+	/* These are not working as expected
+	if iState.Attributes["type"] == "userpass" {
+		if got, want := len(iState.Attributes["paths"]), 1; got != want {
+			return fmt.Errorf("length of paths is %d; want %d", got, want)
 		}
+	} else if iState.Attributes["type"] == "" {
+		if got, want := len(iState.Attributes["paths"]), 3; got != want {
+			return fmt.Errorf("3 length of paths is %d; want %d", got, want)
+		}
+	} else {
+		return fmt.Errorf("We should not be here")
+	}
 	*/
 
 	return nil
