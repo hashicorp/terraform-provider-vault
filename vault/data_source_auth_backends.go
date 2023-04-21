@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -59,6 +60,9 @@ func authBackendsDataSourceRead(d *schema.ResourceData, meta interface{}) error 
 		if targetType == "" {
 			paths = append(paths, path)
 			accessors = append(accessors, auth.Accessor)
+			// we do this to make test assertions easier
+			// this is not required
+			sort.Strings(paths)
 		} else if auth.Type == targetType {
 			paths = append(paths, path)
 			accessors = append(accessors, auth.Accessor)
