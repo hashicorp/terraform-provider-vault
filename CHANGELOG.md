@@ -1,3 +1,13 @@
+## 3.15.0 (April 17, 2023)
+FEATURES:
+* Add support for MongoDB Atlas Secrets engine: ([#1816](https://github.com/hashicorp/terraform-provider-vault/pull/1816))
+
+BUGS:
+* Fix panic while importing namespaces: ([#1818](https://github.com/hashicorp/terraform-provider-vault/pull/1818))
+* Avoid writing empty strings to Vault when creating PKCS managed keys: ([#1803](https://github.com/hashicorp/terraform-provider-vault/pull/1803))
+* Fix possible panic with autopilot import: ([#1801](https://github.com/hashicorp/terraform-provider-vault/pull/1801))
+* Ensure that the `qr_size` can be properly configured for MFA TOTP: ([#1750](https://github.com/hashicorp/terraform-provider-vault/pull/1750))
+
 ## 3.14.0 (March 15, 2023)
 FEATURES:
 * Add PKI Unified CRL parameters: ([#1789](https://github.com/hashicorp/terraform-provider-vault/pull/1789))

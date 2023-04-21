@@ -783,6 +783,14 @@ var (
 			Resource:      UpdateSchemaResource(kmipSecretRoleResource()),
 			PathInventory: []string{"/kmip/scope/{scope}/role/{role}"},
 		},
+		"vault_mongodbatlas_secret_backend": {
+			Resource:      UpdateSchemaResource(mongodbAtlasSecretBackendResource()),
+			PathInventory: []string{"/mongodbatlas/config"},
+		},
+		"vault_mongodbatlas_secret_role": {
+			Resource:      UpdateSchemaResource(mongodbAtlasSecretRoleResource()),
+			PathInventory: []string{"/mongodbatlas/roles/{name}"},
+		},
 		"vault_identity_oidc_scope": {
 			Resource:      UpdateSchemaResource(identityOIDCScopeResource()),
 			PathInventory: []string{"/identity/oidc/scope/{scope}"},
@@ -883,7 +891,20 @@ func MountCreateContextWrapper(f schema.CreateContextFunc, minVersion *version.V
 func importNamespace(d *schema.ResourceData) error {
 	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
 		s := d.State()
-		if _, ok := s.Attributes[consts.FieldNamespace]; !ok {
+		var attemptNamespaceImport bool
+		if s.Empty() {
+			// state does not yet exist or is empty
+			// import is acceptable
+			attemptNamespaceImport = true
+		} else {
+			// only import if namespace
+			// is not already set in state
+			s.Lock()
+			defer s.Unlock()
+			_, ok := s.Attributes[consts.FieldNamespace]
+			attemptNamespaceImport = !ok
+		}
+		if attemptNamespaceImport {
 			log.Printf(`[INFO] Environment variable %s set, `+
 				`attempting TF state import "%s=%s"`,
 				consts.EnvVarVaultNamespaceImport, consts.FieldNamespace, ns)

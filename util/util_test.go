@@ -433,6 +433,215 @@ func TestGetAPIRequestDataWithSlice(t *testing.T) {
 	}
 }
 
+func TestGetAPIRequestDataWithSliceOk(t *testing.T) {
+	tests := []struct {
+		name string
+		d    map[string]*schema.Schema
+		s    []string
+		sm   map[string]interface{}
+		want map[string]interface{}
+	}{
+		{
+			name: "basic-default",
+			d: map[string]*schema.Schema{
+				"name": {
+					Type: schema.TypeString,
+				},
+			},
+			s: []string{"name"},
+			sm: map[string]interface{}{
+				"name": "bob",
+			},
+			want: map[string]interface{}{
+				"name": "bob",
+			},
+		},
+		{
+			name: "set",
+			d: map[string]*schema.Schema{
+				"name": {
+					Type: schema.TypeString,
+				},
+				"parts": {
+					Type: schema.TypeSet,
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
+					},
+				},
+			},
+			s: []string{
+				"name",
+				"parts",
+			},
+			sm: map[string]interface{}{
+				"name": "alice",
+				"parts": []interface{}{
+					"bolt",
+				},
+			},
+			want: map[string]interface{}{
+				"name": "alice",
+				"parts": []interface{}{
+					"bolt",
+				},
+			},
+		},
+		{
+			name: "parts-field-not-configured",
+			d: map[string]*schema.Schema{
+				"name": {
+					Type: schema.TypeString,
+				},
+			},
+			s: []string{
+				"name",
+				"parts",
+			},
+			sm: map[string]interface{}{
+				"name": "alice",
+			},
+			want: map[string]interface{}{
+				"name": "alice",
+			},
+		},
+		{
+			name: "zero-value-int-field",
+			d: map[string]*schema.Schema{
+				"name": {
+					Type: schema.TypeString,
+				},
+				"enabled": {
+					Type: schema.TypeInt,
+				},
+			},
+			s: []string{
+				"name",
+				"enabled",
+			},
+			sm: map[string]interface{}{
+				"name":    "alice",
+				"enabled": 0,
+			},
+			want: map[string]interface{}{
+				"name": "alice",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := schema.TestResourceDataRaw(t, tt.d, tt.sm)
+			if got := GetAPIRequestDataWithSliceOk(r, tt.s); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetAPIRequestDataWithSliceOk() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetAPIRequestDataWithSliceOkExists(t *testing.T) {
+	tests := []struct {
+		name string
+		d    map[string]*schema.Schema
+		s    []string
+		sm   map[string]interface{}
+		want map[string]interface{}
+	}{
+		{
+			name: "basic-default",
+			d: map[string]*schema.Schema{
+				"name": {
+					Type: schema.TypeString,
+				},
+			},
+			s: []string{"name"},
+			sm: map[string]interface{}{
+				"name": "bob",
+			},
+			want: map[string]interface{}{
+				"name": "bob",
+			},
+		},
+		{
+			name: "set",
+			d: map[string]*schema.Schema{
+				"name": {
+					Type: schema.TypeString,
+				},
+				"parts": {
+					Type: schema.TypeSet,
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
+					},
+				},
+			},
+			s: []string{
+				"name",
+				"parts",
+			},
+			sm: map[string]interface{}{
+				"name": "alice",
+				"parts": []interface{}{
+					"bolt",
+				},
+			},
+			want: map[string]interface{}{
+				"name": "alice",
+				"parts": []interface{}{
+					"bolt",
+				},
+			},
+		},
+		{
+			name: "parts-field-not-configured",
+			d: map[string]*schema.Schema{
+				"name": {
+					Type: schema.TypeString,
+				},
+			},
+			s: []string{
+				"name",
+				"parts",
+			},
+			sm: map[string]interface{}{
+				"name": "alice",
+			},
+			want: map[string]interface{}{
+				"name": "alice",
+			},
+		},
+		{
+			name: "zero-value-int-field",
+			d: map[string]*schema.Schema{
+				"name": {
+					Type: schema.TypeString,
+				},
+				"enabled": {
+					Type: schema.TypeInt,
+				},
+			},
+			s: []string{
+				"name",
+				"enabled",
+			},
+			sm: map[string]interface{}{
+				"name":    "alice",
+				"enabled": 0,
+			},
+			want: map[string]interface{}{
+				"name":    "alice",
+				"enabled": 0,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := schema.TestResourceDataRaw(t, tt.d, tt.sm)
+			if got := GetAPIRequestDataWithSliceOkExists(r, tt.s); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetAPIRequestDataWithSliceOkExists() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestCalculateConflictsWith(t *testing.T) {
 	tests := []struct {
 		name  string
