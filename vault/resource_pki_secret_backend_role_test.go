@@ -15,6 +15,89 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+func getPkiSecretBackendRoleConfigChecks(resourceName string, name string, backend string, isUpdate bool) []resource.TestCheckFunc {
+	baseChecks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "name", name),
+		resource.TestCheckResourceAttr(resourceName, "backend", backend),
+		resource.TestCheckResourceAttr(resourceName, "allow_localhost", "true"),
+		resource.TestCheckResourceAttr(resourceName, "allow_bare_domains", "false"),
+		resource.TestCheckResourceAttr(resourceName, "allow_subdomains", "true"),
+		resource.TestCheckResourceAttr(resourceName, "allow_glob_domains", "false"),
+		resource.TestCheckResourceAttr(resourceName, "allow_any_name", "false"),
+		resource.TestCheckResourceAttr(resourceName, "enforce_hostnames", "true"),
+		resource.TestCheckResourceAttr(resourceName, "allow_ip_sans", "true"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans.0", "uri.test.domain"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_other_sans.0", "1.2.3.4.5.5;UTF8:test"),
+		resource.TestCheckResourceAttr(resourceName, "server_flag", "true"),
+		resource.TestCheckResourceAttr(resourceName, "client_flag", "true"),
+		resource.TestCheckResourceAttr(resourceName, "code_signing_flag", "false"),
+		resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
+		resource.TestCheckResourceAttr(resourceName, "key_type", "rsa"),
+		resource.TestCheckResourceAttr(resourceName, "key_bits", "2048"),
+		resource.TestCheckResourceAttr(resourceName, "ext_key_usage.#", "0"),
+		resource.TestCheckResourceAttr(resourceName, "use_csr_common_name", "true"),
+		resource.TestCheckResourceAttr(resourceName, "use_csr_sans", "true"),
+		resource.TestCheckResourceAttr(resourceName, "ou.0", "test"),
+		resource.TestCheckResourceAttr(resourceName, "organization.0", "test"),
+		resource.TestCheckResourceAttr(resourceName, "country.0", "test"),
+		resource.TestCheckResourceAttr(resourceName, "locality.0", "test"),
+		resource.TestCheckResourceAttr(resourceName, "province.0", "test"),
+		resource.TestCheckResourceAttr(resourceName, "street_address.0", "123 test"),
+		resource.TestCheckResourceAttr(resourceName, "postal_code.0", "12345"),
+		resource.TestCheckResourceAttr(resourceName, "generate_lease", "false"),
+		resource.TestCheckResourceAttr(resourceName, "no_store", "false"),
+		resource.TestCheckResourceAttr(resourceName, "require_cn", "true"),
+		resource.TestCheckResourceAttr(resourceName, "basic_constraints_valid_for_non_ca", "false"),
+		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
+	}
+
+	basicChecks := append(baseChecks,
+		resource.TestCheckResourceAttr(resourceName, "allowed_domains.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_domains.0", "test.domain"),
+		resource.TestCheckResourceAttr(resourceName, "key_usage.#", "3"),
+		resource.TestCheckResourceAttr(resourceName, "key_usage.0", "DigitalSignature"),
+		resource.TestCheckResourceAttr(resourceName, "key_usage.1", "KeyAgreement"),
+		resource.TestCheckResourceAttr(resourceName, "key_usage.2", "KeyEncipherment"),
+	)
+	v110BasicChecks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "allow_wildcard_certificates", "true"),
+	}
+
+	updateChecks := append(baseChecks,
+		resource.TestCheckResourceAttr(resourceName, "ttl", "1800"),
+		resource.TestCheckResourceAttr(resourceName, "max_ttl", "3600"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_domains.#", "2"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_domains.0", "other.domain"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_domains.1", "{{identity.entity.name}}"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "true"),
+		resource.TestCheckResourceAttr(resourceName, "key_usage.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "key_usage.0", "DigitalSignature"),
+		resource.TestCheckResourceAttr(resourceName, "policy_identifiers.#", "1"),
+		resource.TestCheckResourceAttr(resourceName, "policy_identifiers.0", "1.2.3.4"),
+	)
+	v110UpdateChecks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "allow_wildcard_certificates", "false"),
+	}
+
+	meta := testProvider.Meta().(*provider.ProviderMeta)
+	isVaultVersion110 := meta.IsAPISupported(provider.VaultVersion110)
+
+	var checks []resource.TestCheckFunc
+
+	if !isUpdate {
+		checks = basicChecks
+		if isVaultVersion110 {
+			checks = append(checks, v110BasicChecks...)
+		}
+	} else {
+		checks = updateChecks
+		if isVaultVersion110 {
+			checks = append(checks, v110UpdateChecks...)
+		}
+	}
+	return checks
+}
+
 var testLegacyPolicyIdentifiers = `policy_identifiers = ["1.2.3.4"]`
 
 func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
@@ -34,49 +117,8 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 	name := acctest.RandomWithPrefix("role")
 	resourceName := "vault_pki_secret_backend_role.test"
 
-	checks := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, "name", name),
-		resource.TestCheckResourceAttr(resourceName, "backend", backend),
-		resource.TestCheckResourceAttr(resourceName, "allow_localhost", "true"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_domains.#", "1"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_domains.0", "test.domain"),
-		resource.TestCheckResourceAttr(resourceName, "allow_bare_domains", "false"),
-		resource.TestCheckResourceAttr(resourceName, "allow_subdomains", "true"),
-		resource.TestCheckResourceAttr(resourceName, "allow_glob_domains", "false"),
-		resource.TestCheckResourceAttr(resourceName, "allow_any_name", "false"),
-		resource.TestCheckResourceAttr(resourceName, "allow_wildcard_certificates", "true"),
-		resource.TestCheckResourceAttr(resourceName, "enforce_hostnames", "true"),
-		resource.TestCheckResourceAttr(resourceName, "allow_ip_sans", "true"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans.0", "uri.test.domain"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_other_sans.0", "1.2.3.4.5.5;UTF8:test"),
-		resource.TestCheckResourceAttr(resourceName, "server_flag", "true"),
-		resource.TestCheckResourceAttr(resourceName, "client_flag", "true"),
-		resource.TestCheckResourceAttr(resourceName, "code_signing_flag", "false"),
-		resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
-		resource.TestCheckResourceAttr(resourceName, "key_type", "rsa"),
-		resource.TestCheckResourceAttr(resourceName, "key_bits", "2048"),
-		resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
-		resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
-		resource.TestCheckResourceAttr(resourceName, "key_usage.#", "3"),
-		resource.TestCheckResourceAttr(resourceName, "key_usage.0", "DigitalSignature"),
-		resource.TestCheckResourceAttr(resourceName, "key_usage.1", "KeyAgreement"),
-		resource.TestCheckResourceAttr(resourceName, "key_usage.2", "KeyEncipherment"),
-		resource.TestCheckResourceAttr(resourceName, "ext_key_usage.#", "0"),
-		resource.TestCheckResourceAttr(resourceName, "use_csr_common_name", "true"),
-		resource.TestCheckResourceAttr(resourceName, "use_csr_sans", "true"),
-		resource.TestCheckResourceAttr(resourceName, "ou.0", "test"),
-		resource.TestCheckResourceAttr(resourceName, "organization.0", "test"),
-		resource.TestCheckResourceAttr(resourceName, "country.0", "test"),
-		resource.TestCheckResourceAttr(resourceName, "locality.0", "test"),
-		resource.TestCheckResourceAttr(resourceName, "province.0", "test"),
-		resource.TestCheckResourceAttr(resourceName, "street_address.0", "123 test"),
-		resource.TestCheckResourceAttr(resourceName, "postal_code.0", "12345"),
-		resource.TestCheckResourceAttr(resourceName, "generate_lease", "false"),
-		resource.TestCheckResourceAttr(resourceName, "no_store", "false"),
-		resource.TestCheckResourceAttr(resourceName, "require_cn", "true"),
-		resource.TestCheckResourceAttr(resourceName, "basic_constraints_valid_for_non_ca", "false"),
-		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
-	}
+	checks := getPkiSecretBackendRoleConfigChecks(resourceName, name, backend, false)
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -132,70 +174,13 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("role")
 	resourceName := "vault_pki_secret_backend_role.test"
 
-	checks := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, "name", name),
-		resource.TestCheckResourceAttr(resourceName, "backend", backend),
-		resource.TestCheckResourceAttr(resourceName, "allow_localhost", "true"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_domains.#", "1"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_domains.0", "test.domain"),
-		resource.TestCheckResourceAttr(resourceName, "allow_bare_domains", "false"),
-		resource.TestCheckResourceAttr(resourceName, "allow_subdomains", "true"),
-		resource.TestCheckResourceAttr(resourceName, "allow_glob_domains", "false"),
-		resource.TestCheckResourceAttr(resourceName, "allow_any_name", "false"),
-		resource.TestCheckResourceAttr(resourceName, "allow_wildcard_certificates", "true"),
-		resource.TestCheckResourceAttr(resourceName, "enforce_hostnames", "true"),
-		resource.TestCheckResourceAttr(resourceName, "allow_ip_sans", "true"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans.0", "uri.test.domain"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_other_sans.0", "1.2.3.4.5.5;UTF8:test"),
-		resource.TestCheckResourceAttr(resourceName, "server_flag", "true"),
-		resource.TestCheckResourceAttr(resourceName, "client_flag", "true"),
-		resource.TestCheckResourceAttr(resourceName, "code_signing_flag", "false"),
-		resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
-		resource.TestCheckResourceAttr(resourceName, "key_type", "rsa"),
-		resource.TestCheckResourceAttr(resourceName, "key_bits", "2048"),
-		resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
-		resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
-		resource.TestCheckResourceAttr(resourceName, "key_usage.#", "3"),
-		resource.TestCheckResourceAttr(resourceName, "key_usage.0", "DigitalSignature"),
-		resource.TestCheckResourceAttr(resourceName, "key_usage.1", "KeyAgreement"),
-		resource.TestCheckResourceAttr(resourceName, "key_usage.2", "KeyEncipherment"),
-		resource.TestCheckResourceAttr(resourceName, "ext_key_usage.#", "0"),
-		resource.TestCheckResourceAttr(resourceName, "use_csr_common_name", "true"),
-		resource.TestCheckResourceAttr(resourceName, "use_csr_sans", "true"),
-		resource.TestCheckResourceAttr(resourceName, "ou.0", "test"),
-		resource.TestCheckResourceAttr(resourceName, "organization.0", "test"),
-		resource.TestCheckResourceAttr(resourceName, "country.0", "test"),
-		resource.TestCheckResourceAttr(resourceName, "locality.0", "test"),
-		resource.TestCheckResourceAttr(resourceName, "province.0", "test"),
-		resource.TestCheckResourceAttr(resourceName, "street_address.0", "123 test"),
-		resource.TestCheckResourceAttr(resourceName, "postal_code.0", "12345"),
-		resource.TestCheckResourceAttr(resourceName, "generate_lease", "false"),
-		resource.TestCheckResourceAttr(resourceName, "no_store", "false"),
-		resource.TestCheckResourceAttr(resourceName, "require_cn", "true"),
-		resource.TestCheckResourceAttr(resourceName, "basic_constraints_valid_for_non_ca", "false"),
-		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
-		resource.TestCheckResourceAttr(resourceName, "policy_identifiers.#", "1"),
-		resource.TestCheckResourceAttr(resourceName, "policy_identifiers.0", "1.2.3.4"),
-	}
+	checks := getPkiSecretBackendRoleConfigChecks(resourceName, name, backend, false)
+
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testPkiSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
-			{
-				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, testLegacyPolicyIdentifiers),
-				Check: resource.ComposeTestCheckFunc(
-					append(checks,
-						resource.TestCheckResourceAttr(resourceName, "ttl", "3600"),
-						resource.TestCheckResourceAttr(resourceName, "max_ttl", "7200"),
-					)...,
-				),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
 			{
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 0, 0, testLegacyPolicyIdentifiers),
 				Check: resource.ComposeTestCheckFunc(
@@ -227,51 +212,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 			{
 				Config: testPkiSecretBackendRoleConfig_updated(name, backend, testLegacyPolicyIdentifiers),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "ttl", "1800"),
-					resource.TestCheckResourceAttr(resourceName, "max_ttl", "3600"),
-					resource.TestCheckResourceAttr(resourceName, "allow_localhost", "true"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_domains.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_domains.0", "other.domain"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_domains.1", "{{identity.entity.name}}"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "true"),
-					resource.TestCheckResourceAttr(resourceName, "allow_bare_domains", "false"),
-					resource.TestCheckResourceAttr(resourceName, "allow_subdomains", "true"),
-					resource.TestCheckResourceAttr(resourceName, "allow_glob_domains", "false"),
-					resource.TestCheckResourceAttr(resourceName, "allow_any_name", "false"),
-					resource.TestCheckResourceAttr(resourceName, "allow_wildcard_certificates", "false"),
-					resource.TestCheckResourceAttr(resourceName, "enforce_hostnames", "true"),
-					resource.TestCheckResourceAttr(resourceName, "allow_ip_sans", "true"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans.0", "uri.test.domain"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_other_sans.0", "1.2.3.4.5.5;UTF8:test"),
-					resource.TestCheckResourceAttr(resourceName, "server_flag", "true"),
-					resource.TestCheckResourceAttr(resourceName, "client_flag", "true"),
-					resource.TestCheckResourceAttr(resourceName, "code_signing_flag", "false"),
-					resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
-					resource.TestCheckResourceAttr(resourceName, "key_type", "rsa"),
-					resource.TestCheckResourceAttr(resourceName, "key_bits", "2048"),
-					resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
-					resource.TestCheckResourceAttr(resourceName, "email_protection_flag", "false"),
-					resource.TestCheckResourceAttr(resourceName, "key_usage.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "key_usage.0", "DigitalSignature"),
-					resource.TestCheckResourceAttr(resourceName, "ext_key_usage.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "use_csr_common_name", "true"),
-					resource.TestCheckResourceAttr(resourceName, "use_csr_sans", "true"),
-					resource.TestCheckResourceAttr(resourceName, "ou.0", "test"),
-					resource.TestCheckResourceAttr(resourceName, "organization.0", "test"),
-					resource.TestCheckResourceAttr(resourceName, "country.0", "test"),
-					resource.TestCheckResourceAttr(resourceName, "locality.0", "test"),
-					resource.TestCheckResourceAttr(resourceName, "province.0", "test"),
-					resource.TestCheckResourceAttr(resourceName, "street_address.0", "123 test"),
-					resource.TestCheckResourceAttr(resourceName, "postal_code.0", "12345"),
-					resource.TestCheckResourceAttr(resourceName, "generate_lease", "false"),
-					resource.TestCheckResourceAttr(resourceName, "no_store", "false"),
-					resource.TestCheckResourceAttr(resourceName, "require_cn", "true"),
-					resource.TestCheckResourceAttr(resourceName, "policy_identifiers.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "policy_identifiers.0", "1.2.3.4"),
-					resource.TestCheckResourceAttr(resourceName, "basic_constraints_valid_for_non_ca", "false"),
-					resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
+					getPkiSecretBackendRoleConfigChecks(resourceName, name, backend, true)...,
 				),
 			},
 			{

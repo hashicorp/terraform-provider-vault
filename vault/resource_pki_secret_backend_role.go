@@ -635,7 +635,6 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 		"allow_subdomains":                   d.Get("allow_subdomains"),
 		"allow_glob_domains":                 d.Get("allow_glob_domains"),
 		"allow_any_name":                     d.Get("allow_any_name"),
-		"allow_wildcard_certificates":        d.Get("allow_wildcard_certificates"),
 		"enforce_hostnames":                  d.Get("enforce_hostnames"),
 		"allow_ip_sans":                      d.Get("allow_ip_sans"),
 		"allowed_uri_sans":                   d.Get("allowed_uri_sans"),
@@ -664,6 +663,10 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 
 	if len(allowedDomains) > 0 {
 		data["allowed_domains"] = allowedDomains
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion110) {
+		data["allow_wildcard_certificates"] = d.Get("allow_wildcard_certificates")
 	}
 
 	if len(keyUsage) > 0 {

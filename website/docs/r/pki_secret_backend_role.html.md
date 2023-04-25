@@ -63,7 +63,8 @@ The following arguments are supported:
 
 * `allow_any_name` - (Optional) Flag to allow any name
 
-* `allow_wildcard_certificates` - (Optional) Flag to allow wildcard certificates
+* `allow_wildcard_certificates` - (Optional) Flag to allow wildcard certificates.
+  *Requires Vault 1.10+.*
 
 * `enforce_hostnames` - (Optional) Flag to allow only valid host names
 
