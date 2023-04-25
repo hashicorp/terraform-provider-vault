@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package entity
 
 import (
@@ -151,7 +154,7 @@ func LookupEntityAlias(client *api.Client, params *FindAliasParams) (*Alias, err
 				return nil, err
 			}
 
-			if a.Name == params.Name {
+			if a.Name == params.Name && a.MountAccessor == params.MountAccessor {
 				return &a, nil
 			}
 		}

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -112,7 +115,7 @@ func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	d.SetId(path)
 
 	log.Printf("[DEBUG] Writing Azure configuration to %q", configPath)
-	data := azureSecretBackendRequestData(d)
+	data := azureSecretBackendRequestData(d, meta)
 	if _, err := client.Logical().Write(configPath, data); err != nil {
 		return fmt.Errorf("error writing Azure configuration for %q: %s", path, err)
 	}
@@ -152,9 +155,19 @@ func azureSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}
 
-	for _, k := range []string{"client_id", "subscription_id", "tenant_id", "use_microsoft_graph_api"} {
+	for _, k := range []string{"client_id", "subscription_id", "tenant_id"} {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
+				return err
+			}
+		}
+	}
+
+	skipMSGraphAPI := provider.IsAPISupported(meta, provider.VaultVersion112)
+
+	if !skipMSGraphAPI {
+		if v, ok := resp.Data["use_microsoft_graph_api"]; ok {
+			if err := d.Set("use_microsoft_graph_api", v); err != nil {
 				return err
 			}
 		}
@@ -194,7 +207,7 @@ func azureSecretBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	data := azureSecretBackendRequestData(d)
+	data := azureSecretBackendRequestData(d, meta)
 	if len(data) > 0 {
 		_, err := client.Logical().Write(azureSecretBackendPath(path), data)
 		if err != nil {
@@ -244,14 +257,25 @@ func azureSecretBackendPath(path string) string {
 	return strings.Trim(path, "/") + "/config"
 }
 
-func azureSecretBackendRequestData(d *schema.ResourceData) map[string]interface{} {
+func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map[string]interface{} {
 	fields := []string{
 		"client_id",
 		"environment",
 		"tenant_id",
 		"client_secret",
-		"use_microsoft_graph_api",
 		"subscription_id",
+	}
+
+	skipMSGraphAPI := provider.IsAPISupported(meta, provider.VaultVersion112)
+
+	if _, ok := d.GetOk("use_microsoft_graph_api"); ok {
+		if skipMSGraphAPI {
+			log.Printf("ignoring this field because Vault version is greater than 1.12")
+		}
+	}
+
+	if !skipMSGraphAPI {
+		fields = append(fields, "use_microsoft_graph_api")
 	}
 
 	data := make(map[string]interface{})

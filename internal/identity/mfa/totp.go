@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mfa
 
 import (
@@ -8,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const (
@@ -43,6 +47,7 @@ var (
 		consts.FieldQRSize: {
 			Type:        schema.TypeInt,
 			Computed:    true,
+			Optional:    true,
 			Description: `The pixel size of the generated square QR code.`,
 		},
 		consts.FieldAlgorithm: {
@@ -75,11 +80,15 @@ var (
 	}
 )
 
+// GetTOTPSchemaResource returns the resource needed to provision an identity/mfa/totp resource.
 func GetTOTPSchemaResource() (*schema.Resource, error) {
-	config, err := NewContextFuncConfig(MethodTypeTOTP, PathTypeMethodID, nil, nil, nil)
+	config, err := NewContextFuncConfig(MethodTypeTOTP, PathTypeMethodID, nil, nil, nil, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	// ensure that the qr_size field can be set to 0
+	config.setAPIValueGetter(consts.FieldQRSize, util.GetAPIRequestValueOkExists)
 
 	return getMethodSchemaResource(totpSchemaMap, config), nil
 }

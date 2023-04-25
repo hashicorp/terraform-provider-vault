@@ -1,3 +1,50 @@
+## 3.15.0 (April 17, 2023)
+FEATURES:
+* Add support for MongoDB Atlas Secrets engine: ([#1816](https://github.com/hashicorp/terraform-provider-vault/pull/1816))
+
+BUGS:
+* Fix panic while importing namespaces: ([#1818](https://github.com/hashicorp/terraform-provider-vault/pull/1818))
+* Avoid writing empty strings to Vault when creating PKCS managed keys: ([#1803](https://github.com/hashicorp/terraform-provider-vault/pull/1803))
+* Fix possible panic with autopilot import: ([#1801](https://github.com/hashicorp/terraform-provider-vault/pull/1801))
+* Ensure that the `qr_size` can be properly configured for MFA TOTP: ([#1750](https://github.com/hashicorp/terraform-provider-vault/pull/1750))
+
+## 3.14.0 (March 15, 2023)
+FEATURES:
+* Add PKI Unified CRL parameters: ([#1789](https://github.com/hashicorp/terraform-provider-vault/pull/1789))
+* Add resource for GCP impersonated account support: ([#1745](https://github.com/hashicorp/terraform-provider-vault/pull/1745))
+
+BUGS:
+* Add nil check for `IsEnterpriseSupported` util: ([#1787](https://github.com/hashicorp/terraform-provider-vault/pull/1787))
+* Fix KV incorrect metadata path for prefixed mounts: ([#1781](https://github.com/hashicorp/terraform-provider-vault/pull/1781))
+
+## 3.13.0 (February 17, 2023)
+FEATURES:
+* Add new resource for AWS Auth Backend config identity: ([#1724](https://github.com/hashicorp/terraform-provider-vault/pull/1724))
+* Support `default_user_template` field on `vault_ssh_secret_backend_role`: ([#1725](https://github.com/hashicorp/terraform-provider-vault/pull/1725))
+
+IMPROVEMENTS:
+* Secrets from the AD, AWS, Azure & Nomad Secrets Engines are sensitive: ([#1726](https://github.com/hashicorp/terraform-provider-vault/pull/1726))
+* Add enterprise check for new Raft Autopilot parameter: ([#1721](https://github.com/hashicorp/terraform-provider-vault/pull/1721))
+
+BUGS:
+* Fix KVV2 datasource upon retrieval of soft deleted secrets: ([#1760](https://github.com/hashicorp/terraform-provider-vault/pull/1760))
+* Fix issue where removing optional fields in database secrets backend connection resource did not reset the fields to their default values: ([#1737](https://github.com/hashicorp/terraform-provider-vault/pull/1737))
+* Fix construction of metadata path in KV V2 resource: ([#1722](https://github.com/hashicorp/terraform-provider-vault/pull/1722))
+
+## 3.12.0 (January 5, 2023)
+IMPROVEMENTS:
+* Add support for importing the PKI CRL config: ([#1710](https://github.com/hashicorp/terraform-provider-vault/pull/1710))
+* Ensure duplicate alias names are handled properly in LookupEntityAlias: ([#1708](https://github.com/hashicorp/terraform-provider-vault/pull/1708))
+* Add support for a Raft Autopilot State datasource: ([#1705](https://github.com/hashicorp/terraform-provider-vault/pull/1705))
+* Add support for adding metadata to a KV V2 Secret: ([#1687](https://github.com/hashicorp/terraform-provider-vault/pull/1687))
+* Set AWS credentials sensitive: ([#1678](https://github.com/hashicorp/terraform-provider-vault/pull/1678))
+* Set ForceNew on the path field of namespaces: ([#1713](https://github.com/hashicorp/terraform-provider-vault/pull/1713))
+
+BUGS:
+* Fix removed MSGraph param in Azure Secrets: ([#1682](https://github.com/hashicorp/terraform-provider-vault/pull/1682))
+* Fix KV V2 data source when specifying a version: ([#1677](https://github.com/hashicorp/terraform-provider-vault/pull/1677))
+* Ensure that `vault_kv_secret_backend_v2` mount is correctly imported: ([#1701](https://github.com/hashicorp/terraform-provider-vault/pull/1701))
+
 ## 3.11.0 (November 16, 2022)
 IMPROVEMENTS:
 * Add Basic Constraints attribute to vault_pki_secret_backend_intermediate_cert_request: ([#1661](https://github.com/hashicorp/terraform-provider-vault/pull/1661))

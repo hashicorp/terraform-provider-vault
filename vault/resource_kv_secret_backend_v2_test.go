@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -38,13 +41,93 @@ func TestAccKVSecretBackendV2(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"mount"},
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
+}
+
+func TestKVV2SecretNameFromPath(t *testing.T) {
+	tests := []struct {
+		name      string
+		path      string
+		want      string
+		expectErr bool
+	}{
+		{
+			name:      "non-prefixed secret name",
+			path:      "cloud/data/dev-token",
+			want:      "dev-token",
+			expectErr: false,
+		},
+		{
+			name:      "prefixed secret name",
+			path:      "cloud/data/engineering/admin/token",
+			want:      "engineering/admin/token",
+			expectErr: false,
+		},
+		{
+			name:      "invalid path",
+			path:      "secret/random/value",
+			want:      "",
+			expectErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			name, err := getKVV2SecretNameFromPath(tt.path)
+			if err == nil && tt.expectErr {
+				t.Fatalf("expected error but got nil")
+			}
+
+			if name != tt.want {
+				t.Fatalf("expected name %s, but got %s", tt.want, name)
+			}
+		})
+	}
+}
+
+func TestKVV2SecretMountFromPath(t *testing.T) {
+	tests := []struct {
+		name      string
+		path      string
+		want      string
+		expectErr bool
+	}{
+		{
+			name:      "non-prefixed mount name",
+			path:      "cloud-metadata/data/token",
+			want:      "cloud-metadata",
+			expectErr: false,
+		},
+		{
+			name:      "prefixed secret name",
+			path:      "cloud-metadata/vault/kv/data/token",
+			want:      "cloud-metadata/vault/kv",
+			expectErr: false,
+		},
+		{
+			name:      "invalid path",
+			path:      "secret/random/value",
+			want:      "",
+			expectErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mount, err := getKVV2SecretMountFromPath(tt.path)
+
+			if err == nil && tt.expectErr {
+				t.Fatalf("expected error but got nil")
+			}
+
+			if mount != tt.want {
+				t.Fatalf("expected name %s, but got %s", tt.want, mount)
+			}
+		})
+	}
 }
 
 func testKVSecretBackendV2Config(path string, isUpdate bool) string {

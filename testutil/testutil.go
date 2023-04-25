@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package testutil
 
 import (
@@ -11,6 +14,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/coreos/pkg/multierror"
@@ -182,6 +186,11 @@ func GetTestRMQCreds(t *testing.T) (string, string, string) {
 	return v[0], v[1], v[2]
 }
 
+func GetTestMDBACreds(t *testing.T) (string, string) {
+	v := SkipTestEnvUnset(t, "MONGODB_ATLAS_PRIVATE_KEY", "MONGODB_ATLAS_PUBLIC_KEY")
+	return v[0], v[1]
+}
+
 func GetTestADCreds(t *testing.T) (string, string, string) {
 	v := SkipTestEnvUnset(t, "AD_BINDDN", "AD_BINDPASS", "AD_URL")
 	return v[0], v[1], v[2]
@@ -190,6 +199,11 @@ func GetTestADCreds(t *testing.T) (string, string, string) {
 func GetTestNomadCreds(t *testing.T) (string, string) {
 	v := SkipTestEnvUnset(t, "NOMAD_ADDR", "NOMAD_TOKEN")
 	return v[0], v[1]
+}
+
+func GetTestPKCSCreds(t *testing.T) (string, string, string) {
+	v := SkipTestEnvUnset(t, "PKCS_KEY_LIBRARY", "PKCS_KEY_SLOT", "PKCS_KEY_PIN")
+	return v[0], v[1], v[2]
 }
 
 func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {
@@ -238,17 +252,16 @@ type GHOrgResponse struct {
 }
 
 // cache GH API responses to avoid triggering the GH request rate limiter
-var ghOrgResponseCache = map[string]*GHOrgResponse{}
+var ghOrgResponseCache = sync.Map{}
 
 // GetGHOrgResponse returns the GH org's meta configuration.
 func GetGHOrgResponse(t *testing.T, org string) *GHOrgResponse {
 	t.Helper()
 
-	if v, ok := ghOrgResponseCache[org]; ok {
-		return v
-	}
-
 	client := newGHRESTClient()
+	if v, ok := ghOrgResponseCache.Load(org); ok {
+		return v.(*GHOrgResponse)
+	}
 
 	result := &GHOrgResponse{}
 	if err := client.get(fmt.Sprintf("orgs/%s", org), result); err != nil {
@@ -259,7 +272,7 @@ func GetGHOrgResponse(t *testing.T, org string) *GHOrgResponse {
 		t.Fatalf("expected org %q from GH API response, actual %q", org, result.Login)
 	}
 
-	ghOrgResponseCache[org] = result
+	ghOrgResponseCache.Store(org, result)
 
 	return result
 }
@@ -288,6 +301,11 @@ func (c *ghRESTClient) do(method, path string, v interface{}) error {
 	}
 
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err

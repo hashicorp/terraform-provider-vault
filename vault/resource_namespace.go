@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -34,6 +37,7 @@ func namespaceResource() *schema.Resource {
 			consts.FieldPath: {
 				Type:         schema.TypeString,
 				Required:     true,
+				ForceNew:     true,
 				Description:  "Namespace path.",
 				ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 			},
@@ -45,6 +49,7 @@ func namespaceResource() *schema.Resource {
 			consts.FieldPathFQ: {
 				Type:        schema.TypeString,
 				Computed:    true,
+				Optional:    true,
 				Description: "The fully qualified namespace path.",
 			},
 		},

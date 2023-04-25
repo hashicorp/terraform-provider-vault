@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -328,6 +331,10 @@ var (
 			Resource:      UpdateSchemaResource(kvSecretSubkeysV2DataSource()),
 			PathInventory: []string{"/secret/subkeys/{path}"},
 		},
+		"vault_raft_autopilot_state": {
+			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
+			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
+		},
 	}
 
 	ResourceRegistry = map[string]*Description{
@@ -385,6 +392,10 @@ var (
 		"vault_aws_auth_backend_client": {
 			Resource:      UpdateSchemaResource(awsAuthBackendClientResource()),
 			PathInventory: []string{"/auth/aws/config/client"},
+		},
+		"vault_aws_auth_backend_config_identity": {
+			Resource:      awsAuthBackendConfigIdentityResource(),
+			PathInventory: []string{"/auth/aws/config/identity"},
 		},
 		"vault_aws_auth_backend_identity_whitelist": {
 			Resource:      UpdateSchemaResource(awsAuthBackendIdentityWhitelistResource()),
@@ -481,6 +492,10 @@ var (
 		"vault_gcp_secret_backend": {
 			Resource:      UpdateSchemaResource(gcpSecretBackendResource("vault_gcp_secret_backend")),
 			PathInventory: []string{"/gcp/config"},
+		},
+		"vault_gcp_secret_impersonated_account": {
+			Resource:      UpdateSchemaResource(gcpSecretImpersonatedAccountResource()),
+			PathInventory: []string{"/gcp/impersonated-account/{name}"},
 		},
 		"vault_gcp_secret_roleset": {
 			Resource:      UpdateSchemaResource(gcpSecretRolesetResource()),
@@ -600,6 +615,10 @@ var (
 		"vault_audit": {
 			Resource:      UpdateSchemaResource(auditResource()),
 			PathInventory: []string{"/sys/audit/{path}"},
+		},
+		"vault_audit_request_header": {
+			Resource:      UpdateSchemaResource(auditRequestHeaderResource()),
+			PathInventory: []string{"/sys/config/auditing/request-headers/{path}"},
 		},
 		"vault_ssh_secret_backend_ca": {
 			Resource:      UpdateSchemaResource(sshSecretBackendCAResource()),
@@ -760,6 +779,14 @@ var (
 			Resource:      UpdateSchemaResource(kmipSecretRoleResource()),
 			PathInventory: []string{"/kmip/scope/{scope}/role/{role}"},
 		},
+		"vault_mongodbatlas_secret_backend": {
+			Resource:      UpdateSchemaResource(mongodbAtlasSecretBackendResource()),
+			PathInventory: []string{"/mongodbatlas/config"},
+		},
+		"vault_mongodbatlas_secret_role": {
+			Resource:      UpdateSchemaResource(mongodbAtlasSecretRoleResource()),
+			PathInventory: []string{"/mongodbatlas/roles/{name}"},
+		},
 		"vault_identity_oidc_scope": {
 			Resource:      UpdateSchemaResource(identityOIDCScopeResource()),
 			PathInventory: []string{"/identity/oidc/scope/{scope}"},
@@ -860,7 +887,20 @@ func MountCreateContextWrapper(f schema.CreateContextFunc, minVersion *version.V
 func importNamespace(d *schema.ResourceData) error {
 	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
 		s := d.State()
-		if _, ok := s.Attributes[consts.FieldNamespace]; !ok {
+		var attemptNamespaceImport bool
+		if s.Empty() {
+			// state does not yet exist or is empty
+			// import is acceptable
+			attemptNamespaceImport = true
+		} else {
+			// only import if namespace
+			// is not already set in state
+			s.Lock()
+			defer s.Unlock()
+			_, ok := s.Attributes[consts.FieldNamespace]
+			attemptNamespaceImport = !ok
+		}
+		if attemptNamespaceImport {
 			log.Printf(`[INFO] Environment variable %s set, `+
 				`attempting TF state import "%s=%s"`,
 				consts.EnvVarVaultNamespaceImport, consts.FieldNamespace, ns)

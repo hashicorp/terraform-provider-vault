@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -22,7 +25,10 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
-const DefaultMaxHTTPRetries = 2
+const (
+	DefaultMaxHTTPRetries = 2
+	enterpriseMetadata    = "ent"
+)
 
 var (
 	MaxHTTPRetriesCCC int
@@ -31,6 +37,7 @@ var (
 	VaultVersion110 = version.Must(version.NewSemver(consts.VaultVersion110))
 	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion111))
 	VaultVersion112 = version.Must(version.NewSemver(consts.VaultVersion112))
+	VaultVersion113 = version.Must(version.NewSemver(consts.VaultVersion113))
 )
 
 // ProviderMeta provides resources with access to the Vault client and
@@ -99,6 +106,18 @@ func (p *ProviderMeta) IsAPISupported(minVersion *version.Version) bool {
 		return false
 	}
 	return ver.GreaterThanOrEqual(minVersion)
+}
+
+// IsEnterpriseSupported returns a boolean
+// describing whether the ProviderMeta
+// vaultVersion supports enterprise
+// features.
+func (p *ProviderMeta) IsEnterpriseSupported() bool {
+	ver := p.GetVaultVersion()
+	if ver == nil {
+		return false
+	}
+	return strings.Contains(ver.Metadata(), enterpriseMetadata)
 }
 
 // GetVaultVersion returns the providerMeta
@@ -335,6 +354,21 @@ func IsAPISupported(meta interface{}, minVersion *version.Version) bool {
 	}
 
 	return p.IsAPISupported(minVersion)
+}
+
+// IsEnterpriseSupported confirms that
+// the providerMeta API supports enterprise
+// features.
+func IsEnterpriseSupported(meta interface{}) bool {
+	var p *ProviderMeta
+	switch v := meta.(type) {
+	case *ProviderMeta:
+		p = v
+	default:
+		panic(fmt.Sprintf("meta argument must be a %T, not %T", p, meta))
+	}
+
+	return p.IsEnterpriseSupported()
 }
 
 func getVaultVersion(client *api.Client) (*version.Version, error) {

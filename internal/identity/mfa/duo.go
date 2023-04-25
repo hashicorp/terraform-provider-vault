@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mfa
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const (
@@ -47,11 +51,14 @@ var duoSchemaMap = map[string]*schema.Schema{
 	},
 }
 
+// GetDuoSchemaResource returns the resource needed to provision an identity/mfa/duo resource.
 func GetDuoSchemaResource() (*schema.Resource, error) {
 	config, _ := NewContextFuncConfig(MethodTypeDuo, PathTypeMethodID, nil, nil, map[string]string{
 		// API is inconsistent between create/update and read.
 		"pushinfo": consts.FieldPushInfo,
-	})
+	}, nil)
+
+	config.setAPIValueGetter(consts.FieldUsernameFormat, util.GetAPIRequestValue)
 
 	return getMethodSchemaResource(duoSchemaMap, config), nil
 }

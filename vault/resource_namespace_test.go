@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -83,6 +86,12 @@ func TestAccNamespace(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					append(checks, getNestedChecks(0)...)...,
 				),
+			},
+			{
+				Config: testNestedNamespaces(namespacePath+"-foo", 0),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceNameParent, consts.FieldPath, namespacePath+"-foo"),
+					testNamespaceDestroy(namespacePath)),
 			},
 		},
 	})

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package util
 
 import (
@@ -18,7 +21,13 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
-func JsonDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
+type (
+	// VaultAPIValueGetter returns the value from the *schema.ResourceData for a key,
+	// along with a boolean that denotes the key's existence.
+	VaultAPIValueGetter func(*schema.ResourceData, string) (interface{}, bool)
+)
+
+func JsonDiffSuppress(k, old, new string, _ *schema.ResourceData) bool {
 	var oldJSON, newJSON interface{}
 	err := json.Unmarshal([]byte(old), &oldJSON)
 	if err != nil {
@@ -190,7 +199,7 @@ func ParsePath(userSuppliedPath, endpoint string, d *schema.ResourceData) string
 		if !ok {
 			continue
 		}
-		// All path parameters must be strings so it's safe to
+		// All path parameters must be strings, so it's safe to
 		// assume here.
 		val := valRaw.(string)
 		recomprised = strings.Replace(recomprised, fmt.Sprintf("{%s}", field), val, -1)
@@ -360,14 +369,64 @@ func GetAPIRequestDataWithSlice(d *schema.ResourceData, fields []string) map[str
 	return data
 }
 
-func getAPIRequestValue(d *schema.ResourceData, k string) interface{} {
-	sv := d.Get(k)
-	switch v := sv.(type) {
-	case *schema.Set:
-		return v.List()
-	default:
-		return sv
+// GetAPIRequestDataWithSliceOk to pass to Vault from schema.ResourceData.
+// Only field values that are set in schema.ResourceData will be returned
+func GetAPIRequestDataWithSliceOk(d *schema.ResourceData, fields []string) map[string]interface{} {
+	return getAPIRequestDataWithSlice(d, GetAPIRequestValueOk, fields)
+}
+
+// GetAPIRequestDataWithSliceOkExists to pass to Vault from schema.ResourceData.
+// Only field values that are set in schema.ResourceData will be returned
+func GetAPIRequestDataWithSliceOkExists(d *schema.ResourceData, fields []string) map[string]interface{} {
+	return getAPIRequestDataWithSlice(d, GetAPIRequestValueOkExists, fields)
+}
+
+func getAPIRequestDataWithSlice(d *schema.ResourceData, f VaultAPIValueGetter, fields []string) map[string]interface{} {
+	data := make(map[string]interface{})
+	for _, k := range fields {
+		if v, ok := f(d, k); ok {
+			data[k] = v
+		}
 	}
+
+	return data
+}
+
+func getAPIRequestValue(d *schema.ResourceData, k string) interface{} {
+	return getAPIValue(d.Get(k))
+}
+
+func getAPIValue(i interface{}) interface{} {
+	switch s := i.(type) {
+	case *schema.Set:
+		return s.List()
+	default:
+		return s
+	}
+}
+
+// GetAPIRequestValueOk returns the Vault API compatible value from *schema.ResourceData for provided key,
+// along with boolean representing keys existence in the resource data.
+// This is equivalent to calling the schema.ResourceData's GetOk() method.
+func GetAPIRequestValueOk(d *schema.ResourceData, k string) (interface{}, bool) {
+	sv, ok := d.GetOk(k)
+	return getAPIValue(sv), ok
+}
+
+// GetAPIRequestValueOkExists returns the Vault API compatible value from *schema.ResourceData for provided key,
+// along with boolean representing keys existence in the resource data.
+// This is equivalent to calling the schema.ResourceData's deprecated GetOkExists() method.
+func GetAPIRequestValueOkExists(d *schema.ResourceData, k string) (interface{}, bool) {
+	sv, ok := d.GetOkExists(k)
+	return getAPIValue(sv), ok
+}
+
+// GetAPIRequestValue returns the value from *schema.ResourceData for provide key.
+// The existence boolean is always true, so it should be ignored,
+// this is done  in order to satisfy the VaultAPIValueGetter type.
+// This is equivalent to calling the schema.ResourceData's Get() method.
+func GetAPIRequestValue(d *schema.ResourceData, k string) (interface{}, bool) {
+	return getAPIValue(d.Get(k)), true
 }
 
 func Remount(d *schema.ResourceData, client *api.Client, mountField string, isAuthMount bool) (string, error) {
@@ -379,7 +438,6 @@ func Remount(d *schema.ResourceData, client *api.Client, mountField string, isAu
 		o, n := d.GetChange(mountField)
 		oldPath := o.(string)
 		newPath := n.(string)
-
 		if isAuthMount {
 			oldPath = "auth/" + oldPath
 			newPath = "auth/" + newPath
