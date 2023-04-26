@@ -5,8 +5,9 @@ package vault
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"testing"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -45,6 +46,20 @@ func TestLDAPSecretBackend(t *testing.T) {
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
+				Config: testLDAPSecretBackendConfig_defaults(bindDN, bindPass),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, "ldap"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, description),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPass, bindPass),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, "ldap://127.0.0.1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUserDN, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldInsecureTLS, "false"),
+				),
+			},
+			{
 				Config: testLDAPSecretBackendConfig(path, description, bindDN, bindPass, url, userDN, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
@@ -76,6 +91,16 @@ func TestLDAPSecretBackend(t *testing.T) {
 				consts.FieldBindPass, consts.FieldSchema, consts.FieldDescription, consts.FieldDisableRemount),
 		},
 	})
+}
+
+// testLDAPSecretBackendConfig_defaults is used to setup the backend defaults.
+func testLDAPSecretBackendConfig_defaults(bindDN, bindPass string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  description               = "test description"
+  binddn                    = "%s"
+  bindpass                  = "%s"
+}`, bindDN, bindPass)
 }
 
 func testLDAPSecretBackendConfig(mount, description, bindDN, bindPass, url, userDN string, insecureTLS bool) string {

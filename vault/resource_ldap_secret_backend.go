@@ -17,6 +17,13 @@ import (
 
 func ldapSecretBackendResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
+		consts.FieldPath: {
+			Type:         schema.TypeString,
+			Default:      consts.MountTypeLDAP,
+			Optional:     true,
+			Description:  "The path where the LDAP secrets backend is mounted.",
+			ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
+		},
 		consts.FieldBindDN: {
 			Type:        schema.TypeString,
 			Required:    true,
@@ -117,7 +124,7 @@ func ldapSecretBackendResource() *schema.Resource {
 	})
 
 	// Add common mount schema to the resource
-	provider.MustAddSchema(resource, getMountSchema("type"))
+	provider.MustAddSchema(resource, getMountSchema("path", "type"))
 	return resource
 }
 
