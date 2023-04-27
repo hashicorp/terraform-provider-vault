@@ -20,6 +20,7 @@ var (
 	kmsType = "kms"
 
 	pkiSecretMountFromPathRegex = regexp.MustCompile("^(.+)/key/.+$")
+	pkiSecretKeyIDFromPathRegex = regexp.MustCompile("^.+/key/(.+)$")
 )
 
 func pkiSecretBackendKeyResource() *schema.Resource {
@@ -42,6 +43,7 @@ func pkiSecretBackendKeyResource() *schema.Resource {
 			consts.FieldType: {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Description: "Specifies the type of the key to create.",
 			},
 			consts.FieldKeyName: {
@@ -52,12 +54,19 @@ func pkiSecretBackendKeyResource() *schema.Resource {
 			consts.FieldKeyType: {
 				Type:        schema.TypeString,
 				Optional:    true,
+				ForceNew:    true,
 				Description: "Specifies the desired key type; must be 'rsa', 'ed25519' or 'ec'.",
 			},
 			consts.FieldKeyBits: {
 				Type:        schema.TypeInt,
 				Optional:    true,
+				ForceNew:    true,
 				Description: "Specifies the number of bits to use for the generated keys.",
+			},
+			consts.FieldKeyID: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID of the generated key.",
 			},
 			consts.FieldManagedKeyName: {
 				Type:        schema.TypeString,
@@ -135,8 +144,17 @@ func pkiSecretBackendKeyRead(_ context.Context, d *schema.ResourceData, meta int
 		return diag.FromErr(err)
 	}
 
-	// set mount
+	keyID, err := pkiSecretKeyIDFromPath(keyPath)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	// set mount and keyID
 	if err := d.Set(consts.FieldMount, mount); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldKeyID, keyID); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -199,6 +217,17 @@ func pkiSecretMountFromPath(path string) (string, error) {
 	res := pkiSecretMountFromPathRegex.FindStringSubmatch(path)
 	if len(res) != 2 {
 		return "", fmt.Errorf("unexpected number of matches (%d) for mount", len(res))
+	}
+	return res[1], nil
+}
+
+func pkiSecretKeyIDFromPath(path string) (string, error) {
+	if !pkiSecretKeyIDFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no key ID found")
+	}
+	res := pkiSecretKeyIDFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for key ID", len(res))
 	}
 	return res[1], nil
 }
