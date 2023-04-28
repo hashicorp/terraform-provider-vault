@@ -59,7 +59,9 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+The following attributes are exported:
+
+* `key_id` - ID of the generated key.
 
 ## Import
 
