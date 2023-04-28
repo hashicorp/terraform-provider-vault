@@ -44,7 +44,6 @@ func TestAccAppRoleAuthBackendRoleSecretID_basic(t *testing.T) {
 func TestAccAppRoleAuthBackendRoleSecretID_wrapped(t *testing.T) {
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
-	withWrappedAccessor := false
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -52,7 +51,7 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped(t *testing.T) {
 		CheckDestroy: testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role, withWrappedAccessor),
+				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
 					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
@@ -65,9 +64,10 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped(t *testing.T) {
 }
 
 func TestAccAppRoleAuthBackendRoleSecretID_wrapped_withWrappedAccessor(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
-	withWrappedAccessor := true
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -75,7 +75,7 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_withWrappedAccessor(t *testin
 		CheckDestroy: testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role, withWrappedAccessor),
+				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
 					resource.TestCheckResourceAttr(secretIDResource, "role_name", role),
@@ -90,11 +90,26 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_withWrappedAccessor(t *testin
 }
 
 func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
-	withWrappedAccessor := false
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
+
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+
+	t.Cleanup(func() {
+		if _, err := client.Logical().Delete(SysNamespaceRoot + namespacePath); err != nil {
+			t.Errorf("failed to delete parent namespace %q, err=%s", namespacePath, err)
+		}
+	})
+
+	// create the namespace for the provider
+	if _, err := client.Logical().Write(SysNamespaceRoot+namespacePath, nil); err != nil {
+		t.Fatal(err)
+	}
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testutil.TestEntPreCheck(t) },
 		Providers: testProviders,
@@ -106,11 +121,7 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testNamespaceConfig(namespacePath),
-				Check:  testNamespaceCheckAttrs(),
-			},
-			{
-				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped_namespace(namespacePath, backend, role, withWrappedAccessor),
+				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped_namespace(namespacePath, backend, role, false),
 				Check: resource.ComposeTestCheckFunc(
 					testAssertClientNamespace(namespacePath),
 					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
@@ -126,7 +137,6 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace(t *testing.T) {
 func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace_withWrappedAccessor(t *testing.T) {
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
-	withWrappedAccessor := true
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
 	resource.Test(t, resource.TestCase{
@@ -144,7 +154,7 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace_withWrappedAccessor
 				Check:  testNamespaceCheckAttrs(),
 			},
 			{
-				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped_namespace(namespacePath, backend, role, withWrappedAccessor),
+				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped_namespace(namespacePath, backend, role, true),
 				Check: resource.ComposeTestCheckFunc(
 					testAssertClientNamespace(namespacePath),
 					resource.TestCheckResourceAttr(secretIDResource, "backend", backend),
@@ -279,13 +289,15 @@ resource "vault_approle_auth_backend_role_secret_id" "secret_id" {
 }
 
 func testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped_namespace(namespacePath, backend, role string, withWrappedAccessor bool) string {
-	return fmt.Sprintf(`
+	config := fmt.Sprintf(`
 provider "vault" {
 	namespace = %q
 }
 
 %s
 `, namespacePath, testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role, withWrappedAccessor))
+
+	return config
 }
 
 func testAssertClientNamespace(expectedNS string) resource.TestCheckFunc {
