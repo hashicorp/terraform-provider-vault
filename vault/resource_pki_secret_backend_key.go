@@ -25,8 +25,8 @@ var (
 
 func pkiSecretBackendKeyResource() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: MountCreateContextWrapper(pkiSecretBackendKeyWrite, provider.VaultVersion111),
-		UpdateContext: pkiSecretBackendKeyWrite,
+		CreateContext: MountCreateContextWrapper(pkiSecretBackendKeyCreate, provider.VaultVersion111),
+		UpdateContext: pkiSecretBackendKeyUpdate,
 		DeleteContext: pkiSecretBackendKeyDelete,
 		ReadContext:   ReadContextWrapper(ReadContextWrapper(pkiSecretBackendKeyRead)),
 		Importer: &schema.ResourceImporter{
@@ -90,7 +90,7 @@ func getPKIKeysIDPath(mount, keyID string) string {
 	return fmt.Sprintf("%s/key/%s", mount, keyID)
 }
 
-func pkiSecretBackendKeyWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func pkiSecretBackendKeyCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -115,7 +115,7 @@ func pkiSecretBackendKeyWrite(ctx context.Context, d *schema.ResourceData, meta 
 		data[k] = d.Get(k)
 	}
 
-	resp, err := client.Logical().Write(keyPath, data)
+	resp, err := client.Logical().WriteWithContext(ctx, keyPath, data)
 	if err != nil {
 		return diag.Errorf("error writing data to %q, err=%s", keyPath, err)
 	}
@@ -130,7 +130,39 @@ func pkiSecretBackendKeyWrite(ctx context.Context, d *schema.ResourceData, meta 
 	return pkiSecretBackendKeyRead(ctx, d, meta)
 }
 
-func pkiSecretBackendKeyRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func pkiSecretBackendKeyUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return diag.FromErr(e)
+	}
+
+	keyPath := d.Id()
+
+	// at present, only key_name can be patched
+	// set up configurable fields to extend this in the future
+	configurableFields := []string{consts.FieldKeyName}
+
+	var patchRequired bool
+	data := map[string]interface{}{}
+	for _, k := range configurableFields {
+		if d.HasChange(k) {
+			data[k] = d.Get(k)
+			patchRequired = true
+		}
+	}
+
+	// only write to Vault if a patch is required
+	if patchRequired {
+		_, err := client.Logical().WriteWithContext(ctx, keyPath, data)
+		if err != nil {
+			return diag.Errorf("error writing data to %q, err=%s", keyPath, err)
+		}
+	}
+
+	return pkiSecretBackendKeyRead(ctx, d, meta)
+}
+
+func pkiSecretBackendKeyRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -159,7 +191,7 @@ func pkiSecretBackendKeyRead(_ context.Context, d *schema.ResourceData, meta int
 	}
 
 	log.Printf("[DEBUG] Reading %s from Vault", keyPath)
-	resp, err := client.Logical().Read(keyPath)
+	resp, err := client.Logical().ReadWithContext(ctx, keyPath)
 	if err != nil {
 		return diag.Errorf("error reading from Vault: %s", err)
 	}
@@ -193,7 +225,7 @@ func pkiSecretBackendKeyRead(_ context.Context, d *schema.ResourceData, meta int
 	return nil
 }
 
-func pkiSecretBackendKeyDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func pkiSecretBackendKeyDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -202,7 +234,7 @@ func pkiSecretBackendKeyDelete(_ context.Context, d *schema.ResourceData, meta i
 	keyPath := d.Id()
 
 	log.Printf("[DEBUG] Deleting PKI Key at %q", keyPath)
-	_, err := client.Logical().Delete(keyPath)
+	_, err := client.Logical().DeleteWithContext(ctx, keyPath)
 	if err != nil {
 		return diag.Errorf("error deleting %q from Vault: %q", keyPath, err)
 	}

@@ -134,8 +134,8 @@ func testPKIKeyUpdate(resourceName string, store *testPKIKeyStore, expectedEqual
 			return fmt.Errorf("key_id not found in state")
 		}
 
-		if (store.id == id) && !expectedEqual {
-			return fmt.Errorf("expected key ID to be updated, but got unchanged ID %s", id)
+		if (store.id == id) != expectedEqual {
+			return fmt.Errorf("expectedEqual=%v, got IDs %s and %s", expectedEqual, id, store.id)
 		}
 
 		return nil
