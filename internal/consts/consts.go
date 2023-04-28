@@ -239,6 +239,8 @@ const (
 	FieldDeletionLDIF               = "deletion_ldif"
 	FieldRollbackLDIF               = "rollback_ldif"
 	FieldUsernameTemplate           = "username_template"
+	FieldSetName                    = "set_name"
+	FieldServiceAccountNames        = "service_account_names"
 
 	/*
 		common environment variables
