@@ -29,7 +29,7 @@ changetype: delete`
 
 func TestAccLDAPSecretBackendDynamicRole(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test-ldap-dynamic-role")
-	bindDN, bindPass, url := testutil.GetTestLDAPCreds(t)
+	bindDN, bindPass, _ := testutil.GetTestLDAPCreds(t)
 	resourceType := "vault_ldap_secret_backend_dynamic_role"
 	resourceName := resourceType + ".role"
 
@@ -42,7 +42,7 @@ func TestAccLDAPSecretBackendDynamicRole(t *testing.T) {
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPSecretBackendDynamicRoleConfig_defaults(roleName, bindDN, bindPass, url),
+				Config: testLDAPSecretBackendDynamicRoleConfig_defaults(roleName, bindDN, bindPass),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCreationLDIF, creationLDIF+"\n"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionLDIF, deletionLDIF+"\n"),
@@ -53,7 +53,7 @@ func TestAccLDAPSecretBackendDynamicRole(t *testing.T) {
 				),
 			},
 			{
-				Config: testLDAPSecretBackendDynamicRoleConfig(roleName, bindDN, bindPass, url, "20", "40"),
+				Config: testLDAPSecretBackendDynamicRoleConfig(roleName, bindDN, bindPass, "20", "40"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCreationLDIF, creationLDIF+"\n"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionLDIF, deletionLDIF+"\n"),
@@ -70,7 +70,7 @@ func TestAccLDAPSecretBackendDynamicRole(t *testing.T) {
 
 // testLDAPSecretBackendDynamicRoleConfig_defaults sets up default and required
 // fields.
-func testLDAPSecretBackendDynamicRoleConfig_defaults(roleName, bindDN, bindPass, url string) string {
+func testLDAPSecretBackendDynamicRoleConfig_defaults(roleName, bindDN, bindPass string) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_secret_backend" "test" {
   description               = "test description"
@@ -93,7 +93,7 @@ EOT
 `, bindDN, bindPass, roleName, creationLDIF, deletionLDIF)
 }
 
-func testLDAPSecretBackendDynamicRoleConfig(roleName, bindDN, bindPass, url, defaultTTL, maxTTL string) string {
+func testLDAPSecretBackendDynamicRoleConfig(roleName, bindDN, bindPass, defaultTTL, maxTTL string) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_secret_backend" "test" {
   description               = "test description"
