@@ -259,11 +259,13 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		}
 	}
 
-	if token == "" {
-		return nil, errors.New("vault token is empty")
+	if token != "" {
+		client.SetToken(token)
+	}
+	if client.Token() == "" {
+		return nil, errors.New("no vault token set on Client")
 	}
 
-	client.SetToken(token)
 	if !d.Get(consts.FieldSkipChildToken).(bool) {
 		tokenInfo, err := client.Auth().Token().LookupSelf()
 		if err != nil {
