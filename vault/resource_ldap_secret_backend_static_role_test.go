@@ -51,7 +51,7 @@ func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, updatedRotationPeriod),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldPath, consts.FieldRole),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldPath, consts.FieldRoleName),
 		},
 	})
 }
@@ -71,7 +71,7 @@ resource "vault_ldap_secret_backend_static_role" "role" {
     path            = vault_ldap_secret_backend.test.path
     username        = "%s"
     dn              = "%s"
-    role            = "%s"
+    role_name       = "%s"
     rotation_period = %s
 }
 `, mount, bindDN, bindPass, url, username, dn, role, rotationPeriod)
