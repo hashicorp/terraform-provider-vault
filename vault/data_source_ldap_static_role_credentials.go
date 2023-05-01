@@ -57,7 +57,6 @@ func ldapStaticCredDataSource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "How often Vault should rotate the password of the user entry.",
-				Sensitive:   true,
 			},
 			consts.FieldTTL: {
 				Type:        schema.TypeString,
