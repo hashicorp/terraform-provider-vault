@@ -54,12 +54,11 @@ services:
     environment:
       - LDAP_ADMIN_USERNAME=admin
       - LDAP_ADMIN_PASSWORD=adminpassword
-      - LDAP_ORGANISATION=example
-      - LDAP_DOMAIN=example.com
-      # - LDAP_USERS=alice,bob
-      # - LDAP_PASSWORDS=password1,password2
-      # - LDAP_ROOT=ou=users,dc=example,dc=org
-      # - LDAP_CUSTOM_LDIF_DIR=/ldifs
-    # volumes:
-      #  - './testdata/ldap:/ldifs'
-      #  - './testdata/openldap_data:/bitnami/openldap'
+      - LDAP_USERS=alice,bob
+      - LDAP_PASSWORDS=password1,password2
+
+  bootstrap_openldap:
+    image: docker.io/bitnami/openldap:2.6
+    depends_on:
+      - openldap
+    command: ldapadd -x -w "adminpassword" -D "cn=admin,dc=example,dc=org" -f ./testdata/ldap/seed.ldif -v -h 127.0.0.1:1389 -c

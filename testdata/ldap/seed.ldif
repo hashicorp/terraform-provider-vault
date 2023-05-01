@@ -1,0 +1,45 @@
+# Define Organizational Units
+dn: ou=groups,dc=example,dc=org
+objectClass: organizationalUnit
+ou: groups
+
+dn: ou=users,dc=example,dc=org
+objectClass: organizationalUnit
+ou: users
+
+dn: cn=dev,ou=groups,dc=example,dc=org
+objectClass: groupOfUniqueNames
+cn: dev
+uniqueMember: cn=staticuser,ou=users,dc=example,dc=org
+uniqueMember: cn=bob.johnson,ou=users,dc=example,dc=org
+uniqueMember: cn=mary.smith,ou=users,dc=example,dc=org
+description: Development group
+
+# Add users for static role rotation
+dn: uid=staticuser,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+cn: staticuser
+sn: staticuser
+uid: staticuser
+userPassword: defaultpassword
+
+dn: uid=bob.johnson,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+cn: bob.johnson
+sn: bob.johnson
+uid: bob.johnson
+userPassword: defaultpassword
+
+dn: uid=mary.smith,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+cn: mary.smith
+sn: mary.smith
+uid: mary.smith
+userPassword: defaultpassword
+
+dn: uid=foo.bar,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+cn: foo.bar
+sn: foo.bar
+uid: foo.bar
+userPassword: defaultpassword
