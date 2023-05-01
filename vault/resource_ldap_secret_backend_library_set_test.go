@@ -33,27 +33,27 @@ func TestAccLDAPSecretBackendLibrarySet(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, setName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".#", "2"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".0", "bob.johnson"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".1", "mary.smith"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".0", "bob"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".1", "alice"),
 				),
 			},
 			{
-				Config: testLDAPSecretBackendLibrarySetConfig(bindDN, bindPass, url, setName, "20", "40", `"bob.johnson"`),
+				Config: testLDAPSecretBackendLibrarySetConfig(bindDN, bindPass, url, setName, "20", "40", `"bob"`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, setName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".0", "bob.johnson"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".0", "bob"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "20"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "40"),
 				),
 			},
 			{
-				Config: testLDAPSecretBackendLibrarySetConfig(bindDN, bindPass, url, setName, "20", "40", `"bob.johnson","foo.bar"`),
+				Config: testLDAPSecretBackendLibrarySetConfig(bindDN, bindPass, url, setName, "20", "40", `"bob","foo"`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, setName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".#", "2"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".0", "bob.johnson"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".1", "foo.bar"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".0", "bob"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".1", "foo"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "20"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "40"),
 				),
@@ -78,7 +78,7 @@ resource "vault_ldap_secret_backend" "test" {
 resource "vault_ldap_secret_backend_library_set" "set" {
   path                  = vault_ldap_secret_backend.test.path
   name                  = "%s"
-  service_account_names = ["bob.johnson","mary.smith"]
+  service_account_names = ["bob","alice"]
 }
 `, bindDN, bindPass, url, setName)
 }

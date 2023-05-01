@@ -54,13 +54,5 @@ services:
     environment:
       - LDAP_ADMIN_USERNAME=admin
       - LDAP_ADMIN_PASSWORD=adminpassword
-      - LDAP_USERS=alice,bob
-      - LDAP_PASSWORDS=password1,password2
-
-  # openldap_setup will seed the openldap container with ldif data
-  openldap_setup:
-    image: docker.io/bitnami/openldap:2.6
-    depends_on:
-      - openldap
-    restart: "no"
-    entrypoint: [ "bash", "-c", "ldapadd -x -w \"adminpassword\" -D \"cn=admin,dc=example,dc=org\" -f ./testdata/ldap/seed.ldif -v -h openldap:1389 -c"]
+      - LDAP_USERS=alice,bob,foo
+      - LDAP_PASSWORDS=password1,password2,password3
