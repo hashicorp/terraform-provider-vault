@@ -28,15 +28,15 @@ resource "vault_ldap_secret_backend" "test" {
 }
 
 resource "vault_ldap_secret_backend_static_role" "role" {
-  path = vault_ldap_secret_backend.test.path
-  username = "alice"
-  role = "alice"
+  path            = vault_ldap_secret_backend.test.path
+  username        = "alice"
+  role_name       = "alice"
   rotation_period = 60
 }
 
 data "vault_ldap_static_credentials" "creds" {
-  path = vault_ldap_secret_backend.test.path
-  role  = vault_ldap_secret_backend_static_role.role.role
+  path      = vault_ldap_secret_backend.test.path
+  role_name = vault_ldap_secret_backend_static_role.role.role_name
 }
 ```
 
@@ -52,7 +52,7 @@ The following arguments are supported:
 * `path` - (Required) The path to the LDAP secret backend to
 read credentials from, with no leading or trailing `/`s.
 
-* `role` - (Required) The name of the LDAP secret backend static role to read
+* `role_name` - (Required) The name of the LDAP secret backend static role to read
 credentials from, with no leading or trailing `/`s.
 
 ## Attributes Reference

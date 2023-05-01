@@ -57,13 +57,13 @@ resource "vault_ldap_secret_backend_static_role" "role" {
     path = vault_ldap_secret_backend.test.path
     username = "%s"
     dn = "%s"
-    role = "%s"
+    role_name = "%s"
     rotation_period = 60
 }
 
 data "vault_ldap_static_credentials" "creds" {
   path = vault_ldap_secret_backend.test.path
-  role  = vault_ldap_secret_backend_static_role.role.role
+  role_name  = vault_ldap_secret_backend_static_role.role.role_name
 }
 `, path, bindDN, bindPass, url, username, dn, username)
 }
