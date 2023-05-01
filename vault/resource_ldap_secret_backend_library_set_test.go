@@ -35,6 +35,7 @@ func TestAccLDAPSecretBackendLibrarySet(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".#", "2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".0", "bob"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".1", "alice"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableCheckInEnforcement, "false"),
 				),
 			},
 			{
@@ -45,6 +46,7 @@ func TestAccLDAPSecretBackendLibrarySet(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".0", "bob"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "20"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "40"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableCheckInEnforcement, "true"),
 				),
 			},
 			{
@@ -56,6 +58,7 @@ func TestAccLDAPSecretBackendLibrarySet(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".1", "foo"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "20"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "40"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableCheckInEnforcement, "true"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldPath, consts.FieldName),
@@ -99,6 +102,8 @@ resource "vault_ldap_secret_backend_library_set" "set" {
   ttl                   = %s
   max_ttl               = %s
   service_account_names = [%s]
+
+  disable_check_in_enforcement = true
 }
 `, bindDN, bindPass, url, setName, ttl, maxTTL, saNames)
 }

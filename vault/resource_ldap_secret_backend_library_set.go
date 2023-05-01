@@ -51,6 +51,11 @@ func ldapSecretBackendLibrarySetResource() *schema.Resource {
 			Description: "The maximum amount of time a check-out last with renewal before Vault automatically checks it back in. Defaults to 24 hours.",
 			Default:     "86400",
 		},
+		consts.FieldDisableCheckInEnforcement: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "Disable enforcing that service accounts must be checked in by the entity or client token that checked them out.",
+		},
 	}
 	return &schema.Resource{
 		CreateContext: createUpdateLDAPLibrarySetResource,
@@ -69,6 +74,7 @@ var ldapSecretBackendLibrarySetFields = []string{
 	consts.FieldServiceAccountNames,
 	consts.FieldTTL,
 	consts.FieldMaxTTL,
+	consts.FieldDisableCheckInEnforcement,
 }
 
 func createUpdateLDAPLibrarySetResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
