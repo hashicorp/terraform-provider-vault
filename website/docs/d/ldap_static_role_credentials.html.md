@@ -28,7 +28,7 @@ resource "vault_ldap_secret_backend" "test" {
 }
 
 resource "vault_ldap_secret_backend_static_role" "role" {
-  path            = vault_ldap_secret_backend.test.path
+  mount            = vault_ldap_secret_backend.test.path
   username        = "alice"
   role_name       = "alice"
   rotation_period = 60
