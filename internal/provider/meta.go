@@ -240,11 +240,6 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 			clone.SetNamespace(namespace)
 		}
 
-		if namespace != "" {
-			// set the namespace on the parent
-			client.SetNamespace(namespace)
-		}
-
 		secret, err := authLogin.Login(clone)
 		if err != nil {
 			return nil, err
@@ -269,18 +264,16 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	if !d.Get(consts.FieldSkipChildToken).(bool) {
 		tokenInfo, err := client.Auth().Token().LookupSelf()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to lookup token, err=%w", err)
 		}
 
-		var parentNamespace string
+		var tokenNamespace string
 		if tokenNamespaceRaw, ok := tokenInfo.Data[consts.FieldNamespacePath]; ok {
-			tokenNamespace := strings.Trim(tokenNamespaceRaw.(string), "/")
-			if tokenNamespace != "" {
-				parentNamespace = tokenNamespace
-			}
+			tokenNamespace = strings.Trim(tokenNamespaceRaw.(string), "/")
 		}
 
-		token, err = createChildToken(d, client, parentNamespace)
+		// a child token is always created in the namespace of the parent token.
+		token, err = createChildToken(d, client, tokenNamespace)
 		if err != nil {
 			return nil, err
 		}
@@ -424,7 +417,7 @@ func getVaultVersion(client *api.Client) (*version.Version, error) {
 	return version.Must(version.NewSemver(resp.Version)), nil
 }
 
-func createChildToken(d *schema.ResourceData, c *api.Client, parentNamespace string) (string, error) {
+func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (string, error) {
 	tokenName := d.Get("token_name").(string)
 	if tokenName == "" {
 		tokenName = "terraform"
@@ -435,11 +428,10 @@ func createChildToken(d *schema.ResourceData, c *api.Client, parentNamespace str
 		return "", err
 	}
 
-	if parentNamespace != "" {
-		log.Printf("[INFO] Creating child token, namespace=%s", parentNamespace)
-		clone.SetNamespace(parentNamespace)
+	if namespace != "" {
+		log.Printf("[INFO] Creating child token, namespace=%q", namespace)
+		clone.SetNamespace(namespace)
 	}
-
 	// In order to enforce our relatively-short lease TTL, we derive a
 	// temporary child token that inherits all the policies of the
 	// token we were given but expires after max_lease_ttl_seconds.
