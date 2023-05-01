@@ -42,7 +42,7 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 			Description: "Distinguished name (DN) of the existing LDAP entry to manage password rotation for.",
 		},
 		consts.FieldRotationPeriod: {
-			Type:        schema.TypeString,
+			Type:        schema.TypeInt,
 			Required:    true,
 			Description: "How often Vault should rotate the password of the user entry.",
 		},

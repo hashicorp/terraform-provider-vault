@@ -54,12 +54,12 @@ func ldapStaticCredDataSource() *schema.Resource {
 				Sensitive:   true,
 			},
 			consts.FieldRotationPeriod: {
-				Type:        schema.TypeString,
+				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "How often Vault should rotate the password of the user entry.",
 			},
 			consts.FieldTTL: {
-				Type:        schema.TypeString,
+				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "Duration in seconds after which the issued credential should expire.",
 			},
@@ -97,13 +97,27 @@ func readLDAPStaticCreds(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 
 	d.SetId(response.username)
-	d.Set(consts.FieldDN, response.dn)
-	d.Set(consts.FieldLastPassword, response.lastPassword)
-	d.Set(consts.FieldLastVaultRotation, response.lastVaultRotation)
-	d.Set(consts.FieldPassword, response.password)
-	d.Set(consts.FieldRotationPeriod, response.rotationPeriod)
-	d.Set(consts.FieldTTL, response.ttl)
-	d.Set(consts.FieldUsername, response.username)
+	if err := d.Set(consts.FieldDN, response.dn); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldLastPassword, response.lastPassword); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldLastVaultRotation, response.lastVaultRotation); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldPassword, response.password); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldRotationPeriod, response.rotationPeriod); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldTTL, response.ttl); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldUsername, response.username); err != nil {
+		return diag.FromErr(err)
+	}
 	return nil
 }
 
@@ -112,8 +126,8 @@ type lDAPStaticCredResponse struct {
 	lastPassword      string
 	lastVaultRotation string
 	password          string
-	rotationPeriod    string
-	ttl               string
+	rotationPeriod    int64
+	ttl               int64
 	username          string
 }
 
@@ -122,8 +136,8 @@ func parseLDAPStaticCredSecret(secret *api.Secret) (lDAPStaticCredResponse, erro
 		dn                string
 		lastPassword      string
 		lastVaultRotation string
-		rotationPeriod    string
-		ttl               string
+		rotationPeriod    int64
+		ttl               int64
 	)
 	if dnRaw, ok := secret.Data[consts.FieldDN]; ok {
 		dn = dnRaw.(string)
@@ -138,11 +152,11 @@ func parseLDAPStaticCredSecret(secret *api.Secret) (lDAPStaticCredResponse, erro
 	}
 
 	if rotationPeriodRaw, ok := secret.Data[consts.FieldRotationPeriod]; ok {
-		rotationPeriod = rotationPeriodRaw.(json.Number).String()
+		rotationPeriod, _ = rotationPeriodRaw.(json.Number).Int64()
 	}
 
 	if ttlRaw, ok := secret.Data[consts.FieldTTL]; ok {
-		ttl = ttlRaw.(json.Number).String()
+		ttl, _ = ttlRaw.(json.Number).Int64()
 	}
 
 	username := secret.Data[consts.FieldUsername].(string)
