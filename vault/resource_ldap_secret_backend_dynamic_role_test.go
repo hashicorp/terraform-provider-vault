@@ -15,14 +15,13 @@ import (
 )
 
 var (
-	creationLDIF = `dn: cn={{.Username}},ou=users,dc=learn,dc=example
+	creationLDIF = `dn: cn={{.Username}},ou=users,dc=example,dc=org
 objectClass: person
 objectClass: top
 cn: learn
 sn: {{.Password | utf16le | base64}}
-memberOf: cn=dev,ou=groups,dc=learn,dc=example
 userPassword: {{.Password}}`
-	deletionLDIF = `dn: cn={{.Username}},ou=users,dc=learn,dc=example
+	deletionLDIF = `dn: cn={{.Username}},ou=users,dc=example,dc=org
 changetype: delete`
 	rollbackLDIF = deletionLDIF
 )
@@ -39,7 +38,7 @@ func TestAccLDAPSecretBackendDynamicRole(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		},
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldMount),
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPSecretBackendDynamicRoleConfig_defaults(roleName, bindDN, bindPass),
@@ -63,7 +62,7 @@ func TestAccLDAPSecretBackendDynamicRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "40"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldPath, consts.FieldRoleName),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName),
 		},
 	})
 }
@@ -79,7 +78,7 @@ resource "vault_ldap_secret_backend" "test" {
 }
 
 resource "vault_ldap_secret_backend_dynamic_role" "role" {
-  path          = vault_ldap_secret_backend.test.path
+  mount         = vault_ldap_secret_backend.test.path
   role_name     = "%s"
   creation_ldif = <<EOT
 %s
@@ -102,7 +101,7 @@ resource "vault_ldap_secret_backend" "test" {
 }
 
 resource "vault_ldap_secret_backend_dynamic_role" "role" {
-  path          = vault_ldap_secret_backend.test.path
+  mount         = vault_ldap_secret_backend.test.path
   role_name     = "%s"
   creation_ldif = <<EOT
 %s

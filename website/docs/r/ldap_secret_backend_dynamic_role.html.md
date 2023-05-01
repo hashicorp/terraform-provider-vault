@@ -30,8 +30,8 @@ resource "vault_ldap_secret_backend" "config" {
 }
 
 resource "vault_ldap_secret_backend_dynamic_role" "role" {
-  path            = vault_ldap_secret_backend.config.path
-  role_name            = "alice"
+  mount         = vault_ldap_secret_backend.config.path
+  role_name     = "alice"
   creation_ldif = <<EOT
 dn: cn={{.Username}},ou=users,dc=learn,dc=example
 objectClass: person
@@ -60,7 +60,7 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
   *Available only for Vault Enterprise*.
 
-* `path` - (Optional) The unique path this backend should be mounted at. Must
+* `mount` - (Optional) The unique path this backend should be mounted at. Must
   not begin or end with a `/`. Defaults to `ldap`.
 
 * `role_name` - (Required) Name of the role.

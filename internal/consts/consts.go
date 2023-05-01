@@ -12,6 +12,7 @@ const (
 	FieldCertificate                = "certificate"
 	FieldClientTLSCert              = "client_tls_cert"
 	FieldClientTLSKey               = "client_tls_key"
+	FieldDistinguishedNames         = "distinguished_names"
 	FieldUPNDomain                  = "upndomain"
 	FieldStartTLS                   = "starttls"
 	FieldRequestTimeout             = "request_timeout"

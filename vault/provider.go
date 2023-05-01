@@ -259,6 +259,10 @@ var (
 			Resource:      UpdateSchemaResource(ldapStaticCredDataSource()),
 			PathInventory: []string{"/ldap/static-cred/{role}"},
 		},
+		"vault_ldap_dynamic_credentials": {
+			Resource:      UpdateSchemaResource(ldapDynamicCredDataSource()),
+			PathInventory: []string{"/ldap/creds/{role}"},
+		},
 		"vault_ad_access_credentials": {
 			Resource:      UpdateSchemaResource(adAccessCredentialsDataSource()),
 			PathInventory: []string{"/ad/creds/{role}"},
