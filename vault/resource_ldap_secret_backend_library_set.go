@@ -24,28 +24,32 @@ func ldapSecretBackendLibrarySetResource() *schema.Resource {
 			Description:  "The path where the LDAP secrets backend is mounted.",
 			ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 		},
-		consts.FieldSetName: {
+		consts.FieldName: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The name of the set of service accounts.",
 			ForceNew:    true,
 		},
 		consts.FieldServiceAccountNames: {
-			Type:        schema.TypeList,
+			Type: schema.TypeList,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
 			Required:    true,
+			ForceNew:    true,
 			Description: "The names of all the service accounts that can be checked out from this set.",
 		},
 		consts.FieldTTL: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "The maximum amount of time a single check-out lasts before Vault automatically checks it back in. Defaults to 24 hours.",
-			Default:     "24h",
+			Default:     "86400",
 		},
 		consts.FieldMaxTTL: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "The maximum amount of time a check-out last with renewal before Vault automatically checks it back in. Defaults to 24 hours.",
-			Default:     "24h",
+			Default:     "86400",
 		},
 	}
 	return &schema.Resource{
@@ -61,11 +65,9 @@ func ldapSecretBackendLibrarySetResource() *schema.Resource {
 }
 
 var ldapSecretBackendLibrarySetFields = []string{
-	consts.FieldCreationLDIF,
-	consts.FieldDeletionLDIF,
-	consts.FieldRollbackLDIF,
-	consts.FieldUsernameTemplate,
-	consts.FieldDefaultTTL,
+	consts.FieldName,
+	consts.FieldServiceAccountNames,
+	consts.FieldTTL,
 	consts.FieldMaxTTL,
 }
 
@@ -76,7 +78,7 @@ func createUpdateLDAPLibrarySetResource(ctx context.Context, d *schema.ResourceD
 	}
 
 	path := d.Get(consts.FieldPath).(string)
-	set := d.Get(consts.FieldSetName).(string)
+	set := d.Get(consts.FieldName).(string)
 	libraryPath := fmt.Sprintf("%s/library/%s", path, set)
 	log.Printf("[DEBUG] Creating LDAP library set at %q", libraryPath)
 	data := map[string]interface{}{}

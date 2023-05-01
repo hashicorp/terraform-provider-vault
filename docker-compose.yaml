@@ -54,5 +54,12 @@ services:
     environment:
       - LDAP_ADMIN_USERNAME=admin
       - LDAP_ADMIN_PASSWORD=adminpassword
-      - LDAP_USERS=alice,bob
-      - LDAP_PASSWORDS=password1,password2
+      - LDAP_ORGANISATION=example
+      - LDAP_DOMAIN=example.com
+      # - LDAP_USERS=alice,bob
+      # - LDAP_PASSWORDS=password1,password2
+      # - LDAP_ROOT=ou=users,dc=example,dc=org
+      # - LDAP_CUSTOM_LDIF_DIR=/ldifs
+    # volumes:
+      #  - './testdata/ldap:/ldifs'
+      #  - './testdata/openldap_data:/bitnami/openldap'
