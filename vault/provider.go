@@ -255,6 +255,10 @@ var (
 			Resource:      UpdateSchemaResource(kubernetesAuthBackendRoleDataSource()),
 			PathInventory: []string{"/auth/kubernetes/role/{name}"},
 		},
+		"vault_ldap_static_credentials": {
+			Resource:      UpdateSchemaResource(ldapStaticCredDataSource()),
+			PathInventory: []string{"/ldap/static-cred/{role}"},
+		},
 		"vault_ad_access_credentials": {
 			Resource:      UpdateSchemaResource(adAccessCredentialsDataSource()),
 			PathInventory: []string{"/ad/creds/{role}"},

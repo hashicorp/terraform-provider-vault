@@ -112,7 +112,7 @@ func ldapSecretBackendResource() *schema.Resource {
 		},
 	}
 	resource := provider.MustAddMountMigrationSchema(&schema.Resource{
-		CreateContext: createUpdateLDAPConfigResource,
+		CreateContext: MountCreateContextWrapper(createUpdateLDAPConfigResource, provider.VaultVersion112),
 		UpdateContext: createUpdateLDAPConfigResource,
 		ReadContext:   ReadContextWrapper(readLDAPConfigResource),
 		DeleteContext: deleteLDAPConfigResource,
