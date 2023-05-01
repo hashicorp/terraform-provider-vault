@@ -33,7 +33,7 @@ func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		},
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldMount),
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPSecretBackendStaticRoleConfig(path, bindDN, bindPass, url, username, dn, username, rotationPeriod),
@@ -51,7 +51,7 @@ func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, updatedRotationPeriod),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldPath, consts.FieldRoleName),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName),
 		},
 	})
 }
@@ -68,11 +68,11 @@ resource "vault_ldap_secret_backend" "test" {
 }
 
 resource "vault_ldap_secret_backend_static_role" "role" {
-    path            = vault_ldap_secret_backend.test.path
-    username        = "%s"
-    dn              = "%s"
-    role_name       = "%s"
-    rotation_period = %s
+  mount            = vault_ldap_secret_backend.test.path
+  username        = "%s"
+  dn              = "%s"
+  role_name       = "%s"
+  rotation_period = %s
 }
 `, mount, bindDN, bindPass, url, username, dn, role, rotationPeriod)
 }

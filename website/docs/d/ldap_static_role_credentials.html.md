@@ -35,7 +35,7 @@ resource "vault_ldap_secret_backend_static_role" "role" {
 }
 
 data "vault_ldap_static_credentials" "creds" {
-  path      = vault_ldap_secret_backend.test.path
+  mount     = vault_ldap_secret_backend.test.path
   role_name = vault_ldap_secret_backend_static_role.role.role_name
 }
 ```
@@ -49,7 +49,7 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
   *Available only for Vault Enterprise*.
 
-* `path` - (Required) The path to the LDAP secret backend to
+* `mount` - (Required) The path to the LDAP secret backend to
 read credentials from, with no leading or trailing `/`s.
 
 * `role_name` - (Required) The name of the LDAP secret backend static role to read

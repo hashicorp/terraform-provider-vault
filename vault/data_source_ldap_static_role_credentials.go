@@ -20,7 +20,7 @@ func ldapStaticCredDataSource() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: ReadContextWrapper(readLDAPStaticCreds),
 		Schema: map[string]*schema.Schema{
-			consts.FieldPath: {
+			consts.FieldMount: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "LDAP Secret Backend to read credentials from.",
@@ -78,9 +78,9 @@ func readLDAPStaticCreds(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 
-	path := d.Get(consts.FieldPath).(string)
+	mount := d.Get(consts.FieldMount).(string)
 	role := d.Get(consts.FieldRoleName).(string)
-	fullPath := fmt.Sprintf("%s/static-cred/%s", path, role)
+	fullPath := fmt.Sprintf("%s/static-cred/%s", mount, role)
 
 	secret, err := client.Logical().ReadWithContext(ctx, fullPath)
 	if err != nil {
