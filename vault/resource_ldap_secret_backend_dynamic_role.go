@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-func ldapSecretBackendStaticRoleResource() *schema.Resource {
+func ldapSecretBackendDynamicRoleResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
 		consts.FieldPath: {
 			Type:         schema.TypeString,
@@ -30,28 +30,42 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 			Description: "Name of the role.",
 			ForceNew:    true,
 		},
-		consts.FieldUsername: {
+		consts.FieldCreationLDIF: {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: "The username of the existing LDAP entry to manage password rotation for.",
-			ForceNew:    true,
+			Description: "A templatized LDIF string used to create a user account. May contain multiple entries.",
 		},
-		consts.FieldDN: {
+		consts.FieldDeletionLDIF: {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "A templatized LDIF string used to delete the user account once its TTL has expired. This may contain multiple LDIF entries.",
+		},
+		consts.FieldRollbackLDIF: {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "Distinguished name (DN) of the existing LDAP entry to manage password rotation for.",
+			Description: "A templatized LDIF string used to attempt to rollback any changes in the event that execution of the creation_ldif results in an error. This may contain multiple LDIF entries.",
 		},
-		consts.FieldRotationPeriod: {
+		consts.FieldUsernameTemplate: {
 			Type:        schema.TypeString,
-			Required:    true,
-			Description: "How often Vault should rotate the password of the user entry.",
+			Optional:    true,
+			Description: "A template used to generate a dynamic username. This will be used to fill in the .Username field within the creation_ldif string.",
+		},
+		consts.FieldDefaultTTL: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Specifies the TTL for the leases associated with this role.",
+		},
+		consts.FieldMaxTTL: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Specifies the maximum TTL for the leases associated with this role.",
 		},
 	}
 	return &schema.Resource{
-		CreateContext: createUpdateLDAPStaticRoleResource,
-		UpdateContext: createUpdateLDAPStaticRoleResource,
-		ReadContext:   ReadContextWrapper(readLDAPStaticRoleResource),
-		DeleteContext: deleteLDAPStaticRoleResource,
+		CreateContext: createUpdateLDAPDynamicRoleResource,
+		UpdateContext: createUpdateLDAPDynamicRoleResource,
+		ReadContext:   ReadContextWrapper(readLDAPDynamicRoleResource),
+		DeleteContext: deleteLDAPDynamicRoleResource,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -59,13 +73,16 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 	}
 }
 
-var ldapSecretBackendStaticRoleFields = []string{
-	consts.FieldUsername,
-	consts.FieldDN,
-	consts.FieldRotationPeriod,
+var ldapSecretBackendDynamicRoleFields = []string{
+	consts.FieldCreationLDIF,
+	consts.FieldDeletionLDIF,
+	consts.FieldRollbackLDIF,
+	consts.FieldUsernameTemplate,
+	consts.FieldDefaultTTL,
+	consts.FieldMaxTTL,
 }
 
-func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func createUpdateLDAPDynamicRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return diag.FromErr(err)
@@ -73,10 +90,10 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 
 	path := d.Get(consts.FieldPath).(string)
 	role := d.Get(consts.FieldRoleName).(string)
-	rolePath := fmt.Sprintf("%s/static-role/%s", path, role)
-	log.Printf("[DEBUG] Creating LDAP static role at %q", rolePath)
+	rolePath := fmt.Sprintf("%s/role/%s", path, role)
+	log.Printf("[DEBUG] Creating LDAP dynamic role at %q", rolePath)
 	data := map[string]interface{}{}
-	for _, field := range ldapSecretBackendStaticRoleFields {
+	for _, field := range ldapSecretBackendDynamicRoleFields {
 		if v, ok := d.GetOk(field); ok {
 			data[field] = v
 		}
@@ -88,10 +105,10 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 
 	d.SetId(rolePath)
 	log.Printf("[DEBUG] Wrote %q", rolePath)
-	return readLDAPStaticRoleResource(ctx, d, meta)
+	return readLDAPDynamicRoleResource(ctx, d, meta)
 }
 
-func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func readLDAPDynamicRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return diag.FromErr(err)
@@ -107,7 +124,7 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 		return nil
 	}
 
-	for _, field := range ldapSecretBackendStaticRoleFields {
+	for _, field := range ldapSecretBackendDynamicRoleFields {
 		if val, ok := resp.Data[field]; ok {
 			if err := d.Set(field, val); err != nil {
 				return diag.FromErr(fmt.Errorf("error setting state key '%s': %s", field, err))
@@ -118,7 +135,7 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 	return nil
 }
 
-func deleteLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func deleteLDAPDynamicRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
 		return diag.FromErr(err)
@@ -132,7 +149,7 @@ func deleteLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, m
 			return nil
 		}
 
-		return diag.FromErr(fmt.Errorf("error deleting static role %q: %w", rolePath, err))
+		return diag.FromErr(fmt.Errorf("error deleting dynamic role %q: %w", rolePath, err))
 	}
 
 	return nil

@@ -34,7 +34,7 @@ resource "vault_ldap_secret_backend_static_role" "role" {
   path            = vault_ldap_secret_backend.config.path
   username        = "alice"
   dn              = "cn=alice,ou=Users,DC=corp,DC=example,DC=net"
-  role            = "alice"
+  role_name       = "alice"
   rotation_period = 60
 }
 ```
@@ -51,7 +51,7 @@ The following arguments are supported:
 * `path` - (Optional) The unique path this backend should be mounted at. Must
   not begin or end with a `/`. Defaults to `ldap`.
 
-* `role` - (Required) Name of the role.
+* `role_name` - (Required) Name of the role.
 
 * `username` - (Required) The username of the existing LDAP entry to manage password rotation for.
 

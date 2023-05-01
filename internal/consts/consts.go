@@ -49,6 +49,7 @@ const (
 	FieldTTL                        = "ttl"
 	FieldMaxTTL                     = "max_ttl"
 	FieldDefaultLeaseTTL            = "default_lease_ttl_seconds"
+	FieldDefaultTTL                 = "default_ttl"
 	FieldMaxLeaseTTL                = "max_lease_ttl_seconds"
 	FieldAuditNonHMACRequestKeys    = "audit_non_hmac_request_keys"
 	FieldAuditNonHMACResponseKeys   = "audit_non_hmac_response_keys"
@@ -236,6 +237,10 @@ const (
 	FieldIPAddresses                = "ip_addresses"
 	FieldCIDRBlocks                 = "cidr_blocks"
 	FieldProjectRoles               = "project_roles"
+	FieldCreationLDIF               = "creation_ldif"
+	FieldDeletionLDIF               = "deletion_ldif"
+	FieldRollbackLDIF               = "rollback_ldif"
+	FieldUsernameTemplate           = "username_template"
 
 	/*
 		common environment variables
