@@ -3,7 +3,7 @@ layout: "vault"
 page_title: "Vault: vault_ldap_dynamic_credentials data source"
 sidebar_current: "docs-vault-datasource-ldap-dynamic_credentials"
 description: |-
-Reads dynamic role credentials from an LDAP secret backend in Vault
+   Reads dynamic role credentials from an LDAP secret backend in Vault
 ---
 
 # vault\_ldap\_dynamic\_credentials
