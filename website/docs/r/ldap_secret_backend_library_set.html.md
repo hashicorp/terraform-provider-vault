@@ -3,13 +3,13 @@ layout: "vault"
 page_title: "Vault: vault_ldap_secret_backend_library resource"
 sidebar_current: "docs-vault-resource-ldap-secret-backend-library"
 description: |-
-  Creates a library on the Active Directory Secret Backend for Vault.
+  Creates a library on the LDAP Secret Backend for Vault.
 ---
 
 # vault\_ldap\_secret\_backend\_library
 
-Creates a library on an Active Directory Secret Backend for Vault. Libraries create
-a pool of existing Active Directory service accounts which can be checked out
+Creates a library on an LDAP Secret Backend for Vault. Libraries create
+a pool of existing LDAP service accounts which can be checked out
 by users.
 
 ~> **Important** All data provided in the resource configuration will be
@@ -23,21 +23,21 @@ for more details.
 
 ```hcl
 resource "vault_ldap_secret_backend" "config" {
-    backend       = "ad"
-    binddn        = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
-    bindpass      = "SuperSecretPassw0rd"
-    url           = "ldaps://ad"
-    insecure_tls  = "true"
-    userdn        = "CN=Users,DC=corp,DC=example,DC=net"
+  path          = "ldap"
+  binddn        = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
+  bindpass      = "SuperSecretPassw0rd"
+  url           = "ldaps://localhost"
+  insecure_tls  = "true"
+  userdn        = "CN=Users,DC=corp,DC=example,DC=net"
 }
 
 resource "vault_ldap_secret_library" "qa" {
-    backend                       = vault_ldap_secret_backend.config.backend
-    name                          = "qa"
-    service_account_names         = ["Bob", "Mary"]
-    ttl                           = 60
-    disable_check_in_enforcement  = true
-    max_ttl                       = 120
+  mount                        = vault_ldap_secret_backend.config.path
+  name                         = "qa"
+  service_account_names        = ["Bob", "Mary"]
+  ttl                          = 60
+  disable_check_in_enforcement = true
+  max_ttl                      = 120
 }
 ```
 

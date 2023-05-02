@@ -17,7 +17,7 @@ import (
 
 func ldapSecretBackendLibrarySetResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		consts.FieldPath: {
+		consts.FieldMount: {
 			Type:         schema.TypeString,
 			Default:      consts.MountTypeLDAP,
 			Optional:     true,
@@ -40,16 +40,16 @@ func ldapSecretBackendLibrarySetResource() *schema.Resource {
 			Description: "The names of all the service accounts that can be checked out from this set.",
 		},
 		consts.FieldTTL: {
-			Type:        schema.TypeString,
+			Type:        schema.TypeInt,
 			Optional:    true,
 			Description: "The maximum amount of time a single check-out lasts before Vault automatically checks it back in. Defaults to 24 hours.",
-			Default:     "86400",
+			Computed:    true,
 		},
 		consts.FieldMaxTTL: {
-			Type:        schema.TypeString,
+			Type:        schema.TypeInt,
 			Optional:    true,
 			Description: "The maximum amount of time a check-out last with renewal before Vault automatically checks it back in. Defaults to 24 hours.",
-			Default:     "86400",
+			Computed:    true,
 		},
 		consts.FieldDisableCheckInEnforcement: {
 			Type:        schema.TypeBool,
@@ -83,7 +83,7 @@ func createUpdateLDAPLibrarySetResource(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 
-	path := d.Get(consts.FieldPath).(string)
+	path := d.Get(consts.FieldMount).(string)
 	set := d.Get(consts.FieldName).(string)
 	libraryPath := fmt.Sprintf("%s/library/%s", path, set)
 	log.Printf("[DEBUG] Creating LDAP library set at %q", libraryPath)

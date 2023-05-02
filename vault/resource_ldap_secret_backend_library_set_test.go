@@ -26,7 +26,7 @@ func TestAccLDAPSecretBackendLibrarySet(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
 		},
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldMount),
 		Steps: []resource.TestStep{
 			{
 				Config: testLDAPSecretBackendLibrarySetConfig_defaults(bindDN, bindPass, url, setName),
@@ -61,7 +61,7 @@ func TestAccLDAPSecretBackendLibrarySet(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableCheckInEnforcement, "true"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldPath, consts.FieldName),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldName),
 		},
 	})
 }
@@ -79,7 +79,7 @@ resource "vault_ldap_secret_backend" "test" {
 }
 
 resource "vault_ldap_secret_backend_library_set" "set" {
-  path                  = vault_ldap_secret_backend.test.path
+  mount                 = vault_ldap_secret_backend.test.path
   name                  = "%s"
   service_account_names = ["bob","alice"]
 }
@@ -97,7 +97,7 @@ resource "vault_ldap_secret_backend" "test" {
 }
 
 resource "vault_ldap_secret_backend_library_set" "set" {
-  path                  = vault_ldap_secret_backend.test.path
+  mount                 = vault_ldap_secret_backend.test.path
   name                  = "%s"
   ttl                   = %s
   max_ttl               = %s
