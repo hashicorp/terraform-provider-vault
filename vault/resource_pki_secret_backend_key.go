@@ -54,12 +54,14 @@ func pkiSecretBackendKeyResource() *schema.Resource {
 			consts.FieldKeyType: {
 				Type:        schema.TypeString,
 				Optional:    true,
+				Computed:    true,
 				ForceNew:    true,
 				Description: "Specifies the desired key type; must be 'rsa', 'ed25519' or 'ec'.",
 			},
 			consts.FieldKeyBits: {
 				Type:        schema.TypeInt,
 				Optional:    true,
+				Computed:    true,
 				ForceNew:    true,
 				Description: "Specifies the number of bits to use for the generated keys.",
 			},
@@ -112,7 +114,9 @@ func pkiSecretBackendKeyCreate(ctx context.Context, d *schema.ResourceData, meta
 
 	data := map[string]interface{}{}
 	for _, k := range fields {
-		data[k] = d.Get(k)
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
 	}
 
 	resp, err := client.Logical().WriteWithContext(ctx, keyPath, data)
