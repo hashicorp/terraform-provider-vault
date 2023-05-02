@@ -84,7 +84,7 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("VAULT_TOKEN_NAME", ""),
 				Description: "Token name to use for creating the Vault child token.",
 			},
-			"skip_child_token": {
+			consts.FieldSkipChildToken: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_SKIP_CHILD_TOKEN", false),
