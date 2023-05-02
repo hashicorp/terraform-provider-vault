@@ -35,11 +35,13 @@ func TestAccLDAPSecretBackendLibrarySet(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".#", "2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".0", "bob"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".1", "alice"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "86400"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "86400"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableCheckInEnforcement, "false"),
 				),
 			},
 			{
-				Config: testLDAPSecretBackendLibrarySetConfig(bindDN, bindPass, url, setName, "20", "40", `"bob"`),
+				Config: testLDAPSecretBackendLibrarySetConfig(bindDN, bindPass, url, setName, `"bob"`, 20, 40),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, setName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".#", "1"),
@@ -50,7 +52,7 @@ func TestAccLDAPSecretBackendLibrarySet(t *testing.T) {
 				),
 			},
 			{
-				Config: testLDAPSecretBackendLibrarySetConfig(bindDN, bindPass, url, setName, "20", "40", `"bob","foo"`),
+				Config: testLDAPSecretBackendLibrarySetConfig(bindDN, bindPass, url, setName, `"bob","foo"`, 20, 40),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, setName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldServiceAccountNames+".#", "2"),
@@ -86,7 +88,7 @@ resource "vault_ldap_secret_backend_library_set" "set" {
 `, bindDN, bindPass, url, setName)
 }
 
-func testLDAPSecretBackendLibrarySetConfig(bindDN, bindPass, url, setName, ttl, maxTTL, saNames string) string {
+func testLDAPSecretBackendLibrarySetConfig(bindDN, bindPass, url, setName, saNames string, ttl, maxTTL int) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_secret_backend" "test" {
   description = "test description"
@@ -99,8 +101,8 @@ resource "vault_ldap_secret_backend" "test" {
 resource "vault_ldap_secret_backend_library_set" "set" {
   mount                 = vault_ldap_secret_backend.test.path
   name                  = "%s"
-  ttl                   = %s
-  max_ttl               = %s
+  ttl                   = %d
+  max_ttl               = %d
   service_account_names = [%s]
 
   disable_check_in_enforcement = true

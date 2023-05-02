@@ -61,8 +61,8 @@ The following arguments are supported:
 * `ttl` - (Optional) The password time-to-live in seconds. Defaults to the configuration
   ttl if not provided.
 
-* `max_ttl` - (Optional) The maximum password time-to-live in seconds. Defaults to the configuration
-    max_ttl if not provided.
+* `max_ttl` - (Optional) The maximum password time-to-live in seconds. Defaults
+  to the configuration max_ttl if not provided.
 
 * `disable_check_in_enforcement` - (Optional) Disable enforcing that service
   accounts must be checked in by the entity or client token that checked them
