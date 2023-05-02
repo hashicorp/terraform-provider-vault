@@ -10,9 +10,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/vault/api"
 )
 
 func ldapDynamicCredDataSource() *schema.Resource {
@@ -36,7 +37,7 @@ func ldapDynamicCredDataSource() *schema.Resource {
 				Description: "Lease identifier assigned by Vault.",
 			},
 			consts.FieldLeaseDuration: {
-				Type:        schema.TypeString,
+				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "Lease duration in seconds.",
 			},
@@ -90,14 +91,14 @@ func readLDAPDynamicCreds(ctx context.Context, d *schema.ResourceData, meta inte
 		return diag.FromErr(err)
 	}
 
-	d.SetId(response.username)
-	if err := d.Set(consts.FieldLeaseID, response.leaseID); err != nil {
+	d.SetId(secret.LeaseID)
+	if err := d.Set(consts.FieldLeaseID, secret.LeaseID); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set(consts.FieldLeaseDuration, response.leaseDuration); err != nil {
+	if err := d.Set(consts.FieldLeaseDuration, secret.LeaseDuration); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set(consts.FieldLeaseRenewable, response.leaseRenewable); err != nil {
+	if err := d.Set(consts.FieldLeaseRenewable, secret.Renewable); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := d.Set(consts.FieldDistinguishedNames, response.distinguishedNames); err != nil {
@@ -113,9 +114,6 @@ func readLDAPDynamicCreds(ctx context.Context, d *schema.ResourceData, meta inte
 }
 
 type lDAPDynamicCredResponse struct {
-	leaseID            string
-	leaseDuration      string
-	leaseRenewable     bool
 	distinguishedNames []string
 	password           string
 	username           string
@@ -123,23 +121,8 @@ type lDAPDynamicCredResponse struct {
 
 func parseLDAPDynamicCredSecret(secret *api.Secret) (lDAPDynamicCredResponse, error) {
 	var (
-		leaseID            string
-		leaseDuration      string
-		leaseRenewable     bool
 		distinguishedNames []string
 	)
-	if leaseIDRaw, ok := secret.Data[consts.FieldLeaseID]; ok {
-		leaseID = leaseIDRaw.(string)
-	}
-
-	if leaseDurationRaw, ok := secret.Data[consts.FieldLeaseDuration]; ok {
-		leaseDuration = leaseDurationRaw.(string)
-	}
-
-	if leaseRenewableRaw, ok := secret.Data[consts.FieldLeaseRenewable]; ok {
-		leaseRenewable = leaseRenewableRaw.(bool)
-	}
-
 	if distinguishedNamesRaw, ok := secret.Data[consts.FieldDistinguishedNames]; ok {
 		for _, dnRaw := range distinguishedNamesRaw.([]interface{}) {
 			distinguishedNames = append(distinguishedNames, dnRaw.(string))
@@ -157,9 +140,6 @@ func parseLDAPDynamicCredSecret(secret *api.Secret) (lDAPDynamicCredResponse, er
 	}
 
 	return lDAPDynamicCredResponse{
-		leaseID:            leaseID,
-		leaseDuration:      leaseDuration,
-		leaseRenewable:     leaseRenewable,
 		distinguishedNames: distinguishedNames,
 		password:           password,
 		username:           username,

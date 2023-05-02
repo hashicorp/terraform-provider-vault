@@ -53,6 +53,7 @@ data "vault_ldap_dynamic_credentials" "creds" {
   mount     = vault_ldap_secret_backend.test.mount
   role_name = vault_ldap_secret_backend_dynamic_role.role.role_name
 }
+
 ```
 
 ## Argument Reference
