@@ -11,9 +11,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/vault/api"
 )
 
 func ldapStaticCredDataSource() *schema.Resource {
@@ -96,7 +97,7 @@ func readLDAPStaticCreds(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 
-	d.SetId(response.username)
+	d.SetId(fullPath)
 	if err := d.Set(consts.FieldDN, response.dn); err != nil {
 		return diag.FromErr(err)
 	}

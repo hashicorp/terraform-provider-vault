@@ -17,7 +17,7 @@ import (
 
 func ldapSecretBackendDynamicRoleResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		consts.FieldPath: {
+		consts.FieldMount: {
 			Type:         schema.TypeString,
 			Default:      consts.MountTypeLDAP,
 			Optional:     true,
@@ -88,9 +88,9 @@ func createUpdateLDAPDynamicRoleResource(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	path := d.Get(consts.FieldPath).(string)
+	mount := d.Get(consts.FieldMount).(string)
 	role := d.Get(consts.FieldRoleName).(string)
-	rolePath := fmt.Sprintf("%s/role/%s", path, role)
+	rolePath := fmt.Sprintf("%s/role/%s", mount, role)
 	log.Printf("[DEBUG] Creating LDAP dynamic role at %q", rolePath)
 	data := map[string]interface{}{}
 	for _, field := range ldapSecretBackendDynamicRoleFields {
