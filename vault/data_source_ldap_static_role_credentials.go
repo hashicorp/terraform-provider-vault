@@ -97,8 +97,7 @@ func readLDAPStaticCreds(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 
-	// todo: check if this should be changed to something unique
-	d.SetId(response.username)
+	d.SetId(fullPath)
 	if err := d.Set(consts.FieldDN, response.dn); err != nil {
 		return diag.FromErr(err)
 	}
