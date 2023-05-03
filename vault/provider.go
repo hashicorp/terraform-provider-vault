@@ -573,6 +573,10 @@ var (
 			Resource:      UpdateSchemaResource(ldapSecretBackendDynamicRoleResource()),
 			PathInventory: []string{"/ldap/role/{name}"},
 		},
+		"vault_ldap_secret_backend_library_set": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendLibrarySetResource()),
+			PathInventory: []string{"/ldap/library/{name}"},
+		},
 		"vault_nomad_secret_backend": {
 			Resource: UpdateSchemaResource(nomadSecretAccessBackendResource()),
 			PathInventory: []string{

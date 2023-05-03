@@ -241,6 +241,8 @@ const (
 	FieldDeletionLDIF               = "deletion_ldif"
 	FieldRollbackLDIF               = "rollback_ldif"
 	FieldUsernameTemplate           = "username_template"
+	FieldServiceAccountNames        = "service_account_names"
+	FieldDisableCheckInEnforcement  = "disable_check_in_enforcement"
 
 	/*
 		common environment variables

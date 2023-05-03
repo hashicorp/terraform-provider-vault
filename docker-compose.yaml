@@ -54,5 +54,5 @@ services:
     environment:
       - LDAP_ADMIN_USERNAME=admin
       - LDAP_ADMIN_PASSWORD=adminpassword
-      - LDAP_USERS=alice,bob
-      - LDAP_PASSWORDS=password1,password2
+      - LDAP_USERS=alice,bob,foo
+      - LDAP_PASSWORDS=password1,password2,password3
