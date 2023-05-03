@@ -49,8 +49,9 @@ EOT
   default_ttl   = "60s"
   max_ttl       = "60s"
 }
+
 data "vault_ldap_dynamic_credentials" "creds" {
-  mount     = vault_ldap_secret_backend.test.mount
+  mount     = vault_ldap_secret_backend.test.path
   role_name = vault_ldap_secret_backend_dynamic_role.role.role_name
 }
 
