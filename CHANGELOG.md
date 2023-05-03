@@ -1,3 +1,7 @@
+## 3.15.1 (May 3, 2023)
+BUGS:
+* Ensure that the auth_login honours the provider's namespace: ([#1830](https://github.com/hashicorp/terraform-provider-vault/pull/1830))
+
 ## 3.15.0 (April 17, 2023)
 FEATURES:
 * Add support for MongoDB Atlas Secrets engine: ([#1816](https://github.com/hashicorp/terraform-provider-vault/pull/1816))
