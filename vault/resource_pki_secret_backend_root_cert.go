@@ -53,7 +53,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				return e
 			}
 
-			cert, err := getCACertificate(client, d.Get("backend").(string))
+			cert, err := getCACertificate(client, d.Get(consts.FieldBackend).(string))
 			if err != nil {
 				return err
 			}
@@ -283,77 +283,42 @@ func pkiSecretBackendRootCertCreate(ctx context.Context, d *schema.ResourceData,
 
 	path := pkiSecretBackendIntermediateSetSignedReadPath(backend, rootType)
 
-	iAltNames := d.Get(consts.FieldAltNames).([]interface{})
-	altNames := make([]string, 0, len(iAltNames))
-	for _, iAltName := range iAltNames {
-		altNames = append(altNames, iAltName.(string))
+	rootCertAPIFields := []string{
+		consts.FieldCommonName,
+		consts.FieldTTL,
+		consts.FieldFormat,
+		consts.FieldPrivateKeyFormat,
+		consts.FieldMaxPathLength,
+		consts.FieldExcludeCNFromSans,
+		consts.FieldOu,
+		consts.FieldOrganization,
+		consts.FieldCountry,
+		consts.FieldLocality,
+		consts.FieldProvince,
+		consts.FieldStreetAddress,
+		consts.FieldPostalCode,
+		consts.FieldManagedKeyName,
+		consts.FieldManagedKeyID,
 	}
 
-	iIPSans := d.Get(consts.FieldIPSans).([]interface{})
-	ipSans := make([]string, 0, len(iIPSans))
-	for _, iIpSan := range iIPSans {
-		ipSans = append(ipSans, iIpSan.(string))
+	rootCertStringArrayFields := []string{
+		consts.FieldAltNames,
+		consts.FieldIPSans,
+		consts.FieldURISans,
+		consts.FieldOtherSans,
+		consts.FieldPermittedDNSDomains,
 	}
 
-	iURISans := d.Get(consts.FieldURISans).([]interface{})
-	uriSans := make([]string, 0, len(iURISans))
-	for _, iUriSan := range iURISans {
-		uriSans = append(uriSans, iUriSan.(string))
+	data := map[string]interface{}{}
+	for _, k := range rootCertAPIFields {
+		data[k] = d.Get(k)
 	}
 
-	iOtherSans := d.Get(consts.FieldOtherSans).([]interface{})
-	otherSans := make([]string, 0, len(iOtherSans))
-	for _, iOtherSan := range iOtherSans {
-		otherSans = append(otherSans, iOtherSan.(string))
-	}
-
-	iPermittedDNSDomains := d.Get(consts.FieldPermittedDNSDomains).([]interface{})
-	permittedDNSDomains := make([]string, 0, len(iPermittedDNSDomains))
-	for _, iPermittedDNSDomain := range iPermittedDNSDomains {
-		permittedDNSDomains = append(permittedDNSDomains, iPermittedDNSDomain.(string))
-	}
-
-	data := map[string]interface{}{
-		consts.FieldCommonName:        d.Get(consts.FieldCommonName).(string),
-		consts.FieldTTL:               d.Get(consts.FieldTTL).(string),
-		consts.FieldFormat:            d.Get(consts.FieldFormat).(string),
-		consts.FieldPrivateKeyFormat:  d.Get(consts.FieldPrivateKeyFormat).(string),
-		consts.FieldMaxPathLength:     d.Get(consts.FieldMaxPathLength).(int),
-		consts.FieldExcludeCNFromSans: d.Get(consts.FieldExcludeCNFromSans).(bool),
-		consts.FieldOu:                d.Get(consts.FieldOu).(string),
-		consts.FieldOrganization:      d.Get(consts.FieldOrganization).(string),
-		consts.FieldCountry:           d.Get(consts.FieldCountry).(string),
-		consts.FieldLocality:          d.Get(consts.FieldLocality).(string),
-		consts.FieldProvince:          d.Get(consts.FieldProvince).(string),
-		consts.FieldStreetAddress:     d.Get(consts.FieldStreetAddress).(string),
-		consts.FieldPostalCode:        d.Get(consts.FieldPostalCode).(string),
-		consts.FieldManagedKeyName:    d.Get(consts.FieldManagedKeyName).(string),
-		consts.FieldManagedKeyID:      d.Get(consts.FieldManagedKeyID).(string),
-	}
-
-	if rootType != "kms" {
-		data[consts.FieldKeyType] = d.Get(consts.FieldKeyType).(string)
-		data[consts.FieldKeyBits] = d.Get(consts.FieldKeyBits).(int)
-	}
-
-	if len(altNames) > 0 {
-		data[consts.FieldAltNames] = strings.Join(altNames, ",")
-	}
-
-	if len(ipSans) > 0 {
-		data[consts.FieldIPSans] = strings.Join(ipSans, ",")
-	}
-
-	if len(uriSans) > 0 {
-		data[consts.FieldURISans] = strings.Join(uriSans, ",")
-	}
-
-	if len(otherSans) > 0 {
-		data[consts.FieldOtherSans] = strings.Join(otherSans, ",")
-	}
-
-	if len(permittedDNSDomains) > 0 {
-		data[consts.FieldPermittedDNSDomains] = strings.Join(permittedDNSDomains, ",")
+	for _, k := range rootCertStringArrayFields {
+		m := util.ToStringArray(d.Get(k).([]interface{}))
+		if len(m) > 0 {
+			data[k] = strings.Join(m, ",")
+		}
 	}
 
 	log.Printf("[DEBUG] Creating root cert on PKI secret backend %q", backend)
