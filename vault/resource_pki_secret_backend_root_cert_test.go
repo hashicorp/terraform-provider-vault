@@ -25,21 +25,21 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 	store := &testPKICertStore{}
 
 	checks := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, "backend", path),
-		resource.TestCheckResourceAttr(resourceName, "type", "internal"),
-		resource.TestCheckResourceAttr(resourceName, "common_name", "test Root CA"),
-		resource.TestCheckResourceAttr(resourceName, "ttl", "86400"),
-		resource.TestCheckResourceAttr(resourceName, "format", "pem"),
-		resource.TestCheckResourceAttr(resourceName, "private_key_format", "der"),
-		resource.TestCheckResourceAttr(resourceName, "key_type", "rsa"),
-		resource.TestCheckResourceAttr(resourceName, "key_bits", "4096"),
-		resource.TestCheckResourceAttr(resourceName, "ou", "test"),
-		resource.TestCheckResourceAttr(resourceName, "organization", "test"),
-		resource.TestCheckResourceAttr(resourceName, "country", "test"),
-		resource.TestCheckResourceAttr(resourceName, "locality", "test"),
-		resource.TestCheckResourceAttr(resourceName, "province", "test"),
-		resource.TestCheckResourceAttrSet(resourceName, "serial"),
-		resource.TestCheckResourceAttrSet(resourceName, "serial_number"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "86400"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "pem"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKeyFormat, "der"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "4096"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldOu, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldOrganization, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCountry, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldLocality, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldProvince, "test"),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerial),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -87,7 +87,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 					genPath := pkiSecretBackendIntermediateSetSignedReadPath(path, "internal")
 					resp, err := client.Logical().Write(genPath,
 						map[string]interface{}{
-							"common_name": "out-of-band",
+							consts.FieldCommonName: "out-of-band",
 						},
 					)
 					if err != nil {
@@ -118,10 +118,10 @@ func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
 	checks := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, "backend", path),
-		resource.TestCheckResourceAttr(resourceName, "type", "kms"),
-		resource.TestCheckResourceAttr(resourceName, "common_name", "test Root CA"),
-		resource.TestCheckResourceAttr(resourceName, "managed_key_name", managedKeyName),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "kms"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldManagedKeyName, managedKeyName),
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -213,11 +213,11 @@ func Test_pkiSecretSerialNumberUpgradeV0(t *testing.T) {
 		{
 			name: "basic",
 			rawState: map[string]interface{}{
-				"serial": "aa:bb:cc:dd:ee",
+				consts.FieldSerial: "aa:bb:cc:dd:ee",
 			},
 			want: map[string]interface{}{
-				"serial":        "aa:bb:cc:dd:ee",
-				"serial_number": "aa:bb:cc:dd:ee",
+				consts.FieldSerial:       "aa:bb:cc:dd:ee",
+				consts.FieldSerialNumber: "aa:bb:cc:dd:ee",
 			},
 		},
 	}

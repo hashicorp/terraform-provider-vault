@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
@@ -19,10 +20,10 @@ import (
 
 func pkiSecretBackendCertResource() *schema.Resource {
 	return &schema.Resource{
-		Create:        pkiSecretBackendCertCreate,
-		Read:          ReadWrapper(pkiSecretBackendCertRead),
-		Update:        pkiSecretBackendCertUpdate,
-		Delete:        pkiSecretBackendCertDelete,
+		CreateContext: pkiSecretBackendCertCreate,
+		ReadContext:   ReadContextWrapper(pkiSecretBackendCertRead),
+		UpdateContext: pkiSecretBackendCertUpdate,
+		DeleteContext: pkiSecretBackendCertDelete,
 		CustomizeDiff: pkiCertAutoRenewCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
@@ -172,10 +173,10 @@ func pkiSecretBackendCertResource() *schema.Resource {
 	}
 }
 
-func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -237,7 +238,7 @@ func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error 
 	log.Printf("[DEBUG] Creating certificate %s by %s on PKI secret backend %q", commonName, name, backend)
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating certificate %s by %s for PKI secret backend %q: %s", commonName, name,
+		return diag.Errorf("error creating certificate %s by %s for PKI secret backend %q: %s", commonName, name,
 			backend, err)
 	}
 	log.Printf("[DEBUG] Created certificate %s by %s on PKI secret backend %q", commonName, name, backend)
@@ -255,11 +256,11 @@ func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error 
 	d.Set("expiration", resp.Data["expiration"])
 
 	if err := pkiSecretBackendCertSynchronizeRenewPending(d); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(fmt.Sprintf("%s/%s/%s", backend, name, commonName))
-	return pkiSecretBackendCertRead(d, meta)
+	return pkiSecretBackendCertRead(ctx, d, meta)
 }
 
 func pkiCertAutoRenewCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
@@ -292,14 +293,14 @@ func pkiCertAutoRenewCustomizeDiff(_ context.Context, d *schema.ResourceDiff, me
 	return nil
 }
 
-func pkiSecretBackendCertRead(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendCertRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	if d.IsNewResource() {
 		return nil
 	}
 
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 	path := d.Get("backend").(string)
 	enabled, err := util.CheckMountEnabled(client, path)
@@ -310,7 +311,7 @@ func pkiSecretBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 
 	if enabled {
 		if err := pkiSecretBackendCertSynchronizeRenewPending(d); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	} else {
 		// trigger a resource re-creation whenever the engine's mount has disappeared
@@ -321,16 +322,16 @@ func pkiSecretBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func pkiSecretBackendCertUpdate(d *schema.ResourceData, m interface{}) error {
+func pkiSecretBackendCertUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	// TODO: add mount gone detection
 	return nil
 }
 
-func pkiSecretBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendCertDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	if d.Get("revoke").(bool) {
 		client, e := provider.GetClient(d, meta)
 		if e != nil {
-			return e
+			return diag.FromErr(e)
 		}
 
 		backend := d.Get("backend").(string)
@@ -346,7 +347,7 @@ func pkiSecretBackendCertDelete(d *schema.ResourceData, meta interface{}) error 
 			commonName, serialNumber, backend)
 		_, err := client.Logical().Write(path, data)
 		if err != nil {
-			return fmt.Errorf("error revoking certificate %q with serial number %q for PKI secret backend %q: %w",
+			return diag.Errorf("error revoking certificate %q with serial number %q for PKI secret backend %q: %s",
 				commonName, serialNumber, backend, err)
 		}
 		log.Printf("[DEBUG] Successfully revoked certificate %q with serial number %q on PKI secret backend %q",
