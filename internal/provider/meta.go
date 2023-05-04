@@ -227,6 +227,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 
 	var token string
 	if authLogin != nil {
+		// the clone is only used to auth to Vault
 		clone, err := client.Clone()
 		if err != nil {
 			return nil, err
@@ -234,6 +235,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 
 		if authLogin.Namespace() != "" {
 			// the namespace configured on the auth_login takes precedence over the provider's
+			// for authentication only.
 			clone.SetNamespace(authLogin.Namespace())
 		} else if namespace != "" {
 			// authenticate to the engine in the provider's namespace
@@ -257,21 +259,22 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	if token != "" {
 		client.SetToken(token)
 	}
+
 	if client.Token() == "" {
 		return nil, errors.New("no vault token set on Client")
 	}
 
+	tokenInfo, err := client.Auth().Token().LookupSelf()
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup token, err=%w", err)
+	}
+
+	var tokenNamespace string
+	if v, ok := tokenInfo.Data[consts.FieldNamespacePath]; ok {
+		tokenNamespace = strings.Trim(v.(string), "/")
+	}
+
 	if !d.Get(consts.FieldSkipChildToken).(bool) {
-		tokenInfo, err := client.Auth().Token().LookupSelf()
-		if err != nil {
-			return nil, fmt.Errorf("failed to lookup token, err=%w", err)
-		}
-
-		var tokenNamespace string
-		if tokenNamespaceRaw, ok := tokenInfo.Data[consts.FieldNamespacePath]; ok {
-			tokenNamespace = strings.Trim(tokenNamespaceRaw.(string), "/")
-		}
-
 		// a child token is always created in the namespace of the parent token.
 		token, err = createChildToken(d, client, tokenNamespace)
 		if err != nil {
@@ -281,8 +284,25 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		client.SetToken(token)
 	}
 
+	if namespace == "" && tokenNamespace != "" {
+		// set the provider namespace to the token's namespace
+		// this is here to ensure that do not break any configurations that are relying on the
+		// token's namespace being used for resource provisioning.
+		// In the future we should drop support for this behaviour.
+		log.Printf("[WARN] The provider namespace should be set when using namespaced auth tokens. "+
+			"Please update your provider configuration's namespace to be %q. "+
+			"Future releases may not support this type of configuration.", tokenNamespace)
+
+		namespace = tokenNamespace
+		// set the namespace on the provider to ensure that all child
+		// namespace paths are properly honoured.
+		if err := d.Set(consts.FieldNamespace, namespace); err != nil {
+			return nil, err
+		}
+	}
+
 	if namespace != "" {
-		// set the namespace on the parent
+		// set the namespace on the parent client
 		client.SetNamespace(namespace)
 	}
 
@@ -423,6 +443,7 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 		tokenName = "terraform"
 	}
 
+	// the clone is only used to auth to Vault
 	clone, err := c.Clone()
 	if err != nil {
 		return "", err
