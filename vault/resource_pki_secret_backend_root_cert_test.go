@@ -38,8 +38,12 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldCountry, "test"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldLocality, "test"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldProvince, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerName, "test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, "test"),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerial),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldKeyID),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerID),
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -164,6 +168,8 @@ resource "vault_pki_secret_backend_root_cert" "test" {
   country              = "test"
   locality             = "test"
   province             = "test"
+  issuer_name          = "test"
+  key_name             = "test"
 }
 `, path)
 

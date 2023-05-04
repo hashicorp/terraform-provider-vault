@@ -240,6 +240,9 @@ const (
 	FieldMaxPathLength              = "max_path_length"
 	FieldExcludeCNFromSans          = "exclude_cn_from_sans"
 	FieldPermittedDNSDomains        = "permitted_dns_domains"
+	FieldIssuerName                 = "issuer_name"
+	FieldIssuerID                   = "issuer_id"
+	FieldKeyRef                     = "key_ref"
 
 	/*
 		common environment variables

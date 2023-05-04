@@ -268,6 +268,41 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				ForceNew:      true,
 				ConflictsWith: []string{consts.FieldManagedKeyName},
 			},
+			consts.FieldIssuerName: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				Description: "Provides a name to the specified issuer. The name must be unique " +
+					"across all issuers and not be the reserved value 'default'.",
+				ForceNew: true,
+			},
+			consts.FieldIssuerID: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The ID of the generated issuer.",
+				ForceNew:    true,
+			},
+			consts.FieldKeyName: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				Description: "When a new key is created with this request, optionally specifies " +
+					"the name for this.",
+				ForceNew: true,
+			},
+			consts.FieldKeyRef: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Specifies the key to use for generating this request.",
+				ForceNew:    true,
+			},
+			consts.FieldKeyID: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The ID of the generated key.",
+				ForceNew:    true,
+			},
 		},
 	}
 }
@@ -309,9 +344,17 @@ func pkiSecretBackendRootCertCreate(ctx context.Context, d *schema.ResourceData,
 		consts.FieldPermittedDNSDomains,
 	}
 
+	// add multi-issuer write API fields if supported
+	isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
+	if isIssuerAPISupported {
+		rootCertAPIFields = append(rootCertAPIFields, consts.FieldIssuerName, consts.FieldKeyName, consts.FieldKeyRef)
+	}
+
 	data := map[string]interface{}{}
 	for _, k := range rootCertAPIFields {
-		data[k] = d.Get(k)
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
 	}
 
 	for _, k := range rootCertStringArrayFields {
@@ -328,10 +371,34 @@ func pkiSecretBackendRootCertCreate(ctx context.Context, d *schema.ResourceData,
 	}
 	log.Printf("[DEBUG] Created root cert on PKI secret backend %q", backend)
 
-	d.Set(consts.FieldCertificate, resp.Data[consts.FieldCertificate])
-	d.Set(consts.FieldIssuingCA, resp.Data[consts.FieldIssuingCA])
-	d.Set(consts.FieldSerial, resp.Data[consts.FieldSerialNumber])
-	d.Set(consts.FieldSerialNumber, resp.Data[consts.FieldSerialNumber])
+	certFieldsMap := map[string]string{
+		consts.FieldCertificate:  consts.FieldCertificate,
+		consts.FieldIssuingCA:    consts.FieldIssuingCA,
+		consts.FieldSerialNumber: consts.FieldSerialNumber,
+		consts.FieldSerial:       consts.FieldSerialNumber,
+	}
+
+	// multi-issuer API fields that are set to TF state
+	// after a read from Vault
+	multiIssuerAPIComputedFields := []string{
+		consts.FieldIssuerID,
+		consts.FieldIssuerName,
+		consts.FieldKeyID,
+		consts.FieldKeyName,
+	}
+
+	if isIssuerAPISupported {
+		// add multi-issuer read API fields to field map
+		for _, k := range multiIssuerAPIComputedFields {
+			certFieldsMap[k] = k
+		}
+	}
+
+	for k, v := range certFieldsMap {
+		if err := d.Set(k, resp.Data[v]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	d.SetId(path)
 
