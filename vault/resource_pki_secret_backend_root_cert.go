@@ -307,7 +307,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 	}
 }
 
-func pkiSecretBackendRootCertCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
