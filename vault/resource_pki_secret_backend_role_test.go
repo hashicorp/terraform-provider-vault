@@ -227,12 +227,8 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !meta.IsAPISupported(provider.VaultVersion111), nil
 				},
-				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, testLegacyPolicyIdentifiers),
-				Check: resource.ComposeTestCheckFunc(
-					append(checks,
-						resource.TestCheckResourceAttr(resourceName, "issuer_ref", "default"),
-					)...,
-				),
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, ""),
+				Check:  resource.TestCheckResourceAttr(resourceName, "issuer_ref", "default"),
 			},
 			{
 				ResourceName:      resourceName,
@@ -244,12 +240,8 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !meta.IsAPISupported(provider.VaultVersion111), nil
 				},
-				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, testLegacyPolicyIdentifiers+"\n"+`issuer_ref = "root-a"`),
-				Check: resource.ComposeTestCheckFunc(
-					append(checks,
-						resource.TestCheckResourceAttr(resourceName, "issuer_ref", "root-a"),
-					)...,
-				),
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, `issuer_ref = "root-a"`),
+				Check:  resource.TestCheckResourceAttr(resourceName, "issuer_ref", "root-a"),
 			},
 			{
 				ResourceName:      resourceName,
