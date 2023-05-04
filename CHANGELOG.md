@@ -1,3 +1,7 @@
+## 3.15.2 (May 3, 2023)
+BUGS:
+* Revert [#1830](https://github.com/hashicorp/terraform-provider-vault/pull/1830) which introduced a unexpected breaking change in the way authentication is done within a namespace: ([#1840](https://github.com/hashicorp/terraform-provider-vault/pull/1840))
+ 
 ## 3.15.1 (May 3, 2023)
 BUGS:
 * Ensure that the auth_login honours the provider's namespace: ([#1830](https://github.com/hashicorp/terraform-provider-vault/pull/1830))
