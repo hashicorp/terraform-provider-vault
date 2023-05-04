@@ -217,6 +217,8 @@ const (
 	FieldIPAddresses                = "ip_addresses"
 	FieldCIDRBlocks                 = "cidr_blocks"
 	FieldProjectRoles               = "project_roles"
+	FieldManagedKeyName             = "managed_key_name"
+	FieldManagedKeyID               = "managed_key_id"
 
 	/*
 		common environment variables
