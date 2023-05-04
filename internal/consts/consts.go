@@ -217,7 +217,7 @@ const (
 	FieldIPAddresses                = "ip_addresses"
 	FieldCIDRBlocks                 = "cidr_blocks"
 	FieldProjectRoles               = "project_roles"
-	FieldSkipChildToken             = "skip_child_token"
+
 	/*
 		common environment variables
 	*/

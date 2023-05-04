@@ -157,7 +157,6 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 
 func TestAccNamespaceProviderConfigure(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
-	testutil.SkipTestAcc(t)
 
 	rootProvider := Provider()
 	rootProviderResource := &schema.Resource{
@@ -169,18 +168,20 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	}
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
-	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
-	t.Cleanup(func() {
-		if _, err := client.Logical().Delete(SysNamespaceRoot + namespacePath); err != nil {
-			t.Errorf("failed to delete parent namespace %q, err=%s", namespacePath, err)
-		}
+	// Create a test namespace and make sure it stays there
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { testutil.TestAccPreCheck(t) },
+		Providers: map[string]*schema.Provider{
+			"vault": rootProvider,
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testNamespaceConfig(namespacePath),
+				Check:  testNamespaceCheckAttrs(),
+			},
+		},
 	})
-
-	// create the namespace for the provider
-	if _, err := client.Logical().Write(SysNamespaceRoot+namespacePath, nil); err != nil {
-		t.Fatal(err)
-	}
 
 	nsProvider := Provider()
 	nsProviderResource := &schema.Resource{
@@ -643,7 +644,7 @@ func TestAccChildToken(t *testing.T) {
 							}
 						}
 					},
-					Config: testProviderConfig(test.useChildTokenSchema, consts.FieldSkipChildToken+` = `+test.skipChildTokenSchema),
+					Config: testProviderConfig(test.useChildTokenSchema, `skip_child_token = `+test.skipChildTokenSchema),
 					Check:  checkTokenUsed(test.expectChildToken),
 				},
 			},
