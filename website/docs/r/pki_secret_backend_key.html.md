@@ -54,7 +54,7 @@ The following arguments are supported:
 
 * `managed_key_name` - (Optional) The managed key's configured name.
 
-* `managed_key_name` - (Optional) The managed key's UUID.
+* `managed_key_id` - (Optional) The managed key's UUID.
 
 
 ## Attributes Reference

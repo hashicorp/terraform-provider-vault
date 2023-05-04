@@ -28,7 +28,7 @@ func pkiSecretBackendKeyResource() *schema.Resource {
 		CreateContext: MountCreateContextWrapper(pkiSecretBackendKeyCreate, provider.VaultVersion111),
 		UpdateContext: pkiSecretBackendKeyUpdate,
 		DeleteContext: pkiSecretBackendKeyDelete,
-		ReadContext:   ReadContextWrapper(ReadContextWrapper(pkiSecretBackendKeyRead)),
+		ReadContext:   ReadContextWrapper(pkiSecretBackendKeyRead),
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -124,7 +124,10 @@ func pkiSecretBackendKeyCreate(ctx context.Context, d *schema.ResourceData, meta
 		return diag.Errorf("error writing data to %q, err=%s", keyPath, err)
 	}
 
-	keyID := resp.Data[consts.FieldKeyID].(string)
+	keyID, ok := resp.Data[consts.FieldKeyID].(string)
+	if !ok {
+		return diag.Errorf("did not receive a key ID from Vault response; key ID required")
+	}
 
 	// set key ID path
 	// this makes both mount and key ID info available
