@@ -134,6 +134,7 @@ func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
 		},
 		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
+			// @TODO add a test step with a key_ref
 			{
 				Config: testPkiSecretBackendRootCertificateConfig_multiIssuer(path, issuerName, keyName),
 				Check: resource.ComposeTestCheckFunc(

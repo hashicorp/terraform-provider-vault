@@ -371,6 +371,9 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 	}
 	log.Printf("[DEBUG] Created root cert on PKI secret backend %q", backend)
 
+	// helpful to consolidate code into single loop
+	// since 'serial' is deprecated, we read the 'serial_number'
+	// field from the response in order to set to the TF state
 	certFieldsMap := map[string]string{
 		consts.FieldCertificate:  consts.FieldCertificate,
 		consts.FieldIssuingCA:    consts.FieldIssuingCA,
