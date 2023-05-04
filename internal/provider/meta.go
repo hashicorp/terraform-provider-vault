@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/config"
-	"k8s.io/utils/pointer"
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -67,11 +66,11 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 		return nil, err
 	}
 
-	ns = strings.Trim(ns, "/")
 	if ns == "" {
 		return nil, fmt.Errorf("empty namespace not allowed")
 	}
 
+	ns = strings.Trim(ns, "/")
 	if root, ok := p.resourceData.GetOk(consts.FieldNamespace); ok && root.(string) != "" {
 		ns = fmt.Sprintf("%s/%s", root, ns)
 	}
@@ -217,73 +216,40 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 
 	MaxHTTPRetriesCCC = d.Get("max_retries_ccc").(int)
 
-	// Set the namespace to the requested namespace, if provided
-	namespace := d.Get(consts.FieldNamespace).(string)
+	// Try and get the token from the config or token helper
+	token, err := GetToken(d)
+	if err != nil {
+		return nil, err
+	}
 
 	authLogin, err := GetAuthLogin(d)
 	if err != nil {
 		return nil, err
 	}
 
-	var token string
 	if authLogin != nil {
-		clone, err := client.Clone()
-		if err != nil {
-			return nil, err
-		}
-
-		if authLogin.Namespace() != "" {
-			// the namespace configured on the auth_login takes precedence over the provider's
-			clone.SetNamespace(authLogin.Namespace())
-		} else if namespace != "" {
-			// authenticate to the engine in the provider's namespace
-			clone.SetNamespace(namespace)
-		}
-
-		secret, err := authLogin.Login(clone)
+		client.SetNamespace(authLogin.Namespace())
+		secret, err := authLogin.Login(client)
 		if err != nil {
 			return nil, err
 		}
 
 		token = secret.Auth.ClientToken
-	} else {
-		// try and get the token from the config or token helper
-		token, err = GetToken(d)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	if token != "" {
 		client.SetToken(token)
 	}
 	if client.Token() == "" {
-		return nil, errors.New("no vault token set on Client")
+		return nil, errors.New("no vault token found")
 	}
 
-	if !d.Get(consts.FieldSkipChildToken).(bool) {
-		tokenInfo, err := client.Auth().Token().LookupSelf()
-		if err != nil {
-			return nil, fmt.Errorf("failed to lookup token, err=%w", err)
-		}
-
-		var tokenNamespace string
-		if tokenNamespaceRaw, ok := tokenInfo.Data[consts.FieldNamespacePath]; ok {
-			tokenNamespace = strings.Trim(tokenNamespaceRaw.(string), "/")
-		}
-
-		// a child token is always created in the namespace of the parent token.
-		token, err = createChildToken(d, client, tokenNamespace)
+	skipChildToken := d.Get("skip_child_token").(bool)
+	if !skipChildToken {
+		err := setChildToken(d, client)
 		if err != nil {
 			return nil, err
 		}
-
-		client.SetToken(token)
-	}
-
-	if namespace != "" {
-		// set the namespace on the parent
-		client.SetNamespace(namespace)
 	}
 
 	var vaultVersion *version.Version
@@ -301,6 +267,11 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 			return nil, err
 		}
 		vaultVersion = ver
+	}
+	// Set the namespace to the requested namespace, if provided
+	namespace := d.Get(consts.FieldNamespace).(string)
+	if namespace != "" {
+		client.SetNamespace(namespace)
 	}
 
 	return &ProviderMeta{
@@ -417,41 +388,47 @@ func getVaultVersion(client *api.Client) (*version.Version, error) {
 	return version.Must(version.NewSemver(resp.Version)), nil
 }
 
-func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (string, error) {
+func setChildToken(d *schema.ResourceData, c *api.Client) error {
 	tokenName := d.Get("token_name").(string)
 	if tokenName == "" {
 		tokenName = "terraform"
 	}
 
-	clone, err := c.Clone()
-	if err != nil {
-		return "", err
-	}
-
-	if namespace != "" {
-		log.Printf("[INFO] Creating child token, namespace=%q", namespace)
-		clone.SetNamespace(namespace)
-	}
 	// In order to enforce our relatively-short lease TTL, we derive a
-	// temporary child token that inherits all the policies of the
+	// temporary child token that inherits all of the policies of the
 	// token we were given but expires after max_lease_ttl_seconds.
 	//
 	// The intent here is that Terraform will need to re-fetch any
-	// secrets on each run, so we limit the exposure risk of secrets
+	// secrets on each run and so we limit the exposure risk of secrets
 	// that end up stored in the Terraform state, assuming that they are
 	// credentials that Vault is able to revoke.
 	//
 	// Caution is still required with state files since not all secrets
 	// can explicitly be revoked, and this limited scope won't apply to
 	// any secrets that are *written* by Terraform to Vault.
-	childTokenLease, err := clone.Auth().Token().Create(&api.TokenCreateRequest{
+
+	// Set the namespace to the token's namespace only for the
+	// child token creation
+	tokenInfo, err := c.Auth().Token().LookupSelf()
+	if err != nil {
+		return err
+	}
+	if tokenNamespaceRaw, ok := tokenInfo.Data["namespace_path"]; ok {
+		tokenNamespace := tokenNamespaceRaw.(string)
+		if tokenNamespace != "" {
+			c.SetNamespace(tokenNamespace)
+		}
+	}
+
+	renewable := false
+	childTokenLease, err := c.Auth().Token().Create(&api.TokenCreateRequest{
 		DisplayName:    tokenName,
 		TTL:            fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
 		ExplicitMaxTTL: fmt.Sprintf("%ds", d.Get("max_lease_ttl_seconds").(int)),
-		Renewable:      pointer.Bool(false),
+		Renewable:      &renewable,
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to create limited child token: %s", err)
+		return fmt.Errorf("failed to create limited child token: %s", err)
 	}
 
 	childToken := childTokenLease.Auth.ClientToken
@@ -459,7 +436,10 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 
 	log.Printf("[INFO] Using Vault token with the following policies: %s", strings.Join(policies, ", "))
 
-	return childToken, nil
+	// Set the token to the generated child token
+	c.SetToken(childToken)
+
+	return nil
 }
 
 func GetToken(d *schema.ResourceData) (string, error) {
