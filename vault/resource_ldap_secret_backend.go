@@ -71,14 +71,14 @@ func ldapSecretBackendResource() *schema.Resource {
 		},
 		consts.FieldSchema: {
 			Type:        schema.TypeString,
-			Default:     "openldap",
 			Optional:    true,
+			Computed:    true,
 			Description: "The LDAP schema to use when storing entry passwords. Valid schemas include openldap, ad, and racf.",
 		},
 		consts.FieldRequestTimeout: {
 			Type:        schema.TypeInt,
 			Optional:    true,
-			Default:     90,
+			Computed:    true,
 			Description: "Timeout, in seconds, for the connection when making requests against the server before returning back an error.",
 		},
 		consts.FieldStartTLS: {
@@ -95,14 +95,14 @@ func ldapSecretBackendResource() *schema.Resource {
 		},
 		consts.FieldURL: {
 			Type:        schema.TypeString,
-			Default:     "ldap://127.0.0.1",
 			Optional:    true,
+			Computed:    true,
 			Description: "LDAP URL to connect to (default: ldap://127.0.0.1). Multiple URLs can be specified by concatenating them with commas; they will be tried in-order.",
 		},
 		consts.FieldUserAttr: {
 			Type:        schema.TypeString,
-			Default:     "cn",
 			Optional:    true,
+			Computed:    true,
 			Description: "Attribute used for users (default: cn)",
 		},
 		consts.FieldUserDN: {
