@@ -10,6 +10,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
@@ -19,9 +20,9 @@ import (
 
 func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 	return &schema.Resource{
-		Create:        pkiSecretBackendRootSignIntermediateCreate,
-		Read:          ReadWrapper(pkiSecretBackendRootSignIntermediateRead),
-		Update:        pkiSecretBackendRootSignIntermediateUpdate,
+		CreateContext: pkiSecretBackendRootSignIntermediateCreate,
+		ReadContext:   ReadContextWrapper(pkiSecretBackendRootSignIntermediateRead),
+		UpdateContext: pkiSecretBackendRootSignIntermediateUpdate,
 		DeleteContext: pkiSecretBackendCertDelete,
 		StateUpgraders: []schema.StateUpgrader{
 			{
@@ -222,10 +223,10 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 	}
 }
 
-func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -304,7 +305,7 @@ func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta int
 	log.Printf("[DEBUG] Creating root sign-intermediate on PKI secret backend %q", backend)
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating root sign-intermediate on PKI secret backend %q: %s", backend, err)
+		return diag.Errorf("error creating root sign-intermediate on PKI secret backend %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Created root sign-intermediate on PKI secret backend %q", backend)
 
@@ -314,16 +315,16 @@ func pkiSecretBackendRootSignIntermediateCreate(d *schema.ResourceData, meta int
 	d.Set("serial_number", resp.Data["serial_number"])
 
 	if err := setCAChain(d, resp); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if err := setCertificateBundle(d, resp); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(fmt.Sprintf("%s/%s", backend, commonName))
 
-	return pkiSecretBackendRootSignIntermediateRead(d, meta)
+	return pkiSecretBackendRootSignIntermediateRead(ctx, d, meta)
 }
 
 func setCAChain(d *schema.ResourceData, resp *api.Secret) error {
@@ -424,15 +425,11 @@ func parseCertChain(m map[string]interface{}, asCA, literal bool) ([]string, err
 	return chain, nil
 }
 
-func pkiSecretBackendRootSignIntermediateRead(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendRootSignIntermediateRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }
 
-func pkiSecretBackendRootSignIntermediateUpdate(d *schema.ResourceData, m interface{}) error {
-	return nil
-}
-
-func pkiSecretBackendRootSignIntermediateDelete(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendRootSignIntermediateUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	return nil
 }
 
