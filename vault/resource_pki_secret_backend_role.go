@@ -46,6 +46,12 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Unique name for the role.",
 			},
+			"issuer_ref": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Specifies the default issuer of this request.",
+			},
 			"ttl": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -446,6 +452,12 @@ func pkiSecretBackendRoleCreate(d *schema.ResourceData, meta interface{}) error 
 		data["policy_identifiers"] = pki.ReadPolicyIdentifierBlocks(policyIdentifierBlocksRaw.(*schema.Set))
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		if issuerRef, ok := d.GetOk("issuer_ref"); ok {
+			data["issuer_ref"] = issuerRef
+		}
+	}
+
 	if len(allowedSerialNumbers) > 0 {
 		data["allowed_serial_numbers"] = allowedSerialNumbers
 	}
@@ -515,6 +527,12 @@ func pkiSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	extKeyUsage := make([]string, 0, len(iExtKeyUsage))
 	for _, iUsage := range iExtKeyUsage {
 		extKeyUsage = append(extKeyUsage, iUsage.(string))
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		if issuerRef, ok := secret.Data["issuer_ref"]; ok {
+			d.Set("issuer_ref", issuerRef)
+		}
 	}
 
 	var legacyPolicyIdentifiers []string = nil
@@ -662,6 +680,12 @@ func pkiSecretBackendRoleUpdate(d *schema.ResourceData, meta interface{}) error 
 
 	if len(extKeyUsage) > 0 {
 		data["ext_key_usage"] = extKeyUsage
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		if issuerRef, ok := d.GetOk("issuer_ref"); ok {
+			data["issuer_ref"] = issuerRef
+		}
 	}
 
 	if policyIdentifiers, ok := d.GetOk("policy_identifiers"); ok {

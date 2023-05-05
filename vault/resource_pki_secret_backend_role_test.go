@@ -223,6 +223,32 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion111), nil
+				},
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, ""),
+				Check:  resource.TestCheckResourceAttr(resourceName, "issuer_ref", "default"),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion111), nil
+				},
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, `issuer_ref = "root-a"`),
+				Check:  resource.TestCheckResourceAttr(resourceName, "issuer_ref", "root-a"),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testPkiSecretBackendRoleConfig_updated(name, backend, testLegacyPolicyIdentifiers),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
@@ -280,7 +306,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 	})
 }
 
-func testPkiSecretBackendRoleConfig_basic(name, path string, roleTTL, maxTTL int, policyIdentifiers string) string {
+func testPkiSecretBackendRoleConfig_basic(name, path string, roleTTL, maxTTL int, extraConfig string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "pki" {
   path = "%s"
@@ -327,7 +353,7 @@ resource "vault_pki_secret_backend_role" "test" {
   not_before_duration                = "45m"
   allowed_serial_numbers             = ["*"]
 }
-`, path, name, roleTTL, maxTTL, policyIdentifiers)
+`, path, name, roleTTL, maxTTL, extraConfig)
 }
 
 func testPkiSecretBackendRoleConfig_updated(name, path string, policyIdentifiers string) string {
