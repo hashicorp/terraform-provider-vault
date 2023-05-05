@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -21,16 +22,36 @@ func pkiSecretBackendConfigCAResource() *schema.Resource {
 		DeleteContext: pkiSecretBackendConfigCADelete,
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The PKI secret backend the resource belongs to.",
 				ForceNew:    true,
 			},
-			"pem_bundle": {
+			consts.FieldPemBundle: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The key and certificate PEM bundle.",
+				ForceNew:    true,
+				Sensitive:   true,
+			},
+			consts.FieldImportedIssuers: {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Computed:    true,
+				Description: "The issuers imported by the Config CA.",
+				ForceNew:    true,
+				Sensitive:   true,
+			},
+			consts.FieldImportedKeys: {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Computed:    true,
+				Description: "The keys imported by the Config CA.",
 				ForceNew:    true,
 				Sensitive:   true,
 			},
@@ -44,22 +65,32 @@ func pkiSecretBackendConfigCACreate(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
+	backend := d.Get(consts.FieldBackend).(string)
 
 	path := pkiSecretBackendConfigCAPath(backend)
 
 	data := map[string]interface{}{
-		"pem_bundle": d.Get("pem_bundle").(string),
+		consts.FieldPemBundle: d.Get(consts.FieldPemBundle).(string),
 	}
 
 	log.Printf("[DEBUG] Creating CA config on PKI secret backend %q", backend)
-	_, err := client.Logical().Write(path, data)
+	resp, err := client.Logical().Write(path, data)
 	if err != nil {
 		return diag.Errorf("error creating CA config for PKI secret backend %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Created CA config on PKI secret backend %q", backend)
 
 	d.SetId(backend)
+
+	isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
+	if isIssuerAPISupported {
+		computedFields := []string{consts.FieldImportedKeys, consts.FieldImportedIssuers}
+		for _, k := range computedFields {
+			if err := d.Set(k, resp.Data[k]); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
 
 	return pkiSecretBackendConfigCARead(ctx, d, meta)
 }

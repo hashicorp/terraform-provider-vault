@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -28,7 +29,19 @@ func TestPkiSecretBackendConfigCA_basic(t *testing.T) {
 			{
 				Config: testPkiSecretBackendConfigCAConfig_basic(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion111), nil
+				},
+				Config: testPkiSecretBackendConfigCAConfig_basic(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, "imported_keys.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "imported_issuers.#", "1"),
 				),
 			},
 		},

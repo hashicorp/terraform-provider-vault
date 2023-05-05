@@ -243,6 +243,9 @@ const (
 	FieldIssuerName                 = "issuer_name"
 	FieldIssuerID                   = "issuer_id"
 	FieldKeyRef                     = "key_ref"
+	FieldPemBundle                  = "pem_bundle"
+	FieldImportedIssuers            = "imported_issuers"
+	FieldImportedKeys               = "imported_keys"
 
 	/*
 		common environment variables
