@@ -28,7 +28,6 @@ func oktaAuthBackendResource() *schema.Resource {
 		Delete: oktaAuthBackendDelete,
 		Read:   ReadWrapper(oktaAuthBackendRead),
 		Update: oktaAuthBackendUpdate,
-		Exists: oktaAuthBackendExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -288,10 +287,6 @@ func oktaAuthBackendDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return nil
-}
-
-func oktaAuthBackendExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	return isOktaAuthBackendPresent(meta.(*provider.ProviderMeta).GetClient(), d.Id())
 }
 
 func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
