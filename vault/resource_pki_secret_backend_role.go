@@ -25,6 +25,51 @@ var (
 	pkiSecretBackendRoleNameFromPathRegex    = regexp.MustCompile("^.+/roles/(.+)$")
 )
 
+var pkiSecretFields = []string{
+	consts.FieldTTL,
+	consts.FieldMaxTTL,
+	consts.FieldAllowedDomainsTemplate,
+	consts.FieldAllowedURISans,
+	consts.FieldAllowedOtherSans,
+	consts.FieldServerFlag,
+	consts.FieldClientFlag,
+	consts.FieldCodeSigningFlag,
+	consts.FieldEmailProtectionFlag,
+	consts.FieldKeyType,
+	consts.FieldKeyBits,
+	consts.FieldOU,
+	consts.FieldOrganization,
+	consts.FieldCountry,
+	consts.FieldLocality,
+	consts.FieldProvince,
+	consts.FieldStreetAddress,
+	consts.FieldPostalCode,
+	consts.FieldNotBeforeDuration,
+}
+
+var pkiSecretListFields = []string{
+	consts.FieldAllowedDomains,
+	consts.FieldKeyUsage,
+	consts.FieldExtKeyUsage,
+	consts.FieldAllowedSerialNumbers,
+}
+
+var pkiSecretBooleanFields = []string{
+	consts.FieldAllowLocalhost,
+	consts.FieldAllowBareDomains,
+	consts.FieldAllowSubdomains,
+	consts.FieldAllowGlobDomains,
+	consts.FieldAllowAnyName,
+	consts.FieldEnforceHostnames,
+	consts.FieldAllowIPSans,
+	consts.FieldUseCSRCommonName,
+	consts.FieldUseCSRSans,
+	consts.FieldGenerateLease,
+	consts.FieldNoStore,
+	consts.FieldRequireCN,
+	consts.FieldBasicConstraintsValidForNonCA,
+}
+
 func pkiSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: pkiSecretBackendRoleCreate,
@@ -375,13 +420,7 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 	log.Printf("[DEBUG] Writing PKI secret backend role %q", path)
 
 	data := map[string]interface{}{}
-	listFields := []string{
-		consts.FieldAllowedDomains,
-		consts.FieldKeyUsage,
-		consts.FieldExtKeyUsage,
-		consts.FieldAllowedSerialNumbers,
-	}
-	for _, k := range listFields {
+	for _, k := range pkiSecretListFields {
 		if v, ok := d.GetOk(k); ok {
 			ifcList := v.([]interface{})
 			list := make([]string, 0, len(ifcList))
@@ -395,50 +434,12 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
-	fields := []string{
-		consts.FieldTTL,
-		consts.FieldMaxTTL,
-		consts.FieldAllowedDomainsTemplate,
-		consts.FieldAllowedURISans,
-		consts.FieldAllowedOtherSans,
-		consts.FieldServerFlag,
-		consts.FieldClientFlag,
-		consts.FieldCodeSigningFlag,
-		consts.FieldEmailProtectionFlag,
-		consts.FieldKeyType,
-		consts.FieldKeyBits,
-		consts.FieldOU,
-		consts.FieldOrganization,
-		consts.FieldCountry,
-		consts.FieldLocality,
-		consts.FieldProvince,
-		consts.FieldStreetAddress,
-		consts.FieldPostalCode,
-		consts.FieldNotBeforeDuration,
-	}
-
-	booleanFields := []string{
-		consts.FieldAllowLocalhost,
-		consts.FieldAllowBareDomains,
-		consts.FieldAllowSubdomains,
-		consts.FieldAllowGlobDomains,
-		consts.FieldAllowAnyName,
-		consts.FieldEnforceHostnames,
-		consts.FieldAllowIPSans,
-		consts.FieldUseCSRCommonName,
-		consts.FieldUseCSRSans,
-		consts.FieldGenerateLease,
-		consts.FieldNoStore,
-		consts.FieldRequireCN,
-		consts.FieldBasicConstraintsValidForNonCA,
-	}
-
-	for _, k := range fields {
+	for _, k := range pkiSecretFields {
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v
 		}
 	}
-	for _, k := range booleanFields {
+	for _, k := range pkiSecretBooleanFields {
 		data[k] = d.Get(k)
 	}
 
@@ -498,27 +499,16 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 		return nil
 	}
 
-	iAllowedDomains := secret.Data[consts.FieldAllowedDomains].([]interface{})
-	allowedDomains := make([]string, 0, len(iAllowedDomains))
-	for _, iAllowedDomain := range iAllowedDomains {
-		allowedDomains = append(allowedDomains, iAllowedDomain.(string))
-	}
+	for _, k := range pkiSecretListFields {
+		ifcList := secret.Data[k].([]interface{})
+		list := make([]string, 0, len(ifcList))
+		for _, ifc := range ifcList {
+			list = append(list, ifc.(string))
+		}
 
-	keyBits, err := secret.Data[consts.FieldKeyBits].(json.Number).Int64()
-	if err != nil {
-		return diag.Errorf("expected key_bits %q to be a number, isn't", secret.Data[consts.FieldKeyBits])
-	}
-
-	iKeyUsage := secret.Data[consts.FieldKeyUsage].([]interface{})
-	keyUsage := make([]string, 0, len(iKeyUsage))
-	for _, iUsage := range iKeyUsage {
-		keyUsage = append(keyUsage, iUsage.(string))
-	}
-
-	iExtKeyUsage := secret.Data[consts.FieldExtKeyUsage].([]interface{})
-	extKeyUsage := make([]string, 0, len(iExtKeyUsage))
-	for _, iUsage := range iExtKeyUsage {
-		extKeyUsage = append(extKeyUsage, iUsage.(string))
+		if len(list) > 0 {
+			d.Set(k, list)
+		}
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion111) {
@@ -539,57 +529,33 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
-	notBeforeDuration := flattenVaultDuration(secret.Data[consts.FieldNotBeforeDuration])
-
-	iAllowedSerialNumbers := secret.Data[consts.FieldAllowedSerialNumbers].([]interface{})
-	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
-	for _, iSerialNumber := range iAllowedSerialNumbers {
-		allowedSerialNumbers = append(allowedSerialNumbers, iSerialNumber.(string))
-	}
-
 	d.Set(consts.FieldBackend, backend)
 	d.Set(consts.FieldName, name)
-	d.Set(consts.FieldTTL, secret.Data[consts.FieldTTL])
-	d.Set(consts.FieldMaxTTL, secret.Data[consts.FieldMaxTTL])
-	d.Set(consts.FieldAllowLocalhost, secret.Data[consts.FieldAllowLocalhost])
-	d.Set(consts.FieldAllowedDomains, allowedDomains)
-	d.Set(consts.FieldAllowedDomainsTemplate, secret.Data[consts.FieldAllowedDomainsTemplate])
-	d.Set(consts.FieldAllowBareDomains, secret.Data[consts.FieldAllowBareDomains])
-	d.Set(consts.FieldAllowSubdomains, secret.Data[consts.FieldAllowSubdomains])
-	d.Set(consts.FieldAllowGlobDomains, secret.Data[consts.FieldAllowGlobDomains])
-	d.Set(consts.FieldAllowAnyName, secret.Data[consts.FieldAllowAnyName])
-	d.Set(consts.FieldEnforceHostnames, secret.Data[consts.FieldEnforceHostnames])
-	d.Set(consts.FieldAllowIPSans, secret.Data[consts.FieldAllowIPSans])
-	d.Set(consts.FieldAllowedURISans, secret.Data[consts.FieldAllowedURISans])
-	d.Set(consts.FieldAllowedOtherSans, secret.Data[consts.FieldAllowedOtherSans])
-	d.Set(consts.FieldServerFlag, secret.Data[consts.FieldServerFlag])
-	d.Set(consts.FieldClientFlag, secret.Data[consts.FieldClientFlag])
-	d.Set(consts.FieldCodeSigningFlag, secret.Data[consts.FieldCodeSigningFlag])
-	d.Set(consts.FieldEmailProtectionFlag, secret.Data[consts.FieldEmailProtectionFlag])
-	d.Set(consts.FieldKeyType, secret.Data[consts.FieldKeyType])
-	d.Set(consts.FieldKeyBits, keyBits)
-	d.Set(consts.FieldKeyUsage, keyUsage)
-	d.Set(consts.FieldExtKeyUsage, extKeyUsage)
-	d.Set(consts.FieldUseCSRCommonName, secret.Data[consts.FieldUseCSRCommonName])
-	d.Set(consts.FieldUseCSRSans, secret.Data[consts.FieldUseCSRSans])
-	d.Set(consts.FieldOU, secret.Data[consts.FieldOU])
-	d.Set(consts.FieldOrganization, secret.Data[consts.FieldOrganization])
-	d.Set(consts.FieldCountry, secret.Data[consts.FieldCountry])
-	d.Set(consts.FieldLocality, secret.Data[consts.FieldLocality])
-	d.Set(consts.FieldProvince, secret.Data[consts.FieldProvince])
-	d.Set(consts.FieldStreetAddress, secret.Data[consts.FieldStreetAddress])
-	d.Set(consts.FieldPostalCode, secret.Data[consts.FieldPostalCode])
-	d.Set(consts.FieldGenerateLease, secret.Data[consts.FieldGenerateLease])
-	d.Set(consts.FieldNoStore, secret.Data[consts.FieldNoStore])
-	d.Set(consts.FieldRequireCN, secret.Data[consts.FieldRequireCN])
+
+	for _, k := range pkiSecretFields {
+		// handle any special cases
+		switch {
+		case k == consts.FieldNotBeforeDuration:
+			d.Set(k, flattenVaultDuration(secret.Data[k]))
+		case k == consts.FieldKeyBits:
+			keyBits, err := secret.Data[consts.FieldKeyBits].(json.Number).Int64()
+			if err != nil {
+				return diag.Errorf("expected key_bits %q to be a number, isn't", secret.Data[consts.FieldKeyBits])
+			}
+			d.Set(consts.FieldKeyBits, keyBits)
+		default:
+			d.Set(k, secret.Data[k])
+		}
+	}
+	for _, k := range pkiSecretBooleanFields {
+		d.Set(k, secret.Data[k])
+	}
+
 	if len(legacyPolicyIdentifiers) > 0 {
 		d.Set(consts.FieldPolicyIdentifiers, legacyPolicyIdentifiers)
 	} else {
 		d.Set(consts.FieldPolicyIdentifier, newPolicyIdentifiers)
 	}
-	d.Set(consts.FieldBasicConstraintsValidForNonCA, secret.Data[consts.FieldBasicConstraintsValidForNonCA])
-	d.Set(consts.FieldNotBeforeDuration, notBeforeDuration)
-	d.Set(consts.FieldAllowedSerialNumbers, allowedSerialNumbers)
 
 	return nil
 }
@@ -603,75 +569,28 @@ func pkiSecretBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 	path := d.Id()
 	log.Printf("[DEBUG] Updating PKI secret backend role %q", path)
 
-	iAllowedDomains := d.Get(consts.FieldAllowedDomains).([]interface{})
-	allowedDomains := make([]string, 0, len(iAllowedDomains))
-	for _, iAllowedDomain := range iAllowedDomains {
-		allowedDomains = append(allowedDomains, iAllowedDomain.(string))
+	data := map[string]interface{}{}
+	for _, k := range pkiSecretListFields {
+		if v, ok := d.GetOk(k); ok {
+			ifcList := v.([]interface{})
+			list := make([]string, 0, len(ifcList))
+			for _, ifc := range ifcList {
+				list = append(list, ifc.(string))
+			}
+
+			if len(list) > 0 {
+				data[k] = list
+			}
+		}
 	}
 
-	iKeyUsage := d.Get(consts.FieldKeyUsage).([]interface{})
-	keyUsage := make([]string, 0, len(iKeyUsage))
-	for _, iUsage := range iKeyUsage {
-		keyUsage = append(keyUsage, iUsage.(string))
+	for _, k := range pkiSecretFields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
 	}
-
-	iExtKeyUsage := d.Get(consts.FieldExtKeyUsage).([]interface{})
-	extKeyUsage := make([]string, 0, len(iExtKeyUsage))
-	for _, iUsage := range iExtKeyUsage {
-		extKeyUsage = append(extKeyUsage, iUsage.(string))
-	}
-
-	iAllowedSerialNumbers := d.Get(consts.FieldAllowedSerialNumbers).([]interface{})
-	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
-	for _, iSerialNumber := range iAllowedSerialNumbers {
-		allowedSerialNumbers = append(allowedSerialNumbers, iSerialNumber.(string))
-	}
-
-	data := map[string]interface{}{
-		consts.FieldTTL:                           d.Get(consts.FieldTTL),
-		consts.FieldMaxTTL:                        d.Get(consts.FieldMaxTTL),
-		consts.FieldAllowLocalhost:                d.Get(consts.FieldAllowLocalhost),
-		consts.FieldAllowBareDomains:              d.Get(consts.FieldAllowBareDomains),
-		consts.FieldAllowedDomainsTemplate:        d.Get(consts.FieldAllowedDomainsTemplate),
-		consts.FieldAllowSubdomains:               d.Get(consts.FieldAllowSubdomains),
-		consts.FieldAllowGlobDomains:              d.Get(consts.FieldAllowGlobDomains),
-		consts.FieldAllowAnyName:                  d.Get(consts.FieldAllowAnyName),
-		consts.FieldEnforceHostnames:              d.Get(consts.FieldEnforceHostnames),
-		consts.FieldAllowIPSans:                   d.Get(consts.FieldAllowIPSans),
-		consts.FieldAllowedURISans:                d.Get(consts.FieldAllowedURISans),
-		consts.FieldAllowedOtherSans:              d.Get(consts.FieldAllowedOtherSans),
-		consts.FieldServerFlag:                    d.Get(consts.FieldServerFlag),
-		consts.FieldClientFlag:                    d.Get(consts.FieldClientFlag),
-		consts.FieldCodeSigningFlag:               d.Get(consts.FieldCodeSigningFlag),
-		consts.FieldEmailProtectionFlag:           d.Get(consts.FieldEmailProtectionFlag),
-		consts.FieldKeyType:                       d.Get(consts.FieldKeyType),
-		consts.FieldKeyBits:                       d.Get(consts.FieldKeyBits),
-		consts.FieldUseCSRCommonName:              d.Get(consts.FieldUseCSRCommonName),
-		consts.FieldUseCSRSans:                    d.Get(consts.FieldUseCSRSans),
-		consts.FieldOU:                            d.Get(consts.FieldOU),
-		consts.FieldOrganization:                  d.Get(consts.FieldOrganization),
-		consts.FieldCountry:                       d.Get(consts.FieldCountry),
-		consts.FieldLocality:                      d.Get(consts.FieldLocality),
-		consts.FieldProvince:                      d.Get(consts.FieldProvince),
-		consts.FieldStreetAddress:                 d.Get(consts.FieldStreetAddress),
-		consts.FieldPostalCode:                    d.Get(consts.FieldPostalCode),
-		consts.FieldGenerateLease:                 d.Get(consts.FieldGenerateLease),
-		consts.FieldNoStore:                       d.Get(consts.FieldNoStore),
-		consts.FieldRequireCN:                     d.Get(consts.FieldRequireCN),
-		consts.FieldBasicConstraintsValidForNonCA: d.Get(consts.FieldBasicConstraintsValidForNonCA),
-		consts.FieldNotBeforeDuration:             d.Get(consts.FieldNotBeforeDuration),
-	}
-
-	if len(allowedDomains) > 0 {
-		data[consts.FieldAllowedDomains] = allowedDomains
-	}
-
-	if len(keyUsage) > 0 {
-		data[consts.FieldKeyUsage] = keyUsage
-	}
-
-	if len(extKeyUsage) > 0 {
-		data[consts.FieldExtKeyUsage] = extKeyUsage
+	for _, k := range pkiSecretBooleanFields {
+		data[k] = d.Get(k)
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion111) {
@@ -684,10 +603,6 @@ func pkiSecretBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 		data[consts.FieldPolicyIdentifiers] = policyIdentifiers
 	} else if policyIdentifierBlocksRaw, ok := d.GetOk(consts.FieldPolicyIdentifier); ok {
 		data[consts.FieldPolicyIdentifiers] = pki.ReadPolicyIdentifierBlocks(policyIdentifierBlocksRaw.(*schema.Set))
-	}
-
-	if len(allowedSerialNumbers) > 0 {
-		data[consts.FieldAllowedSerialNumbers] = allowedSerialNumbers
 	}
 
 	_, err := client.Logical().Write(path, data)
