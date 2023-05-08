@@ -420,6 +420,8 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 	log.Printf("[DEBUG] Writing PKI secret backend role %q", path)
 
 	data := map[string]interface{}{}
+
+	// handle TypeList
 	for _, k := range pkiSecretListFields {
 		if v, ok := d.GetOk(k); ok {
 			ifcList := v.([]interface{})
@@ -434,15 +436,21 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
+	// handle TypeBool
+	for _, k := range pkiSecretBooleanFields {
+		// use d.Get for booleans
+		// see: https://discuss.hashicorp.com/t/terraform-sdk-usage-which-out-of-get-getok-getokexists-with-boolean/41815
+		data[k] = d.Get(k)
+	}
+
+	// handle all other types
 	for _, k := range pkiSecretFields {
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v
 		}
 	}
-	for _, k := range pkiSecretBooleanFields {
-		data[k] = d.Get(k)
-	}
 
+	// handle any other special cases
 	if policyIdentifiers, ok := d.GetOk(consts.FieldPolicyIdentifiers); ok {
 		data[consts.FieldPolicyIdentifiers] = policyIdentifiers
 	} else if policyIdentifierBlocksRaw, ok := d.GetOk(consts.FieldPolicyIdentifier); ok {
@@ -499,6 +507,10 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 		return nil
 	}
 
+	d.Set(consts.FieldBackend, backend)
+	d.Set(consts.FieldName, name)
+
+	// handle TypeList
 	for _, k := range pkiSecretListFields {
 		ifcList := secret.Data[k].([]interface{})
 		list := make([]string, 0, len(ifcList))
@@ -511,12 +523,29 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion111) {
-		if issuerRef, ok := secret.Data[consts.FieldIssuerRef]; ok {
-			d.Set(consts.FieldIssuerRef, issuerRef)
+	// handle TypeBool
+	for _, k := range pkiSecretBooleanFields {
+		d.Set(k, secret.Data[k])
+	}
+
+	// handle all other types
+	for _, k := range pkiSecretFields {
+		// handle any special cases
+		switch {
+		case k == consts.FieldNotBeforeDuration:
+			d.Set(k, flattenVaultDuration(secret.Data[k]))
+		case k == consts.FieldKeyBits:
+			keyBits, err := secret.Data[consts.FieldKeyBits].(json.Number).Int64()
+			if err != nil {
+				return diag.Errorf("expected key_bits %q to be a number", secret.Data[consts.FieldKeyBits])
+			}
+			d.Set(consts.FieldKeyBits, keyBits)
+		default:
+			d.Set(k, secret.Data[k])
 		}
 	}
 
+	// handle any other special cases
 	var legacyPolicyIdentifiers []string = nil
 	var newPolicyIdentifiers *schema.Set = nil
 	if policyIdentifiersRaw, ok := secret.Data[consts.FieldPolicyIdentifiers]; ok {
@@ -529,32 +558,16 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
-	d.Set(consts.FieldBackend, backend)
-	d.Set(consts.FieldName, name)
-
-	for _, k := range pkiSecretFields {
-		// handle any special cases
-		switch {
-		case k == consts.FieldNotBeforeDuration:
-			d.Set(k, flattenVaultDuration(secret.Data[k]))
-		case k == consts.FieldKeyBits:
-			keyBits, err := secret.Data[consts.FieldKeyBits].(json.Number).Int64()
-			if err != nil {
-				return diag.Errorf("expected key_bits %q to be a number, isn't", secret.Data[consts.FieldKeyBits])
-			}
-			d.Set(consts.FieldKeyBits, keyBits)
-		default:
-			d.Set(k, secret.Data[k])
-		}
-	}
-	for _, k := range pkiSecretBooleanFields {
-		d.Set(k, secret.Data[k])
-	}
-
 	if len(legacyPolicyIdentifiers) > 0 {
 		d.Set(consts.FieldPolicyIdentifiers, legacyPolicyIdentifiers)
 	} else {
 		d.Set(consts.FieldPolicyIdentifier, newPolicyIdentifiers)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		if issuerRef, ok := secret.Data[consts.FieldIssuerRef]; ok {
+			d.Set(consts.FieldIssuerRef, issuerRef)
+		}
 	}
 
 	return nil
@@ -569,6 +582,7 @@ func pkiSecretBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 	path := d.Id()
 	log.Printf("[DEBUG] Updating PKI secret backend role %q", path)
 
+	// handle TypeList
 	data := map[string]interface{}{}
 	for _, k := range pkiSecretListFields {
 		if v, ok := d.GetOk(k); ok {
@@ -584,25 +598,29 @@ func pkiSecretBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
+	// handle TypeBool
+	for _, k := range pkiSecretBooleanFields {
+		data[k] = d.Get(k)
+	}
+
+	// handle all other types
 	for _, k := range pkiSecretFields {
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v
 		}
 	}
-	for _, k := range pkiSecretBooleanFields {
-		data[k] = d.Get(k)
+
+	// handle any special cases
+	if policyIdentifiers, ok := d.GetOk(consts.FieldPolicyIdentifiers); ok {
+		data[consts.FieldPolicyIdentifiers] = policyIdentifiers
+	} else if policyIdentifierBlocksRaw, ok := d.GetOk(consts.FieldPolicyIdentifier); ok {
+		data[consts.FieldPolicyIdentifiers] = pki.ReadPolicyIdentifierBlocks(policyIdentifierBlocksRaw.(*schema.Set))
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion111) {
 		if issuerRef, ok := d.GetOk(consts.FieldIssuerRef); ok {
 			data[consts.FieldIssuerRef] = issuerRef
 		}
-	}
-
-	if policyIdentifiers, ok := d.GetOk(consts.FieldPolicyIdentifiers); ok {
-		data[consts.FieldPolicyIdentifiers] = policyIdentifiers
-	} else if policyIdentifierBlocksRaw, ok := d.GetOk(consts.FieldPolicyIdentifier); ok {
-		data[consts.FieldPolicyIdentifiers] = pki.ReadPolicyIdentifierBlocks(policyIdentifierBlocksRaw.(*schema.Set))
 	}
 
 	_, err := client.Logical().Write(path, data)
