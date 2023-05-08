@@ -374,79 +374,72 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 
 	log.Printf("[DEBUG] Writing PKI secret backend role %q", path)
 
-	// TODO: selectively configure the engine by replacing all of the d.Get()
-	// calls with d.GetOk()
-	// The current approach is inconsistent with the majority of the other resources.
-	// It also sets a bad precedent for contributors.
-	iAllowedDomains := d.Get(consts.FieldAllowedDomains).([]interface{})
-	allowedDomains := make([]string, 0, len(iAllowedDomains))
-	for _, iAllowedDomain := range iAllowedDomains {
-		allowedDomains = append(allowedDomains, iAllowedDomain.(string))
+	data := map[string]interface{}{}
+	listFields := []string{
+		consts.FieldAllowedDomains,
+		consts.FieldKeyUsage,
+		consts.FieldExtKeyUsage,
+		consts.FieldAllowedSerialNumbers,
+	}
+	for _, k := range listFields {
+		if v, ok := d.GetOk(k); ok {
+			ifcList := v.([]interface{})
+			list := make([]string, 0, len(ifcList))
+			for _, ifc := range ifcList {
+				list = append(list, ifc.(string))
+			}
+
+			if len(list) > 0 {
+				data[k] = list
+			}
+		}
 	}
 
-	iKeyUsage := d.Get(consts.FieldKeyUsage).([]interface{})
-	keyUsage := make([]string, 0, len(iKeyUsage))
-	for _, iUsage := range iKeyUsage {
-		keyUsage = append(keyUsage, iUsage.(string))
+	fields := []string{
+		consts.FieldTTL,
+		consts.FieldMaxTTL,
+		consts.FieldAllowedDomainsTemplate,
+		consts.FieldAllowedURISans,
+		consts.FieldAllowedOtherSans,
+		consts.FieldServerFlag,
+		consts.FieldClientFlag,
+		consts.FieldCodeSigningFlag,
+		consts.FieldEmailProtectionFlag,
+		consts.FieldKeyType,
+		consts.FieldKeyBits,
+		consts.FieldOU,
+		consts.FieldOrganization,
+		consts.FieldCountry,
+		consts.FieldLocality,
+		consts.FieldProvince,
+		consts.FieldStreetAddress,
+		consts.FieldPostalCode,
+		consts.FieldNotBeforeDuration,
 	}
 
-	iExtKeyUsage := d.Get(consts.FieldExtKeyUsage).([]interface{})
-	extKeyUsage := make([]string, 0, len(iExtKeyUsage))
-	for _, iUsage := range iExtKeyUsage {
-		extKeyUsage = append(extKeyUsage, iUsage.(string))
+	booleanFields := []string{
+		consts.FieldAllowLocalhost,
+		consts.FieldAllowBareDomains,
+		consts.FieldAllowSubdomains,
+		consts.FieldAllowGlobDomains,
+		consts.FieldAllowAnyName,
+		consts.FieldEnforceHostnames,
+		consts.FieldAllowIPSans,
+		consts.FieldUseCSRCommonName,
+		consts.FieldUseCSRSans,
+		consts.FieldGenerateLease,
+		consts.FieldNoStore,
+		consts.FieldRequireCN,
+		consts.FieldBasicConstraintsValidForNonCA,
 	}
 
-	iAllowedSerialNumbers := d.Get(consts.FieldAllowedSerialNumbers).([]interface{})
-	allowedSerialNumbers := make([]string, 0, len(iAllowedSerialNumbers))
-	for _, iSerialNumber := range iAllowedSerialNumbers {
-		allowedSerialNumbers = append(allowedSerialNumbers, iSerialNumber.(string))
+	for _, k := range fields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
 	}
-
-	data := map[string]interface{}{
-		consts.FieldTTL:                           d.Get(consts.FieldTTL),
-		consts.FieldMaxTTL:                        d.Get(consts.FieldMaxTTL),
-		consts.FieldAllowLocalhost:                d.Get(consts.FieldAllowLocalhost),
-		consts.FieldAllowBareDomains:              d.Get(consts.FieldAllowBareDomains),
-		consts.FieldAllowSubdomains:               d.Get(consts.FieldAllowSubdomains),
-		consts.FieldAllowedDomainsTemplate:        d.Get(consts.FieldAllowedDomainsTemplate),
-		consts.FieldAllowGlobDomains:              d.Get(consts.FieldAllowGlobDomains),
-		consts.FieldAllowAnyName:                  d.Get(consts.FieldAllowAnyName),
-		consts.FieldEnforceHostnames:              d.Get(consts.FieldEnforceHostnames),
-		consts.FieldAllowIPSans:                   d.Get(consts.FieldAllowIPSans),
-		consts.FieldAllowedURISans:                d.Get(consts.FieldAllowedURISans),
-		consts.FieldAllowedOtherSans:              d.Get(consts.FieldAllowedOtherSans),
-		consts.FieldServerFlag:                    d.Get(consts.FieldServerFlag),
-		consts.FieldClientFlag:                    d.Get(consts.FieldClientFlag),
-		consts.FieldCodeSigningFlag:               d.Get(consts.FieldCodeSigningFlag),
-		consts.FieldEmailProtectionFlag:           d.Get(consts.FieldEmailProtectionFlag),
-		consts.FieldKeyType:                       d.Get(consts.FieldKeyType),
-		consts.FieldKeyBits:                       d.Get(consts.FieldKeyBits),
-		consts.FieldUseCSRCommonName:              d.Get(consts.FieldUseCSRCommonName),
-		consts.FieldUseCSRSans:                    d.Get(consts.FieldUseCSRSans),
-		consts.FieldOU:                            d.Get(consts.FieldOU),
-		consts.FieldOrganization:                  d.Get(consts.FieldOrganization),
-		consts.FieldCountry:                       d.Get(consts.FieldCountry),
-		consts.FieldLocality:                      d.Get(consts.FieldLocality),
-		consts.FieldProvince:                      d.Get(consts.FieldProvince),
-		consts.FieldStreetAddress:                 d.Get(consts.FieldStreetAddress),
-		consts.FieldPostalCode:                    d.Get(consts.FieldPostalCode),
-		consts.FieldGenerateLease:                 d.Get(consts.FieldGenerateLease),
-		consts.FieldNoStore:                       d.Get(consts.FieldNoStore),
-		consts.FieldRequireCN:                     d.Get(consts.FieldRequireCN),
-		consts.FieldBasicConstraintsValidForNonCA: d.Get(consts.FieldBasicConstraintsValidForNonCA),
-		consts.FieldNotBeforeDuration:             d.Get(consts.FieldNotBeforeDuration),
-	}
-
-	if len(allowedDomains) > 0 {
-		data[consts.FieldAllowedDomains] = allowedDomains
-	}
-
-	if len(keyUsage) > 0 {
-		data[consts.FieldKeyUsage] = keyUsage
-	}
-
-	if len(extKeyUsage) > 0 {
-		data[consts.FieldExtKeyUsage] = extKeyUsage
+	for _, k := range booleanFields {
+		data[k] = d.Get(k)
 	}
 
 	if policyIdentifiers, ok := d.GetOk(consts.FieldPolicyIdentifiers); ok {
@@ -459,10 +452,6 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 		if issuerRef, ok := d.GetOk(consts.FieldIssuerRef); ok {
 			data[consts.FieldIssuerRef] = issuerRef
 		}
-	}
-
-	if len(allowedSerialNumbers) > 0 {
-		data[consts.FieldAllowedSerialNumbers] = allowedSerialNumbers
 	}
 
 	log.Printf("[DEBUG] Creating role %s on PKI secret backend %q", name, backend)
