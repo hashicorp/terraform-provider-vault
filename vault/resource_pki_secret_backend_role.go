@@ -25,7 +25,7 @@ var (
 	pkiSecretBackendRoleNameFromPathRegex    = regexp.MustCompile("^.+/roles/(.+)$")
 )
 
-// Any new fields should probably not be added to these maps. Instead handle
+// Any new fields should probably not be added to these lists. Instead handle
 // them separately within a provider.IsAPISupported guard
 var pkiSecretFields = []string{
 	consts.FieldTTL,
