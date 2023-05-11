@@ -23,7 +23,7 @@ func authBackendsDataSource() *schema.Resource {
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "The auth backend mount points.",
 			},
-			"type": {
+			consts.FieldType: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "The name of the auth backend.",
