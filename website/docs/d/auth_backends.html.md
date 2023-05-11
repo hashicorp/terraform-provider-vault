@@ -28,12 +28,12 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
   *Available only for Vault Enterprise*.
 
-* `type` - (Optional) The name of the auth method type.
+* `type` - (Optional) The name of the auth method type. Allows filtering of backends returned by type.
 
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
 
-* `accessors` - The accessors for this auth methods.
+* `auth_method_accessors` - The accessor IDs for the auth methods.
 
 * `paths` - List of auth backend mount points.

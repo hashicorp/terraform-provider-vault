@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -17,7 +17,7 @@ func authBackendsDataSource() *schema.Resource {
 	return &schema.Resource{
 		Read: ReadWrapper(authBackendsDataSourceRead),
 		Schema: map[string]*schema.Schema{
-			"paths": {
+			consts.FieldPaths: {
 				Type:        schema.TypeList,
 				Computed:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
@@ -26,9 +26,10 @@ func authBackendsDataSource() *schema.Resource {
 			consts.FieldType: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The name of the auth backend.",
+				Description: "The type of the auth backend.",
 			},
-			"accessors": {
+			consts.FieldAuthMethodAccessors: {
+				//"accessors": {
 				Type:        schema.TypeList,
 				Computed:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
@@ -73,8 +74,7 @@ func authBackendsDataSourceRead(d *schema.ResourceData, meta interface{}) error 
 	d.SetId("default")
 	d.Set("paths", paths)
 	d.Set("type", targetType)
-	d.Set("accessors", accessors)
+	d.Set("auth_method_accessors", accessors)
 
-	// If we fell out here then we didn't find our Auth in the list.
 	return nil
 }
