@@ -8,6 +8,7 @@ const (
 		common field names
 	*/
 	FieldPath                       = "path"
+	FieldPaths                      = "paths"
 	FieldParameters                 = "parameters"
 	FieldMethod                     = "method"
 	FieldNamespace                  = "namespace"
