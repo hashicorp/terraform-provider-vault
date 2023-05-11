@@ -69,6 +69,8 @@ The following arguments are supported:
 
 * `allowed_uri_sans` - (Optional) Defines allowed URI SANs
 
+* `allowed_uri_sans_template` - (Optional) When set, `allowed_uri_sans` may contain templates, as with ACL Path Templating. 
+
 * `allowed_other_sans` - (Optional) Defines allowed custom SANs
 
 * `server_flag` - (Optional) Flag to specify certificates for server use

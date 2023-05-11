@@ -75,6 +75,7 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "require_cn", "true"),
 		resource.TestCheckResourceAttr(resourceName, "basic_constraints_valid_for_non_ca", "false"),
 		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans_template", "false"),
 	}
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -174,6 +175,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
 		resource.TestCheckResourceAttr(resourceName, "policy_identifiers.#", "1"),
 		resource.TestCheckResourceAttr(resourceName, "policy_identifiers.0", "1.2.3.4"),
+		resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans_template", "false"),
 	}
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -269,6 +271,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "policy_identifiers.0", "1.2.3.4"),
 					resource.TestCheckResourceAttr(resourceName, "basic_constraints_valid_for_non_ca", "false"),
 					resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans_template", "true"),
 				),
 			},
 			{
@@ -353,6 +356,7 @@ resource "vault_pki_secret_backend_role" "test" {
   enforce_hostnames = true
   allow_ip_sans = true
   allowed_uri_sans = ["uri.test.domain"]
+  allowed_uri_sans_template = true
   allowed_other_sans = ["1.2.3.4.5.5;UTF8:test"]
   server_flag = true
   client_flag = true
