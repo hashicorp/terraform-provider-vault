@@ -87,8 +87,8 @@ resource "vault_auth_backend" "test-bar" {
 }
 data "vault_auth_backends" "test" {
 	depends_on = [
-		"vault_auth_backend.test-foo",
-		"vault_auth_backend.test-bar",
+		vault_auth_backend.test-foo,
+		vault_auth_backend.test-bar,
 	]
 	type = "%s"
 }
