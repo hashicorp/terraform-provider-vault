@@ -18,7 +18,7 @@ require (
 	github.com/coreos/go-oidc/v3 v3.4.0 // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
 	github.com/denisenkom/go-mssqldb v0.12.0
-	github.com/docker/distribution v2.8.1+incompatible // indirect
+	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/googleapis/enterprise-certificate-proxy v0.2.0 // indirect
 	github.com/gosimple/slug v1.11.0
