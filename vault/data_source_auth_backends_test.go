@@ -29,7 +29,7 @@ func TestDataSourceAuthBackends(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(ds, "paths.#", "1"),
 					resource.TestCheckResourceAttr(ds, "paths.0", "token"),
-					resource.TestCheckResourceAttr(ds, "auth_method_accessors.#", "1"),
+					resource.TestCheckResourceAttr(ds, "accessors.#", "1"),
 				),
 			},
 			{
@@ -39,7 +39,7 @@ func TestDataSourceAuthBackends(t *testing.T) {
 					resource.TestCheckResourceAttr(ds, "paths.0", "approle"),
 					resource.TestCheckResourceAttr(ds, "paths.1", "token"),
 					resource.TestCheckResourceAttr(ds, "paths.2", "userpass"),
-					resource.TestCheckResourceAttr(ds, "auth_method_accessors.#", "3"),
+					resource.TestCheckResourceAttr(ds, "accessors.#", "3"),
 					resource.TestCheckResourceAttr(ds, "type", ""),
 				),
 			},
@@ -48,7 +48,7 @@ func TestDataSourceAuthBackends(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(ds, "paths.#", "1"),
 					resource.TestCheckResourceAttr(ds, "paths.0", userpassPath),
-					resource.TestCheckResourceAttr(ds, "auth_method_accessors.#", "1"),
+					resource.TestCheckResourceAttr(ds, "accessors.#", "1"),
 					resource.TestCheckResourceAttr(ds, "type", "userpass"),
 				),
 			},

@@ -34,6 +34,6 @@ The following arguments are supported:
 
 In addition to the fields above, the following attributes are exported:
 
-* `auth_method_accessors` - The accessor IDs for the auth methods.
+* `accessors` - The accessor IDs for the auth methods.
 
 * `paths` - List of auth backend mount points.

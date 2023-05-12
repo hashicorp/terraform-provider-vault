@@ -28,7 +28,7 @@ func authBackendsDataSource() *schema.Resource {
 				Optional:    true,
 				Description: "The type of the auth backend.",
 			},
-			consts.FieldAuthMethodAccessors: {
+			consts.FieldAccessors: {
 				Type:        schema.TypeList,
 				Computed:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
@@ -73,7 +73,7 @@ func authBackendsDataSourceRead(d *schema.ResourceData, meta interface{}) error 
 	d.SetId("default")
 	d.Set("paths", paths)
 	d.Set("type", targetType)
-	d.Set("auth_method_accessors", accessors)
+	d.Set("accessors", accessors)
 
 	return nil
 }
