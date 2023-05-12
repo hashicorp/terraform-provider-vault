@@ -5,7 +5,6 @@ package vault
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -60,9 +59,6 @@ func authBackendsDataSourceRead(d *schema.ResourceData, meta interface{}) error 
 		if targetType == "" {
 			paths = append(paths, path)
 			accessors = append(accessors, auth.Accessor)
-			// we do this to make test assertions easier
-			// this is not required
-			sort.Strings(paths)
 		} else if auth.Type == targetType {
 			paths = append(paths, path)
 			accessors = append(accessors, auth.Accessor)
@@ -71,9 +67,9 @@ func authBackendsDataSourceRead(d *schema.ResourceData, meta interface{}) error 
 
 	// Single instance data source - defaulting ID to 'default'
 	d.SetId("default")
-	d.Set("paths", paths)
-	d.Set("type", targetType)
-	d.Set("accessors", accessors)
+	d.Set(consts.FieldPaths, paths)
+	d.Set(consts.FieldType, targetType)
+	d.Set(consts.FieldAccessors, accessors)
 
 	return nil
 }
