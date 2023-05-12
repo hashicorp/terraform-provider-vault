@@ -9,8 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	r "github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -19,10 +17,10 @@ func TestDataSourceAuthBackends(t *testing.T) {
 	approlePath := acctest.RandomWithPrefix("foo")
 	ds := "data.vault_auth_backends.test"
 
-	r.Test(t, r.TestCase{
+	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Steps: []r.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceAuthBackendsBasic,
 				// The token auth method is built-in and automatically enabled
