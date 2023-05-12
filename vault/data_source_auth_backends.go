@@ -29,7 +29,6 @@ func authBackendsDataSource() *schema.Resource {
 				Description: "The type of the auth backend.",
 			},
 			consts.FieldAuthMethodAccessors: {
-				//"accessors": {
 				Type:        schema.TypeList,
 				Computed:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
