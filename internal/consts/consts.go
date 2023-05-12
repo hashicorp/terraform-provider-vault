@@ -8,6 +8,7 @@ const (
 		common field names
 	*/
 	FieldPath                       = "path"
+	FieldPaths                      = "paths"
 	FieldParameters                 = "parameters"
 	FieldMethod                     = "method"
 	FieldNamespace                  = "namespace"
@@ -157,6 +158,7 @@ const (
 	FieldType                       = "type"
 	FieldMethodID                   = "method_id"
 	FieldMFAMethodIDs               = "mfa_method_ids"
+	FieldAccessors                  = "accessors"
 	FieldAuthMethodAccessors        = "auth_method_accessors"
 	FieldAuthMethodTypes            = "auth_method_types"
 	FieldIdentityGroupIDs           = "identity_group_ids"
