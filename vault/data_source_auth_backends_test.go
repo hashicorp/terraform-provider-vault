@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -25,29 +26,29 @@ func TestDataSourceAuthBackends(t *testing.T) {
 				Config: testDataSourceAuthBackendsBasic,
 				// The token auth method is built-in and automatically enabled
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(ds, "paths.#", "1"),
-					resource.TestCheckResourceAttr(ds, "paths.0", "token"),
-					resource.TestCheckResourceAttr(ds, "accessors.#", "1"),
+					resource.TestCheckResourceAttr(ds, consts.FieldPaths+".#", "1"),
+					resource.TestCheckResourceAttr(ds, consts.FieldPaths+".0", "token"),
+					resource.TestCheckResourceAttr(ds, consts.FieldAccessors+".#", "1"),
 				),
 			},
 			{
 				Config: testDataSourceAuthBackendsBasic_config,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(ds, "paths.#", "3"),
-					resource.TestCheckResourceAttr(ds, "paths.0", "approle"),
-					resource.TestCheckResourceAttr(ds, "paths.1", "token"),
-					resource.TestCheckResourceAttr(ds, "paths.2", "userpass"),
-					resource.TestCheckResourceAttr(ds, "accessors.#", "3"),
-					resource.TestCheckResourceAttr(ds, "type", ""),
+					resource.TestCheckResourceAttr(ds, consts.FieldPaths+".#", "3"),
+					resource.TestCheckResourceAttr(ds, consts.FieldPaths+".0", "approle"),
+					resource.TestCheckResourceAttr(ds, consts.FieldPaths+".1", "token"),
+					resource.TestCheckResourceAttr(ds, consts.FieldPaths+".2", "userpass"),
+					resource.TestCheckResourceAttr(ds, consts.FieldAccessors+".#", "3"),
+					resource.TestCheckResourceAttr(ds, consts.FieldType, ""),
 				),
 			},
 			{
 				Config: testDataSourceAuthBackends_config([]string{userpassPath, approlePath}, "userpass"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(ds, "paths.#", "1"),
-					resource.TestCheckResourceAttr(ds, "paths.0", userpassPath),
-					resource.TestCheckResourceAttr(ds, "accessors.#", "1"),
-					resource.TestCheckResourceAttr(ds, "type", "userpass"),
+					resource.TestCheckResourceAttr(ds, consts.FieldPaths+".#", "1"),
+					resource.TestCheckResourceAttr(ds, consts.FieldPaths+".0", userpassPath),
+					resource.TestCheckResourceAttr(ds, consts.FieldAccessors+".#", "1"),
+					resource.TestCheckResourceAttr(ds, consts.FieldType, "userpass"),
 				),
 			},
 		},
