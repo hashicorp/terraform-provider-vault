@@ -45,6 +45,11 @@ The following arguments are supported:
 
 * `name` - (Required) The name to identify this role within the backend. Must be unique within the backend.
 
+* `issuer_ref` - (Optional) Specifies the default issuer of this request. May
+  be the value `default`, a name, or an issuer ID. Use ACLs to prevent access to
+  the `/pki/issuer/:issuer_ref/{issue,sign}/:name` paths to prevent users
+  overriding the role's `issuer_ref` value.
+
 * `ttl` - (Optional, integer) The TTL, in seconds, for any certificate issued against this role.
 
 * `max_ttl` - (Optional, integer) The maximum lease TTL, in seconds, for the role.
