@@ -78,7 +78,6 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 		ReadContext:   ReadContextWrapper(pkiSecretBackendRoleRead),
 		UpdateContext: pkiSecretBackendRoleUpdate,
 		DeleteContext: pkiSecretBackendRoleDelete,
-		Exists:        pkiSecretBackendRoleExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -648,22 +647,6 @@ func pkiSecretBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta 
 	}
 	log.Printf("[DEBUG] Deleted role %q", path)
 	return nil
-}
-
-func pkiSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if role %q exists", path)
-	secret, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if role %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if role %q exists", path)
-	return secret != nil, nil
 }
 
 func pkiSecretBackendRolePath(backend string, name string) string {
