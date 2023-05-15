@@ -43,7 +43,7 @@ func pkiSecretBackendConfigCAResource() *schema.Resource {
 				Computed:    true,
 				Description: "The issuers imported by the Config CA.",
 				ForceNew:    true,
-				Sensitive:   true,
+				// Sensitive:   true,
 			},
 			consts.FieldImportedKeys: {
 				Type: schema.TypeList,
@@ -53,7 +53,7 @@ func pkiSecretBackendConfigCAResource() *schema.Resource {
 				Computed:    true,
 				Description: "The keys imported by the Config CA.",
 				ForceNew:    true,
-				Sensitive:   true,
+				// Sensitive:   true,
 			},
 		},
 	}
