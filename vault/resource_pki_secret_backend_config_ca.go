@@ -40,20 +40,22 @@ func pkiSecretBackendConfigCAResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Computed:    true,
+				// @TODO need to look into supporting version specific computed fields
+				Optional:    true,
 				Description: "The issuers imported by the Config CA.",
 				ForceNew:    true,
-				// Sensitive:   true,
+				Sensitive:   true,
 			},
 			consts.FieldImportedKeys: {
 				Type: schema.TypeList,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Computed:    true,
+				// @TODO need to look into supporting version specific computed fields
+				Optional:    true,
 				Description: "The keys imported by the Config CA.",
 				ForceNew:    true,
-				// Sensitive:   true,
+				Sensitive:   true,
 			},
 		},
 	}
