@@ -831,6 +831,22 @@ var (
 			Resource:      UpdateSchemaResource(managedKeysResource()),
 			PathInventory: []string{"/sys/managed-keys/{type}/{name}"},
 		},
+		"vault_ldap_secret_backend": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendResource()),
+			PathInventory: []string{"/ldap"},
+		},
+		"vault_ldap_secret_backend_dynamic_role": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendDynamicRoleResource()),
+			PathInventory: []string{"/ldap/role/{role_name}"},
+		},
+		"vault_ldap_secret_backend_static_role": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendStaticRoleResource()),
+			PathInventory: []string{"/ldap/static-role/{role_name}"},
+		},
+		"vault_ldap_secret_backend_library_set": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendLibrarySetResource()),
+			PathInventory: []string{"/ldap/library/{set_name}"},
+		},
 	}
 )
 

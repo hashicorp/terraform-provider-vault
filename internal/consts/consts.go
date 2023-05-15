@@ -276,6 +276,7 @@ const (
 	MountTypeAD           = "ad"
 	MountTypeConsul       = "consul"
 	MountTypeTerraform    = "terraform"
+	MountTypeLDAP         = "ldap"
 
 	/*
 		Vault version constants
