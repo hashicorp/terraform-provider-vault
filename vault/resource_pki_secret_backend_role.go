@@ -64,7 +64,7 @@ var pkiSecretBooleanFields = []string{
 	consts.FieldAllowLocalhost,
 	consts.FieldAllowSubdomains,
 	consts.FieldAllowedURISansTemplate,
-	consts.FieldAllowedWildcardCertificates,
+	consts.FieldAllowWildcardCertificates,
 	consts.FieldBasicConstraintsValidForNonCA,
 	consts.FieldEnforceHostnames,
 	consts.FieldGenerateLease,
@@ -204,7 +204,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Computed:    true,
 				Description: "Flag to indicate that `allowed_uri_sans` specifies a template expression (e.g. {{identity.entity.aliases.<mount accessor>.name}})",
 			},
-			consts.FieldAllowedWildcardCertificates: {
+			consts.FieldAllowWildcardCertificates: {
 				Type:        schema.TypeBool,
 				Required:    false,
 				Optional:    true,
