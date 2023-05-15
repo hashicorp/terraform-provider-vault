@@ -146,6 +146,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans.0", "uri.test.domain"),
 		resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans_template", "false"),
 		resource.TestCheckResourceAttr(resourceName, "allowed_other_sans.0", "1.2.3.4.5.5;UTF8:test"),
+		resource.TestCheckResourceAttr(resourceName, "allow_wildcard_certificates", "true"),
 		resource.TestCheckResourceAttr(resourceName, "server_flag", "true"),
 		resource.TestCheckResourceAttr(resourceName, "client_flag", "true"),
 		resource.TestCheckResourceAttr(resourceName, "code_signing_flag", "false"),
@@ -272,6 +273,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans.1", "spiffe://{{identity.entity.name}}"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_uri_sans_template", "true"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_other_sans.0", "1.2.3.4.5.5;UTF8:test"),
+					resource.TestCheckResourceAttr(resourceName, "allow_wildcard_certificates", "false"),
 					resource.TestCheckResourceAttr(resourceName, "server_flag", "true"),
 					resource.TestCheckResourceAttr(resourceName, "client_flag", "true"),
 					resource.TestCheckResourceAttr(resourceName, "code_signing_flag", "false"),
@@ -385,6 +387,7 @@ resource "vault_pki_secret_backend_role" "test" {
   allowed_uri_sans = ["uri.test.domain", "spiffe://{{identity.entity.name}}"]
   allowed_uri_sans_template = true
   allowed_other_sans = ["1.2.3.4.5.5;UTF8:test"]
+  allow_wildcard_certificates = false
   server_flag = true
   client_flag = true
   code_signing_flag = false

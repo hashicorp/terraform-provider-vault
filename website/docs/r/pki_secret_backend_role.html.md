@@ -78,6 +78,8 @@ The following arguments are supported:
 
 * `allowed_other_sans` - (Optional) Defines allowed custom SANs
 
+* `allow_wildcard_certificates` - (Optional) Flag to allow wildcard certificates.
+
 * `server_flag` - (Optional) Flag to specify certificates for server use
 
 * `client_flag` - (Optional) Flag to specify certificates for client use
