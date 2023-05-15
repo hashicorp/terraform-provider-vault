@@ -93,8 +93,4 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-In addition to the arguments above, the following attributes are exported:
-
-* `imported_issuers` - The issuers imported by the Config CA
-
-* `imported_keys` - The keys imported by the Config CA
+No additional attributes are exported by this resource.
