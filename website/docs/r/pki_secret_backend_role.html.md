@@ -74,7 +74,11 @@ The following arguments are supported:
 
 * `allowed_uri_sans` - (Optional) Defines allowed URI SANs
 
+* `allowed_uri_sans_template` - (Optional) Flag, if set, `allowed_uri_sans` can be specified using identity template expressions such as `{{identity.entity.aliases.<mount accessor>.name}}`.
+
 * `allowed_other_sans` - (Optional) Defines allowed custom SANs
+
+* `allow_wildcard_certificates` - (Optional) Flag to allow wildcard certificates.
 
 * `server_flag` - (Optional) Flag to specify certificates for server use
 
@@ -84,7 +88,7 @@ The following arguments are supported:
 
 * `email_protection_flag` - (Optional) Flag to specify certificates for email protection use
 
-* `key_type` - (Optional) The generated key type, choices: `rsa`, `ec`, `ed25519`, `any`  
+* `key_type` - (Optional) The generated key type, choices: `rsa`, `ec`, `ed25519`, `any`
   Defaults to `rsa`
 
 * `key_bits` - (Optional) The number of bits of generated keys

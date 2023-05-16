@@ -230,6 +230,8 @@ const (
 	FieldEnforceHostnames              = "enforce_hostnames"
 	FieldAllowIPSans                   = "allow_ip_sans"
 	FieldAllowedURISans                = "allowed_uri_sans"
+	FieldAllowedURISansTemplate        = "allowed_uri_sans_template"
+	FieldAllowWildcardCertificates     = "allow_wildcard_certificates"
 	FieldAllowedOtherSans              = "allowed_other_sans"
 	FieldServerFlag                    = "server_flag"
 	FieldClientFlag                    = "client_flag"

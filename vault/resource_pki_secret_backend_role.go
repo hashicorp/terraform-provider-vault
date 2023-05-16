@@ -28,48 +28,50 @@ var (
 // Any new fields should probably not be added to these lists. Instead handle
 // them separately within a provider.IsAPISupported guard
 var pkiSecretFields = []string{
-	consts.FieldTTL,
-	consts.FieldMaxTTL,
 	consts.FieldAllowedDomainsTemplate,
-	consts.FieldAllowedURISans,
 	consts.FieldAllowedOtherSans,
-	consts.FieldServerFlag,
+	consts.FieldAllowedURISans,
 	consts.FieldClientFlag,
 	consts.FieldCodeSigningFlag,
+	consts.FieldCountry,
 	consts.FieldEmailProtectionFlag,
-	consts.FieldKeyType,
 	consts.FieldKeyBits,
+	consts.FieldKeyType,
+	consts.FieldLocality,
+	consts.FieldMaxTTL,
+	consts.FieldNotBeforeDuration,
 	consts.FieldOU,
 	consts.FieldOrganization,
-	consts.FieldCountry,
-	consts.FieldLocality,
-	consts.FieldProvince,
-	consts.FieldStreetAddress,
 	consts.FieldPostalCode,
-	consts.FieldNotBeforeDuration,
+	consts.FieldProvince,
+	consts.FieldServerFlag,
+	consts.FieldStreetAddress,
+	consts.FieldTTL,
 }
 
 var pkiSecretListFields = []string{
 	consts.FieldAllowedDomains,
-	consts.FieldKeyUsage,
-	consts.FieldExtKeyUsage,
 	consts.FieldAllowedSerialNumbers,
+	consts.FieldExtKeyUsage,
+	consts.FieldKeyUsage,
 }
 
 var pkiSecretBooleanFields = []string{
-	consts.FieldAllowLocalhost,
-	consts.FieldAllowBareDomains,
-	consts.FieldAllowSubdomains,
-	consts.FieldAllowGlobDomains,
 	consts.FieldAllowAnyName,
-	consts.FieldEnforceHostnames,
+	consts.FieldAllowBareDomains,
+	consts.FieldAllowGlobDomains,
 	consts.FieldAllowIPSans,
-	consts.FieldUseCSRCommonName,
-	consts.FieldUseCSRSans,
+	consts.FieldAllowLocalhost,
+	consts.FieldAllowSubdomains,
+	consts.FieldAllowedURISansTemplate,
+	consts.FieldAllowWildcardCertificates,
+	consts.FieldBasicConstraintsValidForNonCA,
+	consts.FieldEnforceHostnames,
 	consts.FieldGenerateLease,
 	consts.FieldNoStore,
 	consts.FieldRequireCN,
-	consts.FieldBasicConstraintsValidForNonCA,
+	consts.FieldUseCSRCommonName,
+	consts.FieldUseCSRSans,
 }
 
 func pkiSecretBackendRoleResource() *schema.Resource {
@@ -195,6 +197,19 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+			},
+			consts.FieldAllowedURISansTemplate: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Flag to indicate that `allowed_uri_sans` specifies a template expression (e.g. {{identity.entity.aliases.<mount accessor>.name}})",
+			},
+			consts.FieldAllowWildcardCertificates: {
+				Type:        schema.TypeBool,
+				Required:    false,
+				Optional:    true,
+				Description: "Flag to allow wildcard certificates",
+				Default:     true,
 			},
 			consts.FieldServerFlag: {
 				Type:        schema.TypeBool,
