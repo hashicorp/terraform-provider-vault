@@ -4,10 +4,12 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
@@ -16,12 +18,12 @@ import (
 
 func pkiSecretBackendSignResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendSignCreate,
-		Delete: pkiSecretBackendSignDelete,
-		Update: func(data *schema.ResourceData, i interface{}) error {
+		CreateContext: pkiSecretBackendSignCreate,
+		DeleteContext: pkiSecretBackendSignDelete,
+		UpdateContext: func(ctx context.Context, data *schema.ResourceData, i interface{}) diag.Diagnostics {
 			return nil
 		},
-		Read: ReadWrapper(pkiSecretBackendCertRead),
+		ReadContext: ReadContextWrapper(pkiSecretBackendCertRead),
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
@@ -167,10 +169,10 @@ func pkiSecretBackendSignResource() *schema.Resource {
 	}
 }
 
-func pkiSecretBackendSignCreate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendSignCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -232,7 +234,7 @@ func pkiSecretBackendSignCreate(d *schema.ResourceData, meta interface{}) error 
 		backend)
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating certificate sign %s by %s for PKI secret backend %q: %s",
+		return diag.Errorf("error creating certificate sign %s by %s for PKI secret backend %q: %s",
 			commonName, name, backend, err)
 	}
 	log.Printf("[DEBUG] Created certificate sign %s by %s on PKI secret backend %q", commonName, name,
@@ -246,15 +248,15 @@ func pkiSecretBackendSignCreate(d *schema.ResourceData, meta interface{}) error 
 	d.Set("expiration", resp.Data["expiration"])
 
 	if err := pkiSecretBackendCertSynchronizeRenewPending(d); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(fmt.Sprintf("%s/%s/%s", backend, name, commonName))
 
-	return pkiSecretBackendCertRead(d, meta)
+	return pkiSecretBackendCertRead(ctx, d, meta)
 }
 
-func pkiSecretBackendSignDelete(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendSignDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }
 

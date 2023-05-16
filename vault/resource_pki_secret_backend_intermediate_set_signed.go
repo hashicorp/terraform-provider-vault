@@ -4,10 +4,11 @@
 package vault
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -15,9 +16,9 @@ import (
 
 func pkiSecretBackendIntermediateSetSignedResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendIntermediateSetSignedCreate,
-		Read:   ReadWrapper(pkiSecretBackendCertRead),
-		Delete: pkiSecretBackendIntermediateSetSignedDelete,
+		CreateContext: pkiSecretBackendIntermediateSetSignedCreate,
+		ReadContext:   ReadContextWrapper(pkiSecretBackendCertRead),
+		DeleteContext: pkiSecretBackendIntermediateSetSignedDelete,
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -36,10 +37,10 @@ func pkiSecretBackendIntermediateSetSignedResource() *schema.Resource {
 	}
 }
 
-func pkiSecretBackendIntermediateSetSignedCreate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendIntermediateSetSignedCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -53,15 +54,15 @@ func pkiSecretBackendIntermediateSetSignedCreate(d *schema.ResourceData, meta in
 	log.Printf("[DEBUG] Creating intermediate set-signed on PKI secret backend %q", backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating intermediate set-signed on PKI secret backend %q: %s", backend, err)
+		return diag.Errorf("error creating intermediate set-signed on PKI secret backend %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Created intermediate set-signed on PKI secret backend %q", backend)
 
 	d.SetId(path)
-	return pkiSecretBackendCertRead(d, meta)
+	return pkiSecretBackendCertRead(ctx, d, meta)
 }
 
-func pkiSecretBackendIntermediateSetSignedDelete(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendIntermediateSetSignedDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }
 
