@@ -290,6 +290,8 @@ const (
 	FieldAutoRenew                     = "auto_renew"
 	FieldMinSecondsRemaining           = "min_seconds_remaining"
 	FieldRenewPending                  = "renew_pending"
+	FieldImportedIssuers               = "imported_issuers"
+	FieldImportedKeys                  = "imported_keys"
 
 	/*
 		common environment variables
