@@ -324,7 +324,6 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 		consts.FieldFormat,
 		consts.FieldPrivateKeyFormat,
 		consts.FieldMaxPathLength,
-		consts.FieldExcludeCNFromSans,
 		consts.FieldOu,
 		consts.FieldOrganization,
 		consts.FieldCountry,
@@ -334,6 +333,10 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 		consts.FieldPostalCode,
 		consts.FieldManagedKeyName,
 		consts.FieldManagedKeyID,
+	}
+
+	rootCertBooleanAPIFields := []string{
+		consts.FieldExcludeCNFromSans,
 	}
 
 	rootCertStringArrayFields := []string{
@@ -357,6 +360,12 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 		}
 	}
 
+	// add boolean fields
+	for _, k := range rootCertBooleanAPIFields {
+		data[k] = d.Get(k)
+	}
+
+	// add comma separated string fields
 	for _, k := range rootCertStringArrayFields {
 		m := util.ToStringArray(d.Get(k).([]interface{}))
 		if len(m) > 0 {
