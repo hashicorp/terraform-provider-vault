@@ -15,6 +15,7 @@ const (
 	FieldDistinguishedNames         = "distinguished_names"
 	FieldUPNDomain                  = "upndomain"
 	FieldStartTLS                   = "starttls"
+	FieldConnectionTimeout          = "connection_timeout"
 	FieldRequestTimeout             = "request_timeout"
 	FieldSchema                     = "schema"
 	FieldPasswordPolicy             = "password_policy"

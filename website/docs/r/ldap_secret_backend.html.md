@@ -50,6 +50,9 @@ The following arguments are supported:
 * `certificate` - (Optional) CA certificate to use when verifying LDAP server certificate, must be
   x509 PEM encoded.
 
+* `connection_timeout` - (Optional) Timeout, in seconds, when attempting to connect to the LDAP server before trying
+  the next URL in the configuration.
+
 * `client_tls_cert` - (Optional) Client certificate to provide to the LDAP server, must be x509 PEM encoded.
 
 * `client_tls_key` - (Optional) Client certificate key to provide to the LDAP server, must be x509 PEM encoded.

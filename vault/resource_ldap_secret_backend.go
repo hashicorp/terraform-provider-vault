@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -58,22 +59,30 @@ func ldapSecretBackendResource() *schema.Resource {
 			Description: "Skip LDAP server SSL Certificate verification - insecure and not recommended for production use.",
 		},
 		consts.FieldLength: {
-			Type:        schema.TypeInt,
-			Optional:    true,
-			Computed:    true,
-			Deprecated:  "Length is deprecated and password_policy should be used with Vault >= 1.5.",
-			Description: "The desired length of passwords that Vault generates.",
+			Type:          schema.TypeInt,
+			Optional:      true,
+			Computed:      true,
+			Deprecated:    "Length is deprecated and password_policy should be used with Vault >= 1.5.",
+			Description:   "The desired length of passwords that Vault generates.",
+			ConflictsWith: []string{consts.FieldPasswordPolicy},
 		},
 		consts.FieldPasswordPolicy: {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Name of the password policy to use to generate passwords.",
+			Type:          schema.TypeString,
+			Optional:      true,
+			Description:   "Name of the password policy to use to generate passwords.",
+			ConflictsWith: []string{consts.FieldLength},
 		},
 		consts.FieldSchema: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Computed:    true,
 			Description: "The LDAP schema to use when storing entry passwords. Valid schemas include openldap, ad, and racf.",
+		},
+		consts.FieldConnectionTimeout: {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Default:     30,
+			Description: "Timeout, in seconds, when attempting to connect to the LDAP server before trying the next URL in the configuration.",
 		},
 		consts.FieldRequestTimeout: {
 			Type:        schema.TypeInt,
@@ -154,11 +163,13 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 		consts.FieldBindDN,
 		consts.FieldBindPass,
 		consts.FieldCertificate,
+		consts.FieldConnectionTimeout,
 		consts.FieldClientTLSCert,
 		consts.FieldClientTLSKey,
 		consts.FieldLength,
 		consts.FieldPasswordPolicy,
 		consts.FieldRequestTimeout,
+		consts.FieldSchema,
 		consts.FieldUPNDomain,
 		consts.FieldURL,
 		consts.FieldUserAttr,
@@ -213,12 +224,14 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 
 	fields := []string{
 		consts.FieldBindDN,
+		consts.FieldConnectionTimeout,
 		consts.FieldClientTLSCert,
 		consts.FieldClientTLSKey,
 		consts.FieldInsecureTLS,
 		consts.FieldLength,
 		consts.FieldPasswordPolicy,
 		consts.FieldRequestTimeout,
+		consts.FieldSchema,
 		consts.FieldStartTLS,
 		consts.FieldUPNDomain,
 		consts.FieldURL,

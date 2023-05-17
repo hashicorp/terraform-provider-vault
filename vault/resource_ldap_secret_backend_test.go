@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -22,9 +22,9 @@ To test, run the openldap service provided in the docker-compose.yaml file:
 
 Then export the following environment variables:
 
-	LDAP_BINDDN=cn=admin,dc=example,dc=org
-	LDAP_BINDPASS=adminpassword
-	LDAP_URL=ldap://localhost:1389
+	export LDAP_BINDDN=cn=admin,dc=example,dc=org
+	export LDAP_BINDPASS=adminpassword
+	export LDAP_URL=ldap://localhost:1389
 */
 func TestLDAPSecretBackend(t *testing.T) {
 	var (
@@ -48,6 +48,7 @@ func TestLDAPSecretBackend(t *testing.T) {
 			{
 				Config: testLDAPSecretBackendConfig_defaults(bindDN, bindPass),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "openldap"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, "ldap"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, description),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "0"),
@@ -57,11 +58,13 @@ func TestLDAPSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, "ldap://127.0.0.1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserDN, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldInsecureTLS, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldConnectionTimeout, "30"),
 				),
 			},
 			{
-				Config: testLDAPSecretBackendConfig(path, description, bindDN, bindPass, url, userDN, true),
+				Config: testLDAPSecretBackendConfig(path, description, bindDN, bindPass, url, userDN, "ad", true),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "ad"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, description),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
@@ -71,12 +74,14 @@ func TestLDAPSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserDN, userDN),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldInsecureTLS, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldConnectionTimeout, "99"),
 				),
 			},
 			{
-				Config: testLDAPSecretBackendConfig(path, updatedDescription, bindDN, bindPass, url, updatedUserDN, false),
+				Config: testLDAPSecretBackendConfig(path, updatedDescription, bindDN, bindPass, url, updatedUserDN, "ad", false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "ad"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, updatedDescription),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultLeaseTTL, "3600"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxLeaseTTL, "7200"),
@@ -85,10 +90,11 @@ func TestLDAPSecretBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldURL, url),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserDN, updatedUserDN),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldInsecureTLS, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldConnectionTimeout, "99"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				consts.FieldBindPass, consts.FieldSchema, consts.FieldDescription, consts.FieldDisableRemount),
+				consts.FieldBindPass, consts.FieldConnectionTimeout, consts.FieldDescription, consts.FieldDisableRemount),
 		},
 	})
 }
@@ -103,7 +109,7 @@ resource "vault_ldap_secret_backend" "test" {
 }`, bindDN, bindPass)
 }
 
-func testLDAPSecretBackendConfig(mount, description, bindDN, bindPass, url, userDN string, insecureTLS bool) string {
+func testLDAPSecretBackendConfig(mount, description, bindDN, bindPass, url, userDN, schema string, insecureTLS bool) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_secret_backend" "test" {
   path                      = "%s"
@@ -112,9 +118,11 @@ resource "vault_ldap_secret_backend" "test" {
   max_lease_ttl_seconds     = "7200"
   binddn                    = "%s"
   bindpass                  = "%s"
+  connection_timeout        = "99"
   url                       = "%s"
   userdn                    = "%s"
   insecure_tls              = %v
+  schema                    = "%s"
 }
-`, mount, description, bindDN, bindPass, url, userDN, insecureTLS)
+`, mount, description, bindDN, bindPass, url, userDN, insecureTLS, schema)
 }
