@@ -255,6 +255,14 @@ var (
 			Resource:      UpdateSchemaResource(kubernetesAuthBackendRoleDataSource()),
 			PathInventory: []string{"/auth/kubernetes/role/{name}"},
 		},
+		"vault_ldap_static_credentials": {
+			Resource:      UpdateSchemaResource(ldapStaticCredDataSource()),
+			PathInventory: []string{"/ldap/static-cred/{role}"},
+		},
+		"vault_ldap_dynamic_credentials": {
+			Resource:      UpdateSchemaResource(ldapDynamicCredDataSource()),
+			PathInventory: []string{"/ldap/creds/{role}"},
+		},
 		"vault_ad_access_credentials": {
 			Resource:      UpdateSchemaResource(adAccessCredentialsDataSource()),
 			PathInventory: []string{"/ad/creds/{role}"},
@@ -560,6 +568,22 @@ var (
 		"vault_ldap_auth_backend_group": {
 			Resource:      UpdateSchemaResource(ldapAuthBackendGroupResource()),
 			PathInventory: []string{"/auth/ldap/groups/{name}"},
+		},
+		"vault_ldap_secret_backend": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendResource()),
+			PathInventory: []string{"/ldap/config"},
+		},
+		"vault_ldap_secret_backend_static_role": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendStaticRoleResource()),
+			PathInventory: []string{"/ldap/static-role/{name}"},
+		},
+		"vault_ldap_secret_backend_dynamic_role": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendDynamicRoleResource()),
+			PathInventory: []string{"/ldap/role/{name}"},
+		},
+		"vault_ldap_secret_backend_library_set": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendLibrarySetResource()),
+			PathInventory: []string{"/ldap/library/{name}"},
 		},
 		"vault_nomad_secret_backend": {
 			Resource: UpdateSchemaResource(nomadSecretAccessBackendResource()),

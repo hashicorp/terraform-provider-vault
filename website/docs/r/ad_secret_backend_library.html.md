@@ -8,6 +8,9 @@ description: |-
 
 # vault\_ad\_secret\_backend\_library
 
+~> **Note** This resource is replaced by "vault_ldap_secret_backend_library_set"
+and will be removed in the next major release.
+
 Creates a library on an Active Directory Secret Backend for Vault. Libraries create
 a pool of existing Active Directory service accounts which can be checked out
 by users.
