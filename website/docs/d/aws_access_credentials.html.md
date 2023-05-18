@@ -88,7 +88,7 @@ not need to be specified.
 
 * `ttl` - (Optional) Specifies the TTL for the use of the STS token. This
 is specified as a string with a duration suffix. Valid only when
-`credential_type` of the connected `vault_aws_secret_backend_role` is `assumed_role` or `federation_token`
+`credential_type` of the connected `vault_aws_secret_backend_role` resource is `assumed_role` or `federation_token`
 
 ## Attributes Reference
 
