@@ -1,10 +1,6 @@
 name: Build
 
-on:
-  push:
-    paths:
-      - '.github/workflows/build.yaml'
-      - '**.go'
+on: push
 
 permissions:
   # Permission for checking out code
