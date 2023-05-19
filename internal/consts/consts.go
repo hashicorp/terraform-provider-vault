@@ -4,46 +4,43 @@
 package consts
 
 const (
-	/*
-		common field names
-	*/
-	FieldBindDN             = "binddn"
-	FieldBindPass           = "bindpass"
-	FieldCertificate        = "certificate"
-	FieldClientTLSCert      = "client_tls_cert"
-	FieldClientTLSKey       = "client_tls_key"
-	FieldDistinguishedNames = "distinguished_names"
-	FieldUPNDomain          = "upndomain"
-	FieldStartTLS           = "starttls"
-	FieldConnectionTimeout  = "connection_timeout"
-	FieldRequestTimeout     = "request_timeout"
-	FieldSchema             = "schema"
-	FieldPasswordPolicy     = "password_policy"
-	FieldLength             = "length"
-	FieldInsecureTLS        = "insecure_tls"
-	FieldURL                = "url"
-	FieldUserAttr           = "userattr"
-	FieldUserDN             = "userdn"
-	FieldRotationPeriod     = "rotation_period"
-
-	// FieldPath should be used for all new backend-mounting resources.
-	FieldPath          = "path"
-	FieldPaths         = "paths"
-	FieldParameters    = "parameters"
-	FieldMethod        = "method"
-	FieldNamespace     = "namespace"
-	FieldNamespaceID   = "namespace_id"
-	FieldNamespacePath = "namespace_path"
-
 	// FieldBackend
 	// Deprecated: Prefer FieldMount or FieldPath instead.
 	FieldBackend = "backend"
-	FieldPathFQ  = "path_fq"
-	FieldData    = "data"
-
+	// FieldPath should be used for all new backend-mounting resources.
+	FieldPath = "path"
 	// FieldMount should be used for all new non-backend-mounting resources.
 	// In other words, resources that depend on a backend-mounting resource should use this.
-	FieldMount                      = "mount"
+	FieldMount = "mount"
+	/*
+		common field names
+	*/
+	FieldBindDN                     = "binddn"
+	FieldBindPass                   = "bindpass"
+	FieldCertificate                = "certificate"
+	FieldClientTLSCert              = "client_tls_cert"
+	FieldClientTLSKey               = "client_tls_key"
+	FieldDistinguishedNames         = "distinguished_names"
+	FieldUPNDomain                  = "upndomain"
+	FieldStartTLS                   = "starttls"
+	FieldConnectionTimeout          = "connection_timeout"
+	FieldRequestTimeout             = "request_timeout"
+	FieldSchema                     = "schema"
+	FieldPasswordPolicy             = "password_policy"
+	FieldLength                     = "length"
+	FieldInsecureTLS                = "insecure_tls"
+	FieldURL                        = "url"
+	FieldUserAttr                   = "userattr"
+	FieldUserDN                     = "userdn"
+	FieldRotationPeriod             = "rotation_period"
+	FieldPaths                      = "paths"
+	FieldParameters                 = "parameters"
+	FieldMethod                     = "method"
+	FieldNamespace                  = "namespace"
+	FieldNamespaceID                = "namespace_id"
+	FieldNamespacePath              = "namespace_path"
+	FieldPathFQ                     = "path_fq"
+	FieldData                       = "data"
 	FieldName                       = "name"
 	FieldVersion                    = "version"
 	FieldMetadata                   = "metadata"
