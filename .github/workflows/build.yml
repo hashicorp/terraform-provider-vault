@@ -123,6 +123,7 @@ jobs:
         with:
           terraform_version: '1.4.*'
           terraform_wrapper: false
+      - name: Check Terraform CLI version
         run: terraform --version
       - name: Acceptance Tests
         env:
