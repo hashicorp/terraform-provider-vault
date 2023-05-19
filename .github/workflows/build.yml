@@ -118,6 +118,8 @@ jobs:
           LDAP_PASSWORDS: "password1,password2,password3"
     steps:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - name: Install terrform dependencies
+        run: apt-get -y update && apt-get install unzip
       - uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: '1.4.*'
@@ -142,8 +144,6 @@ jobs:
           LDAP_BINDPASS: "adminpassword"
           LDAP_URL: "ldap://openldap:1389"
         run: |
-          docker ps -a
-          exit
           make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
