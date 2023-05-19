@@ -15,25 +15,24 @@ jobs:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       - id: go-version
         run: echo "version=$(cat .go-version)" >> $GITHUB_OUTPUT
-  # build:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-  #     - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
-  #       with:
-  #         go-version-file: .go-version
-  #     - name: Build
-  #       run: |
-  #         make build
-  #     - name: Run unit tests
-  #       # here to short-circuit the acceptance tests, in the case of a failure.
-  #       env:
-  #         GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-  #       run: |
-  #         make test
+  build:
+    needs: [go-version]
+    runs-on: ubuntu-latest
+    container:
+      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
+    steps:
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - name: Build
+        run: |
+          make build
+      - name: Run unit tests
+        # here to short-circuit the acceptance tests, in the case of a failure.
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          make test
   acceptance:
-    # needs: [go-version, build]
-    needs: go-version
+    needs: [go-version, build]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -118,12 +117,13 @@ jobs:
           LDAP_PASSWORDS: "password1,password2,password3"
     steps:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-      - name: Install terrform dependencies
+      - name: Install setup-terraform dependencies
         run: apt-get -y update && apt-get install unzip
       - uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: '1.4.*'
           terraform_wrapper: false
+        run: terraform --version
       - name: Acceptance Tests
         env:
           VAULT_TOKEN: "root"
