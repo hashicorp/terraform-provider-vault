@@ -4,6 +4,14 @@
 package consts
 
 const (
+	// FieldBackend
+	// Deprecated: Prefer FieldMount or FieldPath instead.
+	FieldBackend = "backend"
+	// FieldPath should be used for all new backend-mounting resources.
+	FieldPath = "path"
+	// FieldMount should be used for all new non-backend-mounting resources.
+	// In other words, resources that depend on a backend-mounting resource should use this.
+	FieldMount = "mount"
 	/*
 		common field names
 	*/
@@ -25,17 +33,14 @@ const (
 	FieldUserAttr                   = "userattr"
 	FieldUserDN                     = "userdn"
 	FieldRotationPeriod             = "rotation_period"
-	FieldPath                       = "path"
 	FieldPaths                      = "paths"
 	FieldParameters                 = "parameters"
 	FieldMethod                     = "method"
 	FieldNamespace                  = "namespace"
 	FieldNamespaceID                = "namespace_id"
 	FieldNamespacePath              = "namespace_path"
-	FieldBackend                    = "backend"
 	FieldPathFQ                     = "path_fq"
 	FieldData                       = "data"
-	FieldMount                      = "mount"
 	FieldName                       = "name"
 	FieldVersion                    = "version"
 	FieldMetadata                   = "metadata"
