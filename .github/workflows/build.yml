@@ -1,6 +1,14 @@
 name: Build
 
-on: push
+on:
+  push:
+    paths:
+      - '.github/workflows/build.yaml'
+      - '**.go'
+
+permissions:
+  # Permission for checking out code
+  contents: read
 
 jobs:
   gh-api-quota-check:
@@ -122,6 +130,10 @@ jobs:
           LDAP_PASSWORDS: "password1,password2,password3"
     steps:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: '1.4.*'
+          terraform_wrapper: false
       - name: Acceptance Tests
         env:
           VAULT_TOKEN: "root"
