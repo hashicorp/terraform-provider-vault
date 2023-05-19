@@ -16,21 +16,13 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/rate_limit
-  go-version:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.go-version.outputs.version }}
-    steps:
-      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-      - id: go-version
-        run: echo "version=$(cat .go-version)" >> $GITHUB_OUTPUT
   build:
-    needs: [go-version]
     runs-on: ubuntu-latest
-    container:
-      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     steps:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+        with:
+          go-version-file: .go-version
       - name: Build
         run: |
           make build
@@ -41,7 +33,7 @@ jobs:
         run: |
           make test
   acceptance:
-    needs: [go-version, build]
+    needs: build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -50,8 +42,6 @@ jobs:
         - "vault-enterprise:1.11.9-ent"
         - "vault-enterprise:1.12.5-ent"
         - "vault-enterprise:1.13.1-ent"
-    container:
-      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
@@ -126,6 +116,9 @@ jobs:
           LDAP_PASSWORDS: "password1,password2,password3"
     steps:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+        with:
+          go-version-file: .go-version
       - uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: '1.4.*'
