@@ -16,7 +16,7 @@ import (
 )
 
 func TestAccAzureAuthBackendConfig_import(t *testing.T) {
-	backend := acctest.RandomWithPrefix("azure")
+	backend := acctest.RandomWithPrefix("azure/foo/bar")
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
