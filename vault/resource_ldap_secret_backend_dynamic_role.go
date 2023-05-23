@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
@@ -51,12 +52,12 @@ func ldapSecretBackendDynamicRoleResource() *schema.Resource {
 			Description: "A template used to generate a dynamic username. This will be used to fill in the .Username field within the creation_ldif string.",
 		},
 		consts.FieldDefaultTTL: {
-			Type:        schema.TypeString,
+			Type:        schema.TypeInt,
 			Optional:    true,
 			Description: "Specifies the TTL for the leases associated with this role.",
 		},
 		consts.FieldMaxTTL: {
-			Type:        schema.TypeString,
+			Type:        schema.TypeInt,
 			Optional:    true,
 			Description: "Specifies the maximum TTL for the leases associated with this role.",
 		},
