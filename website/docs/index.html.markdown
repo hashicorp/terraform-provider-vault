@@ -114,8 +114,23 @@ variables in order to keep credential information out of the configuration.
   `skip_child_token` is set to `true` (see below). Note that
   the given token must have the update capability on the auth/token/create
   path in Vault in order to create child tokens.  A token is required for
-  the provider.  A token can explicitly set via token argument, alternatively 
-  a token can be dynamically set via an `auth_login*` block.
+  the provider. A token can explicitly set via the `token` or `token_file` 
+  arguments, with `token_file` taking precedence if both arguments are set. 
+  Alternatively, a token can be dynamically set via an `auth_login*` block.
+
+* `token_file` - (Optional) Path to a file on disk that contains a Vault 
+  token that will be used by Terraform to authenticate. May be set via the
+  `TERRAFORM_VAULT_TOKEN_FILE` environment variable. If none is otherwise 
+  supplied, Terraform will attempt to read it from `~/.vault-token` (where 
+  the vault command stores its current token). Terraform will issue itself 
+  a new token that is a child of the one given, with a short TTL to limit 
+  the exposure of any requested secrets, unless `skip_child_token` is set 
+  to `true` (see below). Note that the given token must have the update 
+  capability on the auth/token/create path in Vault in order to create child 
+  tokens. A token is required for the provider. A token can explicitly set
+  via the `token` or `token_file` arguments, with `token_file` taking precedence 
+  if both arguments are set. Alternatively, a token can be dynamically set 
+  via an `auth_login*` block.
 
 * `token_name` - (Optional) Token name, that will be used by Terraform when
   creating the child token (`display_name`). This is useful to provide a reference of the

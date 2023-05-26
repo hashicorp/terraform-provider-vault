@@ -515,6 +515,15 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 }
 
 func GetToken(d *schema.ResourceData) (string, error) {
+	if tokenFilePath := d.Get("token_file").(string); tokenFilePath != "" {
+		buf, err := os.ReadFile(tokenFilePath)
+		if err != nil {
+			return "", fmt.Errorf("error reading token file: %s", err)
+		}
+
+		return string(buf), nil
+	}
+
 	if token := d.Get("token").(string); token != "" {
 		return token, nil
 	}

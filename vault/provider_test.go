@@ -387,6 +387,32 @@ func TestAccProviderToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Clear the schema token file if it exists and restore it after rhe test.
+	schemaTokenFilePath, err := homedir.Expand("~/.non-default-token")
+	if err != nil {
+		t.Fatal(err)
+	}
+	origSchemaTokenBytes, err := os.ReadFile(tokenFilePath)
+	if err == nil {
+		// There is an existing token file. Ensure it is restored after this test.
+		info, err := os.Stat(schemaTokenFilePath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			err := os.WriteFile(schemaTokenFilePath, origSchemaTokenBytes, info.Mode())
+			if err != nil {
+				t.Fatal(err)
+			}
+		}()
+		// Delete the existing token file for a clean slate.
+		if err := os.Remove(schemaTokenFilePath); err != nil {
+			t.Fatal(err)
+		}
+	} else if !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+
 	// Clear the config file env var and restore it after the test.
 	reset, err := tempUnsetenv(config.ConfigPathEnv)
 	defer failIfErr(t, reset)
@@ -401,11 +427,12 @@ func TestAccProviderToken(t *testing.T) {
 	}
 
 	type testcase struct {
-		name          string
-		fileToken     bool
-		helperToken   bool
-		schemaToken   bool
-		expectedToken string
+		name            string
+		fileToken       bool
+		helperToken     bool
+		schemaToken     bool
+		schemaFileToken bool
+		expectedToken   string
 	}
 
 	tests := []testcase{
@@ -427,12 +454,21 @@ func TestAccProviderToken(t *testing.T) {
 			expectedToken: "helper-token",
 		},
 		{
-			// A VAULT_TOKEN env var or hardcoded token overrides all else.
+			// A VAULT_TOKEN env var or hardcoded token overrides default token file and helper.
 			name:          "Schema",
 			fileToken:     true,
 			helperToken:   true,
 			schemaToken:   true,
 			expectedToken: "schema-token",
+		},
+		{
+			// A token file path overrides all else.
+			name:            "Schema",
+			fileToken:       true,
+			helperToken:     true,
+			schemaToken:     true,
+			schemaFileToken: true,
+			expectedToken:   "schema-file-token",
 		},
 	}
 
@@ -462,6 +498,22 @@ func TestAccProviderToken(t *testing.T) {
 			// Set up the schema token.
 			if tc.schemaToken {
 				d.Set("token", "schema-token")
+			}
+
+			// Set up the schema file token.
+			if tc.schemaFileToken {
+				schemaTokenBytes := []byte("schema-file-token")
+				err := os.WriteFile(schemaTokenFilePath, schemaTokenBytes, 0o666)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer func() {
+					if err := os.Remove(schemaTokenFilePath); err != nil {
+						t.Fatal(err)
+					}
+				}()
+
+				d.Set("token_file", schemaTokenFilePath)
 			}
 
 			// Get and check the p token.

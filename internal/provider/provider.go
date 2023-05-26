@@ -80,9 +80,15 @@ func NewProvider(
 			},
 			"token": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc(api.EnvVaultToken, ""),
 				Description: "Token to use to authenticate to Vault.",
+			},
+			"token_file": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("TERRAFORM_VAULT_TOKEN_FILE", ""),
+				Description: "Path to a token to use to authenticate to Vault.",
 			},
 			"token_name": {
 				Type:        schema.TypeString,
