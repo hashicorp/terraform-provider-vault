@@ -773,32 +773,21 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 func TestAccDatabaseSecretBackendConnection_externalRotateRoot(t *testing.T) {
 	MaybeSkipDBTests(t, dbEnginePostgres)
 
-	values := testutil.SkipTestEnvUnset(t, "POSTGRES_ROTATE_URL")
-	connURL := values[0]
-	parsedURL, err := url.Parse(connURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	username := parsedURL.User.Username()
-	password, _ := parsedURL.User.Password()
-	maxConnLifetime := "200"
+	username := "postgres"
+	password := "NotSecurePassword1"
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEnginePostgres.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
-	userTempl := "{{.DisplayName}}"
 	maxOpenConnections := "16"
 	updatedMaxOpenConnections := "20"
-	maxIdleConnections := "8"
-	updatedMaxIdleConnections := "12"
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, userTempl, username, password, maxOpenConnections, maxIdleConnections, maxConnLifetime, parsedURL),
+				Config: testAccDatabaseSecretBackendConnectionConfig_PostgresRotateRoot(name, backend, username, password, maxOpenConnections),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password", password),
@@ -808,14 +797,15 @@ func TestAccDatabaseSecretBackendConnection_externalRotateRoot(t *testing.T) {
 				PreConfig: func() {
 					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 					rotateRootPath := fmt.Sprintf("%s/rotate-root/%s", backend, name)
-					_, err := client.Logical().Write(rotateRootPath, nil)
+					resp, err := client.Logical().Write(rotateRootPath, nil)
+					t.Log(resp)
 					if err != nil {
 						t.Error(err)
 					}
 				},
 				// confirm that there is no change in password and yet plan was clean
 				// ensure an update is called to the connection by passing in an updated field
-				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, userTempl, username, password, updatedMaxOpenConnections, updatedMaxIdleConnections, maxConnLifetime, parsedURL),
+				Config: testAccDatabaseSecretBackendConnectionConfig_PostgresRotateRoot(name, backend, username, password, updatedMaxOpenConnections),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password", password),
@@ -1534,7 +1524,7 @@ resource "vault_database_secret_backend_connection" "test" {
   backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
-  root_rotation_statements = [""]
+  root_rotation_statements = ["FOOBAR"]
 
   postgresql {
       connection_url          = "%s"
@@ -1548,6 +1538,30 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, parsedURL.String(), openConn, idleConn, maxConnLifetime, username, password, userTempl)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_PostgresRotateRoot(name, path, username, password, openConn string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = [""]
+
+  postgresql {
+      connection_url          = "postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=disable"
+      max_open_connections    = "%s"
+      username                = "%s"
+      password                = "%s"
+      disable_escaping        = true
+  }
+}
+`, path, name, openConn, username, password)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_postgresql_reset_optional_values(name, path string, parsedURL *url.URL) string {
