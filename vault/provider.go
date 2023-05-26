@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -252,6 +255,14 @@ var (
 			Resource:      UpdateSchemaResource(kubernetesAuthBackendRoleDataSource()),
 			PathInventory: []string{"/auth/kubernetes/role/{name}"},
 		},
+		"vault_ldap_static_credentials": {
+			Resource:      UpdateSchemaResource(ldapStaticCredDataSource()),
+			PathInventory: []string{"/ldap/static-cred/{role}"},
+		},
+		"vault_ldap_dynamic_credentials": {
+			Resource:      UpdateSchemaResource(ldapDynamicCredDataSource()),
+			PathInventory: []string{"/ldap/creds/{role}"},
+		},
 		"vault_ad_access_credentials": {
 			Resource:      UpdateSchemaResource(adAccessCredentialsDataSource()),
 			PathInventory: []string{"/ad/creds/{role}"},
@@ -282,6 +293,10 @@ var (
 		},
 		"vault_auth_backend": {
 			Resource:      UpdateSchemaResource(authBackendDataSource()),
+			PathInventory: []string{"/sys/auth"},
+		},
+		"vault_auth_backends": {
+			Resource:      UpdateSchemaResource(authBackendsDataSource()),
 			PathInventory: []string{"/sys/auth"},
 		},
 		"vault_transit_encrypt": {
@@ -554,6 +569,22 @@ var (
 			Resource:      UpdateSchemaResource(ldapAuthBackendGroupResource()),
 			PathInventory: []string{"/auth/ldap/groups/{name}"},
 		},
+		"vault_ldap_secret_backend": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendResource()),
+			PathInventory: []string{"/ldap/config"},
+		},
+		"vault_ldap_secret_backend_static_role": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendStaticRoleResource()),
+			PathInventory: []string{"/ldap/static-role/{name}"},
+		},
+		"vault_ldap_secret_backend_dynamic_role": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendDynamicRoleResource()),
+			PathInventory: []string{"/ldap/role/{name}"},
+		},
+		"vault_ldap_secret_backend_library_set": {
+			Resource:      UpdateSchemaResource(ldapSecretBackendLibrarySetResource()),
+			PathInventory: []string{"/ldap/library/{name}"},
+		},
 		"vault_nomad_secret_backend": {
 			Resource: UpdateSchemaResource(nomadSecretAccessBackendResource()),
 			PathInventory: []string{
@@ -612,6 +643,10 @@ var (
 		"vault_audit": {
 			Resource:      UpdateSchemaResource(auditResource()),
 			PathInventory: []string{"/sys/audit/{path}"},
+		},
+		"vault_audit_request_header": {
+			Resource:      UpdateSchemaResource(auditRequestHeaderResource()),
+			PathInventory: []string{"/sys/config/auditing/request-headers/{path}"},
 		},
 		"vault_ssh_secret_backend_ca": {
 			Resource:      UpdateSchemaResource(sshSecretBackendCAResource()),
@@ -772,6 +807,14 @@ var (
 			Resource:      UpdateSchemaResource(kmipSecretRoleResource()),
 			PathInventory: []string{"/kmip/scope/{scope}/role/{role}"},
 		},
+		"vault_mongodbatlas_secret_backend": {
+			Resource:      UpdateSchemaResource(mongodbAtlasSecretBackendResource()),
+			PathInventory: []string{"/mongodbatlas/config"},
+		},
+		"vault_mongodbatlas_secret_role": {
+			Resource:      UpdateSchemaResource(mongodbAtlasSecretRoleResource()),
+			PathInventory: []string{"/mongodbatlas/roles/{name}"},
+		},
 		"vault_identity_oidc_scope": {
 			Resource:      UpdateSchemaResource(identityOIDCScopeResource()),
 			PathInventory: []string{"/identity/oidc/scope/{scope}"},
@@ -872,7 +915,20 @@ func MountCreateContextWrapper(f schema.CreateContextFunc, minVersion *version.V
 func importNamespace(d *schema.ResourceData) error {
 	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
 		s := d.State()
-		if _, ok := s.Attributes[consts.FieldNamespace]; !ok {
+		var attemptNamespaceImport bool
+		if s.Empty() {
+			// state does not yet exist or is empty
+			// import is acceptable
+			attemptNamespaceImport = true
+		} else {
+			// only import if namespace
+			// is not already set in state
+			s.Lock()
+			defer s.Unlock()
+			_, ok := s.Attributes[consts.FieldNamespace]
+			attemptNamespaceImport = !ok
+		}
+		if attemptNamespaceImport {
 			log.Printf(`[INFO] Environment variable %s set, `+
 				`attempting TF state import "%s=%s"`,
 				consts.EnvVarVaultNamespaceImport, consts.FieldNamespace, ns)

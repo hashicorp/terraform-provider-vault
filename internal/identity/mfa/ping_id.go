@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mfa
 
 import (
@@ -62,6 +65,7 @@ var pingIDSchemaMap = map[string]*schema.Schema{
 	},
 }
 
+// GetPingIDSchemaResource returns the resource needed to provision an identity/mfa/pingid resource.
 func GetPingIDSchemaResource() (*schema.Resource, error) {
 	config, err := NewContextFuncConfig(MethodTypePingID, PathTypeMethodID, nil, []string{
 		consts.FieldType,
@@ -70,7 +74,7 @@ func GetPingIDSchemaResource() (*schema.Resource, error) {
 		consts.FieldAdminURL,
 		consts.FieldAuthenticatorURL,
 		consts.FieldOrgAlias,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		return nil, err
 	}

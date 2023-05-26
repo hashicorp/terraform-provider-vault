@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -24,7 +27,7 @@ func githubTeamResource() *schema.Resource {
 			"backend": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Auth backend to which team mapping will be congigured.",
+				Description: "Auth backend to which team mapping will be configured.",
 				ForceNew:    true,
 				Default:     "github",
 				// standardise on no beginning or trailing slashes

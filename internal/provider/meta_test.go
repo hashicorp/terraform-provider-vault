@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -493,6 +496,14 @@ func TestIsEnterpriseSupported(t *testing.T) {
 			meta: &ProviderMeta{
 				client:       rootClient,
 				vaultVersion: VaultVersion12,
+			},
+		},
+		{
+			name:     "unsupported unset",
+			expected: false,
+			meta: &ProviderMeta{
+				client:       rootClient,
+				vaultVersion: nil,
 			},
 		},
 	}

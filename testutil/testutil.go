@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package testutil
 
 import (
@@ -183,14 +186,29 @@ func GetTestRMQCreds(t *testing.T) (string, string, string) {
 	return v[0], v[1], v[2]
 }
 
+func GetTestMDBACreds(t *testing.T) (string, string) {
+	v := SkipTestEnvUnset(t, "MONGODB_ATLAS_PRIVATE_KEY", "MONGODB_ATLAS_PUBLIC_KEY")
+	return v[0], v[1]
+}
+
 func GetTestADCreds(t *testing.T) (string, string, string) {
 	v := SkipTestEnvUnset(t, "AD_BINDDN", "AD_BINDPASS", "AD_URL")
+	return v[0], v[1], v[2]
+}
+
+func GetTestLDAPCreds(t *testing.T) (string, string, string) {
+	v := SkipTestEnvUnset(t, "LDAP_BINDDN", "LDAP_BINDPASS", "LDAP_URL")
 	return v[0], v[1], v[2]
 }
 
 func GetTestNomadCreds(t *testing.T) (string, string) {
 	v := SkipTestEnvUnset(t, "NOMAD_ADDR", "NOMAD_TOKEN")
 	return v[0], v[1]
+}
+
+func GetTestPKCSCreds(t *testing.T) (string, string, string) {
+	v := SkipTestEnvUnset(t, "PKCS_KEY_LIBRARY", "PKCS_KEY_SLOT", "PKCS_KEY_PIN")
+	return v[0], v[1], v[2]
 }
 
 func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {

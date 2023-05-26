@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -9,6 +12,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
@@ -39,19 +43,19 @@ func gcpSecretImpersonatedAccountResource() *schema.Resource {
 					return strings.Trim(v.(string), "/")
 				},
 			},
-			"impersonated_account": {
+			consts.FieldImpersonatedAccount: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Name of the Impersonated Account to create",
 				ForceNew:    true,
 			},
-			"service_account_email": {
+			consts.FieldServiceAccountEmail: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Email of the GCP service account.",
 			},
-			"token_scopes": {
+			consts.FieldTokenScopes: {
 				Type: schema.TypeSet,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -59,7 +63,7 @@ func gcpSecretImpersonatedAccountResource() *schema.Resource {
 				Optional:    true,
 				Description: "List of OAuth scopes to assign to `access_token` secrets generated under this impersonated account (`access_token` impersonated accounts only) ",
 			},
-			"service_account_project": {
+			consts.FieldServiceAccountProject: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Project of the GCP Service Account managed by this impersonated account",
@@ -75,7 +79,7 @@ func gcpSecretImpersonatedAccountCreate(ctx context.Context, d *schema.ResourceD
 	}
 
 	backend := d.Get(consts.FieldBackend).(string)
-	impersonatedAccount := d.Get("impersonated_account").(string)
+	impersonatedAccount := d.Get(consts.FieldImpersonatedAccount).(string)
 
 	path := gcpSecretImpersonatedAccountPath(backend, impersonatedAccount)
 
@@ -128,11 +132,11 @@ func gcpSecretImpersonatedAccountRead(ctx context.Context, d *schema.ResourceDat
 	if err := d.Set(consts.FieldBackend, backend); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("impersonated_account", impersonatedAccount); err != nil {
+	if err := d.Set(consts.FieldImpersonatedAccount, impersonatedAccount); err != nil {
 		return diag.FromErr(err)
 	}
 
-	for _, k := range []string{"token_scopes", "service_account_email", "service_account_project"} {
+	for _, k := range []string{consts.FieldTokenScopes, consts.FieldServiceAccountEmail, consts.FieldServiceAccountProject} {
 		v, ok := resp.Data[k]
 		if ok {
 			if err := d.Set(k, v); err != nil {
@@ -185,16 +189,16 @@ func gcpSecretImpersonatedAccountDelete(ctx context.Context, d *schema.ResourceD
 }
 
 func gcpSecretImpersonatedAccountUpdateFields(d *schema.ResourceData, data map[string]interface{}) {
-	if v, ok := d.GetOk("service_account_email"); ok {
-		data["service_account_email"] = v.(string)
+	if v, ok := d.GetOk(consts.FieldServiceAccountEmail); ok {
+		data[consts.FieldServiceAccountEmail] = v.(string)
 	}
 
-	if v, ok := d.GetOk("service_account_project"); ok {
-		data["service_account_project"] = v.(string)
+	if v, ok := d.GetOk(consts.FieldServiceAccountProject); ok {
+		data[consts.FieldServiceAccountProject] = v.(string)
 	}
 
-	if v, ok := d.GetOk("token_scopes"); ok {
-		data["token_scopes"] = v.(*schema.Set).List()
+	if v, ok := d.GetOk(consts.FieldTokenScopes); ok {
+		data[consts.FieldTokenScopes] = v.(*schema.Set).List()
 	}
 }
 

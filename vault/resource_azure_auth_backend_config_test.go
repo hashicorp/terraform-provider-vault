@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -13,7 +16,7 @@ import (
 )
 
 func TestAccAzureAuthBackendConfig_import(t *testing.T) {
-	backend := acctest.RandomWithPrefix("azure")
+	backend := acctest.RandomWithPrefix("azure/foo/bar")
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,

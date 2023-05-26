@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,18 +10,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"golang.org/x/oauth2/google"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"golang.org/x/oauth2/google"
 )
 
 // This test requires that you pass credentials for a user or service account having the IAM rights
 // listed at https://www.vaultproject.io/docs/secrets/gcp/index.html for the project you are testing
 // on. The credentials must also allow setting IAM permissions on the project being tested.
 func TestGCPSecretImpersonatedAccount(t *testing.T) {
-	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
-
 	backend := acctest.RandomWithPrefix("tf-test-gcp")
 	impersonatedAccount := acctest.RandomWithPrefix("tf-test")
 	credentials, project := testutil.GetTestGCPCreds(t)
@@ -32,8 +34,11 @@ func TestGCPSecretImpersonatedAccount(t *testing.T) {
 
 	resourceName := "vault_gcp_secret_impersonated_account.test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers: testProviders,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
+		},
 		CheckDestroy: testGCPSecretImpersonatedAccountDestroy,
 		Steps: []resource.TestStep{
 			{

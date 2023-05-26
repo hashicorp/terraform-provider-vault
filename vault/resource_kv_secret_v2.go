@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -5,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
+	"regexp"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -16,12 +19,17 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-var kvMetadataFields = map[string]string{
-	consts.FieldMaxVersions:        consts.FieldMaxVersions,
-	consts.FieldCASRequired:        consts.FieldCASRequired,
-	consts.FieldDeleteVersionAfter: consts.FieldDeleteVersionAfter,
-	consts.FieldCustomMetadata:     consts.FieldData,
-}
+var (
+	kvV2SecretMountFromPathRegex = regexp.MustCompile("^(.+)/data/.+$")
+	kvV2SecretNameFromPathRegex  = regexp.MustCompile("^.+/data/(.+)$")
+
+	kvMetadataFields = map[string]string{
+		consts.FieldMaxVersions:        consts.FieldMaxVersions,
+		consts.FieldCASRequired:        consts.FieldCASRequired,
+		consts.FieldDeleteVersionAfter: consts.FieldDeleteVersionAfter,
+		consts.FieldCustomMetadata:     consts.FieldData,
+	}
+)
 
 func kvSecretV2Resource(name string) *schema.Resource {
 	return &schema.Resource{
@@ -217,12 +225,34 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 	shouldRead := !d.Get("disable_read").(bool)
 
 	path := d.Id()
+	if path == "" {
+		return nil
+	}
 
 	if err := d.Set(consts.FieldPath, path); err != nil {
 		return diag.FromErr(err)
 	}
 
+	mount, err := getKVV2SecretMountFromPath(path)
+	if err != nil {
+		return diag.Errorf("unable to read mount from ID %s, err=%s", path, err)
+	}
+
+	name, err := getKVV2SecretNameFromPath(path)
+	if err != nil {
+		return diag.Errorf("unable to read name from ID %s, err=%s", path, err)
+	}
+
+	if err := d.Set(consts.FieldMount, mount); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldName, name); err != nil {
+		return diag.FromErr(err)
+	}
+
 	if shouldRead {
+
 		client, e := provider.GetClient(d, meta)
 		if e != nil {
 			return diag.FromErr(e)
@@ -257,7 +287,9 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 
 				// Read & Set custom metadata
 				if _, ok := v[consts.FieldCustomMetadata]; ok {
-					cm, err := readKVV2Metadata(d, client)
+					// construct metadata path
+					metadataPath := getKVV2Path(mount, name, consts.FieldMetadata)
+					cm, err := readKVV2Metadata(client, metadataPath)
 					if err != nil {
 						return diag.FromErr(err)
 					}
@@ -274,9 +306,7 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 	return nil
 }
 
-func readKVV2Metadata(d *schema.ResourceData, client *api.Client) (map[string]interface{}, error) {
-	path := strings.Replace(d.Id(), consts.FieldData, consts.FieldMetadata, 1)
-
+func readKVV2Metadata(client *api.Client, path string) (map[string]interface{}, error) {
 	log.Printf("[DEBUG] Reading metadata for KVV2 secret at %s", path)
 	resp, err := client.Logical().Read(path)
 	if err != nil {
@@ -335,4 +365,26 @@ func kvSecretV2Delete(_ context.Context, d *schema.ResourceData, meta interface{
 	}
 
 	return nil
+}
+
+func getKVV2SecretNameFromPath(path string) (string, error) {
+	if !kvV2SecretNameFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no name found")
+	}
+	res := kvV2SecretNameFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for name", len(res))
+	}
+	return res[1], nil
+}
+
+func getKVV2SecretMountFromPath(path string) (string, error) {
+	if !kvV2SecretMountFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no mount found")
+	}
+	res := kvV2SecretMountFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for mount", len(res))
+	}
+	return res[1], nil
 }
