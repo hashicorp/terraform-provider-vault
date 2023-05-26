@@ -767,6 +767,64 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 	})
 }
 
+// This test makes sure that the DB connection resource is still
+// operational even when an external rotate root call is made to update
+// its credentials
+func TestAccDatabaseSecretBackendConnection_externalRotateRoot(t *testing.T) {
+	MaybeSkipDBTests(t, dbEnginePostgres)
+
+	values := testutil.SkipTestEnvUnset(t, "POSTGRES_ROTATE_URL")
+	connURL := values[0]
+	parsedURL, err := url.Parse(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	username := parsedURL.User.Username()
+	password, _ := parsedURL.User.Password()
+	maxConnLifetime := "200"
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEnginePostgres.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+	userTempl := "{{.DisplayName}}"
+	maxOpenConnections := "16"
+	updatedMaxOpenConnections := "20"
+	maxIdleConnections := "8"
+	updatedMaxIdleConnections := "12"
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, userTempl, username, password, maxOpenConnections, maxIdleConnections, maxConnLifetime, parsedURL),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password", password),
+				),
+			},
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					rotateRootPath := fmt.Sprintf("%s/rotate-root/%s", backend, name)
+					_, err := client.Logical().Write(rotateRootPath, nil)
+					if err != nil {
+						t.Error(err)
+					}
+				},
+				// confirm that there is no change in password and yet plan was clean
+				// ensure an update is called to the connection by passing in an updated field
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgresql(name, backend, userTempl, username, password, updatedMaxOpenConnections, updatedMaxIdleConnections, maxConnLifetime, parsedURL),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password", password),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineElasticSearch)
 
@@ -1476,7 +1534,7 @@ resource "vault_database_secret_backend_connection" "test" {
   backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
-  root_rotation_statements = ["FOOBAR"]
+  root_rotation_statements = [""]
 
   postgresql {
       connection_url          = "%s"
