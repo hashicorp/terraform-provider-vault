@@ -278,8 +278,18 @@ const (
 	FieldIssuerID                      = "issuer_id"
 	FieldKeyRef                        = "key_ref"
 	FieldPemBundle                     = "pem_bundle"
-	FieldImportedIssuers               = "imported_issuers"
-	FieldImportedKeys                  = "imported_keys"
+	FieldCAChain                       = "ca_chain"
+	FieldCSR                           = "csr"
+	FieldUseCSRValues                  = "use_csr_values"
+	FieldCertificateBundle             = "certificate_bundle"
+	FieldRevoke                        = "revoke"
+	FieldPrivateKeyType                = "private_key_type"
+	FieldAddBasicConstraints           = "add_basic_constraints"
+	FieldExported                      = "exported"
+	FieldExpiration                    = "expiration"
+	FieldAutoRenew                     = "auto_renew"
+	FieldMinSecondsRemaining           = "min_seconds_remaining"
+	FieldRenewPending                  = "renew_pending"
 
 	/*
 		common environment variables
