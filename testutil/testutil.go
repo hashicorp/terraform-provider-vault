@@ -109,6 +109,11 @@ func GetTestAWSCreds(t *testing.T) (string, string) {
 	return v[0], v[1]
 }
 
+func GetTestPostgresCreds(t *testing.T) (url, host string) {
+	v := SkipTestEnvUnset(t, "POSTGRES_URL", "POSTGRES_HOST")
+	return v[0], v[1]
+}
+
 func GetTestAWSRegion(t *testing.T) string {
 	v := SkipTestEnvUnset(t, "AWS_DEFAULT_REGION")
 	return v[0]

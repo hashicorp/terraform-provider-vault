@@ -770,12 +770,16 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 // This test makes sure that the DB connection resource is still
 // operational even when an external rotate root call is made to update
 // its credentials
-// Prerequisites: run the Postgres container found in docker-compose.yaml
+// Prerequisites:
+// 1. run the Postgres container found in docker-compose.yaml
+// 2. export POSTGRES_HOST=localhost:5432 && export POSTGRES_URL=whatever
+// Note: this test updates the credentials, so a container restart will be required for reruns.
 func TestAccDatabaseSecretBackendConnection_externalRotateRoot(t *testing.T) {
 	MaybeSkipDBTests(t, dbEnginePostgres)
-
 	username := "postgres"
 	password := "secret"
+	_, postgresHost := testutil.GetTestPostgresCreds(t)
+
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEnginePostgres.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
@@ -788,7 +792,7 @@ func TestAccDatabaseSecretBackendConnection_externalRotateRoot(t *testing.T) {
 		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_PostgresRotateRoot(name, backend, username, password, maxOpenConnections),
+				Config: testAccDatabaseSecretBackendConnectionConfig_PostgresRotateRoot(name, backend, postgresHost, username, password, maxOpenConnections),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password", password),
@@ -805,7 +809,7 @@ func TestAccDatabaseSecretBackendConnection_externalRotateRoot(t *testing.T) {
 				},
 				// confirm that there is no change in password and yet plan was clean
 				// ensure an update is called to the connection by passing in an updated field
-				Config: testAccDatabaseSecretBackendConnectionConfig_PostgresRotateRoot(name, backend, username, password, updatedMaxOpenConnections),
+				Config: testAccDatabaseSecretBackendConnectionConfig_PostgresRotateRoot(name, backend, postgresHost, username, password, updatedMaxOpenConnections),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password", password),
@@ -1540,7 +1544,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, parsedURL.String(), openConn, idleConn, maxConnLifetime, username, password, userTempl)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_PostgresRotateRoot(name, path, username, password, openConn string) string {
+func testAccDatabaseSecretBackendConnectionConfig_PostgresRotateRoot(name, path, postgresHost, username, password, openConn string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1554,14 +1558,14 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = []
 
   postgresql {
-      connection_url          = "postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=disable"
+      connection_url          = "postgresql://{{username}}:{{password}}@%s/postgres?sslmode=disable"
       max_open_connections    = "%s"
       username                = "%s"
       password                = "%s"
       disable_escaping        = true
   }
 }
-`, path, name, openConn, username, password)
+`, path, name, postgresHost, openConn, username, password)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_postgresql_reset_optional_values(name, path string, parsedURL *url.URL) string {
