@@ -196,6 +196,11 @@ func GetTestADCreds(t *testing.T) (string, string, string) {
 	return v[0], v[1], v[2]
 }
 
+func GetTestLDAPCreds(t *testing.T) (string, string, string) {
+	v := SkipTestEnvUnset(t, "LDAP_BINDDN", "LDAP_BINDPASS", "LDAP_URL")
+	return v[0], v[1], v[2]
+}
+
 func GetTestNomadCreds(t *testing.T) (string, string) {
 	v := SkipTestEnvUnset(t, "NOMAD_ADDR", "NOMAD_TOKEN")
 	return v[0], v[1]

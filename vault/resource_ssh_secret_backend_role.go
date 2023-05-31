@@ -70,6 +70,11 @@ func sshSecretBackendRoleResource() *schema.Resource {
 			Type:     schema.TypeString,
 			Optional: true,
 		},
+		"allowed_domains_template": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
 		"allowed_domains": {
 			Type:     schema.TypeString,
 			Optional: true,
@@ -210,12 +215,13 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	path := sshRoleResourcePath(backend, name)
 
 	data := map[string]interface{}{
-		"key_type":                d.Get("key_type").(string),
-		"allow_bare_domains":      d.Get("allow_bare_domains").(bool),
-		"allow_host_certificates": d.Get("allow_host_certificates").(bool),
-		"allow_subdomains":        d.Get("allow_subdomains").(bool),
-		"allow_user_certificates": d.Get("allow_user_certificates").(bool),
-		"allow_user_key_ids":      d.Get("allow_user_key_ids").(bool),
+		"key_type":                 d.Get("key_type").(string),
+		"allow_bare_domains":       d.Get("allow_bare_domains").(bool),
+		"allow_host_certificates":  d.Get("allow_host_certificates").(bool),
+		"allow_subdomains":         d.Get("allow_subdomains").(bool),
+		"allow_user_certificates":  d.Get("allow_user_certificates").(bool),
+		"allow_user_key_ids":       d.Get("allow_user_key_ids").(bool),
+		"allowed_domains_template": d.Get("allowed_domains_template").(bool),
 	}
 
 	if v, ok := d.GetOk("allowed_critical_options"); ok {
@@ -373,7 +379,7 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	fields := []string{
 		"key_type", "allow_bare_domains", "allow_host_certificates",
 		"allow_subdomains", "allow_user_certificates", "allow_user_key_ids",
-		"allowed_critical_options", "allowed_domains",
+		"allowed_critical_options", "allowed_domains_template", "allowed_domains",
 		"cidr_list", "allowed_extensions", "default_extensions",
 		"default_critical_options", "allowed_users_template",
 		"allowed_users", "default_user", "key_id_format",
