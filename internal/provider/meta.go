@@ -38,6 +38,7 @@ var (
 	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion111))
 	VaultVersion112 = version.Must(version.NewSemver(consts.VaultVersion112))
 	VaultVersion113 = version.Must(version.NewSemver(consts.VaultVersion113))
+	VaultVersion114 = version.Must(version.NewSemver(consts.VaultVersion114))
 )
 
 // ProviderMeta provides resources with access to the Vault client and
