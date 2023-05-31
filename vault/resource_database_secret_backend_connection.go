@@ -1517,7 +1517,7 @@ func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string
 	passwordKey := prefix + consts.FieldPassword
 	if v, ok := d.GetOk(passwordKey); ok {
 		if d.IsNewResource() || d.HasChange(passwordKey) {
-			data["password"] = v.(string)
+			data[consts.FieldPassword] = v.(string)
 		}
 	}
 }

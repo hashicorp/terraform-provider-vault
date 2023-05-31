@@ -770,11 +770,12 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 // This test makes sure that the DB connection resource is still
 // operational even when an external rotate root call is made to update
 // its credentials
+// Prerequisites: run the Postgres container found in docker-compose.yaml
 func TestAccDatabaseSecretBackendConnection_externalRotateRoot(t *testing.T) {
 	MaybeSkipDBTests(t, dbEnginePostgres)
 
 	username := "postgres"
-	password := "NotSecurePassword1"
+	password := "secret"
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEnginePostgres.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
@@ -797,8 +798,7 @@ func TestAccDatabaseSecretBackendConnection_externalRotateRoot(t *testing.T) {
 				PreConfig: func() {
 					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 					rotateRootPath := fmt.Sprintf("%s/rotate-root/%s", backend, name)
-					resp, err := client.Logical().Write(rotateRootPath, nil)
-					t.Log(resp)
+					_, err := client.Logical().Write(rotateRootPath, nil)
 					if err != nil {
 						t.Error(err)
 					}
@@ -1551,7 +1551,7 @@ resource "vault_database_secret_backend_connection" "test" {
   backend = vault_mount.db.path
   name = "%s"
   allowed_roles = ["dev", "prod"]
-  root_rotation_statements = [""]
+  root_rotation_statements = []
 
   postgresql {
       connection_url          = "postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=disable"
