@@ -62,6 +62,9 @@ The following arguments are supported:
 
 * `allowed_critical_options` - (Optional) Specifies a comma-separated list of critical options that certificates can have when signed.
 
+* `allowed_domains_template` - (Optional) Specifies if `allowed_domains` can be declared using
+  identity template policies. Non-templated domains are also permitted.
+
 * `allowed_domains` - (Optional) The list of domains for which a client can request a host certificate.
 
 * `cidr_list` - (Optional) The comma-separated string of CIDR blocks for which this role is applicable.

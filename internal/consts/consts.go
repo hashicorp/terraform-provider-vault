@@ -4,19 +4,25 @@
 package consts
 
 const (
+	// FieldBackend
+	// Deprecated: Prefer FieldMount or FieldPath instead.
+	FieldBackend = "backend"
+	// FieldPath should be used for all new backend-mounting resources.
+	FieldPath = "path"
+	// FieldMount should be used for all new non-backend-mounting resources.
+	// In other words, resources that depend on a backend-mounting resource should use this.
+	FieldMount = "mount"
 	/*
 		common field names
 	*/
-	FieldPath                          = "path"
+
 	FieldParameters                    = "parameters"
 	FieldMethod                        = "method"
 	FieldNamespace                     = "namespace"
 	FieldNamespaceID                   = "namespace_id"
 	FieldNamespacePath                 = "namespace_path"
-	FieldBackend                       = "backend"
 	FieldPathFQ                        = "path_fq"
 	FieldData                          = "data"
-	FieldMount                         = "mount"
 	FieldName                          = "name"
 	FieldVersion                       = "version"
 	FieldMetadata                      = "metadata"
@@ -278,6 +284,35 @@ const (
 	FieldIssuerID                      = "issuer_id"
 	FieldKeyRef                        = "key_ref"
 	FieldPemBundle                     = "pem_bundle"
+	FieldBindDN                        = "binddn"
+	FieldBindPass                      = "bindpass"
+	FieldClientTLSCert                 = "client_tls_cert"
+	FieldClientTLSKey                  = "client_tls_key"
+	FieldDistinguishedNames            = "distinguished_names"
+	FieldUPNDomain                     = "upndomain"
+	FieldStartTLS                      = "starttls"
+	FieldConnectionTimeout             = "connection_timeout"
+	FieldRequestTimeout                = "request_timeout"
+	FieldSchema                        = "schema"
+	FieldPasswordPolicy                = "password_policy"
+	FieldLength                        = "length"
+	FieldInsecureTLS                   = "insecure_tls"
+	FieldURL                           = "url"
+	FieldUserAttr                      = "userattr"
+	FieldUserDN                        = "userdn"
+	FieldRotationPeriod                = "rotation_period"
+	FieldPaths                         = "paths"
+	FieldDN                            = "dn"
+	FieldLastPassword                  = "last_password"
+	FieldLastVaultRotation             = "last_vault_rotation"
+	FieldAccessors                     = "accessors"
+	FieldCreationLDIF                  = "creation_ldif"
+	FieldDeletionLDIF                  = "deletion_ldif"
+	FieldRollbackLDIF                  = "rollback_ldif"
+	FieldUsernameTemplate              = "username_template"
+	FieldServiceAccountNames           = "service_account_names"
+	FieldDisableCheckInEnforcement     = "disable_check_in_enforcement"
+	FieldDefaultTTL                    = "default_ttl"
 	FieldImportedIssuers               = "imported_issuers"
 	FieldImportedKeys                  = "imported_keys"
 
@@ -335,6 +370,7 @@ const (
 	MountTypeAzure        = "azure"
 	MountTypeGitHub       = "github"
 	MountTypeAD           = "ad"
+	MountTypeLDAP         = "ldap"
 	MountTypeConsul       = "consul"
 	MountTypeTerraform    = "terraform"
 
