@@ -79,11 +79,17 @@ func pkiSecretBackendIntermediateSetSignedCreate(ctx context.Context, d *schema.
 
 	d.SetId(path)
 
-	// set version specific multi-issuer data from response
-	if provider.IsAPISupported(meta, provider.VaultVersion111) {
-		computedIssuerFields := []string{consts.FieldImportedIssuers, consts.FieldImportedKeys}
+	computedIssuerFields := []string{consts.FieldImportedIssuers, consts.FieldImportedKeys}
 
-		for _, k := range computedIssuerFields {
+	for _, k := range computedIssuerFields {
+		// Vault versions <= 1.10 do not return any response for this endpoint
+		// Set computed fields to nil to avoid drift
+		if resp == nil {
+			if err := d.Set(k, nil); err != nil {
+				return diag.FromErr(err)
+			}
+		} else {
+			// If response is obtained, multi-issuer fields are present in data
 			if v, ok := resp.Data[k]; ok {
 				if err := d.Set(k, v); err != nil {
 					return diag.FromErr(err)
