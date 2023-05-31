@@ -275,6 +275,10 @@ var (
 			Resource:      UpdateSchemaResource(awsAccessCredentialsDataSource()),
 			PathInventory: []string{"/aws/creds"},
 		},
+		"vault_aws_static_access_credentials": {
+			Resource:      UpdateSchemaResource(awsStaticCredDataSource()),
+			PathInventory: []string{"/aws/static-creds/{name}"},
+		},
 		"vault_azure_access_credentials": {
 			Resource:      UpdateSchemaResource(azureAccessCredentialsDataSource()),
 			PathInventory: []string{"/azure/creds/{role}"},
@@ -440,6 +444,10 @@ var (
 		"vault_aws_secret_backend_role": {
 			Resource:      UpdateSchemaResource(awsSecretBackendRoleResource("vault_aws_secret_backend_role")),
 			PathInventory: []string{"/aws/roles/{name}"},
+		},
+		"vault_aws_secret_backend_static_role": {
+			Resource:      UpdateSchemaResource(awsSecretBackendStaticRoleResource()),
+			PathInventory: []string{"/aws/static-roles/{name}"},
 		},
 		"vault_azure_secret_backend": {
 			Resource:      UpdateSchemaResource(azureSecretBackendResource()),
