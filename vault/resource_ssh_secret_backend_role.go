@@ -215,13 +215,12 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	path := sshRoleResourcePath(backend, name)
 
 	data := map[string]interface{}{
-		"key_type":                 d.Get("key_type").(string),
-		"allow_bare_domains":       d.Get("allow_bare_domains").(bool),
-		"allow_host_certificates":  d.Get("allow_host_certificates").(bool),
-		"allow_subdomains":         d.Get("allow_subdomains").(bool),
-		"allow_user_certificates":  d.Get("allow_user_certificates").(bool),
-		"allow_user_key_ids":       d.Get("allow_user_key_ids").(bool),
-		"allowed_domains_template": d.Get("allowed_domains_template").(bool),
+		"key_type":                d.Get("key_type").(string),
+		"allow_bare_domains":      d.Get("allow_bare_domains").(bool),
+		"allow_host_certificates": d.Get("allow_host_certificates").(bool),
+		"allow_subdomains":        d.Get("allow_subdomains").(bool),
+		"allow_user_certificates": d.Get("allow_user_certificates").(bool),
+		"allow_user_key_ids":      d.Get("allow_user_key_ids").(bool),
 	}
 
 	if v, ok := d.GetOk("allowed_critical_options"); ok {
@@ -264,6 +263,8 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		if v, ok := d.GetOk("default_user_template"); ok {
 			data["default_user_template"] = v.(bool)
 		}
+
+		data["allowed_domains_template"] = d.Get("allowed_domains_template")
 	}
 
 	if v, ok := d.GetOk("key_id_format"); ok {
