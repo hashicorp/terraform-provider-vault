@@ -123,6 +123,17 @@ jobs:
           LDAP_ADMIN_PASSWORD: "adminpassword"
           LDAP_USERS: "alice,bob,foo"
           LDAP_PASSWORDS: "password1,password2,password3"
+      ad:
+        image: laslabs/alpine-samba-dc:0.1.0
+        privileged: true
+        ports:
+        - '2389:389'
+        - '2636:636'
+        environment:
+          - SAMBA_DC_REALM=corp.example.net
+          - SAMBA_DC_DOMAIN=EXAMPLE
+          - SAMBA_DC_ADMIN_PASSWD=SuperSecretPassw0rd
+          - SAMBA_DC_DNS_BACKEND=SAMBA_INTERNAL
     steps:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       # setup-terraform expects unzip to be available but we are running in a docker container that doesn't have it pre-installed
