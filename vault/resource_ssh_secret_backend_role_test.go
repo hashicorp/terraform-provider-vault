@@ -71,17 +71,28 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "ttl", "43200"),
 	)
 
-	meta := testProvider.Meta().(*provider.ProviderMeta)
-	isVaultVersion112 := meta.IsAPISupported(provider.VaultVersion112)
+	getCheckFuncs := func(isUpdate bool) resource.TestCheckFunc {
+		return func(state *terraform.State) error {
+			var checks []resource.TestCheckFunc
+			meta := testProvider.Meta().(*provider.ProviderMeta)
+			isVaultVersion112 := meta.IsAPISupported(provider.VaultVersion112)
+			if isVaultVersion112 {
+				initialCheckFuncs = append(initialCheckFuncs,
+					resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "false"),
+				)
 
-	if isVaultVersion112 {
-		initialCheckFuncs = append(initialCheckFuncs,
-			resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "false"),
-		)
+				updateCheckFuncs = append(updateCheckFuncs,
+					resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "true"),
+				)
+			}
+			if isUpdate {
+				checks = updateCheckFuncs
+			} else {
+				checks = initialCheckFuncs
+			}
+			return resource.ComposeAggregateTestCheckFunc(checks...)(state)
 
-		updateCheckFuncs = append(updateCheckFuncs,
-			resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "true"),
-		)
+		}
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -93,12 +104,12 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendRoleConfig_basic(name, backend),
-				Check:  resource.ComposeTestCheckFunc(initialCheckFuncs...),
+				Check:  getCheckFuncs(false),
 			},
 			{
 				Config: testAccSSHSecretBackendRoleConfig_updated(name, backend, false, true),
 				Check: resource.ComposeTestCheckFunc(
-					resource.ComposeTestCheckFunc(updateCheckFuncs...),
+					getCheckFuncs(true),
 					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_lengths.rsa", "2048"),
 				),
 			},
@@ -112,7 +123,7 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 				Config: testAccSSHSecretBackendRoleConfig_updated(
 					name, backend, true, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.ComposeTestCheckFunc(updateCheckFuncs...),
+					getCheckFuncs(true),
 					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.0.type", "rsa"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.0.lengths.#", "3"),
