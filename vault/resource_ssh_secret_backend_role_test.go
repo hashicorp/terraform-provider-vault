@@ -35,7 +35,6 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "allow_user_certificates", "true"),
 		resource.TestCheckResourceAttr(resourceName, "allow_user_key_ids", "false"),
 		resource.TestCheckResourceAttr(resourceName, "allowed_critical_options", ""),
-		resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "false"),
 		resource.TestCheckResourceAttr(resourceName, "allowed_domains", ""),
 		resource.TestCheckResourceAttr(resourceName, "allowed_extensions", ""),
 		resource.TestCheckResourceAttr(resourceName, "default_extensions.%", "0"),
@@ -58,7 +57,6 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "allow_user_certificates", "false"),
 		resource.TestCheckResourceAttr(resourceName, "allow_user_key_ids", "true"),
 		resource.TestCheckResourceAttr(resourceName, "allowed_critical_options", "foo,bar"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "true"),
 		resource.TestCheckResourceAttr(resourceName, "allowed_domains", "example.com,foo.com"),
 		resource.TestCheckResourceAttr(resourceName, "allowed_extensions", "ext1,ext2"),
 		resource.TestCheckResourceAttr(resourceName, "default_extensions.ext1", ""),
@@ -73,9 +71,24 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "ttl", "43200"),
 	)
 
+	meta := testProvider.Meta().(*provider.ProviderMeta)
+	isVaultVersion112 := meta.IsAPISupported(provider.VaultVersion112)
+
+	if isVaultVersion112 {
+		initialCheckFuncs = append(initialCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "false"),
+		)
+
+		updateCheckFuncs = append(updateCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "true"),
+		)
+	}
+
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers: testProviders,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+		},
 		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
