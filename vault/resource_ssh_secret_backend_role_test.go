@@ -74,34 +74,31 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 	getCheckFuncs := func(isUpdate bool) resource.TestCheckFunc {
 		return func(state *terraform.State) error {
 			var checks []resource.TestCheckFunc
+			if isUpdate {
+				checks = append(checks, updateCheckFuncs...)
+			} else {
+				checks = append(checks, initialCheckFuncs...)
+			}
+
 			meta := testProvider.Meta().(*provider.ProviderMeta)
 			isVaultVersion112 := meta.IsAPISupported(provider.VaultVersion112)
 			if isVaultVersion112 {
-				initialCheckFuncs = append(initialCheckFuncs,
-					resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "false"),
-				)
-
-				updateCheckFuncs = append(updateCheckFuncs,
-					resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "true"),
-				)
-			}
-			if isUpdate {
-				checks = updateCheckFuncs
-			} else {
-				checks = initialCheckFuncs
+				if isUpdate {
+					checks = append(checks,
+						resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "true"),
+					)
+				} else {
+					checks = append(checks,
+						resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "false"),
+					)
+				}
 			}
 			return resource.ComposeAggregateTestCheckFunc(checks...)(state)
-
 		}
 	}
 
-	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
-		},
-		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
-		Steps: []resource.TestStep{
+	getSteps := func(importStateVerifyIgnore []string) []resource.TestStep {
+		return []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendRoleConfig_basic(name, backend),
 				Check:  getCheckFuncs(false),
@@ -136,12 +133,39 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: importStateVerifyIgnore,
 			},
-		},
+		}
+	}
+
+	t.Run("vault-1.11-and-below", func(t *testing.T) {
+		resource.Test(t, resource.TestCase{
+			Providers: testProviders,
+			PreCheck: func() {
+				testutil.TestAccPreCheck(t)
+				SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion112)
+
+			},
+			CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
+			Steps:        getSteps([]string{"allowed_domains_template"}),
+		})
 	})
+	t.Run("vault-1.12-and-up", func(t *testing.T) {
+		resource.Test(t, resource.TestCase{
+			Providers: testProviders,
+			PreCheck: func() {
+				testutil.TestAccPreCheck(t)
+				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+
+			},
+			CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
+			Steps:        getSteps([]string{}),
+		})
+	})
+
 }
 
 func TestAccSSHSecretBackendRoleOTP_basic(t *testing.T) {
