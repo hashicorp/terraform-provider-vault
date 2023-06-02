@@ -43,23 +43,25 @@ type Description struct {
 
 type ResourceRegistry map[string]*Description
 
+type ResourcesMap map[string]*schema.Resource
+
 func NewProvider(
 	dataRegistry ResourceRegistry,
 	resourceRegistry ResourceRegistry,
-	resourceMap ...map[string]*schema.Resource,
+	extraResourcesMaps ...ResourcesMap,
 ) *schema.Provider {
 	dataSourcesMap, err := parse(dataRegistry)
 	if err != nil {
 		panic(err)
 	}
 
-	resourcesMap, err := parse(resourceRegistry)
+	coreResourcesMap, err := parse(resourceRegistry)
 	if err != nil {
 		panic(err)
 	}
 
-	for _, m := range resourceMap {
-		MustAddSchemaResource(m, resourcesMap, nil)
+	for _, m := range extraResourcesMaps {
+		MustAddSchemaResource(m, coreResourcesMap, nil)
 	}
 
 	r := &schema.Provider{
@@ -208,7 +210,7 @@ func NewProvider(
 		},
 		ConfigureFunc:  NewProviderMeta,
 		DataSourcesMap: dataSourcesMap,
-		ResourcesMap:   resourcesMap,
+		ResourcesMap:   coreResourcesMap,
 	}
 
 	MustAddAuthLoginSchema(r.Schema)
