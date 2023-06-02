@@ -161,7 +161,7 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 
 			},
 			CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
-			Steps:        getSteps("allowed_domains_template"),
+			Steps:        getSteps("allowed_domains_template = true"),
 		})
 	})
 
