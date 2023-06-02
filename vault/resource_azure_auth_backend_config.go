@@ -19,7 +19,7 @@ var azureAuthBackendConfigFromPathRegex = regexp.MustCompile("^auth/(.+)/config$
 func azureAuthBackendConfigResource() *schema.Resource {
 	return &schema.Resource{
 		Create: azureAuthBackendWrite,
-		Read:   ReadWrapper(azureAuthBackendRead),
+		Read:   provider.ReadWrapper(azureAuthBackendRead),
 		Update: azureAuthBackendWrite,
 		Delete: azureAuthBackendDelete,
 		Exists: azureAuthBackendExists,

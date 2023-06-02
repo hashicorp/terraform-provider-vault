@@ -165,7 +165,7 @@ func raftSnapshotAgentConfigResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createOrUpdateSnapshotAgentConfigResource,
 		Update: createOrUpdateSnapshotAgentConfigResource,
-		Read:   ReadWrapper(readSnapshotAgentConfigResource),
+		Read:   provider.ReadWrapper(readSnapshotAgentConfigResource),
 		Delete: deleteSnapshotAgentConfigResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

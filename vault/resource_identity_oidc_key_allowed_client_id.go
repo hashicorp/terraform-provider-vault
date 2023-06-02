@@ -16,7 +16,7 @@ import (
 func identityOidcKeyAllowedClientId() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOidcKeyAllowedClientIdWrite,
-		Read:   ReadWrapper(identityOidcKeyAllowedClientIdRead),
+		Read:   provider.ReadWrapper(identityOidcKeyAllowedClientIdRead),
 		Delete: identityOidcKeyAllowedClientIdDelete,
 
 		Schema: map[string]*schema.Schema{

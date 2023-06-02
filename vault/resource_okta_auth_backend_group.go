@@ -19,7 +19,7 @@ import (
 func oktaAuthBackendGroupResource() *schema.Resource {
 	return &schema.Resource{
 		Create: oktaAuthBackendGroupWrite,
-		Read:   ReadWrapper(oktaAuthBackendGroupRead),
+		Read:   provider.ReadWrapper(oktaAuthBackendGroupRead),
 		Update: oktaAuthBackendGroupWrite,
 		Delete: oktaAuthBackendGroupDelete,
 		Exists: oktaAuthBackendGroupExists,

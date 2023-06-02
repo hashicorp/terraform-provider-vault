@@ -65,7 +65,7 @@ func ldapSecretBackendDynamicRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: createUpdateLDAPDynamicRoleResource,
 		UpdateContext: createUpdateLDAPDynamicRoleResource,
-		ReadContext:   ReadContextWrapper(readLDAPDynamicRoleResource),
+		ReadContext:   provider.ReadContextWrapper(readLDAPDynamicRoleResource),
 		DeleteContext: deleteLDAPDynamicRoleResource,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
