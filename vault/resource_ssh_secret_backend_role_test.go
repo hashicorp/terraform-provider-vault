@@ -97,14 +97,14 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		}
 	}
 
-	getSteps := func(importStateVerifyIgnore []string) []resource.TestStep {
+	getSteps := func(extraFields string) []resource.TestStep {
 		return []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendRoleConfig_basic(name, backend),
 				Check:  getCheckFuncs(false),
 			},
 			{
-				Config: testAccSSHSecretBackendRoleConfig_updated(name, backend, false, true),
+				Config: testAccSSHSecretBackendRoleConfig_updated(name, backend, false, true, extraFields),
 				Check: resource.ComposeTestCheckFunc(
 					getCheckFuncs(true),
 					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_lengths.rsa", "2048"),
@@ -112,13 +112,13 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 			},
 			{
 				Config: testAccSSHSecretBackendRoleConfig_updated(
-					name, backend, true, true),
+					name, backend, true, true, extraFields),
 				ExpectError: regexp.MustCompile(`"allowed_user_key_config": conflicts with allowed_user_key_lengths`),
 				Destroy:     false,
 			},
 			{
 				Config: testAccSSHSecretBackendRoleConfig_updated(
-					name, backend, true, false),
+					name, backend, true, false, extraFields),
 				Check: resource.ComposeTestCheckFunc(
 					getCheckFuncs(true),
 					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.#", "2"),
@@ -133,10 +133,9 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: importStateVerifyIgnore,
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		}
 	}
@@ -150,7 +149,7 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 
 			},
 			CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
-			Steps:        getSteps([]string{"allowed_domains_template"}),
+			Steps:        getSteps(""),
 		})
 	})
 	t.Run("vault-1.12-and-up", func(t *testing.T) {
@@ -162,7 +161,7 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 
 			},
 			CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
-			Steps:        getSteps([]string{}),
+			Steps:        getSteps("allowed_domains_template"),
 		})
 	})
 
@@ -259,7 +258,7 @@ resource "vault_ssh_secret_backend_role" "test_role" {
 }
 
 func testAccSSHSecretBackendRoleConfig_updated(name, path string, withAllowedUserKeys,
-	withAllowedUserKeyLen bool,
+	withAllowedUserKeyLen bool, extraFields string,
 ) string {
 	fragments := []string{
 		fmt.Sprintf(`
@@ -295,7 +294,6 @@ resource "vault_ssh_secret_backend_role" "test_role" {
   allow_user_certificates  = false
   allow_user_key_ids       = true
   allowed_critical_options = "foo,bar"
-  allowed_domains_template = true
   allowed_domains          = "example.com,foo.com"
   allowed_extensions       = "ext1,ext2"
   default_extensions       = { "ext1" = "" }
@@ -308,7 +306,8 @@ resource "vault_ssh_secret_backend_role" "test_role" {
   algorithm_signer         = "rsa-sha2-256"
   max_ttl                  = "86400"
   ttl                      = "43200"
-`, name))
+  %s
+`, name, extraFields))
 
 	if withAllowedUserKeys {
 		fragments = append(fragments, `dynamic "allowed_user_key_config" {
