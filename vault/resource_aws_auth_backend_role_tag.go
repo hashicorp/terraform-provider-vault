@@ -16,7 +16,7 @@ import (
 func awsAuthBackendRoleTagResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendRoleTagResourceCreate,
-		Read:   ReadWrapper(awsAuthBackendRoleTagResourceRead),
+		Read:   provider.ReadWrapper(awsAuthBackendRoleTagResourceRead),
 		Delete: awsAuthBackendRoleTagResourceDelete,
 
 		Schema: map[string]*schema.Schema{

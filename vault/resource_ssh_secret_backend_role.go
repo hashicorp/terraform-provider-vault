@@ -191,7 +191,7 @@ func sshSecretBackendRoleResource() *schema.Resource {
 
 	return &schema.Resource{
 		Create: sshSecretBackendRoleWrite,
-		Read:   ReadWrapper(sshSecretBackendRoleRead),
+		Read:   provider.ReadWrapper(sshSecretBackendRoleRead),
 		Update: sshSecretBackendRoleWrite,
 		Delete: sshSecretBackendRoleDelete,
 		Exists: sshSecretBackendRoleExists,

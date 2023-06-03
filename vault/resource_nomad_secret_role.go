@@ -60,7 +60,7 @@ func nomadSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: createNomadRoleResource,
 		Update: updateNomadRoleResource,
-		Read:   ReadWrapper(readNomadRoleResource),
+		Read:   provider.ReadWrapper(readNomadRoleResource),
 		Delete: deleteNomadRoleResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

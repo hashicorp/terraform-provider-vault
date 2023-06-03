@@ -19,7 +19,7 @@ func mfaPingIDResource() *schema.Resource {
 		Create: mfaPingIDWrite,
 		Update: mfaPingIDUpdate,
 		Delete: mfaPingIDDelete,
-		Read:   ReadWrapper(mfaPingIDRead),
+		Read:   provider.ReadWrapper(mfaPingIDRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

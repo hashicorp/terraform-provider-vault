@@ -21,7 +21,7 @@ func identityGroupResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityGroupCreate,
 		Update: identityGroupUpdate,
-		Read:   ReadWrapper(identityGroupRead),
+		Read:   provider.ReadWrapper(identityGroupRead),
 		Delete: identityGroupDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

@@ -19,7 +19,7 @@ import (
 
 func ldapStaticCredDataSource() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: ReadContextWrapper(readLDAPStaticCreds),
+		ReadContext: provider.ReadContextWrapper(readLDAPStaticCreds),
 		Schema: map[string]*schema.Schema{
 			consts.FieldMount: {
 				Type:        schema.TypeString,

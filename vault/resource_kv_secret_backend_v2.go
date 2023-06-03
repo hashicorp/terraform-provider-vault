@@ -21,7 +21,7 @@ func kvSecretBackendV2Resource() *schema.Resource {
 		CreateContext: kvSecretBackendV2CreateUpdate,
 		UpdateContext: kvSecretBackendV2CreateUpdate,
 		DeleteContext: kvSecretBackendV2Delete,
-		ReadContext:   ReadContextWrapper(kvSecretBackendV2Read),
+		ReadContext:   provider.ReadContextWrapper(kvSecretBackendV2Read),
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

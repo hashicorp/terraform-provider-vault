@@ -26,7 +26,7 @@ func gcpAuthBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: gcpAuthBackendWrite,
 		Update: gcpAuthBackendUpdate,
-		Read:   ReadWrapper(gcpAuthBackendRead),
+		Read:   provider.ReadWrapper(gcpAuthBackendRead),
 		Delete: gcpAuthBackendDelete,
 		Exists: gcpAuthBackendExists,
 		Importer: &schema.ResourceImporter{
