@@ -18,7 +18,7 @@ func identityOidc() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOidcCreate,
 		Update: identityOidcUpdate,
-		Read:   ReadWrapper(identityOidcRead),
+		Read:   provider.ReadWrapper(identityOidcRead),
 		Delete: identityOidcDelete,
 		Exists: identityOidcExists,
 

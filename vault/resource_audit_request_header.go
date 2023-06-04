@@ -21,7 +21,7 @@ func auditRequestHeaderPath(name string) string {
 func auditRequestHeaderResource() *schema.Resource {
 	return &schema.Resource{
 		Create: auditRequestHeaderCreate,
-		Read:   ReadWrapper(auditRequestHeaderRead),
+		Read:   provider.ReadWrapper(auditRequestHeaderRead),
 		Update: auditRequestHeaderUpdate,
 		Delete: auditRequestHeaderDelete,
 		Exists: auditRequestHeaderExists,

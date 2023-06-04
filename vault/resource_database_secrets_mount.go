@@ -108,7 +108,7 @@ func databaseSecretsMountCustomizeDiff(ctx context.Context, d *schema.ResourceDi
 func databaseSecretsMountResource() *schema.Resource {
 	return &schema.Resource{
 		Create:        databaseSecretsMountCreateOrUpdate,
-		Read:          ReadWrapper(databaseSecretsMountRead),
+		Read:          provider.ReadWrapper(databaseSecretsMountRead),
 		Update:        databaseSecretsMountCreateOrUpdate,
 		Delete:        databaseSecretsMountDelete,
 		CustomizeDiff: databaseSecretsMountCustomizeDiff,

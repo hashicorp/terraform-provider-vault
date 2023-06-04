@@ -8,6 +8,9 @@ description: |-
 
 # vault\_ad\_secret\_backend
 
+~> **Note** This resource is replaced by "vault_ldap_secret_backend" and will
+be removed in the next major release.
+
 Creates an Active Directory Secret Backend for Vault. Active Directory secret backend
 rotates existing Active Directory service account passwords based on the TTL of the role.
 

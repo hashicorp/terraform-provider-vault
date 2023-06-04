@@ -25,7 +25,7 @@ var (
 func consulSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: consulSecretBackendRoleWrite,
-		ReadContext:   ReadContextWrapper(consulSecretBackendRoleRead),
+		ReadContext:   provider.ReadContextWrapper(consulSecretBackendRoleRead),
 		UpdateContext: consulSecretBackendRoleWrite,
 		DeleteContext: consulSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{

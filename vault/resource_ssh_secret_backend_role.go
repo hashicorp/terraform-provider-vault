@@ -70,6 +70,11 @@ func sshSecretBackendRoleResource() *schema.Resource {
 			Type:     schema.TypeString,
 			Optional: true,
 		},
+		"allowed_domains_template": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+		},
 		"allowed_domains": {
 			Type:     schema.TypeString,
 			Optional: true,
@@ -186,7 +191,7 @@ func sshSecretBackendRoleResource() *schema.Resource {
 
 	return &schema.Resource{
 		Create: sshSecretBackendRoleWrite,
-		Read:   ReadWrapper(sshSecretBackendRoleRead),
+		Read:   provider.ReadWrapper(sshSecretBackendRoleRead),
 		Update: sshSecretBackendRoleWrite,
 		Delete: sshSecretBackendRoleDelete,
 		Exists: sshSecretBackendRoleExists,
@@ -258,6 +263,8 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		if v, ok := d.GetOk("default_user_template"); ok {
 			data["default_user_template"] = v.(bool)
 		}
+
+		data["allowed_domains_template"] = d.Get("allowed_domains_template")
 	}
 
 	if v, ok := d.GetOk("key_id_format"); ok {
@@ -381,7 +388,7 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
-		fields = append(fields, []string{"default_user_template"}...)
+		fields = append(fields, []string{"default_user_template", "allowed_domains_template"}...)
 	}
 
 	// cidr_list cannot be read from the API
