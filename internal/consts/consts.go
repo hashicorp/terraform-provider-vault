@@ -253,6 +253,7 @@ const (
 	FieldServiceAccountNames        = "service_account_names"
 	FieldDisableCheckInEnforcement  = "disable_check_in_enforcement"
 	FieldSkipChildToken             = "skip_child_token"
+	FieldTokenPolicies              = "token_policies"
 
 	/*
 		common environment variables
@@ -338,6 +339,7 @@ const (
 	/*
 		misc. path related constants
 	*/
-	PathDelim      = "/"
-	VaultAPIV1Root = "/v1"
+	PathDelim        = "/"
+	VaultAPIV1Root   = "/v1"
+	SysNamespaceRoot = "sys/namespaces/"
 )

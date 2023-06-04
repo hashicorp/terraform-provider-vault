@@ -172,13 +172,13 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
 
 	t.Cleanup(func() {
-		if _, err := client.Logical().Delete(SysNamespaceRoot + namespacePath); err != nil {
+		if _, err := client.Logical().Delete(consts.SysNamespaceRoot + namespacePath); err != nil {
 			t.Errorf("failed to delete parent namespace %q, err=%s", namespacePath, err)
 		}
 	})
 
 	// create the namespace for the provider
-	if _, err := client.Logical().Write(SysNamespaceRoot+namespacePath, nil); err != nil {
+	if _, err := client.Logical().Write(consts.SysNamespaceRoot+namespacePath, nil); err != nil {
 		t.Fatal(err)
 	}
 

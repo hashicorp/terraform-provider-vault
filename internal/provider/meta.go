@@ -142,6 +142,9 @@ func (p *ProviderMeta) validate() error {
 // NewProviderMeta sets up the Provider to service Vault requests.
 // It is meant to be used as a schema.ConfigureFunc.
 func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
+	if d == nil {
+		return nil, fmt.Errorf("nil ResourceData provided")
+	}
 	clientConfig := api.DefaultConfig()
 	addr := d.Get(consts.FieldAddress).(string)
 	if addr != "" {
@@ -287,10 +290,10 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	if namespace == "" && tokenNamespace != "" {
 		// set the provider namespace to the token's namespace
 		// this is here to ensure that do not break any configurations that are relying on the
-		// token's namespace being used for resource provisioning.
+		// token's namespace being used during resource provisioning.
 		// In the future we should drop support for this behaviour.
-		log.Printf("[WARN] The provider namespace should be set when using namespaced auth tokens. "+
-			"Please update your provider configuration's namespace to be %q. "+
+		log.Printf("[WARN] The provider namespace should be set whenever using namespaced auth tokens. "+
+			"You may want to update your provider configuration's namespace to be %q, before executing terraform."+
 			"Future releases may not support this type of configuration.", tokenNamespace)
 
 		namespace = tokenNamespace
