@@ -87,6 +87,8 @@ func TestLDAPSecretBackend(t *testing.T) {
 // schema and tests that the bindpass is not overwritten unless it is
 // explicitly changed in the TF config so that we don't clobber a bindpass that
 // was changed via a rotate-root operation in Vault.
+//
+// use "docker compose up -d ad" to test this locally
 func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 	var (
 		path         = acctest.RandomWithPrefix("tf-test-ldap")
