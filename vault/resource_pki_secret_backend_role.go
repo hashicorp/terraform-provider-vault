@@ -81,7 +81,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 		UpdateContext: pkiSecretBackendRoleUpdate,
 		DeleteContext: pkiSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
