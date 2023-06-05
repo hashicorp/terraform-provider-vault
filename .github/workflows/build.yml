@@ -128,7 +128,7 @@ jobs:
         ports:
         - '2389:389'
         - '2636:636'
-        environment:
+        env:
           - SAMBA_DC_REALM=corp.example.net
           - SAMBA_DC_DOMAIN=EXAMPLE
           - SAMBA_DC_ADMIN_PASSWD=SuperSecretPassw0rd
