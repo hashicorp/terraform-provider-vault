@@ -77,7 +77,7 @@ var pkiSecretBooleanFields = []string{
 func pkiSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: pkiSecretBackendRoleCreate,
-		ReadContext:   ReadContextWrapper(pkiSecretBackendRoleRead),
+		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendRoleRead),
 		UpdateContext: pkiSecretBackendRoleUpdate,
 		DeleteContext: pkiSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{

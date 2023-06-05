@@ -31,7 +31,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 		UpdateContext: func(ctx context.Context, data *schema.ResourceData, i interface{}) diag.Diagnostics {
 			return nil
 		},
-		ReadContext: ReadContextWrapper(pkiSecretBackendCertRead),
+		ReadContext: provider.ReadContextWrapper(pkiSecretBackendCertRead),
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,

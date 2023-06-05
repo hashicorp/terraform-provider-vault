@@ -21,7 +21,7 @@ const (
 func pkiSecretBackendCrlConfigResource() *schema.Resource {
 	return &schema.Resource{
 		Create: pkiSecretBackendCrlConfigCreate,
-		Read:   ReadWrapper(pkiSecretBackendCrlConfigRead),
+		Read:   provider.ReadWrapper(pkiSecretBackendCrlConfigRead),
 		Update: pkiSecretBackendCrlConfigUpdate,
 		Delete: pkiSecretBackendCrlConfigDelete,
 		Importer: &schema.ResourceImporter{

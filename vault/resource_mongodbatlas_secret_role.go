@@ -24,7 +24,7 @@ var (
 func mongodbAtlasSecretRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: mongodbAtlasSecretRoleCreateUpdate,
-		ReadContext:   ReadContextWrapper(mongodbAtlasSecretRoleRead),
+		ReadContext:   provider.ReadContextWrapper(mongodbAtlasSecretRoleRead),
 		UpdateContext: mongodbAtlasSecretRoleCreateUpdate,
 		DeleteContext: mongodbAtlasSecretRoleDelete,
 		Importer: &schema.ResourceImporter{

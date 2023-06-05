@@ -23,7 +23,7 @@ import (
 func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: pkiSecretBackendRootSignIntermediateCreate,
-		ReadContext:   ReadContextWrapper(pkiSecretBackendRootSignIntermediateRead),
+		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendRootSignIntermediateRead),
 		UpdateContext: pkiSecretBackendRootSignIntermediateUpdate,
 		DeleteContext: pkiSecretBackendCertDelete,
 		StateUpgraders: []schema.StateUpgrader{

@@ -19,7 +19,7 @@ import (
 func azureSecretBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: azureSecretBackendCreate,
-		Read:   ReadWrapper(azureSecretBackendRead),
+		Read:   provider.ReadWrapper(azureSecretBackendRead),
 		Update: azureSecretBackendUpdate,
 		Delete: azureSecretBackendDelete,
 		Exists: azureSecretBackendExists,

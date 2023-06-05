@@ -20,7 +20,7 @@ func quotaRateLimitPath(name string) string {
 func quotaRateLimitResource() *schema.Resource {
 	return &schema.Resource{
 		Create: quotaRateLimitCreate,
-		Read:   ReadWrapper(quotaRateLimitRead),
+		Read:   provider.ReadWrapper(quotaRateLimitRead),
 		Update: quotaRateLimitUpdate,
 		Delete: quotaRateLimitDelete,
 		Exists: quotaRateLimitExists,

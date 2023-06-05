@@ -22,7 +22,7 @@ var (
 func terraformCloudSecretRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: terraformCloudSecretRoleWrite,
-		Read:   ReadWrapper(terraformCloudSecretRoleRead),
+		Read:   provider.ReadWrapper(terraformCloudSecretRoleRead),
 		Update: terraformCloudSecretRoleWrite,
 		Delete: terraformCloudSecretRoleDelete,
 		Exists: terraformCloudSecretRoleExists,
