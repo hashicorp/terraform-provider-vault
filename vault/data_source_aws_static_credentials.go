@@ -28,13 +28,13 @@ func awsStaticCredDataSource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Name of the role.",
 			},
-			consts.FieldAWSAccessKeyID: {
+			consts.FieldAccessKey: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "AWS access key ID read from Vault.",
 				Sensitive:   true,
 			},
-			consts.FieldAWSSecretAccessKey: {
+			consts.FieldSecretKey: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "AWS secret key read from Vault.",
@@ -64,10 +64,14 @@ func awsStaticCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceD
 	}
 
 	d.SetId(fullPath)
-	if err := d.Set(consts.FieldAWSAccessKeyID, secret.Data["access_key_id"]); err != nil {
+
+	// Unfortunately we called the secret fields in vault different things between the dynamic and static credentials;
+	// so we're left with the choice here of keeping them common among terraform data sources, or keeping them
+	// the same between vault and terraform.
+	if err := d.Set(consts.FieldAccessKey, secret.Data["access_key_id"]); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set(consts.FieldAWSSecretAccessKey, secret.Data["secret_access_key"]); err != nil {
+	if err := d.Set(consts.FieldSecretKey, secret.Data["secret_access_key"]); err != nil {
 		return diag.FromErr(err)
 	}
 

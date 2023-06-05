@@ -26,8 +26,8 @@ func TestAccDataSourceAWSStaticCredentials(t *testing.T) {
 			{
 				Config: testAWSStaticDataSourceConfig(mount, username),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.vault_aws_static_access_credentials.creds", consts.FieldAWSAccessKeyID),
-					resource.TestCheckResourceAttrSet("data.vault_aws_static_access_credentials.creds", consts.FieldAWSSecretAccessKey),
+					resource.TestCheckResourceAttrSet("data.vault_aws_static_access_credentials.creds", consts.FieldAccessKey),
+					resource.TestCheckResourceAttrSet("data.vault_aws_static_access_credentials.creds", consts.FieldSecretKey),
 				),
 			},
 		},
