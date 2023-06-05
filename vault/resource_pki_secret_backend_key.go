@@ -25,10 +25,10 @@ var (
 
 func pkiSecretBackendKeyResource() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: MountCreateContextWrapper(pkiSecretBackendKeyCreate, provider.VaultVersion111),
+		CreateContext: provider.MountCreateContextWrapper(pkiSecretBackendKeyCreate, provider.VaultVersion111),
 		UpdateContext: pkiSecretBackendKeyUpdate,
 		DeleteContext: pkiSecretBackendKeyDelete,
-		ReadContext:   ReadContextWrapper(pkiSecretBackendKeyRead),
+		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendKeyRead),
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
