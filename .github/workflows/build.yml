@@ -125,7 +125,6 @@ jobs:
           LDAP_PASSWORDS: "password1,password2,password3"
       ad:
         image: laslabs/alpine-samba-dc:0.1.0
-        privileged: true
         ports:
         - '2389:389'
         - '2636:636'
