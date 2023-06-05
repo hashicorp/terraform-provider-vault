@@ -62,7 +62,7 @@ func adSecretBackendRoleResource() *schema.Resource {
 		DeprecationMessage: `This resource is replaced by "vault_ldap_secret_backend_static_role" and will be removed in the next major release.`,
 		Create:             createRoleResource,
 		Update:             updateRoleResource,
-		Read:               ReadWrapper(readRoleResource),
+		Read:               provider.ReadWrapper(readRoleResource),
 		Delete:             deleteRoleResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

@@ -18,7 +18,7 @@ import (
 
 func ldapDynamicCredDataSource() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: ReadContextWrapper(readLDAPDynamicCreds),
+		ReadContext: provider.ReadContextWrapper(readLDAPDynamicCreds),
 		Schema: map[string]*schema.Schema{
 			consts.FieldMount: {
 				Type:        schema.TypeString,
@@ -120,9 +120,7 @@ type lDAPDynamicCredResponse struct {
 }
 
 func parseLDAPDynamicCredSecret(secret *api.Secret) (lDAPDynamicCredResponse, error) {
-	var (
-		distinguishedNames []string
-	)
+	var distinguishedNames []string
 	if distinguishedNamesRaw, ok := secret.Data[consts.FieldDistinguishedNames]; ok {
 		for _, dnRaw := range distinguishedNamesRaw.([]interface{}) {
 			distinguishedNames = append(distinguishedNames, dnRaw.(string))

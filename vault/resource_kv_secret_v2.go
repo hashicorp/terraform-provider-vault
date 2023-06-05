@@ -36,7 +36,7 @@ func kvSecretV2Resource(name string) *schema.Resource {
 		CreateContext: kvSecretV2Write,
 		UpdateContext: kvSecretV2Write,
 		DeleteContext: kvSecretV2Delete,
-		ReadContext:   ReadContextWrapper(kvSecretV2Read),
+		ReadContext:   provider.ReadContextWrapper(kvSecretV2Read),
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

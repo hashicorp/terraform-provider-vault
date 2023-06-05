@@ -114,7 +114,7 @@ func gcpAuthBackendRoleResource() *schema.Resource {
 
 		CreateContext: gcpAuthResourceCreate,
 		UpdateContext: gcpAuthResourceUpdate,
-		ReadContext:   ReadContextWrapper(gcpAuthResourceRead),
+		ReadContext:   provider.ReadContextWrapper(gcpAuthResourceRead),
 		DeleteContext: gcpAuthResourceDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,

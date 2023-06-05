@@ -7,9 +7,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -19,7 +20,7 @@ import (
 func azureSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: azureSecretBackendRoleCreate,
-		ReadContext:   ReadContextWrapper(azureSecretBackendRoleRead),
+		ReadContext:   provider.ReadContextWrapper(azureSecretBackendRoleRead),
 		UpdateContext: azureSecretBackendRoleCreate,
 		DeleteContext: azureSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{

@@ -20,7 +20,7 @@ import (
 func approleAuthBackendLoginResource() *schema.Resource {
 	return &schema.Resource{
 		Create: approleAuthBackendLoginCreate,
-		Read:   ReadWrapper(approleAuthBackendLoginRead),
+		Read:   provider.ReadWrapper(approleAuthBackendLoginRead),
 		Delete: approleAuthBackendLoginDelete,
 		Exists: approleAuthBackendLoginExists,
 

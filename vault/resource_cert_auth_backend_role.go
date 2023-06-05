@@ -115,7 +115,7 @@ func certAuthBackendRoleResource() *schema.Resource {
 
 		CreateContext: certAuthResourceWrite,
 		UpdateContext: certAuthResourceUpdate,
-		ReadContext:   ReadContextWrapper(certAuthResourceRead),
+		ReadContext:   provider.ReadContextWrapper(certAuthResourceRead),
 		DeleteContext: certAuthResourceDelete,
 		Schema:        fields,
 	}

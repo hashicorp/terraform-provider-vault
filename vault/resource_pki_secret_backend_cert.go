@@ -21,10 +21,17 @@ import (
 
 func pkiSecretBackendCertResource() *schema.Resource {
 	return &schema.Resource{
+<<<<<<< HEAD
 		CreateContext: pkiSecretBackendCertCreate,
 		ReadContext:   ReadContextWrapper(pkiSecretBackendCertRead),
 		UpdateContext: pkiSecretBackendCertUpdate,
 		DeleteContext: pkiSecretBackendCertDelete,
+=======
+		Create:        pkiSecretBackendCertCreate,
+		Read:          provider.ReadWrapper(pkiSecretBackendCertRead),
+		Update:        pkiSecretBackendCertUpdate,
+		Delete:        pkiSecretBackendCertDelete,
+>>>>>>> main
 		CustomizeDiff: pkiCertAutoRenewCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
