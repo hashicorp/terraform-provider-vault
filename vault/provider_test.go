@@ -643,8 +643,10 @@ func TestAccChildToken(t *testing.T) {
 							}
 						}
 					},
-					Config: testProviderConfig(test.useChildTokenSchema, consts.FieldSkipChildToken+` = `+test.skipChildTokenSchema),
-					Check:  checkTokenUsed(test.expectChildToken),
+					Config: testProviderConfig(test.useChildTokenSchema,
+						consts.FieldSkipChildToken+` = `+test.skipChildTokenSchema,
+					),
+					Check: checkTokenUsed(test.expectChildToken),
 				},
 			},
 		})

@@ -709,7 +709,8 @@ func TestNewProviderMeta(t *testing.T) {
 					t.Fatalf("failed to clone Vault client, err=%s", err)
 				}
 
-				tokenTTL := time.Minute * 6
+				// in order not to trigger the min TTL warning we can add some time to the min.
+				tokenTTL := TokenTTLMinRecommended + time.Second*10
 				clone.SetNamespace(tt.tokenNamespace)
 				resp, err := clone.Auth().Token().Create(&api.TokenCreateRequest{
 					TTL: tokenTTL.String(),

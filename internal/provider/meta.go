@@ -41,7 +41,7 @@ var (
 	VaultVersion112 = version.Must(version.NewSemver(consts.VaultVersion112))
 	VaultVersion113 = version.Must(version.NewSemver(consts.VaultVersion113))
 
-	TokenTTLMinRecommended = time.Minute * 5
+	TokenTTLMinRecommended = time.Minute * 15
 )
 
 // ProviderMeta provides resources with access to the Vault client and
@@ -275,12 +275,12 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		return nil, fmt.Errorf("failed to lookup token, err=%w", err)
 	}
 
+	warnMinTokenTTL(tokenInfo)
+
 	var tokenNamespace string
 	if v, ok := tokenInfo.Data[consts.FieldNamespacePath]; ok {
 		tokenNamespace = strings.Trim(v.(string), "/")
 	}
-
-	warnMinTokenTTL(tokenInfo)
 
 	if !d.Get(consts.FieldSkipChildToken).(bool) {
 		// a child token is always created in the namespace of the parent token.
@@ -297,8 +297,9 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		// this is here to ensure that do not break any configurations that are relying on the
 		// token's namespace being used during resource provisioning.
 		// In the future we should drop support for this behaviour.
-		log.Printf("[WARN] The provider namespace should be set whenever using namespaced auth tokens. "+
-			"You may want to update your provider configuration's namespace to be %q, before executing terraform."+
+		log.Printf("[WARN] The provider namespace should be set whenever "+
+			"using namespaced auth tokens. You may want to update your provider "+
+			"configuration's namespace to be %q, before executing terraform. "+
 			"Future releases may not support this type of configuration.", tokenNamespace)
 
 		namespace = tokenNamespace
@@ -339,6 +340,8 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 }
 
 func warnMinTokenTTL(tokenInfo *api.Secret) {
+	// tokens with "root" policies tend to have no TTL set, so there should be no
+	// need to warn in this case.
 	if policies, err := tokenInfo.TokenPolicies(); err == nil {
 		for _, v := range policies {
 			if v == "root" {
