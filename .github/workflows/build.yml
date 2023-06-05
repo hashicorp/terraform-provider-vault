@@ -129,10 +129,10 @@ jobs:
         - '2389:389'
         - '2636:636'
         env:
-          - SAMBA_DC_REALM=corp.example.net
-          - SAMBA_DC_DOMAIN=EXAMPLE
-          - SAMBA_DC_ADMIN_PASSWD=SuperSecretPassw0rd
-          - SAMBA_DC_DNS_BACKEND=SAMBA_INTERNAL
+          SAMBA_DC_REALM: "corp.example.net"
+          SAMBA_DC_DOMAIN: "EXAMPLE"
+          SAMBA_DC_ADMIN_PASSWD: "SuperSecretPassw0rd"
+          SAMBA_DC_DNS_BACKEND: "SAMBA_INTERNAL"
     steps:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       # setup-terraform expects unzip to be available but we are running in a docker container that doesn't have it pre-installed
