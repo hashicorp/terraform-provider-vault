@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-version"
@@ -39,6 +40,8 @@ var (
 	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion111))
 	VaultVersion112 = version.Must(version.NewSemver(consts.VaultVersion112))
 	VaultVersion113 = version.Must(version.NewSemver(consts.VaultVersion113))
+
+	TokenTTLMinRecommended = time.Minute * 5
 )
 
 // ProviderMeta provides resources with access to the Vault client and
@@ -277,6 +280,8 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		tokenNamespace = strings.Trim(v.(string), "/")
 	}
 
+	warnMinTokenTTL(tokenInfo)
+
 	if !d.Get(consts.FieldSkipChildToken).(bool) {
 		// a child token is always created in the namespace of the parent token.
 		token, err = createChildToken(d, client, tokenNamespace)
@@ -331,6 +336,26 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		client:       client,
 		vaultVersion: vaultVersion,
 	}, nil
+}
+
+func warnMinTokenTTL(tokenInfo *api.Secret) {
+	if policies, err := tokenInfo.TokenPolicies(); err == nil {
+		for _, v := range policies {
+			if v == "root" {
+				return
+			}
+		}
+	}
+
+	// we can ignore the error here, any issue with the token will be handled later
+	// on during resource provisioning
+	if tokenTTL, err := tokenInfo.TokenTTL(); err == nil {
+		if tokenTTL < TokenTTLMinRecommended {
+			log.Printf("[WARN] The token TTL %s is below the minimum "+
+				"recommended value of %s, this can result in unexpected Vault "+
+				"provisioning failures e.g. 403 permission denied", tokenTTL, TokenTTLMinRecommended)
+		}
+	}
 }
 
 // GetClient is meant to be called from a schema.Resource function.

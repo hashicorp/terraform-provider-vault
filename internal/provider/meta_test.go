@@ -632,14 +632,14 @@ func TestNewProviderMeta(t *testing.T) {
 				consts.FieldSkipChildToken:      true,
 				consts.FieldAuthLoginUserpass: []map[string]interface{}{
 					{
-						consts.FieldNamespace: nsPrefix + "auth-ns",
+						consts.FieldNamespace: nsPrefix + "auth-ns-prov-ns",
 						consts.FieldMount:     consts.MountTypeUserpass,
 						consts.FieldUsername:  defaultUser,
 						consts.FieldPassword:  defaultPassword,
 					},
 				},
 			},
-			authLoginNamespace: nsPrefix + "auth-ns",
+			authLoginNamespace: nsPrefix + "auth-ns-prov-ns",
 			wantNamespace:      nsPrefix + "prov-ns-auth-ns",
 			wantErr:            false,
 		},
@@ -709,8 +709,11 @@ func TestNewProviderMeta(t *testing.T) {
 					t.Fatalf("failed to clone Vault client, err=%s", err)
 				}
 
+				tokenTTL := time.Minute * 6
 				clone.SetNamespace(tt.tokenNamespace)
-				resp, err := clone.Auth().Token().Create(&api.TokenCreateRequest{})
+				resp, err := clone.Auth().Token().Create(&api.TokenCreateRequest{
+					TTL: tokenTTL.String(),
+				})
 				if err != nil {
 					t.Fatalf("failed to create Vault token, err=%s", err)
 				}
