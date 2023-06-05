@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"testing"
 )
@@ -17,7 +18,8 @@ func TestAccAWSSecretBackendStaticRole(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			//SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
 		},
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
