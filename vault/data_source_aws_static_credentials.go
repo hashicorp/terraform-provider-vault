@@ -64,10 +64,10 @@ func awsStaticCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceD
 	}
 
 	d.SetId(fullPath)
-	if err := d.Set(consts.FieldAWSAccessKeyID, secret.Data[consts.FieldAWSSecretAccessKey]); err != nil {
+	if err := d.Set(consts.FieldAWSAccessKeyID, secret.Data["access_key_id"]); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set(consts.FieldAWSSecretAccessKey, secret.Data[consts.FieldAWSSecretAccessKey]); err != nil {
+	if err := d.Set(consts.FieldAWSSecretAccessKey, secret.Data["secret_access_key"]); err != nil {
 		return diag.FromErr(err)
 	}
 
