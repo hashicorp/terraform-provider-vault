@@ -67,7 +67,7 @@ func createUpdateAWSStaticRoleResource(ctx context.Context, d *schema.ResourceDa
 	}
 
 	mount := d.Get(consts.FieldMount).(string)
-	role := d.Get(consts.FieldRoleName).(string)
+	role := d.Get(consts.FieldName).(string)
 	rolePath := fmt.Sprintf("%s/static-roles/%s", mount, role)
 	log.Printf("[DEBUG] Creating AWAS static role at %q", rolePath)
 	data := map[string]interface{}{}
