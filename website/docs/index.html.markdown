@@ -147,9 +147,11 @@ variables in order to keep credential information out of the configuration.
 
 * `auth_login` - (Optional) A configuration block, described below, that
   attempts to authenticate using the `auth/<method>/login` path to
-  acquire a token which Terraform will use. Terraform still issues itself
-  a limited child token using auth/token/create in order to enforce a short
-  TTL and limit exposure. *[See usage details below.](#generic)*
+  acquire a token which Terraform will use, unless a token was found in the
+  `VAULT_TOKEN` environment variable, the `~/.vault-token` file, or using the
+  token helper. Terraform still issues itself a limited child token using
+  `auth/token/create` in order to enforce a short TTL and limit exposure.
+  *[See usage details below.](#generic)*
 
 * `client_auth` - (Optional) A configuration block, described below, that
   provides credentials used by Terraform to authenticate with the Vault

@@ -121,7 +121,11 @@ func TestAccAuthLoginProviderConfigure(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceApproleConfig_basic(),
-				Check:  testResourceApproleLoginCheckAttrs(t),
+				Check:  testResourceApproleLoginCheckAttrs(t, false),
+			},
+			{
+				Config: testResourceApproleConfig_basic(),
+				Check:  testResourceApproleLoginCheckAttrs(t, true),
 			},
 		},
 	})
@@ -236,7 +240,7 @@ resource "vault_approle_auth_backend_role_secret_id" "admin" {
 `
 }
 
-func testResourceApproleLoginCheckAttrs(t *testing.T) resource.TestCheckFunc {
+func testResourceApproleLoginCheckAttrs(t *testing.T, useAuthLogin bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_approle_auth_backend_role_secret_id.admin"]
 		if resourceState == nil {
@@ -276,6 +280,17 @@ func testResourceApproleLoginCheckAttrs(t *testing.T) resource.TestCheckFunc {
 		}
 		approleProviderData := approleProviderResource.TestResourceData()
 		approleProviderData.Set(consts.FieldAuthLoginDefault, authLoginData)
+
+		if useAuthLogin {
+			provider.GetTokenFunc = func(d *schema.ResourceData) (string, error) {
+				return "", nil
+			}
+		} else {
+			provider.GetTokenFunc = func(d *schema.ResourceData) (string, error) {
+				return os.Getenv("VAULT_TOKEN"), nil
+			}
+		}
+
 		_, err := provider.NewProviderMeta(approleProviderData)
 		if err != nil {
 			t.Fatal(err)
@@ -466,7 +481,7 @@ func TestAccProviderToken(t *testing.T) {
 			}
 
 			// Get and check the p token.
-			token, err := provider.GetToken(d)
+			token, err := provider.GetTokenFunc(d)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -789,7 +804,7 @@ func TestAccProviderVaultAddrEnv(t *testing.T) {
 			}
 
 			// Get and check the provider token.
-			token, err := provider.GetToken(d)
+			token, err := provider.GetTokenFunc(d)
 			if err != nil {
 				t.Fatal(err)
 			}
