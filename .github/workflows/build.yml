@@ -40,7 +40,8 @@ jobs:
   #       run: |
   #         make test
   acceptance:
-    needs: [go-version, build]
+    # needs: [go-version, build]
+    needs: [go-version]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
