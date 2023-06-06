@@ -130,10 +130,6 @@ jobs:
         - '2636:636'
         options: >-
           --cap-add "SYS_ADMIN"
-          --health-cmd "LDAPTLS_REQCERT=never ldapsearch -x -b 'CN=Users,DC=corp,DC=example,DC=net' -h 127.0.0.1 -p 2389 -Z -D 'CN=Administrator,CN=Users,DC=corp,DC=example,DC=net' -w 'SuperSecretPassw0rd' CN=Administrator"
-          --health-interval 20s
-          --health-timeout 20s
-          --health-retries 2
         env:
           SAMBA_DC_REALM: "corp.example.net"
           SAMBA_DC_DOMAIN: "EXAMPLE"

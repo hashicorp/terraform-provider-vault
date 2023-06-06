@@ -6,6 +6,7 @@ package vault
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -96,6 +97,10 @@ func TestLDAPSecretBackend(t *testing.T) {
 //
 // export AD_URL=ldaps://localhost:2636
 func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
+	// unfortunately it is necessary to sleep here to wait for the AD container
+	// service to become available
+	time.Sleep(20 * time.Second)
+
 	var (
 		path         = acctest.RandomWithPrefix("tf-test-ldap")
 		resourceType = "vault_ldap_secret_backend"
