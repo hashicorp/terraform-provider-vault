@@ -6,7 +6,6 @@ package vault
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -89,12 +88,14 @@ func TestLDAPSecretBackend(t *testing.T) {
 // explicitly changed in the TF config so that we don't clobber a bindpass that
 // was changed via a rotate-root operation in Vault.
 //
-// use "docker compose up -d ad" to test this locally
+// To test, run the ad service provided in the docker-compose.yaml file:
+//
+//	docker compose up -d ad
+//
+// Then export the following environment variables:
+//
+// export AD_URL=ldaps://localhost:2636
 func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
-	// unfortunately it is necessary to sleep here to wait for the AD container
-	// service to become available
-	time.Sleep(20 * time.Second)
-
 	var (
 		path         = acctest.RandomWithPrefix("tf-test-ldap")
 		resourceType = "vault_ldap_secret_backend"
@@ -102,7 +103,8 @@ func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 		userDN       = "CN=Users,DC=corp,DC=example,DC=net"
 		bindPass     = "SuperSecretPassw0rd"
 		bindDN       = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
-		url          = "ldaps://localhost:2636"
+
+		url = testutil.SkipTestEnvUnset(t, "AD_URL")[0]
 	)
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -113,7 +115,7 @@ func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPSecretBackendConfig_ad(path, ""),
+				Config: testLDAPSecretBackendConfig_ad(path, url, ""),
 				Check: resource.ComposeTestCheckFunc(
 					func(*terraform.State) error {
 						client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
@@ -136,7 +138,7 @@ func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 				),
 			},
 			{
-				Config: testLDAPSecretBackendConfig_ad(path, `description = "new description"`),
+				Config: testLDAPSecretBackendConfig_ad(path, url, `description = "new description"`),
 				Check: resource.ComposeTestCheckFunc(
 					func(*terraform.State) error {
 						client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
@@ -164,7 +166,7 @@ func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 				),
 			},
 			{
-				Config: testLDAPSecretBackendConfig_ad_updated(path, `description = "new description"`),
+				Config: testLDAPSecretBackendConfig_ad_updated(path, url, `description = "new description"`),
 				Check: resource.ComposeTestCheckFunc(
 					// We explicitly updated the bindpass in the TF config so
 					// we expect the state to contain the new value.
@@ -206,32 +208,32 @@ resource "vault_ldap_secret_backend" "test" {
 `, mount, description, bindDN, bindPass, url, userDN, insecureTLS, schema)
 }
 
-func testLDAPSecretBackendConfig_ad(path, extraConfig string) string {
+func testLDAPSecretBackendConfig_ad(path, url, extraConfig string) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_secret_backend" "test" {
   path         = "%s"
   binddn       = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
   bindpass     = "SuperSecretPassw0rd"
-  url          = "ldaps://localhost:2636"
+  url          = "%s"
   insecure_tls = "true"
   userdn       = "CN=Users,DC=corp,DC=example,DC=net"
   schema       = "ad"
   %s
 }
-`, path, extraConfig)
+`, path, url, extraConfig)
 }
 
-func testLDAPSecretBackendConfig_ad_updated(path, extraConfig string) string {
+func testLDAPSecretBackendConfig_ad_updated(path, url, extraConfig string) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_secret_backend" "test" {
   path         = "%s"
   binddn       = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
   bindpass     = "NEW-SuperSecretPassw0rd"
-  url          = "ldaps://localhost:2636"
+  url          = "%s"
   insecure_tls = "true"
   userdn       = "CN=Users,DC=corp,DC=example,DC=net"
   schema       = "ad"
   %s
 }
-`, path, extraConfig)
+`, path, url, extraConfig)
 }

@@ -128,6 +128,8 @@ jobs:
         ports:
         - '2389:389'
         - '2636:636'
+        options: >-
+          --cap-add "SYS_ADMIN"
         env:
           SAMBA_DC_REALM: "corp.example.net"
           SAMBA_DC_DOMAIN: "EXAMPLE"
@@ -165,6 +167,7 @@ jobs:
           LDAP_BINDDN: "cn=admin,dc=example,dc=org"
           LDAP_BINDPASS: "adminpassword"
           LDAP_URL: "ldap://openldap:1389"
+          AD_URL: "ldaps://ad:2636"
         run: |
           make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"

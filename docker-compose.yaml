@@ -61,6 +61,8 @@ services:
   # available so manual test runs should take this into account
   ad:
     image: laslabs/alpine-samba-dc:0.1.0
+    cap_add:
+    - "SYS_ADMIN"
     ports:
       - '2389:389'
       - '2636:636'
