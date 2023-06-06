@@ -126,8 +126,8 @@ jobs:
       ad:
         image: laslabs/alpine-samba-dc:0.1.0
         ports:
-        - '2389:389'
-        - '2636:636'
+        - '389:389'
+        - '636:636'
         options: >-
           --cap-add "SYS_ADMIN"
         env:
@@ -136,6 +136,9 @@ jobs:
           SAMBA_DC_ADMIN_PASSWD: "SuperSecretPassw0rd"
           SAMBA_DC_DNS_BACKEND: "SAMBA_INTERNAL"
     steps:
+      - name: Check containers
+        run: docker ps -a
+
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       # setup-terraform expects unzip to be available but we are running in a docker container that doesn't have it pre-installed
       - name: Install setup-terraform dependencies
@@ -167,7 +170,7 @@ jobs:
           LDAP_BINDDN: "cn=admin,dc=example,dc=org"
           LDAP_BINDPASS: "adminpassword"
           LDAP_URL: "ldap://openldap:1389"
-          AD_URL: "ldaps://ad:2636"
+          AD_URL: "ldaps://ad:636"
         run: |
           make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"
