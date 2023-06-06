@@ -1494,30 +1494,6 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, parsedURL.String(), openConn, idleConn, maxConnLifetime, username, password, userTempl)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_PostgresRotateRoot(name, path, postgresHost, username, password, openConn string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "db" {
-  path = "%s"
-  type = "database"
-}
-
-resource "vault_database_secret_backend_connection" "test" {
-  backend = vault_mount.db.path
-  name = "%s"
-  allowed_roles = ["dev", "prod"]
-  root_rotation_statements = []
-
-  postgresql {
-      connection_url          = "postgresql://{{username}}:{{password}}@%s/postgres?sslmode=disable"
-      max_open_connections    = "%s"
-      username                = "%s"
-      password                = "%s"
-      disable_escaping        = true
-  }
-}
-`, path, name, postgresHost, openConn, username, password)
-}
-
 func testAccDatabaseSecretBackendConnectionConfig_postgresql_reset_optional_values(name, path string, parsedURL *url.URL) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
