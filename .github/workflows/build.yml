@@ -15,33 +15,32 @@ jobs:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       - id: go-version
         run: echo "version=$(cat .go-version)" >> $GITHUB_OUTPUT
-  # build:
-  #   needs: [go-version]
-  #   runs-on: ubuntu-latest
-  #   container:
-  #     image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
-  #   steps:
-  #     - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-  #     - name: Install setup-terraform dependencies
-  #       run: apt-get -y update && apt-get install unzip
-  #     # setup-terraform is used to install the Terraform CLI. If we don't do
-  #     # this then the terraform-plugin-sdk will attempt to download it for each test!
-  #     - uses: hashicorp/setup-terraform@v2
-  #       with:
-  #         terraform_version: '1.4.*'
-  #         terraform_wrapper: false
-  #     - name: Build
-  #       run: |
-  #         make build
-  #     - name: Run unit tests
-  #       # here to short-circuit the acceptance tests, in the case of a failure.
-  #       env:
-  #         GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-  #       run: |
-  #         make test
-  acceptance:
-    # needs: [go-version, build]
+  build:
     needs: [go-version]
+    runs-on: ubuntu-latest
+    container:
+      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
+    steps:
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - name: Install setup-terraform dependencies
+        run: apt-get -y update && apt-get install unzip
+      # setup-terraform is used to install the Terraform CLI. If we don't do
+      # this then the terraform-plugin-sdk will attempt to download it for each test!
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: '1.4.*'
+          terraform_wrapper: false
+      - name: Build
+        run: |
+          make build
+      - name: Run unit tests
+        # here to short-circuit the acceptance tests, in the case of a failure.
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          make test
+  acceptance:
+    needs: [go-version, build]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -124,22 +123,7 @@ jobs:
           LDAP_ADMIN_PASSWORD: "adminpassword"
           LDAP_USERS: "alice,bob,foo"
           LDAP_PASSWORDS: "password1,password2,password3"
-      ad:
-        image: laslabs/alpine-samba-dc:0.1.0
-        ports:
-        - '389:389'
-        - '636:636'
-        options: >-
-          --cap-add "SYS_ADMIN"
-        env:
-          SAMBA_DC_REALM: "corp.example.net"
-          SAMBA_DC_DOMAIN: "EXAMPLE"
-          SAMBA_DC_ADMIN_PASSWD: "SuperSecretPassw0rd"
-          SAMBA_DC_DNS_BACKEND: "SAMBA_INTERNAL"
     steps:
-      - name: Check containers
-        run: /usr/bin/docker ps -a -f 'name=ad'
-
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       # setup-terraform expects unzip to be available but we are running in a docker container that doesn't have it pre-installed
       - name: Install setup-terraform dependencies
@@ -171,13 +155,8 @@ jobs:
           LDAP_BINDDN: "cn=admin,dc=example,dc=org"
           LDAP_BINDPASS: "adminpassword"
           LDAP_URL: "ldap://openldap:1389"
-          AD_URL: "ldaps://ad:636"
         run: |
-          echo "debug docker"
-          /usr/bin/docker ps -a -f 'name=ad'
-          make testacc-ent TESTARGS='--run TestLDAPSecretBackend_SchemaAD -v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
-          echo "debug docker"
-          /usr/bin/docker ps -a -f 'name=ad'
+          make testacc-ent TESTARGS='-test.v -test.parallel=10' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json
