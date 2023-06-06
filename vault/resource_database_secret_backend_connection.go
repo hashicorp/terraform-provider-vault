@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -1510,8 +1511,14 @@ func setDatabaseConnectionDataWithUserPass(d *schema.ResourceData, prefix string
 
 	data["username"] = d.Get(prefix + "username")
 
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
+	// Vault does not return the password in the API. If the root credentials have been rotated, sending
+	// the old password in the update request would break the connection config. Thus we only send it,
+	// if it actually changed to still support updating it for non-rotated cases.
+	passwordKey := prefix + consts.FieldPassword
+	if v, ok := d.GetOk(passwordKey); ok {
+		if d.IsNewResource() || d.HasChange(passwordKey) {
+			data[consts.FieldPassword] = v.(string)
+		}
 	}
 }
 
