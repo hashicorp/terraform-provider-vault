@@ -643,7 +643,7 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 				),
 			},
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, backend, testConnURL, secondaryRootUsername, secondaryRootPassword, 10),
+				Config: testAccDatabaseSecretBackendConnectionConfigTemplated_mysql(name, backend, testConnURL, secondaryRootUsername, secondaryRootPassword, 15),
 				PreConfig: func() {
 					path := fmt.Sprintf("%s/rotate-root/%s", backend, name)
 					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
@@ -661,7 +661,9 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.1", "prod"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "verify_connection", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.connection_url", testConnURL),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "10"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "15"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.username", secondaryRootUsername),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.password", secondaryRootPassword),
 				),
 			},
 		},
@@ -761,58 +763,6 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.disable_escaping", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username_template", ""),
-				),
-			},
-		},
-	})
-}
-
-// This test makes sure that the DB connection resource is still
-// operational even when an external rotate root call is made to update
-// its credentials
-// Prerequisites:
-// 1. run the Postgres container found in docker-compose.yaml
-// 2. export POSTGRES_HOST=localhost:5432 && export POSTGRES_URL=whatever
-// Note: this test updates the credentials, so a container restart will be required for reruns.
-func TestAccDatabaseSecretBackendConnection_externalRotateRoot(t *testing.T) {
-	MaybeSkipDBTests(t, dbEnginePostgres)
-	username := "postgres"
-	password := "secret"
-	_, postgresHost := testutil.GetTestPostgresCreds(t)
-
-	backend := acctest.RandomWithPrefix("tf-test-db")
-	pluginName := dbEnginePostgres.DefaultPluginName()
-	name := acctest.RandomWithPrefix("db")
-	maxOpenConnections := "16"
-	updatedMaxOpenConnections := "20"
-
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy:      testAccDatabaseSecretBackendConnectionCheckDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_PostgresRotateRoot(name, backend, postgresHost, username, password, maxOpenConnections),
-				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username", username),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password", password),
-				),
-			},
-			{
-				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
-					rotateRootPath := fmt.Sprintf("%s/rotate-root/%s", backend, name)
-					_, err := client.Logical().Write(rotateRootPath, nil)
-					if err != nil {
-						t.Error(err)
-					}
-				},
-				// confirm that there is no change in password and yet plan was clean
-				// ensure an update is called to the connection by passing in an updated field
-				Config: testAccDatabaseSecretBackendConnectionConfig_PostgresRotateRoot(name, backend, postgresHost, username, password, updatedMaxOpenConnections),
-				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.username", username),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.password", password),
 				),
 			},
 		},

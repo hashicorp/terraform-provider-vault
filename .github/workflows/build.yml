@@ -147,7 +147,6 @@ jobs:
           MONGODB_URL: "mongodb://root:mongodb@mongo:27017/admin?ssl=false"
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
-          POSTGRES_HOST: "postgres:5432"
           COUCHBASE_HOST: couchbase
           COUCHBASE_USERNAME: Administrator
           COUCHBASE_PASSWORD: password
