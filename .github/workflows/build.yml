@@ -138,7 +138,7 @@ jobs:
           SAMBA_DC_DNS_BACKEND: "SAMBA_INTERNAL"
     steps:
       - name: Check containers
-        run: docker ps -a
+        run: /usr/bin/docker ps -a -f 'name=ad'
 
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       # setup-terraform expects unzip to be available but we are running in a docker container that doesn't have it pre-installed
@@ -173,7 +173,11 @@ jobs:
           LDAP_URL: "ldap://openldap:1389"
           AD_URL: "ldaps://ad:636"
         run: |
+          echo "debug docker"
+          /usr/bin/docker ps -a -f 'name=ad'
           make testacc-ent TESTARGS='--run TestLDAPSecretBackend_SchemaAD -v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
+          echo "debug docker"
+          /usr/bin/docker ps -a -f 'name=ad'
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json
