@@ -9,7 +9,6 @@ IMPROVEMENTS:
 * Add back support for deriving the provider namespace from the Vault token's: ([#1841](https://github.com/hashicorp/terraform-provider-vault/pull/1841))
 
 BUGS:
-* check version for allowed_domains_template field: ([#1881](https://github.com/hashicorp/terraform-provider-vault/pull/1881))
 * Fix DB engine password overwrite: ([#1876](https://github.com/hashicorp/terraform-provider-vault/pull/1876))
 * secrets/ldap: fix bindpass getting overwritten: ([#1875](https://github.com/hashicorp/terraform-provider-vault/pull/1875))
 * azure/auth: fix config path parsing: ([#1871](https://github.com/hashicorp/terraform-provider-vault/pull/1871))
