@@ -17,6 +17,8 @@ import (
 
 func awsSecretBackendStaticRoleResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
+		// backend is deprecated, but the other AWS resource types use it, and predate the deprecation.
+		// It's probably more helpful to the end user to maintain this consistency, in this particular case.
 		consts.FieldBackend: {
 			Type:         schema.TypeString,
 			Optional:     true,
