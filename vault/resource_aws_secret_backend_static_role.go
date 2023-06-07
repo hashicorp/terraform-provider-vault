@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -57,6 +58,7 @@ func awsSecretBackendStaticRoleResource() *schema.Resource {
 }
 
 var awsSecretBackendStaticRoleFields = []string{
+	consts.FieldName,
 	consts.FieldUsername,
 	consts.FieldRotationPeriod,
 }
@@ -94,12 +96,21 @@ func readAWSStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta
 		return diag.FromErr(err)
 	}
 
-	rolePath := d.Id()
-	log.Printf("[DEBUG] Reading %q", rolePath)
+	path := d.Id()
+	log.Printf("[DEBUG] Reading %q", path)
+	pathPieces := strings.Split(path, "/")
+	if len(pathPieces) < 3 || pathPieces[len(pathPieces)-2] != "static-roles" {
+		return diag.FromErr(fmt.Errorf("invalid id %q; must be {backend}/static-roles/{name}", path))
+	}
 
-	resp, err := client.Logical().ReadWithContext(ctx, rolePath)
+	err = d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	resp, err := client.Logical().ReadWithContext(ctx, path)
 	if resp == nil {
-		log.Printf("[WARN] %q not found, removing from state", rolePath)
+		log.Printf("[WARN] %q not found, removing from state", path)
 		d.SetId("")
 		return nil
 	}
