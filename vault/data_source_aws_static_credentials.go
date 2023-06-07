@@ -17,7 +17,7 @@ func awsStaticCredDataSource() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: ReadContextWrapper(awsStaticCredentialsDataSourceRead),
 		Schema: map[string]*schema.Schema{
-			consts.FieldMount: {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "AWS Secret Backend to read credentials from.",
@@ -50,7 +50,7 @@ func awsStaticCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 
-	mount := d.Get(consts.FieldMount).(string)
+	mount := d.Get(consts.FieldBackend).(string)
 	role := d.Get(consts.FieldName).(string)
 	fullPath := fmt.Sprintf("%s/%s/%s", mount, staticCredsAffix, role)
 

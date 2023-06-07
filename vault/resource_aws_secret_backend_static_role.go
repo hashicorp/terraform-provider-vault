@@ -17,10 +17,10 @@ import (
 
 func awsSecretBackendStaticRoleResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		consts.FieldMount: {
+		consts.FieldBackend: {
 			Type:         schema.TypeString,
-			Default:      consts.MountTypeAWS,
 			Optional:     true,
+			Default:      consts.MountTypeAWS,
 			Description:  "The path where the AWS secrets backend is mounted.",
 			ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 		},
@@ -66,7 +66,7 @@ func createUpdateAWSStaticRoleResource(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	mount := d.Get(consts.FieldMount).(string)
+	mount := d.Get(consts.FieldBackend).(string)
 	role := d.Get(consts.FieldName).(string)
 	rolePath := fmt.Sprintf("%s/static-roles/%s", mount, role)
 	log.Printf("[DEBUG] Creating AWAS static role at %q", rolePath)

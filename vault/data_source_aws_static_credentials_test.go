@@ -39,14 +39,14 @@ resource "vault_aws_secret_backend" "aws" {
 }
 
 resource "vault_aws_secret_backend_static_role" "role" {
-	mount = vault_aws_secret_backend.aws.path
+	backend = vault_aws_secret_backend.aws.path
 	name = "test"
 	username = "%s"
 	rotation_period = "3600"
 }
 
 data "vault_aws_static_access_credentials" "creds" {
-	mount = vault_aws_secret_backend.aws.path
+	backend = vault_aws_secret_backend.aws.path
 	name = vault_aws_secret_backend_static_role.role.name
 }`
 
