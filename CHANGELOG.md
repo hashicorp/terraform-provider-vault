@@ -10,7 +10,6 @@ IMPROVEMENTS:
 
 BUGS:
 * Fix DB engine password overwrite: ([#1876](https://github.com/hashicorp/terraform-provider-vault/pull/1876))
-* secrets/ldap: fix bindpass getting overwritten: ([#1875](https://github.com/hashicorp/terraform-provider-vault/pull/1875))
 * azure/auth: fix config path parsing: ([#1871](https://github.com/hashicorp/terraform-provider-vault/pull/1871))
 
 ## 3.15.2 (May 3, 2023)
