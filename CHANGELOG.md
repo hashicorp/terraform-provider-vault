@@ -1,7 +1,7 @@
 ## 3.16.0 (June 7, 2023)
 FEATURES:
-* VAULT-8099 LDAP secrets engine: ([#1859](https://github.com/hashicorp/terraform-provider-vault/pull/1859))
-* Data source vault auth backends: ([#1827](https://github.com/hashicorp/terraform-provider-vault/pull/1827))
+* Add support for LDAP secrets engine: ([#1859](https://github.com/hashicorp/terraform-provider-vault/pull/1859))
+* Add new data source `vault_auth_backends`: ([#1827](https://github.com/hashicorp/terraform-provider-vault/pull/1827))
 * Support allowed_domains_template on ssh_secret_backend_role. Fixes hashicorp#1675: ([#1676](https://github.com/hashicorp/terraform-provider-vault/pull/1676))
 
 IMPROVEMENTS:
