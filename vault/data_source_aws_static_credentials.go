@@ -65,13 +65,10 @@ func awsStaticCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceD
 
 	d.SetId(fullPath)
 
-	// Unfortunately we called the secret fields in vault different things between the dynamic and static credentials;
-	// so we're left with the choice here of keeping them common among terraform data sources, or keeping them
-	// the same between vault and terraform.
-	if err := d.Set(consts.FieldAccessKey, secret.Data["access_key_id"]); err != nil {
+	if err := d.Set(consts.FieldAccessKey, secret.Data[consts.FieldAccessKey]); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set(consts.FieldSecretKey, secret.Data["secret_access_key"]); err != nil {
+	if err := d.Set(consts.FieldSecretKey, secret.Data[consts.FieldSecretKey]); err != nil {
 		return diag.FromErr(err)
 	}
 
