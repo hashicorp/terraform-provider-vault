@@ -153,6 +153,10 @@ var (
 			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
 		},
+		"vault_pki_secret_backend_issuer": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
+			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
+		},
 	}
 
 	ResourceRegistry = map[string]*provider.Description{
