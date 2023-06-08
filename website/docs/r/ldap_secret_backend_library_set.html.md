@@ -1,12 +1,12 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_ldap_secret_backend_library resource"
-sidebar_current: "docs-vault-resource-ldap-secret-backend-library"
+page_title: "Vault: vault_ldap_secret_backend_library_set resource"
+sidebar_current: "docs-vault-resource-ldap-secret-backend-library-set"
 description: |-
   Creates a library on the LDAP Secret Backend for Vault.
 ---
 
-# vault\_ldap\_secret\_backend\_library
+# vault\_ldap\_secret\_backend\_library\_set
 
 Creates a library on an LDAP Secret Backend for Vault. Libraries create
 a pool of existing LDAP service accounts which can be checked out
@@ -31,7 +31,7 @@ resource "vault_ldap_secret_backend" "config" {
   userdn        = "CN=Users,DC=corp,DC=example,DC=net"
 }
 
-resource "vault_ldap_secret_library" "qa" {
+resource "vault_ldap_secret_backend_library_set" "qa" {
   mount                        = vault_ldap_secret_backend.config.path
   name                         = "qa"
   service_account_names        = ["Bob", "Mary"]
@@ -73,5 +73,5 @@ The following arguments are supported:
 LDAP secret backend libraries can be imported using the `path`, e.g.
 
 ```
-$ terraform import vault_ldap_secret_backend_library.set ldap/library/bob
+$ terraform import vault_ldap_secret_backend_library_set.qa ldap/library/bob
 ```
