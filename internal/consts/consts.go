@@ -327,6 +327,10 @@ const (
 	FieldDefaultTTL                    = "default_ttl"
 	FieldImportedIssuers               = "imported_issuers"
 	FieldImportedKeys                  = "imported_keys"
+	FieldExisting                      = "existing"
+	FieldLeafNotAfterBehavior          = "leaf_not_after_behavior"
+	FieldManualChain                   = "manual_chain"
+	FieldUsage                         = "usage"
 
 	/*
 		common environment variables
