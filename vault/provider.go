@@ -157,6 +157,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
 			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
 		},
+		"vault_pki_secret_backend_key": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendKeyDataSource()),
+			PathInventory: []string{"/pki/key/{key_ref}"},
+		},
 	}
 
 	ResourceRegistry = map[string]*provider.Description{

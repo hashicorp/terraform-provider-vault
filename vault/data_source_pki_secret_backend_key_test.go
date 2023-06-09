@@ -15,10 +15,10 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccDataSourcePKISecretIssuer(t *testing.T) {
+func TestAccDataSourcePKISecretKey(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki-backend")
-	issuerName := acctest.RandomWithPrefix("tf-test-pki-issuer")
-	dataName := "data.vault_pki_secret_backend_issuer.test"
+	keyName := acctest.RandomWithPrefix("tf-test-pki-key")
+	dataName := "data.vault_pki_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
@@ -27,20 +27,19 @@ func TestAccDataSourcePKISecretIssuer(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testPKISecretIssuerDataSource(backend, issuerName),
+				Config: testPKISecretKeyDataSource(backend, keyName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(dataName, consts.FieldBackend, backend),
-					resource.TestCheckResourceAttr(dataName, consts.FieldIssuerName, issuerName),
-					resource.TestCheckResourceAttrSet(dataName, consts.FieldIssuerID),
+					resource.TestCheckResourceAttr(dataName, consts.FieldKeyName, keyName),
+					resource.TestCheckResourceAttr(dataName, consts.FieldKeyType, "rsa"),
 					resource.TestCheckResourceAttrSet(dataName, consts.FieldKeyID),
-					resource.TestCheckResourceAttrSet(dataName, consts.FieldCertificate),
 				),
 			},
 		},
 	})
 }
 
-func testPKISecretIssuerDataSource(path, issuerName string) string {
+func testPKISecretKeyDataSource(path, keyName string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
 	path        = "%s"
@@ -48,16 +47,16 @@ resource "vault_mount" "test" {
     description = "PKI secret engine mount"
 }
 
-resource "vault_pki_secret_backend_root_cert" "test" {
-  backend     = vault_mount.test.path
-  type        = "internal"
-  common_name = "test"
-  ttl         = "86400"
-  issuer_name = "%s"
+resource "vault_pki_secret_backend_key" "test" {
+  backend  = vault_mount.test.path
+  type     = "internal"
+  key_name = "%s"
+  key_type = "rsa"
+  key_bits = "4096"
 }
 
-data "vault_pki_secret_backend_issuer" "test" {
-  backend     = vault_mount.test.path
-  issuer_ref  = vault_pki_secret_backend_root_cert.test.issuer_id
-}`, path, issuerName)
+data "vault_pki_secret_backend_key" "test" {
+  backend = vault_mount.test.path
+  key_ref = vault_pki_secret_backend_key.test.key_id
+}`, path, keyName)
 }
