@@ -31,7 +31,6 @@ func TestAccDataSourceAWSStaticCredentials(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldSecretKey),
 				),
 			},
-			//testutil.GetImportTestStep("vault_aws_static_access_credentials.creds", false, nil),
 		},
 	})
 }
