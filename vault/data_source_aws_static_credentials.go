@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-const staticCredsAffix = "static-creds"
+const awsStaticCredsAffix = "static-creds"
 
 func awsStaticCredDataSource() *schema.Resource {
 	return &schema.Resource{
@@ -54,7 +54,7 @@ func awsStaticCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceD
 
 	backend := d.Get(consts.FieldBackend).(string)
 	role := d.Get(consts.FieldName).(string)
-	fullPath := fmt.Sprintf("%s/%s/%s", backend, staticCredsAffix, role)
+	fullPath := fmt.Sprintf("%s/%s/%s", backend, awsStaticCredsAffix, role)
 
 	secret, err := client.Logical().ReadWithContext(ctx, fullPath)
 	if err != nil {

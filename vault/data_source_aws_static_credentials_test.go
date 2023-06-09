@@ -2,18 +2,20 @@ package vault
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"testing"
 )
 
 func TestAccDataSourceAWSStaticCredentials(t *testing.T) {
 	_, _ = testutil.GetTestAWSCreds(t)
 	username := testutil.SkipTestEnvUnset(t, "AWS_STATIC_USER")[0]
 	mount := acctest.RandomWithPrefix("tf-aws-static")
+	resourceName := "data.vault_aws_static_access_credentials.creds"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -25,10 +27,11 @@ func TestAccDataSourceAWSStaticCredentials(t *testing.T) {
 			{
 				Config: testAWSStaticDataSourceConfig(mount, username),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet("data.vault_aws_static_access_credentials.creds", consts.FieldAccessKey),
-					resource.TestCheckResourceAttrSet("data.vault_aws_static_access_credentials.creds", consts.FieldSecretKey),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessKey),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldSecretKey),
 				),
 			},
+			//testutil.GetImportTestStep("vault_aws_static_access_credentials.creds", false, nil),
 		},
 	})
 }
