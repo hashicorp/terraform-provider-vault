@@ -70,10 +70,10 @@ func createUpdateAWSStaticRoleResource(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	mount := d.Get(consts.FieldBackend).(string)
+	backend := d.Get(consts.FieldBackend).(string)
 	role := d.Get(consts.FieldName).(string)
-	rolePath := fmt.Sprintf("%s/static-roles/%s", mount, role)
-	log.Printf("[DEBUG] Creating AWAS static role at %q", rolePath)
+	rolePath := fmt.Sprintf("%s/static-roles/%s", backend, role)
+	log.Printf("[DEBUG] Creating AWS static role at %q", rolePath)
 	data := map[string]interface{}{}
 	for _, field := range awsSecretBackendStaticRoleFields {
 		if v, ok := d.GetOk(field); ok {

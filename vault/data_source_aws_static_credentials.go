@@ -52,9 +52,9 @@ func awsStaticCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 
-	mount := d.Get(consts.FieldBackend).(string)
+	backend := d.Get(consts.FieldBackend).(string)
 	role := d.Get(consts.FieldName).(string)
-	fullPath := fmt.Sprintf("%s/%s/%s", mount, staticCredsAffix, role)
+	fullPath := fmt.Sprintf("%s/%s/%s", backend, staticCredsAffix, role)
 
 	secret, err := client.Logical().ReadWithContext(ctx, fullPath)
 	if err != nil {
