@@ -7,14 +7,23 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
-
+	"regexp"
+	
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
+
+const (
+	awsStaticRolesAffix = "static-roles"
+)
+
+// awsStaticRolesRegex matches vault paths, capturing backend and role names. This is greedy-by-default,
+// which means if someone does something like 'a/static-roles/static-roles/b', the ambiguity will be
+// resolved by putting the extras into the backend part of the path.
+var awsStaticRolesRegex = regexp.MustCompile("(.+)/static-roles/(.+)")
 
 func awsSecretBackendStaticRoleResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
@@ -72,7 +81,7 @@ func createUpdateAWSStaticRoleResource(ctx context.Context, d *schema.ResourceDa
 
 	backend := d.Get(consts.FieldBackend).(string)
 	role := d.Get(consts.FieldName).(string)
-	rolePath := fmt.Sprintf("%s/static-roles/%s", backend, role)
+	rolePath := fmt.Sprintf("%s/%s/%s", backend, awsStaticRolesAffix, role)
 	log.Printf("[DEBUG] Creating AWS static role at %q", rolePath)
 	data := map[string]interface{}{}
 	for _, field := range awsSecretBackendStaticRoleFields {
@@ -98,12 +107,12 @@ func readAWSStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta
 
 	path := d.Id()
 	log.Printf("[DEBUG] Reading %q", path)
-	pathPieces := strings.Split(path, "/")
-	if len(pathPieces) < 3 || pathPieces[len(pathPieces)-2] != "static-roles" {
-		return diag.FromErr(fmt.Errorf("invalid id %q; must be {backend}/static-roles/{name}", path))
+	backend, _, err := parseAWSStaticRolePath(path)
+	if err != nil {
+		return diag.FromErr(fmt.Errorf("invalid id %q; %w", path, err))
 	}
 
-	err = d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
+	err = d.Set("backend", backend)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -144,4 +153,18 @@ func deleteAWSStaticRoleResource(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	return nil
+}
+
+// parseAWSStaticRolePath attempts to parse out the backend and role name from the provided path.
+func parseAWSStaticRolePath(path string) (backend, name string, err error) {
+	ms := awsStaticRolesRegex.FindStringSubmatch(path)
+	if ms == nil {
+		return "", "", fmt.Errorf("no pattern match for path %s", path)
+	}
+	if len(ms) != 3 { // 0 = entire match, 1 = first capture group (backend), 2 = second capture group (role name)
+		return "", "", fmt.Errorf("unexpected number (%d) of matches found, expected 3", len(ms))
+	}
+
+	return ms[1], ms[2], nil
+
 }
