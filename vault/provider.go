@@ -157,9 +157,17 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
 			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
 		},
+		"vault_pki_secret_backend_issuers": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendIssuersDataSource()),
+			PathInventory: []string{"/pki/issuers"},
+		},
 		"vault_pki_secret_backend_key": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendKeyDataSource()),
 			PathInventory: []string{"/pki/key/{key_ref}"},
+		},
+		"vault_pki_secret_backend_keys": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendKeysDataSource()),
+			PathInventory: []string{"/pki/keys"},
 		},
 	}
 

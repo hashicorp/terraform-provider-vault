@@ -331,6 +331,9 @@ const (
 	FieldLeafNotAfterBehavior          = "leaf_not_after_behavior"
 	FieldManualChain                   = "manual_chain"
 	FieldUsage                         = "usage"
+	FieldKeys                          = "keys"
+	FieldKeyInfo                       = "key_info"
+	FieldKeyInfoJSON                   = "key_info_json"
 
 	/*
 		common environment variables
