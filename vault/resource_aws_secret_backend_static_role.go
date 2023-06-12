@@ -23,7 +23,7 @@ const (
 // awsStaticRolesRegex matches vault paths, capturing backend and role names. This is greedy-by-default,
 // which means if someone does something like 'a/static-roles/static-roles/b', the ambiguity will be
 // resolved by putting the extras into the backend part of the path.
-var awsStaticRolesRegex = regexp.MustCompile("(.+)/static-roles/(.+)")
+var awsStaticRolesRegex = regexp.MustCompile("^(.+)/static-roles/(.+)$")
 
 func awsSecretBackendStaticRoleResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
