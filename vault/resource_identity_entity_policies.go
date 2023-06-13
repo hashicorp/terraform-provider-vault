@@ -19,7 +19,7 @@ func identityEntityPoliciesResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityEntityPoliciesUpdate,
 		Update: identityEntityPoliciesUpdate,
-		Read:   ReadWrapper(identityEntityPoliciesRead),
+		Read:   provider.ReadWrapper(identityEntityPoliciesRead),
 		Delete: identityEntityPoliciesDelete,
 
 		Schema: map[string]*schema.Schema{

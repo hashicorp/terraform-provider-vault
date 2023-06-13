@@ -26,7 +26,7 @@ func jwtAuthBackendResource() *schema.Resource {
 		},
 		Create: jwtAuthBackendWrite,
 		Delete: jwtAuthBackendDelete,
-		Read:   ReadWrapper(jwtAuthBackendRead),
+		Read:   provider.ReadWrapper(jwtAuthBackendRead),
 		Update: jwtAuthBackendUpdate,
 
 		CustomizeDiff: jwtCustomizeDiff,

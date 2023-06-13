@@ -1,3 +1,17 @@
+## 3.16.0 (June 7, 2023)
+FEATURES:
+* Add support for LDAP secrets engine: ([#1859](https://github.com/hashicorp/terraform-provider-vault/pull/1859))
+* Add new data source `vault_auth_backends`: ([#1827](https://github.com/hashicorp/terraform-provider-vault/pull/1827))
+* Support allowed_domains_template on ssh_secret_backend_role. Fixes hashicorp#1675: ([#1676](https://github.com/hashicorp/terraform-provider-vault/pull/1676))
+
+IMPROVEMENTS:
+* Add support for retrying kv-v2 secret data writes: ([#1887](https://github.com/hashicorp/terraform-provider-vault/pull/1887))
+* Add back support for deriving the provider namespace from the Vault token's: ([#1841](https://github.com/hashicorp/terraform-provider-vault/pull/1841))
+
+BUGS:
+* Fix DB engine password overwrite: ([#1876](https://github.com/hashicorp/terraform-provider-vault/pull/1876))
+* azure/auth: fix config path parsing: ([#1871](https://github.com/hashicorp/terraform-provider-vault/pull/1871))
+
 ## 3.15.2 (May 3, 2023)
 BUGS:
 * Revert [#1830](https://github.com/hashicorp/terraform-provider-vault/pull/1830) which introduced a unexpected breaking change in the way authentication is done within a namespace: ([#1840](https://github.com/hashicorp/terraform-provider-vault/pull/1840))

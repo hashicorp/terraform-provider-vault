@@ -71,7 +71,7 @@ func kubernetesAuthBackendRoleResource() *schema.Resource {
 
 	return &schema.Resource{
 		CreateContext: kubernetesAuthBackendRoleCreate,
-		ReadContext:   ReadContextWrapper(kubernetesAuthBackendRoleRead),
+		ReadContext:   provider.ReadContextWrapper(kubernetesAuthBackendRoleRead),
 		UpdateContext: kubernetesAuthBackendRoleUpdate,
 		DeleteContext: kubernetesAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{

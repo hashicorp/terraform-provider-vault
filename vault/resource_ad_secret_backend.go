@@ -216,7 +216,7 @@ func adSecretBackendResource() *schema.Resource {
 		DeprecationMessage: `This resource is replaced by "vault_ldap_secret_backend" and will be removed in the next major release.`,
 		Create:             createConfigResource,
 		Update:             updateConfigResource,
-		Read:               ReadWrapper(readConfigResource),
+		Read:               provider.ReadWrapper(readConfigResource),
 		Delete:             deleteConfigResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

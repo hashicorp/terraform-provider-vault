@@ -100,7 +100,7 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create:        createNomadAccessConfigResource,
 		Update:        updateNomadAccessConfigResource,
-		Read:          ReadWrapper(readNomadAccessConfigResource),
+		Read:          provider.ReadWrapper(readNomadAccessConfigResource),
 		Delete:        deleteNomadAccessConfigResource,
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
 		Importer: &schema.ResourceImporter{
