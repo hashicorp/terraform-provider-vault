@@ -61,7 +61,7 @@ func kubernetesAuthBackendRoleDataSource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
-		Read:   ReadWrapper(kubernetesAuthBackendRoleDataSourceRead),
+		Read:   provider.ReadWrapper(kubernetesAuthBackendRoleDataSourceRead),
 		Schema: fields,
 	}
 }

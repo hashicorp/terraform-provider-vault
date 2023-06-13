@@ -4,6 +4,9 @@
 package consts
 
 const (
+	/*
+		common field names
+	*/
 	// FieldBackend
 	// Deprecated: Prefer FieldMount or FieldPath instead.
 	FieldBackend = "backend"
@@ -11,10 +14,7 @@ const (
 	FieldPath = "path"
 	// FieldMount should be used for all new non-backend-mounting resources.
 	// In other words, resources that depend on a backend-mounting resource should use this.
-	FieldMount = "mount"
-	/*
-		common field names
-	*/
+	FieldMount                      = "mount"
 	FieldBindDN                     = "binddn"
 	FieldBindPass                   = "bindpass"
 	FieldCertificate                = "certificate"
@@ -262,6 +262,8 @@ const (
 	FieldRevocationStatements       = "revocation_statements"
 	FieldRollbackStatements         = "rollback_statements"
 	FieldRenewStatements            = "renew_statements"
+	FieldSkipChildToken             = "skip_child_token"
+	FieldTokenPolicies              = "token_policies"
 
 	/*
 		common environment variables
@@ -347,6 +349,7 @@ const (
 	/*
 		misc. path related constants
 	*/
-	PathDelim      = "/"
-	VaultAPIV1Root = "/v1"
+	PathDelim        = "/"
+	VaultAPIV1Root   = "/v1"
+	SysNamespaceRoot = "sys/namespaces/"
 )

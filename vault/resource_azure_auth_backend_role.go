@@ -94,7 +94,7 @@ func azureAuthBackendRoleResource() *schema.Resource {
 
 	return &schema.Resource{
 		CreateContext: azureAuthBackendRoleCreate,
-		ReadContext:   ReadContextWrapper(azureAuthBackendRoleRead),
+		ReadContext:   provider.ReadContextWrapper(azureAuthBackendRoleRead),
 		UpdateContext: azureAuthBackendRoleUpdate,
 		DeleteContext: azureAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{

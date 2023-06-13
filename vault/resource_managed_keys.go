@@ -68,7 +68,7 @@ func getManagedKeyConfig(providerType string) (*managedKeysConfig, error) {
 
 func managedKeysResource() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: MountCreateContextWrapper(createUpdateManagedKeys, provider.VaultVersion110),
+		CreateContext: provider.MountCreateContextWrapper(createUpdateManagedKeys, provider.VaultVersion110),
 		DeleteContext: deleteManagedKeys,
 		ReadContext:   readManagedKeys,
 		UpdateContext: createUpdateManagedKeys,
