@@ -112,9 +112,11 @@ func readAWSStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta
 		return diag.FromErr(fmt.Errorf("invalid id %q; %w", path, err))
 	}
 
-	err = d.Set(consts.FieldBackend, backend)
-	err = d.Set(consts.FieldName, role)
-	if err != nil {
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldName, role); err != nil {
 		return diag.FromErr(err)
 	}
 
