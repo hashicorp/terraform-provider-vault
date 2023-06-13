@@ -150,7 +150,7 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 
 	return &schema.Resource{
 		CreateContext: jwtAuthBackendRoleCreate,
-		ReadContext:   ReadContextWrapper(jwtAuthBackendRoleRead),
+		ReadContext:   provider.ReadContextWrapper(jwtAuthBackendRoleRead),
 		UpdateContext: jwtAuthBackendRoleUpdate,
 		DeleteContext: jwtAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{

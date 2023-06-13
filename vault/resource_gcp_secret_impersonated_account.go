@@ -25,7 +25,7 @@ var (
 func gcpSecretImpersonatedAccountResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: gcpSecretImpersonatedAccountCreate,
-		ReadContext:   ReadContextWrapper(gcpSecretImpersonatedAccountRead),
+		ReadContext:   provider.ReadContextWrapper(gcpSecretImpersonatedAccountRead),
 		UpdateContext: gcpSecretImpersonatedAccountUpdate,
 		DeleteContext: gcpSecretImpersonatedAccountDelete,
 		Importer: &schema.ResourceImporter{

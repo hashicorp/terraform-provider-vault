@@ -121,9 +121,9 @@ func ldapSecretBackendResource() *schema.Resource {
 		},
 	}
 	resource := provider.MustAddMountMigrationSchema(&schema.Resource{
-		CreateContext: MountCreateContextWrapper(createUpdateLDAPConfigResource, provider.VaultVersion112),
+		CreateContext: provider.MountCreateContextWrapper(createUpdateLDAPConfigResource, provider.VaultVersion112),
 		UpdateContext: createUpdateLDAPConfigResource,
-		ReadContext:   ReadContextWrapper(readLDAPConfigResource),
+		ReadContext:   provider.ReadContextWrapper(readLDAPConfigResource),
 		DeleteContext: deleteLDAPConfigResource,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
@@ -187,6 +187,13 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 	}
 
 	for _, field := range fields {
+		// don't update bindpass unless it was changed in the config so that we
+		// don't overwrite it in the event a rotate-root operation was
+		// performed in Vault
+		if field == consts.FieldBindPass && !d.HasChange(field) {
+			continue
+		}
+
 		if v, ok := d.GetOk(field); ok {
 			data[field] = v
 		}

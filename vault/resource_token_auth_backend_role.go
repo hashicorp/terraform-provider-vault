@@ -109,7 +109,7 @@ func tokenAuthBackendRoleResource() *schema.Resource {
 
 	return &schema.Resource{
 		CreateContext: tokenAuthBackendRoleCreate,
-		ReadContext:   ReadContextWrapper(tokenAuthBackendRoleRead),
+		ReadContext:   provider.ReadContextWrapper(tokenAuthBackendRoleRead),
 		UpdateContext: tokenAuthBackendRoleUpdate,
 		DeleteContext: tokenAuthBackendRoleDelete,
 		Importer: &schema.ResourceImporter{

@@ -22,7 +22,7 @@ var approleAuthBackendRoleSecretIDIDRegex = regexp.MustCompile("^backend=(.+)::r
 func approleAuthBackendRoleSecretIDResource(name string) *schema.Resource {
 	return &schema.Resource{
 		Create: approleAuthBackendRoleSecretIDCreate,
-		Read:   ReadWrapper(approleAuthBackendRoleSecretIDRead),
+		Read:   provider.ReadWrapper(approleAuthBackendRoleSecretIDRead),
 		Delete: approleAuthBackendRoleSecretIDDelete,
 		Exists: approleAuthBackendRoleSecretIDExists,
 

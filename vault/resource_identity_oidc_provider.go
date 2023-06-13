@@ -18,7 +18,7 @@ func identityOIDCProviderResource() *schema.Resource {
 	return &schema.Resource{
 		Create: identityOIDCProviderCreateUpdate,
 		Update: identityOIDCProviderCreateUpdate,
-		Read:   ReadWrapper(identityOIDCProviderRead),
+		Read:   provider.ReadWrapper(identityOIDCProviderRead),
 		Delete: identityOIDCProviderDelete,
 
 		Schema: map[string]*schema.Schema{

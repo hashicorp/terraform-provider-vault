@@ -26,7 +26,7 @@ var (
 func transitSecretBackendKeyResource() *schema.Resource {
 	return &schema.Resource{
 		Create: transitSecretBackendKeyCreate,
-		Read:   ReadWrapper(transitSecretBackendKeyRead),
+		Read:   provider.ReadWrapper(transitSecretBackendKeyRead),
 		Update: transitSecretBackendKeyUpdate,
 		Delete: transitSecretBackendKeyDelete,
 		Exists: transitSecretBackendKeyExists,

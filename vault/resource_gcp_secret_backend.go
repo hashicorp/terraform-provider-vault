@@ -19,7 +19,7 @@ import (
 func gcpSecretBackendResource(name string) *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create:        gcpSecretBackendCreate,
-		Read:          ReadWrapper(gcpSecretBackendRead),
+		Read:          provider.ReadWrapper(gcpSecretBackendRead),
 		Update:        gcpSecretBackendUpdate,
 		Delete:        gcpSecretBackendDelete,
 		Exists:        gcpSecretBackendExists,

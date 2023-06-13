@@ -8,13 +8,14 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func authBackendsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: ReadWrapper(authBackendsDataSourceRead),
+		Read: provider.ReadWrapper(authBackendsDataSourceRead),
 		Schema: map[string]*schema.Schema{
 			consts.FieldPaths: {
 				Type:        schema.TypeList,
