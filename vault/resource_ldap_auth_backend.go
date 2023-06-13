@@ -69,7 +69,7 @@ func ldapAuthBackendResource() *schema.Resource {
 		},
 		"max_page_size": {
 			Type:     schema.TypeInt,
-			Default:  -1,
+			Computed: true,
 			Optional: true,
 		},
 		"userdn": {

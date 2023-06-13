@@ -20,29 +20,31 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-ldap-path")
 
 	resourceName := "vault_ldap_auth_backend.test"
+	maxPageSize := 0
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testLDAPAuthBackendDestroy,
+
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "true", maxPageSize),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "false", "true"),
+				Config: testLDAPAuthBackendConfig_basic(path, "false", "true", maxPageSize),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "false", maxPageSize),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "false", "false"),
+				Config: testLDAPAuthBackendConfig_basic(path, "false", "false", maxPageSize),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "false"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "false", maxPageSize),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
@@ -60,23 +62,23 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 		CheckDestroy: testLDAPAuthBackendDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_tls(path, "true", "true"),
+				Config: testLDAPAuthBackendConfig_tls(path, "true", "true", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_tls(path, "false", "true"),
+				Config: testLDAPAuthBackendConfig_tls(path, "false", "true", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
+				Config: testLDAPAuthBackendConfig_tls(path, "true", "false", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_tls(path, "false", "false"),
+				Config: testLDAPAuthBackendConfig_tls(path, "false", "false", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_tls(path, "true", "false"),
+				Config: testLDAPAuthBackendConfig_tls(path, "true", "false", ""),
 				Check:  testLDAPAuthBackendCheck_attrs(resourceName, path),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, "bindpass",
@@ -96,14 +98,14 @@ func TestLDAPAuthBackend_remount(t *testing.T) {
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testLDAPAuthBackendConfig_basic(path, "true", "true"),
+				Config: testLDAPAuthBackendConfig_basic(path, "true", "true", 0),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 					testLDAPAuthBackendCheck_attrs(resourceName, path),
 				),
 			},
 			{
-				Config: testLDAPAuthBackendConfig_basic(updatedPath, "true", "true"),
+				Config: testLDAPAuthBackendConfig_basic(updatedPath, "true", "true", 0),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
 					testLDAPAuthBackendCheck_attrs(resourceName, updatedPath),
@@ -211,7 +213,6 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 			"url":                  "url",
 			"starttls":             "starttls",
 			"case_sensitive_names": "case_sensitive_names",
-			"max_page_size":        "max_page_size",
 			"tls_min_version":      "tls_min_version",
 			"tls_max_version":      "tls_max_version",
 			"insecure_tls":         "insecure_tls",
@@ -228,6 +229,10 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 			"groupdn":              "groupdn",
 			"groupattr":            "groupattr",
 			"use_token_groups":     "use_token_groups",
+		}
+
+		if provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion113) {
+			attrs["max_page_size"] = "max_page_size"
 		}
 
 		for _, v := range commonTokenFields {
@@ -253,7 +258,7 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 	}
 }
 
-func testLDAPAuthBackendConfig_basic(path, use_token_groups string, local string) string {
+func testLDAPAuthBackendConfig_basic(path, use_token_groups string, local string, maxPageSize int) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_auth_backend" "test" {
     path                   = "%s"
@@ -261,7 +266,6 @@ resource "vault_ldap_auth_backend" "test" {
     url                    = "ldaps://example.org"
     starttls               = true
     case_sensitive_names   = false
-    max_page_size          = -1
     tls_min_version        = "tls11"
     tls_max_version        = "tls12"
     insecure_tls           = false
@@ -273,11 +277,12 @@ resource "vault_ldap_auth_backend" "test" {
     userfilter             = "({{.UserAttr}}={{.Username}})"
     username_as_alias      = true
     use_token_groups = %s
+    max_page_size          = %d
 }
-`, path, local, use_token_groups)
+`, path, local, use_token_groups, maxPageSize)
 }
 
-func testLDAPAuthBackendConfig_tls(path, use_token_groups string, local string) string {
+func testLDAPAuthBackendConfig_tls(path, use_token_groups string, local string, extraFields string) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_auth_backend" "test" {
     path                   = "%s"
@@ -370,6 +375,7 @@ MvQzNd87hRypUZ9Hyx2C9RljNDHHjgwYwWv9JOT0xEOS4ZAaPfvTf20=
 -----END RSA PRIVATE KEY-----
 EOT
     use_token_groups = %s
+    %s
 }
-`, path, local, use_token_groups)
+`, path, local, use_token_groups, extraFields)
 }
