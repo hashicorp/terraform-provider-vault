@@ -21,6 +21,27 @@ var (
 	databaseSecretBackendRoleNameFromPathRegex    = regexp.MustCompile("^.+/roles/(.+$)")
 )
 
+var listFields = []string{
+	consts.FieldCreationStatements,
+	consts.FieldRevocationStatements,
+	consts.FieldRollbackStatements,
+	consts.FieldRenewStatements,
+}
+
+var strFields = []string{
+	consts.FieldCACert,
+	consts.FieldCAPrivateKey,
+	consts.FieldKeyType,
+	consts.FieldCommonNameTemplate,
+}
+
+var intFields = []string{
+	consts.FieldDefaultTTL,
+	consts.FieldMaxTTL,
+	consts.FieldKeyBits,
+	consts.FieldSignatureBits,
+}
+
 func databaseSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		Create: databaseSecretBackendRoleWrite,
@@ -89,9 +110,6 @@ func databaseSecretBackendRoleResource() *schema.Resource {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				Description: "Specifies the configuration for the given credential_type.",
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
 			},
 			consts.FieldCACert: {
 				Type:        schema.TypeString,
@@ -154,7 +172,7 @@ func databaseSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 		consts.FieldRevocationStatements,
 		consts.FieldRollbackStatements,
 		consts.FieldRenewStatements,
-		consts.FieldCredentialConfig, // ??
+		consts.FieldCredentialConfig,
 		consts.FieldCACert,
 		consts.FieldPrivateKey,
 		consts.FieldKeyType,
@@ -167,22 +185,6 @@ func databaseSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 			data[k] = d.Get(k)
 		}
 	}
-
-	//if v, ok := d.GetOkExists("default_ttl"); ok {
-	//	data["default_ttl"] = v
-	//}
-	//if v, ok := d.GetOkExists("max_ttl"); ok {
-	//	data["max_ttl"] = v
-	//}
-	//if v, ok := d.GetOkExists("revocation_statements"); ok && v != "" {
-	//	data["revocation_statements"] = v
-	//}
-	//if v, ok := d.GetOkExists("rollback_statements"); ok && v != "" {
-	//	data["rollback_statements"] = v
-	//}
-	//if v, ok := d.GetOkExists("renew_statements"); ok && v != "" {
-	//	data["renew_statements"] = v
-	//}
 
 	log.Printf("[DEBUG] Creating role %q on database backend %q", name, backend)
 	_, err := client.Logical().Write(path, data)
@@ -231,91 +233,51 @@ func databaseSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 	d.Set("backend", backend)
 	d.Set("name", name)
 	d.Set("db_name", secret.Data["db_name"])
-	var creation []string
-	if creationStr, ok := secret.Data["creation_statements"].(string); ok {
-		creation = append(creation, creationStr)
-	} else if creations, ok := secret.Data["creation_statements"].([]interface{}); ok {
-		for _, cr := range creations {
-			creation = append(creation, cr.(string))
-		}
-	}
-	d.Set("creation_statements", creation)
-	var revocation []string
-	if revocationStr, ok := secret.Data["revocation_statements"].(string); ok {
-		revocation = append(revocation, revocationStr)
-	} else if revocations, ok := secret.Data["revocation_statements"].([]interface{}); ok {
-		for _, rev := range revocations {
-			revocation = append(revocation, rev.(string))
-		}
-	}
-	d.Set("revocation_statements", revocation)
-	var rollback []string
-	if rollbackStr, ok := secret.Data["rollback_statements"].(string); ok {
-		rollback = append(rollback, rollbackStr)
-	} else if rollbacks, ok := secret.Data["rollback_statements"].([]interface{}); ok {
-		for _, rb := range rollbacks {
-			rollback = append(rollback, rb.(string))
-		}
-	}
-	d.Set("rollback_statements", rollback)
-	var renew []string
-	if renewStr, ok := secret.Data["renew_statements"].(string); ok {
-		renew = append(renew, renewStr)
-	} else if renews, ok := secret.Data["renew_statements"].([]interface{}); ok {
-		for _, ren := range renews {
-			renew = append(renew, ren.(string))
-		}
-	}
-	d.Set("renew_statements", renew)
 
-	if v, ok := secret.Data["default_ttl"]; ok {
-		n, err := v.(json.Number).Int64()
-		if err != nil {
-			return fmt.Errorf("unexpected value %q for default_ttl of %q", v, path)
+	data := map[string]interface{}{}
+
+	// handle TypeList
+	for _, k := range listFields {
+		if v, ok := d.GetOk(k); ok {
+			ifcList := v.([]interface{})
+			list := make([]string, 0, len(ifcList))
+			for _, ifc := range ifcList {
+				list = append(list, ifc.(string))
+			}
+
+			if len(list) > 0 {
+				data[k] = list
+			}
 		}
-		d.Set("default_ttl", n)
-	}
-	if v, ok := secret.Data["max_ttl"]; ok {
-		n, err := v.(json.Number).Int64()
-		if err != nil {
-			return fmt.Errorf("unexpected value %q for max_ttl of %q", v, path)
-		}
-		d.Set("max_ttl", n)
 	}
 
+	// TODO: check
 	credentialConfig := make(map[string]string)
 	if configStr, ok := secret.Data["credential_config"].(string); ok {
 		parts := strings.Split(configStr, "=")
 		if len(parts) == 2 {
 			key := strings.TrimSpace(parts[0])
-			value := strings.Trim(parts[1], `'"`) // Removing single or double quotes when storing
+			value := strings.Trim(parts[1], `'"`)
 			credentialConfig[key] = value
 		}
 	}
-	fields := []string{
-		consts.FieldCACert,
-		consts.FieldCAPrivateKey,
-		consts.FieldKeyType,
-		consts.FieldCommonNameTemplate,
-	}
-	for _, k := range fields {
+
+	// handle TypeString
+	for _, k := range strFields {
 		if err := d.Set(k, secret.Data[k]); err != nil {
 			return fmt.Errorf("error setting state key %q on database secret backend role, err=%s", k, err)
 		}
 	}
-	if v, ok := secret.Data["key_bits"]; ok {
-		n, err := v.(json.Number).Int64()
-		if err != nil {
-			return fmt.Errorf("unexpected value %q for key_bits of %q", v, path)
+
+	// handle TypeInt
+	for _, k := range intFields {
+		if v, ok := secret.Data[k]; ok {
+			n, err := v.(json.Number).Int64()
+			if err != nil {
+				return fmt.Errorf("unexpected value %q for %s of %q", v, k, path)
+			}
+			d.Set(k, n)
 		}
-		d.Set("key_bits", n)
-	}
-	if v, ok := secret.Data["signature_bits"]; ok {
-		n, err := v.(json.Number).Int64()
-		if err != nil {
-			return fmt.Errorf("unexpected value %q for signature_bits of %q", v, path)
-		}
-		d.Set("signature_bits", n)
 	}
 
 	return nil
