@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -26,9 +27,9 @@ func TestAccAWSSecretBackendStaticRole(t *testing.T) {
 			{
 				Config: testAWSStaticReourceConfig(mount, username),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", "test"),
-					resource.TestCheckResourceAttr(resourceName, "username", "vault-static-roles-test"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_period", "3600"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, "test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "vault-static-roles-test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "3600"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil),
