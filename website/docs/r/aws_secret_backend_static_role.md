@@ -22,14 +22,14 @@ for more details.
 ```hcl
 
 resource "vault_aws_secret_backend" "aws" {
-	path = "%s"
+	path = "my-aws"
 	description = "Obtain AWS credentials."
 }
 
 resource "vault_aws_secret_backend_static_role" "role" {
 	backend = vault_aws_secret_backend.aws.path
 	name = "test"
-	username = "%s"
+	username = "my-test-user"
 	rotation_period = "3600"
 }
 ```

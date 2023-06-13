@@ -28,14 +28,14 @@ Ensure that the lease is long enough for Terraform to complete.
 
 ```hcl
 resource "vault_aws_secret_backend" "aws" {
-	path = "%s"
+	path = "my-aws"
 	description = "Obtain AWS credentials."
 }
 
 resource "vault_aws_secret_backend_static_role" "role" {
 	backend = vault_aws_secret_backend.aws.path
 	name = "test"
-	username = "%s"
+	username = "my-test-user"
 	rotation_period = "3600"
 }
 
@@ -55,6 +55,11 @@ provider "aws" {
 ## Argument Reference
 
 The following arguments are supported:
+
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
+  *Available only for Vault Enterprise*.
 
 * `backend` - (Required) The path to the LDAP secret backend to
 read credentials from, with no leading or trailing `/`s.
