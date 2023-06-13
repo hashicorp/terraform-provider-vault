@@ -35,11 +35,12 @@ const (
 var (
 	MaxHTTPRetriesCCC int
 
-	VaultVersion190 = version.Must(version.NewSemver(consts.VaultVersion190))
-	VaultVersion110 = version.Must(version.NewSemver(consts.VaultVersion110))
-	VaultVersion111 = version.Must(version.NewSemver(consts.VaultVersion111))
-	VaultVersion112 = version.Must(version.NewSemver(consts.VaultVersion112))
-	VaultVersion113 = version.Must(version.NewSemver(consts.VaultVersion113))
+	VaultVersion190    = version.Must(version.NewSemver(consts.VaultVersion190))
+	VaultVersion110    = version.Must(version.NewSemver(consts.VaultVersion110))
+	VaultVersion111    = version.Must(version.NewSemver(consts.VaultVersion111))
+	VaultVersion112    = version.Must(version.NewSemver(consts.VaultVersion112))
+	VaultVersion113    = version.Must(version.NewSemver(consts.VaultVersion113))
+	VaultVersion1_13_2 = version.Must(version.NewSemver("1.13.2"))
 
 	TokenTTLMinRecommended = time.Minute * 15
 )

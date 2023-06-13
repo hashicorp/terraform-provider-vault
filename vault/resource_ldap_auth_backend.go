@@ -272,10 +272,8 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		data["case_sensitive_names"] = v.(bool)
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion113) {
-		if v, ok := d.GetOkExists("max_page_size"); ok {
-			data["max_page_size"] = v
-		}
+	if v, ok := d.GetOkExists("max_page_size"); ok {
+		data["max_page_size"] = v
 	}
 
 	if v, ok := d.GetOk("userdn"); ok {
@@ -393,6 +391,7 @@ func ldapAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interfa
 	d.Set("certificate", resp.Data["certificate"])
 	d.Set("binddn", resp.Data["binddn"])
 	d.Set("case_sensitive_names", resp.Data["case_sensitive_names"])
+	d.Set("max_page_size", resp.Data["max_page_size"])
 	d.Set("userdn", resp.Data["userdn"])
 	d.Set("userattr", resp.Data["userattr"])
 	d.Set("userfilter", resp.Data["userfilter"])
@@ -405,9 +404,6 @@ func ldapAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interfa
 	d.Set("username_as_alias", resp.Data["username_as_alias"])
 	d.Set("use_token_groups", resp.Data["use_token_groups"])
 
-	if provider.IsAPISupported(meta, provider.VaultVersion113) {
-		d.Set("max_page_size", resp.Data["max_page_size"])
-	}
 	// `bindpass`, `client_tls_cert` and `client_tls_key` cannot be read out from the API
 	// So... if they drift, they drift.
 
