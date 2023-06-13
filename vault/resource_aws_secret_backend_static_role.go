@@ -55,9 +55,9 @@ func awsSecretBackendStaticRoleResource() *schema.Resource {
 		},
 	}
 	return &schema.Resource{
-		CreateContext: MountCreateContextWrapper(createUpdateAWSStaticRoleResource, provider.VaultVersion114),
+		CreateContext: provider.MountCreateContextWrapper(createUpdateAWSStaticRoleResource, provider.VaultVersion114),
 		UpdateContext: createUpdateAWSStaticRoleResource,
-		ReadContext:   ReadContextWrapper(readAWSStaticRoleResource),
+		ReadContext:   provider.ReadContextWrapper(readAWSStaticRoleResource),
 		DeleteContext: deleteAWSStaticRoleResource,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
