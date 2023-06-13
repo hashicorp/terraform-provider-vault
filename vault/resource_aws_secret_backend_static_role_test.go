@@ -108,15 +108,15 @@ func TestAWSPathMatching(t *testing.T) {
 
 const testAWSStaticResource = `
 resource "vault_aws_secret_backend" "aws" {
-	path = "%s"
-	description = "Obtain AWS credentials."
+  path = "%s"
+  description = "Obtain AWS credentials."
 }
 
 resource "vault_aws_secret_backend_static_role" "role" {
-	backend = vault_aws_secret_backend.aws.path
-	name = "test"
-	username = "%s"
-	rotation_period = "3600"
+  backend = vault_aws_secret_backend.aws.path
+  name = "test"
+  username = "%s"
+  rotation_period = "3600"
 }`
 
 func testAWSStaticReourceConfig(mount, username string) string {

@@ -37,20 +37,20 @@ func TestAccDataSourceAWSStaticCredentials(t *testing.T) {
 
 const testAWSStaticDataResource = `
 resource "vault_aws_secret_backend" "aws" {
-	path = "%s"
-	description = "Obtain AWS credentials."
+  path = "%s"
+  description = "Obtain AWS credentials."
 }
 
 resource "vault_aws_secret_backend_static_role" "role" {
-	backend = vault_aws_secret_backend.aws.path
-	name = "test"
-	username = "%s"
-	rotation_period = "3600"
+  backend = vault_aws_secret_backend.aws.path
+  name = "test"
+  username = "%s"
+  rotation_period = "3600"
 }
 
 data "vault_aws_static_access_credentials" "creds" {
-	backend = vault_aws_secret_backend.aws.path
-	name = vault_aws_secret_backend_static_role.role.name
+  backend = vault_aws_secret_backend.aws.path
+  name = vault_aws_secret_backend_static_role.role.name
 }`
 
 func testAWSStaticDataSourceConfig(mount, username string) string {
