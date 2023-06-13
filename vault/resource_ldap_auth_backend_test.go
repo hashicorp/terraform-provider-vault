@@ -261,7 +261,7 @@ resource "vault_ldap_auth_backend" "test" {
     url                    = "ldaps://example.org"
     starttls               = true
     case_sensitive_names   = false
-	max_page_size          = -1
+    max_page_size          = -1
     tls_min_version        = "tls11"
     tls_max_version        = "tls12"
     insecure_tls           = false
