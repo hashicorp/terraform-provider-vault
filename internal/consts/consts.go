@@ -252,6 +252,16 @@ const (
 	FieldUsernameTemplate           = "username_template"
 	FieldServiceAccountNames        = "service_account_names"
 	FieldDisableCheckInEnforcement  = "disable_check_in_enforcement"
+	FieldSignatureBits              = "signature_bits"
+	FieldCommonNameTemplate         = "common_name_template"
+	FieldCredentialConfig           = "credential_config"
+	FieldCACert                     = "ca_cert"
+	FieldCAPrivateKey               = "ca_private_key"
+	FieldDBName                     = "db_name"
+	FieldCreationStatements         = "creation_statements"
+	FieldRevocationStatements       = "revocation_statements"
+	FieldRollbackStatements         = "rollback_statements"
+	FieldRenewStatements            = "renew_statements"
 
 	/*
 		common environment variables

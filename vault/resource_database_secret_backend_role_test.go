@@ -38,6 +38,12 @@ func TestAccDatabaseSecretBackendRole_import(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_role.test", "default_ttl", "3600"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_role.test", "max_ttl", "7200"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_role.test", "creation_statements.0", "SELECT 1;"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_role.role", "credential_config.ca_cert", "cert"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_role.role", "credential_config.ca_private_key", "key"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_role.role", "credential_config.key_type", "rsa"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_role.role", "credential_config.key_bits", "2048"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_role.role", "credential_config.signature_bits", "256"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_role.role", "credential_config.common_name_template", "{{.DisplayName}}_{{.RoleName}}"),
 				),
 			},
 			{
@@ -83,6 +89,12 @@ func TestAccDatabaseSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_database_secret_backend_role.test", "default_ttl", "1800"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_role.test", "max_ttl", "3600"),
 					resource.TestCheckResourceAttr("vault_database_secret_backend_role.test", "creation_statements.0", "SELECT 1;"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_role.role", "credential_config.ca_cert", "caCert"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_role.role", "credential_config.ca_private_key", "privateKey"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_role.role", "credential_config.key_type", "ec"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_role.role", "credential_config.key_bits", "224"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_role.role", "credential_config.signature_bits", "384"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_role.role", "credential_config.common_name_template", "{{.DisplayName}}_{{.RoleName}}_{{unix_time}}"),
 				),
 			},
 		},
@@ -136,6 +148,21 @@ resource "vault_database_secret_backend_role" "test" {
   max_ttl = 7200
   creation_statements = ["SELECT 1;"]
 }
+
+resource "vault_database_secret_backend_role" "role" {
+  backend             = vault_mount.db.path
+  name                = "dev"
+  db_name             = vault_database_secret_backend_connection.test.name
+  creation_statements = ["SELECT 1;"]
+  credential_config {
+    ca_cert = "cert"
+    ca_private_key = "key"
+	key_type = "rsa"
+	key_bits = 2048
+	signature_bits = 256
+	common_name_template "{{.DisplayName}}_{{.RoleName}}"
+  }
+}
 `, path, db, connURL, name)
 }
 
@@ -163,6 +190,21 @@ resource "vault_database_secret_backend_role" "test" {
   default_ttl = 1800
   max_ttl = 3600
   creation_statements = ["SELECT 1;"]
+}
+
+resource "vault_database_secret_backend_role" "role" {
+  backend             = vault_mount.db.path
+  name                = "dev"
+  db_name             = vault_database_secret_backend_connection.test.name
+  creation_statements = ["SELECT 1;"]
+  credential_config {
+    ca_cert = "caCert"
+    ca_private_key = "privateKey"
+	key_type = "ec"
+	key_bits = 224
+	signature_bits = 384
+	common_name_template "{{.DisplayName}}_{{.RoleName}}_{{unix_time}}"
+  }
 }
 `, path, db, connURL, name)
 }
