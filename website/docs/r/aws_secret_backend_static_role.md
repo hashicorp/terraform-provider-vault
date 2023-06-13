@@ -46,7 +46,7 @@ The following arguments are supported:
 * `backend` - (Optional) The unique path this backend should be mounted at. Must
   not begin or end with a `/`. Defaults to `aws`
 
-* `username` - (Required) The username of the existing LDAP entry to manage password rotation for.
+* `username` - (Required) The username of the existing AWS IAM to manage password rotation for.
 
 * `rotation_period` - (Required) How often Vault should rotate the password of the user entry.
 
