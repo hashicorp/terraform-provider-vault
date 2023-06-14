@@ -26,7 +26,7 @@ func oktaAuthBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: oktaAuthBackendWrite,
 		Delete: oktaAuthBackendDelete,
-		Read:   ReadWrapper(oktaAuthBackendRead),
+		Read:   provider.ReadWrapper(oktaAuthBackendRead),
 		Update: oktaAuthBackendUpdate,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,

@@ -19,7 +19,7 @@ import (
 func terraformCloudSecretBackendResource() *schema.Resource {
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create:        terraformCloudSecretBackendCreate,
-		Read:          ReadWrapper(terraformCloudSecretBackendRead),
+		Read:          provider.ReadWrapper(terraformCloudSecretBackendRead),
 		Update:        terraformCloudSecretBackendUpdate,
 		Delete:        terraformCloudSecretBackendDelete,
 		Exists:        terraformCloudSecretBackendExists,

@@ -16,7 +16,7 @@ import (
 func pkiSecretBackendIntermediateSetSignedResource() *schema.Resource {
 	return &schema.Resource{
 		Create: pkiSecretBackendIntermediateSetSignedCreate,
-		Read:   ReadWrapper(pkiSecretBackendCertRead),
+		Read:   provider.ReadWrapper(pkiSecretBackendCertRead),
 		Delete: pkiSecretBackendIntermediateSetSignedDelete,
 
 		Schema: map[string]*schema.Schema{

@@ -18,7 +18,7 @@ import (
 func awsAuthBackendLoginResource() *schema.Resource {
 	return &schema.Resource{
 		Create: awsAuthBackendLoginCreate,
-		Read:   ReadWrapper(awsAuthBackendLoginRead),
+		Read:   provider.ReadWrapper(awsAuthBackendLoginRead),
 		Delete: awsAuthBackendLoginDelete,
 
 		Schema: map[string]*schema.Schema{

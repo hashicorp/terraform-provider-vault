@@ -46,7 +46,7 @@ var (
 
 func identityGroupDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: ReadWrapper(identityGroupDataSourceRead),
+		Read: provider.ReadWrapper(identityGroupDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"group_name": {

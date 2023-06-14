@@ -19,16 +19,12 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-const (
-	SysNamespaceRoot = "sys/namespaces/"
-)
-
 func namespaceResource() *schema.Resource {
 	return &schema.Resource{
 		Create: namespaceCreate,
 		Update: namespaceCreate,
 		Delete: namespaceDelete,
-		Read:   ReadWrapper(namespaceRead),
+		Read:   provider.ReadWrapper(namespaceRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -65,7 +61,7 @@ func namespaceCreate(d *schema.ResourceData, meta interface{}) error {
 	path := d.Get(consts.FieldPath).(string)
 
 	log.Printf("[DEBUG] Creating namespace %s in Vault", path)
-	_, err := client.Logical().Write(SysNamespaceRoot+path, nil)
+	_, err := client.Logical().Write(consts.SysNamespaceRoot+path, nil)
 	if err != nil {
 		return fmt.Errorf("error writing to Vault: %s", err)
 	}
@@ -84,7 +80,7 @@ func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Deleting namespace %s from Vault", path)
 
 	deleteNS := func() error {
-		if _, err := client.Logical().Delete(SysNamespaceRoot + path); err != nil {
+		if _, err := client.Logical().Delete(consts.SysNamespaceRoot + path); err != nil {
 			// child namespaces exist under path "test-namespace-2161440981046539760/", cannot remove
 			if respErr, ok := err.(*api.ResponseError); ok && (respErr.StatusCode == http.StatusBadRequest) {
 				return err
@@ -108,7 +104,7 @@ func namespaceDelete(d *schema.ResourceData, meta interface{}) error {
 
 	// wait for the namespace to be gone...
 	return backoff.RetryNotify(func() error {
-		if resp, _ := client.Logical().Read(SysNamespaceRoot + path); resp != nil {
+		if resp, _ := client.Logical().Read(consts.SysNamespaceRoot + path); resp != nil {
 			return fmt.Errorf("namespace %q still exists", path)
 		}
 		return nil
@@ -132,7 +128,7 @@ func namespaceRead(d *schema.ResourceData, meta interface{}) error {
 
 	path := d.Id()
 
-	resp, err := client.Logical().Read(SysNamespaceRoot + path)
+	resp, err := client.Logical().Read(consts.SysNamespaceRoot + path)
 	if err != nil {
 		return fmt.Errorf("error reading from Vault: %s", err)
 	}

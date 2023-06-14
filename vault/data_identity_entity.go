@@ -92,7 +92,7 @@ var (
 
 func identityEntityDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: ReadWrapper(identityEntityDataSourceRead),
+		Read: provider.ReadWrapper(identityEntityDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"entity_name": {

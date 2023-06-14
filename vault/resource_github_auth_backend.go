@@ -62,7 +62,7 @@ func githubAuthBackendResource() *schema.Resource {
 
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
 		Create: githubAuthBackendCreate,
-		Read:   ReadWrapper(githubAuthBackendRead),
+		Read:   provider.ReadWrapper(githubAuthBackendRead),
 		Update: githubAuthBackendUpdate,
 		Delete: githubAuthBackendDelete,
 		Importer: &schema.ResourceImporter{
