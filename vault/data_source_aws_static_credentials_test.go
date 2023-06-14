@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccDataSourceAWSStaticCredentials(t *testing.T) {
-	_, _ = testutil.GetTestAWSCreds(t)
+	a, s := testutil.GetTestAWSCreds(t)
 	username := testutil.SkipTestEnvUnset(t, "AWS_STATIC_USER")[0]
 	mount := acctest.RandomWithPrefix("tf-aws-static")
 	resourceName := "data.vault_aws_static_access_credentials.creds"
@@ -21,11 +21,12 @@ func TestAccDataSourceAWSStaticCredentials(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion114)
+
 		},
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAWSStaticDataSourceConfig(mount, username),
+				Config: testAWSStaticDataSourceConfig(mount, a, s, username),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessKey),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldSecretKey),
@@ -39,6 +40,8 @@ const testAWSStaticDataResource = `
 resource "vault_aws_secret_backend" "aws" {
   path = "%s"
   description = "Obtain AWS credentials."
+  access_key = "%s"
+  secret_key = "%s"
 }
 
 resource "vault_aws_secret_backend_static_role" "role" {
@@ -53,6 +56,6 @@ data "vault_aws_static_access_credentials" "creds" {
   name = vault_aws_secret_backend_static_role.role.name
 }`
 
-func testAWSStaticDataSourceConfig(mount, username string) string {
-	return fmt.Sprintf(testAWSStaticDataResource, mount, username)
+func testAWSStaticDataSourceConfig(mount, access, secret, username string) string {
+	return fmt.Sprintf(testAWSStaticDataResource, mount, access, secret, username)
 }
