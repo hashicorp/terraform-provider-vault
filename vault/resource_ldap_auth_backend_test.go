@@ -238,6 +238,7 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 			"url":                  "url",
 			"starttls":             "starttls",
 			"case_sensitive_names": "case_sensitive_names",
+			"max_page_size":        "max_page_size",
 			"tls_min_version":      "tls_min_version",
 			"tls_max_version":      "tls_max_version",
 			"insecure_tls":         "insecure_tls",
@@ -254,10 +255,6 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 			"groupdn":              "groupdn",
 			"groupattr":            "groupattr",
 			"use_token_groups":     "use_token_groups",
-		}
-
-		if provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion113) {
-			attrs["max_page_size"] = "max_page_size"
 		}
 
 		for _, v := range commonTokenFields {
