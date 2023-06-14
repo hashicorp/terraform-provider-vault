@@ -46,9 +46,9 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.11.9-ent"
-        - "vault-enterprise:1.12.5-ent"
-        - "vault-enterprise:1.13.1-ent"
+        - "vault-enterprise:1.11.11-ent"
+        - "vault-enterprise:1.12.7-ent"
+        - "vault-enterprise:1.13.3-ent"
     container:
       image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     services:
