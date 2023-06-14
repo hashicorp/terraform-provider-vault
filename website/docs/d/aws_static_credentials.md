@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_aws_static_credentials data source"
-sidebar_current: "docs-vault-datasource-aws-static_credentials"
+sidebar_current: "docs-vault-datasource-aws-static-credentials"
 description: |-
   Reads static role credentials from an AWS secret backend in Vault
 ---
@@ -41,9 +41,9 @@ resource "vault_aws_secret_backend_static_role" "role" {
 
 
 # generally, these blocks would be in a different module
-data "vault_ldap_static_credentials" "creds" {
+data "vault_aws_static_credentials" "creds" {
   backend   = vault_aws_secret_backend.aws.path
-  role_name = vault_ldap_secret_backend_static_role.role.role_name
+  role_name = vault_aws_secret_backend_static_role.role.role_name
 }
 
 provider "aws" {
@@ -61,10 +61,10 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
   *Available only for Vault Enterprise*.
 
-* `backend` - (Required) The path to the LDAP secret backend to
+* `backend` - (Required) The path to the AWS secret backend to
 read credentials from, with no leading or trailing `/`s.
 
-* `role_name` - (Required) The name of the LDAP secret backend static role to read
+* `role_name` - (Required) The name of the AWS secret backend static role to read
 credentials from, with no leading or trailing `/`s.
 
 ## Attributes Reference
