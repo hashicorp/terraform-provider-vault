@@ -64,7 +64,7 @@ The following arguments are supported:
 * `backend` - (Required) The path to the AWS secret backend to
 read credentials from, with no leading or trailing `/`s.
 
-* `role_name` - (Required) The name of the AWS secret backend static role to read
+* `name` - (Required) The name of the AWS secret backend static role to read
 credentials from, with no leading or trailing `/`s.
 
 ## Attributes Reference

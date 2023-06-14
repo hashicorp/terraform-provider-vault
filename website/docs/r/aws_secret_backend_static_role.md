@@ -46,6 +46,9 @@ The following arguments are supported:
 * `backend` - (Optional) The unique path this backend should be mounted at. Must
   not begin or end with a `/`. Defaults to `aws`
 
+* `name` - (Required) The name to identify this role within the backend.
+  Must be unique within the backend.
+
 * `username` - (Required) The username of the existing AWS IAM to manage password rotation for.
 
 * `rotation_period` - (Required) How often Vault should rotate the password of the user entry.
