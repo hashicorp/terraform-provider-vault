@@ -42,8 +42,8 @@ resource "vault_aws_secret_backend_static_role" "role" {
 
 # generally, these blocks would be in a different module
 data "vault_aws_static_credentials" "creds" {
-  backend   = vault_aws_secret_backend.aws.path
-  role_name = vault_aws_secret_backend_static_role.role.role_name
+  backend = vault_aws_secret_backend.aws.path
+  name    = vault_aws_secret_backend_static_role.role.role_name
 }
 
 provider "aws" {
