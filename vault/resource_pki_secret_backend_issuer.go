@@ -48,6 +48,63 @@ func pkiSecretBackendIssuerResource() *schema.Resource {
 				Optional:    true,
 				Description: "Reference to an existing issuer.",
 			},
+			consts.FieldLeafNotAfterBehavior: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				Description: "Behavior of a leaf's 'NotAfter' field during " +
+					"issuance.",
+			},
+			consts.FieldManualChain: {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Chain of issuer references to build this issuer's " +
+					"computed CAChain field from, when non-empty.",
+			},
+			consts.FieldUsage: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Comma-separated list of allowed usages for this issuer.",
+			},
+			consts.FieldRevocationSignatureAlgorithm: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Which signature algorithm to use when building CRLs.",
+			},
+			consts.FieldIssuingCertificates: {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Specifies the URL values for the Issuing Certificate field.",
+			},
+			consts.FieldCRLDistributionPoints: {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Specifies the URL values for the CRL Distribution Points field.",
+			},
+			consts.FieldOCSPServers: {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Specifies the URL values for the OCSP Servers field.",
+			},
+			consts.FieldEnableAIAURLTemplating: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Specifies that the AIA URL values should be templated.",
+			},
 		},
 	}
 }
@@ -92,7 +149,17 @@ func pkiSecretBackendIssuerUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	// at present, only issuer_name can be patched
 	// set up configurable fields to extend this in the future
-	configurableFields := []string{consts.FieldIssuerName}
+	configurableFields := []string{
+		consts.FieldIssuerName,
+		consts.FieldLeafNotAfterBehavior,
+		consts.FieldManualChain,
+		consts.FieldUsage,
+		consts.FieldRevocationSignatureAlgorithm,
+		consts.FieldIssuingCertificates,
+		consts.FieldCRLDistributionPoints,
+		consts.FieldOCSPServers,
+		consts.FieldEnableAIAURLTemplating,
+	}
 
 	var patchRequired bool
 	data := map[string]interface{}{}
@@ -150,6 +217,14 @@ func pkiSecretBackendIssuerRead(ctx context.Context, d *schema.ResourceData, met
 
 	fields := []string{
 		consts.FieldIssuerName,
+		consts.FieldLeafNotAfterBehavior,
+		consts.FieldManualChain,
+		consts.FieldUsage,
+		consts.FieldRevocationSignatureAlgorithm,
+		consts.FieldIssuingCertificates,
+		consts.FieldCRLDistributionPoints,
+		consts.FieldOCSPServers,
+		consts.FieldEnableAIAURLTemplating,
 	}
 
 	for _, k := range fields {
