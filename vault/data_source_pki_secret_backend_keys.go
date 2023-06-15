@@ -35,18 +35,16 @@ func pkiSecretBackendKeysDataSource() *schema.Resource {
 				Description: "Keys used under the backend path.",
 			},
 			consts.FieldKeyInfo: {
-				Type:     schema.TypeMap,
-				Computed: true,
-				Description: "Map of keys read from Vault and stored " +
-					"as a string.",
+				Type:        schema.TypeMap,
+				Computed:    true,
+				Description: "Map of key strings read from Vault.",
 			},
 			// we also save the key info as a JSON string in order to
 			// cleanly support nested values
 			consts.FieldKeyInfoJSON: {
-				Type:     schema.TypeString,
-				Computed: true,
-				Description: "Info for keys under this backend path " +
-					"read from Vault.",
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "JSON-encoded key data read from Vault.",
 			},
 		},
 	}
