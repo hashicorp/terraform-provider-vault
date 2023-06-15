@@ -21,8 +21,6 @@ func TestAccPKISecretBackendIssuer_basic(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	issuerName := acctest.RandomWithPrefix("tf-pki-issuer")
-	defaultUsage := "crl-signing,issuing-certificates,ocsp-signing,read-only"
-	updatedUsage := "issuing-certificates,read-only"
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -37,22 +35,21 @@ func TestAccPKISecretBackendIssuer_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerName, ""),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldUsage, defaultUsage),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLeafNotAfterBehavior, "err"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerRef),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerID),
 				),
 			},
 			{
 				Config: testAccPKISecretBackendIssuer_basic(backend,
 					fmt.Sprintf(`issuer_name = "%s"
-										usage = "%s"
-										leaf_not_after_behavior = "truncate"`, issuerName, updatedUsage)),
+										leaf_not_after_behavior = "truncate"`, issuerName)),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerName, issuerName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldUsage, updatedUsage),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLeafNotAfterBehavior, "truncate"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerRef),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerID),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil),

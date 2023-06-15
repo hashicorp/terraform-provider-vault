@@ -105,6 +105,11 @@ func pkiSecretBackendIssuerResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies that the AIA URL values should be templated.",
 			},
+			consts.FieldIssuerID: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID of the issuer.",
+			},
 		},
 	}
 }
@@ -225,6 +230,7 @@ func pkiSecretBackendIssuerRead(ctx context.Context, d *schema.ResourceData, met
 		consts.FieldCRLDistributionPoints,
 		consts.FieldOCSPServers,
 		consts.FieldEnableAIAURLTemplating,
+		consts.FieldIssuerID,
 	}
 
 	for _, k := range fields {

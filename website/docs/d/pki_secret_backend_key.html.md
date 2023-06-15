@@ -28,7 +28,7 @@ resource "vault_mount" "pki" {
 }
 
 resource "vault_pki_secret_backend_key" "key" {
-  backend  = vault_mount.test.path
+  backend  = vault_mount.pki.path
   type     = "internal"
   key_name = "example"
   key_type = "rsa"
@@ -36,8 +36,8 @@ resource "vault_pki_secret_backend_key" "key" {
 }
 
 data "vault_pki_secret_backend_key" "example" {
-  backend = vault_mount.test.path
-  key_ref = vault_pki_secret_backend_key.test.key_id
+  backend = vault_mount.key.path
+  key_ref = vault_pki_secret_backend_key.key.key_id
 }
 ```
 

@@ -28,7 +28,7 @@ resource "vault_mount" "pki" {
 }
 
 resource "vault_pki_secret_backend_root_cert" "root" {
-  backend     = vault_mount.test.path
+  backend     = vault_mount.pki.path
   type        = "internal"
   common_name = "example"
   ttl         = "86400"
@@ -36,7 +36,7 @@ resource "vault_pki_secret_backend_root_cert" "root" {
 }
 
 data "vault_pki_secret_backend_issuers" "test" {
-  backend     = vault_pki_secret_backend_root_cert.test.backend
+  backend     = vault_pki_secret_backend_root_cert.root.backend
 }
 ```
 
