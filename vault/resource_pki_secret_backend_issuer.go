@@ -273,11 +273,11 @@ func pkiSecretBackendFromIssuerPath(path string) (string, error) {
 
 func pkiSecretIssuerRefFromPath(path string) (string, error) {
 	if !pkiSecretIssuerRefFromPathRegex.MatchString(path) {
-		return "", fmt.Errorf("no key ID found")
+		return "", fmt.Errorf("no issuer ID found")
 	}
 	res := pkiSecretIssuerRefFromPathRegex.FindStringSubmatch(path)
 	if len(res) != 2 {
-		return "", fmt.Errorf("unexpected number of matches (%d) for key ID", len(res))
+		return "", fmt.Errorf("unexpected number of matches (%d) for issuer ID", len(res))
 	}
 	return res[1], nil
 }
