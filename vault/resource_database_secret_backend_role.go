@@ -4,12 +4,15 @@
 package vault
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"log"
 	"regexp"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -21,34 +24,40 @@ var (
 	databaseSecretBackendRoleNameFromPathRegex    = regexp.MustCompile("^.+/roles/(.+$)")
 )
 
-var listFields = []string{
+//var listFields = []string{
+//	consts.FieldCreationStatements,
+//	consts.FieldRevocationStatements,
+//	consts.FieldRollbackStatements,
+//	consts.FieldRenewStatements,
+//}
+//var intFields = []string{
+//	consts.FieldDefaultTTL,
+//	consts.FieldMaxTTL,
+//	consts.FieldKeyBits,
+//	consts.FieldSignatureBits,
+//}
+
+var roleAPIFields = []string{
+	consts.FieldCACert,
+	consts.FieldCAPrivateKey,
+	consts.FieldKeyType,
+	consts.FieldCommonNameTemplate,
+	consts.FieldDefaultTTL,
+	consts.FieldMaxTTL,
+	consts.FieldKeyBits,
+	consts.FieldSignatureBits,
 	consts.FieldCreationStatements,
 	consts.FieldRevocationStatements,
 	consts.FieldRollbackStatements,
 	consts.FieldRenewStatements,
 }
 
-var strFields = []string{
-	consts.FieldCACert,
-	consts.FieldCAPrivateKey,
-	consts.FieldKeyType,
-	consts.FieldCommonNameTemplate,
-}
-
-var intFields = []string{
-	consts.FieldDefaultTTL,
-	consts.FieldMaxTTL,
-	consts.FieldKeyBits,
-	consts.FieldSignatureBits,
-}
-
 func databaseSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
-		Create: databaseSecretBackendRoleWrite,
-		Read:   provider.ReadWrapper(databaseSecretBackendRoleRead),
-		Update: databaseSecretBackendRoleWrite,
-		Delete: databaseSecretBackendRoleDelete,
-		Exists: databaseSecretBackendRoleExists,
+		CreateContext: databaseSecretBackendRoleWrite,
+		ReadContext:   provider.ReadContextWrapper(databaseSecretBackendRoleRead),
+		UpdateContext: databaseSecretBackendRoleWrite,
+		DeleteContext: databaseSecretBackendRoleDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -106,6 +115,11 @@ func databaseSecretBackendRoleResource() *schema.Resource {
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Database statements to execute to renew a user.",
 			},
+			consts.FieldCredentialType: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the type of credential that will be generated for the role.",
+			},
 			consts.FieldCredentialConfig: {
 				Type:        schema.TypeMap,
 				Optional:    true,
@@ -123,7 +137,7 @@ func databaseSecretBackendRoleResource() *schema.Resource {
 			},
 			consts.FieldKeyType: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "Specifies the desired key type. Options include: rsa, ed25519, ec.",
 			},
 			consts.FieldKeyBits: {
@@ -147,14 +161,26 @@ func databaseSecretBackendRoleResource() *schema.Resource {
 				Default:     "",
 				Description: "A username template to be used for the client certificate common name.",
 			},
+			consts.FieldFormat: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The output format of the generated private key credential.",
+			},
+
+			consts.FieldPasswordPolicy: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: "The policy used for password generation. Only used when credential type " +
+					"is 'password'.",
+			},
 		},
 	}
 }
 
-func databaseSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendRoleWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get(consts.FieldBackend).(string)
@@ -172,6 +198,7 @@ func databaseSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 		consts.FieldRevocationStatements,
 		consts.FieldRollbackStatements,
 		consts.FieldRenewStatements,
+		consts.FieldCredentialType,
 		consts.FieldCredentialConfig,
 		consts.FieldCACert,
 		consts.FieldPrivateKey,
@@ -189,18 +216,18 @@ func databaseSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 	log.Printf("[DEBUG] Creating role %q on database backend %q", name, backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating role %q for backend %q: %s", name, backend, err)
+		return diag.Errorf("error creating role %q for backend %q: %s", name, backend, err)
 	}
 	log.Printf("[DEBUG] Created role %q on AWS backend %q", name, backend)
 
 	d.SetId(path)
-	return databaseSecretBackendRoleRead(d, meta)
+	return databaseSecretBackendRoleRead(ctx, d, meta)
 }
 
-func databaseSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -209,20 +236,20 @@ func databaseSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 	if err != nil {
 		log.Printf("[WARN] Removing database role %q because its ID is invalid", path)
 		d.SetId("")
-		return fmt.Errorf("invalid role ID %q: %s", path, err)
+		return diag.Errorf("invalid role ID %q: %s", path, err)
 	}
 
 	backend, err := databaseSecretBackendRoleBackendFromPath(path)
 	if err != nil {
 		log.Printf("[WARN] Removing database role %q because its ID is invalid", path)
 		d.SetId("")
-		return fmt.Errorf("invalid role ID %q: %s", path, err)
+		return diag.Errorf("invalid role ID %q: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading role from %q", path)
 	secret, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading role %q: %s", path, err)
+		return diag.Errorf("error reading role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read role from %q", path)
 	if secret == nil {
@@ -230,89 +257,88 @@ func databaseSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 		d.SetId("")
 		return nil
 	}
-	d.Set("backend", backend)
-	d.Set("name", name)
-	d.Set("db_name", secret.Data["db_name"])
 
-	data := map[string]interface{}{}
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldName, name); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldDBName, secret.Data[consts.FieldDBName]); err != nil {
+		return diag.FromErr(err)
+	}
+
+	for _, k := range roleAPIFields {
+		if v, ok := secret.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
 
 	// handle TypeList
-	for _, k := range listFields {
-		if v, ok := d.GetOk(k); ok {
-			ifcList := v.([]interface{})
-			list := make([]string, 0, len(ifcList))
-			for _, ifc := range ifcList {
-				list = append(list, ifc.(string))
-			}
-
-			if len(list) > 0 {
-				data[k] = list
-			}
-		}
-	}
-
-	// TODO: check
-	credentialConfig := make(map[string]string)
-	if configStr, ok := secret.Data["credential_config"].(string); ok {
-		parts := strings.Split(configStr, "=")
-		if len(parts) == 2 {
-			key := strings.TrimSpace(parts[0])
-			value := strings.Trim(parts[1], `'"`)
-			credentialConfig[key] = value
-		}
-	}
-
-	// handle TypeString
-	for _, k := range strFields {
-		if err := d.Set(k, secret.Data[k]); err != nil {
-			return fmt.Errorf("error setting state key %q on database secret backend role, err=%s", k, err)
-		}
-	}
-
-	// handle TypeInt
-	for _, k := range intFields {
-		if v, ok := secret.Data[k]; ok {
-			n, err := v.(json.Number).Int64()
-			if err != nil {
-				return fmt.Errorf("unexpected value %q for %s of %q", v, k, path)
-			}
-			d.Set(k, n)
-		}
-	}
+	//for _, k := range listFields {
+	//	if v, ok := d.GetOk(k); ok {
+	//		ifcList := v.([]interface{})
+	//		list := make([]string, 0, len(ifcList))
+	//		for _, ifc := range ifcList {
+	//			list = append(list, ifc.(string))
+	//		}
+	//
+	//		if len(list) > 0 {
+	//			data[k] = list
+	//		}
+	//	}
+	//}
+	//
+	//// TODO: check
+	//credentialConfig := make(map[string]string)
+	//if configStr, ok := secret.Data["credential_config"].(string); ok {
+	//	parts := strings.Split(configStr, "=")
+	//	if len(parts) == 2 {
+	//		key := strings.TrimSpace(parts[0])
+	//		value := strings.Trim(parts[1], `'"`)
+	//		credentialConfig[key] = value
+	//	}
+	//}
+	//
+	//// handle TypeString
+	//for _, k := range strFields {
+	//	if err := d.Set(k, secret.Data[k]); err != nil {
+	//		return diag.Errorf("error setting state key %q on database secret backend role, err=%s", k, err)
+	//	}
+	//}
+	//
+	//// handle TypeInt
+	//for _, k := range intFields {
+	//	if v, ok := secret.Data[k]; ok {
+	//		n, err := v.(json.Number).Int64()
+	//		if err != nil {
+	//			return diag.Errorf("unexpected value %q for %s of %q", v, k, path)
+	//		}
+	//		d.Set(k, n)
+	//	}
+	//}
 
 	return nil
 }
 
-func databaseSecretBackendRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("error deleting role %q: %s", path, err)
+		return diag.Errorf("error deleting role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Deleted role %q", path)
 	return nil
-}
-
-func databaseSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if %q exists", path)
-	secret, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if %q exists", path)
-	return secret != nil, nil
 }
 
 func databaseSecretBackendRolePath(backend, name string) string {

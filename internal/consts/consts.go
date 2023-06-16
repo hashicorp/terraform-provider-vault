@@ -264,6 +264,8 @@ const (
 	FieldRenewStatements            = "renew_statements"
 	FieldSkipChildToken             = "skip_child_token"
 	FieldTokenPolicies              = "token_policies"
+	FieldCredentialType             = "credential_type"
+	FieldFormat                     = "format"
 
 	/*
 		common environment variables
