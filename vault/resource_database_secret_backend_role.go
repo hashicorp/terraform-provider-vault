@@ -24,19 +24,6 @@ var (
 	databaseSecretBackendRoleNameFromPathRegex    = regexp.MustCompile("^.+/roles/(.+$)")
 )
 
-//var listFields = []string{
-//	consts.FieldCreationStatements,
-//	consts.FieldRevocationStatements,
-//	consts.FieldRollbackStatements,
-//	consts.FieldRenewStatements,
-//}
-//var intFields = []string{
-//	consts.FieldDefaultTTL,
-//	consts.FieldMaxTTL,
-//	consts.FieldKeyBits,
-//	consts.FieldSignatureBits,
-//}
-
 var roleAPIFields = []string{
 	consts.FieldCACert,
 	consts.FieldCAPrivateKey,
