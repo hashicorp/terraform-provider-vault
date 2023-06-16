@@ -125,21 +125,6 @@ func databaseSecretBackendRoleResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies the configuration for the given credential_type.",
 			},
-			consts.FieldCACert: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The PEM-encoded CA certificate.",
-			},
-			consts.FieldCAPrivateKey: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The PEM-encoded private key for the given ca_cert.",
-			},
-			consts.FieldKeyType: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Specifies the desired key type. Options include: rsa, ed25519, ec.",
-			},
 			consts.FieldKeyBits: {
 				Type:     schema.TypeInt,
 				Optional: true,
@@ -154,12 +139,6 @@ func databaseSecretBackendRoleResource() *schema.Resource {
 				Default:  256,
 				Description: "The number of bits to use in the signature algorithm. Options include: 256 " +
 					"(default), 384, 512.",
-			},
-			consts.FieldCommonNameTemplate: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "",
-				Description: "A username template to be used for the client certificate common name.",
 			},
 			consts.FieldFormat: {
 				Type:        schema.TypeString,
@@ -277,51 +256,6 @@ func databaseSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, 
 			}
 		}
 	}
-
-	// handle TypeList
-	//for _, k := range listFields {
-	//	if v, ok := d.GetOk(k); ok {
-	//		ifcList := v.([]interface{})
-	//		list := make([]string, 0, len(ifcList))
-	//		for _, ifc := range ifcList {
-	//			list = append(list, ifc.(string))
-	//		}
-	//
-	//		if len(list) > 0 {
-	//			data[k] = list
-	//		}
-	//	}
-	//}
-	//
-	//// TODO: check
-	//credentialConfig := make(map[string]string)
-	//if configStr, ok := secret.Data["credential_config"].(string); ok {
-	//	parts := strings.Split(configStr, "=")
-	//	if len(parts) == 2 {
-	//		key := strings.TrimSpace(parts[0])
-	//		value := strings.Trim(parts[1], `'"`)
-	//		credentialConfig[key] = value
-	//	}
-	//}
-	//
-	//// handle TypeString
-	//for _, k := range strFields {
-	//	if err := d.Set(k, secret.Data[k]); err != nil {
-	//		return diag.Errorf("error setting state key %q on database secret backend role, err=%s", k, err)
-	//	}
-	//}
-	//
-	//// handle TypeInt
-	//for _, k := range intFields {
-	//	if v, ok := secret.Data[k]; ok {
-	//		n, err := v.(json.Number).Int64()
-	//		if err != nil {
-	//			return diag.Errorf("unexpected value %q for %s of %q", v, k, path)
-	//		}
-	//		d.Set(k, n)
-	//	}
-	//}
-
 	return nil
 }
 
