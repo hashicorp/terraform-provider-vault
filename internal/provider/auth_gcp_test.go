@@ -54,7 +54,7 @@ func TestAuthLoginGCP_Init(t *testing.T) {
 			d := schema.TestResourceDataRaw(t, s, tt.raw)
 			l := &AuthLoginGCP{}
 
-			err := l.Init(d, tt.authField)
+			_, err := l.Init(d, tt.authField)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Init() error = %v, wantErr %v", err, tt.wantErr)
 			}
