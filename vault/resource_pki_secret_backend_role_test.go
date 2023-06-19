@@ -253,6 +253,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "key_usage.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "key_usage.0", "DigitalSignature"),
 					resource.TestCheckResourceAttr(resourceName, "ext_key_usage.#", "0"),
+                                        resource.TestCheckResourceAttr(resourceName, "ext_key_usage_oids.#", "0"
 					resource.TestCheckResourceAttr(resourceName, "use_csr_common_name", "true"),
 					resource.TestCheckResourceAttr(resourceName, "use_csr_sans", "true"),
 					resource.TestCheckResourceAttr(resourceName, "ou.0", "test"),
@@ -310,6 +311,7 @@ resource "vault_pki_secret_backend_role" "test" {
   key_type                           = "rsa"
   key_bits                           = 2048
   ext_key_usage                      = []
+  ext_key_usage_oids                 = []
   use_csr_common_name                = true
   use_csr_sans                       = true
   ou                                 = ["test"]
