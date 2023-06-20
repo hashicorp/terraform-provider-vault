@@ -127,6 +127,25 @@ func TestAccOktaAuthBackend_invalid_max_ttl(t *testing.T) {
 	})
 }
 
+func TestAccOktaAuthBackend_groups_optional(t *testing.T) {
+	organization := "example"
+	path := resource.PrefixedUniqueId("okta-group-optional")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOktaAuthConfig_groups_optional(path, organization),
+				Check: resource.ComposeTestCheckFunc(
+					testAccOktaAuthBackend_UsersCheck(path, "bar", []string{}, []string{"eng", "default"}),
+				),
+			},
+		},
+	})
+}
+
 func TestOktaAuthBackend_remount(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-auth-okta")
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-okta-updated")
@@ -218,6 +237,21 @@ resource "vault_okta_auth_backend" "test" {
     token = "this must be kept secret"
     ttl = "1h"
     max_ttl = "invalid_max_ttl"
+}
+`, path, organization)
+}
+
+func testAccOktaAuthConfig_groups_optional(path string, organization string) string {
+	return fmt.Sprintf(`
+resource "vault_okta_auth_backend" "test" {
+    description = "Testing the Terraform okta auth backend"
+    path = "%s"
+    organization = "%s"
+    token = "this must be kept secret"
+    user {
+        username = "bar"
+        policies   = ["eng", "default"]
+    }
 }
 `, path, organization)
 }
