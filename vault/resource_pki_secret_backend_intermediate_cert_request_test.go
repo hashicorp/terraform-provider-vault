@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -73,6 +74,40 @@ func TestPkiSecretBackendIntermediateCertRequest_managedKeys(t *testing.T) {
 	})
 }
 
+func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
+	path := acctest.RandomWithPrefix("test-pki-mount")
+
+	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
+	keyName := acctest.RandomWithPrefix("test-pki-key")
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Intermediate CA"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldKeyID),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldKeyRef),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			// @TODO add a test step with a key_ref
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_multiIssuer(path, keyName),
+				Check: resource.ComposeTestCheckFunc(
+					append(checks)...,
+				),
+			},
+		},
+	})
+}
+
 func testPkiSecretBackendIntermediateCertRequestConfig_basic(path string, addConstraints bool) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
@@ -91,6 +126,34 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
   add_basic_constraints = %t
 }
 `, path, addConstraints)
+}
+
+func testPkiSecretBackendIntermediateCertRequestConfig_multiIssuer(path, keyName string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = 86400
+  max_lease_ttl_seconds     = 86400
+}
+
+resource "vault_pki_secret_backend_key" "test" {
+  backend  = vault_mount.test.path
+  type     = "exported"
+  key_name = "test"
+  key_type = "rsa"
+  key_bits = "4096"
+}
+
+resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
+  backend     = vault_mount.test.path
+  type        = "internal"
+  common_name = "test Intermediate CA"
+  key_ref     = vault_pki_secret_backend_key.test.id
+  key_name    = "%s"
+}
+`, path, keyName)
 }
 
 func testPkiSecretBackendIntermediateCertRequestConfig_managedKeys(path, keyName, accessKey, secretKey string) string {
