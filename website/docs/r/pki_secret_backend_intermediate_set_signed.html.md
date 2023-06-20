@@ -95,4 +95,9 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+In addition to the arguments above, the following attributes are exported:
+
+* `imported_issuers` - The imported issuers indicating which issuers were created as part of
+  this request.
+
+* `imported_keys` - The imported keys indicating which keys were created as part of this request.
