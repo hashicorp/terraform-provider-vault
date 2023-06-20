@@ -152,8 +152,6 @@ func pkiSecretBackendIssuerUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	path := d.Id()
 
-	// at present, only issuer_name can be patched
-	// set up configurable fields to extend this in the future
 	configurableFields := []string{
 		consts.FieldIssuerName,
 		consts.FieldLeafNotAfterBehavior,

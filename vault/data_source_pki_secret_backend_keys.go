@@ -61,7 +61,7 @@ func readPKISecretBackendKeys(ctx context.Context, d *schema.ResourceData, meta 
 
 	resp, err := client.Logical().ListWithContext(ctx, path)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("error reading from Vault: %s", err))
+		return diag.Errorf("error reading from Vault: %s", err)
 	}
 	log.Printf("[DEBUG] Read %q from Vault", path)
 	if resp == nil {

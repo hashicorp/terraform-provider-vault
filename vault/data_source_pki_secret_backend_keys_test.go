@@ -23,7 +23,7 @@ func TestAccDataSourcePKISecretKeys(t *testing.T) {
 		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
 		},
 		Steps: []resource.TestStep{
 			{

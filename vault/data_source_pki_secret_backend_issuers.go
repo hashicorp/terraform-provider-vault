@@ -44,7 +44,7 @@ func pkiSecretBackendIssuersDataSource() *schema.Resource {
 			consts.FieldKeyInfoJSON: {
 				Type:     schema.TypeString,
 				Computed: true,
-				Description: "JSON-encoded key info key info data " +
+				Description: "JSON-encoded key info data " +
 					"read from Vault.",
 			},
 		},
@@ -62,7 +62,7 @@ func readPKISecretBackendIssuers(ctx context.Context, d *schema.ResourceData, me
 
 	resp, err := client.Logical().ListWithContext(ctx, path)
 	if err != nil {
-		return diag.FromErr(fmt.Errorf("error reading from Vault: %s", err))
+		return diag.Errorf("error reading from Vault: %s", err)
 	}
 	log.Printf("[DEBUG] Read %q from Vault", path)
 	if resp == nil {
