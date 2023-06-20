@@ -38,7 +38,7 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
   *Available only for Vault Enterprise*.
 
-* `mount` - (Required) The path the PKI secret backend is mounted at, with no leading or trailing `/`s.
+* `backend` - (Required) The path the PKI secret backend is mounted at, with no leading or trailing `/`s.
 
 * `type` - (Required) Specifies the type of the key to create. Can be `exported`,`internal` or `kms`.
 
@@ -65,7 +65,7 @@ The following attributes are exported:
 
 ## Import
 
-PKI secret backend roles can be imported using the `id`, e.g.
+PKI secret backend key can be imported using the `id`, e.g.
 
 ```
 $ terraform import vault_pki_secret_backend_key.key pki/key/bf9b0d48-d0dd-652c-30be-77d04fc7e94d

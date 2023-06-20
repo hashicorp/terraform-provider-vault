@@ -139,7 +139,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_secret_backend_key" "test" {
-  mount    = vault_mount.test.path
+  backend  = vault_mount.test.path
   type     = "exported"
   key_name = "test"
   key_type = "rsa"

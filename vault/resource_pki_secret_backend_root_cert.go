@@ -84,9 +84,9 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			consts.FieldType: {
 				Type:         schema.TypeString,
 				Required:     true,
-				Description:  "Type of root to create. Must be either \"exported\" or \"internal\".",
+				Description:  "Type of root to create. Must be either \"existing\", \"exported\", \"internal\" or \"kms\"",
 				ForceNew:     true,
-				ValidateFunc: validation.StringInSlice([]string{"exported", "internal", "kms"}, false),
+				ValidateFunc: validation.StringInSlice([]string{consts.FieldExisting, consts.FieldExported, consts.FieldInternal, keyTypeKMS}, false),
 			},
 			consts.FieldCommonName: {
 				Type:        schema.TypeString,
@@ -349,8 +349,14 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 
 	// add multi-issuer write API fields if supported
 	isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
-	if isIssuerAPISupported {
-		rootCertAPIFields = append(rootCertAPIFields, consts.FieldIssuerName, consts.FieldKeyName, consts.FieldKeyRef)
+
+	if !(rootType == keyTypeKMS || rootType == consts.FieldExisting) {
+		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
+		if isIssuerAPISupported {
+			rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyRef, consts.FieldIssuerName)
+		}
+	} else if isIssuerAPISupported {
+		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyName, consts.FieldIssuerName)
 	}
 
 	data := map[string]interface{}{}
@@ -394,9 +400,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 	// after a read from Vault
 	multiIssuerAPIComputedFields := []string{
 		consts.FieldIssuerID,
-		consts.FieldIssuerName,
 		consts.FieldKeyID,
-		consts.FieldKeyName,
 	}
 
 	if isIssuerAPISupported {
