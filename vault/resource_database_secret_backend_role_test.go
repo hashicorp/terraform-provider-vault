@@ -158,8 +158,8 @@ resource "vault_database_secret_backend_role" "role" {
     ca_cert = "cert"
     ca_private_key = "key"
 	key_type = "rsa"
-	key_bits = 2048
-	signature_bits = 256
+	key_bits = "2048"
+	signature_bits = "256"
 	common_name_template = "{{.DisplayName}}_{{.RoleName}}"
   }
 }
@@ -201,7 +201,7 @@ resource "vault_database_secret_backend_role" "role" {
     ca_cert = "caCert"
     ca_private_key = "privateKey"
 	key_type = "ec"
-	key_bits = "224""
+	key_bits = "224"
 	signature_bits = "384"
 	common_name_template = "{{.DisplayName}}_{{.RoleName}}_{{unix_time}}"
   }
