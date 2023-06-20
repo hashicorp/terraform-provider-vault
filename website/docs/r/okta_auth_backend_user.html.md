@@ -37,7 +37,7 @@ The following arguments are supported:
 
 * `path` - (Required) The path where the Okta auth backend is mounted
 
-* `username` - (Required Optional) Name of the user within Okta
+* `username` - (Required) Name of the user within Okta
 
 * `groups` - (Optional) List of Okta groups to associate with this user
 

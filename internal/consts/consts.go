@@ -4,6 +4,9 @@
 package consts
 
 const (
+	/*
+		common field names
+	*/
 	// FieldBackend
 	// Deprecated: Prefer FieldMount or FieldPath instead.
 	FieldBackend = "backend"
@@ -11,11 +14,26 @@ const (
 	FieldPath = "path"
 	// FieldMount should be used for all new non-backend-mounting resources.
 	// In other words, resources that depend on a backend-mounting resource should use this.
-	FieldMount = "mount"
-	/*
-		common field names
-	*/
-
+	FieldMount                         = "mount"
+	FieldBindDN                        = "binddn"
+	FieldBindPass                      = "bindpass"
+	FieldCertificate                   = "certificate"
+	FieldClientTLSCert                 = "client_tls_cert"
+	FieldClientTLSKey                  = "client_tls_key"
+	FieldDistinguishedNames            = "distinguished_names"
+	FieldUPNDomain                     = "upndomain"
+	FieldStartTLS                      = "starttls"
+	FieldConnectionTimeout             = "connection_timeout"
+	FieldRequestTimeout                = "request_timeout"
+	FieldSchema                        = "schema"
+	FieldPasswordPolicy                = "password_policy"
+	FieldLength                        = "length"
+	FieldInsecureTLS                   = "insecure_tls"
+	FieldURL                           = "url"
+	FieldUserAttr                      = "userattr"
+	FieldUserDN                        = "userdn"
+	FieldRotationPeriod                = "rotation_period"
+	FieldPaths                         = "paths"
 	FieldParameters                    = "parameters"
 	FieldMethod                        = "method"
 	FieldNamespace                     = "namespace"
@@ -32,15 +50,19 @@ const (
 	FieldLeaseRenewable                = "lease_renewable"
 	FieldDepth                         = "depth"
 	FieldDataJSON                      = "data_json"
+	FieldDN                            = "dn"
 	FieldRole                          = "role"
 	FieldRoles                         = "roles"
 	FieldDescription                   = "description"
 	FieldTTL                           = "ttl"
 	FieldMaxTTL                        = "max_ttl"
 	FieldDefaultLeaseTTL               = "default_lease_ttl_seconds"
+	FieldDefaultTTL                    = "default_ttl"
 	FieldMaxLeaseTTL                   = "max_lease_ttl_seconds"
 	FieldAuditNonHMACRequestKeys       = "audit_non_hmac_request_keys"
 	FieldAuditNonHMACResponseKeys      = "audit_non_hmac_response_keys"
+	FieldLastPassword                  = "last_password"
+	FieldLastVaultRotation             = "last_vault_rotation"
 	FieldLocal                         = "local"
 	FieldSealWrap                      = "seal_wrap"
 	FieldExternalEntropyAccess         = "external_entropy_access"
@@ -163,6 +185,7 @@ const (
 	FieldType                          = "type"
 	FieldMethodID                      = "method_id"
 	FieldMFAMethodIDs                  = "mfa_method_ids"
+	FieldAccessors                     = "accessors"
 	FieldAuthMethodAccessors           = "auth_method_accessors"
 	FieldAuthMethodTypes               = "auth_method_types"
 	FieldIdentityGroupIDs              = "identity_group_ids"
@@ -223,6 +246,14 @@ const (
 	FieldIPAddresses                   = "ip_addresses"
 	FieldCIDRBlocks                    = "cidr_blocks"
 	FieldProjectRoles                  = "project_roles"
+	FieldCreationLDIF                  = "creation_ldif"
+	FieldDeletionLDIF                  = "deletion_ldif"
+	FieldRollbackLDIF                  = "rollback_ldif"
+	FieldUsernameTemplate              = "username_template"
+	FieldServiceAccountNames           = "service_account_names"
+	FieldDisableCheckInEnforcement     = "disable_check_in_enforcement"
+	FieldSkipChildToken                = "skip_child_token"
+	FieldTokenPolicies                 = "token_policies"
 	FieldManagedKeyName                = "managed_key_name"
 	FieldManagedKeyID                  = "managed_key_id"
 	FieldIssuerRef                     = "issuer_ref"
@@ -271,7 +302,6 @@ const (
 	FieldPrivateKeyFormat              = "private_key_format"
 	FieldOu                            = "ou"
 	FieldIssuingCA                     = "issuing_ca"
-	FieldCertificate                   = "certificate"
 	FieldSerial                        = "serial"
 	FieldSerialNumber                  = "serial_number"
 	FieldIPSans                        = "ip_sans"
@@ -296,35 +326,6 @@ const (
 	FieldAutoRenew                     = "auto_renew"
 	FieldMinSecondsRemaining           = "min_seconds_remaining"
 	FieldRenewPending                  = "renew_pending"
-	FieldBindDN                        = "binddn"
-	FieldBindPass                      = "bindpass"
-	FieldClientTLSCert                 = "client_tls_cert"
-	FieldClientTLSKey                  = "client_tls_key"
-	FieldDistinguishedNames            = "distinguished_names"
-	FieldUPNDomain                     = "upndomain"
-	FieldStartTLS                      = "starttls"
-	FieldConnectionTimeout             = "connection_timeout"
-	FieldRequestTimeout                = "request_timeout"
-	FieldSchema                        = "schema"
-	FieldPasswordPolicy                = "password_policy"
-	FieldLength                        = "length"
-	FieldInsecureTLS                   = "insecure_tls"
-	FieldURL                           = "url"
-	FieldUserAttr                      = "userattr"
-	FieldUserDN                        = "userdn"
-	FieldRotationPeriod                = "rotation_period"
-	FieldPaths                         = "paths"
-	FieldDN                            = "dn"
-	FieldLastPassword                  = "last_password"
-	FieldLastVaultRotation             = "last_vault_rotation"
-	FieldAccessors                     = "accessors"
-	FieldCreationLDIF                  = "creation_ldif"
-	FieldDeletionLDIF                  = "deletion_ldif"
-	FieldRollbackLDIF                  = "rollback_ldif"
-	FieldUsernameTemplate              = "username_template"
-	FieldServiceAccountNames           = "service_account_names"
-	FieldDisableCheckInEnforcement     = "disable_check_in_enforcement"
-	FieldDefaultTTL                    = "default_ttl"
 	FieldImportedIssuers               = "imported_issuers"
 	FieldImportedKeys                  = "imported_keys"
 
@@ -412,6 +413,7 @@ const (
 	/*
 		misc. path related constants
 	*/
-	PathDelim      = "/"
-	VaultAPIV1Root = "/v1"
+	PathDelim        = "/"
+	VaultAPIV1Root   = "/v1"
+	SysNamespaceRoot = "sys/namespaces/"
 )
