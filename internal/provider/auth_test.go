@@ -156,6 +156,7 @@ func TestGetAuthLogin_registered(t *testing.T) {
 	}
 
 	for _, entry := range registeredAuthLogins {
+		entry := entry
 		t.Run(t.Name()+"-"+entry.Field(), func(t *testing.T) {
 			t.Parallel()
 			sr := entry.LoginSchema().Elem.(*schema.Resource)
