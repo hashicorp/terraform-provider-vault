@@ -153,14 +153,14 @@ resource "vault_database_secret_backend_role" "role" {
   backend             = vault_mount.db.path
   name                = "dev"
   db_name             = vault_database_secret_backend_connection.test.name
-  creation_statements = ["SELECT 1;"]
+  creation_statements = ["{'database_name': '$external', 'x509Type': 'CUSTOMER', 'roles': [{'databaseName':'dbName','roleName':'read'}]}"]
   credential_config {
     ca_cert = "cert"
     ca_private_key = "key"
 	key_type = "rsa"
 	key_bits = 2048
 	signature_bits = 256
-	common_name_template "{{.DisplayName}}_{{.RoleName}}"
+	common_name_template = "{{.DisplayName}}_{{.RoleName}}"
   }
 }
 `, path, db, connURL, name)
