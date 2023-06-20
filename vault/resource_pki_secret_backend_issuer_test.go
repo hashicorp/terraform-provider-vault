@@ -52,7 +52,11 @@ func TestAccPKISecretBackendIssuer_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerID),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil),
+			// ignore changes in 'usage' field since it can be returned in any order
+			// example, error in attribute equivalence in following
+			// Import returns "crl-signing,read-only,issuing-certificates"
+			// TF state returns "read-only,issuing-certificates,crl-signing"
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldUsage),
 		},
 	})
 }
