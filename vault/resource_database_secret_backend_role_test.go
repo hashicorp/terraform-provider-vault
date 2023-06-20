@@ -154,7 +154,7 @@ resource "vault_database_secret_backend_role" "role" {
   name                = "dev"
   db_name             = vault_database_secret_backend_connection.test.name
   creation_statements = ["{'database_name': '$external', 'x509Type': 'CUSTOMER', 'roles': [{'databaseName':'dbName','roleName':'read'}]}"]
-  credential_config {
+  credential_config = {
     ca_cert = "cert"
     ca_private_key = "key"
 	key_type = "rsa"
@@ -197,7 +197,7 @@ resource "vault_database_secret_backend_role" "role" {
   name                = "dev"
   db_name             = vault_database_secret_backend_connection.test.name
   creation_statements = ["{'database_name': '$external', 'x509Type': 'CUSTOMER', 'roles': [{'databaseName':'dbName','roleName':'readWrite'}]}"]
-  credential_config {
+  credential_config = {
     ca_cert = "caCert"
     ca_private_key = "privateKey"
 	key_type = "ec"
