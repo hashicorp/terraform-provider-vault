@@ -36,12 +36,12 @@ func TestAccPKISecretBackendKey_basic(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
 		},
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldMount),
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccPKISecretBackendKey_basic(mount, keyName, "rsa", "2048"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "2048"),
@@ -53,7 +53,7 @@ func TestAccPKISecretBackendKey_basic(t *testing.T) {
 			{
 				Config: testAccPKISecretBackendKey_basic(mount, updatedKeyName, "rsa", "2048"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, updatedKeyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "2048"),
@@ -67,7 +67,7 @@ func TestAccPKISecretBackendKey_basic(t *testing.T) {
 			{
 				Config: testAccPKISecretBackendKey_basic(mount, updatedKeyName, "ec", "224"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, updatedKeyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ec"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyBits, "224"),
@@ -93,7 +93,7 @@ resource "vault_mount" "pki" {
 }
 
 resource "vault_pki_secret_backend_key" "test" {
-  mount    = vault_mount.pki.path
+  backend  = vault_mount.pki.path
   type     = "exported"
   key_name = "%s"
   key_type = "%s"

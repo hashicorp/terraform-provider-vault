@@ -19,8 +19,8 @@ import (
 var (
 	kmsType = "kms"
 
-	pkiSecretMountFromPathRegex = regexp.MustCompile("^(.+)/key/.+$")
-	pkiSecretKeyIDFromPathRegex = regexp.MustCompile("^.+/key/(.+)$")
+	pkiSecretBackendFromPathRegex = regexp.MustCompile("^(.+)/key/.+$")
+	pkiSecretKeyIDFromPathRegex   = regexp.MustCompile("^.+/key/(.+)$")
 )
 
 func pkiSecretBackendKeyResource() *schema.Resource {
@@ -34,11 +34,11 @@ func pkiSecretBackendKeyResource() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			consts.FieldMount: {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "Full path where PKI engine is mounted.",
+				Description: "Full path where PKI backend is mounted.",
 			},
 			consts.FieldType: {
 				Type:        schema.TypeString,
@@ -84,12 +84,12 @@ func pkiSecretBackendKeyResource() *schema.Resource {
 	}
 }
 
-func getPKIGenerateKeysPath(mount, keyType string) string {
-	return fmt.Sprintf("%s/keys/generate/%s", mount, keyType)
+func getPKIGenerateKeysPath(backend, keyType string) string {
+	return fmt.Sprintf("%s/keys/generate/%s", backend, keyType)
 }
 
-func getPKIKeysIDPath(mount, keyID string) string {
-	return fmt.Sprintf("%s/key/%s", mount, keyID)
+func getPKIKeysIDPath(backend, keyID string) string {
+	return fmt.Sprintf("%s/key/%s", backend, keyID)
 }
 
 func pkiSecretBackendKeyCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -98,9 +98,9 @@ func pkiSecretBackendKeyCreate(ctx context.Context, d *schema.ResourceData, meta
 		return diag.FromErr(e)
 	}
 
-	mount := d.Get(consts.FieldMount).(string)
+	backend := d.Get(consts.FieldBackend).(string)
 	keyType := d.Get(consts.FieldType).(string)
-	keyPath := getPKIGenerateKeysPath(mount, keyType)
+	keyPath := getPKIGenerateKeysPath(backend, keyType)
 
 	fields := []string{
 		consts.FieldKeyName,
@@ -130,8 +130,8 @@ func pkiSecretBackendKeyCreate(ctx context.Context, d *schema.ResourceData, meta
 	}
 
 	// set key ID path
-	// this makes both mount and key ID info available
-	rid := getPKIKeysIDPath(mount, keyID)
+	// this makes both backend and key ID info available
+	rid := getPKIKeysIDPath(backend, keyID)
 	d.SetId(rid)
 
 	return pkiSecretBackendKeyRead(ctx, d, meta)
@@ -177,8 +177,8 @@ func pkiSecretBackendKeyRead(ctx context.Context, d *schema.ResourceData, meta i
 
 	keyPath := d.Id()
 
-	// get mount from full path
-	mount, err := pkiSecretMountFromPath(keyPath)
+	// get backend from full path
+	backend, err := pkiSecretBackendFromPath(keyPath)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -188,8 +188,8 @@ func pkiSecretBackendKeyRead(ctx context.Context, d *schema.ResourceData, meta i
 		return diag.FromErr(err)
 	}
 
-	// set mount and keyID
-	if err := d.Set(consts.FieldMount, mount); err != nil {
+	// set backend and keyID
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -249,13 +249,13 @@ func pkiSecretBackendKeyDelete(ctx context.Context, d *schema.ResourceData, meta
 	return nil
 }
 
-func pkiSecretMountFromPath(path string) (string, error) {
-	if !pkiSecretMountFromPathRegex.MatchString(path) {
-		return "", fmt.Errorf("no mount found")
+func pkiSecretBackendFromPath(path string) (string, error) {
+	if !pkiSecretBackendFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no backend found")
 	}
-	res := pkiSecretMountFromPathRegex.FindStringSubmatch(path)
+	res := pkiSecretBackendFromPathRegex.FindStringSubmatch(path)
 	if len(res) != 2 {
-		return "", fmt.Errorf("unexpected number of matches (%d) for mount", len(res))
+		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
 	}
 	return res[1], nil
 }

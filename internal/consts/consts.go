@@ -328,6 +328,18 @@ const (
 	FieldRenewPending                  = "renew_pending"
 	FieldImportedIssuers               = "imported_issuers"
 	FieldImportedKeys                  = "imported_keys"
+	FieldExisting                      = "existing"
+	FieldLeafNotAfterBehavior          = "leaf_not_after_behavior"
+	FieldManualChain                   = "manual_chain"
+	FieldUsage                         = "usage"
+	FieldKeys                          = "keys"
+	FieldKeyInfo                       = "key_info"
+	FieldKeyInfoJSON                   = "key_info_json"
+	FieldRevocationSignatureAlgorithm  = "revocation_signature_algorithm"
+	FieldIssuingCertificates           = "issuing_certificates"
+	FieldCRLDistributionPoints         = "crl_distribution_points"
+	FieldOCSPServers                   = "ocsp_servers"
+	FieldEnableAIAURLTemplating        = "enable_aia_url_templating"
 
 	/*
 		common environment variables

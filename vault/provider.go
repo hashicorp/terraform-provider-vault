@@ -153,6 +153,22 @@ var (
 			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
 		},
+		"vault_pki_secret_backend_issuer": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
+			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
+		},
+		"vault_pki_secret_backend_issuers": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendIssuersDataSource()),
+			PathInventory: []string{"/pki/issuers"},
+		},
+		"vault_pki_secret_backend_key": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendKeyDataSource()),
+			PathInventory: []string{"/pki/key/{key_ref}"},
+		},
+		"vault_pki_secret_backend_keys": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendKeysDataSource()),
+			PathInventory: []string{"/pki/keys"},
+		},
 	}
 
 	ResourceRegistry = map[string]*provider.Description{
@@ -568,6 +584,10 @@ var (
 		"vault_pki_secret_backend_key": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendKeyResource()),
 			PathInventory: []string{"/pki/key/{key_id}"},
+		},
+		"vault_pki_secret_backend_issuer": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerResource()),
+			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
 		},
 		"vault_quota_lease_count": {
 			Resource:      UpdateSchemaResource(quotaLeaseCountResource()),

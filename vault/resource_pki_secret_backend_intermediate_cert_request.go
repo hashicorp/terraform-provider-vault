@@ -35,9 +35,9 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 			consts.FieldType: {
 				Type:         schema.TypeString,
 				Required:     true,
-				Description:  "Type of intermediate to create. Must be either \"exported\" or \"internal\".",
+				Description:  "Type of intermediate to create. Must be either \"existing\", \"exported\", \"internal\" or \"kms\"",
 				ForceNew:     true,
-				ValidateFunc: validation.StringInSlice([]string{consts.FieldExported, consts.FieldInternal, keyTypeKMS}, false),
+				ValidateFunc: validation.StringInSlice([]string{consts.FieldExisting, consts.FieldExported, consts.FieldInternal, keyTypeKMS}, false),
 			},
 			consts.FieldCommonName: {
 				Type:        schema.TypeString,
@@ -260,14 +260,17 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 		consts.FieldOtherSans,
 	}
 
-	if intermediateType != keyTypeKMS {
-		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
-	}
-
 	// add multi-issuer write API fields if supported
 	isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
-	if isIssuerAPISupported {
-		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyName, consts.FieldKeyRef)
+
+	if !(intermediateType == keyTypeKMS || intermediateType == consts.FieldExisting) {
+		// if kms or existing type,
+		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
+		if isIssuerAPISupported {
+			intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyRef)
+		}
+	} else if isIssuerAPISupported {
+		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyName)
 	}
 
 	data := map[string]interface{}{}
