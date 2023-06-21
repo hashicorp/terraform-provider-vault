@@ -12,6 +12,17 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
+func init() {
+	field := consts.FieldAuthLoginCert
+	if err := globalAuthLoginRegistry.Register(field,
+		func(r *schema.ResourceData) (AuthLogin, error) {
+			a := &AuthLoginCert{}
+			return a.Init(r, field)
+		}, GetCertLoginSchema); err != nil {
+		panic(err)
+	}
+}
+
 // GetCertLoginSchema for the cert authentication engine.
 func GetCertLoginSchema(authField string) *schema.Schema {
 	return getLoginSchema(
@@ -44,6 +55,8 @@ func GetCertLoginSchemaResource(authField string) *schema.Resource {
 	}, consts.MountTypeCert)
 }
 
+var _ AuthLogin = (*AuthLoginCert)(nil)
+
 type AuthLoginCert struct {
 	AuthLoginCommon
 }
@@ -61,9 +74,9 @@ func (l *AuthLoginCert) LoginPath() string {
 	return fmt.Sprintf("auth/%s/login", l.MountPath())
 }
 
-func (l *AuthLoginCert) Init(d *schema.ResourceData, authField string) error {
+func (l *AuthLoginCert) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
 	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
-		return err
+		return nil, err
 	}
 
 	// these fields come from the top level provider schema, and are global to all connections.
@@ -79,7 +92,7 @@ func (l *AuthLoginCert) Init(d *schema.ResourceData, authField string) error {
 		}
 	}
 
-	return nil
+	return l, nil
 }
 
 // Method name for the cert authentication engine.

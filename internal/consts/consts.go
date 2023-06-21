@@ -103,7 +103,7 @@ const (
 	FieldPassword                      = "password"
 	FieldPasswordFile                  = "password_file"
 	FieldClientAuth                    = "client_auth"
-	FieldAuthLoginDefault              = "auth_login"
+	FieldAuthLoginGeneric              = "auth_login"
 	FieldAuthLoginUserpass             = "auth_login_userpass"
 	FieldAuthLoginAWS                  = "auth_login_aws"
 	FieldAuthLoginCert                 = "auth_login_cert"

@@ -17,6 +17,17 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
+func init() {
+	field := consts.FieldAuthLoginKerberos
+	if err := globalAuthLoginRegistry.Register(field,
+		func(r *schema.ResourceData) (AuthLogin, error) {
+			a := &AuthLoginKerberos{}
+			return a.Init(r, field)
+		}, GetKerberosLoginSchema); err != nil {
+		panic(err)
+	}
+}
+
 // GetKerberosLoginSchema for the kerberos authentication engine.
 func GetKerberosLoginSchema(authField string) *schema.Schema {
 	return getLoginSchema(
@@ -92,6 +103,8 @@ func GetKerberosLoginSchemaResource(authField string) *schema.Resource {
 	return s
 }
 
+var _ AuthLogin = (*AuthLoginKerberos)(nil)
+
 type AuthLoginKerberos struct {
 	AuthLoginCommon
 	// useful for unit testing
@@ -111,9 +124,9 @@ func (l *AuthLoginKerberos) LoginPath() string {
 	return fmt.Sprintf("auth/%s/login", l.MountPath())
 }
 
-func (l *AuthLoginKerberos) Init(d *schema.ResourceData, authField string) error {
+func (l *AuthLoginKerberos) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
 	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
-		return err
+		return nil, err
 	}
 
 	if _, ok := l.getOk(d, consts.FieldToken); !ok {
@@ -132,11 +145,11 @@ func (l *AuthLoginKerberos) Init(d *schema.ResourceData, authField string) error
 		}
 
 		if len(missing) > 0 {
-			return fmt.Errorf("required fields are unset: %v", missing)
+			return nil, fmt.Errorf("required fields are unset: %v", missing)
 		}
 	}
 
-	return nil
+	return l, nil
 }
 
 // Method name for the kerberos authentication engine.

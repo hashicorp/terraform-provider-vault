@@ -94,7 +94,7 @@ func TestAuthLoginKerberos_Init(t *testing.T) {
 
 			d := schema.TestResourceDataRaw(t, s, tt.raw)
 			l := &AuthLoginKerberos{}
-			err := l.Init(d, tt.authField)
+			_, err := l.Init(d, tt.authField)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("Init() error = %v, wantErr %v", err, tt.wantErr)
 			}
