@@ -72,11 +72,11 @@ func (l *AuthLoginRadius) LoginPath() string {
 }
 
 func (l *AuthLoginRadius) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
-	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
-		return nil, err
-	}
-
-	if err := l.checkRequiredFields(d, consts.FieldUsername, consts.FieldPassword); err != nil {
+	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData) error {
+			return l.checkRequiredFields(d, consts.FieldUsername, consts.FieldPassword)
+		},
+	); err != nil {
 		return nil, err
 	}
 

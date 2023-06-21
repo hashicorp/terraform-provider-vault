@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -17,10 +16,6 @@ import (
 )
 
 func TestAuthLoginCert_Init(t *testing.T) {
-	type fields struct {
-		AuthLoginCommon AuthLoginCommon
-	}
-
 	s := map[string]*schema.Schema{
 		consts.FieldCACertFile: {
 			Type:     schema.TypeString,
@@ -40,15 +35,7 @@ func TestAuthLoginCert_Init(t *testing.T) {
 		},
 	}
 
-	tests := []struct {
-		name         string
-		authField    string
-		raw          map[string]interface{}
-		wantErr      bool
-		expectMount  string
-		expectParams map[string]interface{}
-		expectErr    error
-	}{
+	tests := []authLoginInitTest{
 		{
 			name: "without-role-name",
 			raw: map[string]interface{}{
@@ -160,22 +147,7 @@ func TestAuthLoginCert_Init(t *testing.T) {
 			t.Cleanup(func() {
 				delete(s, tt.authField)
 			})
-
-			d := schema.TestResourceDataRaw(t, s, tt.raw)
-			l := &AuthLoginCert{}
-
-			_, err := l.Init(d, tt.authField)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Init() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if !reflect.DeepEqual(tt.expectErr, err) {
-				t.Errorf("Init() expected error %#v, actual %#v", tt.expectErr, err)
-			}
-
-			if !reflect.DeepEqual(tt.expectParams, l.params) {
-				t.Errorf("Init() expected params %#v, actual %#v", tt.expectParams, l.params)
-			}
+			assertAuthLoginInit(t, tt, s, &AuthLoginCert{})
 		})
 	}
 }

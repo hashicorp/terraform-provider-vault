@@ -122,15 +122,15 @@ func (l *AuthLoginAzure) LoginPath() string {
 }
 
 func (l *AuthLoginAzure) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
-	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
-		return nil, err
-	}
-
-	if err := l.checkRequiredFields(d, l.requiredParams()...); err != nil {
-		return nil, err
-	}
-
-	if err := l.checkFieldsOneOf(d, consts.FieldVMName, consts.FieldVMSSName); err != nil {
+	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData) error {
+			err := l.checkRequiredFields(d, l.requiredParams()...)
+			if err != nil {
+				return err
+			}
+			return l.checkFieldsOneOf(d, consts.FieldVMName, consts.FieldVMSSName)
+		},
+	); err != nil {
 		return nil, err
 	}
 

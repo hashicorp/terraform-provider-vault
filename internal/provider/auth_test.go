@@ -35,6 +35,16 @@ type authLoginTest struct {
 	skipFunc           func(t *testing.T)
 }
 
+type authLoginInitTest struct {
+	name         string
+	authField    string
+	raw          map[string]interface{}
+	wantErr      bool
+	expectMount  string
+	expectParams map[string]interface{}
+	expectErr    error
+}
+
 type testLoginHandler struct {
 	requestCount  int
 	paths         []string
@@ -193,5 +203,34 @@ func TestGetAuthLogin_registered(t *testing.T) {
 				t.Errorf("GetAuthLogin() error = %v, wantErr false", err)
 			}
 		})
+	}
+}
+
+func assertAuthLoginEqual(t *testing.T, expected, actual AuthLogin) {
+	t.Helper()
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("AuthLogin instances not equal, expected %#v, actual %#v", expected, actual)
+	}
+}
+
+func assertAuthLoginInit(t *testing.T, tt authLoginInitTest, s map[string]*schema.Schema, l AuthLogin) {
+	d := schema.TestResourceDataRaw(t, s, tt.raw)
+	actual, err := l.Init(d, tt.authField)
+	if (err != nil) != tt.wantErr {
+		t.Fatalf("Init() error = %v, wantErr %v", err, tt.wantErr)
+	}
+
+	if !reflect.DeepEqual(tt.expectErr, err) {
+		t.Errorf("Init() expected error %#v, actual %#v", tt.expectErr, err)
+	}
+
+	if !reflect.DeepEqual(tt.expectParams, l.Params()) {
+		t.Errorf("Init() expected params %#v, actual %#v", tt.expectParams, l.Params())
+	}
+
+	if err != nil {
+		assertAuthLoginEqual(t, nil, actual)
+	} else {
+		assertAuthLoginEqual(t, l, actual)
 	}
 }

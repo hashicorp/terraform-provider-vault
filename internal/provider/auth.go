@@ -18,8 +18,8 @@ import (
 type (
 	loginSchemaFunc   func(string) *schema.Schema
 	getSchemaResource func(string) *schema.Resource
-
-	authLoginFunc func(*schema.ResourceData) (AuthLogin, error)
+	validateFunc      func(data *schema.ResourceData) error
+	authLoginFunc     func(*schema.ResourceData) (AuthLogin, error)
 )
 
 // authLoginEntry is the tuple of authLoginFunc, schemaFunc.
@@ -115,6 +115,7 @@ type AuthLogin interface {
 	Method() string
 	Login(*api.Client) (*api.Secret, error)
 	Namespace() string
+	Params() map[string]interface{}
 }
 
 // AuthLoginCommon providing common methods for other AuthLogin* implementations.
@@ -125,11 +126,21 @@ type AuthLoginCommon struct {
 	initialized bool
 }
 
-func (l *AuthLoginCommon) Init(d *schema.ResourceData, authField string) error {
+func (l *AuthLoginCommon) Params() map[string]interface{} {
+	return l.params
+}
+
+func (l *AuthLoginCommon) Init(d *schema.ResourceData, authField string, validators ...validateFunc) error {
 	l.authField = authField
 	path, params, err := l.init(d)
 	if err != nil {
 		return err
+	}
+
+	for _, vf := range validators {
+		if err := vf(d); err != nil {
+			return err
+		}
 	}
 
 	l.mount = path
