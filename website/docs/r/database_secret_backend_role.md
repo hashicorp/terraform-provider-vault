@@ -104,7 +104,7 @@ The following arguments are supported:
       to be used for the client certificate common name.
     * `ca_cert` (Optional) - The PEM-encoded CA certificate.
     * `ca_private_key` (Optional) - The PEM-encoded private key for the given `ca_cert`.
-    * `key_type` (Optional) - Specifies the desired key type. Options include:
+    * `key_type` (Required) - Specifies the desired key type. Options include:
       `rsa`, `ed25519`, `ec`.
     * `key_bits` (Optional) - Number of bits to use for the generated keys. Options include:
       `2048` (default), `3072`, `4096`; with `key_type=ec`, allowed values are: `224`, `256` (default),
