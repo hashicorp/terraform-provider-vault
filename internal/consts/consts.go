@@ -340,6 +340,13 @@ const (
 	FieldCRLDistributionPoints         = "crl_distribution_points"
 	FieldOCSPServers                   = "ocsp_servers"
 	FieldEnableAIAURLTemplating        = "enable_aia_url_templating"
+	FieldCredentialConfig              = "credential_config"
+	FieldDBName                        = "db_name"
+	FieldCreationStatements            = "creation_statements"
+	FieldRevocationStatements          = "revocation_statements"
+	FieldRollbackStatements            = "rollback_statements"
+	FieldRenewStatements               = "renew_statements"
+	FieldCredentialType                = "credential_type"
 
 	/*
 		common environment variables
