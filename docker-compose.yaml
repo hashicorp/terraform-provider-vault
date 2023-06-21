@@ -95,4 +95,4 @@ services:
     ports:
       - "9042:9042"
     volumes:
-      - ./cassandra.yaml:/etc/cassandra/cassandra.yaml
+      - ./testdata/cassandra.yaml:/etc/cassandra/cassandra.yaml
