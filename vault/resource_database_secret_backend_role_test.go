@@ -24,7 +24,6 @@ func TestAccDatabaseSecretBackendRole_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("role")
 	dbName := acctest.RandomWithPrefix("db")
-	testConf := testAccDatabaseSecretBackendRoleConfig_basic(name, dbName, backend, connURL)
 	resourceName := "vault_database_secret_backend_role.test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -32,7 +31,7 @@ func TestAccDatabaseSecretBackendRole_basic(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testConf,
+				Config: testAccDatabaseSecretBackendRoleConfig_basic(name, dbName, backend, connURL),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),

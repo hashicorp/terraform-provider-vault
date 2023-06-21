@@ -101,6 +101,7 @@ func databaseSecretBackendRoleResource() *schema.Resource {
 			consts.FieldCredentialType: {
 				Type:        schema.TypeString,
 				Optional:    true,
+				Computed:    true,
 				Description: "Specifies the type of credential that will be generated for the role.",
 			},
 			consts.FieldCredentialConfig: {
