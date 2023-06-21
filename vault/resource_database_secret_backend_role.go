@@ -25,18 +25,14 @@ var (
 )
 
 var roleAPIFields = []string{
-	consts.FieldCACert,
-	consts.FieldCAPrivateKey,
-	consts.FieldKeyType,
-	consts.FieldCommonNameTemplate,
 	consts.FieldDefaultTTL,
 	consts.FieldMaxTTL,
-	consts.FieldKeyBits,
-	consts.FieldSignatureBits,
 	consts.FieldCreationStatements,
 	consts.FieldRevocationStatements,
 	consts.FieldRollbackStatements,
 	consts.FieldRenewStatements,
+	consts.FieldCredentialConfig,
+	consts.FieldCredentialType,
 }
 
 func databaseSecretBackendRoleResource() *schema.Resource {
@@ -112,33 +108,6 @@ func databaseSecretBackendRoleResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies the configuration for the given credential_type.",
 			},
-			consts.FieldKeyBits: {
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  2048,
-				Description: "Number of bits to use for the generated keys. Options include: 2048 " +
-					"(default), 3072, 4096; with key_type=ec, allowed values are: 224, 256 (default), " +
-					"384, 521; ignored with key_type=ed25519.",
-			},
-			consts.FieldSignatureBits: {
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  256,
-				Description: "The number of bits to use in the signature algorithm. Options include: 256 " +
-					"(default), 384, 512.",
-			},
-			consts.FieldFormat: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The output format of the generated private key credential.",
-			},
-
-			consts.FieldPasswordPolicy: {
-				Type:     schema.TypeString,
-				Optional: true,
-				Description: "The policy used for password generation. Only used when credential type " +
-					"is 'password'.",
-			},
 		},
 	}
 }
@@ -158,22 +127,8 @@ func databaseSecretBackendRoleWrite(ctx context.Context, d *schema.ResourceData,
 		"db_name":             d.Get(consts.FieldDBName),
 		"creation_statements": d.Get(consts.FieldCreationStatements),
 	}
-	fields := []string{
-		consts.FieldDefaultTTL,
-		consts.FieldMaxTTL,
-		consts.FieldRevocationStatements,
-		consts.FieldRollbackStatements,
-		consts.FieldRenewStatements,
-		consts.FieldCredentialType,
-		consts.FieldCredentialConfig,
-		consts.FieldCACert,
-		consts.FieldPrivateKey,
-		consts.FieldKeyType,
-		consts.FieldKeyBits,
-		consts.FieldSignatureBits,
-		consts.FieldCommonNameTemplate,
-	}
-	for _, k := range fields {
+
+	for _, k := range roleAPIFields {
 		if d.HasChange(k) {
 			data[k] = d.Get(k)
 		}
