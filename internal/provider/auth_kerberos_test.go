@@ -26,15 +26,7 @@ const (
 )
 
 func TestAuthLoginKerberos_Init(t *testing.T) {
-	tests := []struct {
-		name         string
-		authField    string
-		raw          map[string]interface{}
-		wantErr      bool
-		expectMount  string
-		expectParams map[string]interface{}
-		expectErr    error
-	}{
+	tests := []authLoginInitTest{
 		{
 			name: "with-token",
 			raw: map[string]interface{}{
@@ -91,25 +83,7 @@ func TestAuthLoginKerberos_Init(t *testing.T) {
 			s := map[string]*schema.Schema{
 				tt.authField: GetKerberosLoginSchema(tt.authField),
 			}
-
-			d := schema.TestResourceDataRaw(t, s, tt.raw)
-			l := &AuthLoginKerberos{}
-			_, err := l.Init(d, tt.authField)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("Init() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if err != nil {
-				if tt.expectErr != nil {
-					if !reflect.DeepEqual(tt.expectErr, err) {
-						t.Errorf("Init() expected error %#v, actual %#v", tt.expectErr, err)
-					}
-				}
-			} else {
-				if !reflect.DeepEqual(tt.expectParams, l.params) {
-					t.Errorf("Init() expected params %#v, actual %#v", tt.expectParams, l.params)
-				}
-			}
+			assertAuthLoginInit(t, tt, s, &AuthLoginKerberos{})
 		})
 	}
 }

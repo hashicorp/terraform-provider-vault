@@ -71,11 +71,11 @@ func (l *AuthLoginJWT) LoginPath() string {
 }
 
 func (l *AuthLoginJWT) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
-	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
-		return nil, err
-	}
-
-	if err := l.checkRequiredFields(d, consts.FieldRole, consts.FieldJWT); err != nil {
+	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData) error {
+			return l.checkRequiredFields(d, consts.FieldRole, consts.FieldJWT)
+		},
+	); err != nil {
 		return nil, err
 	}
 

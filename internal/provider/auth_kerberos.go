@@ -125,28 +125,21 @@ func (l *AuthLoginKerberos) LoginPath() string {
 }
 
 func (l *AuthLoginKerberos) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
-	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
-		return nil, err
-	}
-
-	if _, ok := l.getOk(d, consts.FieldToken); !ok {
-		required := []string{
-			consts.FieldUsername,
-			consts.FieldService,
-			consts.FieldRealm,
-			consts.FieldKeytabPath,
-			consts.FieldKRB5ConfPath,
-		}
-		var missing []string
-		for _, f := range required {
-			if _, ok := l.getOk(d, f); !ok {
-				missing = append(missing, f)
+	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData) error {
+			if _, ok := l.getOk(d, consts.FieldToken); !ok {
+				return l.checkRequiredFields(d,
+					consts.FieldUsername,
+					consts.FieldService,
+					consts.FieldRealm,
+					consts.FieldKeytabPath,
+					consts.FieldKRB5ConfPath,
+				)
 			}
-		}
-
-		if len(missing) > 0 {
-			return nil, fmt.Errorf("required fields are unset: %v", missing)
-		}
+			return nil
+		},
+	); err != nil {
+		return nil, err
 	}
 
 	return l, nil

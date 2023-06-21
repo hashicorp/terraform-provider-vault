@@ -76,10 +76,15 @@ type AuthLoginUserpass struct {
 	AuthLoginCommon
 }
 
-func (l *AuthLoginUserpass) Init(d *schema.ResourceData, field string) (AuthLogin, error) {
-	if err := l.AuthLoginCommon.Init(d, field); err != nil {
+func (l *AuthLoginUserpass) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData) error {
+			return l.checkRequiredFields(d, consts.FieldUsername)
+		},
+	); err != nil {
 		return nil, err
 	}
+
 	return l, nil
 }
 
