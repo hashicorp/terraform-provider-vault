@@ -20,6 +20,7 @@ import (
 )
 
 func TestAccOktaAuthBackend_basic(t *testing.T) {
+	resName := "vault_okta_auth_backend.test"
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-basic-")
 
@@ -34,6 +35,10 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 					testAccOktaAuthBackend_InitialCheck,
 					testAccOktaAuthBackend_GroupsCheck(path, "dummy", []string{"one", "two", "default"}),
 					testAccOktaAuthBackend_UsersCheck(path, "foo", []string{"dummy"}, []string{}),
+					resource.TestCheckResourceAttr(resName, "tune.1140311728.default_lease_ttl", "10m"),
+					resource.TestCheckResourceAttr(resName, "tune.1140311728.max_lease_ttl", "20m"),
+					resource.TestCheckResourceAttr(resName, "tune.1140311728.listing_visibility", "hidden"),
+					resource.TestCheckResourceAttr(resName, "tune.1140311728.token_type", "batch"),
 				),
 			},
 			{
@@ -41,6 +46,10 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccOktaAuthBackend_GroupsCheck(path, "example", []string{"three", "four", "default"}),
 					testAccOktaAuthBackend_UsersCheck(path, "bar", []string{"example"}, []string{}),
+					resource.TestCheckResourceAttr(resName, "tune.1364225787.default_lease_ttl", "30m"),
+					resource.TestCheckResourceAttr(resName, "tune.1364225787.max_lease_ttl", "1h"),
+					resource.TestCheckResourceAttr(resName, "tune.1364225787.listing_visibility", "unauth"),
+					resource.TestCheckResourceAttr(resName, "tune.1364225787.token_type", "default-batch"),
 				),
 			},
 		},
@@ -192,6 +201,12 @@ resource "vault_okta_auth_backend" "test" {
         username = "foo"
         groups = ["dummy"]
     }
+	tune {
+		default_lease_ttl = "10m"
+		max_lease_ttl = "20m"
+		listing_visibility = "hidden"
+		token_type = "batch"
+	}
 }
 `, path, organization)
 }
@@ -211,6 +226,12 @@ resource "vault_okta_auth_backend" "test" {
         username = "bar"
         groups = ["example"]
     }
+	tune {
+		default_lease_ttl = "30m"
+		max_lease_ttl = "1h"
+		listing_visibility = "unauth"
+		token_type = "default-batch"
+	}
 }
 `, path, organization)
 }

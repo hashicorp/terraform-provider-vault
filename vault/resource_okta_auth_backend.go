@@ -214,6 +214,7 @@ func oktaAuthBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The mount accessor related to the auth mount.",
 			},
+			"tune": authMountTuneSchema(),
 		},
 	})
 }
@@ -317,6 +318,19 @@ func oktaAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error reading okta oth mount from '%q': %s", path, err)
 	}
+
+	log.Printf("[INFO] Reading okta auth tune from '%q/tune'", path)
+	rawTune, err := authMountTuneGet(client, oktaTuneEndpoint(path))
+	if err != nil {
+		return fmt.Errorf("error reading tune information from Vault: %s", err)
+	}
+
+	if err := d.Set("tune", []map[string]interface{}{rawTune}); err != nil {
+		log.Printf("[ERROR] Error when setting tune config from path '%q/tune' to state: %s", path, err)
+		return err
+	}
+
+	log.Printf("[INFO] Read okta auth tune from '%q/tune'", path)
 
 	if err := d.Set("accessor", mount.Accessor); err != nil {
 		return err
@@ -441,6 +455,19 @@ func oktaAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		err = oktaAuthUpdateUsers(d, client, path, oldValue, newValue)
 		if err != nil {
 			return err
+		}
+	}
+
+	if d.HasChange("tune") {
+		if raw, ok := d.GetOk("tune"); ok {
+			log.Printf("[INFO] Writing okta auth tune to '%q'", oktaTuneEndpoint(path))
+
+			err := authMountTune(client, oktaTuneEndpoint(path), raw)
+			if err != nil {
+				return nil
+			}
+
+			d.SetPartial("tune")
 		}
 	}
 
