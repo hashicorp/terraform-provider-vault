@@ -37,6 +37,7 @@ func testResourceTokenCheckDestroy(s *terraform.State) error {
 }
 
 func TestResourceToken_basic(t *testing.T) {
+	t.Parallel()
 	resourceName := "vault_token.test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -58,6 +59,7 @@ func TestResourceToken_basic(t *testing.T) {
 }
 
 func TestResourceToken_import(t *testing.T) {
+	t.Parallel()
 	resourceName := "vault_token.test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -101,6 +103,7 @@ resource "vault_token" "test" {
 }
 
 func TestResourceToken_full(t *testing.T) {
+	t.Parallel()
 	resourceName := "vault_token.test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -156,6 +159,7 @@ resource "vault_token" "test" {
 }
 
 func TestResourceToken_lookup(t *testing.T) {
+	t.Parallel()
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -188,6 +192,7 @@ resource "vault_token" "test" {
 }
 
 func TestResourceToken_expire(t *testing.T) {
+	t.Parallel()
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -249,6 +254,7 @@ resource "vault_token" "test" {
 }
 
 func TestResourceToken_renew(t *testing.T) {
+	t.Parallel()
 	resourceName := "vault_token.test"
 
 	commonCheckFuncs := []resource.TestCheckFunc{

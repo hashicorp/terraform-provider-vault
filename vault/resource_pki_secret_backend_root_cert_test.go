@@ -18,6 +18,7 @@ import (
 )
 
 func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
+	t.Parallel()
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -110,6 +111,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("test-pki-mount")
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -281,6 +283,7 @@ func Test_pkiSecretSerialNumberUpgradeV0(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := pkiSecretSerialNumberUpgradeV0(nil, tt.rawState, nil)
 
 			if tt.wantErr {

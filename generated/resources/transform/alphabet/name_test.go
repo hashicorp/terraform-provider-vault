@@ -26,6 +26,7 @@ var nameTestProvider = func() *schema.Provider {
 }()
 
 func TestAlphabetName(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("transform")
 
 	resource.Test(t, resource.TestCase{

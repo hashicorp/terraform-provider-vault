@@ -158,6 +158,7 @@ func TestTokenReadProviderConfigureWithHeaders(t *testing.T) {
 func TestAccNamespaceProviderConfigure(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
 	testutil.SkipTestAcc(t)
+	t.Parallel()
 
 	rootProvider := Provider()
 	rootProviderResource := &schema.Resource{
@@ -477,6 +478,7 @@ func TestAccProviderToken(t *testing.T) {
 }
 
 func TestAccTokenName(t *testing.T) {
+	t.Parallel()
 	defer os.Unsetenv("VAULT_TOKEN_NAME")
 	tests := []struct {
 		TokenNameEnv       string
@@ -557,6 +559,7 @@ func TestAccTokenName(t *testing.T) {
 }
 
 func TestAccChildToken(t *testing.T) {
+	t.Parallel()
 	defer os.Unsetenv(consts.EnvVarSkipChildToken)
 
 	checkTokenUsed := func(expectChildToken bool) resource.TestCheckFunc {
@@ -716,6 +719,7 @@ func TestAccProviderVaultAddrEnv(t *testing.T) {
 	// This is an acceptance test because it requires filesystem and env var
 	// changes that could interfere with other Vault operations.
 	testutil.SkipTestAcc(t)
+	t.Parallel()
 
 	// Clear the config file env var and restore it after the test.
 	resetConfigPathEnv, err := tempUnsetenv(config.ConfigPathEnv)

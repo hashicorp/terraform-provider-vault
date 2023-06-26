@@ -26,6 +26,7 @@ var nameTestProvider = func() *schema.Provider {
 }()
 
 func TestTransformationName(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("transform")
 
 	resourceName := "vault_transform_transformation_name.test"

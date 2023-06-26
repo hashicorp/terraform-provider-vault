@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -19,6 +20,7 @@ var testLegacyPolicyIdentifiers = `policy_identifiers = ["1.2.3.4"]`
 
 func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+	t.Parallel()
 	// TODO: this can be merged with TestPkiSecretBackendRole_basic after Vault 1.11 is released.
 	newPolicyIdentifiers := `policy_identifier {
     oid = "1.2.3.4.5"
@@ -127,6 +129,7 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 }
 
 func TestPkiSecretBackendRole_basic(t *testing.T) {
+	t.Parallel()
 	backend := acctest.RandomWithPrefix("pki")
 	name := acctest.RandomWithPrefix("role")
 	resourceName := "vault_pki_secret_backend_role.test"

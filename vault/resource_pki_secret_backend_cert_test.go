@@ -33,6 +33,7 @@ type testPKICertStore struct {
 }
 
 func TestPkiSecretBackendCert_basic(t *testing.T) {
+	t.Parallel()
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
 
@@ -173,6 +174,7 @@ resource "vault_pki_secret_backend_cert" "test" {
 }
 
 func TestPkiSecretBackendCert_renew(t *testing.T) {
+	t.Parallel()
 	path := "pki-root-" + strconv.Itoa(acctest.RandInt())
 
 	store := &testPKICertStore{}
