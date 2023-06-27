@@ -197,8 +197,8 @@ func TestResourceToken_expire(t *testing.T) {
 				Config: testResourceTokenConfig_expire(),
 				Check: resource.ComposeTestCheckFunc(
 					testResourceTokenCheckExpireTime("vault_token.test"),
-					resource.TestCheckResourceAttr("vault_token.test", consts.FieldTTL, "3s"),
-					resource.TestCheckResourceAttr("vault_token.test", consts.FieldLeaseDuration, "2"),
+					resource.TestCheckResourceAttr("vault_token.test", consts.FieldTTL, "5s"),
+					resource.TestCheckResourceAttr("vault_token.test", consts.FieldLeaseDuration, "4"),
 					resource.TestCheckResourceAttrSet("vault_token.test", consts.FieldLeaseStarted),
 					resource.TestCheckResourceAttrSet("vault_token.test", consts.FieldClientToken),
 				),
@@ -222,8 +222,8 @@ func TestResourceToken_expire(t *testing.T) {
 				Config: testResourceTokenConfig_expire(),
 				Check: resource.ComposeTestCheckFunc(
 					testResourceTokenCheckExpireTime("vault_token.test"),
-					resource.TestCheckResourceAttr("vault_token.test", consts.FieldTTL, "3s"),
-					resource.TestCheckResourceAttr("vault_token.test", consts.FieldLeaseDuration, "2"),
+					resource.TestCheckResourceAttr("vault_token.test", consts.FieldTTL, "5s"),
+					resource.TestCheckResourceAttr("vault_token.test", consts.FieldLeaseDuration, "4"),
 					resource.TestCheckResourceAttrSet("vault_token.test", consts.FieldLeaseStarted),
 					resource.TestCheckResourceAttrSet("vault_token.test", consts.FieldClientToken),
 				),
@@ -243,7 +243,7 @@ EOT
 
 resource "vault_token" "test" {
   policies = [vault_policy.test.name]
-  ttl      = "3s"
+  ttl      = "5s"
 }
 `
 }
