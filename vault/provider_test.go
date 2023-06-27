@@ -559,7 +559,6 @@ func TestAccTokenName(t *testing.T) {
 }
 
 func TestAccChildToken(t *testing.T) {
-	t.Parallel()
 	defer os.Unsetenv(consts.EnvVarSkipChildToken)
 
 	checkTokenUsed := func(expectChildToken bool) resource.TestCheckFunc {

@@ -174,7 +174,6 @@ resource "vault_pki_secret_backend_cert" "test" {
 }
 
 func TestPkiSecretBackendCert_renew(t *testing.T) {
-	t.Parallel()
 	path := "pki-root-" + strconv.Itoa(acctest.RandInt())
 
 	store := &testPKICertStore{}

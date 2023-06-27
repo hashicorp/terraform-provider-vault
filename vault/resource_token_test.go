@@ -37,7 +37,6 @@ func testResourceTokenCheckDestroy(s *terraform.State) error {
 }
 
 func TestResourceToken_basic(t *testing.T) {
-	t.Parallel()
 	resourceName := "vault_token.test_basic"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -233,7 +232,6 @@ resource "vault_token" "test_expire" {
 }
 
 func TestResourceToken_renew(t *testing.T) {
-	t.Parallel()
 	resourceName := "vault_token.test_renew"
 
 	commonCheckFuncs := []resource.TestCheckFunc{

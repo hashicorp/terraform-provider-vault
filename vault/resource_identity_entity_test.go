@@ -41,7 +41,6 @@ func TestAccIdentityEntity(t *testing.T) {
 }
 
 func TestAccIdentityEntityUpdate(t *testing.T) {
-	t.Parallel()
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "vault_identity_entity.entity"
