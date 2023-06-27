@@ -179,7 +179,7 @@ func TestPkiSecretBackendCert_renew(t *testing.T) {
 
 	store := &testPKICertStore{}
 
-	resourceName := "vault_pki_secret_backend_cert.test"
+	resourceName := "vault_pki_secret_backend_cert.test_renew"
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, "backend", path),
 		resource.TestCheckResourceAttr(resourceName, "common_name", "cert.test.my.domain"),
@@ -253,7 +253,7 @@ func testWaitCertExpiry(store *testPKICertStore) func() {
 
 func testPkiSecretBackendCertConfig_renew(rootPath string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test-root" {
+resource "vault_mount" "test-root-renew" {
   path                      = "%s"
   type                      = "pki"
   description               = "test root"
@@ -261,8 +261,8 @@ resource "vault_mount" "test-root" {
   max_lease_ttl_seconds     = "8640000"
 }
 
-resource "vault_pki_secret_backend_root_cert" "test" {
-  backend            = vault_mount.test-root.path
+resource "vault_pki_secret_backend_root_cert" "test_renew" {
+  backend            = vault_mount.test-root-renew.path
   type               = "internal"
   common_name        = "my.domain"
   ttl                = "86400"
@@ -277,8 +277,8 @@ resource "vault_pki_secret_backend_root_cert" "test" {
   province           = "test"
 }
 
-resource "vault_pki_secret_backend_role" "test" {
-  backend          = vault_pki_secret_backend_root_cert.test.backend
+resource "vault_pki_secret_backend_role" "test_renew" {
+  backend          = vault_pki_secret_backend_root_cert.test_renew.backend
   name             = "test"
   allowed_domains  = ["test.my.domain"]
   allow_subdomains = true
@@ -286,9 +286,9 @@ resource "vault_pki_secret_backend_role" "test" {
   key_usage        = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
 }
 
-resource "vault_pki_secret_backend_cert" "test" {
-  backend               = vault_pki_secret_backend_role.test.backend
-  name                  = vault_pki_secret_backend_role.test.name
+resource "vault_pki_secret_backend_cert" "test_renew" {
+  backend               = vault_pki_secret_backend_role.test_renew.backend
+  name                  = vault_pki_secret_backend_role.test_renew.name
   common_name           = "cert.test.my.domain"
   ttl                   = "1h"
   auto_renew            = true

@@ -232,7 +232,7 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 
 func testPkiSecretBackendRootCertificateConfig_managedKeys(path, managedKeyName, accessKey, secretKey string) string {
 	config := fmt.Sprintf(`
-resource "vault_managed_keys" "test" {
+resource "vault_managed_keys" "test_managed_keys" {
   aws {
     name       = "%s"
     access_key = "%s"
@@ -243,20 +243,20 @@ resource "vault_managed_keys" "test" {
   }
 }
 
-resource "vault_mount" "test" {
+resource "vault_mount" "test_managed_keys" {
   path                      = "%s"
   type                      = "pki"
   description               = "test"
   default_lease_ttl_seconds = "86400"
   max_lease_ttl_seconds     = "86400"
-  allowed_managed_keys      = [tolist(vault_managed_keys.test.aws)[0].name]
+  allowed_managed_keys      = [tolist(vault_managed_keys.test_managed_keys.aws)[0].name]
 }
 
-resource "vault_pki_secret_backend_root_cert" "test" {
-  backend          = vault_mount.test.path
+resource "vault_pki_secret_backend_root_cert" "test_managed_keys" {
+  backend          = vault_mount.test_managed_keys.path
   type             = "kms"
   common_name      = "test Root CA"
-  managed_key_id = tolist(vault_managed_keys.test.aws)[0].uuid
+  managed_key_id = tolist(vault_managed_keys.test_managed_keys.aws)[0].uuid
 }
 `, managedKeyName, accessKey, secretKey, path)
 

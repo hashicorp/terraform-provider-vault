@@ -19,7 +19,7 @@ import (
 func TestPkiSecretBackendIntermediateCertRequest_basic(t *testing.T) {
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
-	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
+	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test_basic"
 	testCheckFunc := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, "backend", path),
 		resource.TestCheckResourceAttr(resourceName, "type", "internal"),
@@ -77,7 +77,7 @@ func TestPkiSecretBackendIntermediateCertRequest_managedKeys(t *testing.T) {
 func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
 	path := acctest.RandomWithPrefix("test-pki-mount")
 
-	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
+	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test_multi_issuer"
 	keyName := acctest.RandomWithPrefix("test-pki-key")
 
 	checks := []resource.TestCheckFunc{
@@ -110,7 +110,7 @@ func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
 
 func testPkiSecretBackendIntermediateCertRequestConfig_basic(path string, addConstraints bool) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test" {
+resource "vault_mount" "test_basic" {
   path                      = "%s"
   type                      = "pki"
   description               = "test"
@@ -118,8 +118,8 @@ resource "vault_mount" "test" {
   max_lease_ttl_seconds     = 86400
 }
 
-resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
-  backend               = vault_mount.test.path
+resource "vault_pki_secret_backend_intermediate_cert_request" "test_basic" {
+  backend               = vault_mount.test_basic.path
   type                  = "internal"
   common_name           = "test.my.domain"
   uri_sans              = ["spiffe://test.my.domain"]
@@ -130,7 +130,7 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
 
 func testPkiSecretBackendIntermediateCertRequestConfig_multiIssuer(path, keyName string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test" {
+resource "vault_mount" "test_multi_issuer" {
   path                      = "%s"
   type                      = "pki"
   description               = "test"
@@ -138,19 +138,19 @@ resource "vault_mount" "test" {
   max_lease_ttl_seconds     = 86400
 }
 
-resource "vault_pki_secret_backend_key" "test" {
-  backend  = vault_mount.test.path
+resource "vault_pki_secret_backend_key" "test_multi_issuer" {
+  backend  = vault_mount.test_multi_issuer.path
   type     = "exported"
   key_name = "test"
   key_type = "rsa"
   key_bits = "4096"
 }
 
-resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
-  backend     = vault_mount.test.path
+resource "vault_pki_secret_backend_intermediate_cert_request" "test_multi_issuer" {
+  backend     = vault_mount.test_multi_issuer.path
   type        = "internal"
   common_name = "test Intermediate CA"
-  key_ref     = vault_pki_secret_backend_key.test.id
+  key_ref     = vault_pki_secret_backend_key.test_multi_issuer.id
   key_name    = "%s"
 }
 `, path, keyName)
@@ -158,7 +158,7 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
 
 func testPkiSecretBackendIntermediateCertRequestConfig_managedKeys(path, keyName, accessKey, secretKey string) string {
 	return fmt.Sprintf(`
-resource "vault_managed_keys" "test" {
+resource "vault_managed_keys" "test_managed_keys" {
   aws {
     name       = "%s"
     access_key = "%s"
@@ -169,19 +169,19 @@ resource "vault_managed_keys" "test" {
   }
 }
 
-resource "vault_mount" "test" {
+resource "vault_mount" "test_managed_keys" {
   path                      = "%s"
   type                      = "pki"
   description               = "test"
   default_lease_ttl_seconds = 86400
   max_lease_ttl_seconds     = 86400
-  allowed_managed_keys      = [tolist(vault_managed_keys.test.aws)[0].name]
+  allowed_managed_keys      = [tolist(vault_managed_keys.test_managed_keys.aws)[0].name]
 }
 
-resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
-  backend          = vault_mount.test.path
+resource "vault_pki_secret_backend_intermediate_cert_request" "test_managed_keys" {
+  backend          = vault_mount.test_managed_keys.path
   type             = "kms"
-  managed_key_name = tolist(vault_managed_keys.test.aws)[0].name
+  managed_key_name = tolist(vault_managed_keys.test_managed_keys.aws)[0].name
   common_name      = "test.my.domain"
   uri_sans         = ["spiffe://test.my.domain"]
 }
