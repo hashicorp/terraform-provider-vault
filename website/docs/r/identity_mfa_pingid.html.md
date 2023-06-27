@@ -14,7 +14,7 @@ Resource for configuring the pingid MFA method.
 
 
 ```hcl
-resource "vault_identity_mfa_duo" "example" {
+resource "vault_identity_mfa_pingid" "example" {
   settings_file_base64 = "CnVzZV9iYXNlNjR[...]HBtCg=="
 }
 ```
