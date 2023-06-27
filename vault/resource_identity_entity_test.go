@@ -23,7 +23,6 @@ import (
 )
 
 func TestAccIdentityEntity(t *testing.T) {
-	t.Parallel()
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "vault_identity_entity.entity"
@@ -70,7 +69,6 @@ func TestAccIdentityEntityUpdate(t *testing.T) {
 }
 
 func TestAccIdentityEntityUpdateRemoveValues(t *testing.T) {
-	t.Parallel()
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "vault_identity_entity.entity"
@@ -101,8 +99,8 @@ func TestAccIdentityEntityUpdateRemoveValues(t *testing.T) {
 // are still in the plan. They should be removed from the entity if this
 // bool is true.
 func TestAccIdentityEntityUpdateRemovePolicies(t *testing.T) {
-	t.Parallel()
 	entity := acctest.RandomWithPrefix("test-entity")
+
 	resourceName := "vault_identity_entity.entity"
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },

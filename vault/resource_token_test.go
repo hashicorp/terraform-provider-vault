@@ -37,7 +37,28 @@ func testResourceTokenCheckDestroy(s *terraform.State) error {
 }
 
 func TestResourceToken_basic(t *testing.T) {
-	resourceName := "vault_token.test_basic"
+	resourceName := "vault_token.test"
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testResourceTokenCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceTokenConfig_basic(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "60s"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLeaseDuration),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLeaseStarted),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldClientToken),
+				),
+			},
+		},
+	})
+}
+
+func TestResourceToken_import(t *testing.T) {
+	resourceName := "vault_token.test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -66,22 +87,21 @@ func TestResourceToken_basic(t *testing.T) {
 
 func testResourceTokenConfig_basic() string {
 	return `
-resource "vault_policy" "test_basic" {
+resource "vault_policy" "test" {
 	name = "test"
 	policy = <<EOT
 path "secret/*" { capabilities = [ "list" ] }
 EOT
 }
 
-resource "vault_token" "test_basic" {
-	policies = [ vault_policy.test_basic.name ]
+resource "vault_token" "test" {
+	policies = [ vault_policy.test.name ]
 	ttl = "60s"
 }`
 }
 
 func TestResourceToken_full(t *testing.T) {
-	t.Parallel()
-	resourceName := "vault_token.test_full"
+	resourceName := "vault_token.test"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -111,15 +131,15 @@ func TestResourceToken_full(t *testing.T) {
 
 func testResourceTokenConfig_full() string {
 	return `
-resource "vault_policy" "test_full" {
+resource "vault_policy" "test" {
   name   = "test"
   policy = <<EOT
 path "secret/*" { capabilities = [ "list" ] }
 EOT
 }
 
-resource "vault_token" "test_full" {
-  policies          = [vault_policy.test_full.name]
+resource "vault_token" "test" {
+  policies          = [vault_policy.test.name]
   no_parent         = true
   no_default_policy = true
   renewable         = true
@@ -136,7 +156,6 @@ resource "vault_token" "test_full" {
 }
 
 func TestResourceToken_lookup(t *testing.T) {
-	t.Parallel()
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -145,7 +164,7 @@ func TestResourceToken_lookup(t *testing.T) {
 			{
 				Config: testResourceTokenConfig_lookup(),
 				Check: resource.ComposeTestCheckFunc(
-					testResourceTokenLookup("vault_token.test_lookup"),
+					testResourceTokenLookup("vault_token.test"),
 				),
 			},
 		},
@@ -154,23 +173,21 @@ func TestResourceToken_lookup(t *testing.T) {
 
 func testResourceTokenConfig_lookup() string {
 	return `
-resource "vault_policy" "test_lookup" {
+resource "vault_policy" "test" {
   name   = "test"
   policy = <<EOT
 path "secret/*" { capabilities = [ "list" ] }
 EOT
 }
 
-resource "vault_token" "test_lookup" {
-  policies = [vault_policy.test_lookup.name]
+resource "vault_token" "test" {
+  policies = [vault_policy.test.name]
   ttl      = "60s"
 }
 `
 }
 
 func TestResourceToken_expire(t *testing.T) {
-	t.Parallel()
-	resourceName := "vault_token.test_expire"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -179,11 +196,11 @@ func TestResourceToken_expire(t *testing.T) {
 			{
 				Config: testResourceTokenConfig_expire(),
 				Check: resource.ComposeTestCheckFunc(
-					testResourceTokenCheckExpireTime(resourceName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "10s"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldLeaseDuration, "9"),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLeaseStarted),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldClientToken),
+					testResourceTokenCheckExpireTime("vault_token.test"),
+					resource.TestCheckResourceAttr("vault_token.test", consts.FieldTTL, "10s"),
+					resource.TestCheckResourceAttr("vault_token.test", consts.FieldLeaseDuration, "9"),
+					resource.TestCheckResourceAttrSet("vault_token.test", consts.FieldLeaseStarted),
+					resource.TestCheckResourceAttrSet("vault_token.test", consts.FieldClientToken),
 				),
 			},
 			{
@@ -193,7 +210,7 @@ func TestResourceToken_expire(t *testing.T) {
 			{
 				Config: testResourceTokenConfig_expire(),
 				Check: resource.ComposeTestCheckFunc(
-					testResourceTokenWaitExpireTime(resourceName),
+					testResourceTokenWaitExpireTime("vault_token.test"),
 				),
 				ExpectNonEmptyPlan: true,
 			},
@@ -204,11 +221,11 @@ func TestResourceToken_expire(t *testing.T) {
 			{
 				Config: testResourceTokenConfig_expire(),
 				Check: resource.ComposeTestCheckFunc(
-					testResourceTokenCheckExpireTime(resourceName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "10s"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldLeaseDuration, "9"),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLeaseStarted),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldClientToken),
+					testResourceTokenCheckExpireTime("vault_token.test"),
+					resource.TestCheckResourceAttr("vault_token.test", consts.FieldTTL, "10s"),
+					resource.TestCheckResourceAttr("vault_token.test", consts.FieldLeaseDuration, "9"),
+					resource.TestCheckResourceAttrSet("vault_token.test", consts.FieldLeaseStarted),
+					resource.TestCheckResourceAttrSet("vault_token.test", consts.FieldClientToken),
 				),
 			},
 		},
@@ -217,22 +234,22 @@ func TestResourceToken_expire(t *testing.T) {
 
 func testResourceTokenConfig_expire() string {
 	return `
-resource "vault_policy" "test_expire" {
-  name   = "test_expire"
+resource "vault_policy" "test" {
+  name   = "test"
   policy = <<EOT
 path "secret/*" { capabilities = [ "list" ] }
 EOT
 }
 
-resource "vault_token" "test_expire" {
-  policies = [vault_policy.test_expire.name]
+resource "vault_token" "test" {
+  policies = [vault_policy.test.name]
   ttl      = "10s"
 }
 `
 }
 
 func TestResourceToken_renew(t *testing.T) {
-	resourceName := "vault_token.test_renew"
+	resourceName := "vault_token.test"
 
 	commonCheckFuncs := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "30s"),
@@ -240,7 +257,7 @@ func TestResourceToken_renew(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldRenewIncrement, "30"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldLeaseDuration, "29"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldPolicies+".#", "1"),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldPolicies+".0", "test_renew"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPolicies+".0", "test"),
 	}
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -293,16 +310,16 @@ func TestResourceToken_renew(t *testing.T) {
 
 func testResourceTokenConfig_renew(renewable bool) string {
 	config := fmt.Sprintf(`
-resource "vault_policy" "test_renew" {
-  name   = "test_renew"
+resource "vault_policy" "test" {
+  name   = "test"
   policy = <<EOT
 path "secret/*" { capabilities = [ "list" ] }
 EOT
 }
 
-resource "vault_token" "test_renew" {
+resource "vault_token" "test" {
   policies = [
-    vault_policy.test_renew.name,
+    vault_policy.test.name,
   ]
   renewable       = "%t"
   ttl             = "30s"

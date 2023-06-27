@@ -16,7 +16,6 @@ import (
 
 func TestAccKMIPSecretBackend_basic(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
-	t.Parallel()
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	resourceType := "vault_kmip_secret_backend"
@@ -80,7 +79,6 @@ func TestAccKMIPSecretBackend_basic(t *testing.T) {
 
 func TestAccKMIPSecretBackend_remount(t *testing.T) {
 	testutil.SkipTestAccEnt(t)
-	t.Parallel()
 
 	path := acctest.RandomWithPrefix("tf-test-kmip")
 	remountPath := acctest.RandomWithPrefix("tf-test-kmip-updated")

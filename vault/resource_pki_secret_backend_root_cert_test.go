@@ -18,7 +18,6 @@ import (
 )
 
 func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
-	t.Parallel()
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -111,7 +110,6 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 }
 
 func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
-	t.Parallel()
 	path := acctest.RandomWithPrefix("test-pki-mount")
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -232,7 +230,7 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 
 func testPkiSecretBackendRootCertificateConfig_managedKeys(path, managedKeyName, accessKey, secretKey string) string {
 	config := fmt.Sprintf(`
-resource "vault_managed_keys" "test_managed_keys" {
+resource "vault_managed_keys" "test" {
   aws {
     name       = "%s"
     access_key = "%s"
@@ -243,20 +241,20 @@ resource "vault_managed_keys" "test_managed_keys" {
   }
 }
 
-resource "vault_mount" "test_managed_keys" {
+resource "vault_mount" "test" {
   path                      = "%s"
   type                      = "pki"
   description               = "test"
   default_lease_ttl_seconds = "86400"
   max_lease_ttl_seconds     = "86400"
-  allowed_managed_keys      = [tolist(vault_managed_keys.test_managed_keys.aws)[0].name]
+  allowed_managed_keys      = [tolist(vault_managed_keys.test.aws)[0].name]
 }
 
-resource "vault_pki_secret_backend_root_cert" "test_managed_keys" {
-  backend          = vault_mount.test_managed_keys.path
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend          = vault_mount.test.path
   type             = "kms"
   common_name      = "test Root CA"
-  managed_key_id = tolist(vault_managed_keys.test_managed_keys.aws)[0].uuid
+  managed_key_id = tolist(vault_managed_keys.test.aws)[0].uuid
 }
 `, managedKeyName, accessKey, secretKey, path)
 
@@ -283,7 +281,6 @@ func Test_pkiSecretSerialNumberUpgradeV0(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			got, err := pkiSecretSerialNumberUpgradeV0(nil, tt.rawState, nil)
 
 			if tt.wantErr {

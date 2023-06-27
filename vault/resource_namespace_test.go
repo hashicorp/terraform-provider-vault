@@ -18,7 +18,6 @@ import (
 )
 
 func TestAccNamespace(t *testing.T) {
-	t.Parallel()
 	namespacePath := acctest.RandomWithPrefix("parent-ns")
 	resourceNameParent := "vault_namespace.parent"
 	resourceNameChild := "vault_namespace.child"
