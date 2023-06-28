@@ -12,10 +12,10 @@ build: fmtcheck
 	go install
 
 test: fmtcheck
-	TF_ACC= go test $(TESTARGS) -timeout 10m -parallel=20 $(TEST_PATH)
+	TF_ACC= go test $(TESTARGS) -timeout 10m -parallel=10 $(TEST_PATH)
 
 testacc: fmtcheck
-	TF_ACC=1 go test $(TESTARGS) -timeout 30m -parallel=20 $(TEST_PATH)
+	TF_ACC=1 go test $(TESTARGS) -timeout 30m -parallel=10 $(TEST_PATH)
 
 testacc: fmtcheck
 	TF_ACC=1 go test $(TESTARGS) -timeout 30m $(TEST_PATH)
