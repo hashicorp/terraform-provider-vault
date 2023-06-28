@@ -14,6 +14,7 @@ import (
 )
 
 func TestDataSourceIdentityOIDCClientCreds(t *testing.T) {
+	t.Parallel()
 	name := acctest.RandomWithPrefix("test-client")
 
 	resource.Test(t, resource.TestCase{
