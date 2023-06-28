@@ -17,9 +17,6 @@ test: fmtcheck
 testacc: fmtcheck
 	TF_ACC=1 go test $(TESTARGS) -timeout 30m -parallel=10 $(TEST_PATH)
 
-testacc: fmtcheck
-	TF_ACC=1 go test $(TESTARGS) -timeout 30m $(TEST_PATH)
-
 testacc-ent:
 	make testacc TF_ACC_ENTERPRISE=1
 
