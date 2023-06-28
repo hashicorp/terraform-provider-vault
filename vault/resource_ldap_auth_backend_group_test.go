@@ -18,6 +18,7 @@ import (
 )
 
 func TestLDAPAuthBackendGroup_import(t *testing.T) {
+	t.Parallel()
 	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
 	groupname := acctest.RandomWithPrefix("tf-test-ldap-group")
 
@@ -46,6 +47,7 @@ func TestLDAPAuthBackendGroup_import(t *testing.T) {
 }
 
 func TestLDAPAuthBackendGroup_basic(t *testing.T) {
+	t.Parallel()
 	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
 	groupname := acctest.RandomWithPrefix("tf-test-ldap-group")
 
