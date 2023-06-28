@@ -78,6 +78,7 @@ func TestKVV2SecretNameFromPath(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			name, err := getKVV2SecretNameFromPath(tt.path)
@@ -120,6 +121,7 @@ func TestKVV2SecretMountFromPath(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			mount, err := getKVV2SecretMountFromPath(tt.path)
