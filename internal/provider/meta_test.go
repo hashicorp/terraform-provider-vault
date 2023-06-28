@@ -665,6 +665,8 @@ func TestNewProviderMeta(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := api.DefaultConfig()
+			config.MinRetryWait = time.Nanosecond
+			config.MaxRetryWait = time.Nanosecond
 			config.CloneToken = true
 			client, err := api.NewClient(config)
 			if err != nil {
