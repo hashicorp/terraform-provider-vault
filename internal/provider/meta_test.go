@@ -662,17 +662,17 @@ func TestNewProviderMeta(t *testing.T) {
 		}
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			config := api.DefaultConfig()
-			config.MinRetryWait = time.Nanosecond
-			config.MaxRetryWait = time.Nanosecond
-			config.CloneToken = true
-			client, err := api.NewClient(config)
-			if err != nil {
-				t.Fatalf("failed to create Vault client, err=%s", err)
-			}
+	config := api.DefaultConfig()
+	config.CloneToken = true
+	client, err := api.NewClient(config)
+	if err != nil {
+		t.Fatalf("failed to create Vault client, err=%s", err)
+	}
 
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if tt.authLoginNamespace != "" {
 				createNamespace(t, client, tt.authLoginNamespace)
 				options := &api.EnableAuthOptions{
