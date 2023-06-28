@@ -530,28 +530,31 @@ func TestAccTokenName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		resource.Test(t, resource.TestCase{
-			Providers: testProviders,
-			PreCheck:  func() { testutil.TestAccPreCheck(t) },
-			Steps: []resource.TestStep{
-				{
-					PreConfig: func() {
-						if test.UseTokenNameEnv {
-							err := os.Setenv("VAULT_TOKEN_NAME", test.TokenNameEnv)
-							if err != nil {
-								t.Fatal(err)
+		t.Run(test.WantTokenName, func(t *testing.T) {
+			t.Parallel()
+			resource.Test(t, resource.TestCase{
+				Providers: testProviders,
+				PreCheck:  func() { testutil.TestAccPreCheck(t) },
+				Steps: []resource.TestStep{
+					{
+						PreConfig: func() {
+							if test.UseTokenNameEnv {
+								err := os.Setenv("VAULT_TOKEN_NAME", test.TokenNameEnv)
+								if err != nil {
+									t.Fatal(err)
+								}
+							} else {
+								err := os.Unsetenv("VAULT_TOKEN_NAME")
+								if err != nil {
+									t.Fatal(err)
+								}
 							}
-						} else {
-							err := os.Unsetenv("VAULT_TOKEN_NAME")
-							if err != nil {
-								t.Fatal(err)
-							}
-						}
+						},
+						Config: testProviderConfig(test.UseTokenNameSchema, `token_name = "`+test.TokenNameSchema+`"`),
+						Check:  checkSelfToken("display_name", test.WantTokenName),
 					},
-					Config: testProviderConfig(test.UseTokenNameSchema, `token_name = "`+test.TokenNameSchema+`"`),
-					Check:  checkSelfToken("display_name", test.WantTokenName),
 				},
-			},
+			})
 		})
 	}
 }
@@ -571,51 +574,51 @@ func TestAccChildToken(t *testing.T) {
 		}
 	}
 
-	tests := []struct {
+	tests := map[string]struct {
 		skipChildTokenEnv    string
 		useChildTokenEnv     bool
 		skipChildTokenSchema string
 		useChildTokenSchema  bool
 		expectChildToken     bool
 	}{
-		{
+		"tc1": {
 			useChildTokenSchema: false,
 			useChildTokenEnv:    false,
 			expectChildToken:    true,
 		},
-		{
+		"tc2": {
 			skipChildTokenEnv: "",
 			useChildTokenEnv:  true,
 			expectChildToken:  true,
 		},
-		{
+		"tc3": {
 			skipChildTokenEnv: "true",
 			useChildTokenEnv:  true,
 			expectChildToken:  false,
 		},
-		{
+		"tc4": {
 			skipChildTokenEnv: "false",
 			useChildTokenEnv:  true,
 			expectChildToken:  true,
 		},
-		{
+		"tc5": {
 			skipChildTokenSchema: "true",
 			useChildTokenSchema:  true,
 			expectChildToken:     false,
 		},
-		{
+		"tc6": {
 			skipChildTokenSchema: "false",
 			useChildTokenSchema:  true,
 			expectChildToken:     true,
 		},
-		{
+		"tc7": {
 			skipChildTokenEnv:    "true",
 			useChildTokenEnv:     true,
 			skipChildTokenSchema: "false",
 			useChildTokenSchema:  true,
 			expectChildToken:     true,
 		},
-		{
+		"tc8": {
 			skipChildTokenEnv:    "false",
 			useChildTokenEnv:     true,
 			skipChildTokenSchema: "true",
@@ -624,31 +627,34 @@ func TestAccChildToken(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		resource.Test(t, resource.TestCase{
-			Providers: testProviders,
-			PreCheck:  func() { testutil.TestAccPreCheck(t) },
-			Steps: []resource.TestStep{
-				{
-					PreConfig: func() {
-						if test.useChildTokenEnv {
-							err := os.Setenv(consts.EnvVarSkipChildToken, test.skipChildTokenEnv)
-							if err != nil {
-								t.Fatal(err)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			resource.Test(t, resource.TestCase{
+				Providers: testProviders,
+				PreCheck:  func() { testutil.TestAccPreCheck(t) },
+				Steps: []resource.TestStep{
+					{
+						PreConfig: func() {
+							if test.useChildTokenEnv {
+								err := os.Setenv(consts.EnvVarSkipChildToken, test.skipChildTokenEnv)
+								if err != nil {
+									t.Fatal(err)
+								}
+							} else {
+								err := os.Unsetenv(consts.EnvVarSkipChildToken)
+								if err != nil {
+									t.Fatal(err)
+								}
 							}
-						} else {
-							err := os.Unsetenv(consts.EnvVarSkipChildToken)
-							if err != nil {
-								t.Fatal(err)
-							}
-						}
+						},
+						Config: testProviderConfig(test.useChildTokenSchema,
+							consts.FieldSkipChildToken+` = `+test.skipChildTokenSchema,
+						),
+						Check: checkTokenUsed(test.expectChildToken),
 					},
-					Config: testProviderConfig(test.useChildTokenSchema,
-						consts.FieldSkipChildToken+` = `+test.skipChildTokenSchema,
-					),
-					Check: checkTokenUsed(test.expectChildToken),
 				},
-			},
+			})
 		})
 	}
 }
