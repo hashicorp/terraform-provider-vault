@@ -477,7 +477,6 @@ func TestAccProviderToken(t *testing.T) {
 }
 
 func TestAccTokenName(t *testing.T) {
-	t.Parallel()
 	defer os.Unsetenv("VAULT_TOKEN_NAME")
 	tests := []struct {
 		TokenNameEnv       string
@@ -560,7 +559,6 @@ func TestAccTokenName(t *testing.T) {
 }
 
 func TestAccChildToken(t *testing.T) {
-	t.Parallel()
 	defer os.Unsetenv(consts.EnvVarSkipChildToken)
 
 	checkTokenUsed := func(expectChildToken bool) resource.TestCheckFunc {
