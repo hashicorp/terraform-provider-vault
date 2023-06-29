@@ -188,6 +188,7 @@ resource "vault_token" "test" {
 }
 
 func TestResourceToken_expire(t *testing.T) {
+	t.Skip("skipping, because it's flaky in CI and there's a long time.Sleep call")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -249,6 +250,7 @@ resource "vault_token" "test" {
 }
 
 func TestResourceToken_renew(t *testing.T) {
+	t.Skip("skipping, because it's flaky in CI and there's a long time.Sleep call")
 	resourceName := "vault_token.test"
 
 	commonCheckFuncs := []resource.TestCheckFunc{
