@@ -20,6 +20,7 @@ import (
 )
 
 func TestAccOktaAuthBackend_basic(t *testing.T) {
+	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-basic-")
 
@@ -48,6 +49,7 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_import(t *testing.T) {
+	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-import-")
 
@@ -94,6 +96,7 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_invalid_ttl(t *testing.T) {
+	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-invalid-ttl-")
 
@@ -111,6 +114,7 @@ func TestAccOktaAuthBackend_invalid_ttl(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_invalid_max_ttl(t *testing.T) {
+	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-invalid_max_ttl-")
 
@@ -128,6 +132,7 @@ func TestAccOktaAuthBackend_invalid_max_ttl(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_groups_optional(t *testing.T) {
+	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-group-optional")
 
@@ -146,7 +151,8 @@ func TestAccOktaAuthBackend_groups_optional(t *testing.T) {
 	})
 }
 
-func TestOktaAuthBackend_remount(t *testing.T) {
+func TestAccOktaAuthBackend_remount(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-auth-okta")
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-okta-updated")
 
