@@ -11,17 +11,16 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestDataSourcePolicyList(t *testing.T) {
-	datasourceName := "data.vault_policy_list.test"
+func TestDataSourcePolicyRead(t *testing.T) {
+	datasourceName := "data.vault_policy_acl.test"
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testDataSourcePolicyListConfig(),
+				Config: testDataSourcePolicyReadConfig(),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "names.#", "2"),
 					resource.TestCheckResourceAttr(datasourceName, "names.0", "one"),
 					resource.TestCheckResourceAttr(datasourceName, "names.1", "two"),
 				),
@@ -30,7 +29,7 @@ func TestDataSourcePolicyList(t *testing.T) {
 	})
 }
 
-func testDataSourcePolicyListConfig() string {
+func testDataSourcePolicyReadConfig() string {
 	config := `
 	resource "vault_policy" "one" {
 		name = "one"
@@ -41,15 +40,9 @@ func testDataSourcePolicyListConfig() string {
 	}
 	EOT
 	}
-	
-	resource "vault_policy" "two" {
-		name = "two"
-	
-		policy = <<EOT
-	path "secret/my_app" {
-	  capabilities = ["update"]
-	}
-	EOT
+
+	data "vault_policy" "two" {
+		policy_name = "one"
 	}
 	
 	`
