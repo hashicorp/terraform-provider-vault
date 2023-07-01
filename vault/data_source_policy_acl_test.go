@@ -4,48 +4,49 @@
 package vault
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestDataSourcePolicyRead(t *testing.T) {
-	datasourceName := "data.vault_policy_acl.test"
+	policyName := acctest.RandomWithPrefix("test-policy")
+	datasourceName := "data.vault_policy_acl.two"
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
-				Config: testDataSourcePolicyReadConfig(),
+				Config: testDataSourcePolicyReadConfig(policyName),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "names.0", "one"),
-					resource.TestCheckResourceAttr(datasourceName, "names.1", "two"),
+					resource.TestCheckResourceAttr(datasourceName, "name", policyName),
+					resource.TestCheckResourceAttrSet(datasourceName, "policy"),
 				),
 			},
 		},
 	})
 }
 
-func testDataSourcePolicyReadConfig() string {
-	config := `
-	resource "vault_policy" "one" {
-		name = "one"
-	
-		policy = <<EOT
-	path "secret/my_app" {
-	  capabilities = ["update"]
-	}
-	EOT
-	}
+func testDataSourcePolicyReadConfig(policyName string) string {
+	return fmt.Sprintf(`
+resource "vault_policy" "one" {
+	name = "%s"
 
-	data "vault_policy" "two" {
-		policy_name = "one"
-	}
-	
-	`
+	policy = <<EOT
+path "secret/my_app" {
+	capabilities = ["update"]
+}
+EOT
+}
 
-	return config
+data "vault_policy_acl" "two" {
+	name = vault_policy.one.name
+}
+
+	`, policyName)
 }
