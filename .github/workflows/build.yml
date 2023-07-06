@@ -18,15 +18,11 @@ jobs:
   build:
     needs: [go-version]
     runs-on: ubuntu-latest
-#    container:
-#      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     steps:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       - uses: actions/setup-go@v4
         with:
           go-version: '${{ needs.go-version.outputs.version }}'
-      - name: Install setup-terraform dependencies
-        run: sudo apt-get -y update && sudo apt-get install unzip
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v2
@@ -53,8 +49,6 @@ jobs:
         - "vault-enterprise:1.12.7-ent"
         - "vault-enterprise:1.13.3-ent"
         - "vault-enterprise:1.14.0-ent"
-    container:
-      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
@@ -129,9 +123,9 @@ jobs:
           LDAP_PASSWORDS: "password1,password2,password3"
     steps:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-      # setup-terraform expects unzip to be available but we are running in a docker container that doesn't have it pre-installed
-      - name: Install setup-terraform dependencies
-        run: apt-get -y update && apt-get install unzip
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '${{ needs.go-version.outputs.version }}'
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v2
