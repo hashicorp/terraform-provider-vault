@@ -18,10 +18,13 @@ jobs:
   build:
     needs: [go-version]
     runs-on: ubuntu-latest
-    container:
-      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
+#    container:
+#      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     steps:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '${{ needs.go-version.outputs.version }}'
       - name: Install setup-terraform dependencies
         run: apt-get -y update && apt-get install unzip
       # setup-terraform is used to install the Terraform CLI. If we don't do
