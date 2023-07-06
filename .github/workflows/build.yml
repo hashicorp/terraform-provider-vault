@@ -124,8 +124,8 @@ jobs:
       openldap:
         image: docker.io/bitnami/openldap:2.6
         ports:
-          - '1389:1389'
-          - '1636:1636'
+          - 1389:1389
+          - 1636:1636
         env:
           LDAP_ADMIN_USERNAME: "admin"
           LDAP_ADMIN_PASSWORD: "adminpassword"
@@ -148,7 +148,7 @@ jobs:
         env:
           VAULT_TOKEN: "root"
           VAULT_ADDR: "http://localhost:8200"
-          MYSQL_URL: "root:mysql@tcp(mysql:3306)/"
+          MYSQL_URL: "root:mysql@tcp(localhost:3306)/"
           MYSQL_CONNECTION_URL: "{{username}}:{{password}}@tcp(localhost:3306)/"
           MYSQL_CONNECTION_USERNAME: "root"
           MYSQL_CONNECTION_PASSWORD: "mysql"
@@ -162,7 +162,7 @@ jobs:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           LDAP_BINDDN: "cn=admin,dc=example,dc=org"
           LDAP_BINDPASS: "adminpassword"
-          LDAP_URL: "ldap://localhost:1389"
+          LDAP_URL: "ldap://127.0.0.1:1389"
         run: |
           make testacc-ent TESTARGS='-test.v' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true
       - name: "Generate Vault API Path Coverage Report"
