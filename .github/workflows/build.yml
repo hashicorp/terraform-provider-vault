@@ -61,26 +61,36 @@ jobs:
           --health-interval 1s
           --health-timeout 5s
           --health-retries 5
+        ports:
+          - 8200:8200
       mysql:
         image: docker.mirror.hashicorp.services/mysql:latest
         env:
           MYSQL_ROOT_PASSWORD: mysql
+        ports:
+          - 3306:3306
       mssql:
         image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
+        ports:
+          - 1433:1433
       mongo:
         image: docker.mirror.hashicorp.services/mongo:latest
         env:
           MONGO_INITDB_ROOT_USERNAME: root
           MONGO_INITDB_ROOT_PASSWORD: mongodb
           MONGO_INITDB_DATABASE: admin
+        ports:
+          - 27017:27017
       postgres:
         image: docker.mirror.hashicorp.services/postgres:latest
         env:
           POSTGRES_PASSWORD: secret
           POSTGRES_DB: database
+        ports:
+          - 5432:5432
       couchbase:
         image: docker.io/couchbase/server-sandbox:7.1.1
         ports:
