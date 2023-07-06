@@ -114,8 +114,8 @@ jobs:
         env:
           CONSUL_LOCAL_CONFIG: "{\"acl\":{\"enabled\":true}}"
         ports:
-        - 8500:8500
-        - 8600:8600
+          - 8500:8500
+          - 8600:8600
         options: >-
           --health-cmd "curl -f 'http://127.0.0.1:8500/v1/health/node/server-1'"
           --health-interval 1s
@@ -124,8 +124,8 @@ jobs:
       openldap:
         image: docker.io/bitnami/openldap:2.6
         ports:
-        - '1389:1389'
-        - '1636:1636'
+          - '1389:1389'
+          - '1636:1636'
         env:
           LDAP_ADMIN_USERNAME: "admin"
           LDAP_ADMIN_PASSWORD: "adminpassword"
