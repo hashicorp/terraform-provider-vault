@@ -175,8 +175,8 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 	password := values[2]
 
 	localCouchbaseHost := host
-	_, dockerized := os.LookupEnv("DOCKERIZED")
-	if dockerized {
+	_, native := os.LookupEnv("NATIVE")
+	if native {
 		localCouchbaseHost = "localhost"
 	}
 
@@ -1672,8 +1672,8 @@ resource "vault_database_secret_backend_connection" "test" {
 
 func newMySQLConnection(t *testing.T, connURL string, username string, password string) *sql.DB {
 	mysqlURL := connURL
-	_, dockerized := os.LookupEnv("DOCKERIZED")
-	if dockerized {
+	_, native := os.LookupEnv("NATIVE")
+	if native {
 		mysqlURL = "{{username}}:{{password}}@tcp(localhost:3306)/"
 	}
 

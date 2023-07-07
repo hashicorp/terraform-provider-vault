@@ -125,8 +125,8 @@ func testAccDatabaseSecretBackendStaticRoleCheckDestroy(s *terraform.State) erro
 
 func createTestUser(connURL, username string) error {
 	mysqlURL := connURL
-	_, dockerized := os.LookupEnv("DOCKERIZED")
-	if dockerized {
+	_, native := os.LookupEnv("NATIVE")
+	if native {
 		mysqlURL = "root:mysql@tcp(localhost:3306)/"
 	}
 
