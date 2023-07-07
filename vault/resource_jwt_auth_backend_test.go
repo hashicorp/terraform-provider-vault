@@ -17,6 +17,7 @@ import (
 )
 
 func TestAccJWTAuthBackend(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("jwt")
 	resourceType := "vault_jwt_auth_backend"
 	resourceName := resourceType + ".jwt"
@@ -111,6 +112,7 @@ func TestAccJWTAuthBackend(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("oidc")
 	resourceType := "vault_jwt_auth_backend"
 	resourceName := resourceType + ".oidc"
@@ -164,6 +166,7 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 }
 
 func TestAccJWTAuthBackend_OIDC(t *testing.T) {
+	t.Parallel()
 	resourceType := "vault_jwt_auth_backend"
 	resourceName := resourceType + ".oidc"
 	getSteps := func(path, ns string) []resource.TestStep {
@@ -222,6 +225,7 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 }
 
 func TestAccJWTAuthBackend_invalid(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("jwt")
 	invalidPath := path + consts.PathDelim
 	resource.Test(t, resource.TestCase{
@@ -252,6 +256,7 @@ func TestAccJWTAuthBackend_invalid(t *testing.T) {
 }
 
 func TestJWTAuthBackend_remount(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-auth-jwt")
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-jwt-updated")
 
@@ -407,6 +412,7 @@ resource "vault_namespace" "test" {
 }
 
 func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("jwt")
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
@@ -460,6 +466,7 @@ func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendProviderConfigConversionBool(t *testing.T) {
+	t.Parallel()
 	type test struct {
 		name  string
 		value string
@@ -499,6 +506,7 @@ func TestAccJWTAuthBackendProviderConfigConversionBool(t *testing.T) {
 }
 
 func TestAccJWTAuthBackendProviderConfigConversionInt(t *testing.T) {
+	t.Parallel()
 	type test struct {
 		name  string
 		value string

@@ -19,6 +19,7 @@ import (
 )
 
 func TestAccKVSecret(t *testing.T) {
+	t.Parallel()
 	resourceName := "vault_kv_secret.test"
 	mount := acctest.RandomWithPrefix("tf-kvv2")
 	name := acctest.RandomWithPrefix("tf-secret")
