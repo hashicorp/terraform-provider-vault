@@ -127,7 +127,7 @@ func createTestUser(connURL, username string) error {
 	mysqlURL := connURL
 	_, dockerized := os.LookupEnv("DOCKERIZED")
 	if dockerized {
-		mysqlURL = "vault:vault@tcp(localhost:3306)/"
+		mysqlURL = "root:mysql@tcp(localhost:3306)/"
 	}
 
 	ctx := context.Background()
