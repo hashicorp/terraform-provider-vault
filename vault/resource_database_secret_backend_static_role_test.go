@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"os"
 	"testing"
 
@@ -124,8 +125,16 @@ func testAccDatabaseSecretBackendStaticRoleCheckDestroy(s *terraform.State) erro
 }
 
 func createTestUser(connURL, username string) error {
+	mysqlURL := connURL
+	rawURL, err := url.Parse(connURL)
+	_, vaultDockerized := os.LookupEnv("VAULT_DOCKERIZED")
+	if err != nil && vaultDockerized {
+		rawURL.Host = "localhost"
+		mysqlURL = rawURL.String()
+	}
+
 	ctx := context.Background()
-	db, err := sql.Open("mysql", connURL)
+	db, err := sql.Open("mysql", mysqlURL)
 	if err != nil {
 		return err
 	}
