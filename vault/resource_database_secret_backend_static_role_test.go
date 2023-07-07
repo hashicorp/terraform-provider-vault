@@ -127,8 +127,8 @@ func testAccDatabaseSecretBackendStaticRoleCheckDestroy(s *terraform.State) erro
 func createTestUser(connURL, username string) error {
 	mysqlURL := connURL
 	rawURL, err := url.Parse(connURL)
-	_, vaultDockerized := os.LookupEnv("VAULT_DOCKERIZED")
-	if err != nil && vaultDockerized {
+	_, dockerized := os.LookupEnv("DOCKERIZED")
+	if err != nil && dockerized {
 		rawURL.Host = "localhost"
 		mysqlURL = rawURL.String()
 	}

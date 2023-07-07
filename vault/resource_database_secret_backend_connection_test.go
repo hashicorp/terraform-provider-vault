@@ -175,8 +175,8 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 	password := values[2]
 
 	localCouchbaseHost := host
-	_, vaultDockerized := os.LookupEnv("VAULT_DOCKERIZED")
-	if vaultDockerized {
+	_, dockerized := os.LookupEnv("DOCKERIZED")
+	if dockerized {
 		localCouchbaseHost = "localhost"
 	}
 
@@ -1672,11 +1672,9 @@ resource "vault_database_secret_backend_connection" "test" {
 
 func newMySQLConnection(t *testing.T, connURL string, username string, password string) *sql.DB {
 	mysqlURL := connURL
-	rawURL, err := url.Parse(connURL)
-	_, vaultDockerized := os.LookupEnv("VAULT_DOCKERIZED")
-	if err != nil && vaultDockerized {
-		rawURL.Host = "localhost"
-		mysqlURL = rawURL.String()
+	_, dockerized := os.LookupEnv("DOCKERIZED")
+	if dockerized {
+		mysqlURL = "{{username}}:{{password}}@tcp(localhost:3306)/"
 	}
 
 	dbURL := dbutil.QueryHelper(mysqlURL, map[string]string{
