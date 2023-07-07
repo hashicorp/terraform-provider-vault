@@ -7,12 +7,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAuthLoginCert_Init(t *testing.T) {
@@ -206,13 +209,34 @@ func TestAuthLoginCert_Login(t *testing.T) {
 		w.Write(m)
 	}
 
+	tempDir := t.TempDir()
+
+	b, k, err := testutil.GenerateCA()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	certFile := path.Join(tempDir, "cert.crt")
+	if err := os.WriteFile(certFile, b, 0o400); err != nil {
+		t.Fatal(err)
+	}
+
+	keyFile := path.Join(tempDir, "cert.key")
+	if err := os.WriteFile(keyFile, k, 0o400); err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []authLoginTest{
 		{
 			name: "default",
 			authLogin: &AuthLoginCert{
 				AuthLoginCommon{
-					authField:   "baz",
-					params:      map[string]interface{}{},
+					authField: "baz",
+					params: map[string]interface{}{
+						consts.FieldCertFile:      certFile,
+						consts.FieldKeyFile:       keyFile,
+						consts.FieldSkipTLSVerify: true,
+					},
 					initialized: true,
 				},
 			},
@@ -231,6 +255,7 @@ func TestAuthLoginCert_Login(t *testing.T) {
 					},
 				},
 			},
+			tls:     true,
 			wantErr: false,
 		},
 		{
@@ -240,7 +265,10 @@ func TestAuthLoginCert_Login(t *testing.T) {
 					authField: "baz",
 					mount:     "qux",
 					params: map[string]interface{}{
-						consts.FieldName: "bob",
+						consts.FieldName:          "bob",
+						consts.FieldCertFile:      certFile,
+						consts.FieldKeyFile:       keyFile,
+						consts.FieldSkipTLSVerify: true,
 					},
 					initialized: true,
 				},
@@ -262,6 +290,7 @@ func TestAuthLoginCert_Login(t *testing.T) {
 					},
 				},
 			},
+			tls:     true,
 			wantErr: false,
 		},
 		{
@@ -276,6 +305,7 @@ func TestAuthLoginCert_Login(t *testing.T) {
 			},
 			want:      nil,
 			wantErr:   true,
+			tls:       true,
 			expectErr: authLoginInitCheckError,
 		},
 	}

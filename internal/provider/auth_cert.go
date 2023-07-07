@@ -4,11 +4,14 @@
 package provider
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
@@ -75,7 +78,11 @@ func (l *AuthLoginCert) LoginPath() string {
 }
 
 func (l *AuthLoginCert) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
-	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
+	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData) error {
+			return l.checkRequiredFields(d, consts.FieldCertFile, consts.FieldKeyFile)
+		},
+	); err != nil {
 		return nil, err
 	}
 
@@ -111,46 +118,44 @@ func (l *AuthLoginCert) Login(client *api.Client) (*api.Secret, error) {
 		return nil, err
 	}
 
-	tlsConfig := &api.TLSConfig{
-		Insecure: false,
+	config := client.CloneConfig()
+	tlsConfig := config.TLSConfig()
+	if tlsConfig == nil {
+		return nil, fmt.Errorf("clone api.Config's TLSConfig is nil")
 	}
 
-	if v, ok := l.params[consts.FieldCACertFile]; ok {
-		tlsConfig.CACert = v.(string)
-	}
-
-	if v, ok := l.params[consts.FieldCACertDir]; ok {
-		tlsConfig.CAPath = v.(string)
-	}
-
+	var clientCertFile string
+	var clientKeyFile string
 	if v, ok := l.params[consts.FieldCertFile]; ok {
-		tlsConfig.ClientCert = v.(string)
+		clientCertFile = v.(string)
 	}
 
 	if v, ok := l.params[consts.FieldKeyFile]; ok {
-		tlsConfig.ClientKey = v.(string)
-	}
-
-	if v, ok := l.params[consts.FieldTLSServerName]; ok {
-		tlsConfig.TLSServerName = v.(string)
+		clientKeyFile = v.(string)
 	}
 
 	if v, ok := l.params[consts.FieldSkipTLSVerify]; ok {
-		tlsConfig.Insecure = v.(bool)
+		tlsConfig.InsecureSkipVerify = v.(bool)
 	}
 
-	config := c.CloneConfig()
-	if err := config.ConfigureTLS(tlsConfig); err != nil {
-		return nil, err
-	}
-
-	c, err = api.NewClient(config)
+	clientCert, err := tls.LoadX509KeyPair(clientCertFile, clientKeyFile)
 	if err != nil {
 		return nil, err
 	}
 
-	if config.CloneHeaders {
-		c.SetHeaders(client.Headers())
+	tlsConfig.GetClientCertificate = func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
+		return &clientCert, nil
+	}
+
+	switch t := config.HttpClient.Transport.(type) {
+	case *helper.TransportWrapper:
+		if err := t.SetTLSConfig(tlsConfig); err != nil {
+			return nil, err
+		}
+	case *http.Transport:
+		t.TLSClientConfig = tlsConfig
+	default:
+		return nil, fmt.Errorf("HTTPClient has unsupported Transport type %T", t)
 	}
 
 	params := make(map[string]interface{})

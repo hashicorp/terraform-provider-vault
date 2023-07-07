@@ -154,29 +154,26 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	if addr != "" {
 		clientConfig.Address = addr
 	}
+	clientConfig.CloneTLSConfig = true
 
-	clientAuthI := d.Get(consts.FieldClientAuth).([]interface{})
-	if len(clientAuthI) > 1 {
-		return nil, fmt.Errorf("client_auth block may appear only once")
-	}
-
-	clientAuthCert := ""
-	clientAuthKey := ""
-	if len(clientAuthI) == 1 {
-		clientAuth := clientAuthI[0].(map[string]interface{})
-		clientAuthCert = clientAuth[consts.FieldCertFile].(string)
-		clientAuthKey = clientAuth[consts.FieldKeyFile].(string)
-	}
-
-	err := clientConfig.ConfigureTLS(&api.TLSConfig{
+	tlsConfig := &api.TLSConfig{
 		CACert:        d.Get(consts.FieldCACertFile).(string),
 		CAPath:        d.Get(consts.FieldCACertDir).(string),
 		Insecure:      d.Get(consts.FieldSkipTLSVerify).(bool),
 		TLSServerName: d.Get(consts.FieldTLSServerName).(string),
+	}
 
-		ClientCert: clientAuthCert,
-		ClientKey:  clientAuthKey,
-	})
+	if _, ok := d.GetOk(consts.FieldClientAuth); ok {
+		prefix := fmt.Sprintf("%s.0.", consts.FieldClientAuth)
+		if v, ok := d.GetOk(prefix + consts.FieldCertFile); ok {
+			tlsConfig.ClientCert = v.(string)
+		}
+		if v, ok := d.GetOk(prefix + consts.FieldKeyFile); ok {
+			tlsConfig.ClientKey = v.(string)
+		}
+	}
+
+	err := clientConfig.ConfigureTLS(tlsConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure TLS for Vault API: %s", err)
 	}

@@ -116,6 +116,7 @@ func NewProvider(
 				Optional:    true,
 				Description: "Client authentication credentials.",
 				MaxItems:    1,
+				Deprecated:  fmt.Sprintf("Use %s instead", consts.FieldAuthLoginCert),
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						consts.FieldCertFile: {

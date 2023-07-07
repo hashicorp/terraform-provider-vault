@@ -5,8 +5,8 @@ package provider
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"reflect"
 	"testing"
@@ -33,6 +33,7 @@ type authLoginTest struct {
 	wantErr            bool
 	expectErr          error
 	skipFunc           func(t *testing.T)
+	tls                bool
 }
 
 type authLoginInitTest struct {
@@ -93,10 +94,15 @@ func testAuthLogin(t *testing.T, tt authLoginTest) {
 		tt.skipFunc(t)
 	}
 
-	config, ln := testutil.TestHTTPServer(t, tt.handler.handler())
+	var config *api.Config
+	var ln net.Listener
+	if tt.tls {
+		config, ln = testutil.TestHTTPSServer(t, tt.handler.handler(), nil)
+	} else {
+		config, ln = testutil.TestHTTPServer(t, tt.handler.handler())
+	}
 	defer ln.Close()
 
-	config.Address = fmt.Sprintf("http://%s", ln.Addr())
 	c, err := api.NewClient(config)
 	if err != nil {
 		t.Fatal(err)
