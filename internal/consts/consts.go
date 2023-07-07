@@ -114,6 +114,7 @@ const (
 	FieldAuthLoginOIDC                 = "auth_login_oidc"
 	FieldAuthLoginJWT                  = "auth_login_jwt"
 	FieldAuthLoginAzure                = "auth_login_azure"
+	FieldAuthLoginTokenFile            = "auth_login_token_file"
 	FieldIAMHttpRequestMethod          = "iam_http_request_method"
 	FieldIAMRequestURL                 = "iam_request_url"
 	FieldIAMRequestBody                = "iam_request_body"
@@ -347,6 +348,7 @@ const (
 	FieldRollbackStatements            = "rollback_statements"
 	FieldRenewStatements               = "renew_statements"
 	FieldCredentialType                = "credential_type"
+	FieldFilename                      = "filename"
 
 	/*
 		common environment variables
@@ -405,6 +407,7 @@ const (
 	MountTypeLDAP         = "ldap"
 	MountTypeConsul       = "consul"
 	MountTypeTerraform    = "terraform"
+	MountTypeNone         = "none"
 
 	/*
 		Vault version constants
