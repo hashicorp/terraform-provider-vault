@@ -7,3 +7,8 @@ jobs:
   actionlint:
     # using `main` as the ref will keep your workflow up-to-date
     uses: hashicorp/vault-workflows-common/.github/workflows/actionlint.yaml@main
+
+self-hosted-runner:
+  # Labels of self-hosted runner in array of string
+  labels:
+    - custom-linux-large
