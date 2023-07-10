@@ -1,4 +1,4 @@
 self-hosted-runner:
-  # Labels of self-hosted runner in array of string
+  # Labels of custom runners in array of string
   labels:
     - custom-linux-large
