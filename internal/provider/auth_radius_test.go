@@ -108,7 +108,11 @@ func TestAuthLoginRadius_LoginPath(t *testing.T) {
 func TestAuthLoginRadius_Login(t *testing.T) {
 	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
 		m, err := json.Marshal(
-			&api.Secret{},
+			&api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "radius",
+				},
+			},
 		)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -146,7 +150,11 @@ func TestAuthLoginRadius_Login(t *testing.T) {
 					consts.FieldPassword: "password1",
 				},
 			},
-			want:    &api.Secret{},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "radius",
+				},
+			},
 			wantErr: false,
 		},
 		{

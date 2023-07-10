@@ -108,7 +108,11 @@ func TestAuthLoginJWT_LoginPath(t *testing.T) {
 func TestAuthLoginJWT_Login(t *testing.T) {
 	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
 		m, err := json.Marshal(
-			&api.Secret{},
+			&api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "jwt",
+				},
+			},
 		)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -146,7 +150,11 @@ func TestAuthLoginJWT_Login(t *testing.T) {
 					consts.FieldJWT:  "jwt1",
 				},
 			},
-			want:    &api.Secret{},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "jwt",
+				},
+			},
 			wantErr: false,
 		},
 		{

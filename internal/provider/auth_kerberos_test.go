@@ -120,7 +120,11 @@ func TestAuthLoginKerberos_LoginPath(t *testing.T) {
 func TestAuthLoginKerberos_Login(t *testing.T) {
 	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
 		m, err := json.Marshal(
-			&api.Secret{},
+			&api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "kerberos",
+				},
+			},
 		)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -167,7 +171,11 @@ func TestAuthLoginKerberos_Login(t *testing.T) {
 					consts.FieldAuthorization: fmt.Sprintf("Negotiate %s", testNegTokenInit),
 				},
 			},
-			want:    &api.Secret{},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "kerberos",
+				},
+			},
 			wantErr: false,
 		},
 		{
@@ -206,7 +214,11 @@ func TestAuthLoginKerberos_Login(t *testing.T) {
 					consts.FieldAuthorization: fmt.Sprintf("Negotiate %s", testNegTokenInit),
 				},
 			},
-			want:    &api.Secret{},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "kerberos",
+				},
+			},
 			wantErr: false,
 		},
 	}
