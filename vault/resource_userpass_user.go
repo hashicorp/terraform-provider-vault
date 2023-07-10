@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -56,18 +56,35 @@ func userpassUserResource() *schema.Resource {
 	}
 }
 
+var (
+	userpassMountFromPathRegex    = regexp.MustCompile("^auth/(.+)/users/.+$")
+	userpassUsernameFromPathRegex = regexp.MustCompile("^auth/.+/users/(.+)$")
+)
+
 func userPath(mount string, username string) string {
-	return fmt.Sprintf("auth/%s/users/%s", strings.Trim(mount, "/"), strings.Trim(username, "/"))
+	return fmt.Sprintf("auth/%s/users/%s", mount, username)
 }
 
-func usernameFromPath(userId string) string {
-	return userId[strings.LastIndex(userId, "/")+1:]
+func mountFromPath(path string) (string, error) {
+	if !userpassMountFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no backend found")
+	}
+	res := userpassMountFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for mount", len(res))
+	}
+	return res[1], nil
 }
 
-func mountFromPath(userId string) string {
-	userPath := "/users/" + usernameFromPath(userId)
-	s := strings.Replace(userId, userPath, "", -1)
-	return strings.Replace(s, "auth/", "", -1)
+func usernameFromPath(path string) (string, error) {
+	if !userpassUsernameFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no name found")
+	}
+	res := userpassUsernameFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for username", len(res))
+	}
+	return res[1], nil
 }
 
 func userpassUserCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -125,8 +142,18 @@ func userpassUserRead(_ context.Context, d *schema.ResourceData, meta interface{
 		return diag.FromErr(err)
 	}
 
-	d.Set(consts.FieldUsername, usernameFromPath(path))
-	d.Set(consts.FieldMount, mountFromPath(path))
+	mount, err := mountFromPath(path)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	d.Set(consts.FieldMount, mount)
+
+	username, err := usernameFromPath(path)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	d.Set(consts.FieldUsername, username)
+
 	readTokenFields(d, dt)
 
 	return nil
