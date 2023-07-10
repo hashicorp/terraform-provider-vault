@@ -184,10 +184,11 @@ func TestAuthLoginCert_LoginPath(t *testing.T) {
 func TestAuthLoginCert_Login(t *testing.T) {
 	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
 		role := "default"
-		if v, ok := t.params[len(t.params)-1][consts.FieldName]; ok {
-			role = v.(string)
+		if t.params != nil {
+			if v, ok := t.params[len(t.params)-1][consts.FieldName]; ok {
+				role = v.(string)
+			}
 		}
-
 		m, err := json.Marshal(
 			&api.Secret{
 				Auth: &api.SecretAuth{
@@ -223,7 +224,7 @@ func TestAuthLoginCert_Login(t *testing.T) {
 			expectReqPaths: []string{
 				"/v1/auth/cert/login",
 			},
-			expectReqParams: []map[string]interface{}{{}},
+			expectReqParams: nil,
 			want: &api.Secret{
 				Auth: &api.SecretAuth{
 					Metadata: map[string]string{
