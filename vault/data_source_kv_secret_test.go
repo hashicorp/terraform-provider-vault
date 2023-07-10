@@ -15,6 +15,7 @@ import (
 )
 
 func TestDataSourceKVSecret(t *testing.T) {
+	t.Parallel()
 	mount := acctest.RandomWithPrefix("tf-kv")
 	name := acctest.RandomWithPrefix("foo")
 

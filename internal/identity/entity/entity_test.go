@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 
@@ -259,13 +260,17 @@ func TestFindAliases(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			r := tt.findHandler
 
 			config, ln := testutil.TestHTTPServer(t, r.handler())
 			defer ln.Close()
 
 			config.Address = fmt.Sprintf("http://%s", ln.Addr())
+			config.MinRetryWait = time.Nanosecond
+			config.MaxRetryWait = time.Nanosecond
 			c, err := api.NewClient(config)
 			if err != nil {
 				t.Fatal(err)

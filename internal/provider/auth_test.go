@@ -5,6 +5,8 @@ package provider
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -19,7 +21,7 @@ import (
 
 // expectedRegisteredAuthLogin value should be modified when adding
 // registering/de-registering AuthLogin resources.
-const expectedRegisteredAuthLogin = 11
+const expectedRegisteredAuthLogin = 12
 
 type authLoginTest struct {
 	name               string
@@ -34,6 +36,7 @@ type authLoginTest struct {
 	expectErr          error
 	skipFunc           func(t *testing.T)
 	tls                bool
+	preLoginFunc       func(t *testing.T)
 }
 
 type authLoginInitTest struct {
@@ -41,6 +44,7 @@ type authLoginInitTest struct {
 	authField    string
 	raw          map[string]interface{}
 	wantErr      bool
+	envVars      map[string]string
 	expectMount  string
 	expectParams map[string]interface{}
 	expectErr    error
@@ -60,28 +64,34 @@ func (t *testLoginHandler) handler() http.HandlerFunc {
 
 		t.paths = append(t.paths, req.URL.Path)
 
-		if req.Method != http.MethodPut {
+		switch req.Method {
+		case http.MethodPut, http.MethodGet:
+		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
 
-		b, err := ioutil.ReadAll(req.Body)
+		b, err := io.ReadAll(req.Body)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		var params map[string]interface{}
-		if err := json.Unmarshal(b, &params); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
+		if len(b) > 0 {
+			if err := json.Unmarshal(b, &params); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 		}
 
 		for _, p := range t.excludeParams {
 			delete(params, p)
 		}
 
-		t.params = append(t.params, params)
+		if len(params) > 0 {
+			t.params = append(t.params, params)
+		}
 
 		t.handlerFunc(t, w, req)
 	}
@@ -92,6 +102,10 @@ func testAuthLogin(t *testing.T, tt authLoginTest) {
 
 	if tt.skipFunc != nil {
 		tt.skipFunc(t)
+	}
+
+	if tt.preLoginFunc != nil {
+		tt.preLoginFunc(t)
 	}
 
 	var config *api.Config
@@ -220,6 +234,10 @@ func assertAuthLoginEqual(t *testing.T, expected, actual AuthLogin) {
 }
 
 func assertAuthLoginInit(t *testing.T, tt authLoginInitTest, s map[string]*schema.Schema, l AuthLogin) {
+	for k, v := range tt.envVars {
+		t.Setenv(k, v)
+	}
+
 	d := schema.TestResourceDataRaw(t, s, tt.raw)
 	actual, err := l.Init(d, tt.authField)
 	if (err != nil) != tt.wantErr {

@@ -17,6 +17,7 @@ import (
 )
 
 func TestDataSourceIdentityEntityName(t *testing.T) {
+	t.Parallel()
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "data.vault_identity_entity.entity"
@@ -38,6 +39,7 @@ func TestDataSourceIdentityEntityName(t *testing.T) {
 }
 
 func TestDataSourceIdentityEntityAlias(t *testing.T) {
+	t.Parallel()
 	entity := acctest.RandomWithPrefix("test-entity")
 
 	resourceName := "data.vault_identity_entity.entity"
