@@ -148,8 +148,8 @@ jobs:
         env:
           VAULT_TOKEN: "root"
           VAULT_ADDR: "http://localhost:8200"
-          # NATIVE is true if not using jobs.<job_id>.container
-          NATIVE: "true"
+          # RUNS_IN_CONTAINER is false if not using jobs.<job_id>.container
+          RUNS_IN_CONTAINER: "false"
           MYSQL_URL: "root:mysql@tcp(mysql:3306)/"
           MYSQL_CONNECTION_URL: "{{username}}:{{password}}@tcp(mysql:3306)/"
           MYSQL_CONNECTION_USERNAME: "root"
