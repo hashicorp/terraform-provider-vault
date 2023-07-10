@@ -6,121 +6,105 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccUserpassUser_basic(t *testing.T) {
-	backend := acctest.RandomWithPrefix("userpass")
-	resName := "vault_userpass_user.user"
-	username := "john_doe"
-	password := "supersecretpassword"
+	mount := acctest.RandomWithPrefix("userpass")
+	username := "u-se_r1"
+	password := "pa33w$rd"
+	resourceType := "vault_userpass_user"
+	resourceName := resourceType + ".user"
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccUserpassUserCheckDestroy,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeUserpass, consts.FieldUsername),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccUserpassUserConfig_basic(backend, username, password, []string{"admin", "security"}),
+				Config: testAccUserpassUserConfig_basic(mount, username, password, []string{"admin", "security"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/users/"+username),
-					resource.TestCheckResourceAttr(resName, "backend", backend),
-					resource.TestCheckResourceAttr(resName, "username", username),
-					resource.TestCheckResourceAttr(resName, "password", password),
-					resource.TestCheckResourceAttr(resName, "token_policies.#", "2"),
-					resource.TestCheckResourceAttr(resName, "token_policies.0", "admin"),
-					resource.TestCheckResourceAttr(resName, "token_policies.1", "security"),
+					resource.TestCheckResourceAttr(resourceName, "id", "auth/"+mount+"/users/"+username),
+					resource.TestCheckResourceAttr(resourceName, "mount", mount),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "password", password),
+					resource.TestCheckResourceAttr(resourceName, "token_policies.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "token_policies.0", "admin"),
+					resource.TestCheckResourceAttr(resourceName, "token_policies.1", "security"),
 				),
 			},
 			{
-				Config: testAccUserpassUserConfig_basic(backend, username, password, []string{"updated_policy"}),
+				Config: testAccUserpassUserConfig_basic(mount, username, password, []string{"updated_policy"}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resName, "id", "auth/"+backend+"/users/"+username),
-					resource.TestCheckResourceAttr(resName, "backend", backend),
-					resource.TestCheckResourceAttr(resName, "username", username),
-					resource.TestCheckResourceAttr(resName, "password", password),
-					resource.TestCheckResourceAttr(resName, "token_policies.#", "1"),
-					resource.TestCheckResourceAttr(resName, "token_policies.0", "updated_policy"),
+					resource.TestCheckResourceAttr(resourceName, "id", "auth/"+mount+"/users/"+username),
+					resource.TestCheckResourceAttr(resourceName, "mount", mount),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "password", password),
+					resource.TestCheckResourceAttr(resourceName, "token_policies.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "token_policies.0", "updated_policy"),
 				),
 			},
-		},
-	})
-}
-
-func TestAccUserpassUser_importBasic(t *testing.T) {
-	backend := acctest.RandomWithPrefix("userpass")
-	resName := "vault_userpass_user.user"
-	user := "u3er_name"
-	password := "pa33_word"
-	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccUserpassUserConfig_basic(backend, user, password, []string{"security", "admin"}),
-			},
-			{
-				ResourceName:            resName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"password"},
-			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldPassword),
 		},
 	})
 }
 
 func TestAccUserpassHelpers(t *testing.T) {
-	t.Run("Test helper functions", func(t *testing.T) {
-		expectedPath := "auth/userpass/users/blm_hemu"
-		expectedBackend := "userpass"
-		expectedUsername := "blm_hemu"
-
-		actualPath := userPath(expectedBackend, expectedUsername)
-		actualBackend := backendFromPath(expectedPath)
-		actualUsername := usernameFromPath(expectedPath)
-
-		if actualPath != expectedPath {
-			t.Fatalf("expected path '%s', got: '%s'", expectedPath, actualPath)
+	testCases := []struct {
+		mount    string
+		username string
+		path     string
+	}{
+		{
+			mount:    "userpass",
+			username: "username",
+			path:     "auth/userpass/users/username",
+		},
+		{
+			mount:    "userpa/ss",
+			username: "username",
+			path:     "auth/userpa/ss/users/username",
+		},
+		{
+			mount:    "userpass",
+			username: "us/ername",
+			path:     "auth/userpass/users/us/ername",
+		},
+		{
+			mount:    "userpa/ss",
+			username: "us/ername",
+			path:     "auth/userpa/ss/users/us/ername",
+		},
+		{
+			mount:    "!userp@/s@$ss",
+			username: "b-l@m_hemu",
+			path:     "auth/!userp@/s@$ss/users/b-l@m_hemu",
+		},
+	}
+	for _, tc := range testCases {
+		actualPath := userPath(tc.mount, tc.username)
+		if actualPath != tc.path {
+			t.Fatalf("expected path '%s', got: '%s'", tc.path, actualPath)
 		}
 
-		if actualBackend != expectedBackend {
-			t.Fatalf("expected backend '%s', got: '%s'", expectedBackend, actualBackend)
+		actualmount, err := mountFromPath(tc.path)
+		if err != nil || actualmount != tc.mount {
+			t.Fatalf("err: %s expected mount: '%s' actual mount: '%s'", err, tc.mount, actualmount)
 		}
 
-		if actualUsername != expectedUsername {
-			t.Fatalf("expected username '%s', got: '%s'", expectedUsername, actualUsername)
-		}
-	})
-}
-
-func testAccUserpassUserCheckDestroy(s *terraform.State) error {
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_userpass_user" {
-			continue
-		}
-
-		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
-		if e != nil {
-			return e
-		}
-
-		resp, err := client.RawRequest(client.NewRequest("GET", "/v1/"+rs.Primary.ID))
-		log.Printf("[DEBUG] Checking if resource '%s' is destroyed, statusCode: %d, error: %s", rs.Primary.ID, resp.StatusCode, err)
-		if resp.StatusCode == 404 {
-			return nil
+		actualUsername, err := usernameFromPath(tc.path)
+		if err != nil || actualUsername != tc.username {
+			t.Fatalf("err: %s expected username: '%s' actual username: '%s'", err, tc.username, actualUsername)
 		}
 	}
-	return fmt.Errorf("Userpass user resource still exists")
 }
 
-func testAccUserpassUserConfig_basic(backend string, username string, password string, policies []string) string {
+func testAccUserpassUserConfig_basic(mount string, username string, password string, policies []string) string {
 	p, _ := json.Marshal(policies)
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "userpass" {
@@ -129,10 +113,10 @@ resource "vault_auth_backend" "userpass" {
 }
 
 resource "vault_userpass_user" "user" {
-	backend = vault_auth_backend.userpass.path
+	mount = vault_auth_backend.userpass.path
 	username = "%s"
 	password = "%s"
 	token_policies = %s
 }
-`, backend, username, password, p)
+`, mount, username, password, p)
 }

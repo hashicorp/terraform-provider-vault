@@ -67,7 +67,7 @@ func userPath(mount string, username string) string {
 
 func mountFromPath(path string) (string, error) {
 	if !userpassMountFromPathRegex.MatchString(path) {
-		return "", fmt.Errorf("no backend found")
+		return "", fmt.Errorf("no mount found")
 	}
 	res := userpassMountFromPathRegex.FindStringSubmatch(path)
 	if len(res) != 2 {
