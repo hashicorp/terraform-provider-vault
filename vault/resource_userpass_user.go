@@ -4,10 +4,12 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -45,12 +47,12 @@ func userpassUserResource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return &schema.Resource{
-		Create: userpassUserCreate,
-		Read:   ReadWrapper(userpassUserRead),
-		Update: userpassUserUpdate,
-		Delete: userpassUserDelete,
+		CreateContext: userpassUserCreate,
+		ReadContext:   ReadContextWrapper(userpassUserRead),
+		UpdateContext: userpassUserUpdate,
+		DeleteContext: userpassUserDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: fields,
 	}
@@ -70,19 +72,19 @@ func backendFromPath(userId string) string {
 	return strings.Replace(s, "auth/", "", -1)
 }
 
-func userpassUserCreate(d *schema.ResourceData, meta interface{}) error {
+func userpassUserCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	id := userPath(d.Get("backend").(string), d.Get("username").(string))
 	d.SetId(id)
 	d.MarkNewResource()
 
 	log.Printf("[INFO] Creating new user at '%v'", id)
-	return userpassUserUpdate(d, meta)
+	return userpassUserUpdate(ctx, d, meta)
 }
 
-func userpassUserUpdate(d *schema.ResourceData, meta interface{}) error {
+func userpassUserUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -103,18 +105,18 @@ func userpassUserUpdate(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		d.SetId("")
 		log.Printf("[ERROR] Error writing user at '%s'", path)
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Saved user at '%v'", path)
 
-	return userpassUserRead(d, meta)
+	return userpassUserRead(ctx, d, meta)
 }
 
-func userpassUserRead(d *schema.ResourceData, meta interface{}) error {
+func userpassUserRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -122,7 +124,7 @@ func userpassUserRead(d *schema.ResourceData, meta interface{}) error {
 	dt, err := client.Logical().Read(path)
 	if err != nil {
 		log.Printf("[ERROR] Error reading user from '%s'", path)
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("username", usernameFromPath(path))
@@ -132,15 +134,15 @@ func userpassUserRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func userpassUserDelete(d *schema.ResourceData, meta interface{}) error {
+func userpassUserDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	_, err := client.Logical().Delete(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	return nil
 }
