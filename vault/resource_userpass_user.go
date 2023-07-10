@@ -12,35 +12,33 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func userpassUserResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
-		"backend": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Auth backend to which user will be configured.",
-			ForceNew:    true,
-			Default:     "userpass",
-			// standardise on no beginning or trailing slashes
-			StateFunc: func(v interface{}) string {
-				return strings.Trim(v.(string), "/")
-			},
+		consts.FieldMount: {
+			Type:         schema.TypeString,
+			Optional:     true,
+			ForceNew:     true,
+			Description:  "Auth backend to which user will be configured.",
+			Default:      consts.MountTypeUserpass,
+			ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 		},
-		"username": {
+		consts.FieldUsername: {
 			Type:         schema.TypeString,
 			Required:     true,
 			ForceNew:     true,
 			Description:  "Username part of userpass.",
 			ValidateFunc: provider.ValidateStringSlug,
 		},
-		"password": {
+		consts.FieldPassword: {
 			Type:        schema.TypeString,
 			Required:    true,
+			Sensitive:   true,
 			ForceNew:    true,
 			Description: "Password part of userpass.",
-			Sensitive:   true,
 		},
 	}
 
@@ -73,7 +71,7 @@ func backendFromPath(userId string) string {
 }
 
 func userpassUserCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	id := userPath(d.Get("backend").(string), d.Get("username").(string))
+	id := userPath(d.Get(consts.FieldMount).(string), d.Get(consts.FieldUsername).(string))
 	d.SetId(id)
 	d.MarkNewResource()
 
@@ -93,12 +91,12 @@ func userpassUserUpdate(ctx context.Context, d *schema.ResourceData, meta interf
 
 	updateTokenFields(d, data, false)
 
-	if v, ok := d.GetOk("username"); ok {
-		data["username"] = v.(string)
+	if v, ok := d.GetOk(consts.FieldUsername); ok {
+		data[consts.FieldUsername] = v.(string)
 	}
 
-	if v, ok := d.GetOk("password"); ok {
-		data["password"] = v.(string)
+	if v, ok := d.GetOk(consts.FieldPassword); ok {
+		data[consts.FieldPassword] = v.(string)
 	}
 
 	_, err := client.Logical().Write(path, data)
@@ -127,8 +125,8 @@ func userpassUserRead(_ context.Context, d *schema.ResourceData, meta interface{
 		return diag.FromErr(err)
 	}
 
-	d.Set("username", usernameFromPath(path))
-	d.Set("backend", backendFromPath(path))
+	d.Set(consts.FieldUsername, usernameFromPath(path))
+	d.Set(consts.FieldMount, backendFromPath(path))
 	readTokenFields(d, dt)
 
 	return nil
