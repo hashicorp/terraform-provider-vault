@@ -568,7 +568,8 @@ The `auth_login_token_file` configuration block accepts the following arguments:
   *Available only for Vault Enterprise*.
 
 * `filename` - (Required) The filename containing a Vault token. The file must contain a single Vault token 
-  and be user readable e.g. perms=`0600`.
+  and be user readable e.g. perms=`0600`. May be set via the `TERRAFORM_VAULT_TOKEN_FILENAME`
+  environment variable.
 
 ### Generic
 

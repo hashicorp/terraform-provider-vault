@@ -41,6 +41,7 @@ type authLoginInitTest struct {
 	authField    string
 	raw          map[string]interface{}
 	wantErr      bool
+	envVars      map[string]string
 	expectMount  string
 	expectParams map[string]interface{}
 	expectErr    error
@@ -225,7 +226,12 @@ func assertAuthLoginEqual(t *testing.T, expected, actual AuthLogin) {
 }
 
 func assertAuthLoginInit(t *testing.T, tt authLoginInitTest, s map[string]*schema.Schema, l AuthLogin) {
+	for k, v := range tt.envVars {
+		t.Setenv(k, v)
+	}
+
 	d := schema.TestResourceDataRaw(t, s, tt.raw)
+
 	actual, err := l.Init(d, tt.authField)
 	if (err != nil) != tt.wantErr {
 		t.Fatalf("Init() error = %v, wantErr %v", err, tt.wantErr)

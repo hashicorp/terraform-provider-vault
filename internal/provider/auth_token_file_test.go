@@ -25,13 +25,30 @@ func TestAuthLoginTokenFile_Init(t *testing.T) {
 			raw: map[string]interface{}{
 				consts.FieldAuthLoginTokenFile: []interface{}{
 					map[string]interface{}{
-						consts.FieldFilename: "cert.key",
+						consts.FieldFilename: "vault-token",
 					},
 				},
 			},
 			expectParams: map[string]interface{}{
 				consts.FieldNamespace: "",
-				consts.FieldFilename:  "cert.key",
+				consts.FieldFilename:  "vault-token",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "basic-from-env",
+			authField: consts.FieldAuthLoginTokenFile,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginTokenFile: []interface{}{
+					map[string]interface{}{},
+				},
+			},
+			envVars: map[string]string{
+				consts.EnvVarTokenFilename: "/tmp/vault-token",
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace: "",
+				consts.FieldFilename:  "/tmp/vault-token",
 			},
 			wantErr: false,
 		},

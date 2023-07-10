@@ -381,6 +381,8 @@ const (
 	EnvVarRadiusUsername = "RADIUS_USERNAME"
 	// EnvVarRadiusPassword for the Radius auth login
 	EnvVarRadiusPassword = "RADIUS_PASSWORD"
+	// EnvVarTokenFilename for the TokenFile auth login.
+	EnvVarTokenFilename = "TERRAFORM_VAULT_TOKEN_FILENAME"
 
 	/*
 		common mount types
