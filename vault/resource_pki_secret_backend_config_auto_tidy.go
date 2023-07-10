@@ -9,41 +9,34 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/terraform-provider-vault/util"
+)
+
+const (
+	fieldTidyCertStore = "tidy_cert_store"
 )
 
 func pkiSecretBackendConfigAutoTidyResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendConfigAutoTidyCreateUpdate,
-		Read:   provider.ReadWrapper(pkiSecretBackendConfigAutoTidyRead),
-		Update: pkiSecretBackendConfigAutoTidyCreateUpdate,
-		Delete: pkiSecretBackendConfigAutoTidyDelete,
+		CreateContext: pkiSecretBackendConfigAutoTidyCreateUpdate,
+		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendConfigAutoTidyRead),
+		UpdateContext: pkiSecretBackendConfigAutoTidyCreateUpdate,
+		DeleteContext: pkiSecretBackendConfigAutoTidyDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: func(_ context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
-				id := d.Id()
-				if id == "" {
-					return nil, fmt.Errorf("no path set for import, id=%q", id)
-				}
-
-				parts := strings.Split(util.NormalizeMountPath(id), "/")
-				if err := d.Set("backend", parts[0]); err != nil {
-					return nil, err
-				}
-
-				return []*schema.ResourceData{d}, nil
-			},
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The path of the PKI secret backend the resource belongs to.",
 			},
-			"tidy_cert_store": {
+			fieldTidyCertStore: {
 				Type:        schema.TypeBool,
 				Default:     false,
 				Optional:    true,
@@ -86,7 +79,7 @@ func pkiSecretBackendConfigAutoTidyResource() *schema.Resource {
 				Description: "Set to true to remove expired, cross-cluster revocation entries. This is the cross-cluster equivalent of tidy_revoked_certs. Only runs on the active node of the primary cluster.",
 			},
 			"safety_buffer": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Specifies a duration using duration format strings used as a safety buffer to ensure certificates are not expunged prematurely; as an example, this can keep certificates from being removed from the CRL that, due to clock skew, might still be considered valid on other hosts. For a certificate to be expunged, the time must be after the expiration time of the certificate (according to the local clock) plus the duration of safety_buffer. Defaults to 72h.",
 			},
@@ -96,7 +89,7 @@ func pkiSecretBackendConfigAutoTidyResource() *schema.Resource {
 				Description: "Specifies a duration that issuers should be kept for, past their NotAfter validity period. Defaults to 365 days as hours (8760h).",
 			},
 			"pause_duration": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Specifies the duration to pause between tidying individual certificates. This releases the revocation lock and allows other operations to continue while tidy is paused. This allows an operator to control tidy's resource utilization within a timespan: the LIST operation will remain in memory, but the space between reading, parsing, and updates on-disk cert entries will be increased, decreasing resource utilization.\n\nDoes not affect tidy_expired_issuers.",
 			},
@@ -123,7 +116,7 @@ func pkiSecretBackendConfigAutoTidyResource() *schema.Resource {
 				Description: "Specifies whether automatic tidy is enabled or not.",
 			},
 			"interval_duration": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeInt,
 				Optional:    true,
 				Description: "Specifies the duration between automatic tidy operations; note that this is from the end of one operation to the start of the next so the time of the operation itself does not need to be considered. Defaults to 12h",
 			},
@@ -143,13 +136,13 @@ func pkiSecretBackendConfigAutoTidyResource() *schema.Resource {
 	}
 }
 
-func pkiSecretBackendConfigAutoTidyCreateUpdate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendConfigAutoTidyCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
+	backend := d.Get(consts.FieldBackend).(string)
 
 	path := pkiSecretBackendConfigAutoTidyPath(backend)
 
@@ -158,30 +151,44 @@ func pkiSecretBackendConfigAutoTidyCreateUpdate(d *schema.ResourceData, meta int
 		action = "Update"
 	}
 
-	data := map[string]interface{}{
-		"tidy_cert_store":                          d.Get("tidy_cert_store"),
-		"tidy_revoked_certs":                       d.Get("tidy_revoked_certs"),
-		"tidy_revoked_cert_issuer_associations":    d.Get("tidy_revoked_cert_issuer_associations"),
-		"tidy_expired_issuers":                     d.Get("tidy_expired_issuers"),
-		"tidy_move_legacy_ca_bundle":               d.Get("tidy_move_legacy_ca_bundle"),
-		"tidy_revocation_queue":                    d.Get("tidy_revocation_queue"),
-		"tidy_cross_cluster_revoked_certs":         d.Get("tidy_cross_cluster_revoked_certs"),
-		"safety_buffer":                            d.Get("safety_buffer"),
-		"issuer_safety_buffer":                     d.Get("issuer_safety_buffer"),
-		"pause_duration":                           d.Get("pause_duration"),
-		"revocation_queue_safety_buffer":           d.Get("revocation_queue_safety_buffer"),
-		"tidy_acme":                                d.Get("tidy_acme"),
-		"acme_account_safety_buffer":               d.Get("acme_account_safety_buffer"),
-		"enabled":                                  d.Get("enabled"),
-		"interval_duration":                        d.Get("interval_duration"),
-		"maintain_stored_certificate_counts":       d.Get("maintain_stored_certificate_counts"),
-		"publish_stored_certificate_count_metrics": d.Get("publish_stored_certificate_count_metrics"),
+	booleanFields := []string{
+		fieldTidyCertStore,
+		"tidy_revoked_certs",
+		"tidy_revoked_cert_issuer_associations",
+		"tidy_expired_issuers",
+		"tidy_move_legacy_ca_bundle",
+		"tidy_revocation_queue",
+		"tidy_cross_cluster_revoked_certs",
+		"tidy_acme",
+		"enabled",
+		"maintain_stored_certificate_counts",
+		"publish_stored_certificate_count_metrics",
+	}
+
+	fields := []string{
+		"safety_buffer",
+		"issuer_safety_buffer",
+		"pause_duration",
+		"revocation_queue_safety_buffer",
+		"acme_account_safety_buffer",
+		"interval_duration",
+	}
+
+	data := map[string]interface{}{}
+	for _, k := range fields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
+	}
+
+	for _, k := range booleanFields {
+		data[k] = d.Get(k)
 	}
 
 	log.Printf("[DEBUG] %s auto tidy config on PKI secret backend %q", action, backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error writing PKI auto tidy config to %q: %w", backend, err)
+		return diag.Errorf("error writing PKI auto tidy config to %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] %sd auto tidy config on PKI secret backend %q", action, backend)
 
@@ -189,25 +196,25 @@ func pkiSecretBackendConfigAutoTidyCreateUpdate(d *schema.ResourceData, meta int
 		d.SetId(fmt.Sprintf("%s/config/auto-tidy", backend))
 	}
 
-	return pkiSecretBackendConfigAutoTidyRead(d, meta)
+	return pkiSecretBackendConfigAutoTidyRead(ctx, d, meta)
 }
 
-func pkiSecretBackendConfigAutoTidyRead(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendConfigAutoTidyRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 
 	if path == "" {
-		return fmt.Errorf("no path set, id=%q", d.Id())
+		return diag.Errorf("no path set, id=%q", d.Id())
 	}
 
 	log.Printf("[DEBUG] Reading auto tidy config from PKI secret path %q", path)
 	config, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading auto tidy config on PKI secret backend %q: %s", path, err)
+		return diag.Errorf("error reading auto tidy config on PKI secret backend %q: %s", path, err)
 	}
 
 	if config == nil {
@@ -217,7 +224,7 @@ func pkiSecretBackendConfigAutoTidyRead(d *schema.ResourceData, meta interface{}
 	}
 
 	fields := []string{
-		"tidy_cert_store",
+		fieldTidyCertStore,
 		"tidy_revoked_certs",
 		"tidy_revoked_cert_issuer_associations",
 		"tidy_expired_issuers",
@@ -237,14 +244,14 @@ func pkiSecretBackendConfigAutoTidyRead(d *schema.ResourceData, meta interface{}
 	}
 	for _, k := range fields {
 		if err := d.Set(k, config.Data[k]); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	return nil
 }
 
-func pkiSecretBackendConfigAutoTidyDelete(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendConfigAutoTidyDelete(_ context.Context, _ *schema.ResourceData, _ interface{}) diag.Diagnostics {
 	return nil
 }
 
