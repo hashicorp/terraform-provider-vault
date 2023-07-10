@@ -22,7 +22,7 @@ func userpassUserResource() *schema.Resource {
 			Type:         schema.TypeString,
 			Optional:     true,
 			ForceNew:     true,
-			Description:  "Auth backend to which user will be configured.",
+			Description:  "Auth mount at which user will be configured.",
 			Default:      consts.MountTypeUserpass,
 			ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 		},
@@ -56,15 +56,15 @@ func userpassUserResource() *schema.Resource {
 	}
 }
 
-func userPath(backend string, username string) string {
-	return fmt.Sprintf("auth/%s/users/%s", strings.Trim(backend, "/"), strings.Trim(username, "/"))
+func userPath(mount string, username string) string {
+	return fmt.Sprintf("auth/%s/users/%s", strings.Trim(mount, "/"), strings.Trim(username, "/"))
 }
 
 func usernameFromPath(userId string) string {
 	return userId[strings.LastIndex(userId, "/")+1:]
 }
 
-func backendFromPath(userId string) string {
+func mountFromPath(userId string) string {
 	userPath := "/users/" + usernameFromPath(userId)
 	s := strings.Replace(userId, userPath, "", -1)
 	return strings.Replace(s, "auth/", "", -1)
@@ -126,7 +126,7 @@ func userpassUserRead(_ context.Context, d *schema.ResourceData, meta interface{
 	}
 
 	d.Set(consts.FieldUsername, usernameFromPath(path))
-	d.Set(consts.FieldMount, backendFromPath(path))
+	d.Set(consts.FieldMount, mountFromPath(path))
 	readTokenFields(d, dt)
 
 	return nil
