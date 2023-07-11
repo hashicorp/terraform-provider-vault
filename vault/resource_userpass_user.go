@@ -22,7 +22,7 @@ func userpassUserResource() *schema.Resource {
 			Type:         schema.TypeString,
 			Optional:     true,
 			ForceNew:     true,
-			Description:  "Auth mount at which user will be configured.",
+			Description:  "Path where the userpass auth backend is mounted.",
 			Default:      consts.MountTypeUserpass,
 			ValidateFunc: provider.ValidateNoLeadingTrailingSlashes,
 		},
