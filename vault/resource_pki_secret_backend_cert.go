@@ -175,6 +175,14 @@ func pkiSecretBackendCertResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies the default issuer of this request.",
 			},
+			consts.FieldUserIds: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "The allowed User ID's.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -221,6 +229,16 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 	if provider.IsAPISupported(meta, provider.VaultVersion111) {
 		if issuerRef, ok := d.GetOk(consts.FieldIssuerRef); ok {
 			data[consts.FieldIssuerRef] = issuerRef
+		}
+	}
+
+	// add UID if supported
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		if userIds, ok := d.GetOk(consts.FieldUserIds); ok {
+			m := util.ToStringArray(userIds.([]interface{}))
+			if len(m) > 0 {
+				data[consts.FieldIssuerRef] = strings.Join(m, ",")
+			}
 		}
 	}
 
