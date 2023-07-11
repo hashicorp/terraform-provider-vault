@@ -347,7 +347,7 @@ const (
 	FieldRollbackStatements            = "rollback_statements"
 	FieldRenewStatements               = "renew_statements"
 	FieldCredentialType                = "credential_type"
-
+	FieldDefault                       = "default"
 	/*
 		common environment variables
 	*/

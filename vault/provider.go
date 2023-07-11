@@ -597,6 +597,10 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerResource()),
 			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
 		},
+		"vault_pki_secret_backend_config_issuers": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigIssuers()),
+			PathInventory: []string{"/pki/config/issuers"},
+		},
 		"vault_quota_lease_count": {
 			Resource:      UpdateSchemaResource(quotaLeaseCountResource()),
 			PathInventory: []string{"/sys/quotas/lease-count/{name}"},
