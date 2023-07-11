@@ -82,6 +82,8 @@ The following arguments are supported:
 
 * `allow_wildcard_certificates` - (Optional) Flag to allow wildcard certificates.
 
+* `allowed_user_ids` - (Optional) Defines allowed user IDs
+
 * `server_flag` - (Optional) Flag to specify certificates for server use
 
 * `client_flag` - (Optional) Flag to specify certificates for client use
@@ -134,6 +136,7 @@ The following arguments are supported:
    - `cps` - (Optional) The URL of the CPS for the policy identifier
 
    Example usage:
+
 ```hcl
 resource "vault_mount" "pki" {
   path                      = "pki"
@@ -162,8 +165,6 @@ resource "vault_pki_secret_backend_role" "role" {
   }
 }
 ```
-
-
 
 * `basic_constraints_valid_for_non_ca` - (Optional) Flag to mark basic constraints valid when issuing non-CA certificates
 

@@ -608,6 +608,53 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
+	d.Set("backend", backend)
+	d.Set("name", name)
+	d.Set("ttl", secret.Data["ttl"])
+	d.Set("max_ttl", secret.Data["max_ttl"])
+	d.Set("allow_localhost", secret.Data["allow_localhost"])
+	d.Set("allowed_domains", allowedDomains)
+	d.Set("allowed_domains_template", secret.Data["allowed_domains_template"])
+	d.Set("allow_bare_domains", secret.Data["allow_bare_domains"])
+	d.Set("allow_subdomains", secret.Data["allow_subdomains"])
+	d.Set("allow_glob_domains", secret.Data["allow_glob_domains"])
+	d.Set("allow_any_name", secret.Data["allow_any_name"])
+	d.Set("enforce_hostnames", secret.Data["enforce_hostnames"])
+	d.Set("allow_ip_sans", secret.Data["allow_ip_sans"])
+	d.Set("allowed_uri_sans", secret.Data["allowed_uri_sans"])
+	d.Set("allowed_other_sans", secret.Data["allowed_other_sans"])
+	d.Set("server_flag", secret.Data["server_flag"])
+	d.Set("client_flag", secret.Data["client_flag"])
+	d.Set("code_signing_flag", secret.Data["code_signing_flag"])
+	d.Set("email_protection_flag", secret.Data["email_protection_flag"])
+	d.Set("key_type", secret.Data["key_type"])
+	d.Set("key_bits", keyBits)
+	d.Set("key_usage", keyUsage)
+	d.Set("ext_key_usage", extKeyUsage)
+	d.Set("use_csr_common_name", secret.Data["use_csr_common_name"])
+	d.Set("use_csr_sans", secret.Data["use_csr_sans"])
+	d.Set("ou", secret.Data["ou"])
+	d.Set("organization", secret.Data["organization"])
+	d.Set("country", secret.Data["country"])
+	d.Set("locality", secret.Data["locality"])
+	d.Set("province", secret.Data["province"])
+	d.Set("street_address", secret.Data["street_address"])
+	d.Set("postal_code", secret.Data["postal_code"])
+	d.Set("generate_lease", secret.Data["generate_lease"])
+	d.Set("no_store", secret.Data["no_store"])
+	d.Set("require_cn", secret.Data["require_cn"])
+	if len(legacyPolicyIdentifiers) > 0 {
+		d.Set(consts.FieldPolicyIdentifiers, legacyPolicyIdentifiers)
+	} else {
+		d.Set(consts.FieldPolicyIdentifier, newPolicyIdentifiers)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		if issuerRef, ok := secret.Data[consts.FieldIssuerRef]; ok {
+			d.Set(consts.FieldIssuerRef, issuerRef)
+		}
+	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion111) {
 		if allowedUserIds, ok := secret.Data[consts.FieldAllowedUserIds]; ok {
 			d.Set(consts.FieldAllowedUserIds, allowedUserIds)
