@@ -178,6 +178,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 			consts.FieldUserIds: {
 				Type:        schema.TypeList,
 				Optional:    true,
+				ForceNew:    true,
 				Description: "The allowed User ID's.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -237,7 +238,7 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 		if userIds, ok := d.GetOk(consts.FieldUserIds); ok {
 			m := util.ToStringArray(userIds.([]interface{}))
 			if len(m) > 0 {
-				data[consts.FieldIssuerRef] = strings.Join(m, ",")
+				data[consts.FieldUserIds] = strings.Join(m, ",")
 			}
 		}
 	}
