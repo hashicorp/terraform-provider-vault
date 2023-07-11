@@ -30,6 +30,18 @@ jobs:
         with:
           terraform_version: '1.4.*'
           terraform_wrapper: false
+
+      - name: Cache go build
+        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+            ~/Library/Caches/go-build
+          key: ${{ runner.os }}-golang-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-golang-
+
       - name: Build
         run: |
           make build
@@ -41,7 +53,7 @@ jobs:
           make test
   acceptance:
     needs: [go-version, build]
-    runs-on: ubuntu-latest
+    runs-on: [custom, linux, custom-linux-large]
     strategy:
       fail-fast: false
       matrix:
@@ -137,6 +149,18 @@ jobs:
           terraform_wrapper: false
       - name: Check Terraform CLI version
         run: terraform --version
+
+      - name: Cache go build
+        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+            ~/Library/Caches/go-build
+          key: ${{ runner.os }}-golang-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-golang-
+
       - name: Acceptance Tests
         env:
           VAULT_TOKEN: "root"

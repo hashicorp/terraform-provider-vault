@@ -152,6 +152,8 @@ variables in order to keep credential information out of the configuration.
 
 * `auth_login_azure` - (Optional) Utilizes the `azure` authentication engine. *[See usage details below.](#azure)*
 
+* `auth_login_token_file` - (Optional) Utilizes a local file containing a Vault token. *[See usage details below.](#token-file)*
+* 
 * `auth_login` - (Optional) A configuration block, described below, that
   attempts to authenticate using the `auth/<method>/login` path to
   acquire a token which Terraform will use. Terraform still issues itself
@@ -551,6 +553,23 @@ The `auth_login_azure` configuration block accepts the following arguments:
 
 * `scope` - (Optional) The scopes to include in the token request. Defaults to `https://management.azure.com/`
 
+
+### Token File
+
+Provides support for "authenticating" to Vault using a local file containing a Vault token.
+
+~> Using `auth_login_token_file` is not recommended, since it relies on a Vault token that is persisted to disk.
+Please ensure you have processes in place that will remove the token file between Terraform executions.
+
+The `auth_login_token_file` configuration block accepts the following arguments:
+
+* `namespace` - (Optional) The path to the namespace that has the mounted auth method.
+  This defaults to the root namespace. Cannot contain any leading or trailing slashes.
+  *Available only for Vault Enterprise*.
+
+* `filename` - (Required) The filename containing a Vault token. The file must contain a single Vault token 
+  and be user readable e.g. perms=`0600`. May be set via the `TERRAFORM_VAULT_TOKEN_FILENAME`
+  environment variable.
 
 ### Generic
 
