@@ -109,7 +109,7 @@ func testAuthLogin(t *testing.T, tt authLoginTest) {
 	var config *api.Config
 	var ln net.Listener
 	if tt.tls {
-		config, ln = testutil.TestHTTPSServer(t, tt.handler.handler(), nil)
+		config, ln = testutil.TestHTTPSServer(t, tt.handler.handler())
 	} else {
 		config, ln = testutil.TestHTTPServer(t, tt.handler.handler())
 	}

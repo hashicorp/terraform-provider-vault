@@ -365,29 +365,28 @@ func TestHTTPServer(t *testing.T, handler http.Handler) (*api.Config, net.Listen
 // TestHTTPSServer creates a test HTTP server that handles requests until
 // the listener returned is closed.
 // XXX: copied from github.com/hashicorp/vault/api/client_test.go
-func TestHTTPSServer(t *testing.T, handler http.Handler, tlsConfig *tls.Config) (*api.Config, net.Listener) {
+func TestHTTPSServer(t *testing.T, handler http.Handler) (*api.Config, net.Listener) {
 	t.Helper()
 
 	var ca []byte
 	var key []byte
 	var err error
-	if tlsConfig == nil {
-		ca, key, err = GenerateCA()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		cert, err := tls.X509KeyPair(ca, key)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		tlsConfig = &tls.Config{
-			Certificates: []tls.Certificate{cert},
-		}
+	var serverTLSConfig *tls.Config
+	ca, key, err = GenerateCA()
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	server, ln, err := testHTTPServer(handler, tlsConfig)
+	cert, err := tls.X509KeyPair(ca, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	serverTLSConfig = &tls.Config{
+		Certificates: []tls.Certificate{cert},
+	}
+
+	server, ln, err := testHTTPServer(handler, serverTLSConfig)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -395,13 +394,11 @@ func TestHTTPSServer(t *testing.T, handler http.Handler, tlsConfig *tls.Config) 
 	go server.ServeTLS(ln, "", "")
 
 	config := api.DefaultConfig()
-	if tlsConfig == nil {
-		config.CloneTLSConfig = true
-		if err := config.ConfigureTLS(&api.TLSConfig{
-			CACertBytes: ca,
-		}); err != nil {
-			t.Fatal(err)
-		}
+	config.CloneTLSConfig = true
+	if err := config.ConfigureTLS(&api.TLSConfig{
+		CACertBytes: ca,
+	}); err != nil {
+		t.Fatal(err)
 	}
 
 	config.Address = fmt.Sprintf("https://%s", ln.Addr())
