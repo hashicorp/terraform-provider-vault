@@ -75,7 +75,6 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "require_cn", "true"),
 		resource.TestCheckResourceAttr(resourceName, "basic_constraints_valid_for_non_ca", "false"),
 		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_user_ids.0", "45m"),
 	}
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
@@ -328,7 +327,6 @@ resource "vault_pki_secret_backend_role" "test" {
   max_ttl                            = %d
   allow_localhost                    = true
   allowed_domains                    = ["test.domain"]
-	allowed_user_ids                   = ["*"]
   allow_bare_domains                 = false
   allow_subdomains                   = true
   allow_glob_domains                 = false
@@ -360,7 +358,6 @@ resource "vault_pki_secret_backend_role" "test" {
   basic_constraints_valid_for_non_ca = false
   not_before_duration                = "45m"
   allowed_serial_numbers             = ["*"]
-	allowed_user_ids                   = ["*"]
 }
 `, path, name, roleTTL, maxTTL, extraConfig)
 }
@@ -380,7 +377,6 @@ resource "vault_pki_secret_backend_role" "test" {
   max_ttl = 3600
   allow_localhost = true
   allowed_domains = ["other.domain", "{{identity.entity.name}}"]
-	allowed_user_ids = ["*"]
   allowed_domains_template = true
   allow_bare_domains = false
   allow_subdomains = true
@@ -416,7 +412,6 @@ resource "vault_pki_secret_backend_role" "test" {
   basic_constraints_valid_for_non_ca = false
   not_before_duration = "45m"
   allowed_serial_numbers = ["*"]
-	allowed_user_ids = ["*"]
 }`, path, name, policyIdentifiers)
 }
 
