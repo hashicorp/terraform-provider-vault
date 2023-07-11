@@ -30,15 +30,14 @@ func userpassUserResource() *schema.Resource {
 			Type:         schema.TypeString,
 			Required:     true,
 			ForceNew:     true,
-			Description:  "Username part of userpass.",
+			Description:  "The username for the user.",
 			ValidateFunc: provider.ValidateStringSlug,
 		},
 		consts.FieldPassword: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Sensitive:   true,
-			ForceNew:    true,
-			Description: "Password part of userpass.",
+			Description: "The password for the user.",
 		},
 	}
 
@@ -88,11 +87,7 @@ func usernameFromPath(path string) (string, error) {
 }
 
 func userpassUserCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	id := userPath(d.Get(consts.FieldMount).(string), d.Get(consts.FieldUsername).(string))
-	d.SetId(id)
-	d.MarkNewResource()
-
-	log.Printf("[INFO] Creating new user at '%v'", id)
+	log.Printf("[INFO] Creating user %s at mount %s", d.Get(consts.FieldUsePasscode).(string), d.Get(consts.FieldMount).(string))
 	return userpassUserUpdate(ctx, d, meta)
 }
 
@@ -101,8 +96,6 @@ func userpassUserUpdate(ctx context.Context, d *schema.ResourceData, meta interf
 	if e != nil {
 		return diag.FromErr(e)
 	}
-
-	path := d.Id()
 
 	data := map[string]interface{}{}
 
@@ -116,12 +109,13 @@ func userpassUserUpdate(ctx context.Context, d *schema.ResourceData, meta interf
 		data[consts.FieldPassword] = v.(string)
 	}
 
+	path := userPath(d.Get(consts.FieldMount).(string), d.Get(consts.FieldUsername).(string))
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		d.SetId("")
 		log.Printf("[ERROR] Error writing user at '%s'", path)
 		return diag.FromErr(err)
 	}
+	d.SetId(path)
 
 	log.Printf("[INFO] Saved user at '%v'", path)
 
@@ -137,7 +131,8 @@ func userpassUserRead(_ context.Context, d *schema.ResourceData, meta interface{
 	path := d.Id()
 
 	dt, err := client.Logical().Read(path)
-	if err != nil {
+	if err != nil || dt == nil {
+		d.SetId("")
 		log.Printf("[ERROR] Error reading user from '%s'", path)
 		return diag.FromErr(err)
 	}
