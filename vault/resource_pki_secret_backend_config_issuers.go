@@ -42,7 +42,7 @@ func pkiSecretBackendConfigIssuers() *schema.Resource {
 			consts.FieldDefault: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Specifies the default issuer by reference.",
+				Description: "Specifies the default issuer by ID.",
 			},
 			fieldDefaultFollowsLatestIssuer: {
 				Type:     schema.TypeBool,
