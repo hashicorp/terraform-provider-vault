@@ -74,6 +74,8 @@ The following arguments are supported:
 
 * `allowed_uri_sans` - (Optional) Defines allowed URI SANs
 
+* `allowed_user_ids` - (Optional) Defines allowed User IDs
+
 * `allowed_uri_sans_template` - (Optional) Flag, if set, `allowed_uri_sans` can be specified using identity template expressions such as `{{identity.entity.aliases.<mount accessor>.name}}`.
 
 * `allowed_other_sans` - (Optional) Defines allowed custom SANs
