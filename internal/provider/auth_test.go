@@ -5,8 +5,8 @@ package provider
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"reflect"
 	"testing"
@@ -33,6 +33,7 @@ type authLoginTest struct {
 	wantErr            bool
 	expectErr          error
 	skipFunc           func(t *testing.T)
+	tls                bool
 	preLoginFunc       func(t *testing.T)
 }
 
@@ -105,10 +106,15 @@ func testAuthLogin(t *testing.T, tt authLoginTest) {
 		tt.preLoginFunc(t)
 	}
 
-	config, ln := testutil.TestHTTPServer(t, tt.handler.handler())
+	var config *api.Config
+	var ln net.Listener
+	if tt.tls {
+		config, ln = testutil.TestHTTPSServer(t, tt.handler.handler())
+	} else {
+		config, ln = testutil.TestHTTPServer(t, tt.handler.handler())
+	}
 	defer ln.Close()
 
-	config.Address = fmt.Sprintf("http://%s", ln.Addr())
 	c, err := api.NewClient(config)
 	if err != nil {
 		t.Fatal(err)
@@ -231,7 +237,6 @@ func assertAuthLoginInit(t *testing.T, tt authLoginInitTest, s map[string]*schem
 	}
 
 	d := schema.TestResourceDataRaw(t, s, tt.raw)
-
 	actual, err := l.Init(d, tt.authField)
 	if (err != nil) != tt.wantErr {
 		t.Fatalf("Init() error = %v, wantErr %v", err, tt.wantErr)

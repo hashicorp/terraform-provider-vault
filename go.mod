@@ -37,7 +37,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-jwt v0.13.2-0.20221012184020-28cc68ee722b
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.8.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.13.0-pre
-	github.com/hashicorp/vault/api v1.8.1
+	github.com/hashicorp/vault/api v1.9.3-0.20230628215639-3ca33976762c
 	github.com/hashicorp/vault/sdk v0.6.0
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/jcmturner/gokrb5/v8 v8.4.2
@@ -46,7 +46,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mitchellh/pointerstructure v1.2.1 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
-	golang.org/x/crypto v0.0.0-20221012134737-56aed061732a
+	golang.org/x/crypto v0.6.0
 	golang.org/x/net v0.7.0
 	golang.org/x/oauth2 v0.0.0-20221006150949-b44042a4b9c1
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
