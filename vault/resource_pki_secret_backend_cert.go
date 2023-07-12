@@ -179,7 +179,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 				Type:        schema.TypeList,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "The allowed User ID's.",
+				Description: "List of Subject User IDs.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
