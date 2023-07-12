@@ -55,7 +55,7 @@ The following arguments are supported:
 
 * `default` - (Required) Specifies the default issuer using the issuer ID.
   **NOTE:** It is recommended to only set the default issuer using the ID. 
-  Passing in the issuer name can lead to possible drifts in the state.
+  While Vault does allow passing in the issuer name, this can lead to possible drifts in the Terraform state.
 
 * `default_follows_latest_issuer` - (Optional) Specifies whether a root creation
   or an issuer import operation updates the default issuer to the newly added issuer.
