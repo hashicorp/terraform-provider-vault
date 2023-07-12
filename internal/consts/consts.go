@@ -349,7 +349,7 @@ const (
 	FieldRenewStatements               = "renew_statements"
 	FieldCredentialType                = "credential_type"
 	FieldFilename                      = "filename"
-
+	FieldDefault                       = "default"
 	/*
 		common environment variables
 	*/
