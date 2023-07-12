@@ -235,7 +235,7 @@ func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]inter
 		path = v.(string)
 	} else if v, ok := l.getOk(d, consts.FieldMount); ok {
 		path = v.(string)
-	} else {
+	} else if l.mount != consts.MountTypeNone {
 		return "", nil, fmt.Errorf("no valid path configured for %q", l.authField)
 	}
 
@@ -243,7 +243,12 @@ func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]inter
 	if v, ok := l.getOk(d, consts.FieldParameters); ok {
 		params = v.(map[string]interface{})
 	} else {
-		params = config[0].(map[string]interface{})
+		v := config[0]
+		if v == nil {
+			params = make(map[string]interface{})
+		} else {
+			params = v.(map[string]interface{})
+		}
 	}
 
 	l.initialized = true
@@ -312,20 +317,25 @@ func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {
 }
 
 func mustAddLoginSchema(r *schema.Resource, defaultMount string) *schema.Resource {
-	MustAddSchema(r, map[string]*schema.Schema{
+	m := map[string]*schema.Schema{
 		consts.FieldNamespace: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "The authentication engine's namespace.",
 		},
-		consts.FieldMount: {
+	}
+
+	if defaultMount != consts.MountTypeNone {
+		m[consts.FieldMount] = &schema.Schema{
 			Type:             schema.TypeString,
 			Optional:         true,
 			Description:      "The path where the authentication engine is mounted.",
 			Default:          defaultMount,
 			ValidateDiagFunc: ValidateDiagPath,
-		},
-	})
+		}
+	}
+
+	MustAddSchema(r, m)
 
 	return r
 }

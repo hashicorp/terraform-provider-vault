@@ -44,7 +44,6 @@ var pkiSecretFields = []string{
 	consts.FieldOrganization,
 	consts.FieldPostalCode,
 	consts.FieldProvince,
-	consts.FieldServerFlag,
 	consts.FieldStreetAddress,
 	consts.FieldTTL,
 }
@@ -63,13 +62,14 @@ var pkiSecretBooleanFields = []string{
 	consts.FieldAllowIPSans,
 	consts.FieldAllowLocalhost,
 	consts.FieldAllowSubdomains,
-	consts.FieldAllowedURISansTemplate,
 	consts.FieldAllowWildcardCertificates,
+	consts.FieldAllowedURISansTemplate,
 	consts.FieldBasicConstraintsValidForNonCA,
 	consts.FieldEnforceHostnames,
 	consts.FieldGenerateLease,
 	consts.FieldNoStore,
 	consts.FieldRequireCN,
+	consts.FieldServerFlag,
 	consts.FieldUseCSRCommonName,
 	consts.FieldUseCSRSans,
 }

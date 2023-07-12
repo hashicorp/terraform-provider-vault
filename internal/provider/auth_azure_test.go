@@ -154,7 +154,11 @@ func TestAuthLoginAzure_LoginPath(t *testing.T) {
 func TestAuthLoginAzure_Login(t *testing.T) {
 	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
 		m, err := json.Marshal(
-			&api.Secret{},
+			&api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "azure",
+				},
+			},
 		)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -198,7 +202,11 @@ func TestAuthLoginAzure_Login(t *testing.T) {
 					consts.FieldResourceGroupName: "res1",
 				},
 			},
-			want:    &api.Secret{},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "azure",
+				},
+			},
 			wantErr: false,
 		},
 		{
@@ -225,7 +233,11 @@ func TestAuthLoginAzure_Login(t *testing.T) {
 			skipFunc: func(t *testing.T) {
 				testutil.SkipTestEnvUnset(t, envVarTFAccAzureAuth)
 			},
-			want:    &api.Secret{},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "azure",
+				},
+			},
 			wantErr: false,
 		},
 		{
