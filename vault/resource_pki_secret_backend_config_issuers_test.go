@@ -16,6 +16,8 @@ import (
 )
 
 func TestAccPKISecretBackendConfigIssuers_basic(t *testing.T) {
+	t.Parallel()
+
 	backend := acctest.RandomWithPrefix("tf-test-pki")
 	resourceType := "vault_pki_secret_backend_config_issuers"
 	resourceName := resourceType + ".test"

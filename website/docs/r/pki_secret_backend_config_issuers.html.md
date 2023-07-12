@@ -67,7 +67,7 @@ No additional attributes are exported by this resource.
 
 ## Import
 
-PKI secret backend config issuers can be imported using the `id`, e.g.
+PKI secret backend config issuers can be imported using the path, e.g.
 
 ```
 $ terraform import vault_pki_secret_backend_issuer.config pki/config/issuers

@@ -36,7 +36,6 @@ func pkiSecretBackendConfigIssuers() *schema.Resource {
 			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
 				Description: "Full path where PKI backend is mounted.",
 			},
 			consts.FieldDefault: {
