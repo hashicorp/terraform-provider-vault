@@ -251,6 +251,19 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion111), nil
+				},
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, `allowed_user_ids = ["test"]`),
+				Check:  resource.TestCheckResourceAttr(resourceName, "allowed_user_ids.0", "test"),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testPkiSecretBackendRoleConfig_updated(name, backend, testLegacyPolicyIdentifiers),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
