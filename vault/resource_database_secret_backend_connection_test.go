@@ -174,6 +174,12 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 	username := values[1]
 	password := values[2]
 
+	localCouchbaseHost := host
+	runsInContainer := os.Getenv("RUNS_IN_CONTAINER") == "true"
+	if !runsInContainer {
+		localCouchbaseHost = "localhost"
+	}
+
 	hostTLS := fmt.Sprintf("couchbases://%s", host)
 
 	getBase64PEM := func(host string) string {
@@ -191,7 +197,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 		return base64.StdEncoding.EncodeToString(b)
 	}
 
-	host1Base64PEM := getBase64PEM(host)
+	host1Base64PEM := getBase64PEM(localCouchbaseHost)
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineCouchbase.DefaultPluginName()
@@ -1665,7 +1671,13 @@ resource "vault_database_secret_backend_connection" "test" {
 }
 
 func newMySQLConnection(t *testing.T, connURL string, username string, password string) *sql.DB {
-	dbURL := dbutil.QueryHelper(connURL, map[string]string{
+	mysqlURL := connURL
+	runsInContainer := os.Getenv("RUNS_IN_CONTAINER") == "true"
+	if !runsInContainer {
+		mysqlURL = "{{username}}:{{password}}@tcp(localhost:3306)/"
+	}
+
+	dbURL := dbutil.QueryHelper(mysqlURL, map[string]string{
 		"username": username,
 		"password": password,
 	})

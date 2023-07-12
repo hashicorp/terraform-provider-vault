@@ -18,12 +18,11 @@ jobs:
   build:
     needs: [go-version]
     runs-on: ubuntu-latest
-    container:
-      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     steps:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-      - name: Install setup-terraform dependencies
-        run: apt-get -y update && apt-get install unzip
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: '.go-version'
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v2
@@ -62,8 +61,6 @@ jobs:
         - "vault-enterprise:1.12.7-ent"
         - "vault-enterprise:1.13.3-ent"
         - "vault-enterprise:1.14.0-ent"
-    container:
-      image: "docker.mirror.hashicorp.services/golang:${{ needs.go-version.outputs.version }}"
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
@@ -76,26 +73,36 @@ jobs:
           --health-interval 1s
           --health-timeout 5s
           --health-retries 5
+        ports:
+          - 8200:8200
       mysql:
         image: docker.mirror.hashicorp.services/mysql:latest
         env:
           MYSQL_ROOT_PASSWORD: mysql
+        ports:
+          - 3306:3306
       mssql:
         image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
+        ports:
+          - 1433:1433
       mongo:
         image: docker.mirror.hashicorp.services/mongo:latest
         env:
           MONGO_INITDB_ROOT_USERNAME: root
           MONGO_INITDB_ROOT_PASSWORD: mongodb
           MONGO_INITDB_DATABASE: admin
+        ports:
+          - 27017:27017
       postgres:
         image: docker.mirror.hashicorp.services/postgres:latest
         env:
           POSTGRES_PASSWORD: secret
           POSTGRES_DB: database
+        ports:
+          - 5432:5432
       couchbase:
         image: docker.io/couchbase/server-sandbox:7.1.1
         ports:
@@ -119,8 +126,8 @@ jobs:
         env:
           CONSUL_LOCAL_CONFIG: "{\"acl\":{\"enabled\":true}}"
         ports:
-        - 8500:8500
-        - 8600:8600
+          - 8500:8500
+          - 8600:8600
         options: >-
           --health-cmd "curl -f 'http://127.0.0.1:8500/v1/health/node/server-1'"
           --health-interval 1s
@@ -129,8 +136,8 @@ jobs:
       openldap:
         image: docker.io/bitnami/openldap:2.6
         ports:
-        - '1389:1389'
-        - '1636:1636'
+          - 1389:1389
+          - 1636:1636
         env:
           LDAP_ADMIN_USERNAME: "admin"
           LDAP_ADMIN_PASSWORD: "adminpassword"
@@ -138,9 +145,9 @@ jobs:
           LDAP_PASSWORDS: "password1,password2,password3"
     steps:
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-      # setup-terraform expects unzip to be available but we are running in a docker container that doesn't have it pre-installed
-      - name: Install setup-terraform dependencies
-        run: apt-get -y update && apt-get install unzip
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: '.go-version'
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v2
@@ -164,7 +171,9 @@ jobs:
       - name: Acceptance Tests
         env:
           VAULT_TOKEN: "root"
-          VAULT_ADDR: "http://vault:8200"
+          VAULT_ADDR: "http://localhost:8200"
+          # RUNS_IN_CONTAINER is false if not using jobs.<job_id>.container
+          RUNS_IN_CONTAINER: "false"
           MYSQL_URL: "root:mysql@tcp(mysql:3306)/"
           MYSQL_CONNECTION_URL: "{{username}}:{{password}}@tcp(mysql:3306)/"
           MYSQL_CONNECTION_USERNAME: "root"
