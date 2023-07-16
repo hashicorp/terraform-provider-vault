@@ -353,10 +353,10 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 	if !(rootType == keyTypeKMS || rootType == consts.FieldExisting) {
 		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
 		if isIssuerAPISupported {
-			rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyRef, consts.FieldIssuerName)
+			rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyName, consts.FieldIssuerName)
 		}
 	} else if isIssuerAPISupported {
-		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyName, consts.FieldIssuerName)
+		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyRef, consts.FieldIssuerName)
 	}
 
 	data := map[string]interface{}{}

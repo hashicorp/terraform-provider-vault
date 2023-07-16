@@ -264,13 +264,13 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 	isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
 
 	if !(intermediateType == keyTypeKMS || intermediateType == consts.FieldExisting) {
-		// if kms or existing type,
+		// if not (kms or existing type)
 		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
 		if isIssuerAPISupported {
-			intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyRef)
+			intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyName)
 		}
 	} else if isIssuerAPISupported {
-		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyName)
+		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyRef)
 	}
 
 	data := map[string]interface{}{}
