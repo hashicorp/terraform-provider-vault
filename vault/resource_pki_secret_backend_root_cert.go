@@ -355,7 +355,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 		if isIssuerAPISupported {
 			rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyName, consts.FieldIssuerName)
 		}
-	} else if isIssuerAPISupported {
+	} else if rootType == consts.FieldExisting && isIssuerAPISupported {
 		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyRef, consts.FieldIssuerName)
 	}
 

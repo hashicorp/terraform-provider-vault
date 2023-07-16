@@ -269,7 +269,7 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 		if isIssuerAPISupported {
 			intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyName)
 		}
-	} else if isIssuerAPISupported {
+	} else if intermediateType == consts.FieldExisting && isIssuerAPISupported {
 		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyRef)
 	}
 
