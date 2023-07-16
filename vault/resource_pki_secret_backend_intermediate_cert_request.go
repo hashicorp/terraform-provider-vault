@@ -263,7 +263,7 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 	// add multi-issuer write API fields if supported
 	isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
 
-	if intermediateType == keyTypeKMS || intermediateType == consts.FieldExisting {
+	if !(intermediateType == keyTypeKMS || intermediateType == consts.FieldExisting) {
 		// if kms or existing type,
 		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
 		if isIssuerAPISupported {
