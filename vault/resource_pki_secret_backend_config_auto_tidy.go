@@ -5,9 +5,11 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -84,17 +86,20 @@ func pkiSecretBackendConfigAutoTidyResource() *schema.Resource {
 				Description: "Specifies a duration using duration format strings used as a safety buffer to ensure certificates are not expunged prematurely; as an example, this can keep certificates from being removed from the CRL that, due to clock skew, might still be considered valid on other hosts. For a certificate to be expunged, the time must be after the expiration time of the certificate (according to the local clock) plus the duration of safety_buffer. Defaults to 72h.",
 			},
 			"issuer_safety_buffer": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeInt,
 				Optional:    true,
+				Computed:    true,
 				Description: "Specifies a duration that issuers should be kept for, past their NotAfter validity period. Defaults to 365 days as hours (8760h).",
 			},
 			"pause_duration": {
 				Type:        schema.TypeInt,
 				Optional:    true,
+				Computed:    true,
 				Description: "Specifies the duration to pause between tidying individual certificates. This releases the revocation lock and allows other operations to continue while tidy is paused. This allows an operator to control tidy's resource utilization within a timespan: the LIST operation will remain in memory, but the space between reading, parsing, and updates on-disk cert entries will be increased, decreasing resource utilization.\n\nDoes not affect tidy_expired_issuers.",
 			},
 			"revocation_queue_safety_buffer": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeInt,
+				Computed:    true,
 				Optional:    true,
 				Description: "Specifies a duration after which cross-cluster revocation requests will be removed as expired. This should be set high enough that, if a cluster disappears for a while but later comes back, any revocation requests which it should process will still be there, but not too long as to fill up storage with too many invalid requests. Defaults to 48h.",
 			},
@@ -105,8 +110,9 @@ func pkiSecretBackendConfigAutoTidyResource() *schema.Resource {
 				Description: "Set to true to tidy stale ACME accounts, orders, authorizations, EABs, and challenges. ACME orders are tidied (deleted) safety_buffer after the certificate associated with them expires, or after the order and relevant authorizations have expired if no certificate was produced. Authorizations are tidied with the corresponding order.",
 			},
 			"acme_account_safety_buffer": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeInt,
 				Optional:    true,
+				Computed:    true,
 				Description: "The amount of time that must pass after creation that an account with no orders is marked revoked, and the amount of time after being marked revoked or deactivated. The default is 30 days as hours.",
 			},
 			"enabled": {
@@ -211,6 +217,14 @@ func pkiSecretBackendConfigAutoTidyRead(_ context.Context, d *schema.ResourceDat
 		return diag.Errorf("no path set, id=%q", d.Id())
 	}
 
+	backend, found := strings.CutSuffix(path, "/config/auto-tidy")
+	if !found {
+		return diag.Errorf("error parsing backend from ID %s", path)
+	}
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
+		return diag.FromErr(err)
+	}
+
 	log.Printf("[DEBUG] Reading auto tidy config from PKI secret path %q", path)
 	config, err := client.Logical().Read(path)
 	if err != nil {
@@ -223,7 +237,7 @@ func pkiSecretBackendConfigAutoTidyRead(_ context.Context, d *schema.ResourceDat
 		return nil
 	}
 
-	fields := []string{
+	booleanFields := []string{
 		fieldTidyCertStore,
 		"tidy_revoked_certs",
 		"tidy_revoked_cert_issuer_associations",
@@ -231,20 +245,52 @@ func pkiSecretBackendConfigAutoTidyRead(_ context.Context, d *schema.ResourceDat
 		"tidy_move_legacy_ca_bundle",
 		"tidy_revocation_queue",
 		"tidy_cross_cluster_revoked_certs",
+		"tidy_acme",
+		"enabled",
+		"maintain_stored_certificate_counts",
+		"publish_stored_certificate_count_metrics",
+	}
+
+	durationFields := []string{
 		"safety_buffer",
 		"issuer_safety_buffer",
 		"pause_duration",
 		"revocation_queue_safety_buffer",
-		"tidy_acme",
 		"acme_account_safety_buffer",
-		"enabled",
 		"interval_duration",
-		"maintain_stored_certificate_counts",
-		"publish_stored_certificate_count_metrics",
 	}
-	for _, k := range fields {
+
+	for _, k := range booleanFields {
 		if err := d.Set(k, config.Data[k]); err != nil {
 			return diag.FromErr(err)
+		}
+	}
+
+	for _, k := range durationFields {
+		if val, ok := config.Data[k]; ok {
+			if v, ok := val.(string); ok {
+				// the duration fields are written to
+				// Vault as integers but are returned as a string
+				// of the format "3h12m10s"
+				// parse and store as integers to avoid drift
+				t, err := time.ParseDuration(v)
+				if err != nil {
+					return diag.Errorf("error parsing duration, err=%s", err)
+				}
+				if err := d.Set(k, t.Seconds()); err != nil {
+					return diag.FromErr(err)
+				}
+			} else {
+				// Value is a json Number
+				// convert to integer
+				if _, ok := val.(json.Number); ok {
+					if v, err := val.(json.Number).Int64(); err == nil {
+						if err := d.Set(k, v); err != nil {
+							return diag.FromErr(err)
+						}
+					}
+				}
+			}
 		}
 	}
 
