@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"testing"
@@ -186,6 +187,15 @@ func testAccAWSAuthBackendClientCheck_attrs(backend string) resource.TestCheckFu
 				return fmt.Errorf("expected %s (%s) of %q to be %q, got %q", apiAttr, stateAttr, endpoint, instanceState.Attributes[stateAttr], resp.Data[apiAttr])
 			}
 		}
+
+		if v, ok := resp.Data["max_retries"]; ok {
+			got := v.(json.Number).String()
+			expected := instanceState.Attributes["max_retries"]
+			if got != expected {
+				return fmt.Errorf("expected max_retries to be %q, got %q", expected, got)
+			}
+		}
+
 		return nil
 	}
 }
@@ -207,6 +217,7 @@ resource "vault_aws_auth_backend_client" "client" {
   sts_endpoint = "http://vault.test/sts"
   sts_region = "vault-test"
   iam_server_id_header_value = "vault.test"
+  max_retries = 1
 }
 `, backend)
 }
@@ -228,6 +239,7 @@ resource "vault_aws_auth_backend_client" "client" {
   sts_endpoint = "http://updated.vault.test/sts"
   sts_region = "updated-vault-test"
   iam_server_id_header_value = "updated.vault.test"
+  max_retries = 2
 }`, backend)
 }
 
