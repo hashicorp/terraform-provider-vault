@@ -253,7 +253,7 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 			{
 				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !meta.IsAPISupported(provider.VaultVersion111), nil
+					return !meta.IsAPISupported(provider.VaultVersion113), nil
 				},
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, `allowed_user_ids = ["test"]`),
 				Check:  resource.TestCheckResourceAttr(resourceName, "allowed_user_ids.0", "test"),

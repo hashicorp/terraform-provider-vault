@@ -234,7 +234,7 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	// add UID if supported
-	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
 		if userIds, ok := d.GetOk(consts.FieldUserIds); ok {
 			m := util.ToStringArray(userIds.([]interface{}))
 			if len(m) > 0 {

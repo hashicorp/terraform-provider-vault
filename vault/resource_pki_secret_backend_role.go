@@ -487,7 +487,7 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
 		if allowedUserIds, ok := d.GetOk(consts.FieldAllowedUserIds); ok {
 			ifcList := allowedUserIds.([]interface{})
 			list := make([]string, 0, len(ifcList))
@@ -608,7 +608,7 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
 		if allowedUserIds, ok := secret.Data[consts.FieldAllowedUserIds]; ok {
 			d.Set(consts.FieldAllowedUserIds, allowedUserIds)
 		}
@@ -667,7 +667,7 @@ func pkiSecretBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
 		if allowedUserIds, ok := d.GetOk(consts.FieldAllowedUserIds); ok {
 			ifcList := allowedUserIds.([]interface{})
 			list := make([]string, 0, len(ifcList))
