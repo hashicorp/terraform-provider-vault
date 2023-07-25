@@ -131,17 +131,27 @@ func ldapAuthBackendResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
-
 		"description": {
 			Type:     schema.TypeString,
 			Optional: true,
 			Computed: true,
 		},
-
+		"backend": {
+			Type:          schema.TypeString,
+			Description:   "Uses an existing enabled auth backend.",
+			Optional:      true,
+			AtLeastOneOf:  []string{"path"},
+			ConflictsWith: []string{"path"},
+			StateFunc: func(v interface{}) string {
+				return strings.Trim(v.(string), "/")
+			},
+		},
 		consts.FieldPath: {
-			Type:     schema.TypeString,
-			Optional: true,
-			Default:  "ldap",
+			Type:          schema.TypeString,
+			Description:   "The path of the LDAP auth backend. In case of an existing auth backend, use the backend attribute.",
+			Optional:      true,
+			AtLeastOneOf:  []string{"backend"},
+			ConflictsWith: []string{"backend"},
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
 			},
@@ -198,23 +208,40 @@ func ldapAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta inte
 		return diag.FromErr(e)
 	}
 
-	path := d.Get("path").(string)
-	options := &api.EnableAuthOptions{
-		Type:        ldapAuthType,
-		Description: d.Get("description").(string),
-		Local:       d.Get("local").(bool),
+	if v, ok := d.GetOk("path"); ok {
+		path := v.(string)
+
+		options := &api.EnableAuthOptions{
+			Type:        ldapAuthType,
+			Description: d.Get("description").(string),
+			Local:       d.Get("local").(bool),
+		}
+
+		log.Printf("[DEBUG] Enabling LDAP auth backend %q", path)
+
+		err := client.Sys().EnableAuthWithOptions(path, options)
+		if err != nil {
+			return diag.Errorf("error enabling ldap auth backend %q: %s", path, err)
+		}
+
+		log.Printf("[DEBUG] Enabled LDAP auth backend %q", path)
+
+		d.SetId(path)
+
+		return ldapAuthBackendUpdate(ctx, d, meta)
 	}
 
-	log.Printf("[DEBUG] Enabling LDAP auth backend %q", path)
-	err := client.Sys().EnableAuthWithOptions(path, options)
-	if err != nil {
-		return diag.Errorf("error enabling ldap auth backend %q: %s", path, err)
+	if v, ok := d.GetOk("backend"); ok {
+		backend := v.(string)
+
+		log.Printf("[DEBUG] Using existing backend %q for LDAP auth", backend)
+
+		d.SetId(d.Get("backend").(string))
+
+		return ldapAuthBackendUpdate(ctx, d, meta)
 	}
-	log.Printf("[DEBUG] Enabled LDAP auth backend %q", path)
 
-	d.SetId(path)
-
-	return ldapAuthBackendUpdate(ctx, d, meta)
+	return diag.Errorf("either one of backend or path is required")
 }
 
 func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -354,6 +381,7 @@ func ldapAuthBackendRead(_ context.Context, d *schema.ResourceData, meta interfa
 	}
 
 	d.Set("path", path)
+	d.Set("backend", path)
 
 	authMount := auths[strings.Trim(path, "/")+"/"]
 	if authMount == nil {

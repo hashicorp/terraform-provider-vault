@@ -51,6 +51,24 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 	})
 }
 
+func TestLDAPAuthBackend_backend(t *testing.T) {
+	t.Parallel()
+
+	resourceName := "vault_ldap_auth_backend.test"
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testLDAPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_backend(),
+				Check:  testLDAPAuthBackendCheck_attrs(resourceName, "ldap"),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount"),
+		},
+	})
+}
+
 func TestLDAPAuthBackend_tls(t *testing.T) {
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-ldap-tls-path")
@@ -278,6 +296,31 @@ resource "vault_ldap_auth_backend" "test" {
     use_token_groups = %s
 }
 `, path, local, use_token_groups)
+}
+
+func testLDAPAuthBackendConfig_backend() string {
+	return fmt.Sprint(`
+resource "vault_auth_backend" "ldap" {
+	type = "ldap"
+}
+
+resource "vault_ldap_auth_backend" "test" {
+    backend                = vault_auth_backend.ldap.type
+    url                    = "ldaps://example.org"
+    starttls               = true
+    case_sensitive_names   = false
+	max_page_size          = -1
+    tls_min_version        = "tls11"
+    tls_max_version        = "tls12"
+    insecure_tls           = false
+    binddn                 = "cn=example.com"
+    bindpass               = "supersecurepassword"
+    discoverdn             = false
+    deny_null_bind         = true
+    description            = "example"
+    userfilter             = "({{.UserAttr}}={{.Username}})"
+    username_as_alias      = true
+}`)
 }
 
 func testLDAPAuthBackendConfig_tls(path, use_token_groups string, local string) string {
