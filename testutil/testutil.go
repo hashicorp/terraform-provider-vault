@@ -907,3 +907,28 @@ func GetTestCertPool(t *testing.T, cert []byte) *x509.CertPool {
 	}
 	return pool
 }
+
+type TestRetryHandler struct {
+	Requests    int
+	Retries     int
+	OKAtCount   int
+	RespData    []byte
+	RetryStatus int
+}
+
+func (r *TestRetryHandler) Handler() http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		if r.Requests > 0 {
+			r.Retries++
+		}
+
+		r.Requests++
+		if r.OKAtCount > 0 && (r.Requests == r.OKAtCount) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(r.RespData)
+			return
+		} else {
+			w.WriteHeader(r.RetryStatus)
+		}
+	}
+}

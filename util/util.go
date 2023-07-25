@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -404,4 +405,59 @@ func Remount(d *schema.ResourceData, client *api.Client, mountField string, isAu
 	}
 
 	return ret, nil
+}
+
+type RetryRequestOpts struct {
+	MaxTries    uint64
+	Delay       time.Duration
+	StatusCodes []int
+}
+
+func DefaultRequestOpts() *RetryRequestOpts {
+	return &RetryRequestOpts{
+		MaxTries:    60,
+		Delay:       time.Millisecond * 500,
+		StatusCodes: []int{http.StatusBadRequest},
+	}
+}
+
+// RetryWrite attempts to retry a Logical.Write() to Vault for the
+// RetryRequestOpts. Primary useful for handling some of Vault's eventually
+// consistent APIs.
+func RetryWrite(client *api.Client, path string, data map[string]interface{}, req *RetryRequestOpts) (*api.Secret, error) {
+	if req == nil {
+		req = DefaultRequestOpts()
+	}
+
+	if path == "" {
+		return nil, fmt.Errorf("path is empty")
+	}
+
+	bo := backoff.NewConstantBackOff(req.Delay)
+
+	codes := make(map[int]bool, len(req.StatusCodes))
+	for _, s := range req.StatusCodes {
+		codes[s] = true
+	}
+
+	var resp *api.Secret
+	return resp, backoff.RetryNotify(
+		func() error {
+			r, err := client.Logical().Write(path, data)
+			if err != nil {
+				e := fmt.Errorf("error writing to path %q, err=%w", path, err)
+				if respErr, ok := err.(*api.ResponseError); ok {
+					if _, retry := codes[respErr.StatusCode]; retry {
+						return e
+					}
+				}
+
+				return backoff.Permanent(e)
+			}
+			resp = r
+			return nil
+		}, backoff.WithMaxRetries(bo, req.MaxTries),
+		func(err error, duration time.Duration) {
+			log.Printf("[WARN] Writing to path %q failed, retrying in %s", path, duration)
+		})
 }

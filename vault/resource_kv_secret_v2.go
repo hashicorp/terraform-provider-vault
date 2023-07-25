@@ -19,6 +19,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -203,7 +204,7 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 		data[k] = d.Get(k)
 	}
 
-	if err := writeSecretDataWithRetry(client, path, data); err != nil {
+	if _, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts()); err != nil {
 		return diag.FromErr(err)
 	}
 
