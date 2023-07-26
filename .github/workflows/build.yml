@@ -123,7 +123,7 @@ jobs:
           --health-timeout 5s
           --health-retries 60
       consul:
-        image: docker.mirror.hashicorp.services/consul:latest
+        image: docker.mirror.hashicorp.services/hashicorp/consul:latest
         env:
           CONSUL_LOCAL_CONFIG: "{\"acl\":{\"enabled\":true}}"
         ports:
