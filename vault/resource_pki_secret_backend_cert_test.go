@@ -81,6 +81,17 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 					testPKICertRevocation(intermediatePath, store),
 				),
 			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion113), nil
+				},
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "user_ids.0", "foo"),
+					resource.TestCheckResourceAttr(resourceName, "user_ids.1", "bar"),
+				),
+			},
 		},
 	})
 }
@@ -149,6 +160,7 @@ resource "vault_pki_secret_backend_role" "test" {
   allowed_domains  = ["test.my.domain"]
   allow_subdomains = true
   allowed_uri_sans = ["spiffe://test.my.domain"]
+	allowed_user_ids = ["foo", "bar"]
   max_ttl          = "3600"
   key_usage        = ["DigitalSignature", "KeyAgreement", "KeyEncipherment"]
 }
@@ -162,6 +174,7 @@ resource "vault_pki_secret_backend_cert" "test" {
   name                  = vault_pki_secret_backend_role.test.name
   common_name           = "cert.test.my.domain"
   uri_sans              = ["spiffe://test.my.domain"]
+	user_ids              = ["foo", "bar"]
   ttl                   = "720h"
   min_seconds_remaining = 60
   revoke                = %t
