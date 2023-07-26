@@ -413,6 +413,16 @@ type RetryRequestOpts struct {
 	StatusCodes []int
 }
 
+func (r *RetryRequestOpts) IsRetryableStatus(statusCode int) bool {
+	for _, s := range r.StatusCodes {
+		if s == statusCode {
+			return true
+		}
+	}
+
+	return false
+}
+
 func DefaultRequestOpts() *RetryRequestOpts {
 	return &RetryRequestOpts{
 		MaxTries:    60,
@@ -435,11 +445,6 @@ func RetryWrite(client *api.Client, path string, data map[string]interface{}, re
 
 	bo := backoff.NewConstantBackOff(req.Delay)
 
-	codes := make(map[int]bool, len(req.StatusCodes))
-	for _, s := range req.StatusCodes {
-		codes[s] = true
-	}
-
 	var resp *api.Secret
 	return resp, backoff.RetryNotify(
 		func() error {
@@ -447,7 +452,7 @@ func RetryWrite(client *api.Client, path string, data map[string]interface{}, re
 			if err != nil {
 				e := fmt.Errorf("error writing to path %q, err=%w", path, err)
 				if respErr, ok := err.(*api.ResponseError); ok {
-					if _, retry := codes[respErr.StatusCode]; retry {
+					if req.IsRetryableStatus(respErr.StatusCode) {
 						return e
 					}
 				}
