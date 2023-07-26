@@ -1,3 +1,7 @@
+## Unreleased
+FEATURES:
+* Add support for User ID configuration for PKI Secrets Engine: ([#1936](https://github.com/hashicorp/terraform-provider-vault/pull/1936))
+
 ## 3.18.0 (Jul 12, 2023)
 FEATURES:
 * Add support to set default issuers configuration for PKI Secrets Engine: ([#1937](https://github.com/hashicorp/terraform-provider-vault/pull/1937))
