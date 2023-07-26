@@ -8,17 +8,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"regexp"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -203,7 +202,7 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 		data[k] = d.Get(k)
 	}
 
-	if err := writeSecretDataWithRetry(client, path, data); err != nil {
+	if _, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts()); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -389,22 +388,4 @@ func getKVV2SecretMountFromPath(path string) (string, error) {
 		return "", fmt.Errorf("unexpected number of matches (%d) for mount", len(res))
 	}
 	return res[1], nil
-}
-
-func writeSecretDataWithRetry(client *api.Client, path string, data map[string]interface{}) error {
-	return backoff.RetryNotify(
-		func() error {
-			if _, err := client.Logical().Write(path, data); err != nil {
-				e := fmt.Errorf("error writing secret data: %w", err)
-				if respErr, ok := err.(*api.ResponseError); ok && (respErr.StatusCode == http.StatusBadRequest) {
-					return e
-				}
-
-				return backoff.Permanent(e)
-			}
-			return nil
-		}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Millisecond*500), 10),
-		func(err error, duration time.Duration) {
-			log.Printf("[WARN] Writing secret data to %q failed, retrying in %s", path, duration)
-		})
 }
