@@ -4,11 +4,17 @@
 package util
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 type testingStruct struct {
@@ -690,6 +696,177 @@ func TestCalculateConflictsWith(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := CalculateConflictsWith(tt.self, tt.group); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("CalculateConflictsWith() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRetryWrite(t *testing.T) {
+	tests := []struct {
+		name         string
+		path         string
+		reqData      map[string]interface{}
+		req          *RetryRequestOpts
+		retryHandler *testutil.TestRetryHandler
+		want         *api.Secret
+		wantErr      bool
+	}{
+		{
+			name: "ok-without-retries",
+			path: "foo/baz",
+			reqData: map[string]interface{}{
+				"qux": "baz",
+			},
+			req: &RetryRequestOpts{
+				MaxTries:    3,
+				Delay:       time.Millisecond * 100,
+				StatusCodes: []int{http.StatusBadRequest},
+			},
+			retryHandler: &testutil.TestRetryHandler{
+				OKAtCount: 1,
+			},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"qux": "baz",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "ok-with-retries",
+			path: "foo/baz",
+			reqData: map[string]interface{}{
+				"baz": "biff",
+			},
+			req: &RetryRequestOpts{
+				MaxTries:    3,
+				Delay:       time.Millisecond * 100,
+				StatusCodes: []int{http.StatusBadRequest},
+			},
+			retryHandler: &testutil.TestRetryHandler{
+				OKAtCount:   2,
+				RetryStatus: http.StatusBadRequest,
+			},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"baz": "biff",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "non-retryable-no-status",
+			path: "foo/baz",
+			reqData: map[string]interface{}{
+				"baz": "biff",
+			},
+			req: &RetryRequestOpts{
+				MaxTries:    3,
+				Delay:       time.Millisecond * 100,
+				StatusCodes: []int{},
+			},
+			retryHandler: &testutil.TestRetryHandler{
+				RetryStatus: http.StatusConflict,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "max-retries-exceeded-single",
+			path: "foo/baz",
+			reqData: map[string]interface{}{
+				"baz": "biff",
+			},
+			req: &RetryRequestOpts{
+				MaxTries:    3,
+				Delay:       time.Millisecond * 100,
+				StatusCodes: []int{http.StatusBadRequest},
+			},
+			retryHandler: &testutil.TestRetryHandler{
+				RetryStatus: http.StatusBadRequest,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "max-retries-exceeded-choices",
+			path: "foo/baz",
+			reqData: map[string]interface{}{
+				"baz": "biff",
+			},
+			req: &RetryRequestOpts{
+				MaxTries:    3,
+				Delay:       time.Millisecond * 100,
+				StatusCodes: []int{http.StatusBadRequest, http.StatusConflict},
+			},
+			retryHandler: &testutil.TestRetryHandler{
+				RetryStatus: http.StatusConflict,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config, ln := testutil.TestHTTPServer(t, tt.retryHandler.Handler())
+			defer ln.Close()
+
+			config.Address = fmt.Sprintf("http://%s", ln.Addr())
+			client, err := api.NewClient(config)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !tt.wantErr && tt.retryHandler.RespData == nil {
+				b, err := json.Marshal(tt.reqData)
+				if err != nil {
+					t.Fatal(err)
+				}
+				tt.retryHandler.RespData = b
+			}
+
+			got, err := RetryWrite(client, tt.path, tt.reqData, tt.req)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RetryWrite() error = %v, wantErr %v", err,
+					tt.wantErr)
+				return
+			}
+
+			if tt.wantErr {
+				if len(tt.req.StatusCodes) == 0 {
+					if tt.retryHandler.Retries != 0 {
+						t.Fatalf("expected 0 retries, actual %d",
+							tt.retryHandler.Retries)
+					}
+					if tt.retryHandler.Requests != 1 {
+						t.Fatalf("expected 1 requests, actual %d",
+							tt.retryHandler.Requests)
+					}
+				} else {
+					if int(tt.req.MaxTries) != tt.retryHandler.Retries {
+						t.Fatalf("expected %d retries, actual %d",
+							tt.req.MaxTries, tt.retryHandler.Requests)
+					}
+				}
+			} else {
+				if tt.retryHandler.OKAtCount != tt.retryHandler.Requests {
+					t.Fatalf("expected %d retries, actual %d",
+						tt.retryHandler.OKAtCount, tt.retryHandler.Requests)
+				}
+
+				var expectedRetries int
+				if tt.retryHandler.OKAtCount > 1 {
+					expectedRetries = tt.retryHandler.Requests - 1
+				}
+
+				if expectedRetries != tt.retryHandler.Retries {
+					t.Fatalf("expected %d retries, actual %d",
+						expectedRetries, tt.retryHandler.Requests)
+				}
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("RetryWrite() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -69,6 +69,16 @@ func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.0", "foo"),
 				),
 			},
+			{
+				Config: testAccIdentityEntityPoliciesConfigNonExclusiveUpdateEntity(entity),
+				Check: resource.ComposeTestCheckFunc(
+					testAccIdentityEntityPoliciesCheckLogical("vault_identity_entity.entity", []string{"dev", "foo"}),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.dev", "policies.0", "dev"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.#", "1"),
+					resource.TestCheckResourceAttr("vault_identity_entity_policies.test", "policies.0", "foo"),
+				),
+			},
 		},
 	})
 }
@@ -257,6 +267,31 @@ func testAccIdentityEntityPoliciesConfigNonExclusiveUpdate(entity string) string
 resource "vault_identity_entity" "entity" {
   name = "%s"
   external_policies = true
+}
+
+resource "vault_identity_entity_policies" "dev" {
+	entity_id = vault_identity_entity.entity.id
+  exclusive = false
+  policies = ["dev"]
+}
+
+
+resource "vault_identity_entity_policies" "test" {
+  entity_id = vault_identity_entity.entity.id
+  exclusive = false
+  policies = ["foo"]
+}
+`, entity)
+}
+
+func testAccIdentityEntityPoliciesConfigNonExclusiveUpdateEntity(entity string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_entity" "entity" {
+  name = "%s"
+  external_policies = true
+  metadata = {
+    version = "1"
+  }
 }
 
 resource "vault_identity_entity_policies" "dev" {
