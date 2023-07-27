@@ -166,10 +166,7 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 		}
 	}
 
-	if v, ok := d.GetOk("permanently_delete"); ok {
-		data["permanently_delete"] = v.(bool)
-	}
-
+	data["permanently_delete"] = d.Get("permanently_delete").(bool)
 	return nil
 }
 
