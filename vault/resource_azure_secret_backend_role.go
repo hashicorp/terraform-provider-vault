@@ -96,6 +96,12 @@ func azureSecretBackendRoleResource() *schema.Resource {
 				Optional:    true,
 				Description: "Application Object ID for an existing service principal that will be used instead of creating dynamic service principals.",
 			},
+			"permanently_delete": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Indicates whether the applications and service principals created by Vault will be permanently deleted when the corresponding leases expire.",
+			},
 			"ttl": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -150,16 +156,18 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 		data["azure_groups"] = jsonAzureListString
 	}
 
-	if v, ok := d.GetOk("application_object_id"); ok {
-		data["application_object_id"] = v.(string)
+	for _, k := range []string{
+		"ttl",
+		"max_ttl",
+		"application_object_id",
+	} {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v.(string)
+		}
 	}
 
-	if v, ok := d.GetOk("ttl"); ok {
-		data["ttl"] = v.(string)
-	}
-
-	if v, ok := d.GetOk("max_ttl"); ok {
-		data["max_ttl"] = v.(string)
+	if v, ok := d.GetOk("permanently_delete"); ok {
+		data["permanently_delete"] = v.(bool)
 	}
 
 	return nil
@@ -218,6 +226,7 @@ func azureSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta 
 		"ttl",
 		"max_ttl",
 		"application_object_id",
+		"permanently_delete",
 	} {
 		if v, ok := resp.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {

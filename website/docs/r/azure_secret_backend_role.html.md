@@ -64,7 +64,9 @@ The following arguments are supported:
 * `azure_groups` - List of Azure groups to be assigned to the generated service principal.
 * `azure_roles` - List of Azure roles to be assigned to the generated service principal.
 * `application_object_id` - Application Object ID for an existing service principal that will
-   be used instead of creating dynamic service principals. If present, `azure_roles` will be ignored.
+   be used instead of creating dynamic service principals. If present, `azure_roles` and `permanently_delete` will be ignored.
+* `permanently_delete` - Indicates whether the applications and service principals created by Vault will be permanently
+   deleted when the corresponding leases expire. Defaults to `false`.
 * `ttl` – (Optional) Specifies the default TTL for service principals generated using this role.
    Accepts time suffixed strings ("1h") or an integer number of seconds. Defaults to the system/engine default TTL time.
 * `max_ttl` – (Optional) Specifies the maximum TTL for service principals generated using this role. Accepts time
