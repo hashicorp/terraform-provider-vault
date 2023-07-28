@@ -232,7 +232,7 @@ var (
 			PathInventory: []string{"/auth/aws/config/client"},
 		},
 		"vault_aws_auth_backend_config_identity": {
-			Resource:      awsAuthBackendConfigIdentityResource(),
+			Resource:      UpdateSchemaResource(awsAuthBackendConfigIdentityResource()),
 			PathInventory: []string{"/auth/aws/config/identity"},
 		},
 		"vault_aws_auth_backend_identity_whitelist": {
