@@ -1,7 +1,10 @@
-## Unreleased 
-
+## Unreleased
 FEATURES:
+* Add support for User ID configuration for PKI Secrets Engine: ([#1936](https://github.com/hashicorp/terraform-provider-vault/pull/1936))
 * Add support for `use_sts_region_from_client` in `vault_aws_auth_backend_client` available in Vault v1.15.0+: ([#1963](https://github.com/hashicorp/terraform-provider-vault/pull/1963))
+
+BUGS:
+* auth/aws: enable namespace support for AWS backend config identity: ([#1961](https://github.com/hashicorp/terraform-provider-vault/pull/1961))
 
 ## 3.18.0 (Jul 12, 2023)
 FEATURES:
