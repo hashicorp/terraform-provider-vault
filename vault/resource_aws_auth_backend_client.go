@@ -76,6 +76,7 @@ func awsAuthBackendClientResource() *schema.Resource {
 			useSTSRegionFromClient: {
 				Type:        schema.TypeBool,
 				Optional:    true,
+				Computed:    true,
 				Description: "If set, will override sts_region and use the region from the client request's header",
 			},
 			"iam_server_id_header_value": {

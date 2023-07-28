@@ -128,12 +128,20 @@ func TestAccAWSAuthBackendClientStsRegionFromClient(t *testing.T) {
 		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend),
+				Config: testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend, false),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAWSAuthBackendClientCheck_attrs(backend),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", useSTSRegionFromClient, "false"),
+				),
+			},
+			{
+				Config: testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend, true),
 				Check: resource.ComposeTestCheckFunc(
 					testAccAWSAuthBackendClientCheck_attrs(backend),
 					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", useSTSRegionFromClient, "true"),
 				),
 			},
+			testutil.GetImportTestStep("vault_aws_auth_backend_client.client", false, nil),
 		},
 	})
 }
@@ -308,7 +316,7 @@ resource "vault_aws_auth_backend_client" "client" {
 }`, backend)
 }
 
-func testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend string) string {
+func testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend string, useSTSRegionFromClient bool) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "aws" {
   path = "%s"
@@ -319,6 +327,6 @@ resource "vault_auth_backend" "aws" {
 resource "vault_aws_auth_backend_client" "client" {
   backend = vault_auth_backend.aws.path
   access_key = "AWSACCESSKEY"
-  use_sts_region_from_client = true
-}`, backend)
+  use_sts_region_from_client = %v
+}`, backend, useSTSRegionFromClient)
 }
