@@ -1,3 +1,8 @@
+## Unreleased 
+
+FEATURES:
+* Add support for `use_sts_region_from_client` in `vault_aws_auth_backend_client` available in Vault v1.15.0+: ([#1963](https://github.com/hashicorp/terraform-provider-vault/pull/1963))
+
 ## 3.18.0 (Jul 12, 2023)
 FEATURES:
 * Add support to set default issuers configuration for PKI Secrets Engine: ([#1937](https://github.com/hashicorp/terraform-provider-vault/pull/1937))
