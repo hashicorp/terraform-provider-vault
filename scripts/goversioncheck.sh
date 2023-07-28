@@ -2,7 +2,7 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-# Modified copy from vault-secrets-operator.
+# Copied from vault-secrets-operator.
 
 GO_CMD=${GO_CMD:-go}
 
