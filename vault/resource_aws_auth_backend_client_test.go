@@ -117,6 +117,27 @@ func TestAccAWSAuthBackendClientStsRegionNoEndpoint(t *testing.T) {
 	})
 }
 
+func TestAccAWSAuthBackendClientStsRegionFromClient(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+		},
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAWSAuthBackendClientCheck_attrs(backend),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", useSTSRegionFromClient, "true"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckAWSAuthBackendClientDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_aws_auth_backend_client" {
@@ -284,5 +305,20 @@ resource "vault_aws_auth_backend_client" "client" {
   iam_endpoint = "http://vault.test/iam"
   sts_region = "vault-test"
   iam_server_id_header_value = "vault.test"
+}`, backend)
+}
+
+func testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
+  access_key = "AWSACCESSKEY"
+  use_sts_region_from_client = true
 }`, backend)
 }
