@@ -99,7 +99,7 @@ func azureSecretBackendRoleResource() *schema.Resource {
 			"permanently_delete": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     false,
+				Computed:    true,
 				Description: "Indicates whether the applications and service principals created by Vault will be permanently deleted when the corresponding leases expire.",
 			},
 			"ttl": {
