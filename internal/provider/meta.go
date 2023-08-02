@@ -450,7 +450,13 @@ func IsEnterpriseSupported(meta interface{}) bool {
 }
 
 func getVaultVersion(client *api.Client) (*version.Version, error) {
-	resp, err := client.Sys().SealStatus()
+	clone, err := client.Clone()
+	if err != nil {
+		return nil, err
+	}
+
+	clone.ClearNamespace()
+	resp, err := clone.Sys().SealStatus()
 	if err != nil {
 		return nil, fmt.Errorf("could not determine the Vault server version, err=%s", err)
 	}
