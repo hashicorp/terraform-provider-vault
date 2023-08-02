@@ -1,9 +1,14 @@
 ## Unreleased
+
+## 3.19.0 (Aug 2, 2023)
 FEATURES:
 * Add support for User ID configuration for PKI Secrets Engine: ([#1936](https://github.com/hashicorp/terraform-provider-vault/pull/1936))
 
 BUGS:
 * auth/aws: enable namespace support for AWS backend config identity: ([#1961](https://github.com/hashicorp/terraform-provider-vault/pull/1961))
+* Retry Write on kv-v2 config: ([#1955](https://github.com/hashicorp/terraform-provider-vault/pull/1955))
+* Update `vault_identity_entity` to exclude policies from Vault request if `external_policies` is `true`: ([#1950](https://github.com/hashicorp/terraform-provider-vault/pull/1950))
+* Bump Go version to fix macOS resolver issue: ([#1941](https://github.com/hashicorp/terraform-provider-vault/pull/1941))
 
 ## 3.18.0 (Jul 12, 2023)
 FEATURES:
