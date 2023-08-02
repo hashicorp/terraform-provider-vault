@@ -116,7 +116,7 @@ func azureSecretBackendRoleResource() *schema.Resource {
 	}
 }
 
-func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceData, data map[string]interface{}) diag.Diagnostics {
+func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceData, meta interface{}, data map[string]interface{}) diag.Diagnostics {
 	if v, ok := d.GetOk("azure_roles"); ok {
 		rawAzureList := v.(*schema.Set).List()
 
@@ -166,7 +166,10 @@ func azureSecretBackendRoleUpdateFields(_ context.Context, d *schema.ResourceDat
 		}
 	}
 
-	data["permanently_delete"] = d.Get("permanently_delete").(bool)
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		data["permanently_delete"] = d.Get("permanently_delete").(bool)
+	}
+
 	return nil
 }
 
@@ -182,7 +185,7 @@ func azureSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, m
 	path := azureSecretRoleResourcePath(backend, role)
 
 	data := map[string]interface{}{}
-	if diags := azureSecretBackendRoleUpdateFields(ctx, d, data); diags != nil {
+	if diags := azureSecretBackendRoleUpdateFields(ctx, d, meta, data); diags != nil {
 		return diags
 	}
 
