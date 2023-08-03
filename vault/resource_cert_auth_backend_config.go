@@ -13,7 +13,7 @@ import (
 func certAuthBackendConfigResource() *schema.Resource {
 	return &schema.Resource{
 		Create: certAuthBackendWrite,
-		Read:   ReadWrapper(certAuthBackendRead),
+		Read:   provider.ReadWrapper(certAuthBackendRead),
 		Update: certAuthBackendWrite,
 		Delete: certAuthBackendDelete,
 		Exists: certAuthBackendExists,
