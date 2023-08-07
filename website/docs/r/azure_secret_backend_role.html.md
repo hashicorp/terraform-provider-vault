@@ -66,7 +66,7 @@ The following arguments are supported:
 * `application_object_id` - (Optional) Application Object ID for an existing service principal that will
   be used instead of creating dynamic service principals. If present, `azure_roles` and `permanently_delete` will be ignored.
 * `permanently_delete` - (Optional) Indicates whether the applications and service principals created by Vault will be permanently
-  deleted when the corresponding leases expire. Defaults to `false`.
+  deleted when the corresponding leases expire. Defaults to `false`. For Vault v1.12+.
 * `ttl` – (Optional) Specifies the default TTL for service principals generated using this role.
   Accepts time suffixed strings ("1h") or an integer number of seconds. Defaults to the system/engine default TTL time.
 * `max_ttl` – (Optional) Specifies the maximum TTL for service principals generated using this role. Accepts time
