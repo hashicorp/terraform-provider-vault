@@ -205,6 +205,11 @@ func pkiSecretBackendIssuerRead(ctx context.Context, d *schema.ResourceData, met
 
 	log.Printf("[DEBUG] Reading %s from Vault", path)
 	resp, err := client.Logical().ReadWithContext(ctx, path)
+	if resp == nil {
+		d.SetId("")
+		return nil
+	}
+
 	if err != nil {
 		return diag.Errorf("error reading from Vault: %s", err)
 	}
@@ -232,9 +237,11 @@ func pkiSecretBackendIssuerRead(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	for _, k := range fields {
-		if err := d.Set(k, resp.Data[k]); err != nil {
-			return diag.Errorf("error setting state key %q for issuer, err=%s",
-				k, err)
+		if v, ok := resp.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return diag.Errorf("error setting state key %q for issuer, err=%s",
+					k, err)
+			}
 		}
 	}
 

@@ -20,6 +20,7 @@ require (
 	github.com/denisenkom/go-mssqldb v0.12.0
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/go-sql-driver/mysql v1.6.0
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.0 // indirect
 	github.com/gosimple/slug v1.11.0
 	github.com/hashicorp/errwrap v1.1.0

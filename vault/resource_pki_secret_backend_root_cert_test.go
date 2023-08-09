@@ -84,7 +84,7 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					genPath := pkiSecretBackendIntermediateSetSignedReadPath(path, "internal")
+					genPath := pkiSecretBackendGenerateRootPath(path, "internal", false)
 					resp, err := client.Logical().Write(genPath,
 						map[string]interface{}{
 							consts.FieldCommonName: "out-of-band",
@@ -139,6 +139,38 @@ func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
 				Config: testPkiSecretBackendRootCertificateConfig_multiIssuer(path, issuerName, keyName),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks)...,
+				),
+			},
+		},
+	})
+}
+
+// Ensures that TF state is cleanly resolved whenever
+// multiple root certs are generated
+func TestAccPKISecretBackendRootCert_multiple(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-pki")
+	resourceType := "vault_pki_secret_backend_root_cert"
+	resourceCurrentIssuer := resourceType + ".current"
+	resourceNextIssuer := resourceType + ".next"
+
+	resource.Test(t, resource.TestCase{
+		ProviderFactories: providerFactories,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion111)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccPKISecretBackendRootCert_multiple(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceCurrentIssuer, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceCurrentIssuer, consts.FieldType, "internal"),
+					resource.TestCheckResourceAttrSet(resourceCurrentIssuer, consts.FieldIssuerID),
+
+					resource.TestCheckResourceAttr(resourceNextIssuer, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceNextIssuer, consts.FieldType, "internal"),
+					resource.TestCheckResourceAttrSet(resourceNextIssuer, consts.FieldIssuerID),
 				),
 			},
 		},
@@ -226,6 +258,29 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 `, path, issuer, key)
 
 	return config
+}
+
+func testAccPKISecretBackendRootCert_multiple(path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path        = "%s"
+	type        = "pki"
+	description = "PKI secret engine mount"
+}
+
+resource "vault_pki_secret_backend_root_cert" "current" {
+  backend     = vault_mount.test.path
+  type        = "internal"
+  common_name = "test"
+  ttl         = "86400"
+}
+
+resource "vault_pki_secret_backend_root_cert" "next" {
+  backend     = vault_mount.test.path
+  type        = "internal"
+  common_name = "test"
+  ttl         = "86400"
+}`, path)
 }
 
 func testPkiSecretBackendRootCertificateConfig_managedKeys(path, managedKeyName, accessKey, secretKey string) string {

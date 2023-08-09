@@ -5,9 +5,11 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -231,7 +233,8 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 
 	backend := d.Get(consts.FieldBackend).(string)
 	intermediateType := d.Get(consts.FieldType).(string)
-	path := pkiSecretBackendIntermediateGeneratePath(backend, intermediateType)
+
+	path := pkiSecretBackendIntermediateGeneratePath(backend, intermediateType, provider.IsAPISupported(meta, provider.VaultVersion111))
 
 	intermediateCertAPIFields := []string{
 		consts.FieldCommonName,
@@ -262,15 +265,19 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 
 	// add multi-issuer write API fields if supported
 	isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
+	isKeyBeingGenerated := !(intermediateType == keyTypeKMS || intermediateType == consts.FieldExisting)
 
-	if !(intermediateType == keyTypeKMS || intermediateType == consts.FieldExisting) {
-		// if kms or existing type,
+	if isKeyBeingGenerated {
 		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
 		if isIssuerAPISupported {
-			intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyRef)
+			intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyName)
 		}
-	} else if isIssuerAPISupported {
-		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyName)
+	} else {
+		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyRef)
+	}
+
+	if isIssuerAPISupported {
+		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldIssuerName)
 	}
 
 	data := map[string]interface{}{}
@@ -329,7 +336,15 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 
 	}
 
-	d.SetId(path)
+	id := path
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		// multiple CSRs can be generated
+		// ensure unique IDs
+		uniqueSuffix := uuid.New()
+		id = fmt.Sprintf("%s/%s", path, uniqueSuffix)
+	}
+
+	d.SetId(id)
 	return pkiSecretBackendIntermediateCertRequestRead(ctx, d, meta)
 }
 
@@ -341,6 +356,9 @@ func pkiSecretBackendIntermediateCertRequestDelete(ctx context.Context, d *schem
 	return nil
 }
 
-func pkiSecretBackendIntermediateGeneratePath(backend string, intermediateType string) string {
+func pkiSecretBackendIntermediateGeneratePath(backend, intermediateType string, isMultiIssuerSupported bool) string {
+	if isMultiIssuerSupported {
+		return strings.Trim(backend, "/") + "/issuers/generate/intermediate/" + strings.Trim(intermediateType, "/")
+	}
 	return strings.Trim(backend, "/") + "/intermediate/generate/" + strings.Trim(intermediateType, "/")
 }

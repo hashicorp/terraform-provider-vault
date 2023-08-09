@@ -53,9 +53,16 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				return e
 			}
 
-			cert, err := getCACertificate(client, d.Get(consts.FieldBackend).(string))
-			if err != nil {
-				return err
+			var cert *x509.Certificate
+			if provider.IsAPISupported(meta, provider.VaultVersion111) {
+				// get certificate for issuer with issuer_id
+				cert, e = getIssuerPEM(client, d.Get(consts.FieldBackend).(string), d.Get(consts.FieldIssuerID).(string))
+			} else {
+				// get certificate for issuer 'default'
+				cert, e = getDefaultCAPEM(client, d.Get(consts.FieldBackend).(string))
+				if e != nil {
+					return e
+				}
 			}
 
 			if cert != nil {
@@ -316,7 +323,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 	backend := d.Get(consts.FieldBackend).(string)
 	rootType := d.Get(consts.FieldType).(string)
 
-	path := pkiSecretBackendIntermediateSetSignedReadPath(backend, rootType)
+	path := pkiSecretBackendGenerateRootPath(backend, rootType, provider.IsAPISupported(meta, provider.VaultVersion111))
 
 	rootCertAPIFields := []string{
 		consts.FieldCommonName,
@@ -349,14 +356,19 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 
 	// add multi-issuer write API fields if supported
 	isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
+	isKeyBeingGenerated := !(rootType == keyTypeKMS || rootType == consts.FieldExisting)
 
-	if !(rootType == keyTypeKMS || rootType == consts.FieldExisting) {
+	if isKeyBeingGenerated {
 		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
 		if isIssuerAPISupported {
-			rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyRef, consts.FieldIssuerName)
+			rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyName)
 		}
-	} else if isIssuerAPISupported {
-		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyName, consts.FieldIssuerName)
+	} else {
+		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyRef)
+	}
+
+	if isIssuerAPISupported {
+		rootCertAPIFields = append(rootCertAPIFields, consts.FieldIssuerName)
 	}
 
 	data := map[string]interface{}{}
@@ -416,13 +428,20 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 		}
 	}
 
-	d.SetId(path)
+	id := path
+	if isIssuerAPISupported {
+		// multiple root certs can be issued
+		// ensure ID for each root_cert resource is unique
+		issuerID := resp.Data[consts.FieldIssuerID]
+		id = fmt.Sprintf("%s/issuer/%s", backend, issuerID)
+	}
+
+	d.SetId(id)
 
 	return nil
 }
 
-func getCACertificate(client *api.Client, mount string) (*x509.Certificate, error) {
-	path := fmt.Sprintf("/v1/%s/ca/pem", mount)
+func getCACertificate(client *api.Client, path string) (*x509.Certificate, error) {
 	req := client.NewRequest(http.MethodGet, path)
 	req.ClientToken = ""
 	resp, err := client.RawRequest(req)
@@ -455,6 +474,16 @@ func getCACertificate(client *api.Client, mount string) (*x509.Certificate, erro
 	return nil, nil
 }
 
+func getDefaultCAPEM(client *api.Client, mount string) (*x509.Certificate, error) {
+	path := fmt.Sprintf("/v1/%s/ca/pem", mount)
+	return getCACertificate(client, path)
+}
+
+func getIssuerPEM(client *api.Client, mount, issuerID string) (*x509.Certificate, error) {
+	path := fmt.Sprintf("/v1/%s/issuer/%s/pem", mount, issuerID)
+	return getCACertificate(client, path)
+}
+
 func pkiSecretBackendRootCertDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
@@ -463,7 +492,12 @@ func pkiSecretBackendRootCertDelete(ctx context.Context, d *schema.ResourceData,
 
 	backend := d.Get(consts.FieldBackend).(string)
 
-	path := pkiSecretBackendIntermediateSetSignedDeletePath(backend)
+	var path string
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		path = d.Id()
+	} else {
+		path = pkiSecretBackendDeleteRootPath(backend)
+	}
 
 	log.Printf("[DEBUG] Deleting root cert from PKI secret backend %q", path)
 	if _, err := client.Logical().Delete(path); err != nil {
@@ -473,11 +507,14 @@ func pkiSecretBackendRootCertDelete(ctx context.Context, d *schema.ResourceData,
 	return nil
 }
 
-func pkiSecretBackendIntermediateSetSignedReadPath(backend string, rootType string) string {
+func pkiSecretBackendGenerateRootPath(backend, rootType string, isMultiIssuerSupported bool) string {
+	if isMultiIssuerSupported {
+		return strings.Trim(backend, "/") + "/issuers/generate/root/" + strings.Trim(rootType, "/")
+	}
 	return strings.Trim(backend, "/") + "/root/generate/" + strings.Trim(rootType, "/")
 }
 
-func pkiSecretBackendIntermediateSetSignedDeletePath(backend string) string {
+func pkiSecretBackendDeleteRootPath(backend string) string {
 	return strings.Trim(backend, "/") + "/root"
 }
 
