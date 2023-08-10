@@ -523,13 +523,8 @@ func pkiSecretBackendRootCertDelete(ctx context.Context, d *schema.ResourceData,
 	if provider.IsAPISupported(meta, provider.VaultVersion111) {
 		// @TODO can be removed in future versions of the Provider
 		// this is added to allow a seamless upgrade for users
-		// from v3.18.0 and v3.19.0 of the Provider
+		// from v3.18.0/v3.19.0 of the Provider
 		if !strings.Contains(d.Id(), "/root/generate/") {
-			// Provide an actionable log
-			log.Printf("[WARN] This resource was created with an older version of the provider. " +
-				"If you have not already done so, we recommend upgrading to a newer version " +
-				"(>=v3.20.0) of the provider once this resource has been destroyed")
-		} else {
 			path = d.Id()
 		}
 	}
