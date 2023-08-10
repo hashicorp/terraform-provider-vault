@@ -84,7 +84,9 @@ func TestPkiSecretBackendRootCertificate_basic(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					genPath := pkiSecretBackendGenerateRootPath(path, "internal", false)
+
+					isMultiIssuerSupported := testProvider.Meta().(*provider.ProviderMeta).IsAPISupported(provider.VaultVersion111)
+					genPath := pkiSecretBackendGenerateRootPath(path, "internal", isMultiIssuerSupported)
 					resp, err := client.Logical().Write(genPath,
 						map[string]interface{}{
 							consts.FieldCommonName: "out-of-band",

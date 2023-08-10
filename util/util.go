@@ -51,6 +51,10 @@ func ToStringArray(input []interface{}) []string {
 	return output
 }
 
+func Is500(err error) bool {
+	return ErrorContainsHTTPCode(err, http.StatusInternalServerError)
+}
+
 func Is404(err error) bool {
 	return ErrorContainsHTTPCode(err, http.StatusNotFound)
 }
@@ -61,6 +65,14 @@ func ErrorContainsHTTPCode(err error, codes ...int) bool {
 			return true
 		}
 	}
+	return false
+}
+
+func ErrorContainsString(err error, s string) bool {
+	if strings.Contains(err.Error(), s) {
+		return true
+	}
+
 	return false
 }
 

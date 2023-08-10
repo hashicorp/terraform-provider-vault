@@ -24,6 +24,10 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
+const (
+	issuerNotFoundErr = "unable to find PKI issuer for reference"
+)
+
 func pkiSecretBackendRootCertResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: pkiSecretBackendRootCertCreate,
@@ -54,11 +58,33 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			}
 
 			var cert *x509.Certificate
-			if provider.IsAPISupported(meta, provider.VaultVersion111) {
-				// get certificate for issuer with issuer_id
+			isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
+			if isIssuerAPISupported {
+				// get the specific certificate for issuer with issuer_id
 				cert, e = getIssuerPEM(client, d.Get(consts.FieldBackend).(string), d.Get(consts.FieldIssuerID).(string))
+				if e != nil {
+					// Check if this is an out-of-band change on the issuer
+					if util.Is500(e) && util.ErrorContainsString(e, issuerNotFoundErr) {
+						log.Printf("issuer deleted out-of-band. re-creating root cert")
+						// Force a change on the issuer ID field since
+						// it no longer exists and must be re-created
+						if e = d.SetNewComputed(consts.FieldIssuerID); e != nil {
+							return e
+						}
+
+						if e := d.ForceNew(consts.FieldIssuerID); e != nil {
+							return e
+						}
+
+						return nil
+					}
+
+					// not an out-of-band issuer error
+					return e
+				}
 			} else {
-				// get certificate for issuer 'default'
+				// get the 'default' issuer's certificate
+				// default behavior for non multi-issuer API
 				cert, e = getDefaultCAPEM(client, d.Get(consts.FieldBackend).(string))
 				if e != nil {
 					return e
