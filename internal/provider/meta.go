@@ -273,6 +273,9 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to lookup token, err=%w", err)
 	}
+	if tokenInfo == nil {
+		return nil, fmt.Errorf("no token information returned from self lookup")
+	}
 
 	warnMinTokenTTL(tokenInfo)
 
