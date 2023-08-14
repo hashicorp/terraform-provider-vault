@@ -18,7 +18,7 @@ import (
 
 func TestAccAWSAuthBackendClient_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
@@ -39,7 +39,7 @@ func TestAccAWSAuthBackendClient_import(t *testing.T) {
 
 func TestAccAWSAuthBackendClient_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
@@ -58,7 +58,7 @@ func TestAccAWSAuthBackendClient_basic(t *testing.T) {
 
 func TestAccAWSAuthBackendClient_nested(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws") + "/nested"
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
@@ -77,7 +77,7 @@ func TestAccAWSAuthBackendClient_nested(t *testing.T) {
 
 func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
@@ -104,7 +104,7 @@ func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 
 func TestAccAWSAuthBackendClientStsRegionNoEndpoint(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
 		Providers:    testProviders,
 		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
@@ -113,6 +113,35 @@ func TestAccAWSAuthBackendClientStsRegionNoEndpoint(t *testing.T) {
 				Config:      testAccAWSAuthBackendClientConfigSTSRegionNoEndpoint(backend),
 				ExpectError: regexp.MustCompile("Error: both sts_endpoint and sts_region need to be set"),
 			},
+		},
+	})
+}
+
+func TestAccAWSAuthBackendClientStsRegionFromClient(t *testing.T) {
+	backend := acctest.RandomWithPrefix("aws")
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+		},
+		Providers:    testProviders,
+		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend, false),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAWSAuthBackendClientCheck_attrs(backend),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", useSTSRegionFromClient, "false"),
+				),
+			},
+			{
+				Config: testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend, true),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAWSAuthBackendClientCheck_attrs(backend),
+					resource.TestCheckResourceAttr("vault_aws_auth_backend_client.client", useSTSRegionFromClient, "true"),
+				),
+			},
+			testutil.GetImportTestStep("vault_aws_auth_backend_client.client", false, nil),
 		},
 	})
 }
@@ -285,4 +314,19 @@ resource "vault_aws_auth_backend_client" "client" {
   sts_region = "vault-test"
   iam_server_id_header_value = "vault.test"
 }`, backend)
+}
+
+func testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend string, useSTSRegionFromClient bool) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend client config"
+}
+
+resource "vault_aws_auth_backend_client" "client" {
+  backend = vault_auth_backend.aws.path
+  access_key = "AWSACCESSKEY"
+  use_sts_region_from_client = %v
+}`, backend, useSTSRegionFromClient)
 }
