@@ -88,6 +88,11 @@ func gcpAuthBackendResource() *schema.Resource {
 					Schema: gcpAuthCustomEndpointSchema(),
 				},
 			},
+			"accessor": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The accessor of the auth backend",
+			},
 		},
 	})
 }
@@ -256,6 +261,7 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		"project_id",
 		"client_email",
 		"local",
+		"accessor",
 	}
 
 	for _, param := range params {

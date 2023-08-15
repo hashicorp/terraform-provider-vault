@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -33,6 +34,8 @@ const gcpJSONCredentials string = `
 func TestGCPAuthBackend_basic(t *testing.T) {
 	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
 
+	resName := "vault_gcp_auth_backend.test"
+	var resAuthFirst api.AuthMount
 	path := resource.PrefixedUniqueId("gcp-basic-")
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -46,6 +49,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 			{
 				Config: testGCPAuthBackendConfig_update(path, gcpJSONCredentials),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckAuthMountExists(resName, &resAuthFirst),
 					testGCPAuthBackendCheck_attrs(),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.#", "1"),
@@ -59,11 +63,13 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 						"custom_endpoint.0.crm", "cloudresourcemanager.googleapis.com"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.0.compute", "compute.googleapis.com"),
+					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuthFirst.Accessor),
 				),
 			},
 			{
 				Config: testGCPAuthBackendConfig_update_partial(path, gcpJSONCredentials),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckAuthMountExists(resName, &resAuthFirst),
 					testGCPAuthBackendCheck_attrs(),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.#", "1"),
@@ -77,6 +83,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 						"custom_endpoint.0.crm", "example.com:9200"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.0.compute", "compute.example.com"),
+					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuthFirst.Accessor),
 				),
 			},
 			{
