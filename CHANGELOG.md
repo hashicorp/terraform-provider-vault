@@ -1,5 +1,8 @@
 ## Unreleased
 
+BUGS:
+* Fixes a panic that can occur when Vault [lookup-self](https://developer.hashicorp.com/vault/api-docs/auth/token#lookup-a-token-self) API returns nil token info ([#1978](https://github.com/hashicorp/terraform-provider-vault/pull/1978))
+
 ## 3.19.0 (Aug 2, 2023)
 FEATURES:
 * Add support for User ID configuration for PKI Secrets Engine: ([#1936](https://github.com/hashicorp/terraform-provider-vault/pull/1936))
