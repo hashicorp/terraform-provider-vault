@@ -34,7 +34,6 @@ const gcpJSONCredentials string = `
 func TestGCPAuthBackend_basic(t *testing.T) {
 	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
 
-	resName := "vault_gcp_auth_backend.test"
 	var resAuthFirst api.AuthMount
 	path := resource.PrefixedUniqueId("gcp-basic-")
 	resource.Test(t, resource.TestCase{
@@ -49,7 +48,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 			{
 				Config: testGCPAuthBackendConfig_update(path, gcpJSONCredentials),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckAuthMountExists(resName, &resAuthFirst),
+					testAccCheckAuthMountExists("vault_gcp_auth_backend.test", &resAuthFirst),
 					testGCPAuthBackendCheck_attrs(),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.#", "1"),
@@ -63,13 +62,13 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 						"custom_endpoint.0.crm", "cloudresourcemanager.googleapis.com"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.0.compute", "compute.googleapis.com"),
-					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuthFirst.Accessor),
+					resource.TestCheckResourceAttrPtr("vault_gcp_auth_backend.test", "accessor", &resAuthFirst.Accessor),
 				),
 			},
 			{
 				Config: testGCPAuthBackendConfig_update_partial(path, gcpJSONCredentials),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckAuthMountExists(resName, &resAuthFirst),
+					testAccCheckAuthMountExists("vault_gcp_auth_backend.test", &resAuthFirst),
 					testGCPAuthBackendCheck_attrs(),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.#", "1"),
@@ -83,7 +82,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 						"custom_endpoint.0.crm", "example.com:9200"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.0.compute", "compute.example.com"),
-					resource.TestCheckResourceAttrPtr(resName, "accessor", &resAuthFirst.Accessor),
+					resource.TestCheckResourceAttrPtr("vault_gcp_auth_backend.test", "accessor", &resAuthFirst.Accessor),
 				),
 			},
 			{
