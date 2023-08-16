@@ -86,14 +86,16 @@ func TestAccPKISecretBackendKey_basic(t *testing.T) {
 
 func testAccPKISecretBackendKey_basic(path, keyName, keyType, keyBits string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "pki" {
-	path        = "%s"
-	type        = "pki"
-    description = "PKI secret engine mount"
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
 }
 
 resource "vault_pki_secret_backend_key" "test" {
-  backend  = vault_mount.pki.path
+  backend  = vault_mount.test.path
   type     = "exported"
   key_name = "%s"
   key_type = "%s"

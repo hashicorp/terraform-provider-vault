@@ -80,14 +80,27 @@ func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
 	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
 	keyName := acctest.RandomWithPrefix("test-pki-key")
 
-	checks := []resource.TestCheckFunc{
+	// used to test existing key flow
+	store := &testPKIKeyStore{}
+	keyResourceName := "vault_pki_secret_backend_key.test"
+	updatedKeyName := acctest.RandomWithPrefix("test-pki-key-updated")
+
+	commonChecks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Intermediate CA"),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldKeyID),
-		resource.TestCheckResourceAttrSet(resourceName, consts.FieldKeyRef),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Intermediate CA"),
 	}
+
+	internalChecks := append(commonChecks,
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+		// keyName is only set on internal if it is passed by user
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
+	)
+
+	existingChecks := append(commonChecks,
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "existing"),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldKeyRef),
+	)
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -97,11 +110,27 @@ func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
 		},
 		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
-			// @TODO add a test step with a key_ref
 			{
-				Config: testPkiSecretBackendIntermediateCertRequestConfig_multiIssuer(path, keyName),
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_multiIssuerInternal(path, keyName),
 				Check: resource.ComposeTestCheckFunc(
-					append(checks)...,
+					append(internalChecks)...,
+				),
+			},
+			{
+				// Create and capture key ID
+				Config: testAccPKISecretBackendKey_basic(path, updatedKeyName, "rsa", "2048"),
+				Check: resource.ComposeTestCheckFunc(
+					testCapturePKIKeyID(keyResourceName, store),
+				),
+			},
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_multiIssuerExisting(path, updatedKeyName),
+				Check: resource.ComposeTestCheckFunc(
+					append(existingChecks,
+						// confirm that root cert key ID is same as the key
+						// created in step 2; thereby confirming key_ref is passed
+						testPKIKeyUpdate(resourceName, store, true),
+					)...,
 				),
 			},
 		},
@@ -128,7 +157,26 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
 `, path, addConstraints)
 }
 
-func testPkiSecretBackendIntermediateCertRequestConfig_multiIssuer(path, keyName string) string {
+func testPkiSecretBackendIntermediateCertRequestConfig_multiIssuerInternal(path, keyName string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = 86400
+  max_lease_ttl_seconds     = 86400
+}
+
+resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
+  backend     = vault_mount.test.path
+  type        = "internal"
+  common_name = "test Intermediate CA"
+  key_name    = "%s"
+}
+`, path, keyName)
+}
+
+func testPkiSecretBackendIntermediateCertRequestConfig_multiIssuerExisting(path, keyName string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path                      = "%s"
@@ -141,17 +189,16 @@ resource "vault_mount" "test" {
 resource "vault_pki_secret_backend_key" "test" {
   backend  = vault_mount.test.path
   type     = "exported"
-  key_name = "test"
+  key_name = "%s"
   key_type = "rsa"
-  key_bits = "4096"
+  key_bits = "2048"
 }
 
 resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
   backend     = vault_mount.test.path
-  type        = "internal"
+  type        = "existing"
   common_name = "test Intermediate CA"
-  key_ref     = vault_pki_secret_backend_key.test.id
-  key_name    = "%s"
+  key_ref     = vault_pki_secret_backend_key.test.key_id
 }
 `, path, keyName)
 }

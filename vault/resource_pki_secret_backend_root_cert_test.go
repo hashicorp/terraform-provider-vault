@@ -118,15 +118,29 @@ func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
 	keyName := acctest.RandomWithPrefix("test-pki-key")
 	issuerName := acctest.RandomWithPrefix("test-pki-issuer")
 
-	checks := []resource.TestCheckFunc{
+	// used to test existing key flow
+	store := &testPKIKeyStore{}
+	keyResourceName := "vault_pki_secret_backend_key.test"
+	updatedKeyName := acctest.RandomWithPrefix("test-pki-key-updated")
+
+	commonChecks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA"),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerName, issuerName),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldKeyID),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuerID),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerName, issuerName),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA"),
 	}
+
+	internalChecks := append(commonChecks,
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+		// keyName is only set on internal if it is passed by user
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
+	)
+
+	existingChecks := append(commonChecks,
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "existing"),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldKeyRef),
+	)
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -136,11 +150,27 @@ func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
 		},
 		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
-			// @TODO add a test step with a key_ref
 			{
-				Config: testPkiSecretBackendRootCertificateConfig_multiIssuer(path, issuerName, keyName),
+				Config: testPkiSecretBackendRootCertificateConfig_multiIssuerInternal(path, issuerName, keyName),
 				Check: resource.ComposeTestCheckFunc(
-					append(checks)...,
+					append(internalChecks)...,
+				),
+			},
+			{
+				// Create and capture key ID
+				Config: testAccPKISecretBackendKey_basic(path, updatedKeyName, "rsa", "2048"),
+				Check: resource.ComposeTestCheckFunc(
+					testCapturePKIKeyID(keyResourceName, store),
+				),
+			},
+			{
+				Config: testPkiSecretBackendRootCertificateConfig_multiIssuerExisting(path, issuerName, updatedKeyName),
+				Check: resource.ComposeTestCheckFunc(
+					append(existingChecks,
+						// confirm that root cert key ID is same as the key
+						// created in step 2; thereby confirming key_ref is passed
+						testPKIKeyUpdate(resourceName, store, true),
+					)...,
 				),
 			},
 		},
@@ -149,7 +179,7 @@ func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
 
 // Ensures that TF state is cleanly resolved whenever
 // multiple root certs are generated
-func TestAccPKISecretBackendRootCert_multiple(t *testing.T) {
+func TestAccPKISecretBackendRootCert_multipleRootCerts(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki")
 	resourceType := "vault_pki_secret_backend_root_cert"
 	resourceCurrentIssuer := resourceType + ".current"
@@ -164,7 +194,7 @@ func TestAccPKISecretBackendRootCert_multiple(t *testing.T) {
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccPKISecretBackendRootCert_multiple(backend),
+				Config: testAccPKISecretBackendRootCert_multipleRootCerts(backend),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceCurrentIssuer, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceCurrentIssuer, consts.FieldType, "internal"),
@@ -240,7 +270,7 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 	return config
 }
 
-func testPkiSecretBackendRootCertificateConfig_multiIssuer(path, issuer, key string) string {
+func testPkiSecretBackendRootCertificateConfig_multiIssuerInternal(path, issuer, key string) string {
 	config := fmt.Sprintf(`
 resource "vault_mount" "test" {
   path                      = "%s"
@@ -262,7 +292,37 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 	return config
 }
 
-func testAccPKISecretBackendRootCert_multiple(path string) string {
+func testPkiSecretBackendRootCertificateConfig_multiIssuerExisting(path, issuer, key string) string {
+	config := fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = "86400"
+  max_lease_ttl_seconds     = "86400"
+}
+
+resource "vault_pki_secret_backend_key" "test" {
+  backend  = vault_mount.test.path
+  type     = "exported"
+  key_name = "%s"
+  key_type = "rsa"
+  key_bits = "2048"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend              = vault_mount.test.path
+  type                 = "existing"
+  common_name          = "test Root CA"
+  issuer_name          = "%s"
+  key_ref              = vault_pki_secret_backend_key.test.key_id
+}
+`, path, key, issuer)
+
+	return config
+}
+
+func testAccPKISecretBackendRootCert_multipleRootCerts(path string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
 	path        = "%s"

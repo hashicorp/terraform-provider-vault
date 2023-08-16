@@ -382,19 +382,21 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 
 	// add multi-issuer write API fields if supported
 	isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
-	isKeyBeingGenerated := !(rootType == keyTypeKMS || rootType == consts.FieldExisting)
 
-	if isKeyBeingGenerated {
+	// Fields only used when we are generating a key
+	if !(rootType == keyTypeKMS || rootType == consts.FieldExisting) {
 		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
-		if isIssuerAPISupported {
-			rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyName)
-		}
-	} else {
-		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyRef)
 	}
 
 	if isIssuerAPISupported {
+		// We always can specify the issuer name we are generating root certs
 		rootCertAPIFields = append(rootCertAPIFields, consts.FieldIssuerName)
+
+		if rootType == consts.FieldExisting {
+			rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyRef)
+		} else {
+			rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyName)
+		}
 	}
 
 	data := map[string]interface{}{}

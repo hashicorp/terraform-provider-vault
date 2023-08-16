@@ -265,19 +265,19 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 
 	// add multi-issuer write API fields if supported
 	isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
-	isKeyBeingGenerated := !(intermediateType == keyTypeKMS || intermediateType == consts.FieldExisting)
 
-	if isKeyBeingGenerated {
+	// Fields only used when we are generating a key
+	if !(intermediateType == keyTypeKMS || intermediateType == consts.FieldExisting) {
 		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
-		if isIssuerAPISupported {
-			intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyName)
-		}
-	} else {
-		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyRef)
 	}
 
 	if isIssuerAPISupported {
-		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldIssuerName)
+		// Note: CSR generation does not persist an issuer, just a key, so consts.FieldIssuerName is not supported
+		if intermediateType == consts.FieldExisting {
+			intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyRef)
+		} else {
+			intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyName)
+		}
 	}
 
 	data := map[string]interface{}{}
