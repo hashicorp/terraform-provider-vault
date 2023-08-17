@@ -1,5 +1,5 @@
 ## Unreleased
-FEATURES:
+IMPROVEMENTS:
 * Add accessor attribute for `vault_gcp_auth_backend` resource: ([#1980](https://github.com/hashicorp/terraform-provider-vault/pull/1980))
 
 BUGS:
