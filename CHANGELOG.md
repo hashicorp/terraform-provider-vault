@@ -1,4 +1,6 @@
 ## Unreleased
+IMPROVEMENTS:
+* Add accessor attribute for `vault_gcp_auth_backend` resource: ([#1980](https://github.com/hashicorp/terraform-provider-vault/pull/1980))
 
 BUGS:
 * Fixes a panic that can occur when Vault [lookup-self](https://developer.hashicorp.com/vault/api-docs/auth/token#lookup-a-token-self) API returns nil token info ([#1978](https://github.com/hashicorp/terraform-provider-vault/pull/1978))

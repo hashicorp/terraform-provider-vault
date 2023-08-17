@@ -74,6 +74,8 @@ In addition to the fields above, the following attributes are also exposed:
 
 * `client_email` - The clients email associated with the credentials
 
+* `accessor` - The mount accessor related to the auth mount. It is useful for integration with [Identity Secrets Engine](https://www.vaultproject.io/docs/secrets/identity/index.html).
+
 ## Import
 
 GCP authentication backends can be imported using the backend name, e.g.
