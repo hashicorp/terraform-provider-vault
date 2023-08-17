@@ -167,7 +167,7 @@ resource "vault_pki_secret_backend_role" "role" {
 
 * `basic_constraints_valid_for_non_ca` - (Optional) Flag to mark basic constraints valid when issuing non-CA certificates
 
-* `not_before_duration` - (Optional) Specifies the duration by which to backdate the NotBefore property.
+* `not_before_duration` - (Optional) Specifies the [duration](https://developer.hashicorp.com/vault/docs/concepts/duration-format) by which to backdate the NotBefore property.
 
 * `allowed_serial_numbers` - (Optional) An array of allowed serial numbers to put in Subject
 
