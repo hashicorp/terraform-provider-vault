@@ -1,0 +1,71 @@
+name: "Request a New Resource or Data Source"
+description: "Choose this option to request an entirely new resource or data source be added to the provider."
+title: "[New]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # Thank you for opening a request!
+
+        This form is intended to be used when requesting an entirely new
+        resource, data source, or service be added to the provider. If you're
+        looking for a change to be made to an existing resource or data source,
+        consider submitting either the "Request an Enhancement" or Report a
+        Bug" forms instead.
+
+        Please update the title to match what you're requesting, e.g.:
+
+        - `[New Resource]:` - for new resource requests
+        - `[New Data Source]:` - for new data source requests
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Please leave a brief description of what you're requesting.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tf_config
+    attributes:
+      label: Potential Terraform Configuration
+      description: |
+        If this request was implemented, what might the Terraform configuration
+        look like? A best guess is helpful, even if you're unsure of exactly
+        what the end result will look like.
+
+        **Note:** This field will render in HCL, so there is no need to add a
+        [code fence](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-and-highlighting-code-blocks).
+      render: terraform
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: |
+        Where possible, please supply links to Vault documentation, other
+        GitHub issues (open or closed) or pull requests that give additional
+        context.
+
+        [Information about referencing Github Issues](https://help.github.com/articles/basic-writing-and-formatting-syntax/#referencing-issues-and-pull-requests)
+    validations:
+      required: false
+
+  - type: dropdown
+    id: will_contribute
+    attributes:
+      label: Would you like to implement a fix?
+      description: |
+        If you plan to implement a fix for this, check this box to let the
+        maintainers and community know (you can update this later if you change
+        your mind). If this would be your first contribution, refer to
+        [Developing the Provider](https://github.com/hashicorp/terraform-provider-vault#developing-the-provider)
+        for tips on getting started.
+      options:
+        - "No"
+        - "Yes"
+    validations:
+      required: false
