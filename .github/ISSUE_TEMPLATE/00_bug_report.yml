@@ -214,7 +214,7 @@ body:
     attributes:
       label: References
       description: |
-        Where possible, please supply links to vendor documentation, other
+        Where possible, please supply links to Vault documentation, other
         GitHub issues (open or closed) or pull requests that give additional
         context.
 
