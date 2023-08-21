@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 name: "Request a New Resource or Data Source"
 description: "Choose this option to request an entirely new resource or data source be added to the provider."
 title: "[New]: "
