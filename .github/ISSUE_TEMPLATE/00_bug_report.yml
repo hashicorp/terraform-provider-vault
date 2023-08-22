@@ -127,7 +127,6 @@ body:
 
   - type: markdown
     attributes:
-      placeholder: "* GH-1234"
       value: |
         # Configuration and Logging
 
@@ -215,6 +214,7 @@ body:
   - type: textarea
     id: references
     attributes:
+      placeholder: "* GH-1234"
       label: References
       description: |
         Where possible, please supply links to Vault documentation, other
