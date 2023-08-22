@@ -1,6 +1,6 @@
 ## Unreleased
 FEATURES:
-* Add option to `permanently_delete` roles for `vault_azure_secret_backend_role`: ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
+* Add support for setting `permanently_delete` argument on `resource_azure_secret_backend_role`: ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
 
 IMPROVEMENTS:
 * Add accessor attribute for `vault_gcp_auth_backend` resource: ([#1980](https://github.com/hashicorp/terraform-provider-vault/pull/1980))
