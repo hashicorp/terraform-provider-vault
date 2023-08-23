@@ -51,6 +51,10 @@ func ToStringArray(input []interface{}) []string {
 	return output
 }
 
+func Is500(err error) bool {
+	return ErrorContainsHTTPCode(err, http.StatusInternalServerError)
+}
+
 func Is404(err error) bool {
 	return ErrorContainsHTTPCode(err, http.StatusNotFound)
 }
@@ -62,6 +66,10 @@ func ErrorContainsHTTPCode(err error, codes ...int) bool {
 		}
 	}
 	return false
+}
+
+func ErrorContainsString(err error, s string) bool {
+	return strings.Contains(err.Error(), s)
 }
 
 // CalculateConflictsWith returns a slice of field names that conflict with
