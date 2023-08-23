@@ -65,7 +65,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				if e != nil {
 					// Check if this is an out-of-band change on the issuer
 					if util.Is500(e) && util.ErrorContainsString(e, issuerNotFoundErr) {
-						log.Printf("issuer deleted out-of-band. re-creating root cert")
+						log.Printf("[WARN] issuer deleted out-of-band. re-creating root cert")
 						// Force a change on the issuer ID field since
 						// it no longer exists and must be re-created
 						if e = d.SetNewComputed(consts.FieldIssuerID); e != nil {

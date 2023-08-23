@@ -69,11 +69,7 @@ func ErrorContainsHTTPCode(err error, codes ...int) bool {
 }
 
 func ErrorContainsString(err error, s string) bool {
-	if strings.Contains(err.Error(), s) {
-		return true
-	}
-
-	return false
+	return strings.Contains(err.Error(), s)
 }
 
 // CalculateConflictsWith returns a slice of field names that conflict with
