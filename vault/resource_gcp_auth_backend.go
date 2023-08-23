@@ -93,6 +93,7 @@ func gcpAuthBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The accessor of the auth backend",
 			},
+			"tune": authMountTuneSchema(),
 		},
 	}, false)
 }
@@ -194,7 +195,8 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	path := gcpAuthBackendConfigPath(d.Id())
+	gcpPath := d.Id()
+	path := gcpAuthBackendConfigPath(gcpPath)
 
 	if !d.IsNewResource() {
 		newMount, err := util.Remount(d, client, consts.FieldPath, true)
@@ -228,6 +230,35 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		d.SetId("")
 		return fmt.Errorf("error writing gcp config %q: %s", path, err)
+	}
+
+	backendType := gcpAuthType
+	var input api.MountConfigInput
+	var callTune bool
+
+	if d.HasChange("tune") {
+		log.Printf("[INFO] Auth '%q' tune configuration changed", gcpPath)
+
+		if raw, ok := d.GetOk("tune"); ok {
+			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, gcpPath)
+
+			input = expandAuthMethodTune(raw.(*schema.Set).List())
+		}
+		callTune = true
+	}
+
+	if d.HasChange("description") && !d.IsNewResource() {
+		desc := d.Get("description").(string)
+		input.Description = &desc
+		callTune = true
+	}
+
+	if callTune {
+		if err := tuneMount(client, "auth/"+gcpPath, input); err != nil {
+			return err
+		}
+
+		log.Printf("[INFO] Written %s auth tune to '%q'", backendType, gcpPath)
 	}
 	log.Printf("[DEBUG] Wrote gcp config %q", path)
 

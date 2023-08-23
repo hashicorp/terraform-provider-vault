@@ -62,7 +62,13 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 						"custom_endpoint.0.crm", "cloudresourcemanager.googleapis.com"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.0.compute", "compute.googleapis.com"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.default_lease_ttl", "60s"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.max_lease_ttl", "3600s"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.listing_visibility", "unauth"),
 					resource.TestCheckResourceAttrPtr("vault_gcp_auth_backend.test", "accessor", &resAuthFirst.Accessor),
+					checkAuthMount("gcp", listingVisibility("unauth")),
+					checkAuthMount("gcp", defaultLeaseTtl(60)),
+					checkAuthMount("gcp", maxLeaseTtl(3600)),
 				),
 			},
 			{
@@ -82,7 +88,13 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 						"custom_endpoint.0.crm", "example.com:9200"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.0.compute", "compute.example.com"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.default_lease_ttl", "60s"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.max_lease_ttl", "7200s"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.listing_visibility", ""),
 					resource.TestCheckResourceAttrPtr("vault_gcp_auth_backend.test", "accessor", &resAuthFirst.Accessor),
+					checkAuthMount("gcp", listingVisibility("unauth")),
+					checkAuthMount("gcp", defaultLeaseTtl(60)),
+					checkAuthMount("gcp", maxLeaseTtl(7200)),
 				),
 			},
 			{
@@ -235,6 +247,11 @@ resource "vault_gcp_auth_backend" "test" {
     crm     = "cloudresourcemanager.googleapis.com"
     compute = "compute.googleapis.com"
   }
+  tune {
+    listing_visibility = "unauth"
+    max_lease_ttl      = "3600s"
+    default_lease_ttl  = "60s"
+  }
 }
 `, credentials, path)
 }
@@ -252,6 +269,10 @@ resource "vault_gcp_auth_backend" "test" {
   custom_endpoint {
     crm     = "example.com:9200"
     compute = "compute.example.com"
+  }
+  tune {
+    max_lease_ttl      = "7200s"
+    default_lease_ttl  = "60s"
   }
 }
 `, credentials, path)
