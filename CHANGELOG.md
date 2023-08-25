@@ -1,6 +1,7 @@
 ## Unreleased
 FEATURES:
 * Add support for setting `permanently_delete` argument on `resource_azure_secret_backend_role`: ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
+* Add x509 support to static database roles: ([#1992](https://github.com/hashicorp/terraform-provider-vault/pull/1992))
 
 IMPROVEMENTS:
 * Add accessor attribute for `vault_gcp_auth_backend` resource: ([#1980](https://github.com/hashicorp/terraform-provider-vault/pull/1980))
