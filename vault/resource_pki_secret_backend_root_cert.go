@@ -24,6 +24,10 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
+const (
+	issuerNotFoundErr = "unable to find PKI issuer for reference"
+)
+
 func pkiSecretBackendRootCertResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: pkiSecretBackendRootCertCreate,
@@ -53,9 +57,38 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 				return e
 			}
 
-			cert, err := getCACertificate(client, d.Get(consts.FieldBackend).(string))
-			if err != nil {
-				return err
+			var cert *x509.Certificate
+			isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
+			if isIssuerAPISupported {
+				// get the specific certificate for issuer with issuer_id
+				cert, e = getIssuerPEM(client, d.Get(consts.FieldBackend).(string), d.Get(consts.FieldIssuerID).(string))
+				if e != nil {
+					// Check if this is an out-of-band change on the issuer
+					if util.Is500(e) && util.ErrorContainsString(e, issuerNotFoundErr) {
+						log.Printf("[WARN] issuer deleted out-of-band. re-creating root cert")
+						// Force a change on the issuer ID field since
+						// it no longer exists and must be re-created
+						if e = d.SetNewComputed(consts.FieldIssuerID); e != nil {
+							return e
+						}
+
+						if e := d.ForceNew(consts.FieldIssuerID); e != nil {
+							return e
+						}
+
+						return nil
+					}
+
+					// not an out-of-band issuer error
+					return e
+				}
+			} else {
+				// get the 'default' issuer's certificate
+				// default behavior for non multi-issuer API
+				cert, e = getDefaultCAPEM(client, d.Get(consts.FieldBackend).(string))
+				if e != nil {
+					return e
+				}
 			}
 
 			if cert != nil {
@@ -316,7 +349,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 	backend := d.Get(consts.FieldBackend).(string)
 	rootType := d.Get(consts.FieldType).(string)
 
-	path := pkiSecretBackendIntermediateSetSignedReadPath(backend, rootType)
+	path := pkiSecretBackendGenerateRootPath(backend, rootType, provider.IsAPISupported(meta, provider.VaultVersion111))
 
 	rootCertAPIFields := []string{
 		consts.FieldCommonName,
@@ -350,13 +383,20 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 	// add multi-issuer write API fields if supported
 	isIssuerAPISupported := provider.IsAPISupported(meta, provider.VaultVersion111)
 
+	// Fields only used when we are generating a key
 	if !(rootType == keyTypeKMS || rootType == consts.FieldExisting) {
 		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
-		if isIssuerAPISupported {
-			rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyRef, consts.FieldIssuerName)
+	}
+
+	if isIssuerAPISupported {
+		// We always can specify the issuer name we are generating root certs
+		rootCertAPIFields = append(rootCertAPIFields, consts.FieldIssuerName)
+
+		if rootType == consts.FieldExisting {
+			rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyRef)
+		} else {
+			rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyName)
 		}
-	} else if isIssuerAPISupported {
-		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyName, consts.FieldIssuerName)
 	}
 
 	data := map[string]interface{}{}
@@ -416,13 +456,20 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 		}
 	}
 
-	d.SetId(path)
+	id := path
+	if isIssuerAPISupported {
+		// multiple root certs can be issued
+		// ensure ID for each root_cert resource is unique
+		issuerID := resp.Data[consts.FieldIssuerID]
+		id = fmt.Sprintf("%s/issuer/%s", backend, issuerID)
+	}
+
+	d.SetId(id)
 
 	return nil
 }
 
-func getCACertificate(client *api.Client, mount string) (*x509.Certificate, error) {
-	path := fmt.Sprintf("/v1/%s/ca/pem", mount)
+func getCACertificate(client *api.Client, path string) (*x509.Certificate, error) {
 	req := client.NewRequest(http.MethodGet, path)
 	req.ClientToken = ""
 	resp, err := client.RawRequest(req)
@@ -455,6 +502,16 @@ func getCACertificate(client *api.Client, mount string) (*x509.Certificate, erro
 	return nil, nil
 }
 
+func getDefaultCAPEM(client *api.Client, mount string) (*x509.Certificate, error) {
+	path := fmt.Sprintf("/v1/%s/ca/pem", mount)
+	return getCACertificate(client, path)
+}
+
+func getIssuerPEM(client *api.Client, mount, issuerID string) (*x509.Certificate, error) {
+	path := fmt.Sprintf("/v1/%s/issuer/%s/pem", mount, issuerID)
+	return getCACertificate(client, path)
+}
+
 func pkiSecretBackendRootCertDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
@@ -463,7 +520,16 @@ func pkiSecretBackendRootCertDelete(ctx context.Context, d *schema.ResourceData,
 
 	backend := d.Get(consts.FieldBackend).(string)
 
-	path := pkiSecretBackendIntermediateSetSignedDeletePath(backend)
+	path := pkiSecretBackendDeleteRootPath(backend)
+
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		// @TODO can be removed in future versions of the Provider
+		// this is added to allow a seamless upgrade for users
+		// from v3.18.0/v3.19.0 of the Provider
+		if !strings.Contains(d.Id(), "/root/generate/") {
+			path = d.Id()
+		}
+	}
 
 	log.Printf("[DEBUG] Deleting root cert from PKI secret backend %q", path)
 	if _, err := client.Logical().Delete(path); err != nil {
@@ -473,11 +539,14 @@ func pkiSecretBackendRootCertDelete(ctx context.Context, d *schema.ResourceData,
 	return nil
 }
 
-func pkiSecretBackendIntermediateSetSignedReadPath(backend string, rootType string) string {
+func pkiSecretBackendGenerateRootPath(backend, rootType string, isMultiIssuerSupported bool) string {
+	if isMultiIssuerSupported {
+		return strings.Trim(backend, "/") + "/issuers/generate/root/" + strings.Trim(rootType, "/")
+	}
 	return strings.Trim(backend, "/") + "/root/generate/" + strings.Trim(rootType, "/")
 }
 
-func pkiSecretBackendIntermediateSetSignedDeletePath(backend string) string {
+func pkiSecretBackendDeleteRootPath(backend string) string {
 	return strings.Trim(backend, "/") + "/root"
 }
 
