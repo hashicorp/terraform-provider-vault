@@ -352,6 +352,7 @@ const (
 	FieldCredentialType                = "credential_type"
 	FieldFilename                      = "filename"
 	FieldDefault                       = "default"
+	FieldRotationStatements            = "rotation_statements"
 	/*
 		common environment variables
 	*/
