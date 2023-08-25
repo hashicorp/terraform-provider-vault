@@ -26,3 +26,73 @@ services:
       MYSQL_DATABASE: "main"
       MYSQL_USER: "vault"
       MYSQL_PASSWORD: "vault"
+
+  elastic:
+    image: elasticsearch:7.17.10
+    ports:
+      - "9200:9200"
+    environment:
+      "discovery.type": "single-node"
+      "xpack.security.enabled": "true"
+      "ELASTIC_PASSWORD": "elastic"
+
+  influxdb:
+    image: influxdb:1.8.10
+    ports:
+      - "8086:8086"
+    environment:
+      "DOCKER_INFLUXDB_INIT_MODE": "setup"
+      "DOCKER_INFLUXDB_INIT_USERNAME": "admin"
+      "DOCKER_INFLUXDB_INIT_PASSWORD": "password"
+      "DOCKER_INFLUXDB_INIT_ORG": "test"
+      "DOCKER_INFLUXDB_INIT_BUCKET": "test"
+
+  openldap:
+    image: docker.io/bitnami/openldap:2.6
+    ports:
+      - '1389:1389'
+      - '1636:1636'
+    environment:
+      - LDAP_ADMIN_USERNAME=admin
+      - LDAP_ADMIN_PASSWORD=adminpassword
+      - LDAP_USERS=alice,bob,foo
+      - LDAP_PASSWORDS=password1,password2,password3
+
+  # this container will take at least 20 seconds for the ad service to be
+  # available so manual test runs should take this into account
+  ad:
+    image: laslabs/alpine-samba-dc:0.1.0
+    cap_add:
+      - "SYS_ADMIN"
+    ports:
+      - '2389:389'
+      - '2636:636'
+    environment:
+      - SAMBA_DC_REALM=corp.example.net
+      - SAMBA_DC_DOMAIN=EXAMPLE
+      - SAMBA_DC_ADMIN_PASSWD=SuperSecretPassw0rd
+      - SAMBA_DC_DNS_BACKEND=SAMBA_INTERNAL
+
+  redis:
+    image: redis:7.0.11
+    ports:
+      - '6379:6379'
+    command: >
+      --requirepass password
+
+  couchbase:
+    image: couchbase:7.2.0
+    ports:
+      - '8091-8097:8091-8097'
+      - '9123:9123'
+      - '11207:11207'
+      - '11210:11210'
+      - '11280:11280'
+      - '18097:18097'
+
+  cassandra:
+    image: cassandra:4.0
+    ports:
+      - "9042:9042"
+    volumes:
+      - ./testdata/cassandra.yaml:/etc/cassandra/cassandra.yaml
