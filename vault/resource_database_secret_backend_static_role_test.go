@@ -327,7 +327,7 @@ resource "vault_database_secret_backend_connection" "test" {
 resource "vault_database_secret_backend_static_role" "test" {
   backend             = vault_mount.db.path
   name                = "%s"
-  username 			  = "%s"
+  username            = "%s"
   db_name             = vault_database_secret_backend_connection.test.name
   rotation_period     = 3600
   credential_type     = "client_certificate"

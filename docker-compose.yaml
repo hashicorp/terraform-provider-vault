@@ -30,7 +30,7 @@ services:
   elastic:
     image: elasticsearch:7.17.10
     ports:
-      - "9200:9200"
+    - "9200:9200"
     environment:
       "discovery.type": "single-node"
       "xpack.security.enabled": "true"
@@ -39,7 +39,7 @@ services:
   influxdb:
     image: influxdb:1.8.10
     ports:
-      - "8086:8086"
+    - "8086:8086"
     environment:
       "DOCKER_INFLUXDB_INIT_MODE": "setup"
       "DOCKER_INFLUXDB_INIT_USERNAME": "admin"
@@ -63,7 +63,7 @@ services:
   ad:
     image: laslabs/alpine-samba-dc:0.1.0
     cap_add:
-      - "SYS_ADMIN"
+    - "SYS_ADMIN"
     ports:
       - '2389:389'
       - '2636:636'
