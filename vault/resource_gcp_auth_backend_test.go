@@ -62,13 +62,22 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 						"custom_endpoint.0.crm", "cloudresourcemanager.googleapis.com"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.0.compute", "compute.googleapis.com"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.default_lease_ttl", "60s"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.max_lease_ttl", "3600s"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.listing_visibility", "unauth"),
-					resource.TestCheckResourceAttrPtr("vault_gcp_auth_backend.test", "accessor", &resAuthFirst.Accessor),
-					checkAuthMount("gcp", listingVisibility("unauth")),
-					checkAuthMount("gcp", defaultLeaseTtl(60)),
-					checkAuthMount("gcp", maxLeaseTtl(3600)),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.default_lease_ttl", "10m"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.max_lease_ttl", "20m"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.listing_visibility", "hidden"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_request_keys.#", "2"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_request_keys.0", "key1"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_request_keys.1", "key2"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_response_keys.#", "2"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_response_keys.0", "key3"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_response_keys.1", "key4"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.passthrough_request_headers.1", "X-Forwarded-To"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.token_type", "batch"),
 				),
 			},
 			{
@@ -88,13 +97,21 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 						"custom_endpoint.0.crm", "example.com:9200"),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.0.compute", "compute.example.com"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.default_lease_ttl", "60s"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.max_lease_ttl", "7200s"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.listing_visibility", ""),
-					resource.TestCheckResourceAttrPtr("vault_gcp_auth_backend.test", "accessor", &resAuthFirst.Accessor),
-					checkAuthMount("gcp", listingVisibility("unauth")),
-					checkAuthMount("gcp", defaultLeaseTtl(60)),
-					checkAuthMount("gcp", maxLeaseTtl(7200)),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.default_lease_ttl", "50m"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.max_lease_ttl", "1h10m"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.listing_visibility", "unauth"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_request_keys.#", "1"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_request_keys.0", "key1"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_response_keys.#", "0"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.passthrough_request_headers.#", "3"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.passthrough_request_headers.1", "X-Forwarded-To"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.passthrough_request_headers.2", "X-Mas"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.allowed_response_headers.#", "3"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.allowed_response_headers.2", "X-Mas-Response"),
+					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.token_type", "default-batch"),
 				),
 			},
 			{
@@ -103,6 +120,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"credentials",
+					"disable_remount",
 				},
 			},
 			{
@@ -119,6 +137,7 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"credentials",
+					"disable_remount",
 				},
 			},
 		},
@@ -248,9 +267,14 @@ resource "vault_gcp_auth_backend" "test" {
     compute = "compute.googleapis.com"
   }
   tune {
-    listing_visibility = "unauth"
-    max_lease_ttl      = "3600s"
-    default_lease_ttl  = "60s"
+	default_lease_ttl = "10m"
+	max_lease_ttl = "20m"
+	listing_visibility = "hidden"
+	audit_non_hmac_request_keys = ["key1", "key2"]
+	audit_non_hmac_response_keys = ["key3", "key4"]
+	passthrough_request_headers = ["X-Custom-Header", "X-Forwarded-To"]
+	allowed_response_headers = ["X-Custom-Response-Header", "X-Forwarded-Response-To"]
+	token_type = "batch"
   }
 }
 `, credentials, path)
@@ -271,8 +295,13 @@ resource "vault_gcp_auth_backend" "test" {
     compute = "compute.example.com"
   }
   tune {
-    max_lease_ttl      = "7200s"
-    default_lease_ttl  = "60s"
+    default_lease_ttl = "50m"
+    max_lease_ttl = "1h10m"
+    audit_non_hmac_request_keys = ["key1"]
+    listing_visibility = "unauth"
+    passthrough_request_headers = ["X-Custom-Header", "X-Forwarded-To", "X-Mas"]
+    allowed_response_headers = ["X-Custom-Response-Header", "X-Forwarded-Response-To", "X-Mas-Response"]
+    token_type = "default-batch"
   }
 }
 `, credentials, path)

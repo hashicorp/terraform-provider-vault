@@ -224,14 +224,6 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 		data["custom_endpoint"] = endpoints
 	}
-
-	log.Printf("[DEBUG] Writing gcp config %q", path)
-	_, err := client.Logical().Write(path, data)
-	if err != nil {
-		d.SetId("")
-		return fmt.Errorf("error writing gcp config %q: %s", path, err)
-	}
-
 	backendType := gcpAuthType
 	var input api.MountConfigInput
 	var callTune bool
@@ -260,6 +252,14 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		log.Printf("[INFO] Written %s auth tune to '%q'", backendType, gcpPath)
 	}
+
+	log.Printf("[DEBUG] Writing gcp config %q", path)
+	_, err := client.Logical().Write(path, data)
+	if err != nil {
+		d.SetId("")
+		return fmt.Errorf("error writing gcp config %q: %s", path, err)
+	}
+
 	log.Printf("[DEBUG] Wrote gcp config %q", path)
 
 	return gcpAuthBackendRead(d, meta)
@@ -271,7 +271,8 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		return e
 	}
 
-	path := gcpAuthBackendConfigPath(d.Id())
+	gcpPath := d.Id()
+	path := gcpAuthBackendConfigPath(gcpPath)
 
 	log.Printf("[DEBUG] Reading gcp auth backend config %q", path)
 	resp, err := client.Logical().Read(path)
@@ -309,8 +310,9 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 			return err
 		}
 	}
+
 	// fetch AuthMount in order to set accessor attribute
-	mount, err := getAuthMountIfPresent(client, d.Id())
+	mount, err := getAuthMountIfPresent(client, gcpPath)
 	if err != nil {
 		return err
 	}
@@ -318,12 +320,22 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-	if err := d.Set("accessor", mount.Accessor); err != nil {
+	log.Printf("[DEBUG] Reading %q auth tune from '%q/tune'", gcpPath, gcpPath)
+	rawTune, err := authMountTuneGet(client, "auth/"+gcpPath)
+	if err != nil {
+		return fmt.Errorf("error reading tune information from Vault: %w", err)
+	}
+	data := map[string]interface{}{}
+	data["tune"] = []map[string]interface{}{rawTune}
+	if err := util.SetResourceData(d, data); err != nil {
 		return err
 	}
 
+	if err := d.Set("accessor", mount.Accessor); err != nil {
+		return err
+	}
 	// set the auth backend's path
-	if err := d.Set("path", d.Id()); err != nil {
+	if err := d.Set("path", gcpPath); err != nil {
 		return err
 	}
 

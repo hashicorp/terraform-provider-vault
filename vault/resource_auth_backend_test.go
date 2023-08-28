@@ -283,9 +283,6 @@ func checkAuthMount(backend string, checker func(*api.AuthMount) error) resource
 		for serverPath, serverAuth := range auths {
 			if serverPath == backend+"/" {
 				found = true
-				if serverAuth.Type != "github" {
-					return fmt.Errorf("unexpected auth type")
-				}
 
 				if err := checker(serverAuth); err != nil {
 					return err
