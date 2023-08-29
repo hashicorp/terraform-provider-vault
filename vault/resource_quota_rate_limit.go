@@ -60,6 +60,11 @@ func quotaRateLimitResource() *schema.Resource {
 				Description:  "If set, when a client reaches a rate limit threshold, the client will be prohibited from any further requests until after the 'block_interval' in seconds has elapsed.",
 				ValidateFunc: validation.IntAtLeast(0),
 			},
+			"role": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "If set on a quota where path is set to an auth mount with a concept of roles (such as /auth/approle/), this will make the quota restrict login requests to that mount that are made with the specified role.",
+			},
 		},
 	}
 }
@@ -86,6 +91,10 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("block_interval"); ok {
 		data["block_interval"] = v
+	}
+
+	if v, ok := d.GetOk("role"); ok {
+		data["role"] = v
 	}
 
 	_, err := client.Logical().Write(path, data)
@@ -119,7 +128,7 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"path", "rate", "interval", "block_interval"} {
+	for _, k := range []string{"path", "rate", "role", "interval", "block_interval"} {
 		v, ok := resp.Data[k]
 		if ok {
 			if err := d.Set(k, v); err != nil {
@@ -152,6 +161,10 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("block_interval"); ok {
 		data["block_interval"] = v
+	}
+
+	if v, ok := d.GetOk("role"); ok {
+		data["role"] = v
 	}
 
 	_, err := client.Logical().Write(path, data)

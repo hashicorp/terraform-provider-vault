@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -68,6 +67,34 @@ func TestQuotaRateLimit(t *testing.T) {
 	})
 }
 
+func TestQuotaRateLimitWithRole(t *testing.T) {
+	name := acctest.RandomWithPrefix("rate-limit")
+	backend := acctest.RandomWithPrefix("approle")
+	role := acctest.RandomWithPrefix("test-role")
+	rateLimit := randomQuotaRateString()
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: resource.ComposeTestCheckFunc(
+			testQuotaRateLimitCheckDestroy([]string{rateLimit}),
+			testAccCheckAppRoleAuthBackendRoleDestroy,
+		),
+		Steps: []resource.TestStep{
+			{
+				Config: testQuotaRateLimitWithRole_Config(backend, role, name, rateLimit, 1, 0),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", fmt.Sprintf("auth/%s", backend)),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "rate", rateLimit),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "interval", "1"),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "block_interval", "0"),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "role", role),
+				),
+			},
+		},
+	})
+}
+
 func testQuotaRateLimitCheckDestroy(rateLimits []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
@@ -98,4 +125,28 @@ resource "vault_quota_rate_limit" "foobar" {
   block_interval = %d
 }
 `, name, path, rate, interval, blockInterval)
+}
+
+func testQuotaRateLimitWithRole_Config(backend, role, name, rate string, interval, blockInterval int) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "approle" {
+  type = "approle"
+  path = "%s"
+}
+
+resource "vault_approle_auth_backend_role" "role" {
+  backend = vault_auth_backend.approle.path
+  role_name = "%s"
+  token_policies = ["default"]
+}
+
+resource "vault_quota_rate_limit" "foobar" {
+  name = "%s"
+  path = "/auth/%s"
+  role = "%s"
+  rate = %s
+  interval = %d
+  block_interval = %d
+}
+`, backend, role, name, backend, role, rate, interval, blockInterval)
 }
