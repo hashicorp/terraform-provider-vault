@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -34,7 +35,7 @@ func TestQuotaRateLimit(t *testing.T) {
 		CheckDestroy: testQuotaRateLimitCheckDestroy([]string{rateLimit, newRateLimit}),
 		Steps: []resource.TestStep{
 			{
-				Config: testQuotaRateLimit_Config(name, "", rateLimit, 1, 0),
+				Config: testQuotaRateLimitConfig(name, "", rateLimit, 1, 0),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", ""),
@@ -44,7 +45,7 @@ func TestQuotaRateLimit(t *testing.T) {
 				),
 			},
 			{
-				Config: testQuotaRateLimit_Config(name, "", newRateLimit, 60, 120),
+				Config: testQuotaRateLimitConfig(name, "", newRateLimit, 60, 120),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", ""),
@@ -54,7 +55,7 @@ func TestQuotaRateLimit(t *testing.T) {
 				),
 			},
 			{
-				Config: testQuotaRateLimit_Config(name, "sys/", newRateLimit, 60, 120),
+				Config: testQuotaRateLimitConfig(name, "sys/", newRateLimit, 60, 120),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", "sys/"),
@@ -72,6 +73,8 @@ func TestQuotaRateLimitWithRole(t *testing.T) {
 	backend := acctest.RandomWithPrefix("approle")
 	role := acctest.RandomWithPrefix("test-role")
 	rateLimit := randomQuotaRateString()
+	resourceName := "vault_quota_rate_limit.foobar"
+
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
 		PreCheck:  func() { testutil.TestAccPreCheck(t) },
@@ -81,14 +84,14 @@ func TestQuotaRateLimitWithRole(t *testing.T) {
 		),
 		Steps: []resource.TestStep{
 			{
-				Config: testQuotaRateLimitWithRole_Config(backend, role, name, rateLimit, 1, 0),
+				Config: testQuotaRateLimitWithRoleConfig(backend, role, name, rateLimit, 1, 0),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", fmt.Sprintf("auth/%s/", backend)),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "rate", rateLimit),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "interval", "1"),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "block_interval", "0"),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "role", role),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("auth/%s/", backend)),
+					resource.TestCheckResourceAttr(resourceName, "rate", rateLimit),
+					resource.TestCheckResourceAttr(resourceName, "interval", "1"),
+					resource.TestCheckResourceAttr(resourceName, "block_interval", "0"),
+					resource.TestCheckResourceAttr(resourceName, "role", role),
 				),
 			},
 		},
@@ -115,7 +118,7 @@ func testQuotaRateLimitCheckDestroy(rateLimits []string) resource.TestCheckFunc 
 }
 
 // Caution: Don't set test rate values too low or other tests running concurrently might fail
-func testQuotaRateLimit_Config(name, path, rate string, interval, blockInterval int) string {
+func testQuotaRateLimitConfig(name, path, rate string, interval, blockInterval int) string {
 	return fmt.Sprintf(`
 resource "vault_quota_rate_limit" "foobar" {
   name = "%s"
@@ -127,7 +130,7 @@ resource "vault_quota_rate_limit" "foobar" {
 `, name, path, rate, interval, blockInterval)
 }
 
-func testQuotaRateLimitWithRole_Config(backend, role, name, rate string, interval, blockInterval int) string {
+func testQuotaRateLimitWithRoleConfig(backend, role, name, rate string, interval, blockInterval int) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "approle" {
   type = "approle"
@@ -142,12 +145,11 @@ resource "vault_approle_auth_backend_role" "role" {
 
 resource "vault_quota_rate_limit" "foobar" {
   name = "%s"
-  path = "auth/%s/"
+  path = "auth/${vault_auth_backend.approle.path}/"
   role = vault_approle_auth_backend_role.role.role_name
   rate = %s
   interval = %d
   block_interval = %d
-  depends_on = [ vault_auth_backend.approle, vault_approle_auth_backend_role.role ]
 }
-`, backend, role, name, backend, rate, interval, blockInterval)
+`, backend, role, name, rate, interval, blockInterval)
 }
