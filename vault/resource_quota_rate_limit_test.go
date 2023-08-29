@@ -84,7 +84,7 @@ func TestQuotaRateLimitWithRole(t *testing.T) {
 				Config: testQuotaRateLimitWithRole_Config(backend, role, name, rateLimit, 1, 0),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "name", name),
-					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", fmt.Sprintf("auth/%s", backend)),
+					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "path", fmt.Sprintf("auth/%s/", backend)),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "rate", rateLimit),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "interval", "1"),
 					resource.TestCheckResourceAttr("vault_quota_rate_limit.foobar", "block_interval", "0"),
@@ -137,16 +137,17 @@ resource "vault_auth_backend" "approle" {
 resource "vault_approle_auth_backend_role" "role" {
   backend = vault_auth_backend.approle.path
   role_name = "%s"
-  token_policies = ["default"]
+  token_policies = ["default", "dev", "prod"]
 }
 
 resource "vault_quota_rate_limit" "foobar" {
   name = "%s"
-  path = "/auth/%s"
-  role = "%s"
+  path = "auth/%s/"
+  role = vault_approle_auth_backend_role.role.role_name
   rate = %s
   interval = %d
   block_interval = %d
+  depends_on = [ vault_auth_backend.approle, vault_approle_auth_backend_role.role ]
 }
-`, backend, role, name, backend, role, rate, interval, blockInterval)
+`, backend, role, name, backend, rate, interval, blockInterval)
 }
