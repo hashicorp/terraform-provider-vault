@@ -94,8 +94,8 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 		data["block_interval"] = v
 	}
 
-	if v, ok := d.GetOk("role"); ok {
-		data["role"] = v
+	if v, ok := d.GetOk(consts.FieldRole); ok {
+		data[consts.FieldRole] = v
 	}
 
 	_, err := client.Logical().Write(path, data)
@@ -129,7 +129,7 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"path", "rate", "role", "interval", "block_interval"} {
+	for _, k := range []string{"path", "rate", "interval", "block_interval", consts.FieldRole} {
 		v, ok := resp.Data[k]
 		if ok {
 			if err := d.Set(k, v); err != nil {
@@ -164,8 +164,8 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["block_interval"] = v
 	}
 
-	if v, ok := d.GetOk("role"); ok {
-		data["role"] = v
+	if v, ok := d.GetOk(consts.FieldRole); ok {
+		data[consts.FieldRole] = v
 	}
 
 	_, err := client.Logical().Write(path, data)
