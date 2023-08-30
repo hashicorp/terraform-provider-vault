@@ -94,8 +94,10 @@ func quotaRateLimitCreate(d *schema.ResourceData, meta interface{}) error {
 		data["block_interval"] = v
 	}
 
-	if v, ok := d.GetOk(consts.FieldRole); ok {
-		data[consts.FieldRole] = v
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if v, ok := d.GetOk(consts.FieldRole); ok {
+			data[consts.FieldRole] = v
+		}
 	}
 
 	_, err := client.Logical().Write(path, data)
@@ -129,7 +131,12 @@ func quotaRateLimitRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"path", "rate", "interval", "block_interval", consts.FieldRole} {
+	fields := []string{"path", "rate", "interval", "block_interval", "name"}
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		fields = append(fields, consts.FieldRole)
+	}
+
+	for _, k := range fields {
 		v, ok := resp.Data[k]
 		if ok {
 			if err := d.Set(k, v); err != nil {
@@ -164,8 +171,10 @@ func quotaRateLimitUpdate(d *schema.ResourceData, meta interface{}) error {
 		data["block_interval"] = v
 	}
 
-	if v, ok := d.GetOk(consts.FieldRole); ok {
-		data[consts.FieldRole] = v
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if v, ok := d.GetOk(consts.FieldRole); ok {
+			data[consts.FieldRole] = v
+		}
 	}
 
 	_, err := client.Logical().Write(path, data)

@@ -74,8 +74,10 @@ func quotaLeaseCountCreate(d *schema.ResourceData, meta interface{}) error {
 	data["path"] = d.Get("path").(string)
 	data["max_leases"] = d.Get("max_leases").(int)
 
-	if v, ok := d.GetOk(consts.FieldRole); ok {
-		data[consts.FieldRole] = v
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if v, ok := d.GetOk(consts.FieldRole); ok {
+			data[consts.FieldRole] = v
+		}
 	}
 
 	_, err := client.Logical().Write(path, data)
@@ -109,7 +111,12 @@ func quotaLeaseCountRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	for _, k := range []string{"path", "max_leases", consts.FieldRole} {
+	fields := []string{"path", "max_leases", "name"}
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		fields = append(fields, consts.FieldRole)
+	}
+
+	for _, k := range fields {
 		v, ok := resp.Data[k]
 		if ok {
 			if err := d.Set(k, v); err != nil {
@@ -136,8 +143,10 @@ func quotaLeaseCountUpdate(d *schema.ResourceData, meta interface{}) error {
 	data["path"] = d.Get(consts.FieldPath).(string)
 	data["max_leases"] = d.Get("max_leases").(int)
 
-	if v, ok := d.GetOk(consts.FieldRole); ok {
-		data[consts.FieldRole] = v
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		if v, ok := d.GetOk(consts.FieldRole); ok {
+			data[consts.FieldRole] = v
+		}
 	}
 
 	_, err := client.Logical().Write(path, data)

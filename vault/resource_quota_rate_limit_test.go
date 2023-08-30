@@ -77,7 +77,10 @@ func TestQuotaRateLimitWithRole(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+		},
 		CheckDestroy: resource.ComposeTestCheckFunc(
 			testQuotaRateLimitCheckDestroy([]string{rateLimit}),
 			testAccCheckAppRoleAuthBackendRoleDestroy,
@@ -94,7 +97,7 @@ func TestQuotaRateLimitWithRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRole, role),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "name"),
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }

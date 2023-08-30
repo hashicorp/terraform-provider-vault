@@ -66,7 +66,10 @@ func TestQuotaLeaseCountWithRole(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testutil.TestEntPreCheck(t) },
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+		},
 		CheckDestroy: resource.ComposeTestCheckFunc(
 			testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
 			testAccCheckAppRoleAuthBackendRoleDestroy,
@@ -90,7 +93,7 @@ func TestQuotaLeaseCountWithRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRole, role),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "name"),
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
