@@ -49,7 +49,7 @@ func quotaLeaseCountResource() *schema.Resource {
 				Description:  "The maximum number of leases to be allowed by the quota rule. The max_leases must be positive.",
 				ValidateFunc: validation.IntAtLeast(0),
 			},
-			"role": {
+			consts.FieldRole: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "If set on a quota where path is set to an auth mount with a concept of roles (such as /auth/approle/), this will make the quota restrict login requests to that mount that are made with the specified role.",

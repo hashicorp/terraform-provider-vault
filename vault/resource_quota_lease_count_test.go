@@ -78,6 +78,7 @@ func TestQuotaLeaseCountWithRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("auth/%s/", backend)),
 					resource.TestCheckResourceAttr(resourceName, "max_leases", leaseCount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRole, role),
 				),
 			},
 			{
@@ -86,6 +87,7 @@ func TestQuotaLeaseCountWithRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("auth/%s/", backend)),
 					resource.TestCheckResourceAttr(resourceName, "max_leases", newLeaseCount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRole, role),
 				),
 			},
 		},

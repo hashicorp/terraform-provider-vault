@@ -91,7 +91,7 @@ func TestQuotaRateLimitWithRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "rate", rateLimit),
 					resource.TestCheckResourceAttr(resourceName, "interval", "1"),
 					resource.TestCheckResourceAttr(resourceName, "block_interval", "0"),
-					resource.TestCheckResourceAttr(resourceName, "role", role),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRole, role),
 				),
 			},
 		},
