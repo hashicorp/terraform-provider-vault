@@ -90,6 +90,7 @@ func TestQuotaLeaseCountWithRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRole, role),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil, "name"),
 		},
 	})
 }
