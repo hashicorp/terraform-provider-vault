@@ -4,64 +4,103 @@
 package vault
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func pkiSecretBackendIntermediateSetSignedResource() *schema.Resource {
 	return &schema.Resource{
-		Create: pkiSecretBackendIntermediateSetSignedCreate,
-		Read:   provider.ReadWrapper(pkiSecretBackendCertRead),
-		Delete: pkiSecretBackendIntermediateSetSignedDelete,
-
+		CreateContext: pkiSecretBackendIntermediateSetSignedCreate,
+		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendCertRead),
+		DeleteContext: pkiSecretBackendIntermediateSetSignedDelete,
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The PKI secret backend the resource belongs to.",
 				ForceNew:    true,
 			},
-			"certificate": {
+			consts.FieldCertificate: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The certificate.",
+				ForceNew:    true,
+			},
+			consts.FieldImportedIssuers: {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Computed:    true,
+				Description: "The imported issuers.",
+				ForceNew:    true,
+			},
+			consts.FieldImportedKeys: {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Computed:    true,
+				Description: "The imported keys.",
 				ForceNew:    true,
 			},
 		},
 	}
 }
 
-func pkiSecretBackendIntermediateSetSignedCreate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendIntermediateSetSignedCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
+	backend := d.Get(consts.FieldBackend).(string)
 
 	path := pkiSecretBackendIntermediateSetSignedCreatePath(backend)
 
 	data := map[string]interface{}{
-		"certificate": d.Get("certificate").(string),
+		consts.FieldCertificate: d.Get(consts.FieldCertificate).(string),
 	}
 
 	log.Printf("[DEBUG] Creating intermediate set-signed on PKI secret backend %q", backend)
-	_, err := client.Logical().Write(path, data)
+	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating intermediate set-signed on PKI secret backend %q: %s", backend, err)
+		return diag.Errorf("error creating intermediate set-signed on PKI secret backend %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Created intermediate set-signed on PKI secret backend %q", backend)
 
 	d.SetId(path)
-	return pkiSecretBackendCertRead(d, meta)
+
+	computedIssuerFields := []string{consts.FieldImportedIssuers, consts.FieldImportedKeys}
+
+	for _, k := range computedIssuerFields {
+		// Vault versions <= 1.10 do not return any response for this endpoint
+		// Set computed fields to nil to avoid drift
+		if resp == nil {
+			if err := d.Set(k, nil); err != nil {
+				return diag.FromErr(err)
+			}
+		} else {
+			// If response is obtained, multi-issuer fields are present in data
+			if v, ok := resp.Data[k]; ok {
+				if err := d.Set(k, v); err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		}
+	}
+
+	return pkiSecretBackendCertRead(ctx, d, meta)
 }
 
-func pkiSecretBackendIntermediateSetSignedDelete(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendIntermediateSetSignedDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }
 

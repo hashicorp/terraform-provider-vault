@@ -124,8 +124,14 @@ func testAccDatabaseSecretBackendStaticRoleCheckDestroy(s *terraform.State) erro
 }
 
 func createTestUser(connURL, username string) error {
+	mysqlURL := connURL
+	runsInContainer := os.Getenv("RUNS_IN_CONTAINER") == "true"
+	if !runsInContainer {
+		mysqlURL = "root:mysql@tcp(localhost:3306)/"
+	}
+
 	ctx := context.Background()
-	db, err := sql.Open("mysql", connURL)
+	db, err := sql.Open("mysql", mysqlURL)
 	if err != nil {
 		return err
 	}

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -21,21 +20,9 @@ import (
 const envVarGCPServiceAccount = "TF_ACC_GOOGLE_SERVICE_ACCOUNT"
 
 func TestAuthLoginGCP_Init(t *testing.T) {
-	type fields struct {
-		AuthLoginCommon AuthLoginCommon
-	}
-
 	s := map[string]*schema.Schema{}
 
-	tests := []struct {
-		name         string
-		authField    string
-		raw          map[string]interface{}
-		wantErr      bool
-		expectMount  string
-		expectParams map[string]interface{}
-		expectErr    error
-	}{
+	tests := []authLoginInitTest{
 		{
 			name:         "error-missing-resource",
 			authField:    consts.FieldAuthLoginGCP,
@@ -50,22 +37,7 @@ func TestAuthLoginGCP_Init(t *testing.T) {
 			t.Cleanup(func() {
 				delete(s, tt.authField)
 			})
-
-			d := schema.TestResourceDataRaw(t, s, tt.raw)
-			l := &AuthLoginGCP{}
-
-			err := l.Init(d, tt.authField)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Init() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if !reflect.DeepEqual(tt.expectErr, err) {
-				t.Errorf("Init() expected error %#v, actual %#v", tt.expectErr, err)
-			}
-
-			if !reflect.DeepEqual(tt.expectParams, l.params) {
-				t.Errorf("Init() expected params %#v, actual %#v", tt.expectParams, l.params)
-			}
+			assertAuthLoginInit(t, tt, s, &AuthLoginGCP{})
 		})
 	}
 }

@@ -6,6 +6,7 @@ package provider
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -15,36 +16,106 @@ import (
 )
 
 type (
-	GetLoginSchema    func(string) *schema.Schema
+	loginSchemaFunc   func(string) *schema.Schema
 	getSchemaResource func(string) *schema.Resource
+	validateFunc      func(data *schema.ResourceData) error
+	authLoginFunc     func(*schema.ResourceData) (AuthLogin, error)
 )
+
+// authLoginEntry is the tuple of authLoginFunc, schemaFunc.
+type authLoginEntry struct {
+	field      string
+	loginFunc  authLoginFunc
+	schemaFunc loginSchemaFunc
+}
+
+// AuthLogin returns a new AuthLogin instance from provided schema.ResourceData.
+func (a *authLoginEntry) AuthLogin(r *schema.ResourceData) (AuthLogin, error) {
+	return a.loginFunc(r)
+}
+
+// LoginSchema returns the AuthLogin's schema.Schema.
+func (a *authLoginEntry) LoginSchema() *schema.Schema {
+	return a.schemaFunc(a.Field())
+}
+
+// Field returns the entry's top level schema field name. E.g. auth_jwt.
+func (a *authLoginEntry) Field() string {
+	return a.field
+}
+
+// authLoginRegistry provides the storage for authLoginEntry, mapped to the
+// entry's field name.
+type authLoginRegistry struct {
+	m sync.Map
+}
+
+// Register field for loginFunc and schemaFunc. A field can only be registered
+// once.
+func (r *authLoginRegistry) Register(field string, loginFunc authLoginFunc, schemaFunc loginSchemaFunc) error {
+	e := &authLoginEntry{
+		field:      field,
+		loginFunc:  loginFunc,
+		schemaFunc: schemaFunc,
+	}
+
+	_, loaded := r.m.LoadOrStore(field, e)
+	if loaded {
+		return fmt.Errorf("auth login field %s is already registered", field)
+	}
+	return nil
+}
+
+// Get the authLoginEntry for field.
+func (r *authLoginRegistry) Get(field string) (*authLoginEntry, error) {
+	v, ok := r.m.Load(field)
+	if !ok {
+		return nil, fmt.Errorf("auth login function not registered for %s", field)
+	}
+	if entry, ok := v.(*authLoginEntry); ok {
+		return entry, nil
+	} else {
+		return nil, fmt.Errorf("invalid type %T store in registry", v)
+	}
+}
+
+// Fields returns the names of all registered AuthLogin's
+func (r *authLoginRegistry) Fields() []string {
+	var keys []string
+	r.m.Range(func(key, _ interface{}) bool {
+		keys = append(keys, key.(string))
+		return true
+	})
+
+	return keys
+}
+
+// Values returns a slice of all registered authLoginEntry(s).
+func (r *authLoginRegistry) Values() []*authLoginEntry {
+	var result []*authLoginEntry
+	r.m.Range(func(key, value interface{}) bool {
+		result = append(result, value.(*authLoginEntry))
+		return true
+	})
+
+	return result
+}
 
 // AuthLoginFields supported by the provider.
 var (
-	AuthLoginFields = []string{
-		consts.FieldAuthLoginDefault,
-		consts.FieldAuthLoginUserpass,
-		consts.FieldAuthLoginAWS,
-		consts.FieldAuthLoginCert,
-		consts.FieldAuthLoginGCP,
-		consts.FieldAuthLoginKerberos,
-		consts.FieldAuthLoginRadius,
-		consts.FieldAuthLoginOCI,
-		consts.FieldAuthLoginOIDC,
-		consts.FieldAuthLoginJWT,
-		consts.FieldAuthLoginAzure,
-	}
-
 	authLoginInitCheckError = errors.New("auth login not initialized")
+
+	globalAuthLoginRegistry = &authLoginRegistry{}
 )
 
 type AuthLogin interface {
-	Init(data *schema.ResourceData, authFiled string) error
+	Init(*schema.ResourceData, string) (AuthLogin, error)
 	MountPath() string
 	LoginPath() string
 	Method() string
-	Login(client *api.Client) (*api.Secret, error)
+	Login(*api.Client) (*api.Secret, error)
 	Namespace() string
+	Params() map[string]interface{}
 }
 
 // AuthLoginCommon providing common methods for other AuthLogin* implementations.
@@ -55,11 +126,21 @@ type AuthLoginCommon struct {
 	initialized bool
 }
 
-func (l *AuthLoginCommon) Init(d *schema.ResourceData, authField string) error {
+func (l *AuthLoginCommon) Params() map[string]interface{} {
+	return l.params
+}
+
+func (l *AuthLoginCommon) Init(d *schema.ResourceData, authField string, validators ...validateFunc) error {
 	l.authField = authField
 	path, params, err := l.init(d)
 	if err != nil {
 		return err
+	}
+
+	for _, vf := range validators {
+		if err := vf(d); err != nil {
+			return err
+		}
 	}
 
 	l.mount = path
@@ -154,15 +235,20 @@ func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]inter
 		path = v.(string)
 	} else if v, ok := l.getOk(d, consts.FieldMount); ok {
 		path = v.(string)
-	} else {
-		return "", nil, fmt.Errorf("no valid path configured in %#v", d)
+	} else if l.mount != consts.MountTypeNone {
+		return "", nil, fmt.Errorf("no valid path configured for %q", l.authField)
 	}
 
 	var params map[string]interface{}
 	if v, ok := l.getOk(d, consts.FieldParameters); ok {
 		params = v.(map[string]interface{})
 	} else {
-		params = config[0].(map[string]interface{})
+		v := config[0]
+		if v == nil {
+			params = make(map[string]interface{})
+		} else {
+			params = v.(map[string]interface{})
+		}
 	}
 
 	l.initialized = true
@@ -213,63 +299,43 @@ func (l *AuthLoginCommon) validate() error {
 }
 
 func GetAuthLogin(r *schema.ResourceData) (AuthLogin, error) {
-	for _, authField := range AuthLoginFields {
+	for _, authField := range globalAuthLoginRegistry.Fields() {
 		_, ok := r.GetOk(authField)
 		if !ok {
 			continue
 		}
 
-		var l AuthLogin
-		switch authField {
-		case consts.FieldAuthLoginDefault:
-			l = &AuthLoginGeneric{}
-		case consts.FieldAuthLoginAWS:
-			l = &AuthLoginAWS{}
-		case consts.FieldAuthLoginUserpass:
-			l = &AuthLoginUserpass{}
-		case consts.FieldAuthLoginGCP:
-			l = &AuthLoginGCP{}
-		case consts.FieldAuthLoginKerberos:
-			l = &AuthLoginKerberos{}
-		case consts.FieldAuthLoginRadius:
-			l = &AuthLoginRadius{}
-		case consts.FieldAuthLoginOCI:
-			l = &AuthLoginOCI{}
-		case consts.FieldAuthLoginOIDC:
-			l = &AuthLoginOIDC{}
-		case consts.FieldAuthLoginJWT:
-			l = &AuthLoginJWT{}
-		case consts.FieldAuthLoginAzure:
-			l = &AuthLoginAzure{}
-		default:
-			return nil, nil
-		}
-
-		if err := l.Init(r, authField); err != nil {
+		entry, err := globalAuthLoginRegistry.Get(authField)
+		if err != nil {
 			return nil, err
 		}
 
-		return l, nil
+		return entry.AuthLogin(r)
 	}
 
 	return nil, nil
 }
 
 func mustAddLoginSchema(r *schema.Resource, defaultMount string) *schema.Resource {
-	MustAddSchema(r, map[string]*schema.Schema{
+	m := map[string]*schema.Schema{
 		consts.FieldNamespace: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "The authentication engine's namespace.",
 		},
-		consts.FieldMount: {
+	}
+
+	if defaultMount != consts.MountTypeNone {
+		m[consts.FieldMount] = &schema.Schema{
 			Type:             schema.TypeString,
 			Optional:         true,
 			Description:      "The path where the authentication engine is mounted.",
 			Default:          defaultMount,
 			ValidateDiagFunc: ValidateDiagPath,
-		},
-	})
+		}
+	}
+
+	MustAddSchema(r, m)
 
 	return r
 }
@@ -281,42 +347,14 @@ func getLoginSchema(authField, description string, resourceFunc getSchemaResourc
 		MaxItems:      1,
 		Description:   description,
 		Elem:          resourceFunc(authField),
-		ConflictsWith: util.CalculateConflictsWith(authField, AuthLoginFields),
+		ConflictsWith: util.CalculateConflictsWith(authField, globalAuthLoginRegistry.Fields()),
 	}
 }
 
 // MustAddAuthLoginSchema adds all supported auth login type schema.Schema to
 // a schema map.
 func MustAddAuthLoginSchema(s map[string]*schema.Schema) {
-	for _, authField := range AuthLoginFields {
-		var f GetLoginSchema
-		switch authField {
-		case consts.FieldAuthLoginDefault:
-			f = GetGenericLoginSchema
-		case consts.FieldAuthLoginUserpass:
-			f = GetUserpassLoginSchema
-		case consts.FieldAuthLoginAWS:
-			f = GetAWSLoginSchema
-		case consts.FieldAuthLoginCert:
-			f = GetCertLoginSchema
-		case consts.FieldAuthLoginGCP:
-			f = GetGCPLoginSchema
-		case consts.FieldAuthLoginKerberos:
-			f = GetKerberosLoginSchema
-		case consts.FieldAuthLoginRadius:
-			f = GetRadiusLoginSchema
-		case consts.FieldAuthLoginOCI:
-			f = GetOCILoginSchema
-		case consts.FieldAuthLoginOIDC:
-			f = GetOIDCLoginSchema
-		case consts.FieldAuthLoginJWT:
-			f = GetJWTLoginSchema
-		case consts.FieldAuthLoginAzure:
-			f = GetAzureLoginSchema
-		default:
-			panic(fmt.Errorf("auth login %q has no schema defined", authField))
-		}
-
-		mustAddSchema(authField, f(authField), s)
+	for _, v := range globalAuthLoginRegistry.Values() {
+		mustAddSchema(v.Field(), v.LoginSchema(), s)
 	}
 }

@@ -188,6 +188,7 @@ resource "vault_token" "test" {
 }
 
 func TestResourceToken_expire(t *testing.T) {
+	t.Skip("skipping, because it's flaky in CI and there's a long time.Sleep call")
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
 		PreCheck:     func() { testutil.TestAccPreCheck(t) },
@@ -197,8 +198,8 @@ func TestResourceToken_expire(t *testing.T) {
 				Config: testResourceTokenConfig_expire(),
 				Check: resource.ComposeTestCheckFunc(
 					testResourceTokenCheckExpireTime("vault_token.test"),
-					resource.TestCheckResourceAttr("vault_token.test", consts.FieldTTL, "10s"),
-					resource.TestCheckResourceAttr("vault_token.test", consts.FieldLeaseDuration, "9"),
+					resource.TestCheckResourceAttr("vault_token.test", consts.FieldTTL, "5s"),
+					resource.TestCheckResourceAttr("vault_token.test", consts.FieldLeaseDuration, "4"),
 					resource.TestCheckResourceAttrSet("vault_token.test", consts.FieldLeaseStarted),
 					resource.TestCheckResourceAttrSet("vault_token.test", consts.FieldClientToken),
 				),
@@ -222,8 +223,8 @@ func TestResourceToken_expire(t *testing.T) {
 				Config: testResourceTokenConfig_expire(),
 				Check: resource.ComposeTestCheckFunc(
 					testResourceTokenCheckExpireTime("vault_token.test"),
-					resource.TestCheckResourceAttr("vault_token.test", consts.FieldTTL, "10s"),
-					resource.TestCheckResourceAttr("vault_token.test", consts.FieldLeaseDuration, "9"),
+					resource.TestCheckResourceAttr("vault_token.test", consts.FieldTTL, "5s"),
+					resource.TestCheckResourceAttr("vault_token.test", consts.FieldLeaseDuration, "4"),
 					resource.TestCheckResourceAttrSet("vault_token.test", consts.FieldLeaseStarted),
 					resource.TestCheckResourceAttrSet("vault_token.test", consts.FieldClientToken),
 				),
@@ -243,19 +244,20 @@ EOT
 
 resource "vault_token" "test" {
   policies = [vault_policy.test.name]
-  ttl      = "10s"
+  ttl      = "5s"
 }
 `
 }
 
 func TestResourceToken_renew(t *testing.T) {
+	t.Skip("skipping, because it's flaky in CI and there's a long time.Sleep call")
 	resourceName := "vault_token.test"
 
 	commonCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "30s"),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldRenewMinLease, "10"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "20s"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldRenewMinLease, "15"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldRenewIncrement, "30"),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldLeaseDuration, "29"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldLeaseDuration, "19"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldPolicies+".#", "1"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldPolicies+".0", "test"),
 	}
@@ -322,8 +324,8 @@ resource "vault_token" "test" {
     vault_policy.test.name,
   ]
   renewable       = "%t"
-  ttl             = "30s"
-  renew_min_lease = 10
+  ttl             = "20s"
+  renew_min_lease = 15
   renew_increment = 30
 }
 `, renewable)

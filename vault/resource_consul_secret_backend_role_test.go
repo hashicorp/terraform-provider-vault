@@ -18,6 +18,7 @@ import (
 )
 
 func TestConsulSecretBackendRole(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-consul")
 	name := acctest.RandomWithPrefix("tf-test-name")
 	token := "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"

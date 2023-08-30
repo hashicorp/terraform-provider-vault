@@ -18,6 +18,7 @@ import (
 
 // This is light on testing as most of the code is covered by `resource_okta_auth_backend_test.go`
 func TestAccOktaAuthBackendGroup_basic(t *testing.T) {
+	t.Parallel()
 	path := "okta-" + strconv.Itoa(acctest.RandInt())
 	organization := "dummy"
 
@@ -44,6 +45,7 @@ func TestAccOktaAuthBackendGroup_basic(t *testing.T) {
 
 /* Test config which contains a special character "/" in the group name */
 func TestAccOktaAuthBackendGroup_specialChar(t *testing.T) {
+	t.Parallel()
 	path := "okta-" + strconv.Itoa(acctest.RandInt())
 	organization := "dummy"
 

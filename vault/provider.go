@@ -157,6 +157,22 @@ var (
 			Resource:      UpdateSchemaResource(raftAutopilotStateDataSource()),
 			PathInventory: []string{"/sys/storage/raft/autopilot/state"},
 		},
+		"vault_pki_secret_backend_issuer": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerDataSource()),
+			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
+		},
+		"vault_pki_secret_backend_issuers": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendIssuersDataSource()),
+			PathInventory: []string{"/pki/issuers"},
+		},
+		"vault_pki_secret_backend_key": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendKeyDataSource()),
+			PathInventory: []string{"/pki/key/{key_ref}"},
+		},
+		"vault_pki_secret_backend_keys": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendKeysDataSource()),
+			PathInventory: []string{"/pki/keys"},
+		},
 	}
 
 	ResourceRegistry = map[string]*provider.Description{
@@ -216,7 +232,7 @@ var (
 			PathInventory: []string{"/auth/aws/config/client"},
 		},
 		"vault_aws_auth_backend_config_identity": {
-			Resource:      awsAuthBackendConfigIdentityResource(),
+			Resource:      UpdateSchemaResource(awsAuthBackendConfigIdentityResource()),
 			PathInventory: []string{"/auth/aws/config/identity"},
 		},
 		"vault_aws_auth_backend_identity_whitelist": {
@@ -572,6 +588,18 @@ var (
 		"vault_pki_secret_backend_sign": {
 			Resource:      UpdateSchemaResource(pkiSecretBackendSignResource()),
 			PathInventory: []string{"/pki/sign/{role}"},
+		},
+		"vault_pki_secret_backend_key": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendKeyResource()),
+			PathInventory: []string{"/pki/key/{key_id}"},
+		},
+		"vault_pki_secret_backend_issuer": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendIssuerResource()),
+			PathInventory: []string{"/pki/issuer/{issuer_ref}"},
+		},
+		"vault_pki_secret_backend_config_issuers": {
+			Resource:      UpdateSchemaResource(pkiSecretBackendConfigIssuers()),
+			PathInventory: []string{"/pki/config/issuers"},
 		},
 		"vault_quota_lease_count": {
 			Resource:      UpdateSchemaResource(quotaLeaseCountResource()),

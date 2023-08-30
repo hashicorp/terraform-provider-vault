@@ -26,15 +26,7 @@ const (
 )
 
 func TestAuthLoginKerberos_Init(t *testing.T) {
-	tests := []struct {
-		name         string
-		authField    string
-		raw          map[string]interface{}
-		wantErr      bool
-		expectMount  string
-		expectParams map[string]interface{}
-		expectErr    error
-	}{
+	tests := []authLoginInitTest{
 		{
 			name: "with-token",
 			raw: map[string]interface{}{
@@ -91,25 +83,7 @@ func TestAuthLoginKerberos_Init(t *testing.T) {
 			s := map[string]*schema.Schema{
 				tt.authField: GetKerberosLoginSchema(tt.authField),
 			}
-
-			d := schema.TestResourceDataRaw(t, s, tt.raw)
-			l := &AuthLoginKerberos{}
-			err := l.Init(d, tt.authField)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("Init() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if err != nil {
-				if tt.expectErr != nil {
-					if !reflect.DeepEqual(tt.expectErr, err) {
-						t.Errorf("Init() expected error %#v, actual %#v", tt.expectErr, err)
-					}
-				}
-			} else {
-				if !reflect.DeepEqual(tt.expectParams, l.params) {
-					t.Errorf("Init() expected params %#v, actual %#v", tt.expectParams, l.params)
-				}
-			}
+			assertAuthLoginInit(t, tt, s, &AuthLoginKerberos{})
 		})
 	}
 }
@@ -146,7 +120,11 @@ func TestAuthLoginKerberos_LoginPath(t *testing.T) {
 func TestAuthLoginKerberos_Login(t *testing.T) {
 	handlerFunc := func(t *testLoginHandler, w http.ResponseWriter, req *http.Request) {
 		m, err := json.Marshal(
-			&api.Secret{},
+			&api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "kerberos",
+				},
+			},
 		)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -193,7 +171,11 @@ func TestAuthLoginKerberos_Login(t *testing.T) {
 					consts.FieldAuthorization: fmt.Sprintf("Negotiate %s", testNegTokenInit),
 				},
 			},
-			want:    &api.Secret{},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "kerberos",
+				},
+			},
 			wantErr: false,
 		},
 		{
@@ -232,7 +214,11 @@ func TestAuthLoginKerberos_Login(t *testing.T) {
 					consts.FieldAuthorization: fmt.Sprintf("Negotiate %s", testNegTokenInit),
 				},
 			},
-			want:    &api.Secret{},
+			want: &api.Secret{
+				Data: map[string]interface{}{
+					"auth_login": "kerberos",
+				},
+			},
 			wantErr: false,
 		},
 	}

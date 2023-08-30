@@ -131,6 +131,8 @@ The following arguments are supported:
   single token to be granted per instance ID. This can only be set when
   `auth_type` is set to `ec2`.
 
+* `backend` - (Optional) Path to the mounted aws auth backend.
+
 ### Common Token Arguments
 
 These arguments are common across several Authentication Token resources since Vault 1.2.

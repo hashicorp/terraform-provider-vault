@@ -17,6 +17,7 @@ import (
 )
 
 func TestLDAPAuthBackend_basic(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-ldap-path")
 
 	resourceName := "vault_ldap_auth_backend.test"
@@ -51,6 +52,7 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 }
 
 func TestLDAPAuthBackend_tls(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-ldap-tls-path")
 
 	resourceName := "vault_ldap_auth_backend.test"
@@ -86,6 +88,7 @@ func TestLDAPAuthBackend_tls(t *testing.T) {
 }
 
 func TestLDAPAuthBackend_remount(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-auth-ldap")
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-ldap-updated")
 

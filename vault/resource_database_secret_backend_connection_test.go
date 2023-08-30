@@ -98,7 +98,7 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_cassandra(name, backend, host, username, password),
+				Config: testAccDatabaseSecretBackendConnectionConfig_cassandra(name, backend, host, username, password, "5"),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -174,6 +174,12 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 	username := values[1]
 	password := values[2]
 
+	localCouchbaseHost := host
+	runsInContainer := os.Getenv("RUNS_IN_CONTAINER") == "true"
+	if !runsInContainer {
+		localCouchbaseHost = "localhost"
+	}
+
 	hostTLS := fmt.Sprintf("couchbases://%s", host)
 
 	getBase64PEM := func(host string) string {
@@ -191,7 +197,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 		return base64.StdEncoding.EncodeToString(b)
 	}
 
-	host1Base64PEM := getBase64PEM(host)
+	host1Base64PEM := getBase64PEM(localCouchbaseHost)
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineCouchbase.DefaultPluginName()
@@ -266,6 +272,7 @@ func TestAccDatabaseSecretBackendConnection_influxdb(t *testing.T) {
 
 	username := os.Getenv("INFLUXDB_USERNAME")
 	password := os.Getenv("INFLUXDB_PASSWORD")
+	port := os.Getenv("INFLUXDB_PORT")
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineInfluxDB.DefaultPluginName()
 	name := acctest.RandomWithPrefix("db")
@@ -276,7 +283,7 @@ func TestAccDatabaseSecretBackendConnection_influxdb(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_influxdb(name, backend, host, username, password),
+				Config: testAccDatabaseSecretBackendConnectionConfig_influxdb(name, backend, host, port, username, password),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(resourceName, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_roles.0", "dev"),
@@ -606,7 +613,7 @@ func TestAccDatabaseSecretBackendConnectionTemplatedUpdateExcludePassword_mysql(
 	secondaryRootUsername := acctest.RandomWithPrefix("username")
 	secondaryRootPassword := acctest.RandomWithPrefix("password")
 	db := newMySQLConnection(t, connURL, username, password)
-	createMySQSUser(t, db, secondaryRootUsername, secondaryRootPassword)
+	createMySQLUser(t, db, secondaryRootUsername, secondaryRootPassword)
 	t.Cleanup(func() {
 		deleteMySQLUser(t, db, secondaryRootUsername)
 	})
@@ -808,7 +815,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"verify_connection", "elasticsearch.0.password"},
 			},
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_elasticsearchUpdated(name, backend, connURL, username, password),
+				Config: testAccDatabaseSecretBackendConnectionConfig_elasticsearchUpdated(name, backend, connURL, username, password, "test"),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -821,6 +828,27 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.insecure", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.username_template", "test"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.tls_server_name", "test"),
+				),
+			},
+			{
+				PreConfig: func() {
+					// Uncomment block below to actually rotate root. We're avoiding doing this in CI test runs
+					// because it will change the password and cause (future) tests to 401.
+
+					//path := fmt.Sprintf("%s/rotate-root/%s", backend, name)
+					//client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					//
+					//_, err := client.Logical().Write(path, map[string]interface{}{})
+					//if err != nil {
+					//	t.Error(err)
+					//}
+				},
+				// assert that after rotating root, the password stored in state does not change.
+				Config: testAccDatabaseSecretBackendConnectionConfig_elasticsearchUpdated(name, backend, connURL, username, password, "foobar"),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.password", password),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.username_template", "foobar"),
 				),
 			},
 		},
@@ -867,10 +895,11 @@ func TestAccDatabaseSecretBackendConnection_snowflake(t *testing.T) {
 func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineRedis)
 
-	values := testutil.SkipTestEnvUnset(t, "REDIS_HOST", "REDIS_USERNAME", "REDIS_PASSWORD")
+	values := testutil.SkipTestEnvUnset(t, "REDIS_HOST", "REDIS_PORT", "REDIS_USERNAME", "REDIS_PASSWORD")
 	host := values[0]
-	username := values[1]
-	password := values[2]
+	port := values[1]
+	username := values[2]
+	password := values[3]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	pluginName := dbEngineRedis.DefaultPluginName()
@@ -882,7 +911,7 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_redis(name, backend, host, username, password),
+				Config: testAccDatabaseSecretBackendConnectionConfig_redis(name, backend, host, port, username, password, "*"),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "*"),
@@ -893,6 +922,26 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.password", password),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.tls", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.insecure_tls", "false"),
+				),
+			},
+			{
+				PreConfig: func() {
+					// Uncomment block below to actually rotate root. We're avoiding doing this in CI test runs
+					// because it will change the password and cause (future) tests to 401.
+
+					//path := fmt.Sprintf("%s/rotate-root/%s", backend, name)
+					//client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					//
+					//_, err := client.Logical().Write(path, map[string]interface{}{})
+					//if err != nil {
+					//	t.Error(err)
+					//}
+				},
+				Config: testAccDatabaseSecretBackendConnectionConfig_redis(name, backend, host, port, username, password, "foobar"),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "foobar"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.password", password),
 				),
 			},
 			{
@@ -1044,7 +1093,7 @@ func testAccDatabaseSecretBackendConnectionCheckDestroy(s *terraform.State) erro
 	return nil
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_cassandra(name, path, host, username, password string) string {
+func testAccDatabaseSecretBackendConnectionConfig_cassandra(name, path, host, username, password, timeout string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1062,9 +1111,11 @@ resource "vault_database_secret_backend_connection" "test" {
     username = "%s"
     password = "%s"
     tls = false
+    protocol_version = 4
+    connect_timeout = %s
   }
 }
-`, path, name, host, username, password)
+`, path, name, host, username, password, timeout)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_cassandraProtocol(name, path, host, username, password string) string {
@@ -1112,7 +1163,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, connURL, userTempl)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_influxdb(name, path, host, username, password string) string {
+func testAccDatabaseSecretBackendConnectionConfig_influxdb(name, path, host, port, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1127,12 +1178,13 @@ resource "vault_database_secret_backend_connection" "test" {
 
   influxdb {
     host     = "%s"
+    port     = "%s"
     username = "%s"
     password = "%s"
     tls      = false
   }
 }
-`, path, name, host, username, password)
+`, path, name, host, port, username, password)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_couchbase(name, path, host1, username, password, base64PEM string) string {
@@ -1191,7 +1243,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, host, username, password)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_elasticsearchUpdated(name, path, host, username, password string) string {
+func testAccDatabaseSecretBackendConnectionConfig_elasticsearchUpdated(name, path, host, username, password, usernameTemplate string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1209,11 +1261,11 @@ resource "vault_database_secret_backend_connection" "test" {
     username = "%s"
     password = "%s"
 	insecure = true
-	username_template = "test"
+	username_template = %q
 	tls_server_name = "test"
   }
 }
-`, path, name, host, username, password)
+`, path, name, host, username, password, usernameTemplate)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_mongodbatlas(name, path, public_key, private_key, project_id string) string {
@@ -1537,7 +1589,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, url, username, password, userTempl)
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_redis(name, path, host, username, password string) string {
+func testAccDatabaseSecretBackendConnectionConfig_redis(name, path, host, port, username, password, allowedRoles string) string {
 	config := fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1549,13 +1601,14 @@ resource "vault_mount" "db" {
 resource "vault_database_secret_backend_connection" "test" {
   backend = vault_mount.db.path
   name = "%s"
-  allowed_roles = ["*"]
+  allowed_roles = [%q]
   redis {
     	host = "%s"
+    	port = "%s"
 		username = "%s"
 		password = "%s"
   }
-}`, name, host, username, password)
+}`, name, allowedRoles, host, port, username, password)
 
 	return config
 }
@@ -1618,7 +1671,13 @@ resource "vault_database_secret_backend_connection" "test" {
 }
 
 func newMySQLConnection(t *testing.T, connURL string, username string, password string) *sql.DB {
-	dbURL := dbutil.QueryHelper(connURL, map[string]string{
+	mysqlURL := connURL
+	runsInContainer := os.Getenv("RUNS_IN_CONTAINER") == "true"
+	if !runsInContainer {
+		mysqlURL = "{{username}}:{{password}}@tcp(localhost:3306)/"
+	}
+
+	dbURL := dbutil.QueryHelper(mysqlURL, map[string]string{
 		"username": username,
 		"password": password,
 	})
@@ -1631,7 +1690,7 @@ func newMySQLConnection(t *testing.T, connURL string, username string, password 
 	return db
 }
 
-func createMySQSUser(t *testing.T, db *sql.DB, username string, password string) {
+func createMySQLUser(t *testing.T, db *sql.DB, username string, password string) {
 	createUser := fmt.Sprintf("CREATE USER '%s'@'%%' IDENTIFIED BY '%s';", username, password)
 	grantPrivileges := fmt.Sprintf("GRANT ALL PRIVILEGES ON *.* TO '%s'@'%%' WITH GRANT OPTION;", username)
 

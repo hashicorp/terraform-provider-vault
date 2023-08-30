@@ -23,6 +23,10 @@ resource "vault_mount" "example" {
 resource "vault_mount" "kvv2-example" {
   path        = "version2-example"
   type        = "kv-v2"
+  options = {
+    version = "2"
+    type    = "kv-v2"
+  }
   description = "This is an example KV Version 2 secret engine mount"
 }
 ```

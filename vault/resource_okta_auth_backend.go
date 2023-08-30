@@ -157,7 +157,7 @@ func oktaAuthBackendResource() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"groups": {
 							Type:        schema.TypeSet,
-							Required:    true,
+							Optional:    true,
 							Description: "Groups within the Okta auth backend to associate with this user",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,

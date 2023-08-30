@@ -15,6 +15,17 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
+func init() {
+	field := consts.FieldAuthLoginUserpass
+	if err := globalAuthLoginRegistry.Register(field,
+		func(r *schema.ResourceData) (AuthLogin, error) {
+			a := &AuthLoginUserpass{}
+			return a.Init(r, field)
+		}, GetUserpassLoginSchema); err != nil {
+		panic(err)
+	}
+}
+
 // GetUserpassLoginSchema for the userpass authentication engine.
 func GetUserpassLoginSchema(authField string) *schema.Schema {
 	return getLoginSchema(
@@ -56,11 +67,25 @@ func GetUserpassLoginSchemaResource(authField string) *schema.Resource {
 	}, consts.MountTypeUserpass)
 }
 
+var _ AuthLogin = (*AuthLoginUserpass)(nil)
+
 // AuthLoginUserpass provides an interface for authenticating to the
 // userpass authentication engine.
 // Requires configuration provided by SchemaLoginUserpass.
 type AuthLoginUserpass struct {
 	AuthLoginCommon
+}
+
+func (l *AuthLoginUserpass) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData) error {
+			return l.checkRequiredFields(d, consts.FieldUsername)
+		},
+	); err != nil {
+		return nil, err
+	}
+
+	return l, nil
 }
 
 // LoginPath for the userpass authentication engine.

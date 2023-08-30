@@ -45,6 +45,11 @@ The following arguments are supported:
 
 * `name` - (Required) The name to identify this role within the backend. Must be unique within the backend.
 
+* `issuer_ref` - (Optional) Specifies the default issuer of this request. May
+  be the value `default`, a name, or an issuer ID. Use ACLs to prevent access to
+  the `/pki/issuer/:issuer_ref/{issue,sign}/:name` paths to prevent users
+  overriding the role's `issuer_ref` value.
+
 * `ttl` - (Optional, integer) The TTL, in seconds, for any certificate issued against this role.
 
 * `max_ttl` - (Optional, integer) The maximum lease TTL, in seconds, for the role.
@@ -69,7 +74,13 @@ The following arguments are supported:
 
 * `allowed_uri_sans` - (Optional) Defines allowed URI SANs
 
+* `allowed_user_ids` - (Optional) Defines allowed User IDs
+
+* `allowed_uri_sans_template` - (Optional) Flag, if set, `allowed_uri_sans` can be specified using identity template expressions such as `{{identity.entity.aliases.<mount accessor>.name}}`.
+
 * `allowed_other_sans` - (Optional) Defines allowed custom SANs
+
+* `allow_wildcard_certificates` - (Optional) Flag to allow wildcard certificates.
 
 * `server_flag` - (Optional) Flag to specify certificates for server use
 
@@ -79,7 +90,7 @@ The following arguments are supported:
 
 * `email_protection_flag` - (Optional) Flag to specify certificates for email protection use
 
-* `key_type` - (Optional) The generated key type, choices: `rsa`, `ec`, `ed25519`, `any`  
+* `key_type` - (Optional) The generated key type, choices: `rsa`, `ec`, `ed25519`, `any`
   Defaults to `rsa`
 
 * `key_bits` - (Optional) The number of bits of generated keys
@@ -156,7 +167,7 @@ resource "vault_pki_secret_backend_role" "role" {
 
 * `basic_constraints_valid_for_non_ca` - (Optional) Flag to mark basic constraints valid when issuing non-CA certificates
 
-* `not_before_duration` - (Optional) Specifies the duration by which to backdate the NotBefore property.
+* `not_before_duration` - (Optional) Specifies the [duration](https://developer.hashicorp.com/vault/docs/concepts/duration-format) by which to backdate the NotBefore property.
 
 * `allowed_serial_numbers` - (Optional) An array of allowed serial numbers to put in Subject
 

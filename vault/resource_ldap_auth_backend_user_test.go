@@ -18,6 +18,7 @@ import (
 )
 
 func TestLDAPAuthBackendUser_basic(t *testing.T) {
+	t.Parallel()
 	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
 	username := acctest.RandomWithPrefix("tf-test-ldap-user")
 
@@ -53,6 +54,7 @@ func TestLDAPAuthBackendUser_basic(t *testing.T) {
 }
 
 func TestLDAPAuthBackendUser_noGroups(t *testing.T) {
+	t.Parallel()
 	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
 	username := acctest.RandomWithPrefix("tf-test-ldap-user")
 
@@ -81,6 +83,7 @@ func TestLDAPAuthBackendUser_noGroups(t *testing.T) {
 }
 
 func TestLDAPAuthBackendUser_oneGroup(t *testing.T) {
+	t.Parallel()
 	backend := acctest.RandomWithPrefix("tf-test-ldap-backend")
 	username := acctest.RandomWithPrefix("tf-test-ldap-user")
 

@@ -20,6 +20,7 @@ import (
 func TestDataSourceIdentityOIDCOpenIDConfig(t *testing.T) {
 	testutil.SkipTestAcc(t)
 	testutil.TestAccPreCheck(t)
+	t.Parallel()
 
 	providerName := acctest.RandomWithPrefix("test-provider")
 	keyName := acctest.RandomWithPrefix("test-key")

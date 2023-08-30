@@ -41,6 +41,7 @@ var (
 	VaultVersion112 = version.Must(version.NewSemver(consts.VaultVersion112))
 	VaultVersion113 = version.Must(version.NewSemver(consts.VaultVersion113))
 	VaultVersion114 = version.Must(version.NewSemver(consts.VaultVersion114))
+	VaultVersion115 = version.Must(version.NewSemver(consts.VaultVersion115))
 
 	TokenTTLMinRecommended = time.Minute * 15
 )
@@ -154,29 +155,26 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	if addr != "" {
 		clientConfig.Address = addr
 	}
+	clientConfig.CloneTLSConfig = true
 
-	clientAuthI := d.Get(consts.FieldClientAuth).([]interface{})
-	if len(clientAuthI) > 1 {
-		return nil, fmt.Errorf("client_auth block may appear only once")
-	}
-
-	clientAuthCert := ""
-	clientAuthKey := ""
-	if len(clientAuthI) == 1 {
-		clientAuth := clientAuthI[0].(map[string]interface{})
-		clientAuthCert = clientAuth[consts.FieldCertFile].(string)
-		clientAuthKey = clientAuth[consts.FieldKeyFile].(string)
-	}
-
-	err := clientConfig.ConfigureTLS(&api.TLSConfig{
+	tlsConfig := &api.TLSConfig{
 		CACert:        d.Get(consts.FieldCACertFile).(string),
 		CAPath:        d.Get(consts.FieldCACertDir).(string),
 		Insecure:      d.Get(consts.FieldSkipTLSVerify).(bool),
 		TLSServerName: d.Get(consts.FieldTLSServerName).(string),
+	}
 
-		ClientCert: clientAuthCert,
-		ClientKey:  clientAuthKey,
-	})
+	if _, ok := d.GetOk(consts.FieldClientAuth); ok {
+		prefix := fmt.Sprintf("%s.0.", consts.FieldClientAuth)
+		if v, ok := d.GetOk(prefix + consts.FieldCertFile); ok {
+			tlsConfig.ClientCert = v.(string)
+		}
+		if v, ok := d.GetOk(prefix + consts.FieldKeyFile); ok {
+			tlsConfig.ClientKey = v.(string)
+		}
+	}
+
+	err := clientConfig.ConfigureTLS(tlsConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure TLS for Vault API: %s", err)
 	}
@@ -274,6 +272,9 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	tokenInfo, err := client.Auth().Token().LookupSelf()
 	if err != nil {
 		return nil, fmt.Errorf("failed to lookup token, err=%w", err)
+	}
+	if tokenInfo == nil {
+		return nil, fmt.Errorf("no token information returned from self lookup")
 	}
 
 	warnMinTokenTTL(tokenInfo)
@@ -453,7 +454,13 @@ func IsEnterpriseSupported(meta interface{}) bool {
 }
 
 func getVaultVersion(client *api.Client) (*version.Version, error) {
-	resp, err := client.Sys().SealStatus()
+	clone, err := client.Clone()
+	if err != nil {
+		return nil, err
+	}
+
+	clone.ClearNamespace()
+	resp, err := clone.Sys().SealStatus()
 	if err != nil {
 		return nil, fmt.Errorf("could not determine the Vault server version, err=%s", err)
 	}

@@ -15,6 +15,7 @@ import (
 )
 
 func TestAccKVSecretBackendV2(t *testing.T) {
+	t.Parallel()
 	resourceName := "vault_kv_secret_backend_v2.test"
 	mount := acctest.RandomWithPrefix("tf-kvv2")
 
@@ -50,6 +51,7 @@ func TestAccKVSecretBackendV2(t *testing.T) {
 }
 
 func TestKVV2SecretNameFromPath(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		path      string
@@ -76,7 +78,9 @@ func TestKVV2SecretNameFromPath(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			name, err := getKVV2SecretNameFromPath(tt.path)
 			if err == nil && tt.expectErr {
 				t.Fatalf("expected error but got nil")
@@ -90,6 +94,7 @@ func TestKVV2SecretNameFromPath(t *testing.T) {
 }
 
 func TestKVV2SecretMountFromPath(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		path      string
@@ -116,7 +121,9 @@ func TestKVV2SecretMountFromPath(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			mount, err := getKVV2SecretMountFromPath(tt.path)
 
 			if err == nil && tt.expectErr {

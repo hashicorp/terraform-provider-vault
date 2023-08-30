@@ -28,7 +28,7 @@ services:
       MYSQL_PASSWORD: "vault"
 
   elastic:
-    image: elasticsearch:7.6.0
+    image: elasticsearch:7.17.10
     ports:
     - "9200:9200"
     environment:
@@ -37,10 +37,11 @@ services:
       "ELASTIC_PASSWORD": "elastic"
 
   influxdb:
-    image: influxdb:1.7.11-alpine
+    image: influxdb:1.8.10
     ports:
     - "8086:8086"
     environment:
+      "DOCKER_INFLUXDB_INIT_MODE": "setup"
       "DOCKER_INFLUXDB_INIT_USERNAME": "admin"
       "DOCKER_INFLUXDB_INIT_PASSWORD": "password"
       "DOCKER_INFLUXDB_INIT_ORG": "test"
@@ -72,4 +73,26 @@ services:
       - SAMBA_DC_ADMIN_PASSWD=SuperSecretPassw0rd
       - SAMBA_DC_DNS_BACKEND=SAMBA_INTERNAL
 
+  redis:
+    image: redis:7.0.11
+    ports:
+      - '6379:6379'
+    command: >
+      --requirepass password
 
+  couchbase:
+    image: couchbase:7.2.0
+    ports:
+      - '8091-8097:8091-8097'
+      - '9123:9123'
+      - '11207:11207'
+      - '11210:11210'
+      - '11280:11280'
+      - '18097:18097'
+
+  cassandra:
+    image: cassandra:4.0
+    ports:
+      - "9042:9042"
+    volumes:
+      - ./testdata/cassandra.yaml:/etc/cassandra/cassandra.yaml

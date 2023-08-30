@@ -17,6 +17,10 @@ artifacts accordingly. See
 [the main provider documentation](../index.html)
 for more details.
 
+~> **Important** Multi-Issuer Functionality is enabled on this version
+of the Provider. If migrating from an older version of Vault or the Provider,
+please refer to the [PKI Multi-Issuer Upgrade Guide](../guides/pki_multi_issuer_upgrade.html.markdown)
+
 ## Example Usage
 
 ```hcl
@@ -96,6 +100,14 @@ The following arguments are supported:
 * `managed_key_id` - (Optional) The ID of the previously configured managed key. This field is
   required if `type` is `kms` and it conflicts with `managed_key_name`
 
+* `issuer_name` - (Optional) Provides a name to the specified issuer. The name must be unique
+  across all issuers and not be the reserved value `default`
+
+* `key_name` - (Optional) When a new key is created with this request, optionally specifies
+  the name for this. The global ref `default` may not be used as a name.
+
+* `key_ref` - (Optional) Specifies the key (either default, by name, or by identifier) to use
+  for generating this request. Only suitable for `type=existing` requests.
 
 ## Attributes Reference
 
@@ -108,3 +120,7 @@ In addition to the fields above, the following attributes are exported:
 * `serial` - Deprecated, use `serial_number` instead.
  
 * `serial_number` - The certificate's serial number, hex formatted.
+
+* `issuer_id` - The ID of the generated issuer.
+
+* `key_id` - The ID of the generated key.

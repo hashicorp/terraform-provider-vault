@@ -14,6 +14,17 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
+func init() {
+	field := consts.FieldAuthLoginOIDC
+	if err := globalAuthLoginRegistry.Register(field,
+		func(r *schema.ResourceData) (AuthLogin, error) {
+			a := &AuthLoginOIDC{}
+			return a.Init(r, field)
+		}, GetOIDCLoginSchema); err != nil {
+		panic(err)
+	}
+}
+
 // GetOIDCLoginSchema for the oidc authentication engine.
 func GetOIDCLoginSchema(authField string) *schema.Schema {
 	return getLoginSchema(
@@ -50,6 +61,8 @@ func GetOIDCLoginSchemaResource(_ string) *schema.Resource {
 	return s
 }
 
+var _ AuthLogin = (*AuthLoginOIDC)(nil)
+
 // AuthLoginOIDC provides an interface for authenticating to the
 // oidc authentication engine.
 // Requires configuration provided by SchemaLoginOIDC.
@@ -71,16 +84,16 @@ func (l *AuthLoginOIDC) LoginPath() string {
 	return ""
 }
 
-func (l *AuthLoginOIDC) Init(d *schema.ResourceData, authField string) error {
-	if err := l.AuthLoginCommon.Init(d, authField); err != nil {
-		return err
+func (l *AuthLoginOIDC) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData) error {
+			return l.checkRequiredFields(d, consts.FieldRole)
+		},
+	); err != nil {
+		return nil, err
 	}
 
-	if err := l.checkRequiredFields(d, consts.FieldRole); err != nil {
-		return err
-	}
-
-	return nil
+	return l, nil
 }
 
 // Method name for the oidc authentication engine.

@@ -10,41 +10,43 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func pkiSecretBackendCertResource() *schema.Resource {
 	return &schema.Resource{
-		Create:        pkiSecretBackendCertCreate,
-		Read:          provider.ReadWrapper(pkiSecretBackendCertRead),
-		Update:        pkiSecretBackendCertUpdate,
-		Delete:        pkiSecretBackendCertDelete,
+		CreateContext: pkiSecretBackendCertCreate,
+		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendCertRead),
+		UpdateContext: pkiSecretBackendCertUpdate,
+		DeleteContext: pkiSecretBackendCertDelete,
 		CustomizeDiff: pkiCertAutoRenewCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The PKI secret backend the resource belongs to.",
 				ForceNew:    true,
 			},
-			"name": {
+			consts.FieldName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "Name of the role to create the certificate against.",
 				ForceNew:    true,
 			},
-			"common_name": {
+			consts.FieldCommonName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "CN of the certificate to create.",
 				ForceNew:    true,
 			},
-			"alt_names": {
+			consts.FieldAltNames: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative names.",
@@ -53,7 +55,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ip_sans": {
+			consts.FieldIPSans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative IPs.",
@@ -62,7 +64,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"uri_sans": {
+			consts.FieldURISans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of alternative URIs.",
@@ -71,7 +73,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"other_sans": {
+			consts.FieldOtherSans: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "List of other SANs.",
@@ -80,13 +82,13 @@ func pkiSecretBackendCertResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"ttl": {
+			consts.FieldTTL: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    false,
 				Description: "Time to live.",
 			},
-			"format": {
+			consts.FieldFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "The format of data.",
@@ -94,7 +96,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 				Default:      "pem",
 				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle"}, false),
 			},
-			"private_key_format": {
+			consts.FieldPrivateKeyFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Description:  "The private key format.",
@@ -102,186 +104,217 @@ func pkiSecretBackendCertResource() *schema.Resource {
 				Default:      "der",
 				ValidateFunc: validation.StringInSlice([]string{"der", "pkcs8"}, false),
 			},
-			"exclude_cn_from_sans": {
+			consts.FieldExcludeCNFromSans: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Flag to exclude CN from SANs.",
 				ForceNew:    true,
 			},
-			"auto_renew": {
+			consts.FieldAutoRenew: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
 				Description: "If enabled, a new certificate will be generated if the expiration is within min_seconds_remaining",
 			},
-			"min_seconds_remaining": {
+			consts.FieldMinSecondsRemaining: {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     604800,
 				Description: "Generate a new certificate when the expiration is within this number of seconds",
 			},
-			"certificate": {
+			consts.FieldCertificate: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The certicate.",
 			},
-			"issuing_ca": {
+			consts.FieldIssuingCA: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The issuing CA.",
 			},
-			"ca_chain": {
+			consts.FieldCAChain: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The CA chain.",
 			},
-			"private_key": {
+			consts.FieldPrivateKey: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The private key.",
 				Sensitive:   true,
 			},
-			"private_key_type": {
+			consts.FieldPrivateKeyType: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The private key type.",
 			},
-			"serial_number": {
+			consts.FieldSerialNumber: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The serial number.",
 			},
-			"expiration": {
+			consts.FieldExpiration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "The certificate expiration as a Unix-style timestamp.",
 			},
-			"renew_pending": {
+			consts.FieldRenewPending: {
 				Type:     schema.TypeBool,
 				Computed: true,
 				Description: "Initially false, and then set to true during refresh once " +
 					"the expiration is less than min_seconds_remaining in the future.",
 			},
-			"revoke": {
+			consts.FieldRevoke: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
 				Description: "Revoke the certificate upon resource destruction.",
 			},
+			consts.FieldIssuerRef: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the default issuer of this request.",
+			},
+			consts.FieldUserIds: {
+				Type:        schema.TypeList,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "List of Subject User IDs.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
 
-func pkiSecretBackendCertCreate(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
-	name := d.Get("name").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	name := d.Get(consts.FieldName).(string)
 
 	path := pkiSecretBackendCertPath(backend, name)
 
-	commonName := d.Get("common_name").(string)
+	commonName := d.Get(consts.FieldCommonName).(string)
 
-	// TODO: cleanup this bit...
-	iAltNames := d.Get("alt_names").([]interface{})
-	altNames := make([]string, 0, len(iAltNames))
-	for _, iAltName := range iAltNames {
-		altNames = append(altNames, iAltName.(string))
+	certAPIFields := []string{
+		consts.FieldCommonName,
+		consts.FieldTTL,
+		consts.FieldFormat,
+		consts.FieldPrivateKeyFormat,
 	}
 
-	iIPSans := d.Get("ip_sans").([]interface{})
-	ipSans := make([]string, 0, len(iIPSans))
-	for _, iIpSan := range iIPSans {
-		ipSans = append(ipSans, iIpSan.(string))
+	certBooleanAPIFields := []string{
+		consts.FieldExcludeCNFromSans,
 	}
 
-	iURISans := d.Get("uri_sans").([]interface{})
-	uriSans := make([]string, 0, len(iURISans))
-	for _, iUriSan := range iURISans {
-		uriSans = append(uriSans, iUriSan.(string))
+	certStringArrayAPIFields := []string{
+		consts.FieldAltNames,
+		consts.FieldOtherSans,
+		consts.FieldIPSans,
+		consts.FieldURISans,
 	}
 
-	iOtherSans := d.Get("other_sans").([]interface{})
-	otherSans := make([]string, 0, len(iOtherSans))
-	for _, iOtherSan := range iOtherSans {
-		otherSans = append(otherSans, iOtherSan.(string))
+	data := map[string]interface{}{}
+	for _, k := range certAPIFields {
+		if v, ok := d.GetOk(k); ok {
+			data[k] = v
+		}
 	}
 
-	data := map[string]interface{}{
-		"common_name":          d.Get("common_name").(string),
-		"ttl":                  d.Get("ttl").(string),
-		"format":               d.Get("format").(string),
-		"private_key_format":   d.Get("private_key_format").(string),
-		"exclude_cn_from_sans": d.Get("exclude_cn_from_sans").(bool),
+	// add version specific multi-issuer fields
+	if provider.IsAPISupported(meta, provider.VaultVersion111) {
+		if issuerRef, ok := d.GetOk(consts.FieldIssuerRef); ok {
+			data[consts.FieldIssuerRef] = issuerRef
+		}
 	}
 
-	if len(altNames) > 0 {
-		data["alt_names"] = strings.Join(altNames, ",")
+	// add UID if supported
+	if provider.IsAPISupported(meta, provider.VaultVersion113) {
+		if userIds, ok := d.GetOk(consts.FieldUserIds); ok {
+			m := util.ToStringArray(userIds.([]interface{}))
+			if len(m) > 0 {
+				data[consts.FieldUserIds] = strings.Join(m, ",")
+			}
+		}
 	}
 
-	if len(ipSans) > 0 {
-		data["ip_sans"] = strings.Join(ipSans, ",")
+	// add boolean fields
+	for _, k := range certBooleanAPIFields {
+		data[k] = d.Get(k)
 	}
 
-	if len(uriSans) > 0 {
-		data["uri_sans"] = strings.Join(uriSans, ",")
-	}
-
-	if len(otherSans) > 0 {
-		data["other_sans"] = strings.Join(otherSans, ",")
+	// add comma separated string fields
+	for _, k := range certStringArrayAPIFields {
+		m := util.ToStringArray(d.Get(k).([]interface{}))
+		if len(m) > 0 {
+			data[k] = strings.Join(m, ",")
+		}
 	}
 
 	log.Printf("[DEBUG] Creating certificate %s by %s on PKI secret backend %q", commonName, name, backend)
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating certificate %s by %s for PKI secret backend %q: %s", commonName, name,
+		return diag.Errorf("error creating certificate %s by %s for PKI secret backend %q: %s", commonName, name,
 			backend, err)
 	}
 	log.Printf("[DEBUG] Created certificate %s by %s on PKI secret backend %q", commonName, name, backend)
 
-	caChain := resp.Data["ca_chain"]
+	caChain := resp.Data[consts.FieldCAChain]
 	if caChain != nil {
-		d.Set("ca_chain", strings.Join(convertIntoSliceOfString(caChain)[:], "\n"))
+		d.Set(consts.FieldCAChain, strings.Join(convertIntoSliceOfString(caChain)[:], "\n"))
 	}
 
-	d.Set("certificate", resp.Data["certificate"])
-	d.Set("issuing_ca", resp.Data["issuing_ca"])
-	d.Set("private_key", resp.Data["private_key"])
-	d.Set("private_key_type", resp.Data["private_key_type"])
-	d.Set("serial_number", resp.Data["serial_number"])
-	d.Set("expiration", resp.Data["expiration"])
+	// helpful to consolidate code into single loop
+	// since 'serial' is deprecated, we read the 'serial_number'
+	// field from the response in order to set to the TF state
+	computedFields := []string{
+		consts.FieldCertificate,
+		consts.FieldIssuingCA,
+		consts.FieldPrivateKey,
+		consts.FieldPrivateKeyType,
+		consts.FieldSerialNumber,
+		consts.FieldExpiration,
+	}
+
+	for _, k := range computedFields {
+		if err := d.Set(k, resp.Data[k]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	if err := pkiSecretBackendCertSynchronizeRenewPending(d); err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(fmt.Sprintf("%s/%s/%s", backend, name, commonName))
-	return pkiSecretBackendCertRead(d, meta)
+	return pkiSecretBackendCertRead(ctx, d, meta)
 }
 
 func pkiCertAutoRenewCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	// The Create and Read functions will both set renew_pending if
 	// the current time is after the min_seconds_remaining timestamp. During
 	// planning we respond to that by proposing automatic renewal, if enabled.
-	if d.Id() == "" || !d.Get("auto_renew").(bool) {
+	if d.Id() == "" || !d.Get(consts.FieldAutoRenew).(bool) {
 		return nil
 	}
-	if d.Get("renew_pending").(bool) {
+	if d.Get(consts.FieldRenewPending).(bool) {
 		log.Printf("[DEBUG] certificate %q is due for renewal", d.Id())
-		if err := d.SetNewComputed("certificate"); err != nil {
+		if err := d.SetNewComputed(consts.FieldCertificate); err != nil {
 			return err
 		}
 
-		if err := d.ForceNew("certificate"); err != nil {
+		if err := d.ForceNew(consts.FieldCertificate); err != nil {
 			return err
 		}
 
 		// Renewing the certificate will reset the value of renew_pending
-		d.SetNewComputed("renew_pending")
-		if err := d.ForceNew("renew_pending"); err != nil {
+		d.SetNewComputed(consts.FieldRenewPending)
+		if err := d.ForceNew(consts.FieldRenewPending); err != nil {
 			return err
 		}
 
@@ -292,16 +325,16 @@ func pkiCertAutoRenewCustomizeDiff(_ context.Context, d *schema.ResourceDiff, me
 	return nil
 }
 
-func pkiSecretBackendCertRead(d *schema.ResourceData, meta interface{}) error {
+func pkiSecretBackendCertRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	if d.IsNewResource() {
 		return nil
 	}
 
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
-	path := d.Get("backend").(string)
+	path := d.Get(consts.FieldBackend).(string)
 	enabled, err := util.CheckMountEnabled(client, path)
 	if err != nil {
 		log.Printf("[WARN] Failed to check if mount %q exist, preempting the read operation", path)
@@ -310,7 +343,7 @@ func pkiSecretBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 
 	if enabled {
 		if err := pkiSecretBackendCertSynchronizeRenewPending(d); err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	} else {
 		// trigger a resource re-creation whenever the engine's mount has disappeared
@@ -321,32 +354,32 @@ func pkiSecretBackendCertRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func pkiSecretBackendCertUpdate(d *schema.ResourceData, m interface{}) error {
+func pkiSecretBackendCertUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	// TODO: add mount gone detection
 	return nil
 }
 
-func pkiSecretBackendCertDelete(d *schema.ResourceData, meta interface{}) error {
-	if d.Get("revoke").(bool) {
+func pkiSecretBackendCertDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if d.Get(consts.FieldRevoke).(bool) {
 		client, e := provider.GetClient(d, meta)
 		if e != nil {
-			return e
+			return diag.FromErr(e)
 		}
 
-		backend := d.Get("backend").(string)
+		backend := d.Get(consts.FieldBackend).(string)
 		path := strings.Trim(backend, "/") + "/revoke"
 
-		serialNumber := d.Get("serial_number").(string)
-		commonName := d.Get("common_name").(string)
+		serialNumber := d.Get(consts.FieldSerialNumber).(string)
+		commonName := d.Get(consts.FieldCommonName).(string)
 		data := map[string]interface{}{
-			"serial_number": serialNumber,
+			consts.FieldSerialNumber: serialNumber,
 		}
 
 		log.Printf("[DEBUG] Revoking certificate %q with serial number %q on PKI secret backend %q",
 			commonName, serialNumber, backend)
 		_, err := client.Logical().Write(path, data)
 		if err != nil {
-			return fmt.Errorf("error revoking certificate %q with serial number %q for PKI secret backend %q: %w",
+			return diag.Errorf("error revoking certificate %q with serial number %q for PKI secret backend %q: %s",
 				commonName, serialNumber, backend, err)
 		}
 		log.Printf("[DEBUG] Successfully revoked certificate %q with serial number %q on PKI secret backend %q",
@@ -366,18 +399,18 @@ func pkiSecretBackendCertPath(backend string, name string) string {
 // seconds in the future (relative to the current system time), and then
 // updates the renew_pending attribute accordingly.
 func pkiSecretBackendCertSynchronizeRenewPending(d *schema.ResourceData) error {
-	if _, ok := d.Get("renew_pending").(bool); !ok {
+	if _, ok := d.Get(consts.FieldRenewPending).(bool); !ok {
 		// pkiSecretBackendCertRead is shared between vault_pki_secret_backend_cert
 		// and vault_pki_secret_backend_root_cert, and the latter doesn't have
-		// an auto-renew mechanism so doesn't have a "renew_pending" attribute
+		// an auto-renew mechanism so doesn't have a consts.FieldRenewPending attribute
 		// to update.
 		return nil
 	}
 
-	expiration := d.Get("expiration").(int)
-	earlyRenew := d.Get("min_seconds_remaining").(int)
+	expiration := d.Get(consts.FieldExpiration).(int)
+	earlyRenew := d.Get(consts.FieldMinSecondsRemaining).(int)
 	effectiveExpiration := int64(expiration - earlyRenew)
-	return d.Set("renew_pending", checkPKICertExpiry(effectiveExpiration))
+	return d.Set(consts.FieldRenewPending, checkPKICertExpiry(effectiveExpiration))
 }
 
 func checkPKICertExpiry(expiration int64) bool {

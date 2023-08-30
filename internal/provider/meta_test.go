@@ -662,6 +662,227 @@ func TestNewProviderMeta(t *testing.T) {
 		}
 	}
 
+	config := api.DefaultConfig()
+	config.CloneToken = true
+	client, err := api.NewClient(config)
+	if err != nil {
+		t.Fatalf("failed to create Vault client, err=%s", err)
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if tt.authLoginNamespace != "" {
+				createNamespace(t, client, tt.authLoginNamespace)
+				options := &api.EnableAuthOptions{
+					Type:        consts.MountTypeUserpass,
+					Description: "test auth_userpass",
+					Local:       true,
+				}
+
+				clone, err := client.Clone()
+				if err != nil {
+					t.Fatalf("failed to clone Vault client, err=%s", err)
+				}
+
+				clone.SetNamespace(tt.authLoginNamespace)
+				if err := clone.Sys().EnableAuthWithOptions(consts.MountTypeUserpass, options); err != nil {
+					t.Fatalf("failed to enable auth, err=%s", err)
+				}
+
+				if _, err := clone.Logical().Write("auth/userpass/users/alice",
+					map[string]interface{}{
+						consts.FieldPassword:      defaultPassword,
+						consts.FieldTokenPolicies: []string{"admin", "default"},
+					}); err != nil {
+					t.Fatalf("failed to create user, err=%s", err)
+				}
+			}
+
+			if tt.tokenNamespace != "" {
+				if tt.data == nil {
+					t.Fatal("test data cannot be nil when tokenNamespace set")
+				}
+
+				createNamespace(t, client, tt.tokenNamespace)
+				clone, err := client.Clone()
+				if err != nil {
+					t.Fatalf("failed to clone Vault client, err=%s", err)
+				}
+
+				// in order not to trigger the min TTL warning we can add some time to the min.
+				tokenTTL := TokenTTLMinRecommended + time.Second*10
+				clone.SetNamespace(tt.tokenNamespace)
+				resp, err := clone.Auth().Token().Create(&api.TokenCreateRequest{
+					TTL: tokenTTL.String(),
+				})
+				if err != nil {
+					t.Fatalf("failed to create Vault token, err=%s", err)
+				}
+				tt.data[consts.FieldToken] = resp.Auth.ClientToken
+			}
+
+			for k, v := range tt.data {
+				if err := tt.d.Set(k, v); err != nil {
+					t.Fatalf("failed to set resource data, key=%s, value=%#v", k, v)
+				}
+			}
+
+			got, err := NewProviderMeta(tt.d)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewProviderMeta() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if err != nil {
+				if got != nil {
+					t.Errorf("NewProviderMeta() got = %v, want nil", got)
+				}
+				return
+			}
+
+			p, ok := got.(*ProviderMeta)
+			if !ok {
+				t.Fatalf("invalid type got %T, expected %T", got, &ProviderMeta{})
+			}
+
+			if !reflect.DeepEqual(p.client.Namespace(), tt.wantNamespace) {
+				t.Errorf("NewProviderMeta() got ns = %v, want ns %v", p.client.Namespace(), tt.wantNamespace)
+			}
+
+			if client.Token() == "" {
+				t.Errorf("NewProviderMeta() got empty Client token")
+			}
+		})
+	}
+}
+
+func TestNewProviderMeta_Cert(t *testing.T) {
+	testutil.SkipTestAcc(t)
+	testutil.SkipTestAccEnt(t)
+	testutil.TestAccPreCheck(t)
+
+	nsPrefix := acctest.RandomWithPrefix("ns")
+
+	defaultUser := "alice"
+	defaultPassword := "f00bazB1ff"
+
+	rootProvider := NewProvider(nil, nil)
+	pr := &schema.Resource{
+		Schema: rootProvider.Schema,
+	}
+
+	tests := []struct {
+		name               string
+		d                  *schema.ResourceData
+		data               map[string]interface{}
+		wantNamespace      string
+		tokenNamespace     string
+		authLoginNamespace string
+		wantErr            bool
+	}{
+		{
+			name:    "invalid-nil-ResourceData",
+			d:       nil,
+			wantErr: true,
+		},
+		{
+			// expect provider namespace set.
+			name: "with-provider-ns-only",
+			d:    pr.TestResourceData(),
+			data: map[string]interface{}{
+				consts.FieldNamespace:           nsPrefix + "prov",
+				consts.FieldSkipGetVaultVersion: true,
+			},
+			wantNamespace: nsPrefix + "prov",
+			wantErr:       false,
+		},
+		{
+			// expect token namespace set
+			name: "with-token-ns-only",
+			d:    pr.TestResourceData(),
+			data: map[string]interface{}{
+				consts.FieldSkipGetVaultVersion: true,
+				consts.FieldSkipChildToken:      true,
+			},
+			tokenNamespace: nsPrefix + "token-ns-only",
+			wantNamespace:  nsPrefix + "token-ns-only",
+			wantErr:        false,
+		},
+		{
+			// expect provider namespace set.
+			name: "with-provider-ns-and-token-ns",
+			d:    pr.TestResourceData(),
+			data: map[string]interface{}{
+				consts.FieldNamespace:           nsPrefix + "prov-and-token",
+				consts.FieldSkipGetVaultVersion: true,
+				consts.FieldSkipChildToken:      true,
+			},
+			tokenNamespace: nsPrefix + "token-ns",
+			wantNamespace:  nsPrefix + "prov-and-token",
+			wantErr:        false,
+		},
+		{
+			// expect auth_login namespace set.
+			name: "with-auth-login-and-ns",
+			d:    pr.TestResourceData(),
+			data: map[string]interface{}{
+				consts.FieldSkipGetVaultVersion: true,
+				consts.FieldSkipChildToken:      true,
+				consts.FieldAuthLoginUserpass: []map[string]interface{}{
+					{
+						consts.FieldNamespace: nsPrefix + "auth-ns",
+						consts.FieldMount:     consts.MountTypeUserpass,
+						consts.FieldUsername:  defaultUser,
+						consts.FieldPassword:  defaultPassword,
+					},
+				},
+			},
+			authLoginNamespace: nsPrefix + "auth-ns",
+			wantNamespace:      nsPrefix + "auth-ns",
+			wantErr:            false,
+		},
+		{
+			// expect provider namespace set.
+			name: "with-provider-ns-and-auth-login-with-ns",
+			d:    pr.TestResourceData(),
+			data: map[string]interface{}{
+				consts.FieldNamespace:           nsPrefix + "prov-ns-auth-ns",
+				consts.FieldSkipGetVaultVersion: true,
+				consts.FieldSkipChildToken:      true,
+				consts.FieldAuthLoginUserpass: []map[string]interface{}{
+					{
+						consts.FieldNamespace: nsPrefix + "auth-ns-prov-ns",
+						consts.FieldMount:     consts.MountTypeUserpass,
+						consts.FieldUsername:  defaultUser,
+						consts.FieldPassword:  defaultPassword,
+					},
+				},
+			},
+			authLoginNamespace: nsPrefix + "auth-ns-prov-ns",
+			wantNamespace:      nsPrefix + "prov-ns-auth-ns",
+			wantErr:            false,
+		},
+	}
+
+	createNamespace := func(t *testing.T, client *api.Client, ns string) {
+		t.Helper()
+		t.Cleanup(func() {
+			err := backoff.Retry(func() error {
+				_, err := client.Logical().Delete(consts.SysNamespaceRoot + ns)
+				return err
+			}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Microsecond*500), 10))
+			if err != nil {
+				t.Fatalf("failed to delete namespace %q, err=%s", ns, err)
+			}
+		})
+		if _, err := client.Logical().Write(
+			consts.SysNamespaceRoot+ns, nil); err != nil {
+			t.Fatalf("failed to create namespace, err=%s", err)
+		}
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := api.DefaultConfig()

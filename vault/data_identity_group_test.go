@@ -37,6 +37,7 @@ func TestDataSourceIdentityGroupName(t *testing.T) {
 }
 
 func TestDataSourceIdentityGroupAlias(t *testing.T) {
+	t.Parallel()
 	group := acctest.RandomWithPrefix("test-group")
 
 	resource.Test(t, resource.TestCase{

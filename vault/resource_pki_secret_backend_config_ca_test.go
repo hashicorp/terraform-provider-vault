@@ -28,7 +28,7 @@ func TestPkiSecretBackendConfigCA_basic(t *testing.T) {
 			{
 				Config: testPkiSecretBackendConfigCAConfig_basic(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "backend", path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 				),
 			},
 		},

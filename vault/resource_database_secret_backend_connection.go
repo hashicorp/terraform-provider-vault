@@ -863,44 +863,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 
 	switch engine {
 	case dbEngineCassandra:
-		if v, ok := d.GetOk(prefix + "hosts"); ok {
-			log.Printf("[DEBUG] Cassandra hosts: %v", v.([]interface{}))
-			var hosts []string
-			for _, host := range v.([]interface{}) {
-				if v == nil {
-					continue
-				}
-				hosts = append(hosts, host.(string))
-			}
-			data["hosts"] = strings.Join(hosts, ",")
-		}
-		if v, ok := d.GetOkExists(prefix + "port"); ok {
-			data["port"] = v.(int)
-		}
-		if v, ok := d.GetOk(prefix + "username"); ok {
-			data["username"] = v.(string)
-		}
-		if v, ok := d.GetOk("cassandra.0.password"); ok {
-			data["password"] = v.(string)
-		}
-		if v, ok := d.GetOkExists(prefix + "tls"); ok {
-			data["tls"] = v.(bool)
-		}
-		if v, ok := d.GetOkExists("cassandra.0.insecure_tls"); ok {
-			data["insecure_tls"] = v.(bool)
-		}
-		if v, ok := d.GetOkExists("cassandra.0.pem_bundle"); ok {
-			data["pem_bundle"] = v.(string)
-		}
-		if v, ok := d.GetOkExists(prefix + "pem_json"); ok {
-			data["pem_json"] = v.(string)
-		}
-		if v, ok := d.GetOkExists(prefix + "protocol_version"); ok {
-			data["protocol_version"] = v.(int)
-		}
-		if v, ok := d.GetOkExists(prefix + "connect_timeout"); ok {
-			data["connect_timeout"] = v.(int)
-		}
+		setCassandraDatabaseConnectionData(d, prefix, data)
 	case dbEngineCouchbase:
 		setCouchbaseDatabaseConnectionData(d, prefix, data)
 	case dbEngineInfluxDB:
@@ -910,15 +873,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineMongoDB:
 		setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	case dbEngineMongoDBAtlas:
-		if v, ok := d.GetOk(prefix + "public_key"); ok {
-			data["public_key"] = v.(string)
-		}
-		if v, ok := d.GetOk(prefix + "private_key"); ok {
-			data["private_key"] = v.(string)
-		}
-		if v, ok := d.GetOk(prefix + "project_id"); ok {
-			data["project_id"] = v.(string)
-		}
+		setMongoDBAtlasDatabaseConnectionData(d, prefix, data)
 	case dbEngineMSSQL:
 		setMSSQLDatabaseConnectionData(d, prefix, data)
 	case dbEngineMySQL:
@@ -948,6 +903,66 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	}
 
 	return data, nil
+}
+
+func setMongoDBAtlasDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	if v, ok := d.GetOk(prefix + "public_key"); ok {
+		data["public_key"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "private_key"); ok {
+		data["private_key"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "project_id"); ok {
+		data["project_id"] = v.(string)
+	}
+}
+
+func setCassandraDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	if v, ok := d.GetOk(prefix + "hosts"); ok {
+		log.Printf("[DEBUG] Cassandra hosts: %v", v.([]interface{}))
+		var hosts []string
+		for _, host := range v.([]interface{}) {
+			if v == nil {
+				continue
+			}
+			hosts = append(hosts, host.(string))
+		}
+		data["hosts"] = strings.Join(hosts, ",")
+	}
+	if v, ok := d.GetOkExists(prefix + "port"); ok {
+		data["port"] = v.(int)
+	}
+	if v, ok := d.GetOk(prefix + "username"); ok {
+		data["username"] = v.(string)
+	}
+
+	passwordKey := prefix + consts.FieldPassword
+	fmt.Println("passworkKey", passwordKey)
+	if v, ok := d.GetOk(passwordKey); ok {
+		if d.IsNewResource() || d.HasChange(passwordKey) {
+			fmt.Println("password updated", v.(string))
+			data[consts.FieldPassword] = v.(string)
+		}
+	}
+
+	if v, ok := d.GetOkExists(prefix + "tls"); ok {
+		data["tls"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists("cassandra.0.insecure_tls"); ok {
+		data["insecure_tls"] = v.(bool)
+	}
+	if v, ok := d.GetOkExists("cassandra.0.pem_bundle"); ok {
+		data["pem_bundle"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "pem_json"); ok {
+		data["pem_json"] = v.(string)
+	}
+	if v, ok := d.GetOkExists(prefix + "protocol_version"); ok {
+		data["protocol_version"] = v.(int)
+	}
+	if v, ok := d.GetOkExists(prefix + "connect_timeout"); ok {
+		data["connect_timeout"] = v.(int)
+	}
 }
 
 func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
@@ -1367,9 +1382,14 @@ func setRedisDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 	if v, ok := d.GetOk(prefix + "username"); ok {
 		data["username"] = v.(string)
 	}
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
+
+	passwordKey := prefix + consts.FieldPassword
+	if v, ok := d.GetOk(passwordKey); ok {
+		if d.IsNewResource() || d.HasChange(passwordKey) {
+			data[consts.FieldPassword] = v.(string)
+		}
 	}
+
 	if v, ok := d.GetOk(prefix + "tls"); ok {
 		data["tls"] = v.(bool)
 	}
@@ -1408,8 +1428,11 @@ func setElasticsearchDatabaseConnectionData(d *schema.ResourceData, prefix strin
 		data["username"] = v.(string)
 	}
 
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
+	passwordKey := prefix + consts.FieldPassword
+	if v, ok := d.GetOk(passwordKey); ok {
+		if d.IsNewResource() || d.HasChange(passwordKey) {
+			data[consts.FieldPassword] = v.(string)
+		}
 	}
 
 	if v, ok := d.GetOk(prefix + "ca_cert"); ok {
@@ -1452,9 +1475,14 @@ func setCouchbaseDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	if v, ok := d.GetOk(prefix + "username"); ok {
 		data["username"] = v
 	}
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v
+
+	passwordKey := prefix + consts.FieldPassword
+	if v, ok := d.GetOk(passwordKey); ok {
+		if d.IsNewResource() || d.HasChange(passwordKey) {
+			data[consts.FieldPassword] = v.(string)
+		}
 	}
+
 	if v, ok := d.GetOkExists(prefix + "tls"); ok {
 		data["tls"] = v.(bool)
 	}
@@ -1483,9 +1511,14 @@ func setInfluxDBDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 	if v, ok := d.GetOk(prefix + "username"); ok {
 		data["username"] = v.(string)
 	}
-	if v, ok := d.GetOk(prefix + "password"); ok {
-		data["password"] = v.(string)
+
+	passwordKey := prefix + consts.FieldPassword
+	if v, ok := d.GetOk(passwordKey); ok {
+		if d.IsNewResource() || d.HasChange(passwordKey) {
+			data[consts.FieldPassword] = v.(string)
+		}
 	}
+
 	if v, ok := d.GetOkExists(prefix + "tls"); ok {
 		data["tls"] = v.(bool)
 	}

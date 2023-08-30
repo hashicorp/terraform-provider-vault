@@ -20,6 +20,7 @@ import (
 )
 
 func TestAccOktaAuthBackend_basic(t *testing.T) {
+	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-basic-")
 
@@ -48,6 +49,7 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_import(t *testing.T) {
+	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-import-")
 
@@ -94,6 +96,7 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_invalid_ttl(t *testing.T) {
+	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-invalid-ttl-")
 
@@ -111,6 +114,7 @@ func TestAccOktaAuthBackend_invalid_ttl(t *testing.T) {
 }
 
 func TestAccOktaAuthBackend_invalid_max_ttl(t *testing.T) {
+	t.Parallel()
 	organization := "example"
 	path := resource.PrefixedUniqueId("okta-invalid_max_ttl-")
 
@@ -127,7 +131,28 @@ func TestAccOktaAuthBackend_invalid_max_ttl(t *testing.T) {
 	})
 }
 
-func TestOktaAuthBackend_remount(t *testing.T) {
+func TestAccOktaAuthBackend_groups_optional(t *testing.T) {
+	t.Parallel()
+	organization := "example"
+	path := resource.PrefixedUniqueId("okta-group-optional")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers:    testProviders,
+		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOktaAuthConfig_groups_optional(path, organization),
+				Check: resource.ComposeTestCheckFunc(
+					testAccOktaAuthBackend_UsersCheck(path, "bar", []string{}, []string{"eng", "default"}),
+				),
+			},
+		},
+	})
+}
+
+func TestAccOktaAuthBackend_remount(t *testing.T) {
+	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-auth-okta")
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-okta-updated")
 
@@ -218,6 +243,21 @@ resource "vault_okta_auth_backend" "test" {
     token = "this must be kept secret"
     ttl = "1h"
     max_ttl = "invalid_max_ttl"
+}
+`, path, organization)
+}
+
+func testAccOktaAuthConfig_groups_optional(path string, organization string) string {
+	return fmt.Sprintf(`
+resource "vault_okta_auth_backend" "test" {
+    description = "Testing the Terraform okta auth backend"
+    path = "%s"
+    organization = "%s"
+    token = "this must be kept secret"
+    user {
+        username = "bar"
+        policies   = ["eng", "default"]
+    }
 }
 `, path, organization)
 }
