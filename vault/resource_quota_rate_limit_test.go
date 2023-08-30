@@ -94,7 +94,7 @@ func TestQuotaRateLimitWithRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRole, role),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "name", consts.FieldRole),
+			testutil.GetImportTestStep(resourceName, false, nil, "name"),
 		},
 	})
 }
