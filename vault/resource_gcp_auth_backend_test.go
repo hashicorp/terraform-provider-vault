@@ -36,6 +36,9 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 
 	var resAuthFirst api.AuthMount
 	path := resource.PrefixedUniqueId("gcp-basic-")
+	resourceType := "vault_gcp_auth_backend"
+	resourceName := resourceType + ".test"
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		ProviderFactories: providerFactories,
@@ -43,83 +46,83 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
-				Check:  testGCPAuthBackendCheck_attrs(),
+				Check:  testGCPAuthBackendCheck_attrs(resourceName),
 			},
 			{
 				Config: testGCPAuthBackendConfig_update(path, gcpJSONCredentials),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testutil.TestAccCheckAuthMountExists("vault_gcp_auth_backend.test",
+					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuthFirst,
 						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
-					testGCPAuthBackendCheck_attrs(),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+					testGCPAuthBackendCheck_attrs(resourceName),
+					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.#", "1"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.0.%", "4"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.0.api", "www.googleapis.com"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.0.iam", "iam.googleapis.com"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.0.crm", "cloudresourcemanager.googleapis.com"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.0.compute", "compute.googleapis.com"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.default_lease_ttl", "10m"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.max_lease_ttl", "20m"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.listing_visibility", "hidden"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_request_keys.#", "2"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_request_keys.0", "key1"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_request_keys.1", "key2"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_response_keys.#", "2"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_response_keys.0", "key3"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_response_keys.1", "key4"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.passthrough_request_headers.#", "2"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.passthrough_request_headers.1", "X-Forwarded-To"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.allowed_response_headers.#", "2"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.token_type", "batch"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "10m"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "20m"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "hidden"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.0", "key1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.1", "key2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.0", "key3"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.1", "key4"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.1", "X-Forwarded-To"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", "batch"),
 				),
 			},
 			{
 				Config: testGCPAuthBackendConfig_update_partial(path, gcpJSONCredentials),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testutil.TestAccCheckAuthMountExists("vault_gcp_auth_backend.test",
+					testutil.TestAccCheckAuthMountExists(resourceName,
 						&resAuthFirst,
 						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
-					testGCPAuthBackendCheck_attrs(),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+					testGCPAuthBackendCheck_attrs(resourceName),
+					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.#", "1"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.0.%", "4"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.0.api", ""),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.0.iam", ""),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.0.crm", "example.com:9200"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.0.compute", "compute.example.com"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.default_lease_ttl", "50m"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.max_lease_ttl", "1h10m"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.listing_visibility", "unauth"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_request_keys.#", "1"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_request_keys.0", "key1"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.audit_non_hmac_response_keys.#", "0"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.passthrough_request_headers.#", "3"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.passthrough_request_headers.1", "X-Forwarded-To"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.passthrough_request_headers.2", "X-Mas"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.allowed_response_headers.#", "3"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.allowed_response_headers.2", "X-Mas-Response"),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test", "tune.0.token_type", "default-batch"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.default_lease_ttl", "50m"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.max_lease_ttl", "1h10m"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.listing_visibility", "unauth"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_request_keys.0", "key1"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.audit_non_hmac_response_keys.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.0", "X-Custom-Header"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.1", "X-Forwarded-To"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.passthrough_request_headers.2", "X-Mas"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.0", "X-Custom-Response-Header"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.1", "X-Forwarded-Response-To"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.allowed_response_headers.2", "X-Mas-Response"),
+					resource.TestCheckResourceAttr(resourceName, "tune.0.token_type", "default-batch"),
 				),
 			},
 			{
-				ResourceName:      "vault_gcp_auth_backend.test",
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
@@ -130,13 +133,13 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testGCPAuthBackendCheck_attrs(),
-					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
+					testGCPAuthBackendCheck_attrs(resourceName),
+					resource.TestCheckResourceAttr(resourceName,
 						"custom_endpoint.#", "0"),
 				),
 			},
 			{
-				ResourceName:      "vault_gcp_auth_backend.test",
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
@@ -150,6 +153,8 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 
 func TestGCPAuthBackend_import(t *testing.T) {
 	path := resource.PrefixedUniqueId("gcp-import-")
+	resourceType := "vault_gcp_auth_backend"
+	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testutil.TestAccPreCheck(t) },
@@ -158,10 +163,10 @@ func TestGCPAuthBackend_import(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
-				Check:  testGCPAuthBackendCheck_attrs(),
+				Check:  testGCPAuthBackendCheck_attrs(resourceName),
 			},
 			{
-				ResourceName:      "vault_gcp_auth_backend.test",
+				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
@@ -176,8 +181,8 @@ func TestGCPAuthBackend_import(t *testing.T) {
 func TestGCPAuthBackend_remount(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-auth-gcp")
 	updatedPath := acctest.RandomWithPrefix("tf-test-auth-gcp-updated")
-
-	resourceName := "vault_gcp_auth_backend.test"
+	resourceType := "vault_gcp_auth_backend"
+	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
 		ProviderFactories: providerFactories,
@@ -186,14 +191,14 @@ func TestGCPAuthBackend_remount(t *testing.T) {
 			{
 				Config: testGCPAuthBackendConfig_basic(path, gcpJSONCredentials),
 				Check: resource.ComposeTestCheckFunc(
-					testGCPAuthBackendCheck_attrs(),
+					testGCPAuthBackendCheck_attrs(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "path", path),
 				),
 			},
 			{
 				Config: testGCPAuthBackendConfig_basic(updatedPath, gcpJSONCredentials),
 				Check: resource.ComposeTestCheckFunc(
-					testGCPAuthBackendCheck_attrs(),
+					testGCPAuthBackendCheck_attrs(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "path", updatedPath),
 				),
 			},
@@ -224,9 +229,9 @@ func testGCPAuthBackendDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testGCPAuthBackendCheck_attrs() resource.TestCheckFunc {
+func testGCPAuthBackendCheck_attrs(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		resourceState := s.Modules[0].Resources["vault_gcp_auth_backend.test"]
+		resourceState := s.Modules[0].Resources[resourceName]
 		if resourceState == nil {
 			return fmt.Errorf("resource not found in state")
 		}
