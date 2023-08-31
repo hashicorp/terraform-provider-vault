@@ -48,7 +48,9 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 			{
 				Config: testGCPAuthBackendConfig_update(path, gcpJSONCredentials),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckAuthMountExists("vault_gcp_auth_backend.test", &resAuthFirst),
+					testutil.TestAccCheckAuthMountExists("vault_gcp_auth_backend.test",
+						&resAuthFirst,
+						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
 					testGCPAuthBackendCheck_attrs(),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.#", "1"),
@@ -83,7 +85,9 @@ func TestGCPAuthBackend_basic(t *testing.T) {
 			{
 				Config: testGCPAuthBackendConfig_update_partial(path, gcpJSONCredentials),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckAuthMountExists("vault_gcp_auth_backend.test", &resAuthFirst),
+					testutil.TestAccCheckAuthMountExists("vault_gcp_auth_backend.test",
+						&resAuthFirst,
+						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
 					testGCPAuthBackendCheck_attrs(),
 					resource.TestCheckResourceAttr("vault_gcp_auth_backend.test",
 						"custom_endpoint.#", "1"),

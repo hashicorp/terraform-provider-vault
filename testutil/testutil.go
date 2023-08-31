@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"math/big"
 	"net"
 	"net/http"
@@ -801,6 +802,37 @@ func GetImportTestStep(resourceName string, skipVerify bool, check resource.Impo
 	}
 
 	return ts
+}
+
+func TestAccCheckAuthMountExists(n string, out *api.AuthMount, c *api.Client) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		return AuthMountExistsHelper(n, s, out, c)
+	}
+}
+
+func AuthMountExistsHelper(resourceName string, s *terraform.State, out *api.AuthMount, c *api.Client) error {
+	rs, ok := s.RootModule().Resources[resourceName]
+	if !ok {
+		return fmt.Errorf("Not found: %s", resourceName)
+	}
+
+	if rs.Primary.ID == "" {
+		return fmt.Errorf("No id for %s is set", resourceName)
+	}
+
+	auths, err := c.Sys().ListAuth()
+	if err != nil {
+		return fmt.Errorf("error reading from Vault: %s", err)
+	}
+
+	resp := auths[strings.Trim(rs.Primary.ID, "/")+"/"]
+	if resp == nil {
+		return fmt.Errorf("auth mount %s not present", rs.Primary.ID)
+	}
+	log.Printf("[INFO] Auth mount resource '%v' confirmed to exist at path: %v", resourceName, rs.Primary.ID)
+	*out = *resp
+
+	return nil
 }
 
 // GetNamespaceImportStateCheck checks that the namespace was properly imported into the state.
