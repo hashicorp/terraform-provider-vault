@@ -5,8 +5,6 @@ FEATURES:
 ## 3.20.0 (Aug 30, 2023)
 FEATURES:
 * Add support for setting `permanently_delete` argument on `resource_azure_secret_backend_role`: ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
-
-IMPROVEMENTS:
 * Add `use_sts_region_from_client` to AWS Auth Config: ([#1963](https://github.com/hashicorp/terraform-provider-vault/pull/1963))
 * Add accessor attribute for `vault_gcp_auth_backend` resource: ([#1980](https://github.com/hashicorp/terraform-provider-vault/pull/1980))
 
