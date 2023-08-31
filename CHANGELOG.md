@@ -1,13 +1,19 @@
 ## Unreleased
 FEATURES:
-* Add support for setting `permanently_delete` argument on `resource_azure_secret_backend_role`: ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
 * Add x509 support to static database roles: ([#1992](https://github.com/hashicorp/terraform-provider-vault/pull/1992))
 
+## 3.20.0 (Aug 30, 2023)
+FEATURES:
+* Add support for setting `permanently_delete` argument on `resource_azure_secret_backend_role`: ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
+
 IMPROVEMENTS:
+* Add `use_sts_region_from_client` to AWS Auth Config: ([#1963](https://github.com/hashicorp/terraform-provider-vault/pull/1963))
 * Add accessor attribute for `vault_gcp_auth_backend` resource: ([#1980](https://github.com/hashicorp/terraform-provider-vault/pull/1980))
 
 BUGS:
 * Fixes a panic that can occur when Vault [lookup-self](https://developer.hashicorp.com/vault/api-docs/auth/token#lookup-a-token-self) API returns nil token info ([#1978](https://github.com/hashicorp/terraform-provider-vault/pull/1978))
+* Resolve TF state for PKI Multi-Issuer workflows: ([#1973](https://github.com/hashicorp/terraform-provider-vault/pull/1973))
+* Check the seal-status on the default namespace: ([#1967](https://github.com/hashicorp/terraform-provider-vault/pull/1967))
 
 ## 3.19.0 (Aug 2, 2023)
 FEATURES:
