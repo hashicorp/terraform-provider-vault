@@ -48,6 +48,8 @@ The following arguments are supported:
 * `max_leases` - (Required) The maximum number of leases to be allowed by the quota
   rule. The `max_leases` must be positive.
 
+* `role` - (Optional) If set on a quota where `path` is set to an auth mount with a concept of roles (such as /auth/approle/), this will make the quota restrict login requests to that mount that are made with the specified role.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
