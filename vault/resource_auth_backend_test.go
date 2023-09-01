@@ -214,7 +214,9 @@ func TestResourceAuthTune(t *testing.T) {
 			{
 				Config: testResourceAuthTune_initialConfig(backend),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAuthMountExists(resName, &resAuthFirst),
+					testutil.TestAccCheckAuthMountExists(resName,
+						&resAuthFirst,
+						testProvider.Meta().(*provider.ProviderMeta).GetClient()),
 					resource.TestCheckResourceAttr(resName, "path", backend),
 					resource.TestCheckResourceAttr(resName, "id", backend),
 					resource.TestCheckResourceAttr(resName, "type", "github"),
@@ -283,6 +285,9 @@ func checkAuthMount(backend string, checker func(*api.AuthMount) error) resource
 		for serverPath, serverAuth := range auths {
 			if serverPath == backend+"/" {
 				found = true
+				if serverAuth.Type != "github" && serverAuth.Type != "gcp" {
+					return fmt.Errorf("unexpected auth type")
+				}
 
 				if err := checker(serverAuth); err != nil {
 					return err
