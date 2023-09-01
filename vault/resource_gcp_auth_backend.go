@@ -267,6 +267,7 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	gcpPath := d.Id()
+	gcpAuthPath := "auth/" + gcpPath
 	path := gcpAuthBackendConfigPath(gcpPath)
 
 	log.Printf("[DEBUG] Reading gcp auth backend config %q", path)
@@ -315,8 +316,8 @@ func gcpAuthBackendRead(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-	log.Printf("[DEBUG] Reading %q auth tune from '%q/tune'", gcpPath, gcpPath)
-	rawTune, err := authMountTuneGet(client, "auth/"+gcpPath)
+	log.Printf("[DEBUG] Reading %s auth tune from '%q/tune'", gcpAuthType, gcpAuthPath)
+	rawTune, err := authMountTuneGet(client, gcpAuthPath)
 	if err != nil {
 		return fmt.Errorf("error reading tune information from Vault: %w", err)
 	}
