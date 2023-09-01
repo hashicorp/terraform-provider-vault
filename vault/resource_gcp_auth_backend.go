@@ -196,6 +196,7 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	gcpPath := d.Id()
+	gcpAuthPath := "auth/" + gcpPath
 	path := gcpAuthBackendConfigPath(gcpPath)
 
 	if !d.IsNewResource() {
@@ -204,6 +205,7 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 			return err
 		}
 
+		gcpAuthPath = "auth/" + newMount
 		path = gcpAuthBackendConfigPath(newMount)
 	}
 
@@ -224,36 +226,29 @@ func gcpAuthBackendUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 		data["custom_endpoint"] = endpoints
 	}
-	backendType := gcpAuthType
-	var input api.MountConfigInput
-	var callTune bool
 
 	if d.HasChange("tune") {
-		log.Printf("[INFO] Auth '%q' tune configuration changed", gcpPath)
-
+		log.Printf("[INFO] %s Auth '%q' tune configuration changed", gcpAuthType, gcpAuthPath)
 		if raw, ok := d.GetOk("tune"); ok {
-			log.Printf("[DEBUG] Writing %s auth tune to '%q'", backendType, gcpPath)
-
-			input = expandAuthMethodTune(raw.(*schema.Set).List())
+			log.Printf("[DEBUG] Writing %s auth tune to '%q'", gcpAuthType, gcpAuthPath)
+			err := authMountTune(client, gcpAuthPath, raw)
+			if err != nil {
+				return nil
+			}
 		}
-		callTune = true
 	}
 
-	if d.HasChange("description") && !d.IsNewResource() {
-		desc := d.Get("description").(string)
-		input.Description = &desc
-		callTune = true
-	}
-
-	if callTune {
-		if err := tuneMount(client, "auth/"+gcpPath, input); err != nil {
+	if d.HasChange("description") {
+		description := d.Get("description").(string)
+		tune := api.MountConfigInput{Description: &description}
+		err := client.Sys().TuneMount(gcpAuthPath, tune)
+		if err != nil {
+			log.Printf("[ERROR] Error updating %s auth description to '%q'", gcpAuthType, gcpAuthPath)
 			return err
 		}
-
-		log.Printf("[INFO] Written %s auth tune to '%q'", backendType, gcpPath)
 	}
 
-	log.Printf("[DEBUG] Writing gcp config %q", path)
+	log.Printf("[DEBUG] Writing %s config %q", gcpAuthType, path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
