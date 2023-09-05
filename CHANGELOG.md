@@ -2,6 +2,10 @@
 FEATURES:
 * Add x509 support to static database roles: ([#1992](https://github.com/hashicorp/terraform-provider-vault/pull/1992))
 
+IMPROVEMENTS:
+* Update dependencies ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
+  * github.com/hashicorp/go-secure-stdlib/awsutil `v0.1.6` -> `v0.2.3`
+
 ## 3.20.0 (Aug 30, 2023)
 FEATURES:
 * Add support for setting `permanently_delete` argument on `resource_azure_secret_backend_role`: ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
