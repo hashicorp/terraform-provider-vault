@@ -79,6 +79,8 @@ The following arguments are supported:
 
 * `starttls` - (Optional) Issue a StartTLS command after establishing unencrypted connection.
 
+* `schema` - (Optional)  The LDAP schema to use when storing entry passwords. Valid schemas include `openldap`, `ad`, and `racf`. Default is `openldap`.
+
 * `upndomain` - (Optional) Enables userPrincipalDomain login with [username]@UPNDomain.
 
 * `url` - (Required) LDAP URL to connect to. Multiple URLs can be specified by concatenating
