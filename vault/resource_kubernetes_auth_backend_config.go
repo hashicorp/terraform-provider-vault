@@ -28,19 +28,14 @@ var (
 	vaultVersion193             = version.Must(version.NewSemver("1.9.3"))
 )
 
-const (
-	FieldKubernetesCACert  = "kubernetes_ca_cert"
-	FieldDisableLocalCAJWT = "disable_local_ca_jwt"
-)
-
 func kubernetesAuthBackendConfigResource() *schema.Resource {
 	s := map[string]*schema.Schema{
-		"kubernetes_host": {
+		consts.FieldKubernetesHost: {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.",
 		},
-		FieldKubernetesCACert: {
+		consts.FieldKubernetesCACert: {
 			Type:        schema.TypeString,
 			Description: "PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API.",
 			Optional:    true,
@@ -53,7 +48,7 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 			Optional:    true,
 			Sensitive:   true,
 		},
-		"pem_keys": {
+		consts.FieldPEMKeys: {
 			Type:        schema.TypeList,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Description: "Optional list of PEM-formatted public keys or certificates used to verify the signatures of Kubernetes service account JWTs. If a certificate is given, its public key will be extracted. Not every installation of Kubernetes exposes these keys.",
@@ -70,18 +65,18 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-		"issuer": {
+		consts.FieldIssuer: {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "Optional JWT issuer. If no issuer is specified, kubernetes.io/serviceaccount will be used as the default issuer.",
 		},
-		"disable_iss_validation": {
+		consts.FieldDisableISSValidation: {
 			Type:        schema.TypeBool,
 			Computed:    true,
 			Optional:    true,
 			Description: "Optional disable JWT issuer validation. Allows to skip ISS validation.",
 		},
-		FieldDisableLocalCAJWT: {
+		consts.FieldDisableLocalCAJWT: {
 			Type:        schema.TypeBool,
 			Computed:    true,
 			Optional:    true,
@@ -98,7 +93,7 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, m interface{}) error {
-			if !diff.Get(FieldDisableLocalCAJWT).(bool) && diff.Id() != "" {
+			if !diff.Get(consts.FieldDisableLocalCAJWT).(bool) && diff.Id() != "" {
 				// on Vault 1.9.3+ the K8S CA certificate is no longer stored in the Vault
 				// configuration when Vault is running in K8s and FieldDisableLocalCAJWT is
 				// false. Unfortunately, the change did not consider the Vault schema upgrade
@@ -117,18 +112,17 @@ func kubernetesAuthBackendConfigResource() *schema.Resource {
 					return fmt.Errorf("invalid type %T", m)
 				}
 
-				if s[FieldKubernetesCACert].Computed && meta.GetVaultVersion().GreaterThanOrEqual(vaultVersion193) {
-					val, valExists := diff.GetRawConfig().AsValueMap()[FieldKubernetesCACert]
-					o, n := diff.GetChange(FieldKubernetesCACert)
+				if s[consts.FieldKubernetesCACert].Computed && meta.GetVaultVersion().GreaterThanOrEqual(vaultVersion193) {
+					val, valExists := diff.GetRawConfig().AsValueMap()[consts.FieldKubernetesCACert]
+					o, n := diff.GetChange(consts.FieldKubernetesCACert)
 					if (valExists && val.IsNull() && n.(string) != "") || (o.(string) != "" && n.(string) == "") {
 						// trigger a diff, since we want to unset the previously computed value.
-						if err := diff.SetNew(FieldKubernetesCACert, ""); err != nil {
+						if err := diff.SetNew(consts.FieldKubernetesCACert, ""); err != nil {
 							return err
 						}
-						overrideKubernetesFieldsMap.Store(diff.Id()+"."+FieldKubernetesCACert, "")
+						overrideKubernetesFieldsMap.Store(diff.Id()+"."+consts.FieldKubernetesCACert, "")
 					}
 				}
-
 			}
 
 			return nil
@@ -155,33 +149,33 @@ func kubernetesAuthBackendConfigCreate(d *schema.ResourceData, meta interface{})
 
 	data := map[string]interface{}{}
 
-	if v, ok := d.GetOk(FieldKubernetesCACert); ok {
-		data[FieldKubernetesCACert] = v
+	if v, ok := d.GetOk(consts.FieldKubernetesCACert); ok {
+		data[consts.FieldKubernetesCACert] = v
 	}
 
 	if v, ok := d.GetOk("token_reviewer_jwt"); ok {
 		data["token_reviewer_jwt"] = v.(string)
 	}
 
-	if v, ok := d.GetOkExists("pem_keys"); ok {
+	if v, ok := d.GetOkExists(consts.FieldPEMKeys); ok {
 		var pemKeys []string
 		for _, pemKey := range v.([]interface{}) {
 			pemKeys = append(pemKeys, pemKey.(string))
 		}
-		data["pem_keys"] = strings.Join(pemKeys, ",")
+		data[consts.FieldPEMKeys] = strings.Join(pemKeys, ",")
 	}
-	data["kubernetes_host"] = d.Get("kubernetes_host").(string)
+	data[consts.FieldKubernetesHost] = d.Get(consts.FieldKubernetesHost).(string)
 
-	if v, ok := d.GetOk("issuer"); ok {
-		data["issuer"] = v.(string)
-	}
-
-	if v := d.Get("disable_iss_validation"); v != nil {
-		data["disable_iss_validation"] = v
+	if v, ok := d.GetOk(consts.FieldIssuer); ok {
+		data[consts.FieldIssuer] = v.(string)
 	}
 
-	if v, ok := d.GetOk("disable_local_ca_jwt"); ok {
-		data["disable_local_ca_jwt"] = v
+	if v := d.Get(consts.FieldDisableISSValidation); v != nil {
+		data[consts.FieldDisableISSValidation] = v
+	}
+
+	if v, ok := d.GetOk(consts.FieldDisableLocalCAJWT); ok {
+		data[consts.FieldDisableLocalCAJWT] = v
 	}
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -243,12 +237,12 @@ func kubernetesAuthBackendConfigRead(d *schema.ResourceData, meta interface{}) e
 	}
 
 	params := []string{
-		"kubernetes_host",
-		"kubernetes_ca_cert",
-		"issuer",
-		"disable_iss_validation",
-		"disable_local_ca_jwt",
-		"pem_keys",
+		consts.FieldKubernetesCACert,
+		consts.FieldKubernetesHost,
+		consts.FieldIssuer,
+		consts.FieldDisableISSValidation,
+		consts.FieldDisableLocalCAJWT,
+		consts.FieldPEMKeys,
 	}
 
 	for _, k := range params {
@@ -279,33 +273,33 @@ func kubernetesAuthBackendConfigUpdate(d *schema.ResourceData, meta interface{})
 		data[param] = val
 	}
 
-	if v, ok := d.GetOk(FieldKubernetesCACert); ok {
-		setData(FieldKubernetesCACert, v)
+	if v, ok := d.GetOk(consts.FieldKubernetesCACert); ok {
+		setData(consts.FieldKubernetesCACert, v)
 	}
 
 	if v, ok := d.GetOk("token_reviewer_jwt"); ok {
 		setData("token_reviewer_jwt", v.(string))
 	}
 
-	if v, ok := d.GetOkExists("pem_keys"); ok {
+	if v, ok := d.GetOkExists(consts.FieldPEMKeys); ok {
 		var pemKeys []string
 		for _, pemKey := range v.([]interface{}) {
 			pemKeys = append(pemKeys, pemKey.(string))
 		}
-		setData("pem_keys", strings.Join(pemKeys, ","))
+		setData(consts.FieldPEMKeys, strings.Join(pemKeys, ","))
 	}
-	setData("kubernetes_host", d.Get("kubernetes_host").(string))
+	setData(consts.FieldKubernetesHost, d.Get(consts.FieldKubernetesHost).(string))
 
-	if v, ok := d.GetOk("issuer"); ok {
-		setData("issuer", v.(string))
-	}
-
-	if v, ok := d.GetOkExists("disable_iss_validation"); ok {
-		setData("disable_iss_validation", v)
+	if v, ok := d.GetOk(consts.FieldIssuer); ok {
+		setData(consts.FieldIssuer, v.(string))
 	}
 
-	if v, ok := d.GetOk("disable_local_ca_jwt"); ok {
-		setData("disable_local_ca_jwt", v)
+	if v, ok := d.GetOkExists(consts.FieldDisableISSValidation); ok {
+		setData(consts.FieldDisableISSValidation, v)
+	}
+
+	if v, ok := d.GetOk(consts.FieldDisableLocalCAJWT); ok {
+		setData(consts.FieldDisableLocalCAJWT, v)
 	}
 
 	_, err := client.Logical().Write(path, data)
