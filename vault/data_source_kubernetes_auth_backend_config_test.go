@@ -68,7 +68,8 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer, disableIssValidation, disableLocalCaJwt),
+				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, jwt, issuer,
+					disableIssValidation, disableLocalCaJwt, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
 						"backend", backend),
@@ -132,5 +133,6 @@ func testAccKubernetesAuthBackendConfigDataSourceConfig_full(backend, jwt string
 
 data "vault_kubernetes_auth_backend_config" "config" {
   backend = "%s"
-}`, testAccKubernetesAuthBackendConfigConfig_full(backend, jwt, issuer, disableIssValidation, disableLocalCaJwt), backend)
+}`, testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, jwt, issuer,
+		disableIssValidation, disableLocalCaJwt, false), backend)
 }
