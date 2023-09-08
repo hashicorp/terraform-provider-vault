@@ -6,6 +6,9 @@ FEATURES:
 BUGS:
 * Fix duplicate timestamp and incorrect level messages: ([#2031](https://github.com/hashicorp/terraform-provider-vault/pull/2031))
 
+IMPROVEMENTS:
+* Ensure sensitive values are masked in `vault_approle_auth_backend_login` plan output ([#2008](https://github.com/hashicorp/terraform-provider-vault/pull/2008))
+
 ## 3.20.1 (Sep 13, 2023)
 IMPROVEMENTS:
 * Update dependencies ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
