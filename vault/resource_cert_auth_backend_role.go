@@ -97,6 +97,14 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
+		"allowed_metadata_extensions": {
+			Type:        schema.TypeSet,
+			Optional:    true,
+			Description: "A array of oid extensions.",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+		},
 		"backend": {
 			Type:     schema.TypeString,
 			Optional: true,
@@ -153,6 +161,10 @@ func certAuthResourceWrite(ctx context.Context, d *schema.ResourceData, meta int
 		data["allowed_dns_sans"] = v.(*schema.Set).List()
 	}
 
+	if v, ok := d.GetOk("allowed_metadata_extensions"); ok {
+		data["allowed_metadata_extensions"] = v.(*schema.Set).List()
+	}
+
 	if v, ok := d.GetOk("allowed_uri_sans"); ok {
 		data["allowed_uri_sans"] = v.(*schema.Set).List()
 	}
@@ -207,6 +219,10 @@ func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta in
 
 	if v, ok := d.GetOk("allowed_uri_sans"); ok {
 		data["allowed_uri_sans"] = v.(*schema.Set).List()
+	}
+
+	if d.HasChange("allowed_metadata_extensions") {
+		data["allowed_metadata_extensions"] = d.Get("allowed_metadata_extensions").(*schema.Set).List()
 	}
 
 	if d.HasChange("allowed_organizational_units") {
@@ -309,6 +325,17 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 				schema.HashString, resp.Data["required_extensions"].([]interface{})))
 	} else {
 		d.Set("required_extensions",
+			schema.NewSet(
+				schema.HashString, []interface{}{}))
+	}
+
+	// Vault sometimes returns these as null instead of an empty list.
+	if resp.Data["allowed_metadata_extensions"] != nil {
+		d.Set("allowed_metadata_extensions",
+			schema.NewSet(
+				schema.HashString, resp.Data["allowed_metadata_extensions"].([]interface{})))
+	} else {
+		d.Set("allowed_metadata_extensions",
 			schema.NewSet(
 				schema.HashString, []interface{}{}))
 	}
