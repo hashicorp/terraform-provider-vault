@@ -371,6 +371,7 @@ resource "vault_pki_secret_backend_role" "test" {
   basic_constraints_valid_for_non_ca = false
   not_before_duration                = "45m"
   allowed_serial_numbers             = ["*"]
+  cn_validations					 = ["email", "hostname"]
 }
 `, path, name, roleTTL, maxTTL, extraConfig)
 }
@@ -425,6 +426,7 @@ resource "vault_pki_secret_backend_role" "test" {
   basic_constraints_valid_for_non_ca = false
   not_before_duration = "45m"
   allowed_serial_numbers = ["*"]
+  cn_validations = ["disabled"]
 }`, path, name, policyIdentifiers)
 }
 
