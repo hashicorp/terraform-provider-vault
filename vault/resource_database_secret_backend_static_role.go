@@ -4,11 +4,15 @@
 package vault
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -20,37 +24,42 @@ var (
 	databaseSecretBackendStaticRoleNameFromPathRegex    = regexp.MustCompile("^.+/static-roles/(.+$)")
 )
 
+var optionalStaticRoleAPIFields = []string{
+	consts.FieldRotationStatements,
+	consts.FieldCredentialType,
+	consts.FieldCredentialConfig,
+}
+
 func databaseSecretBackendStaticRoleResource() *schema.Resource {
 	return &schema.Resource{
-		Create: databaseSecretBackendStaticRoleWrite,
-		Read:   provider.ReadWrapper(databaseSecretBackendStaticRoleRead),
-		Update: databaseSecretBackendStaticRoleWrite,
-		Delete: databaseSecretBackendStaticRoleDelete,
-		Exists: databaseSecretBackendStaticRoleExists,
+		CreateContext: databaseSecretBackendStaticRoleWrite,
+		ReadContext:   provider.ReadContextWrapper(databaseSecretBackendStaticRoleRead),
+		UpdateContext: databaseSecretBackendStaticRoleWrite,
+		DeleteContext: databaseSecretBackendStaticRoleDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"name": {
+			consts.FieldName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Unique name for the static role.",
 			},
-			"backend": {
+			consts.FieldBackend: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "The path of the Database Secret Backend the role belongs to.",
 			},
-			"username": {
+			consts.FieldUsername: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "The database username that this role corresponds to.",
 			},
-			"rotation_period": {
+			consts.FieldRotationPeriod: {
 				Type:        schema.TypeInt,
 				Required:    true,
 				Description: "The amount of time Vault should wait before rotating the password, in seconds.",
@@ -62,59 +71,71 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 					return
 				},
 			},
-			"db_name": {
+			consts.FieldDBName: {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "Database connection to use for this role.",
 			},
-			"rotation_statements": {
+			consts.FieldRotationStatements: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Database statements to execute to rotate the password for the configured database user.",
 			},
+			consts.FieldCredentialType: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Specifies the type of credential that will be generated for the role.",
+			},
+			consts.FieldCredentialConfig: {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "Specifies the configuration for the given credential_type.",
+			},
 		},
 	}
 }
 
-func databaseSecretBackendStaticRoleWrite(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
-	backend := d.Get("backend").(string)
-	name := d.Get("name").(string)
+	backend := d.Get(consts.FieldBackend).(string)
+	name := d.Get(consts.FieldName).(string)
 
 	path := databaseSecretBackendStaticRolePath(backend, name)
 
 	data := map[string]interface{}{
-		"username":            d.Get("username"),
-		"rotation_period":     d.Get("rotation_period"),
-		"db_name":             d.Get("db_name"),
-		"rotation_statements": []string{},
+		"username":        d.Get(consts.FieldUsername),
+		"rotation_period": d.Get(consts.FieldRotationPeriod),
+		"db_name":         d.Get(consts.FieldDBName),
 	}
 
-	if v, ok := d.GetOkExists("rotation_statements"); ok && v != "" {
-		data["rotation_statements"] = v
+	for _, k := range optionalStaticRoleAPIFields {
+		if d.HasChange(k) {
+			data[k] = d.Get(k)
+		}
 	}
 
 	log.Printf("[DEBUG] Creating static role %q on database backend %q", name, backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating static role %q for backend %q: %s", name, backend, err)
+		return diag.Errorf("error creating static role %q for backend %q: %s", name, backend, err)
 	}
-	log.Printf("[DEBUG] Created static role %q on AWS backend %q", name, backend)
+	log.Printf("[DEBUG] Created static role %q on database backend %q", name, backend)
 
 	d.SetId(path)
-	return databaseSecretBackendStaticRoleRead(d, meta)
+	return databaseSecretBackendStaticRoleRead(ctx, d, meta)
 }
 
-func databaseSecretBackendStaticRoleRead(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendStaticRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -123,20 +144,20 @@ func databaseSecretBackendStaticRoleRead(d *schema.ResourceData, meta interface{
 	if err != nil {
 		log.Printf("[WARN] Removing database static role %q because its ID is invalid", path)
 		d.SetId("")
-		return fmt.Errorf("invalid static role ID %q: %s", path, err)
+		return diag.Errorf("invalid static role ID %q: %s", path, err)
 	}
 
 	backend, err := databaseSecretBackendStaticRoleBackendFromPath(path)
 	if err != nil {
 		log.Printf("[WARN] Removing database static role %q because its ID is invalid", path)
 		d.SetId("")
-		return fmt.Errorf("invalid static role ID %q: %s", path, err)
+		return diag.Errorf("invalid static role ID %q: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Reading static role from %q", path)
 	role, err := client.Logical().Read(path)
 	if err != nil {
-		return fmt.Errorf("error reading static role %q: %s", path, err)
+		return diag.Errorf("error reading static role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Read static role from %q", path)
 	if role == nil {
@@ -145,65 +166,50 @@ func databaseSecretBackendStaticRoleRead(d *schema.ResourceData, meta interface{
 		return nil
 	}
 
-	d.Set("backend", backend)
-	d.Set("name", name)
-	d.Set("username", role.Data["username"])
-	d.Set("db_name", role.Data["db_name"])
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
+		return diag.FromErr(err)
+	}
 
-	if v, ok := role.Data["rotation_period"]; ok {
-		n, err := v.(json.Number).Int64()
-		if err != nil {
-			return fmt.Errorf("unexpected value %q for rotation_period of %q", v, path)
+	if err := d.Set(consts.FieldName, name); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldDBName, role.Data[consts.FieldDBName]); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldUsername, role.Data[consts.FieldUsername]); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set(consts.FieldRotationPeriod, role.Data[consts.FieldRotationPeriod]); err != nil {
+		return diag.FromErr(err)
+	}
+
+	for _, k := range optionalStaticRoleAPIFields {
+		if v, ok := role.Data[k]; ok {
+			if err := d.Set(k, v); err != nil {
+				return diag.FromErr(err)
+			}
 		}
-		d.Set("rotation_period", n)
 	}
-
-	var rotation []string
-	if rotationStr, ok := role.Data["rotation_statements"].(string); ok {
-		rotation = append(rotation, rotationStr)
-	} else if rotations, ok := role.Data["rotation_statements"].([]interface{}); ok {
-		for _, cr := range rotations {
-			rotation = append(rotation, cr.(string))
-		}
-	}
-	err = d.Set("rotation_statements", rotation)
-	if err != nil {
-		return fmt.Errorf("unexpected value %q for rotation_statements of %s: %s", rotation, path, err)
-	}
-
 	return nil
 }
 
-func databaseSecretBackendStaticRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func databaseSecretBackendStaticRoleDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting static role %q", path)
 	_, err := client.Logical().Delete(path)
 	if err != nil {
-		return fmt.Errorf("error deleting static role %q: %s", path, err)
+		return diag.Errorf("error deleting static role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Deleted static role %q", path)
 	return nil
-}
-
-func databaseSecretBackendStaticRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return false, e
-	}
-
-	path := d.Id()
-	log.Printf("[DEBUG] Checking if %q exists", path)
-	role, err := client.Logical().Read(path)
-	if err != nil {
-		return true, fmt.Errorf("error checking if %q exists: %s", path, err)
-	}
-	log.Printf("[DEBUG] Checked if %q exists", path)
-	return role != nil, nil
 }
 
 func databaseSecretBackendStaticRolePath(backend, name string) string {

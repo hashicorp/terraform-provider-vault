@@ -1,4 +1,7 @@
 ## Unreleased
+FEATURES:
+* Add x509 support to static database roles: ([#1992](https://github.com/hashicorp/terraform-provider-vault/pull/1992))
+
 IMPROVEMENTS:
 * Update dependencies ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
   * github.com/hashicorp/go-secure-stdlib/awsutil `v0.1.6` -> `v0.2.3`
