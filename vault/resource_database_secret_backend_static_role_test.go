@@ -183,7 +183,7 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 
-resource "vault_database_secret_backend_static_period_role" "period" {
+resource "vault_database_secret_backend_static_period_role" "test" {
   backend = vault_mount.db.path
   db_name = vault_database_secret_backend_connection.test.name
   name = "%s"
@@ -192,7 +192,7 @@ resource "vault_database_secret_backend_static_period_role" "period" {
   rotation_statements = ["ALTER USER '{{username}}'@'localhost' IDENTIFIED BY '{{password}}';"]
 }
 
-resource "vault_database_secret_backend_static_schedule_role" "schedule" {
+resource "vault_database_secret_backend_static_schedule_role" "test" {
   backend = vault_mount.db.path
   db_name = vault_database_secret_backend_connection.test.name
   name = "%s"
