@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
+func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
 	connURL := os.Getenv("MYSQL_URL")
 	if connURL == "" {
 		t.Skip("MYSQL_URL not set")
@@ -28,7 +28,6 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 	username := acctest.RandomWithPrefix("user")
 	dbName := acctest.RandomWithPrefix("db")
 	name := acctest.RandomWithPrefix("staticrole")
-	resourceName := "vault_database_secret_backend_static_role.test"
 
 	if err := createTestUser(connURL, username); err != nil {
 		t.Fatal(err)
@@ -40,33 +39,32 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendStaticRoleConfig_rotationSchedule(name, username, dbName, backend, connURL),
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_basic(name, username, dbName, backend, connURL),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "username", username),
-					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
-					resource.TestCheckResourceAttr(resourceName, "rotation_schedule", "* * * * *"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_window", "3600"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "name", name),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "backend", backend),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "username", username),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "db_name", dbName),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "rotation_period", "3600"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_schedule_role.test", "rotation_schedule", "* * * * *"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_schedule_role.test", "rotation_window", "3600"),
 				),
 			},
 			{
-				Config: testAccDatabaseSecretBackendStaticRoleConfig_updatedRotationSchedule(name, username, dbName, backend, connURL),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "username", username),
-					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
-					resource.TestCheckResourceAttr(resourceName, "rotation_schedule", "*/30 * * * *"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_window", "14400"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_statements.0", "SELECT 1;"),
-				),
+				ResourceName:      "vault_database_secret_backend_static_period_role.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName:      "vault_database_secret_backend_static_schedule_role.test",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
 }
 
-func TestAccDatabaseSecretBackendStaticRole_rotationPeriod(t *testing.T) {
+func TestAccDatabaseSecretBackendStaticRole_basic(t *testing.T) {
 	connURL := os.Getenv("MYSQL_URL")
 	if connURL == "" {
 		t.Skip("MYSQL_URL not set")
@@ -75,7 +73,6 @@ func TestAccDatabaseSecretBackendStaticRole_rotationPeriod(t *testing.T) {
 	name := acctest.RandomWithPrefix("staticrole")
 	username := acctest.RandomWithPrefix("user")
 	dbName := acctest.RandomWithPrefix("db")
-	resourceName := "vault_database_secret_backend_static_role.test"
 
 	if err := createTestUser(connURL, username); err != nil {
 		t.Fatal(err)
@@ -87,24 +84,28 @@ func TestAccDatabaseSecretBackendStaticRole_rotationPeriod(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendStaticRoleConfig_rotationPeriod(name, username, dbName, backend, connURL),
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_basic(name, username, dbName, backend, connURL),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "username", username),
-					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
-					resource.TestCheckResourceAttr(resourceName, "rotation_period", "3600"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "name", name),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "backend", backend),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "username", username),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "db_name", dbName),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "rotation_period", "3600"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_schedule_role.test", "rotation_schedule", "* * * * *"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_schedule_role.test", "rotation_window", "3600"),
 				),
 			},
 			{
-				Config: testAccDatabaseSecretBackendStaticRoleConfig_updatedRotationPeriod(name, username, dbName, backend, connURL),
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_updated(name, username, dbName, backend, connURL),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "username", username),
-					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
-					resource.TestCheckResourceAttr(resourceName, "rotation_period", "1800"),
-					resource.TestCheckResourceAttr(resourceName, "rotation_statements.0", "SELECT 1;"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "name", name),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "backend", backend),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "username", username),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "db_name", dbName),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "rotation_period", "1800"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_schedule_role.test", "rotation_schedule", "*/30 * * * *"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_schedule_role.test", "rotation_window", "14400"),
+					resource.TestCheckResourceAttr("vault_database_secret_backend_static_period_role.test", "rotation_statements.0", "SELECT 1;"),
 				),
 			},
 		},
@@ -165,7 +166,7 @@ func createTestUser(connURL, username string) error {
 	return nil
 }
 
-func testAccDatabaseSecretBackendStaticRoleConfig_rotationSchedule(name, username, db, path, connURL string) string {
+func testAccDatabaseSecretBackendStaticRoleConfig_basic(name, username, db, path, connURL string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -182,7 +183,16 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 
-resource "vault_database_secret_backend_static_role" "test" {
+resource "vault_database_secret_backend_static_period_role" "period" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  rotation_period = 3600
+  rotation_statements = ["ALTER USER '{{username}}'@'localhost' IDENTIFIED BY '{{password}}';"]
+}
+
+resource "vault_database_secret_backend_static_schedule_role" "schedule" {
   backend = vault_mount.db.path
   db_name = vault_database_secret_backend_connection.test.name
   name = "%s"
@@ -194,7 +204,7 @@ resource "vault_database_secret_backend_static_role" "test" {
 `, path, db, connURL, name, username)
 }
 
-func testAccDatabaseSecretBackendStaticRoleConfig_updatedRotationSchedule(name, username, db, path, connURL string) string {
+func testAccDatabaseSecretBackendStaticRoleConfig_updated(name, username, db, path, connURL string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -211,69 +221,22 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 
-resource "vault_database_secret_backend_static_role" "test" {
+resource "vault_database_secret_backend_static_period_role" "period" {
+  backend = vault_mount.db.path
+  db_name = vault_database_secret_backend_connection.test.name
+  name = "%s"
+  username = "%s"
+  rotation_period = 1800
+  rotation_statements = ["SELECT 1;"]
+}
+
+resource "vault_database_secret_backend_static_schedule_role" "schedule" {
   backend = vault_mount.db.path
   db_name = vault_database_secret_backend_connection.test.name
   name = "%s"
   username = "%s"
   rotation_schedule = "*/30 * * * *"
   rotation_window = 14400
-  rotation_statements = ["SELECT 1;"]
-}
-`, path, db, connURL, name, username)
-}
-
-func testAccDatabaseSecretBackendStaticRoleConfig_rotationPeriod(name, username, db, path, connURL string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "db" {
-  path = "%s"
-  type = "database"
-}
-
-resource "vault_database_secret_backend_connection" "test" {
-  backend = vault_mount.db.path
-  name = "%s"
-  allowed_roles = ["*"]
-
-  mysql {
-	  connection_url = "%s"
-  }
-}
-
-resource "vault_database_secret_backend_static_role" "test" {
-  backend = vault_mount.db.path
-  db_name = vault_database_secret_backend_connection.test.name
-  name = "%s"
-  username = "%s"
-  rotation_period = 3600
-  rotation_statements = ["ALTER USER '{{username}}'@'localhost' IDENTIFIED BY '{{password}}';"]
-}
-`, path, db, connURL, name, username)
-}
-
-func testAccDatabaseSecretBackendStaticRoleConfig_updatedRotationPeriod(name, username, db, path, connURL string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "db" {
-  path = "%s"
-  type = "database"
-}
-
-resource "vault_database_secret_backend_connection" "test" {
-  backend = vault_mount.db.path
-  name = "%s"
-  allowed_roles = ["*"]
-
-  mysql {
-	  connection_url = "%s"
-  }
-}
-
-resource "vault_database_secret_backend_static_role" "test" {
-  backend = vault_mount.db.path
-  db_name = vault_database_secret_backend_connection.test.name
-  name = "%s"
-  username = "%s"
-  rotation_period = 1800
   rotation_statements = ["SELECT 1;"]
 }
 `, path, db, connURL, name, username)
