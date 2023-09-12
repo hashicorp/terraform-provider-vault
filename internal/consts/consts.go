@@ -352,6 +352,9 @@ const (
 	FieldCredentialType                = "credential_type"
 	FieldFilename                      = "filename"
 	FieldDefault                       = "default"
+	FieldRotationStatements            = "rotation_statements"
+	FieldRotationSchedule              = "rotation_schedule"
+	FieldRotationWindow                = "rotation_window"
 	/*
 		common environment variables
 	*/
