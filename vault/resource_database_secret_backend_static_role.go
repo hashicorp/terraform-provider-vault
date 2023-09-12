@@ -62,7 +62,7 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 			},
 			consts.FieldRotationPeriod: {
 				Type:        schema.TypeInt,
-				Required:    true,
+				Optional:    true,
 				Description: "The amount of time Vault should wait before rotating the password, in seconds.",
 				ValidateFunc: func(v interface{}, k string) (ws []string, errs []error) {
 					value := v.(int)
@@ -74,12 +74,12 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 			},
 			consts.FieldRotationSchedule: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "A cron-style string that will define the schedule on which rotations should occur.",
 			},
 			consts.FieldRotationWindow: {
 				Type:     schema.TypeInt,
-				Required: true,
+				Optional: true,
 				Description: "The amount of time in which the rotation is allowed to occur starting " +
 					"from a given rotation_schedule.",
 			},
