@@ -1,7 +1,12 @@
 ## Unreleased
+
+## 3.20.1 (Sep 13, 2023)
 IMPROVEMENTS:
 * Update dependencies ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
   * github.com/hashicorp/go-secure-stdlib/awsutil `v0.1.6` -> `v0.2.3`
+
+BUGS:
+* Update k8s-auth config to support unsetting the K8s CA Cert: ([#2005](https://github.com/hashicorp/terraform-provider-vault/pull/2005))
 
 ## 3.20.0 (Aug 30, 2023)
 FEATURES:
