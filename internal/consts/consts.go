@@ -352,6 +352,12 @@ const (
 	FieldCredentialType                = "credential_type"
 	FieldFilename                      = "filename"
 	FieldDefault                       = "default"
+	FieldKubernetesCACert              = "kubernetes_ca_cert"
+	FieldDisableLocalCAJWT             = "disable_local_ca_jwt"
+	FieldKubernetesHost                = "kubernetes_host"
+	FieldServiceAccountJWT             = "service_account_jwt"
+	FieldDisableISSValidation          = "disable_iss_validation"
+	FieldPEMKeys                       = "pem_keys"
 	/*
 		common environment variables
 	*/
@@ -385,7 +391,6 @@ const (
 	EnvVarRadiusPassword = "RADIUS_PASSWORD"
 	// EnvVarTokenFilename for the TokenFile auth login.
 	EnvVarTokenFilename = "TERRAFORM_VAULT_TOKEN_FILENAME"
-
 	/*
 		common mount types
 	*/
