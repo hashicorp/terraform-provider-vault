@@ -25,9 +25,9 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 		t.Skip("MYSQL_URL not set")
 	}
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	username := acctest.RandomWithPrefix("schedule-user")
+	username := acctest.RandomWithPrefix("username")
 	dbName := acctest.RandomWithPrefix("db")
-	name := acctest.RandomWithPrefix("static-schedule-role")
+	name := acctest.RandomWithPrefix("static-role")
 	resourceName := "vault_database_secret_backend_static_role.test"
 
 	if err := createTestUser(connURL, username); err != nil {
