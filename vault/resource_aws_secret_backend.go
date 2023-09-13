@@ -268,6 +268,7 @@ func awsSecretBackendRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("description", mount.Description)
 	d.Set("default_lease_ttl_seconds", mount.Config.DefaultLeaseTTL)
 	d.Set("max_lease_ttl_seconds", mount.Config.MaxLeaseTTL)
+	d.Set("local", mount.Local)
 
 	return nil
 }
