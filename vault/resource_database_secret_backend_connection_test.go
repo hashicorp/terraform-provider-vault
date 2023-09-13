@@ -827,7 +827,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDatabaseSecretBackendConnectionConfig_mysql_cloud(name, backend, connURL, "gcp_iam", saJSON),
+				Config: testAccDatabaseSecretBackendConnectionConfig_postgres_cloud(name, backend, connURL, "gcp_iam", saJSON),
 				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, dbEngineMySQL.DefaultPluginName(),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.#", "2"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "allowed_roles.0", "dev"),
@@ -1654,6 +1654,29 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, parsedURL.String())
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_postgres_cloud(name, path string, parsedURL *url.URL, authType, serviceAccountJSON string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+  root_rotation_statements = ["FOOBAR"]
+
+  postgresql {
+      connection_url          = "%s"
+		auth_type = "%s"
+		service_account_json = "%s"
+      disable_escaping        = true
+  }
+}
+`, path, name, parsedURL.String(), authType, serviceAccountJSON)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_snowflake(name, path, url, username, password, userTempl string) string {
