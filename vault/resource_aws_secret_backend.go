@@ -98,6 +98,13 @@ func awsSecretBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "Template describing how dynamic usernames are generated.",
 			},
+			"local": {
+				Type:        schema.TypeBool,
+				ForceNew:    true,
+				Optional:    true,
+				Default:     false,
+				Description: "Specifies if the secret backend is local only",
+			},
 		},
 	})
 }
@@ -143,12 +150,14 @@ func awsSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
 	iamEndpoint := d.Get("iam_endpoint").(string)
 	stsEndpoint := d.Get("sts_endpoint").(string)
 	usernameTemplate := d.Get("username_template").(string)
+	local := d.Get("local").(bool)
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting AWS backend at %q", path)
 	err := client.Sys().Mount(path, &api.MountInput{
 		Type:        consts.MountTypeAWS,
 		Description: description,
+		Local:       local,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: fmt.Sprintf("%ds", defaultTTL),
 			MaxLeaseTTL:     fmt.Sprintf("%ds", maxTTL),
