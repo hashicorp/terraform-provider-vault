@@ -444,7 +444,7 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 
 func TestAccDatabaseSecretBackendConnection_mysql_cloud(t *testing.T) {
 	// wanted this to be the included with the following test, but the env-var check is different
-	values := testutil.SkipTestEnvUnset(t, "MYSQL_CONNECTION_URL", "MYSQL_CONNECTION_SERVICE_ACCOUNT_JSON")
+	values := testutil.SkipTestEnvUnset(t, "MYSQL_CLOUD_CONNECTION_URL", "MYSQL_CLOUD_CONNECTION_SERVICE_ACCOUNT_JSON")
 	connURL, saJSON := values[0], values[1]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
@@ -813,7 +813,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql(t *testing.T) {
 
 func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 	// wanted this to be the included with the following test, but the env-var check is different
-	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL", "POSTGRES_SERVICE_ACCOUNT_JSON")
+	values := testutil.SkipTestEnvUnset(t, "POSTGRES_CLOUD_URL", "POSTGRES_CLOUD_SERVICE_ACCOUNT_JSON")
 	connURL, saJSON := values[0], values[1]
 
 	backend := acctest.RandomWithPrefix("tf-test-db")
@@ -1656,7 +1656,7 @@ resource "vault_database_secret_backend_connection" "test" {
 `, path, name, parsedURL.String())
 }
 
-func testAccDatabaseSecretBackendConnectionConfig_postgres_cloud(name, path string, parsedURL *url.URL, authType, serviceAccountJSON string) string {
+func testAccDatabaseSecretBackendConnectionConfig_postgres_cloud(name, path, connURL, authType, serviceAccountJSON string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
   path = "%s"
@@ -1676,7 +1676,7 @@ resource "vault_database_secret_backend_connection" "test" {
       disable_escaping        = true
   }
 }
-`, path, name, parsedURL.String(), authType, serviceAccountJSON)
+`, path, name, connURL, authType, serviceAccountJSON)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_snowflake(name, path, url, username, password, userTempl string) string {
