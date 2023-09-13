@@ -28,6 +28,7 @@ type connectionStringConfig struct {
 	excludeUsernameTemplate bool
 	includeUserPass         bool
 	includeDisableEscaping  bool
+	isCloud                 bool
 }
 
 const (
@@ -556,6 +557,7 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 			Elem: connectionStringResource(&connectionStringConfig{
 				includeUserPass:        true,
 				includeDisableEscaping: true,
+				isCloud:                true,
 			}),
 			MaxItems:      1,
 			ConflictsWith: util.CalculateConflictsWith(dbEnginePostgres.Name(), dbEngineTypes),
@@ -752,6 +754,20 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 		}
 	}
 
+	if config.isCloud {
+		res.Schema["auth_type"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "some description",
+		}
+		res.Schema["service_account_json"] = &schema.Schema{
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "some json description",
+			Sensitive:   true,
+		}
+	}
+
 	if !config.excludeUsernameTemplate {
 		res.Schema["username_template"] = &schema.Schema{
 			Type:        schema.TypeString,
@@ -774,6 +790,7 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 func mysqlConnectionStringResource() *schema.Resource {
 	r := connectionStringResource(&connectionStringConfig{
 		includeUserPass: true,
+		isCloud:         true,
 	})
 	r.Schema["tls_certificate_key"] = &schema.Schema{
 		Type:        schema.TypeString,
@@ -887,7 +904,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineOracle:
 		setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	case dbEnginePostgres:
-		setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
+		setPostgresDatabaseConnectionData(d, prefix, data)
 	case dbEngineElasticSearch:
 		setElasticsearchDatabaseConnectionData(d, prefix, data)
 	case dbEngineRedis:
@@ -1351,6 +1368,15 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	}
 }
 
+func setCloudDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	if v, ok := d.GetOk(prefix + "auth_type"); ok {
+		data["auth_type"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "service_account_json"); ok {
+		data["service_account_json"] = v.(string)
+	}
+}
+
 func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	if v, ok := d.GetOk(prefix + "contained_db"); ok {
@@ -1364,12 +1390,18 @@ func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 
 func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	setDatabaseConnectionDataWithUserPass(d, prefix, data)
+	setCloudDatabaseConnectionData(d, prefix, data)
 	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
 		data["tls_certificate_key"] = v.(string)
 	}
 	if v, ok := d.GetOk(prefix + "tls_ca"); ok {
 		data["tls_ca"] = v.(string)
 	}
+}
+
+func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+	setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
+	setCloudDatabaseConnectionData(d, prefix, data)
 }
 
 func setRedisDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
