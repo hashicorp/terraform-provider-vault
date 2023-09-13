@@ -2,6 +2,7 @@
 IMPROVEMENTS:
 * Update dependencies ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
   * github.com/hashicorp/go-secure-stdlib/awsutil `v0.1.6` -> `v0.2.3`
+* Add `local` variable to `aws_secret_backend` resource, in order to mark the mount as non - replicated
 
 ## 3.20.0 (Aug 30, 2023)
 FEATURES:
