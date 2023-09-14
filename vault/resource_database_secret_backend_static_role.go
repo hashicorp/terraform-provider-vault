@@ -24,8 +24,6 @@ var (
 
 var staticRoleFields = []string{
 	consts.FieldRotationPeriod,
-	//consts.FieldRotationSchedule,
-	//consts.FieldRotationWindow,
 	consts.FieldRotationStatements,
 	consts.FieldUsername,
 	consts.FieldDBName,
@@ -110,13 +108,18 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 
 	path := databaseSecretBackendStaticRolePath(backend, name)
 
-	data := map[string]interface{}{
-		"rotation_statements": []string{},
+	useAPIVer115 := provider.IsAPISupported(meta, provider.VaultVersion115)
+	if useAPIVer115 {
+		if d.HasChange(consts.FieldRotationSchedule) {
+			staticRoleFields = append(staticRoleFields, "rotation_schedule")
+		}
+		if d.HasChange(consts.FieldRotationWindow) {
+			staticRoleFields = append(staticRoleFields, "rotation_window")
+		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion115) {
-		data["rotation_schedule"] = d.Get(consts.FieldRotationSchedule)
-		data["rotation_window"] = d.Get(consts.FieldRotationWindow)
+	data := map[string]interface{}{
+		"rotation_statements": []string{},
 	}
 
 	for _, k := range staticRoleFields {
@@ -178,7 +181,8 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+	useAPIVer115 := provider.IsAPISupported(meta, provider.VaultVersion115)
+	if useAPIVer115 {
 		d.Set(consts.FieldRotationSchedule, role.Data["rotation_schedule"])
 		d.Set(consts.FieldRotationWindow, role.Data["rotation_window"])
 	}
