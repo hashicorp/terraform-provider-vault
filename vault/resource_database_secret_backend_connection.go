@@ -1675,11 +1675,11 @@ func validateDBPluginName(s string) error {
 func getSortedPluginPrefixes() ([]string, error) {
 	var pluginPrefixes []string
 	for _, d := range dbEngines {
-		prefix, err := d.PluginPrefix()
+		prefix, err := d.PluginPrefixes()
 		if err != nil {
 			return nil, err
 		}
-		pluginPrefixes = append(pluginPrefixes, prefix)
+		pluginPrefixes = append(pluginPrefixes, prefix...)
 	}
 	// sorted by max length
 	sort.Slice(pluginPrefixes, func(i, j int) bool {
