@@ -1,5 +1,9 @@
 ## Unreleased
 
+## 3.20.2 (Sep 13, 2023)
+IMPROVEMENTS:
+* ` to ensure that the unit of time being used is specified ([#2015](https://github.com/hashicorp/terraform-provider-vault/pull/2015))
+
 ## 3.20.1 (Sep 13, 2023)
 IMPROVEMENTS:
 * Update dependencies ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
