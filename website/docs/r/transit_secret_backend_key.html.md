@@ -58,7 +58,7 @@ The following arguments are supported:
 
 * `min_encryption_version` - (Optional) Minimum key version to use for encryption
 
-* `auto_rotate_period` - (Optional) Amount of time the key should live before being automatically rotated.
+* `auto_rotate_period` - (Optional) Amount of seconds the key should live before being automatically rotated.
   A value of 0 disables automatic rotation for the key.
 
 ## Attributes Reference
