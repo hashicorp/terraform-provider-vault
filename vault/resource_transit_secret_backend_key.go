@@ -159,6 +159,22 @@ func transitSecretBackendKeyResource() *schema.Resource {
 				Computed:    true,
 				Description: "Whether or not the key supports signing, based on key type.",
 			},
+			// import only options
+			"ciphertext": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The base64-encoded ciphertext of the keys. The AES key should be encrypted using OAEP with the wrapping key and then concatenated with the import key, wrapped by the AES key.",
+				Sensitive:     true, // not actually sensitive, but it's a big blob and people often think it is sensitive
+				ConflictsWith: []string{"min_encryption_version", "min_decryption_version", "convergent_encryption", "deletion_allowed"},
+			},
+			"hash_function": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Default:       "SHA256",
+				Description:   "The hash function used as a random oracle in the OAEP wrapping of the user-generated, ephemeral AES key. Can be one of SHA1, SHA224, SHA256 (default), SHA384, or SHA512",
+				ValidateFunc:  validation.StringInSlice([]string{"SHA1", "SHA224", "SHA256", "SHA384", "SHA512"}, false),
+				ConflictsWith: []string{"min_encryption_version", "min_decryption_version", "convergent_encryption", "deletion_allowed"},
+			},
 		},
 		CustomizeDiff: customdiff.All(
 			customdiff.ValidateChange("exportable", func(_ context.Context, old, new, meta interface{}) error {
@@ -223,11 +239,22 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 		"auto_rotate_period":    autoRotatePeriod,
 	}
 
-	log.Printf("[DEBUG] Creating encryption key %s on transit secret backend %q", name, backend)
-	_, err := client.Logical().Write(path, data)
-	if err != nil {
-		return fmt.Errorf("error creating encryption key %s for transit secret backend %q: %s", name, backend, err)
+	// check for import
+	ciphertext := d.Get("ciphertext").(string)
+	if ciphertext != "" {
+		// import instead of create
+		err := transitSecretBackendKeyImport(d, meta)
+		if err != nil {
+			return err
+		}
+	} else {
+		log.Printf("[DEBUG] Creating encryption key %s on transit secret backend %q", name, backend)
+		_, err := client.Logical().Write(path, data)
+		if err != nil {
+			return fmt.Errorf("error creating encryption key %s for transit secret backend %q: %s", name, backend, err)
+		}
 	}
+
 	log.Printf("[DEBUG] Setting configuration for encryption key %s on transit secret backend %q", name, backend)
 	_, conferr := client.Logical().Write(path+"/config", configData)
 	if conferr != nil {
@@ -237,6 +264,61 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 	log.Printf("[DEBUG] Created encryption key %s on transit secret backend %q", name, backend)
 	d.SetId(path)
 	return transitSecretBackendKeyRead(d, meta)
+}
+
+func transitSecretBackendKeyImport(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	backend := d.Get("backend").(string)
+	name := d.Get("name").(string)
+	autoRotatePeriod := getTransitAutoRotatePeriod(d)
+	data := map[string]interface{}{
+		"allow_plaintext_backup": d.Get("allow_plaintext_backup").(bool),
+		"exportable":             d.Get("exportable").(bool),
+		"derived":                d.Get("derived").(bool),
+		"type":                   d.Get("type").(string),
+		"auto_rotate_period":     autoRotatePeriod,
+		"ciphertext":             d.Get("ciphertext").(string),
+		"hash_function":          d.Get("hash_function").(string),
+	}
+
+	path := transitSecretBackendImportKeyPath(backend, name)
+	log.Printf("[DEBUG] Importing encryption key %s with backend %s", name, backend)
+	_, err := client.Logical().Write(path, data)
+	if err != nil {
+		return fmt.Errorf("error importing encryption key %s with backend %s: %s", name, backend, err)
+	}
+
+	log.Printf("[DEBUG] Imported encryption key %s with backend %s", name, backend)
+	return nil
+}
+
+func transitSecretBackendKeyImportVersion(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	backend := d.Get("backend").(string)
+	name := d.Get("name").(string)
+	data := map[string]interface{}{
+		"type":          d.Get("type").(string),
+		"ciphertext":    d.Get("ciphertext").(string),
+		"hash_function": d.Get("hash_function").(string),
+	}
+
+	path := transitSecretBackendImportVersionKeyPath(backend, name)
+	log.Printf("[DEBUG] Importing encryption key version %s with backend %s", name, backend)
+	_, err := client.Logical().Write(path, data)
+	if err != nil {
+		return fmt.Errorf("error importing encryption key %s with backend %s: %s", name, backend, err)
+	}
+
+	log.Printf("[DEBUG] Imported encryption key version %s with backend %s", name, backend)
+	return nil
 }
 
 func getTransitAutoRotatePeriod(d *schema.ResourceData) int {
@@ -412,11 +494,21 @@ func transitSecretBackendKeyUpdate(d *schema.ResourceData, meta interface{}) err
 		"auto_rotate_period":     getTransitAutoRotatePeriod(d),
 	}
 
-	_, err := client.Logical().Write(path+"/config", data)
-	if err != nil {
-		return fmt.Errorf("error updating transit secret backend key %q: %s", path, err)
+	// check for import_version
+	ciphertext := d.Get("ciphertext").(string)
+	if ciphertext != "" {
+		// import_version instead of update
+		err := transitSecretBackendKeyImportVersion(d, meta)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err := client.Logical().Write(path+"/config", data)
+		if err != nil {
+			return fmt.Errorf("error updating transit secret backend key %q: %s", path, err)
+		}
+		log.Printf("[DEBUG] Updated transit secret backend key %q", path)
 	}
-	log.Printf("[DEBUG] Updated transit secret backend key %q", path)
 
 	return transitSecretBackendKeyRead(d, meta)
 }
@@ -455,6 +547,14 @@ func transitSecretBackendKeyExists(d *schema.ResourceData, meta interface{}) (bo
 
 func transitSecretBackendKeyPath(backend string, name string) string {
 	return strings.Trim(backend, "/") + "/keys/" + strings.Trim(name, "/")
+}
+
+func transitSecretBackendImportKeyPath(backend string, name string) string {
+	return strings.Trim(backend, "/") + "/keys/" + strings.Trim(name, "/") + "/import"
+}
+
+func transitSecretBackendImportVersionKeyPath(backend string, name string) string {
+	return strings.Trim(backend, "/") + "/keys/" + strings.Trim(name, "/") + "/import_version"
 }
 
 func transitSecretBackendKeyNameFromPath(path string) (string, error) {
