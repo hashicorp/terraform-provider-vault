@@ -6,7 +6,7 @@ description: |-
   Managing the MFA Duo method configuration
 ---
 
-# vault\_mfa-duo
+# vault\_mfa\_duo
 
 Provides a resource to manage [Duo MFA](https://www.vaultproject.io/docs/enterprise/mfa/mfa-duo.html).
 
