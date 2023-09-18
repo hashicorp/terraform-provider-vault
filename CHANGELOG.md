@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* Add support for setting `not_before_duration` argument on `vault_ssh_secret_backend_role`: ([#2019](https://github.com/hashicorp/terraform-provider-vault/pull/2019))
+
 ## 3.20.1 (Sep 13, 2023)
 IMPROVEMENTS:
 * Update dependencies ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
