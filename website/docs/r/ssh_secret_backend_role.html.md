@@ -99,6 +99,9 @@ The following arguments are supported:
 
 * `ttl` - (Optional) Specifies the Time To Live value.
 
+* `not_before_duration` - (Optional) Specifies the duration by which to backdate the ValidAfter property.
+  Uses [duration format strings](https://developer.hashicorp.com/vault/docs/concepts/duration-format).
+
 
 ### Allowed User Key Configuration
 * `type` - (Required) The SSH public key type.  

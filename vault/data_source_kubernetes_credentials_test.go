@@ -9,12 +9,13 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccKubernetesSecretCredentialsDataSource(t *testing.T) {
-	testutil.SkipTestEnvSet(t, testutil.EnvVarSkipVaultNext)
+	t.Skip("Requires a Kubernetes cluster and manual setup. Should be automated.")
 
 	dataSourceName := "data.vault_kubernetes_service_account_token.token"
 	backend := acctest.RandomWithPrefix("tf-test-kubernetes")
@@ -22,7 +23,9 @@ func TestAccKubernetesSecretCredentialsDataSource(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceKubernetesServiceAccountTokenConfig(backend, name),
