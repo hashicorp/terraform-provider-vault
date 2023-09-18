@@ -48,6 +48,8 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "algorithm_signer", "default"),
 		resource.TestCheckResourceAttr(resourceName, "max_ttl", "0"),
 		resource.TestCheckResourceAttr(resourceName, "ttl", "0"),
+		// 30s is the default value vault uese.
+		// https://developer.hashicorp.com/vault/api-docs/secret/ssh#not_before_duration
 		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "30"),
 	)
 
@@ -70,7 +72,8 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "algorithm_signer", "rsa-sha2-256"),
 		resource.TestCheckResourceAttr(resourceName, "max_ttl", "86400"),
 		resource.TestCheckResourceAttr(resourceName, "ttl", "43200"),
-		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "50m"),
+		// 50m (3000 seconds)
+		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "3000"),
 	)
 
 	getCheckFuncs := func(isUpdate bool) resource.TestCheckFunc {
@@ -308,7 +311,7 @@ resource "vault_ssh_secret_backend_role" "test_role" {
   algorithm_signer         = "rsa-sha2-256"
   max_ttl                  = "86400"
   ttl                      = "43200"
-  not_before_duration      = "50m"
+  not_before_duration      = "3000"
   %s
 `, name, extraFields))
 
