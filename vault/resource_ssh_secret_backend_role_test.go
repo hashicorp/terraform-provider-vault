@@ -48,7 +48,7 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "algorithm_signer", "default"),
 		resource.TestCheckResourceAttr(resourceName, "max_ttl", "0"),
 		resource.TestCheckResourceAttr(resourceName, "ttl", "0"),
-		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "0"),
+		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "30"),
 	)
 
 	updateCheckFuncs := append(commonCheckFuncs,
@@ -70,7 +70,7 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "algorithm_signer", "rsa-sha2-256"),
 		resource.TestCheckResourceAttr(resourceName, "max_ttl", "86400"),
 		resource.TestCheckResourceAttr(resourceName, "ttl", "43200"),
-		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "30m"),
+		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "50m"),
 	)
 
 	getCheckFuncs := func(isUpdate bool) resource.TestCheckFunc {
@@ -308,7 +308,7 @@ resource "vault_ssh_secret_backend_role" "test_role" {
   algorithm_signer         = "rsa-sha2-256"
   max_ttl                  = "86400"
   ttl                      = "43200"
-  not_before_duration      = "30m"
+  not_before_duration      = "50m"
   %s
 `, name, extraFields))
 
