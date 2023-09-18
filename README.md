@@ -68,7 +68,8 @@ In order to run the full suite of Acceptance tests, you will need the following:
 
 1. An instance of Vault running to run the tests against.  The acceptance
    tests send requests to vault over TLS.  You can start a compatible local
-   vault with `vault server -dev-tls`.
+   vault with `vault server -dev-tls`.  The command will print the values needed
+   for step 2.
 2. The following environment variables are set:
     - `VAULT_ADDR` - location of Vault
     - `VAULT_TOKEN` - token used to query Vault. These tests do not attempt to read `~/.vault-token`.
