@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
+func TestAccDatabaseSecretBackendStaticRole(t *testing.T) {
 	connURL := os.Getenv("MYSQL_URL")
 	if connURL == "" {
 		t.Skip("MYSQL_URL not set")
@@ -35,8 +35,11 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers: testProviders,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+		},
 		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -64,22 +67,6 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 			},
 		},
 	})
-}
-
-func TestAccDatabaseSecretBackendStaticRole_rotationPeriod(t *testing.T) {
-	connURL := os.Getenv("MYSQL_URL")
-	if connURL == "" {
-		t.Skip("MYSQL_URL not set")
-	}
-	backend := acctest.RandomWithPrefix("tf-test-db")
-	name := acctest.RandomWithPrefix("staticrole")
-	username := acctest.RandomWithPrefix("user")
-	dbName := acctest.RandomWithPrefix("db")
-	resourceName := "vault_database_secret_backend_static_role.test"
-
-	if err := createTestUser(connURL, username); err != nil {
-		t.Fatal(err)
-	}
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
