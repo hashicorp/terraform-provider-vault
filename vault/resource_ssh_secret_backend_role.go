@@ -187,6 +187,12 @@ func sshSecretBackendRoleResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
+		"not_before_duration": {
+			Type:        schema.TypeString,
+			Description: "Specifies the duration by which to backdate the ValidAfter property. Uses duration format strings.",
+			Optional:    true,
+			Computed:    true,
+		},
 	}
 
 	return &schema.Resource{
@@ -281,6 +287,10 @@ func sshSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("ttl"); ok {
 		data["ttl"] = v.(string)
+	}
+
+	if v, ok := d.GetOk("not_before_duration"); ok {
+		data["not_before_duration"] = v.(string)
 	}
 
 	var isUserKeyConfig bool
@@ -384,7 +394,7 @@ func sshSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		"cidr_list", "allowed_extensions", "default_extensions",
 		"default_critical_options", "allowed_users_template",
 		"allowed_users", "default_user", "key_id_format",
-		"max_ttl", "ttl", "algorithm_signer",
+		"max_ttl", "ttl", "algorithm_signer", "not_before_duration",
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
