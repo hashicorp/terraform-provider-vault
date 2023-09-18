@@ -66,10 +66,13 @@ In order to run the full suite of Acceptance tests, you will need the following:
 
 *Note:* Acceptance tests create real resources, and often cost money to run.
 
-1. An instance of Vault running to run the tests against
+1. An instance of Vault running to run the tests against.  The acceptance
+   tests send requests to vault over TLS.  You can start a compatible local
+   vault with `vault server -dev-tls`.
 2. The following environment variables are set:
     - `VAULT_ADDR` - location of Vault
     - `VAULT_TOKEN` - token used to query Vault. These tests do not attempt to read `~/.vault-token`.
+    - `VAULT_CACERT` - the CA certificate file used to verify vault's server TLS certificate.
 3. The following environment variables may need to be set depending on which acceptance tests you wish to run.
 There may be additional variables for specific tests. Consult the specific test(s) for more information.
     - `AWS_ACCESS_KEY_ID`
