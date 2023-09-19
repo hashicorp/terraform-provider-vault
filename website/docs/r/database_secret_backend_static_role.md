@@ -3,7 +3,7 @@ layout: "vault"
 page_title: "Vault: vault_database_secret_backend_static_role resource"
 sidebar_current: "docs-vault-resource-database-secret-backend-static-role"
 description: |-
-  Configures a database secret backend static role for Vault.
+Configures a database secret backend static role for Vault.
 ---
 
 # vault\_database\_secret\_backend\_static\_role
@@ -38,6 +38,16 @@ resource "vault_database_secret_backend_static_role" "static_role" {
   rotation_period     = "3600"
   rotation_statements = ["ALTER USER \"{{name}}\" WITH PASSWORD '{{password}}';"]
 }
+
+resource "vault_database_secret_backend_static_role" "static_role" {
+  backend             = vault_mount.db.path
+  name                = "my-static-role"
+  db_name             = vault_database_secret_backend_connection.postgres.name
+  username            = "example"
+  rotation_schedule   = "0 0 * * SAT"
+  rotation_window     = "172800"
+  rotation_statements = ["ALTER USER \"{{name}}\" WITH PASSWORD '{{password}}';"]
+}
 ```
 
 ## Argument Reference
@@ -47,7 +57,7 @@ The following arguments are supported:
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
   The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
-   *Available only for Vault Enterprise*.
+  *Available only for Vault Enterprise*.
 
 * `name` - (Required) A unique name to give the static role.
 
@@ -57,7 +67,17 @@ The following arguments are supported:
 
 * `username` - (Required) The database username that this static role corresponds to.
 
-* `rotation_period` - (Required) The amount of time Vault should wait before rotating the password, in seconds.
+* `rotation_period` - The amount of time Vault should wait before rotating the password, in seconds.
+  Mutually exclusive with `rotation_schedule`.
+
+* `rotation_schedule` - A cron-style string that will define the schedule on which rotations should occur.
+  Mutually exclusive with `rotation_period`.
+
+**Warning**: The `rotation_period` and `rotation_schedule` fields are
+mutually exclusive. One of them must be set but not both.
+
+* `rotation_window` - (Optional) The amount of time in which the rotation is allowed to occur starting
+  from a given `rotation_schedule`.
 
 * `rotation_statements` - (Optional) Database statements to execute to rotate the password for the configured database user.
 
