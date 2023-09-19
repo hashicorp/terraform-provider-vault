@@ -1997,6 +1997,26 @@ func Test_getDBEngineFromResp(t *testing.T) {
 			},
 		},
 		{
+			name: "basic-aliased",
+			engines: []*dbEngine{
+				{
+					name:              "foo",
+					defaultPluginName: "foo" + dbPluginSuffix,
+					pluginAliases:     []string{"baz-biff"},
+				},
+			},
+			r: &api.Secret{
+				Data: map[string]interface{}{
+					"plugin_name": "baz-biff",
+				},
+			},
+			want: &dbEngine{
+				name:              "foo",
+				defaultPluginName: "foo" + dbPluginSuffix,
+				pluginAliases:     []string{"baz-biff"},
+			},
+		},
+		{
 			name: "variant",
 			engines: []*dbEngine{
 				{
@@ -2020,6 +2040,36 @@ func Test_getDBEngineFromResp(t *testing.T) {
 			want: &dbEngine{
 				name:              "foo-variant",
 				defaultPluginName: "foo-variant" + dbPluginSuffix,
+			},
+		},
+		{
+			name: "variant-aliased",
+			engines: []*dbEngine{
+				{
+					name:              "foo",
+					defaultPluginName: "foo" + dbPluginSuffix,
+					pluginAliases:     []string{"baz-biff"},
+				},
+				{
+					name:              "foo-variant",
+					defaultPluginName: "foo-variant" + dbPluginSuffix,
+					pluginAliases:     []string{"baz-biff-variant"},
+				},
+				{
+					name:              "foo-variant-1",
+					defaultPluginName: "foo-variant-1" + dbPluginSuffix,
+					pluginAliases:     []string{"baz-biff-variant-1"},
+				},
+			},
+			r: &api.Secret{
+				Data: map[string]interface{}{
+					"plugin_name": "baz-biff-variant",
+				},
+			},
+			want: &dbEngine{
+				name:              "foo-variant",
+				defaultPluginName: "foo-variant" + dbPluginSuffix,
+				pluginAliases:     []string{"baz-biff-variant"},
 			},
 		},
 		{

@@ -94,6 +94,7 @@ var (
 	dbEngineOracle = &dbEngine{
 		name:              "oracle",
 		defaultPluginName: "oracle" + dbPluginSuffix,
+		pluginAliases:     []string{"vault-plugin-database-oracle"},
 	}
 	dbEngineSnowflake = &dbEngine{
 		name:              "snowflake",
@@ -137,6 +138,7 @@ var (
 type dbEngine struct {
 	name              string
 	defaultPluginName string
+	pluginAliases     []string
 }
 
 // GetPluginName from the schema.ResourceData if it is configured,
@@ -180,6 +182,17 @@ func (i *dbEngine) PluginPrefix() (string, error) {
 	}
 
 	return prefix, nil
+}
+
+// PluginPrefixes returns a slice of "plugin-name" prefixes that this engine is
+// compatible with.
+func (i *dbEngine) PluginPrefixes() ([]string, error) {
+	defaultPrefix, err := i.PluginPrefix()
+	if err != nil {
+		return nil, err
+	}
+
+	return append([]string{defaultPrefix}, i.pluginAliases...), nil
 }
 
 func getDatabaseSchema(typ schema.ValueType) schemaMap {
@@ -826,20 +839,23 @@ func getDBEngineFromResp(engines []*dbEngine, r *api.Secret) (*dbEngine, error) 
 	var last int
 	var engine *dbEngine
 	for _, e := range engines {
-		prefix, err := e.PluginPrefix()
+		prefixes, err := e.PluginPrefixes()
 		if err != nil {
 			return nil, err
 		}
-		if prefix != "" && strings.HasPrefix(pluginName.(string), prefix) {
-			l := len(prefix)
-			if last == 0 {
+
+		for _, prefix := range prefixes {
+			if prefix != "" && strings.HasPrefix(pluginName.(string), prefix) {
+				l := len(prefix)
+				if last == 0 {
+					last = l
+				}
+
+				if l >= last {
+					engine = e
+				}
 				last = l
 			}
-
-			if l >= last {
-				engine = e
-			}
-			last = l
 		}
 	}
 
@@ -1659,11 +1675,11 @@ func validateDBPluginName(s string) error {
 func getSortedPluginPrefixes() ([]string, error) {
 	var pluginPrefixes []string
 	for _, d := range dbEngines {
-		prefix, err := d.PluginPrefix()
+		prefixes, err := d.PluginPrefixes()
 		if err != nil {
 			return nil, err
 		}
-		pluginPrefixes = append(pluginPrefixes, prefix)
+		pluginPrefixes = append(pluginPrefixes, prefixes...)
 	}
 	// sorted by max length
 	sort.Slice(pluginPrefixes, func(i, j int) bool {
