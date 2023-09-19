@@ -19,15 +19,54 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
+	connURL := os.Getenv("MYSQL_URL")
+	if connURL == "" {
+		t.Skip("MYSQL_URL not set")
+	}
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	username := acctest.RandomWithPrefix("user")
+	dbName := acctest.RandomWithPrefix("db")
+	name := acctest.RandomWithPrefix("staticrole")
+	resourceName := "vault_database_secret_backend_static_role.test"
+
+	if err := createTestUser(connURL, username); err != nil {
+		t.Fatal(err)
+	}
+
+	resource.Test(t, resource.TestCase{
+		Providers:    testProviders,
+		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy: testAccDatabaseSecretBackendStaticRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendStaticRoleConfig_rotationPeriod(name, username, dbName, backend, connURL),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "username", username),
+					resource.TestCheckResourceAttr(resourceName, "db_name", dbName),
+					resource.TestCheckResourceAttr(resourceName, "rotation_period", "3600"),
+				),
+			},
+			{
+				ResourceName:      "vault_database_secret_backend_static_role.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestAccDatabaseSecretBackendStaticRole_rotationPeriod(t *testing.T) {
 	connURL := os.Getenv("MYSQL_URL")
 	if connURL == "" {
 		t.Skip("MYSQL_URL not set")
 	}
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	username := acctest.RandomWithPrefix("username")
+	username := acctest.RandomWithPrefix("user")
 	dbName := acctest.RandomWithPrefix("db")
-	name := acctest.RandomWithPrefix("static-role")
+	name := acctest.RandomWithPrefix("staticrole")
 	resourceName := "vault_database_secret_backend_static_role.test"
 
 	if err := createTestUser(connURL, username); err != nil {
@@ -70,9 +109,9 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 		t.Skip("MYSQL_URL not set")
 	}
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	username := acctest.RandomWithPrefix("username")
+	username := acctest.RandomWithPrefix("user")
 	dbName := acctest.RandomWithPrefix("db")
-	name := acctest.RandomWithPrefix("static-role")
+	name := acctest.RandomWithPrefix("staticrole")
 	resourceName := "vault_database_secret_backend_static_role.test"
 
 	if err := createTestUser(connURL, username); err != nil {
@@ -130,7 +169,7 @@ func testAccDatabaseSecretBackendStaticRoleCheckDestroy(s *terraform.State) erro
 			return err
 		}
 		if secret != nil {
-			return fmt.Errorf("sttatic role %q still exists", rs.Primary.ID)
+			return fmt.Errorf("static role %q still exists", rs.Primary.ID)
 		}
 	}
 	return nil
