@@ -3,7 +3,7 @@ layout: "vault"
 page_title: "Vault: vault_database_secret_backend_static_role resource"
 sidebar_current: "docs-vault-resource-database-secret-backend-static-role"
 description: |-
-Configures a database secret backend static role for Vault.
+ Configures a database secret backend static role for Vault.
 ---
 
 # vault\_database\_secret\_backend\_static\_role
@@ -57,7 +57,7 @@ The following arguments are supported:
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
   The `namespace` is always relative to the provider's configured [namespace](../index.html#namespace).
-  *Available only for Vault Enterprise*.
+   *Available only for Vault Enterprise*.
 
 * `name` - (Required) A unique name to give the static role.
 
