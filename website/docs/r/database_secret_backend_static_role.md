@@ -3,7 +3,7 @@ layout: "vault"
 page_title: "Vault: vault_database_secret_backend_static_role resource"
 sidebar_current: "docs-vault-resource-database-secret-backend-static-role"
 description: |-
- Configures a database secret backend static role for Vault.
+  Configures a database secret backend static role for Vault.
 ---
 
 # vault\_database\_secret\_backend\_static\_role
