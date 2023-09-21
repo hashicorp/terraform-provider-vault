@@ -7,6 +7,7 @@ FEATURES:
 IMPROVEMENTS:
 * Update dependencies ([#1958](https://github.com/hashicorp/terraform-provider-vault/pull/1958))
   * github.com/hashicorp/go-secure-stdlib/awsutil `v0.1.6` -> `v0.2.3`
+* Add `local` variable to `aws_secret_backend` resource, in order to mark the mount as non - replicated
 
 BUGS:
 * Update k8s-auth config to support unsetting the K8s CA Cert: ([#2005](https://github.com/hashicorp/terraform-provider-vault/pull/2005))

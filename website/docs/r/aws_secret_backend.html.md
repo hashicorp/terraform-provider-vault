@@ -77,6 +77,8 @@ for credentials issued by this backend.
 
 * `username_template` - (Optional)  Template describing how dynamic usernames are generated. The username template is used to generate both IAM usernames (capped at 64 characters) and STS usernames (capped at 32 characters). If no template is provided the field defaults to the template:
 
+* `local` - (Optional) Specifies whether the secrets mount will be marked as local. Local mounts are not replicated to performance replicas.
+
 ```
 {{ if (eq .Type "STS") }}
     {{ printf "vault-%s-%s" (unix_time) (random 20) | truncate 32 }}
