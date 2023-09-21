@@ -36,6 +36,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "region", "us-east-1"),
 					resource.TestCheckResourceAttr(resourceName, "iam_endpoint", ""),
 					resource.TestCheckResourceAttr(resourceName, "sts_endpoint", ""),
+					resource.TestCheckResourceAttr(resourceName, "local", "false"),
 					resource.TestCheckResourceAttrSet(resourceName, "username_template"),
 				),
 			},
@@ -52,6 +53,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "region", "us-west-1"),
 					resource.TestCheckResourceAttr(resourceName, "iam_endpoint", "https://iam.amazonaws.com"),
 					resource.TestCheckResourceAttr(resourceName, "sts_endpoint", "https://sts.us-west-1.amazonaws.com"),
+					resource.TestCheckResourceAttr(resourceName, "local", "false"),
 				),
 			},
 			{
@@ -66,6 +68,7 @@ func TestAccAWSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "region", "us-west-1"),
 					resource.TestCheckResourceAttr(resourceName, "iam_endpoint", ""),
 					resource.TestCheckResourceAttr(resourceName, "sts_endpoint", ""),
+					resource.TestCheckResourceAttr(resourceName, "local", "false"),
 				),
 			},
 		},
