@@ -20,10 +20,8 @@ import (
 )
 
 func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
-	connURL := os.Getenv("MYSQL_URL")
-	if connURL == "" {
-		t.Skip("MYSQL_URL not set")
-	}
+	connURL := testutil.SkipTestEnvUnset(t, "MYSQL_URL")[0]
+
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	username := acctest.RandomWithPrefix("user")
 	dbName := acctest.RandomWithPrefix("db")
@@ -59,10 +57,8 @@ func TestAccDatabaseSecretBackendStaticRole_import(t *testing.T) {
 }
 
 func TestAccDatabaseSecretBackendStaticRole_rotationPeriod(t *testing.T) {
-	connURL := os.Getenv("MYSQL_URL")
-	if connURL == "" {
-		t.Skip("MYSQL_URL not set")
-	}
+	connURL := testutil.SkipTestEnvUnset(t, "MYSQL_URL")[0]
+
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	username := acctest.RandomWithPrefix("user")
 	dbName := acctest.RandomWithPrefix("db")
@@ -109,9 +105,9 @@ func TestAccDatabaseSecretBackendStaticRole_rotationSchedule(t *testing.T) {
 		t.Skip("MYSQL_URL not set")
 	}
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	username := acctest.RandomWithPrefix("user")
+	username := acctest.RandomWithPrefix("username")
 	dbName := acctest.RandomWithPrefix("db")
-	name := acctest.RandomWithPrefix("staticrole")
+	name := acctest.RandomWithPrefix("static-role")
 	resourceName := "vault_database_secret_backend_static_role.test"
 
 	if err := createTestUser(connURL, username); err != nil {

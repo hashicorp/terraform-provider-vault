@@ -30,18 +30,20 @@ resource "vault_database_secret_backend_connection" "postgres" {
   }
 }
 
-resource "vault_database_secret_backend_static_role" "static_role" {
+# configure a static role with period-based rotations
+resource "vault_database_secret_backend_static_role" "period_role" {
   backend             = vault_mount.db.path
-  name                = "my-static-role"
+  name                = "my-period-role"
   db_name             = vault_database_secret_backend_connection.postgres.name
   username            = "example"
   rotation_period     = "3600"
   rotation_statements = ["ALTER USER \"{{name}}\" WITH PASSWORD '{{password}}';"]
 }
 
-resource "vault_database_secret_backend_static_role" "static_role" {
+# configure a static role with schedule-based rotations
+resource "vault_database_secret_backend_static_role" "schedule_role" {
   backend             = vault_mount.db.path
-  name                = "my-static-role"
+  name                = "my-schedule-role"
   db_name             = vault_database_secret_backend_connection.postgres.name
   username            = "example"
   rotation_schedule   = "0 0 * * SAT"
