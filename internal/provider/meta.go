@@ -237,6 +237,10 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 			return nil, err
 		}
 
+		// Don't need a token for authLogin. Avoid Vault error/crash when the token is set to a namespaced one.
+		// See issue : https://github.com/hashicorp/vault/issues/23216
+		clone.SetToken("")
+
 		if authLogin.Namespace() != "" {
 			// the namespace configured on the auth_login takes precedence over the provider's
 			// for authentication only.
