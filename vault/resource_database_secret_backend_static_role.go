@@ -181,6 +181,10 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
+	if err := d.Set(consts.FieldUsername, role.Data[consts.FieldUsername]); err != nil {
+		return diag.FromErr(err)
+	}
+
 	useAPIVer115 := provider.IsAPISupported(meta, provider.VaultVersion115)
 	if useAPIVer115 {
 		if err := d.Set(consts.FieldRotationSchedule, role.Data[consts.FieldRotationSchedule]); err != nil {
