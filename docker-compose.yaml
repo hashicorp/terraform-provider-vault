@@ -16,16 +16,15 @@ services:
       VAULT_TOKEN: "TEST"
       MYSQL_URL: "vault:vault@tcp(mysql:3306)/"
 
+  # to run this container on Mac M1 you need to
+  # export DOCKER_DEFAULT_PLATFORM=linux/amd64
   mysql:
-    image: mysql:5.7
+    image: docker.mirror.hashicorp.services/mysql:latest
     command: --default-authentication-plugin=mysql_native_password
     ports:
     - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: "root"
-      MYSQL_DATABASE: "main"
-      MYSQL_USER: "vault"
-      MYSQL_PASSWORD: "vault"
+      MYSQL_ROOT_PASSWORD: "mysql"
 
   elastic:
     image: elasticsearch:7.17.10

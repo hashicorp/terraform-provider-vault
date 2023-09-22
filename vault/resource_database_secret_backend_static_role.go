@@ -25,7 +25,6 @@ var (
 var staticRoleFields = []string{
 	consts.FieldRotationPeriod,
 	consts.FieldRotationStatements,
-	consts.FieldUsername,
 	consts.FieldDBName,
 }
 
@@ -119,6 +118,7 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 	}
 
 	data := map[string]interface{}{
+		"username":            d.Get("username"),
 		"rotation_statements": []string{},
 	}
 
