@@ -18,6 +18,10 @@ services:
 
   # to run this container on Mac M1 you need to
   # export DOCKER_DEFAULT_PLATFORM=linux/amd64
+  # to run acceptance tests locally you need to
+  # export MYSQL_URL=root:mysql@tcp(localhost:3306)/
+  # to run the docker container
+  # docker compose up -d mysql
   mysql:
     image: docker.mirror.hashicorp.services/mysql:latest
     command: --default-authentication-plugin=mysql_native_password

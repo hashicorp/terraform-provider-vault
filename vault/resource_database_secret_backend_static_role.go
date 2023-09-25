@@ -107,25 +107,28 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 
 	path := databaseSecretBackendStaticRolePath(backend, name)
 
-	useAPIVer115 := provider.IsAPISupported(meta, provider.VaultVersion115)
-	if useAPIVer115 {
-		if d.HasChange(consts.FieldRotationSchedule) {
-			staticRoleFields = append(staticRoleFields, consts.FieldRotationSchedule)
-		}
-		if d.HasChange(consts.FieldRotationWindow) {
-			staticRoleFields = append(staticRoleFields, consts.FieldRotationWindow)
-		}
-	}
-
 	data := map[string]interface{}{
-		"username":            d.Get("username"),
+		"username":            d.Get(consts.FieldUsername),
+		"db_name":             d.Get(consts.FieldDBName),
 		"rotation_statements": []string{},
 	}
 
-	for _, k := range staticRoleFields {
-		if d.HasChange(k) {
-			data[k] = d.Get(k)
+	useAPIVer115 := provider.IsAPISupported(meta, provider.VaultVersion115)
+	if useAPIVer115 {
+		if v, ok := d.GetOk(consts.FieldRotationSchedule); ok && v != "" {
+			data[consts.FieldRotationSchedule] = v
 		}
+		if v, ok := d.GetOk(consts.FieldRotationWindow); ok && v != "" {
+			data[consts.FieldRotationWindow] = v
+		}
+	}
+
+	if v, ok := d.GetOk(consts.FieldRotationStatements); ok && v != "" {
+		data[consts.FieldRotationStatements] = v
+	}
+
+	if v, ok := d.GetOk(consts.FieldRotationPeriod); ok && v != "" {
+		data[consts.FieldRotationPeriod] = v
 	}
 
 	log.Printf("[DEBUG] Creating static role %q on database backend %q", name, backend)
