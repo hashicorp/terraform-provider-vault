@@ -1370,6 +1370,7 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 
 func setCloudDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	if v, ok := d.GetOk(prefix + "auth_type"); ok {
+		fmt.Println("setting auth_type")
 		data["auth_type"] = v.(string)
 	}
 	if v, ok := d.GetOk(prefix + "service_account_json"); ok {
