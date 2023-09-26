@@ -78,7 +78,7 @@ The following arguments are supported:
 **Warning**: The `rotation_period` and `rotation_schedule` fields are
 mutually exclusive. One of them must be set but not both.
 
-* `rotation_window` - (Optional) The amount of time in which the rotation is allowed to occur starting
+* `rotation_window` - (Optional) The amount of time, in seconds, in which rotations are allowed to occur starting
   from a given `rotation_schedule`.
 
 * `rotation_statements` - (Optional) Database statements to execute to rotate the password for the configured database user.

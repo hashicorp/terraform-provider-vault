@@ -77,7 +77,7 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 			consts.FieldRotationWindow: {
 				Type:     schema.TypeInt,
 				Optional: true,
-				Description: "The amount of time in which the rotation is allowed to occur starting " +
+				Description: "The amount of time in seconds in which the rotations are allowed to occur starting " +
 					"from a given rotation_schedule.",
 			},
 			consts.FieldDBName: {
