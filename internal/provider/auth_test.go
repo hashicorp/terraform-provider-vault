@@ -35,6 +35,7 @@ type authLoginTest struct {
 	skipFunc           func(t *testing.T)
 	tls                bool
 	preLoginFunc       func(t *testing.T)
+	token              string
 }
 
 type authLoginInitTest struct {
@@ -118,6 +119,14 @@ func testAuthLogin(t *testing.T, tt authLoginTest) {
 	c, err := api.NewClient(config)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// clear the vault token to avoid issues where it is picked up from one of its
+	// default sources.
+	c.ClearToken()
+
+	if tt.token != "" {
+		c.SetToken(tt.token)
 	}
 
 	got, err := tt.authLogin.Login(c)

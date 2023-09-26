@@ -5,6 +5,7 @@ package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -241,6 +242,27 @@ func TestAuthLoginAzure_Login(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginAzure{
+				AuthLoginCommon: AuthLoginCommon{
+					authField: consts.FieldAuthLoginAzure,
+					params: map[string]interface{}{
+						consts.FieldRole:              "alice",
+						consts.FieldJWT:               "jwt1",
+						consts.FieldSubscriptionID:    "sub1",
+						consts.FieldResourceGroupName: "res1",
+						consts.FieldVMSSName:          "vmss1",
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
+		},
+		{
 			name: "error-uninitialized",
 			authLogin: &AuthLoginAzure{
 				AuthLoginCommon: AuthLoginCommon{
@@ -258,6 +280,7 @@ func TestAuthLoginAzure_Login(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}

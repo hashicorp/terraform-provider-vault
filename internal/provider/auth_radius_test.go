@@ -5,6 +5,7 @@ package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -158,6 +159,25 @@ func TestAuthLoginRadius_Login(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginRadius{
+				AuthLoginCommon: AuthLoginCommon{
+					authField: consts.FieldAuthLoginRadius,
+					params: map[string]interface{}{
+						consts.FieldUsername: "alice",
+						consts.FieldPassword: "password1",
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			token:     "foo",
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
+		},
+		{
 			name: "error-uninitialized",
 			authLogin: &AuthLoginRadius{
 				AuthLoginCommon: AuthLoginCommon{
@@ -175,6 +195,7 @@ func TestAuthLoginRadius_Login(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}

@@ -5,6 +5,7 @@ package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -188,6 +189,25 @@ func TestAuthLoginOCI_Login(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginOCI{
+				AuthLoginCommon: AuthLoginCommon{
+					authField: consts.FieldAuthLoginOCI,
+					params: map[string]interface{}{
+						consts.FieldRole:     "alice",
+						consts.FieldAuthType: ociAuthTypeAPIKeys,
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			token:     "foo",
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
+		},
+		{
 			name: "error-uninitialized",
 			authLogin: &AuthLoginOCI{
 				AuthLoginCommon: AuthLoginCommon{
@@ -205,6 +225,7 @@ func TestAuthLoginOCI_Login(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}

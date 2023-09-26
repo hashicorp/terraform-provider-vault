@@ -15,7 +15,7 @@ build: go-version-check fmtcheck
 	go install
 
 test: go-version-check fmtcheck
-	TF_ACC= go test $(TESTARGS) -timeout 10m $(TEST_PATH)
+	TF_ACC= VAULT_TOKEN= go test $(TESTARGS) -timeout 10m $(TEST_PATH)
 
 testacc: fmtcheck
 	TF_ACC=1 go test $(TESTARGS) -timeout 30m $(TEST_PATH)

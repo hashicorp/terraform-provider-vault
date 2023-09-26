@@ -5,6 +5,7 @@ package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -286,9 +287,29 @@ func TestAuthLoginAWS_Login(t *testing.T) {
 			wantErr:   true,
 			expectErr: authLoginInitCheckError,
 		},
+		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginAWS{
+				AuthLoginCommon{
+					authField: "baz",
+					mount:     "foo",
+					params: map[string]interface{}{
+						consts.FieldRole: "bob",
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			token:     "foo",
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}
