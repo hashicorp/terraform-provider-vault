@@ -237,6 +237,12 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 			return nil, err
 		}
 
+		if clone.Token() != "" {
+			log.Printf("[WARN] A vault token was set from the runtime environment, "+
+				"clearing it for auth_login method %q", authLogin.Method())
+			clone.ClearToken()
+		}
+
 		if authLogin.Namespace() != "" {
 			// the namespace configured on the auth_login takes precedence over the provider's
 			// for authentication only.

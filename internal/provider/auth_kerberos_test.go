@@ -6,6 +6,7 @@ package provider
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -221,9 +222,43 @@ func TestAuthLoginKerberos_Login(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginKerberos{
+				authHeaderFunc: getTestAuthHeaderFunc(&krbauth.LoginCfg{
+					Username:               "alice",
+					Service:                "service1",
+					Realm:                  "realm1",
+					KeytabPath:             "/etc/kerberos/keytab",
+					Krb5ConfPath:           "/etc/kerberos/krb5.conf",
+					DisableFASTNegotiation: true,
+					RemoveInstanceName:     false,
+				}),
+				AuthLoginCommon: AuthLoginCommon{
+					authField: consts.FieldAuthLoginKerberos,
+					params: map[string]interface{}{
+						consts.FieldUsername:               "alice",
+						consts.FieldService:                "service1",
+						consts.FieldRealm:                  "realm1",
+						consts.FieldKeytabPath:             "/etc/kerberos/keytab",
+						consts.FieldKRB5ConfPath:           "/etc/kerberos/krb5.conf",
+						consts.FieldDisableFastNegotiation: true,
+						consts.FieldRemoveInstanceName:     false,
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			token:     "foo",
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}

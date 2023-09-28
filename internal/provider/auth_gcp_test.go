@@ -5,6 +5,7 @@ package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -169,6 +170,42 @@ func TestAuthLoginGCP_Login(t *testing.T) {
 			},
 		},
 		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginGCP{
+				AuthLoginCommon{
+					authField: "baz",
+					mount:     "qux",
+					params: map[string]interface{}{
+						consts.FieldRole:           "bob",
+						consts.FieldCredentials:    os.Getenv(consts.EnvVarGoogleApplicationCreds),
+						consts.FieldServiceAccount: os.Getenv(envVarGCPServiceAccount),
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				excludeParams: []string{consts.FieldJWT},
+				handlerFunc:   handlerFunc,
+			},
+			expectReqCount: 1,
+			expectReqPaths: []string{
+				"/v1/auth/qux/login",
+			},
+			expectReqParams: []map[string]interface{}{{
+				consts.FieldRole: "bob",
+			}},
+			want: &api.Secret{
+				Auth: &api.SecretAuth{
+					Metadata: map[string]string{
+						consts.FieldRole: "bob",
+					},
+				},
+			},
+			token:     "foo",
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
+		},
+		{
 			name: "no-jwt",
 			authLogin: &AuthLoginGCP{
 				AuthLoginCommon{
@@ -201,6 +238,7 @@ func TestAuthLoginGCP_Login(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}

@@ -211,6 +211,10 @@ func (l *AuthLoginCommon) copyParamsExcluding(excludes ...string) (map[string]in
 }
 
 func (l *AuthLoginCommon) login(client *api.Client, path string, params map[string]interface{}) (*api.Secret, error) {
+	if client.Token() != "" {
+		return nil, fmt.Errorf("vault login client has a token set")
+	}
+
 	return client.Logical().Write(path, params)
 }
 

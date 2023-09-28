@@ -5,6 +5,7 @@ package provider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -295,6 +296,28 @@ func TestAuthLoginCert_Login(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "error-vault-token-set",
+			authLogin: &AuthLoginCert{
+				AuthLoginCommon{
+					authField: "baz",
+					mount:     "qux",
+					params: map[string]interface{}{
+						consts.FieldName:          "bob",
+						consts.FieldCertFile:      certFile,
+						consts.FieldKeyFile:       keyFile,
+						consts.FieldSkipTLSVerify: true,
+					},
+					initialized: true,
+				},
+			},
+			handler: &testLoginHandler{
+				handlerFunc: handlerFunc,
+			},
+			token:     "foo",
+			wantErr:   true,
+			expectErr: errors.New("vault login client has a token set"),
+		},
+		{
 			name: "error-uninitialized",
 			authLogin: &AuthLoginCert{
 				AuthLoginCommon{
@@ -312,6 +335,7 @@ func TestAuthLoginCert_Login(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testAuthLogin(t, tt)
 		})
 	}
