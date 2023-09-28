@@ -5,6 +5,7 @@ FEATURES:
 
 BUGS:
 * Fix duplicate timestamp and incorrect level messages: ([#2031](https://github.com/hashicorp/terraform-provider-vault/pull/2031))
+* Fix inconsistent final plan for identity groups in certain upgrade scenarios: ([#2032](https://github.com/hashicorp/terraform-provider-vault/pull/2032))
 
 ## 3.20.1 (Sep 13, 2023)
 IMPROVEMENTS:
