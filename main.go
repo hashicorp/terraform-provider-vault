@@ -5,6 +5,7 @@ package main
 
 import (
 	"flag"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
 
@@ -34,6 +35,10 @@ func main() {
 		serveOpts.Debug = debug
 		serveOpts.ProviderAddr = "hashicorp/vault"
 	}
+
+	// fix duplicate timestamp and incorrect level messages
+	// https://developer.hashicorp.com/terraform/plugin/log/writing#legacy-log-troubleshooting
+	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
 
 	plugin.Serve(serveOpts)
 }
