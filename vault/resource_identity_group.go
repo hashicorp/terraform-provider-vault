@@ -111,6 +111,14 @@ func identityGroupResource() *schema.Resource {
 				Optional:    true,
 				Default:     false,
 				Description: "Manage member groups externally through `vault_identity_group_member_group_ids`",
+				// Suppress the diff if we are upgrading from a provider
+				// version that did not support external_member_group_ids
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					if old == "" && new != "" {
+						return true
+					}
+					return false
+				},
 			},
 		},
 	}
@@ -128,11 +136,13 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 
 		// Member groups and entities can't be set for external groups
 		if d.Get("type").(string) == "internal" {
-			if externalMemberEntityIds, ok := d.GetOk("external_member_entity_ids"); !(ok && externalMemberEntityIds.(bool)) {
+			externalMemberEntityIds := d.Get("external_member_entity_ids")
+			if !externalMemberEntityIds.(bool) {
 				data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
 			}
 
-			if externalMemberGroupIds, ok := d.GetOk("external_member_group_ids"); !(ok && externalMemberGroupIds.(bool)) {
+			externalMemberGroupIds := d.Get("external_member_group_ids")
+			if !externalMemberGroupIds.(bool) {
 				data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
 			}
 		}
