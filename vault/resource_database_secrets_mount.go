@@ -296,7 +296,7 @@ func databaseSecretsMountRead(d *schema.ResourceData, meta interface{}) error {
 	store := &dbConfigStore{}
 	if v, ok := resp.Data["keys"]; ok {
 		for _, v := range v.([]interface{}) {
-			if err := readDBEngineConfig(d, client, store, v.(string)); err != nil {
+			if err := readDBEngineConfig(d, client, store, v.(string), meta); err != nil {
 				return err
 			}
 		}
@@ -315,7 +315,7 @@ func databaseSecretsMountDelete(d *schema.ResourceData, meta interface{}) error 
 	return mountDelete(d, meta)
 }
 
-func readDBEngineConfig(d *schema.ResourceData, client *api.Client, store *dbConfigStore, name string) error {
+func readDBEngineConfig(d *schema.ResourceData, client *api.Client, store *dbConfigStore, name string, meta interface{}) error {
 	root := d.Id()
 
 	path := databaseSecretBackendConnectionPath(root, name)
@@ -336,7 +336,7 @@ func readDBEngineConfig(d *schema.ResourceData, client *api.Client, store *dbCon
 	}
 
 	idx := len(store.Get(engine))
-	result, err := getDBConnectionConfig(d, engine, idx, resp)
+	result, err := getDBConnectionConfig(d, engine, idx, resp, meta)
 	if err != nil {
 		return err
 	}

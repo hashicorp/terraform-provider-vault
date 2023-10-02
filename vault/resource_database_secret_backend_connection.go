@@ -1051,7 +1051,7 @@ func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 	return result, nil
 }
 
-func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret, meta interface{}) map[string]interface{} {
 	result := getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
@@ -1060,14 +1060,16 @@ func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 	}
 
 	// cloud specific
-	if v, ok := data["auth_type"]; ok {
-		result["auth_type"] = v.(string)
-	}
-	if v, ok := d.GetOk(prefix + "service_account_json"); ok {
-		result["service_account_json"] = v.(string)
-	} else {
-		if v, ok := data["service_account_json"]; ok {
+	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		if v, ok := data["auth_type"]; ok {
+			result["auth_type"] = v.(string)
+		}
+		if v, ok := d.GetOk(prefix + "service_account_json"); ok {
 			result["service_account_json"] = v.(string)
+		} else {
+			if v, ok := data["service_account_json"]; ok {
+				result["service_account_json"] = v.(string)
+			}
 		}
 	}
 
@@ -1088,7 +1090,7 @@ func getConnectionDetailsFromResponseWithDisableEscaping(d *schema.ResourceData,
 	return result
 }
 
-func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret, meta interface{}) map[string]interface{} {
 	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
@@ -1110,15 +1112,17 @@ func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 		}
 	}
 
-	// cloud specific
-	if v, ok := data["auth_type"]; ok {
-		result["auth_type"] = v.(string)
-	}
-	if v, ok := d.GetOk(prefix + "service_account_json"); ok {
-		result["service_account_json"] = v.(string)
-	} else {
-		if v, ok := data["service_account_json"]; ok {
+	if provider.IsAPISupported(meta, provider.VaultVersion115) {
+		// cloud specific
+		if v, ok := data["auth_type"]; ok {
+			result["auth_type"] = v.(string)
+		}
+		if v, ok := d.GetOk(prefix + "service_account_json"); ok {
 			result["service_account_json"] = v.(string)
+		} else {
+			if v, ok := data["service_account_json"]; ok {
+				result["service_account_json"] = v.(string)
+			}
 		}
 	}
 
@@ -1786,7 +1790,7 @@ func databaseSecretBackendConnectionRead(d *schema.ResourceData, meta interface{
 		return err
 	}
 
-	result, err := getDBConnectionConfig(d, engine, 0, resp)
+	result, err := getDBConnectionConfig(d, engine, 0, resp, meta)
 	if err != nil {
 		return err
 	}
@@ -1842,7 +1846,7 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret,
 }
 
 func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
-	resp *api.Secret,
+	resp *api.Secret, meta interface{},
 ) (map[string]interface{}, error) {
 	var result map[string]interface{}
 
@@ -1871,7 +1875,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 		}
 		result = values
 	case dbEngineMySQL:
-		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp)
+		result = getMySQLConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineMySQLRDS:
 		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	case dbEngineMySQLAurora:
@@ -1881,7 +1885,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineOracle:
 		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	case dbEnginePostgres:
-		result = getPostgresConnectionDetailsFromResponse(d, prefix, resp)
+		result = getPostgresConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEngineElasticSearch:
 		result = getElasticsearchConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineSnowflake:
