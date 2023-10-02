@@ -5,6 +5,7 @@ FEATURES:
 
 BUGS:
 * Fix duplicate timestamp and incorrect level messages: ([#2031](https://github.com/hashicorp/terraform-provider-vault/pull/2031))
+* Fix panic when setting `key_usage` to an array of empty string and enable it to unset the key usage constraints: ([#2036](https://github.com/hashicorp/terraform-provider-vault/pull/2036))
 
 ## 3.20.1 (Sep 13, 2023)
 IMPROVEMENTS:
