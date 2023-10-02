@@ -246,7 +246,7 @@ func databaseSecretsMountCreateOrUpdate(d *schema.ResourceData, meta interface{}
 					return fmt.Errorf("duplicate name %q for engine %#v", name, engine)
 				}
 				seen[name] = true
-				if err := writeDatabaseSecretConfig(d, client, engine, i, true, path); err != nil {
+				if err := writeDatabaseSecretConfig(d, client, engine, i, true, path, meta); err != nil {
 					return err
 				}
 				count++

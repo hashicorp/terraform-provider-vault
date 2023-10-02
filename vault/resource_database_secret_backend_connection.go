@@ -867,7 +867,7 @@ func getDBEngineFromResp(engines []*dbEngine, r *api.Secret) (*dbEngine, error) 
 	return nil, fmt.Errorf("no supported database engines found for plugin %q", pluginName)
 }
 
-func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceData) (map[string]interface{}, error) {
+func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceData, meta interface{}) (map[string]interface{}, error) {
 	prefix := engine.ResourcePrefix(idx)
 	data := map[string]interface{}{}
 
@@ -894,7 +894,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineMSSQL:
 		setMSSQLDatabaseConnectionData(d, prefix, data)
 	case dbEngineMySQL:
-		setMySQLDatabaseConnectionData(d, prefix, data)
+		setMySQLDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineMySQLRDS:
 		setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	case dbEngineMySQLAurora:
@@ -904,7 +904,7 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineOracle:
 		setDatabaseConnectionDataWithUserPass(d, prefix, data)
 	case dbEnginePostgres:
-		setPostgresDatabaseConnectionData(d, prefix, data)
+		setPostgresDatabaseConnectionData(d, prefix, data, meta)
 	case dbEngineElasticSearch:
 		setElasticsearchDatabaseConnectionData(d, prefix, data)
 	case dbEngineRedis:
@@ -1379,7 +1379,10 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 	}
 }
 
-func setCloudDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+func setCloudDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
+	if !provider.IsAPISupported(meta, provider.VaultVersion115) {
+		return
+	}
 	if v, ok := d.GetOk(prefix + "auth_type"); ok {
 		data["auth_type"] = v.(string)
 	}
@@ -1399,9 +1402,9 @@ func setMSSQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 	}
 }
 
-func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
 	setDatabaseConnectionDataWithUserPass(d, prefix, data)
-	setCloudDatabaseConnectionData(d, prefix, data)
+	setCloudDatabaseConnectionData(d, prefix, data, meta)
 	if v, ok := d.GetOk(prefix + "tls_certificate_key"); ok {
 		data["tls_certificate_key"] = v.(string)
 	}
@@ -1410,9 +1413,10 @@ func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 	}
 }
 
-func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
+func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
 	setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
-	setCloudDatabaseConnectionData(d, prefix, data)
+	setCloudDatabaseConnectionData(d, prefix, data, meta)
+
 }
 
 func setRedisDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
@@ -1620,7 +1624,7 @@ func databaseSecretBackendConnectionCreateOrUpdate(
 	path := databaseSecretBackendConnectionPath(
 		d.Get("backend").(string), d.Get("name").(string))
 	if err := writeDatabaseSecretConfig(
-		d, client, engine, 0, false, path); err != nil {
+		d, client, engine, 0, false, path, meta); err != nil {
 		return err
 	}
 
@@ -1631,9 +1635,9 @@ func databaseSecretBackendConnectionCreateOrUpdate(
 }
 
 func writeDatabaseSecretConfig(d *schema.ResourceData, client *api.Client,
-	engine *dbEngine, idx int, unifiedSchema bool, path string,
+	engine *dbEngine, idx int, unifiedSchema bool, path string, meta interface{},
 ) error {
-	data, err := getDatabaseAPIDataForEngine(engine, idx, d)
+	data, err := getDatabaseAPIDataForEngine(engine, idx, d, meta)
 	if err != nil {
 		return err
 	}
