@@ -473,6 +473,12 @@ func TestAccDatabaseSecretBackendConnection_mysql_cloud(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "mysql.0.max_connection_lifetime", "0"),
 				),
 			},
+			{
+				ResourceName:            testDefaultDatabaseSecretBackendResource,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"verify_connection", "mysql.0.service_account_json"},
+			},
 		},
 	})
 }
@@ -839,6 +845,12 @@ func TestAccDatabaseSecretBackendConnection_postgresql_cloud(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.disable_escaping", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "postgresql.0.auth_type", "gcp_iam"),
 				),
+			},
+			{
+				ResourceName:            testDefaultDatabaseSecretBackendResource,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"verify_connection", "postgres.0.service_account_json"},
 			},
 		},
 	})
