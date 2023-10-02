@@ -451,7 +451,14 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 			ifcList := v.([]interface{})
 			list := make([]string, 0, len(ifcList))
 			for _, ifc := range ifcList {
-				list = append(list, ifc.(string))
+				if ifc != nil {
+					list = append(list, ifc.(string))
+				} else if ifc == nil && k == consts.FieldKeyUsage {
+					// special handling for key_usage because an array with an
+					// empty string means we do not want to specify key usage
+					// constraints
+					list = append(list, "")
+				}
 			}
 
 			if len(list) > 0 {
