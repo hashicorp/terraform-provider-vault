@@ -1670,10 +1670,9 @@ resource "vault_database_secret_backend_connection" "test" {
   root_rotation_statements = ["FOOBAR"]
 
   postgresql {
-      connection_url          = "%s"
-		auth_type = "%s"
+      connection_url       = "%s"
+		auth_type            = "%s"
 		service_account_json = "%s"
-      disable_escaping        = true
   }
 }
 `, path, name, connURL, authType, serviceAccountJSON)

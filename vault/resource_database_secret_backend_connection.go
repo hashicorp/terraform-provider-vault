@@ -1029,16 +1029,6 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 			result["username_template"] = v.(string)
 		}
 	}
-	if v, ok := data["auth_type"]; ok {
-		result["auth_type"] = v.(string)
-	}
-	if v, ok := d.GetOk(prefix + "service_account_json"); ok {
-		result["service_account_json"] = v.(string)
-	} else {
-		if v, ok := data["service_account_json"]; ok {
-			result["service_account_json"] = v.(string)
-		}
-	}
 
 	return result
 }
@@ -1059,6 +1049,29 @@ func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 	}
 
 	return result, nil
+}
+
+func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+	result := getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
+	details := resp.Data["connection_details"]
+	data, ok := details.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	// cloud specific
+	if v, ok := data["auth_type"]; ok {
+		result["auth_type"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "service_account_json"); ok {
+		result["service_account_json"] = v.(string)
+	} else {
+		if v, ok := data["service_account_json"]; ok {
+			result["service_account_json"] = v.(string)
+		}
+	}
+
+	return result
 }
 
 func getConnectionDetailsFromResponseWithDisableEscaping(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
@@ -1096,6 +1109,19 @@ func getMySQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 			result["tls_ca"] = v.(string)
 		}
 	}
+
+	// cloud specific
+	if v, ok := data["auth_type"]; ok {
+		result["auth_type"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "service_account_json"); ok {
+		result["service_account_json"] = v.(string)
+	} else {
+		if v, ok := data["service_account_json"]; ok {
+			result["service_account_json"] = v.(string)
+		}
+	}
+
 	return result
 }
 
@@ -1855,7 +1881,7 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineOracle:
 		result = getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	case dbEnginePostgres:
-		result = getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
+		result = getPostgresConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineElasticSearch:
 		result = getElasticsearchConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineSnowflake:
