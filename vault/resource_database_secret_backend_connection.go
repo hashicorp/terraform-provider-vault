@@ -1029,6 +1029,17 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 			result["username_template"] = v.(string)
 		}
 	}
+	if v, ok := data["auth_type"]; ok {
+		result["auth_type"] = v.(string)
+	}
+	if v, ok := d.GetOk(prefix + "service_account_json"); ok {
+		result["service_account_json"] = v.(string)
+	} else {
+		if v, ok := data["service_account_json"]; ok {
+			result["service_account_json"] = v.(string)
+		}
+	}
+
 	return result
 }
 
@@ -1370,7 +1381,6 @@ func setDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[s
 
 func setCloudDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
 	if v, ok := d.GetOk(prefix + "auth_type"); ok {
-		fmt.Println("setting auth_type")
 		data["auth_type"] = v.(string)
 	}
 	if v, ok := d.GetOk(prefix + "service_account_json"); ok {
