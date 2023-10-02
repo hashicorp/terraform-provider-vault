@@ -113,16 +113,8 @@ func transitSecretBackendKeyResource() *schema.Resource {
 			"key_size": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Description: "The key size in bytes for algorithms that allow variable key sizes. Currently only applicable to HMAC, where it must be between 32 and 512 bytes.",
+				Description: "The key size in bytes for algorithms that allow variable key sizes. Currently only applicable to HMAC; this value must be between 32 and 512.",
 				Default:     0,
-				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
-					v := val.(int)
-					// Default for non-hmac is 0.
-					if v == 0 || v < 32 || v > 512 {
-						errs = append(errs, fmt.Errorf("%q must be greater than 32, and less than 512. Got: %d", key, v))
-					}
-					return
-				},
 			},
 			"latest_version": {
 				Type:        schema.TypeInt,
@@ -235,7 +227,10 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 		"derived":               d.Get("derived").(bool),
 		"type":                  d.Get("type").(string),
 		"auto_rotate_period":    autoRotatePeriod,
-		"key_size":              d.Get("key_size").(int),
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		data["key_size"] = d.Get("key_size").(int)
 	}
 
 	log.Printf("[DEBUG] Creating encryption key %s on transit secret backend %q", name, backend)
@@ -354,20 +349,17 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	// On read, key_size will be nil if the encryption key type is not HMAC. Choosing not to set it in those cases.
-	key_size := secret.Data["key_size"]
-	if key_size != nil || secret.Data["type"] == "hmac" {
-		key_size, err := secret.Data["key_size"].(json.Number).Int64()
-		if err != nil {
-			return fmt.Errorf("expected key_size %q to be a number, and it isn't", secret.Data["key_size"])
-		}
-
-		if key_size > 0 { // Just to make sure we are not creating an HMAC type key with a key_size of 0.
-			if err := d.Set("key_size", key_size); err != nil {
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		// On read, key_size will be nil if the encryption key type is not HMAC. Choosing not to set it in those cases.
+		keySize := secret.Data["key_size"]
+		if keySize != nil || secret.Data["type"] == "hmac" {
+			keySize, err := secret.Data["key_size"].(json.Number).Int64()
+			if err != nil {
+				return fmt.Errorf("expected key_size %q to be a number, and it isn't", secret.Data["key_size"])
+			}
+			if err := d.Set("key_size", keySize); err != nil {
 				return err
 			}
-		} else {
-			return fmt.Errorf("expected key_size %q to be greater than zero, and it isn't", secret.Data["key_size"])
 		}
 	}
 

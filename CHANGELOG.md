@@ -2,6 +2,7 @@
 
 FEATURES:
 * Add support for setting `not_before_duration` argument on `vault_ssh_secret_backend_role`: ([#2019](https://github.com/hashicorp/terraform-provider-vault/pull/2019))
+* Add support for `hmac` key type and key_size to `vault_transit_secret_backend_key`: ([#2034](https://github.com/hashicorp/terraform-provider-vault/pull/2034/))
 
 BUGS:
 * Fix duplicate timestamp and incorrect level messages: ([#2031](https://github.com/hashicorp/terraform-provider-vault/pull/2031))

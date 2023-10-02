@@ -164,6 +164,10 @@ func TestTransitSecretBackendKey_hmac(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testTransitSecretBackendKeyConfig_hmac(name, backend),
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion112), nil
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
@@ -183,6 +187,10 @@ func TestTransitSecretBackendKey_hmac(t *testing.T) {
 			},
 			{
 				Config: testTransitSecretBackendKeyConfig_hmacupdated(name, backend),
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion112), nil
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
