@@ -96,7 +96,7 @@ The following arguments are supported:
 * `key_bits` - (Optional) The number of bits of generated keys
 
 * `key_usage` - (Optional) Specify the allowed key usage constraint on issued
-  certificates. Deafults to `["DigitalSignature", "KeyAgreement", "KeyEncipherment"])`.
+  certificates. Defaults to `["DigitalSignature", "KeyAgreement", "KeyEncipherment"])`.
   Set to an array of empty string `[""]` to unset the default key usage
   constraints.
 
