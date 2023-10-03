@@ -5,6 +5,7 @@ FEATURES:
 
 BUGS:
 * Fix duplicate timestamp and incorrect level messages: ([#2031](https://github.com/hashicorp/terraform-provider-vault/pull/2031))
+* Add state upgrader in secrets/auth backends for `disable_remount` parameter ([#2037](https://github.com/hashicorp/terraform-provider-vault/pull/2037))
 
 IMPROVEMENTS:
 * Ensure sensitive values are masked in `vault_approle_auth_backend_login` plan output ([#2008](https://github.com/hashicorp/terraform-provider-vault/pull/2008))
