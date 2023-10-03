@@ -557,7 +557,6 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 
 	listFields := append(pkiSecretListFields, consts.FieldKeyUsage)
 	// handle TypeList
-	// for _, k := range pkiSecretListFields {
 	for _, k := range listFields {
 		list := expandStringSlice(secret.Data[k].([]interface{}))
 
@@ -565,11 +564,6 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 			d.Set(k, list)
 		}
 	}
-	// special handling for key_usage because an empty array or array with
-	// empty string means we do not want to specify key usage constraints
-	// if keyUsage, ok := secret.Data[consts.FieldKeyUsage]; ok {
-	// 	d.Set(consts.FieldKeyUsage, keyUsage)
-	// }
 
 	// handle TypeBool
 	for _, k := range pkiSecretBooleanFields {
