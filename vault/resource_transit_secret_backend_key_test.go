@@ -73,7 +73,7 @@ func TestTransitSecretBackendKey_basic(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"auto_rotate_interval"},
+				ImportStateVerifyIgnore: []string{"auto_rotate_interval", "key_size"},
 			},
 			{
 				Config:      testTransitSecretBackendKeyConfig_invalidUpdates(name, backend),
@@ -136,6 +136,70 @@ func TestTransitSecretBackendKey_rsa4096(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "supports_encryption", "true"),
 					resource.TestCheckResourceAttr(resourceName, "supports_signing", "true"),
 					resource.TestCheckResourceAttr(resourceName, "min_decryption_version", "1"),
+					resource.TestCheckResourceAttr(resourceName, "min_encryption_version", "0"),
+					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
+					resource.TestCheckResourceAttr(resourceName, "exportable", "false"),
+					resource.TestCheckResourceAttr(resourceName, "allow_plaintext_backup", "false"),
+					resource.TestCheckResourceAttr(resourceName, "auto_rotate_period", "0"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"key_size"},
+			},
+		},
+	})
+}
+
+func TestTransitSecretBackendKey_hmac(t *testing.T) {
+	backend := acctest.RandomWithPrefix("transit")
+	name := acctest.RandomWithPrefix("key")
+	resourceName := "vault_transit_secret_backend_key.test"
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+		},
+		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testTransitSecretBackendKeyConfig_hmac(name, backend),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
+					resource.TestCheckResourceAttr(resourceName, "convergent_encryption", "false"),
+					resource.TestCheckResourceAttr(resourceName, "derived", "false"),
+					resource.TestCheckResourceAttr(resourceName, "exportable", "false"),
+					resource.TestCheckResourceAttr(resourceName, "key_size", "32"),
+					resource.TestCheckResourceAttr(resourceName, "latest_version", "1"),
+					resource.TestCheckResourceAttr(resourceName, "type", "hmac"),
+					resource.TestCheckResourceAttr(resourceName, "supports_decryption", "false"),
+					resource.TestCheckResourceAttr(resourceName, "supports_derivation", "false"),
+					resource.TestCheckResourceAttr(resourceName, "supports_encryption", "false"),
+					resource.TestCheckResourceAttr(resourceName, "supports_signing", "false"),
+					resource.TestCheckResourceAttr(resourceName, "auto_rotate_period", "0"),
+				),
+			},
+			{
+				Config: testTransitSecretBackendKeyConfig_hmacupdated(name, backend),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
+					resource.TestCheckResourceAttr(resourceName, "convergent_encryption", "false"),
+					resource.TestCheckResourceAttr(resourceName, "derived", "false"),
+					resource.TestCheckResourceAttr(resourceName, "key_size", "32"),
+					resource.TestCheckResourceAttr(resourceName, "latest_version", "1"),
+					resource.TestCheckResourceAttr(resourceName, "type", "hmac"),
+					resource.TestCheckResourceAttr(resourceName, "supports_decryption", "false"),
+					resource.TestCheckResourceAttr(resourceName, "supports_derivation", "false"),
+					resource.TestCheckResourceAttr(resourceName, "supports_encryption", "false"),
+					resource.TestCheckResourceAttr(resourceName, "supports_signing", "false"),
+					resource.TestCheckResourceAttr(resourceName, "min_decryption_version", "1"),
 					resource.TestCheckResourceAttr(resourceName, "min_encryption_version", "1"),
 					resource.TestCheckResourceAttr(resourceName, "deletion_allowed", "true"),
 					resource.TestCheckResourceAttr(resourceName, "exportable", "true"),
@@ -184,6 +248,23 @@ resource "vault_transit_secret_backend_key" "test" {
 `, path, name)
 }
 
+func testTransitSecretBackendKeyConfig_hmac(name, path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "transit" {
+  path = "%s"
+  type = "transit"
+}
+
+resource "vault_transit_secret_backend_key" "test" {
+  backend = vault_mount.transit.path
+  name = "%s"
+  deletion_allowed = true
+  type = "hmac"
+  key_size = 32
+}
+`, path, name)
+}
+
 func testTransitSecretBackendKeyConfig_rsa4096updated(name, path string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "transit" {
@@ -196,6 +277,23 @@ resource "vault_transit_secret_backend_key" "test" {
   name = "%s"
   deletion_allowed = true
   type = "rsa-4096"
+}
+`, path, name)
+}
+
+func testTransitSecretBackendKeyConfig_hmacupdated(name, path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "transit" {
+  path = "%s"
+  type = "transit"
+}
+
+resource "vault_transit_secret_backend_key" "test" {
+  backend = vault_mount.transit.path
+  name = "%s"
+  deletion_allowed = true
+  type = "hmac"
+  key_size = 32
   min_decryption_version = 1
   min_encryption_version = 1
   exportable             = true
