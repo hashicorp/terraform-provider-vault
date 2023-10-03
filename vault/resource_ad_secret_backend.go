@@ -223,7 +223,7 @@ func adSecretBackendResource() *schema.Resource {
 		},
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldBackend),
 		Schema:        fields,
-	})
+	}, false)
 }
 
 func createConfigResource(d *schema.ResourceData, meta interface{}) error {

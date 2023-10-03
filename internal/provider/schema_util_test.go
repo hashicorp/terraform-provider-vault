@@ -29,7 +29,7 @@ func TestSecretsAuthDisableRemountUpgradeV0(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := secretsAuthMountDisableRemountUpgradeV0(nil, tt.rawState, nil)
+			got, err := SecretsAuthMountDisableRemountUpgradeV0(nil, tt.rawState, nil)
 
 			if tt.wantErr {
 				if err == nil {

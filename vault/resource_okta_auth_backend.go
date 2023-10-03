@@ -215,7 +215,7 @@ func oktaAuthBackendResource() *schema.Resource {
 				Description: "The mount accessor related to the auth mount.",
 			},
 		},
-	})
+	}, false)
 }
 
 func normalizeOktaTTL(i interface{}) string {

@@ -130,7 +130,7 @@ func ldapSecretBackendResource() *schema.Resource {
 		},
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema:        fields,
-	})
+	}, false)
 
 	// Add common mount schema to the resource
 	provider.MustAddSchema(resource, getMountSchema("path", "type"))

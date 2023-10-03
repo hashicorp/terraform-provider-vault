@@ -70,7 +70,7 @@ func githubAuthBackendResource() *schema.Resource {
 		},
 		Schema:        fields,
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
-	})
+	}, false)
 }
 
 func githubAuthBackendCreate(d *schema.ResourceData, meta interface{}) error {

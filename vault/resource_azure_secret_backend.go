@@ -87,7 +87,7 @@ func azureSecretBackendResource() *schema.Resource {
 				Description: "The Azure cloud environment. Valid values: AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud, AzureGermanCloud.",
 			},
 		},
-	})
+	}, false)
 }
 
 func azureSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {

@@ -174,8 +174,15 @@ func ldapAuthBackendResource() *schema.Resource {
 	addTokenFields(fields, &addTokenFieldsConfig{})
 
 	return provider.MustAddMountMigrationSchema(&schema.Resource{
-		SchemaVersion: 1,
-
+		SchemaVersion: 2,
+		// Handle custom state upgrade case since schema version was already 1
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 1,
+				Type:    provider.SecretsAuthMountDisableRemountResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: provider.SecretsAuthMountDisableRemountUpgradeV0,
+			},
+		},
 		CreateContext: ldapAuthBackendWrite,
 		UpdateContext: ldapAuthBackendUpdate,
 		ReadContext:   provider.ReadContextWrapper(ldapAuthBackendRead),
@@ -185,7 +192,7 @@ func ldapAuthBackendResource() *schema.Resource {
 		},
 		CustomizeDiff: getMountCustomizeDiffFunc(consts.FieldPath),
 		Schema:        fields,
-	})
+	}, true)
 }
 
 func ldapAuthBackendConfigPath(path string) string {

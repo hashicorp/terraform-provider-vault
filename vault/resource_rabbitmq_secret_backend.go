@@ -91,7 +91,7 @@ func rabbitMQSecretBackendResource() *schema.Resource {
 				Description: "Template describing how dynamic usernames are generated.",
 			},
 		},
-	})
+	}, false)
 }
 
 func rabbitMQSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {
