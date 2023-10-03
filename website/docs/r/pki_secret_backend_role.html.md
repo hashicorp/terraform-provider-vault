@@ -97,8 +97,7 @@ The following arguments are supported:
 
 * `key_usage` - (Optional) Specify the allowed key usage constraint on issued
   certificates. Defaults to `["DigitalSignature", "KeyAgreement", "KeyEncipherment"])`.
-  Set to an array of empty string `[""]` to unset the default key usage
-  constraints.
+  To specify no default key usage constraints, set this to an empty list `[]`.
 
 * `ext_key_usage` - (Optional) Specify the allowed extended key usage constraint on issued certificates
 
