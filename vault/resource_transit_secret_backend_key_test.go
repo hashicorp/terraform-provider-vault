@@ -158,16 +158,15 @@ func TestTransitSecretBackendKey_hmac(t *testing.T) {
 	name := acctest.RandomWithPrefix("key")
 	resourceName := "vault_transit_secret_backend_key.test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		Providers: testProviders,
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+		},
 		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testTransitSecretBackendKeyConfig_hmac(name, backend),
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !meta.IsAPISupported(provider.VaultVersion112), nil
-				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
@@ -187,10 +186,6 @@ func TestTransitSecretBackendKey_hmac(t *testing.T) {
 			},
 			{
 				Config: testTransitSecretBackendKeyConfig_hmacupdated(name, backend),
-				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !meta.IsAPISupported(provider.VaultVersion112), nil
-				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", backend),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
