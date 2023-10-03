@@ -328,6 +328,12 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "key_usage.0", ""),
 				),
 			},
+			{
+				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, `key_usage = []`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "key_usage.#", "0"),
+				),
+			},
 		},
 	})
 }
