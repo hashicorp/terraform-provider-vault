@@ -58,10 +58,11 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.11.11-ent"
-        - "vault-enterprise:1.12.7-ent"
-        - "vault-enterprise:1.13.3-ent"
-        - "vault-enterprise:1.14.0-ent"
+        - "vault-enterprise:1.11.12-ent"
+        - "vault-enterprise:1.12.11-ent"
+        - "vault-enterprise:1.13.8-ent"
+        - "vault-enterprise:1.14.4-ent"
+        - "vault-enterprise:1.15.0-ent"
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
