@@ -199,6 +199,11 @@ func namespaceRead(ctx context.Context, d *schema.ResourceData, meta interface{}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		toSet[consts.FieldCustomMetadata] = resp.Data[consts.FieldCustomMetadata]
+	} else {
+		// set computed parameter to nil for vault versions <= 1.11
+		// prevents 'known after apply' drift in TF state since field
+		// would never be set otherwise
+		toSet[consts.FieldCustomMetadata] = nil
 	}
 
 	pathFQ := path
