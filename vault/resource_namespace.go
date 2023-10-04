@@ -71,7 +71,7 @@ func namespaceCreate(ctx context.Context, d *schema.ResourceData, meta interface
 
 	var data map[string]interface{}
 
-	// data in non-nil only if Vault version >= 1.12
+	// data is non-nil only if Vault version >= 1.12
 	// and custom_metadata is provided
 	if provider.IsAPISupported(meta, provider.VaultVersion112) {
 		if v, ok := d.GetOk(consts.FieldCustomMetadata); ok {
