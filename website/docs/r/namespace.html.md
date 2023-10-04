@@ -79,6 +79,9 @@ The following arguments are supported:
 
 * `path` - (Required) The path of the namespace. Must not have a trailing `/`.
 
+* `custom_metadata` - (Optional) A map of arbitrary string to string valued user-provided metadata meant 
+  to describe the namespace. Requires Vault version 1.12+.
+
 ## Attributes Reference
 
 In addition to the above arguments, the following attributes are exported:
