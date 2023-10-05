@@ -49,7 +49,6 @@ var pkiSecretListFields = []string{
 	consts.FieldAllowedDomains,
 	consts.FieldAllowedSerialNumbers,
 	consts.FieldExtKeyUsage,
-	consts.FieldKeyUsage,
 }
 
 var pkiSecretBooleanFields = []string{
@@ -448,15 +447,23 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 	// handle TypeList
 	for _, k := range pkiSecretListFields {
 		if v, ok := d.GetOk(k); ok {
-			ifcList := v.([]interface{})
-			list := make([]string, 0, len(ifcList))
-			for _, ifc := range ifcList {
-				list = append(list, ifc.(string))
-			}
+			list := expandStringSlice(v.([]interface{}))
 
 			if len(list) > 0 {
 				data[k] = list
 			}
+		}
+	}
+	// special handling for key_usage because an empty array or array with
+	// empty string means we do not want to specify key usage constraints
+	if v, ok := d.GetOk(consts.FieldKeyUsage); ok {
+		data[consts.FieldKeyUsage] = expandStringSlice(v.([]interface{}))
+	} else {
+		// check if we are an empty array or null (not set in config)
+		val, _ := d.GetRawConfig().AsValueMap()[consts.FieldKeyUsage]
+		if !val.IsNull() {
+			// value was set as empty array in config
+			data[consts.FieldKeyUsage] = make([]string, 0)
 		}
 	}
 
@@ -548,13 +555,10 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 	d.Set(consts.FieldBackend, backend)
 	d.Set(consts.FieldName, name)
 
+	listFields := append(pkiSecretListFields, consts.FieldKeyUsage)
 	// handle TypeList
-	for _, k := range pkiSecretListFields {
-		ifcList := secret.Data[k].([]interface{})
-		list := make([]string, 0, len(ifcList))
-		for _, ifc := range ifcList {
-			list = append(list, ifc.(string))
-		}
+	for _, k := range listFields {
+		list := expandStringSlice(secret.Data[k].([]interface{}))
 
 		if len(list) > 0 {
 			d.Set(k, list)
@@ -630,15 +634,23 @@ func pkiSecretBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 	data := map[string]interface{}{}
 	for _, k := range pkiSecretListFields {
 		if v, ok := d.GetOk(k); ok {
-			ifcList := v.([]interface{})
-			list := make([]string, 0, len(ifcList))
-			for _, ifc := range ifcList {
-				list = append(list, ifc.(string))
-			}
+			list := expandStringSlice(v.([]interface{}))
 
 			if len(list) > 0 {
 				data[k] = list
 			}
+		}
+	}
+	// special handling for key_usage because an empty array or array with
+	// empty string means we do not want to specify key usage constraints
+	if v, ok := d.GetOk(consts.FieldKeyUsage); ok {
+		data[consts.FieldKeyUsage] = expandStringSlice(v.([]interface{}))
+	} else {
+		// check if we are an empty array or null (not set in config)
+		val, _ := d.GetRawConfig().AsValueMap()[consts.FieldKeyUsage]
+		if !val.IsNull() {
+			// value was set as empty array in config
+			data[consts.FieldKeyUsage] = make([]string, 0)
 		}
 	}
 
