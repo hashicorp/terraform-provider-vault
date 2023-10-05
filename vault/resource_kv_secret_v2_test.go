@@ -5,14 +5,22 @@ package vault
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
+
+var testKVV2Data = map[string]interface{}{
+	"foo": "bar",
+	"baz": "qux",
+}
 
 func TestAccKVSecretV2(t *testing.T) {
 	t.Parallel()
@@ -112,6 +120,120 @@ func TestAccKVSecretV2(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestAccKVSecretV2_DisableRead(t *testing.T) {
+	t.Parallel()
+	resourceName := "vault_kv_secret_v2.test"
+	mount := acctest.RandomWithPrefix("tf-kvv2")
+	name := acctest.RandomWithPrefix("tf-secret")
+
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					mountKVEngine(t, mount, name)
+				},
+				Config: testKVSecretV2Config_DisableRead(mount, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", mount, name)),
+					resource.TestCheckResourceAttr(resourceName, "disable_read", "true"),
+				),
+			},
+			{
+				PreConfig: func() {
+					writeKVData(t, mount, name)
+				},
+				Config: testKVSecretV2Config_DisableRead(mount, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", mount, name)),
+					resource.TestCheckResourceAttr(resourceName, "disable_read", "true"),
+				),
+			},
+			{
+				PreConfig: func() {
+					readKVData(t, mount, name)
+				},
+				Config: testKVSecretV2Config_DisableRead(mount, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", mount, name)),
+					resource.TestCheckResourceAttr(resourceName, "disable_read", "true"),
+				),
+			},
+		},
+	})
+}
+
+func readKVData(t *testing.T, mount, name string) {
+	t.Helper()
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+
+	// Read data at path
+	path := fmt.Sprintf("%s/data/%s", mount, name)
+	resp, err := client.Logical().Read(path)
+	if err != nil {
+		t.Fatalf(fmt.Sprintf("error reading from Vault; err=%s", err))
+	}
+
+	if resp == nil {
+		t.Fatalf("empty response")
+	}
+	if len(resp.Data) == 0 {
+		t.Fatalf("kvv2 secret data should not be empty")
+	}
+	if !reflect.DeepEqual(resp.Data["data"], testKVV2Data) {
+		t.Fatalf("kvv2 secret data does not match got: %#+v, want: %#+v", resp.Data["data"], testKVV2Data)
+	}
+}
+
+func writeKVData(t *testing.T, mount, name string) {
+	t.Helper()
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+
+	data := map[string]interface{}{
+		consts.FieldData: testKVV2Data,
+	}
+	// Write data at path
+	path := fmt.Sprintf("%s/data/%s", mount, name)
+	resp, err := client.Logical().Write(path, data)
+	if err != nil {
+		t.Fatalf(fmt.Sprintf("error writing to Vault; err=%s", err))
+	}
+
+	if resp == nil {
+		t.Fatalf("empty response")
+	}
+}
+
+func mountKVEngine(t *testing.T, mount, name string) {
+	t.Helper()
+	client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+
+	err := client.Sys().Mount(mount, &api.MountInput{
+		Type:        "kv-v2",
+		Description: "Mount for testing KV datasource",
+	})
+	if err != nil {
+		t.Fatalf(fmt.Sprintf("error mounting kvv2 engine; err=%s", err))
+	}
+}
+
+func testKVSecretV2Config_DisableRead(mount, name string) string {
+	return fmt.Sprintf(`
+resource "vault_kv_secret_v2" "test" {
+  mount        = "%s"
+  name         = "%s"
+  disable_read = true
+  data_json    = jsonencode({})
+}`, mount, name)
 }
 
 func testKVSecretV2Config_initial(mount, name string) string {
