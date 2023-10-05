@@ -76,7 +76,7 @@ func TestQuotaRateLimitWithRole(t *testing.T) {
 	resourceName := "vault_quota_rate_limit.foobar"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)

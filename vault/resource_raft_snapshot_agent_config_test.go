@@ -18,7 +18,7 @@ import (
 func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
 			testutil.TestEntPreCheck(t)

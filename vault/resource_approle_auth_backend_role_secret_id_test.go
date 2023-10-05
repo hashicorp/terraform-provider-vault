@@ -96,8 +96,8 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace(t *testing.T) {
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestEntPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			if err := testAccCheckAppRoleAuthBackendRoleSecretIDDestroy(s); err != nil {
 				return err
@@ -130,8 +130,8 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_namespace_withWrappedAccessor
 
 	namespacePath := acctest.RandomWithPrefix("test-namespace")
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestEntPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			if err := testAccCheckAppRoleAuthBackendRoleSecretIDDestroy(s); err != nil {
 				return err

@@ -20,8 +20,8 @@ func TestAccMount_importBasic(t *testing.T) {
 		version:   "1",
 	}
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_initialConfig(cfg),

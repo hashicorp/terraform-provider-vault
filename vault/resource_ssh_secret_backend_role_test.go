@@ -147,11 +147,10 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 
 	t.Run("vault-1.11-and-below", func(t *testing.T) {
 		resource.Test(t, resource.TestCase{
-			Providers: testProviders,
+			ProviderFactories: providerFactories,
 			PreCheck: func() {
 				testutil.TestAccPreCheck(t)
 				SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion112)
-
 			},
 			CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
 			Steps:        getSteps(""),
@@ -159,17 +158,15 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 	})
 	t.Run("vault-1.12-and-up", func(t *testing.T) {
 		resource.Test(t, resource.TestCase{
-			Providers: testProviders,
+			ProviderFactories: providerFactories,
 			PreCheck: func() {
 				testutil.TestAccPreCheck(t)
 				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
-
 			},
 			CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
 			Steps:        getSteps("allowed_domains_template = true"),
 		})
 	})
-
 }
 
 func TestAccSSHSecretBackendRoleOTP_basic(t *testing.T) {
@@ -200,7 +197,7 @@ func TestAccSSHSecretBackendRole_template(t *testing.T) {
 	resourceName := "vault_ssh_secret_backend_role.test_role"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)

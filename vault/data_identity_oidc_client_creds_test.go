@@ -18,8 +18,8 @@ func TestDataSourceIdentityOIDCClientCreds(t *testing.T) {
 	name := acctest.RandomWithPrefix("test-client")
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityOIDCClientCreds_config(name),

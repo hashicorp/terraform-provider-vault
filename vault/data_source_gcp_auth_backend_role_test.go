@@ -96,8 +96,8 @@ func TestAccGCPAuthBackendRoleDataSource_none(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-gcp-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGCPAuthBackendRoleDataSourceConfig(backend, name),

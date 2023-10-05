@@ -23,8 +23,8 @@ func TestDataSourceKVSubkeys(t *testing.T) {
 	expectedSubkeys := `{"baz":{"riff":null},"foo":null,"zip":null}`
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceKVSubkeysConfig(mount, secretPath),
