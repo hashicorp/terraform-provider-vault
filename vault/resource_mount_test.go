@@ -244,7 +244,7 @@ func TestResourceMountMangedKeys(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		PreCheck:  func() { testutil.TestEntPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceMount_managedKeysConfig(keyName, path, false),

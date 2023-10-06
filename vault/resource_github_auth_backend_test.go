@@ -83,7 +83,7 @@ func TestAccGithubAuthBackend_ns(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
+		PreCheck:     func() { testutil.TestEntPreCheck(t) },
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeGitHub, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
@@ -361,7 +361,7 @@ func testAccGithubAuthBackendConfig_tuning(path string) string {
 resource "vault_github_auth_backend" "test" {
   	path = "%s"
   	organization = "%s"
-  
+
   	tune {
 		default_lease_ttl = "10m"
 		max_lease_ttl = "20m"
@@ -381,7 +381,7 @@ func testAccGithubAuthBackendConfig_tuningUpdated(path string) string {
 resource "vault_github_auth_backend" "test" {
   	path = "%s"
 	organization = "%s"
-  
+
   	tune {
 		default_lease_ttl = "50m"
 		max_lease_ttl = "1h10m"
@@ -400,7 +400,7 @@ func testAccGithubAuthBackendConfig_description(path, org, description string) s
 resource "vault_github_auth_backend" "test" {
 	path = "%s"
 	organization = "%s"
-	description = "%s"  
+	description = "%s"
 }
 `, path, org, description)
 }

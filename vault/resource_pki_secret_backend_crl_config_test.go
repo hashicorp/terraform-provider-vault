@@ -5,6 +5,7 @@ package vault
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"testing"
 
@@ -131,6 +132,10 @@ func setupCRLConfigTest(t *testing.T, preCheck func(), ignoreImportFields ...str
 			Check:  getCRLConfigChecks(resourceName, false),
 		},
 		{
+			SkipFunc: func() (bool, error) {
+				_, found := os.LookupEnv(testutil.EnvVarTfAccEnt)
+				return !found, nil
+			},
 			Config: testPkiSecretBackendCrlConfigConfig_explicit(rootPath),
 			Check:  getCRLConfigChecks(resourceName, true),
 		},

@@ -41,6 +41,7 @@ import (
 
 const (
 	EnvVarSkipVaultNext = "SKIP_VAULT_NEXT_TESTS"
+	EnvVarTfAccEnt      = "TF_ACC_ENTERPRISE"
 )
 
 func TestAccPreCheck(t *testing.T) {
@@ -61,7 +62,7 @@ func SkipTestAcc(t *testing.T) {
 
 func SkipTestAccEnt(t *testing.T) {
 	t.Helper()
-	SkipTestEnvUnset(t, "TF_ACC_ENTERPRISE")
+	SkipTestEnvUnset(t, EnvVarTfAccEnt)
 }
 
 // SkipTestEnvSet skips the test if any of the provided environment variables

@@ -215,7 +215,7 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("oidc")
 		resource.Test(t, resource.TestCase{
-			PreCheck:     func() { testutil.TestAccPreCheck(t) },
+			PreCheck:     func() { testutil.TestEntPreCheck(t) },
 			Providers:    testProviders,
 			CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 			Steps:        getSteps(path, ns),
