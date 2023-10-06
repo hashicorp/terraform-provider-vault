@@ -20,8 +20,8 @@ func TestDataSourceIdentityGroupName(t *testing.T) {
 	group := acctest.RandomWithPrefix("test-group")
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityGroup_configName(group),
@@ -41,8 +41,8 @@ func TestDataSourceIdentityGroupAlias(t *testing.T) {
 	group := acctest.RandomWithPrefix("test-group")
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityGroup_configAlias(group),

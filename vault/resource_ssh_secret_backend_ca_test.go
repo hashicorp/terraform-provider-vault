@@ -50,8 +50,8 @@ func TestAccSSHSecretBackendCA_provided(t *testing.T) {
 func TestAccSSHSecretBackend_import(t *testing.T) {
 	backend := "ssh-" + acctest.RandString(10)
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendCAConfigGenerated(backend),

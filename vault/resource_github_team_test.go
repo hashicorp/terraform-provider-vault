@@ -72,8 +72,8 @@ func TestAccGithubTeam_importBasic(t *testing.T) {
 	resName := "vault_github_team.team"
 	team := "import-team"
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGithubTeamConfig_basic(backend, team, []string{"admin", "developer"}),

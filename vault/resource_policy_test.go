@@ -18,8 +18,8 @@ import (
 func TestResourcePolicy(t *testing.T) {
 	name := acctest.RandomWithPrefix("test-")
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testResourcePolicy_initialConfig(name),
