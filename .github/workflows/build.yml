@@ -63,6 +63,7 @@ jobs:
         - "vault-enterprise:1.13.8-ent"
         - "vault-enterprise:1.14.4-ent"
         - "vault-enterprise:1.15.0-ent"
+        - "vault:1.15.0"
     services:
       vault:
         image: hashicorp/${{ matrix.image }}
