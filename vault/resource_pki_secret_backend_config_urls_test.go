@@ -47,9 +47,9 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				// Test that reading from an unconfigured mount succeeds

@@ -20,9 +20,9 @@ func TestAccKubernetesAuthBackendConfigDataSource_basic(t *testing.T) {
 	jwt := kubernetesJWT
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_basic(backend, jwt, kubernetesCAcert),
@@ -64,9 +64,9 @@ func TestAccKubernetesAuthBackendConfigDataSource_full(t *testing.T) {
 	disableLocalCaJwt := true
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckKubernetesAuthBackendConfigDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckKubernetesAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAuthBackendConfigConfig_full(backend, kubernetesCAcert, jwt, issuer,

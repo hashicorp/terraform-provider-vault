@@ -105,8 +105,8 @@ func TestAccRaftSnapshotAgentConfig_import(t *testing.T) {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
 			testutil.TestEntPreCheck(t)
 		},
-		Providers:    testProviders,
-		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRaftSnapshotAgentConfig_basic(name),

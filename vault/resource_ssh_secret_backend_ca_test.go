@@ -19,9 +19,9 @@ func TestAccSSHSecretBackendCA_basic(t *testing.T) {
 	backend := "ssh-" + acctest.RandString(10)
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccCheckSSHSecretBackendCADestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendCAConfigGenerated(backend),
@@ -35,9 +35,9 @@ func TestAccSSHSecretBackendCA_provided(t *testing.T) {
 	backend := "ssh-" + acctest.RandString(10)
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccCheckSSHSecretBackendCADestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccCheckSSHSecretBackendCADestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendCAConfigProvided(backend),

@@ -45,9 +45,9 @@ func TestAccDatabaseSecretsMount_mssql(t *testing.T) {
 
 	username := parsedURL.User.Username()
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeDatabase, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeDatabase, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretsMount_mssql(name, backend, pluginName, parsedURL),
@@ -147,9 +147,9 @@ func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
 	resourceName := resourceType + ".db"
 	username := parsedURL.User.Username()
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeDatabase, consts.FieldPath),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeDatabase, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDatabaseSecretsMount_mssql_dual(name, name2, backend, pluginName, parsedURL, parsedURL2),

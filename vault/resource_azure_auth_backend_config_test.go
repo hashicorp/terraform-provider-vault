@@ -18,9 +18,9 @@ import (
 func TestAccAzureAuthBackendConfig_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("azure/foo/bar")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAzureAuthBackendConfigDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAzureAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAzureAuthBackendConfig_basic(backend),
@@ -39,9 +39,9 @@ func TestAccAzureAuthBackendConfig_import(t *testing.T) {
 func TestAccAzureAuthBackendConfig_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("azure")
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccCheckAzureAuthBackendConfigDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccCheckAzureAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAzureAuthBackendConfig_basic(backend),

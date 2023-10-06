@@ -47,9 +47,9 @@ func TestGCPSecretStaticAccount(t *testing.T) {
 	resourceNameBackend := "vault_gcp_secret_backend.test"
 	resourceName := "vault_gcp_secret_static_account.test"
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testGCPSecretStaticAccountDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testGCPSecretStaticAccountDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: noBindings,

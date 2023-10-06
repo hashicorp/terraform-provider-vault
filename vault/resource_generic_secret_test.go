@@ -136,9 +136,9 @@ func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 	resourceName := "vault_generic_secret.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAllVersionDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAllVersionDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig_v2(path, false),

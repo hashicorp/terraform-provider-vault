@@ -25,9 +25,9 @@ func TestAccAppRoleAuthBackendRoleSecretID_basic(t *testing.T) {
 	role := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_basic(backend, role),
@@ -47,9 +47,9 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped(t *testing.T) {
 	withWrappedAccessor := false
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role, withWrappedAccessor),
@@ -70,9 +70,9 @@ func TestAccAppRoleAuthBackendRoleSecretID_wrapped_withWrappedAccessor(t *testin
 	withWrappedAccessor := true
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_wrapped(backend, role, withWrappedAccessor),
@@ -165,9 +165,9 @@ func TestAccAppRoleAuthBackendRoleSecretID_full(t *testing.T) {
 	secretID := acctest.RandomWithPrefix("test-role-id")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAppRoleAuthBackendRoleSecretIDDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAppRoleAuthBackendRoleSecretIDConfig_full(backend, role, secretID),

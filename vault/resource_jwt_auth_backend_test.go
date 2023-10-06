@@ -89,10 +89,10 @@ func TestAccJWTAuthBackend(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 		resource.Test(t, resource.TestCase{
-			PreCheck:     func() { testutil.TestAccPreCheck(t) },
-			Providers:    testProviders,
-			CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
-			Steps:        getSteps(path, ""),
+			PreCheck:          func() { testutil.TestAccPreCheck(t) },
+			ProviderFactories: providerFactories,
+			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:             getSteps(path, ""),
 		})
 	},
 	)
@@ -102,10 +102,10 @@ func TestAccJWTAuthBackend(t *testing.T) {
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("jwt")
 		resource.Test(t, resource.TestCase{
-			PreCheck:     func() { testutil.TestEntPreCheck(t) },
-			Providers:    testProviders,
-			CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
-			Steps:        getSteps(path, ns),
+			PreCheck:          func() { testutil.TestEntPreCheck(t) },
+			ProviderFactories: providerFactories,
+			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:             getSteps(path, ns),
 		})
 	},
 	)
@@ -143,10 +143,10 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 		resource.Test(t, resource.TestCase{
-			PreCheck:     func() { testutil.TestAccPreCheck(t) },
-			Providers:    testProviders,
-			CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
-			Steps:        getSteps(path, ""),
+			PreCheck:          func() { testutil.TestAccPreCheck(t) },
+			ProviderFactories: providerFactories,
+			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:             getSteps(path, ""),
 		})
 	},
 	)
@@ -156,10 +156,10 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("jwt")
 		resource.Test(t, resource.TestCase{
-			PreCheck:     func() { testutil.TestEntPreCheck(t) },
-			Providers:    testProviders,
-			CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
-			Steps:        getSteps(path, ns),
+			PreCheck:          func() { testutil.TestEntPreCheck(t) },
+			ProviderFactories: providerFactories,
+			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:             getSteps(path, ns),
 		})
 	},
 	)
@@ -202,10 +202,10 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 		t.Parallel()
 		path := acctest.RandomWithPrefix("oidc")
 		resource.Test(t, resource.TestCase{
-			PreCheck:     func() { testutil.TestAccPreCheck(t) },
-			Providers:    testProviders,
-			CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
-			Steps:        getSteps(path, ""),
+			PreCheck:          func() { testutil.TestAccPreCheck(t) },
+			ProviderFactories: providerFactories,
+			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:             getSteps(path, ""),
 		})
 	},
 	)
@@ -215,10 +215,10 @@ func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 		ns := acctest.RandomWithPrefix("ns")
 		path := acctest.RandomWithPrefix("oidc")
 		resource.Test(t, resource.TestCase{
-			PreCheck:     func() { testutil.TestAccPreCheck(t) },
-			Providers:    testProviders,
-			CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
-			Steps:        getSteps(path, ns),
+			PreCheck:          func() { testutil.TestAccPreCheck(t) },
+			ProviderFactories: providerFactories,
+			CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+			Steps:             getSteps(path, ns),
 		})
 	},
 	)

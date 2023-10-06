@@ -22,9 +22,9 @@ import (
 func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityEntityPoliciesDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityPoliciesConfigExclusive(entity),
@@ -46,9 +46,9 @@ func TestAccIdentityEntityPoliciesExclusive(t *testing.T) {
 func TestAccIdentityEntityPoliciesNonExclusive(t *testing.T) {
 	entity := acctest.RandomWithPrefix("test-entity")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckidentityEntityPoliciesDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckidentityEntityPoliciesDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityEntityPoliciesConfigNonExclusive(entity),

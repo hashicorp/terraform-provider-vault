@@ -77,9 +77,9 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "45m"),
 	}
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testPkiSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, testLegacyPolicyIdentifiers),
@@ -114,9 +114,9 @@ func TestPkiSecretBackendRole_policy_identifier(t *testing.T) {
 	})
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testPkiSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, combinedPolicyIdentifiers),
@@ -178,9 +178,9 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, "policy_identifiers.0", "1.2.3.4"),
 	}
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testPkiSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testPkiSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, testLegacyPolicyIdentifiers),

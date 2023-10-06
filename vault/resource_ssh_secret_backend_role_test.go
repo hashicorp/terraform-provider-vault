@@ -173,9 +173,9 @@ func TestAccSSHSecretBackendRoleOTP_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test/ssh")
 	name := acctest.RandomWithPrefix("tf-test-role")
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccSSHSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccSSHSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSSHSecretBackendRoleOTPConfig_basic(name, backend),

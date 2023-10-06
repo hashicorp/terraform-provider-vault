@@ -26,8 +26,8 @@ func TestAccKVSecretV2(t *testing.T) {
 	customMetadata := `{"extra":"cheese","pizza":"please"}`
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKVSecretV2Config_initial(mount, name),

@@ -19,9 +19,9 @@ import (
 func TestAccAWSAuthBackendClient_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basic(backend),
@@ -40,9 +40,9 @@ func TestAccAWSAuthBackendClient_import(t *testing.T) {
 func TestAccAWSAuthBackendClient_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basic(backend),
@@ -59,9 +59,9 @@ func TestAccAWSAuthBackendClient_basic(t *testing.T) {
 func TestAccAWSAuthBackendClient_nested(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws") + "/nested"
 	resource.ParallelTest(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basic(backend),
@@ -78,9 +78,9 @@ func TestAccAWSAuthBackendClient_nested(t *testing.T) {
 func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfig_basicWithoutSecretKey(backend),
@@ -105,9 +105,9 @@ func TestAccAWSAuthBackendClient_withoutSecretKey(t *testing.T) {
 func TestAccAWSAuthBackendClientStsRegionNoEndpoint(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccAWSAuthBackendClientConfigSTSRegionNoEndpoint(backend),
@@ -124,8 +124,8 @@ func TestAccAWSAuthBackendClientStsRegionFromClient(t *testing.T) {
 			testutil.TestAccPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
 		},
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendClientDestroy,
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendClientDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendClientConfigSTSRegionFromClient(backend, false),
