@@ -37,7 +37,7 @@ IMPROVEMENTS:
    * `github.com/hashicorp/go-cty` v1.4.1-0.20200414143053-d3edf31b6320 -> v1.4.1-0.20200723130312-85980079f637
    * `github.com/hashicorp/go-retryablehttp` v0.7.1 -> v0.7.4
    * `github.com/hashicorp/terraform-plugin-sdk/v2` v2.16.0 -> v2.29.0
-   * `github.com/hashicorp/vault-plugin-auth-jwt` v0.13.2-0.20221012184020-28cc68ee722b -> v0.17.1
+   * `github.com/hashicorp/vault-plugin-auth-jwt` v0.13.2-0.20221012184020-28cc68ee722b -> v0.17.0
    * `github.com/hashicorp/vault-plugin-auth-kerberos` v0.8.0 -> v0.10.1
    * `github.com/hashicorp/vault-plugin-auth-oci` v0.13.0-pre -> v0.14.2
    * `github.com/hashicorp/vault/api` v1.9.3-0.20230628215639-3ca33976762c -> v1.10.0
