@@ -970,10 +970,8 @@ func setCassandraDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 	}
 
 	passwordKey := prefix + consts.FieldPassword
-	fmt.Println("passworkKey", passwordKey)
 	if v, ok := d.GetOk(passwordKey); ok {
 		if d.IsNewResource() || d.HasChange(passwordKey) {
-			fmt.Println("password updated", v.(string))
 			data[consts.FieldPassword] = v.(string)
 		}
 	}
@@ -1462,7 +1460,6 @@ func setMySQLDatabaseConnectionData(d *schema.ResourceData, prefix string, data 
 func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
 	setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	setCloudDatabaseConnectionData(d, prefix, data, meta)
-
 }
 
 func setRedisDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {
