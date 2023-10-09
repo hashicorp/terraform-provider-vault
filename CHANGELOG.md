@@ -1,8 +1,13 @@
 ## Unreleased
 
 FEATURES:
+* Add GCP CloudSQL support to Postgres, MySQL DB engines: ([#2012](https://github.com/hashicorp/terraform-provider-vault/pull/2012))
+* Add support for DB Adv TTL Mgmt: ([#2011](https://github.com/hashicorp/terraform-provider-vault/pull/2011))
 * Add support for setting `not_before_duration` argument on `vault_ssh_secret_backend_role`: ([#2019](https://github.com/hashicorp/terraform-provider-vault/pull/2019))
 * Add support for `hmac` key type and key_size to `vault_transit_secret_backend_key`: ([#2034](https://github.com/hashicorp/terraform-provider-vault/pull/2034/))
+* Add support for roles to both rate limit and lease count quotas: ([#1994](https://github.com/hashicorp/terraform-provider-vault/pull/1994))
+* Add `allowed_email_sans` field to write and update functions of `vault_cert_auth_backend_role`: ([#1140](https://github.com/hashicorp/terraform-provider-vault/pull/1140))
+* Add support for `local` parameter in aws secret engine: ([#2013](https://github.com/hashicorp/terraform-provider-vault/pull/2013))
 
 BUGS:
 * Fix duplicate timestamp and incorrect level messages: ([#2031](https://github.com/hashicorp/terraform-provider-vault/pull/2031))
@@ -10,8 +15,11 @@ BUGS:
 * Add state migrator for `external_member_group_ids`  in Identity Group ([#2043](https://github.com/hashicorp/terraform-provider-vault/pull/2043))
 * Fix drift detection for the kv-v2 secrets resource when `disable_read` is enabled: ([#2039](https://github.com/hashicorp/terraform-provider-vault/pull/2039))
 * Add state migrator in secrets/auth backends for `disable_remount` parameter ([#2037](https://github.com/hashicorp/terraform-provider-vault/pull/2037))
+* Fix failure when `auth_login` is specified and vault token is picked up from the runtime/execution environment: ([#2029](https://github.com/hashicorp/terraform-provider-vault/pull/2029))
+* Remove logging of password key: ([#2044](https://github.com/hashicorp/terraform-provider-vault/pull/2044))
 
 IMPROVEMENTS:
+* Oracle DB engine enablement on HCP Vault: ([#2006](https://github.com/hashicorp/terraform-provider-vault/pull/2006))
 * Ensure sensitive values are masked in `vault_approle_auth_backend_login` plan output ([#2008](https://github.com/hashicorp/terraform-provider-vault/pull/2008))
 * Updated dependencies: ([#2038](https://github.com/hashicorp/terraform-provider-vault/pull/2038))
    * `cloud.google.com/go/compute` v1.10.0 removed
