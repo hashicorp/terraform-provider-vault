@@ -24,9 +24,9 @@ func TestAccKubernetesSecretBackendRole(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-role")
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccKubernetesSecretBackendRoleCheckDestroy,
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccKubernetesSecretBackendRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testKubernetesSecretBackendRole_initialConfig(backend, name),

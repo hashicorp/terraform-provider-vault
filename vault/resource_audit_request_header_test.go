@@ -20,9 +20,9 @@ func TestAuditRequestHeader(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test")
 	newName := acctest.RandomWithPrefix("tf-test-new")
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAuditRequestHeaderCheckDestroy(name, newName),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAuditRequestHeaderCheckDestroy(name, newName),
 		Steps: []resource.TestStep{
 			{
 				Config: testAuditRequestHeader_Config(name, false),

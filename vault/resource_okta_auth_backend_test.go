@@ -25,9 +25,9 @@ func TestAccOktaAuthBackend_basic(t *testing.T) {
 	path := resource.PrefixedUniqueId("okta-basic-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthConfig_basic(path, organization),
@@ -54,9 +54,9 @@ func TestAccOktaAuthBackend_import(t *testing.T) {
 	path := resource.PrefixedUniqueId("okta-import-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthConfig_basic(path, organization),
@@ -101,9 +101,9 @@ func TestAccOktaAuthBackend_invalid_ttl(t *testing.T) {
 	path := resource.PrefixedUniqueId("okta-invalid-ttl-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccOktaAuthConfig_invalid_ttl(path, organization),
@@ -119,9 +119,9 @@ func TestAccOktaAuthBackend_invalid_max_ttl(t *testing.T) {
 	path := resource.PrefixedUniqueId("okta-invalid_max_ttl-")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccOktaAuthConfig_invalid_max_ttl(path, organization),
@@ -137,9 +137,9 @@ func TestAccOktaAuthBackend_groups_optional(t *testing.T) {
 	path := resource.PrefixedUniqueId("okta-group-optional")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccOktaAuthBackend_Destroyed(path),
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccOktaAuthBackend_Destroyed(path),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthConfig_groups_optional(path, organization),
@@ -160,8 +160,8 @@ func TestAccOktaAuthBackend_remount(t *testing.T) {
 	resourceName := "vault_okta_auth_backend.test"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthConfig_basic(path, organization),

@@ -20,8 +20,8 @@ func TestAccKVSecretBackendV2(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-kvv2")
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
 			{
 				Config: testKVSecretBackendV2Config(mount, false),

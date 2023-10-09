@@ -27,8 +27,8 @@ func TestAccIdentityGroupMemberGroupIdsNonExclusive(t *testing.T) {
 	resourceNameDev := "vault_identity_group_member_group_ids.dev"
 	resourceNameTest := "vault_identity_group_member_group_ids.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityGroupMemberGroupIdsConfigNonExclusive(group1, group2),

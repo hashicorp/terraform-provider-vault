@@ -24,9 +24,9 @@ func TestQuotaLeaseCount(t *testing.T) {
 	resourceName := "vault_quota_lease_count.foobar"
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestEntPreCheck(t) },
-		CheckDestroy: testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		CheckDestroy:      testQuotaLeaseCountCheckDestroy([]string{leaseCount, newLeaseCount}),
 		Steps: []resource.TestStep{
 			{
 				Config: testQuotaLeaseCountConfig(ns, name, "", leaseCount),
@@ -65,7 +65,7 @@ func TestQuotaLeaseCountWithRole(t *testing.T) {
 	resourceName := "vault_quota_lease_count.foobar"
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)

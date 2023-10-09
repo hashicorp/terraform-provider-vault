@@ -20,9 +20,9 @@ func TestAccIdentityOidcKeyAllowedClientId(t *testing.T) {
 	name := acctest.RandomWithPrefix("test-role")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckIdentityOidcKeyAllowedClientIdDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckIdentityOidcKeyAllowedClientIdDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOidcKeyAllowedClientIdConfig(name),

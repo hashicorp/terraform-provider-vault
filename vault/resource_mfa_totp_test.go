@@ -21,8 +21,8 @@ func TestMFATOTPBasic(t *testing.T) {
 
 	var id string
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestEntPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testMFATOTPConfig(path, 20),

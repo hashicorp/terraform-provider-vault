@@ -25,9 +25,9 @@ func TestAccIdentityOIDCScope(t *testing.T) {
 	resourceName := "vault_identity_oidc_scope.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckOIDCScopeDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckOIDCScopeDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccIdentityOIDCScopeConfig_basic(name),
