@@ -155,7 +155,7 @@ resource "vault_identity_group" "test_upper" {
 	})
 }
 
-func TestSecretsAuthDisableRemountUpgradeV0(t *testing.T) {
+func TestIdentityGroupExternalGroupIDsUpgradeV0(t *testing.T) {
 	tests := []struct {
 		name     string
 		rawState map[string]interface{}
