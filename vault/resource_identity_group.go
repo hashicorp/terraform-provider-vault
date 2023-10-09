@@ -146,7 +146,8 @@ func identityGroupUpdateFields(d *schema.ResourceData, data map[string]interface
 				data["member_entity_ids"] = d.Get("member_entity_ids").(*schema.Set).List()
 			}
 
-			if externalMemberGroupIds, ok := d.GetOk(fieldExternalMemberGroupIDs); !(ok && externalMemberGroupIds.(bool)) {
+			externalMemberGroupIds := d.Get(fieldExternalMemberGroupIDs)
+			if !externalMemberGroupIds.(bool) {
 				data["member_group_ids"] = d.Get("member_group_ids").(*schema.Set).List()
 			}
 		}
