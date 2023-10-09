@@ -110,7 +110,7 @@ func kmipSecretBackendResource() *schema.Resource {
 				Description: "Client certificate TTL in seconds",
 			},
 		},
-	})
+	}, false)
 }
 
 func kmipSecretBackendCreate(d *schema.ResourceData, meta interface{}) error {

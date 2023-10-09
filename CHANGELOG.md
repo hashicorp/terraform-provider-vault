@@ -9,6 +9,7 @@ BUGS:
 * Fix panic when setting `key_usage` to an array of empty string and enable it to unset the key usage constraints: ([#2036](https://github.com/hashicorp/terraform-provider-vault/pull/2036))
 * Add state migrator for `external_member_group_ids`  in Identity Group ([#2043](https://github.com/hashicorp/terraform-provider-vault/pull/2043))
 * Fix drift detection for the kv-v2 secrets resource when `disable_read` is enabled: ([#2039](https://github.com/hashicorp/terraform-provider-vault/pull/2039))
+* Add state migrator in secrets/auth backends for `disable_remount` parameter ([#2037](https://github.com/hashicorp/terraform-provider-vault/pull/2037))
 
 IMPROVEMENTS:
 * Ensure sensitive values are masked in `vault_approle_auth_backend_login` plan output ([#2008](https://github.com/hashicorp/terraform-provider-vault/pull/2008))

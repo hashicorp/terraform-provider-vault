@@ -107,7 +107,7 @@ func nomadSecretAccessBackendResource() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: fields,
-	})
+	}, false)
 }
 
 func createNomadAccessConfigResource(d *schema.ResourceData, meta interface{}) error {

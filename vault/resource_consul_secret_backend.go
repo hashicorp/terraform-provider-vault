@@ -113,7 +113,7 @@ func consulSecretBackendResource() *schema.Resource {
 				Description: "Specifies if the secret backend is local only",
 			},
 		},
-	})
+	}, false)
 }
 
 func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

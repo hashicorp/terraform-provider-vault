@@ -69,7 +69,7 @@ func AuthBackendResource() *schema.Resource {
 
 			"tune": authMountTuneSchema(),
 		},
-	})
+	}, false)
 }
 
 func authBackendWrite(d *schema.ResourceData, meta interface{}) error {
