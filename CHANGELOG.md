@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 3.21.0 (Oct 9, 2023)
+
 FEATURES:
 * Add GCP CloudSQL support to Postgres, MySQL DB engines: ([#2012](https://github.com/hashicorp/terraform-provider-vault/pull/2012))
 * Add support for DB Adv TTL Mgmt: ([#2011](https://github.com/hashicorp/terraform-provider-vault/pull/2011))
