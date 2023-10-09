@@ -65,7 +65,7 @@ func TestDataSourceIdentityOIDCOpenIDConfig(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders,
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceIdentityOIDCOpenIDConfig_config(keyName, clientName, providerName, u.Host),

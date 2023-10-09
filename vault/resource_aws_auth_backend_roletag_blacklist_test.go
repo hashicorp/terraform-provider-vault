@@ -20,9 +20,9 @@ import (
 func TestAccAWSAuthBackendRoleTagBlacklist_import(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendRoleTagBlacklistDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendRoleTagBlacklistDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleTagBlacklistConfig_basic(backend),
@@ -40,9 +40,9 @@ func TestAccAWSAuthBackendRoleTagBlacklist_import(t *testing.T) {
 func TestAccAWSAuthBackendRoleTagBlacklist_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendRoleTagBlacklistDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendRoleTagBlacklistDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleTagBlacklistConfig_basic(backend),
@@ -55,9 +55,9 @@ func TestAccAWSAuthBackendRoleTagBlacklist_basic(t *testing.T) {
 func TestAccAWSAuthBackendRoleTagBlacklist_updated(t *testing.T) {
 	backend := acctest.RandomWithPrefix("aws")
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckAWSAuthBackendRoleTagBlacklistDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckAWSAuthBackendRoleTagBlacklistDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAWSAuthBackendRoleTagBlacklistConfig_basic(backend),

@@ -23,9 +23,9 @@ func TestAccOktaAuthBackendGroup_basic(t *testing.T) {
 	organization := "dummy"
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccOktaAuthBackendGroup_Destroyed(path, "foo"),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccOktaAuthBackendGroup_Destroyed(path, "foo"),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthGroupConfig_basic(path, organization),
@@ -50,9 +50,9 @@ func TestAccOktaAuthBackendGroup_specialChar(t *testing.T) {
 	organization := "dummy"
 
 	resource.Test(t, resource.TestCase{
-		Providers:    testProviders,
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		CheckDestroy: testAccOktaAuthBackendGroup_Destroyed(path, "foo/bar"),
+		ProviderFactories: providerFactories,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:      testAccOktaAuthBackendGroup_Destroyed(path, "foo/bar"),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccOktaAuthGroupConfig_specialChar(path, organization),

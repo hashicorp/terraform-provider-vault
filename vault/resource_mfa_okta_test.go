@@ -18,8 +18,8 @@ func TestMFAOktaBasic(t *testing.T) {
 	resourceName := "vault_mfa_okta.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestEntPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testMFAOktaConfig(path),

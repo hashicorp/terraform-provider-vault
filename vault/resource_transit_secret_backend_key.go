@@ -96,10 +96,10 @@ func transitSecretBackendKeyResource() *schema.Resource {
 			"type": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Description:  "Specifies the type of key to create. The currently-supported types are: aes128-gcm96, aes256-gcm96, chacha20-poly1305, ed25519, ecdsa-p256, ecdsa-p384, ecdsa-p521, rsa-2048, rsa-3072, rsa-4096",
+				Description:  "Specifies the type of key to create. The currently-supported types are: aes128-gcm96, aes256-gcm96, chacha20-poly1305, ed25519, ecdsa-p256, ecdsa-p384, ecdsa-p521, hmac, rsa-2048, rsa-3072, rsa-4096",
 				ForceNew:     true,
 				Default:      "aes256-gcm96",
-				ValidateFunc: validation.StringInSlice([]string{"aes128-gcm96", "aes256-gcm96", "chacha20-poly1305", "ed25519", "ecdsa-p256", "ecdsa-p384", "ecdsa-p521", "rsa-2048", "rsa-3072", "rsa-4096"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"aes128-gcm96", "aes256-gcm96", "chacha20-poly1305", "ed25519", "ecdsa-p256", "ecdsa-p384", "ecdsa-p521", "hmac", "rsa-2048", "rsa-3072", "rsa-4096"}, false),
 			},
 			"keys": {
 				Type:        schema.TypeList,
@@ -109,6 +109,12 @@ func transitSecretBackendKeyResource() *schema.Resource {
 					Type: schema.TypeMap,
 					Elem: schema.TypeString,
 				},
+			},
+			"key_size": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The key size in bytes for algorithms that allow variable key sizes. Currently only applicable to HMAC; this value must be between 32 and 512.",
+				Default:     0,
 			},
 			"latest_version": {
 				Type:        schema.TypeInt,
@@ -223,10 +229,14 @@ func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) err
 		"auto_rotate_period":    autoRotatePeriod,
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		data["key_size"] = d.Get("key_size").(int)
+	}
+
 	log.Printf("[DEBUG] Creating encryption key %s on transit secret backend %q", name, backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error creating encryption key %s for transit secret backend %q: %s", name, backend, err)
+		return fmt.Errorf("error creating encryption key %s for transit secret backend %q: %s with key size %d", name, backend, err, d.Get("key_size").(int))
 	}
 	log.Printf("[DEBUG] Setting configuration for encryption key %s on transit secret backend %q", name, backend)
 	_, conferr := client.Logical().Write(path+"/config", configData)
@@ -317,24 +327,42 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 		return fmt.Errorf("expected min_encryption_version %q to be a number, and it isn't", secret.Data["min_encryption_version"])
 	}
 
-	ikeys := secret.Data["keys"].(map[string]interface{})
+	ikeys := secret.Data["keys"]
 	keys := []interface{}{}
-	for _, v := range ikeys {
-		// Data structure of "keys" differs depending on encryption key type. Sometimes it's a single integer hash,
-		// and other times it's a full map of values describing the key version's creation date, name, and public key.
-
-		if sv, ok := v.(map[string]interface{}); ok { // for key types of rsa-2048, rsa-3072, rsa-4096, ed25519, ecdsa-p256, ecdsa-p384 or ecdsa-p521
-			keys = append(keys, sv)
-		} else if sv, ok := v.(json.Number); ok { // for key types of aes128-gcm96, aes256-gcm96 or chacha20-poly1305
-			m := make(map[string]interface{})
-			m["id"] = sv
-			keys = append(keys, m)
+	if ikeys != nil || secret.Data["type"] != "hmac" { // hmac type does not return keys
+		ikeys := secret.Data["keys"].(map[string]interface{})
+		for _, v := range ikeys {
+			// Data structure of "keys" differs depending on encryption key type. Sometimes it's a single integer hash,
+			// and other times it's a full map of values describing the key version's creation date, name, and public key.
+			if sv, ok := v.(map[string]interface{}); ok { // for key types of rsa-2048, rsa-3072, rsa-4096, ed25519, ecdsa-p256, ecdsa-p384 or ecdsa-p521
+				keys = append(keys, sv)
+			} else if sv, ok := v.(json.Number); ok { // for key types of aes128-gcm96, aes256-gcm96 or chacha20-poly1305
+				m := make(map[string]interface{})
+				m["id"] = sv
+				keys = append(keys, m)
+			}
 		}
+
 	}
 
 	if err := d.Set("keys", keys); err != nil {
 		return err
 	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion112) {
+		// On read, key_size will be nil if the encryption key type is not HMAC. Choosing not to set it in those cases.
+		keySize := secret.Data["key_size"]
+		if keySize != nil || secret.Data["type"] == "hmac" {
+			keySize, err := secret.Data["key_size"].(json.Number).Int64()
+			if err != nil {
+				return fmt.Errorf("expected key_size %q to be a number, and it isn't", secret.Data["key_size"])
+			}
+			if err := d.Set("key_size", keySize); err != nil {
+				return err
+			}
+		}
+	}
+
 	if err := d.Set("backend", backend); err != nil {
 		return err
 	}

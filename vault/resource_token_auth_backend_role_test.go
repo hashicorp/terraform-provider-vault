@@ -20,9 +20,9 @@ func TestAccTokenAuthBackendRole(t *testing.T) {
 
 	resourceName := "vault_token_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckTokenAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckTokenAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccTokenAuthBackendRoleConfig(role),
@@ -43,9 +43,9 @@ func TestAccTokenAuthBackendRoleUpdate(t *testing.T) {
 
 	resourceName := "vault_token_auth_backend_role.role"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testutil.TestAccPreCheck(t) },
-		Providers:    testProviders,
-		CheckDestroy: testAccCheckTokenAuthBackendRoleDestroy,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy:      testAccCheckTokenAuthBackendRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccTokenAuthBackendRoleConfig(role),

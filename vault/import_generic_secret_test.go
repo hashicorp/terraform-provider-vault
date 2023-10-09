@@ -18,8 +18,8 @@ func TestAccGenericSecret_importBasic(t *testing.T) {
 	name := acctest.RandomWithPrefix("test")
 	path := fmt.Sprintf("%s/%s", mount, name)
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestAccPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfig(mount, name),
@@ -46,8 +46,8 @@ func TestAccGenericSecret_importBasicNS(t *testing.T) {
 	path := fmt.Sprintf("%s/%s", mount, name)
 	resourceName := "vault_generic_secret.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testutil.TestEntPreCheck(t) },
-		Providers: testProviders,
+		PreCheck:          func() { testutil.TestEntPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testResourceGenericSecret_initialConfigNS(ns, mount, name),
