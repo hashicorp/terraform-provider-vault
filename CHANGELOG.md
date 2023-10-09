@@ -53,6 +53,8 @@ IMPROVEMENTS:
    * `google.golang.org/api` v0.98.0 -> v0.144.0
    * `google.golang.org/genproto` v0.0.0-20221010155953-15ba04fc1c0e -> v0.0.0-20231002182017-d307bd883b97
    * `k8s.io/utils` v0.0.0-20220210201930-3a6ce19ff2f9 -> v0.0.0-20230726121419-3b25d923346b
+* Updated dependencies: ([#2038](https://github.com/hashicorp/terraform-provider-vault/pull/2038))
+   * `github.com/aws/aws-sdk-go` v1.44.106 -> v1.45.24
 
 ## 3.20.1 (Sep 13, 2023)
 IMPROVEMENTS:
