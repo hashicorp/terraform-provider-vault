@@ -32,6 +32,19 @@ var (
 	}
 )
 
+func kvSecretV2DisableReadDiff(ctx context.Context, diff *schema.ResourceDiff, m interface{}) error {
+	if diff.Get(consts.FieldDisableRead).(bool) && diff.Id() != "" {
+		// When disable_read is true we need to remove the computed data keys
+		// from the diff. Otherwise, we will report drift because they were
+		// never set but the provider expects them to be because they are
+		// computed fields.
+		log.Printf("[DEBUG] %q is set, clearing %q and %q", consts.FieldDisableRead, consts.FieldData, consts.FieldMetadata)
+		diff.Clear(consts.FieldData)
+		diff.Clear(consts.FieldMetadata)
+	}
+	return nil
+}
+
 func kvSecretV2Resource(name string) *schema.Resource {
 	return &schema.Resource{
 		CreateContext: kvSecretV2Write,
@@ -41,6 +54,7 @@ func kvSecretV2Resource(name string) *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		CustomizeDiff: kvSecretV2DisableReadDiff,
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldMount: {
@@ -77,7 +91,7 @@ func kvSecretV2Resource(name string) *schema.Resource {
 				Description: "An object that holds option settings.",
 			},
 
-			"disable_read": {
+			consts.FieldDisableRead: {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
@@ -223,7 +237,7 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 }
 
 func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	shouldRead := !d.Get("disable_read").(bool)
+	shouldRead := !d.Get(consts.FieldDisableRead).(bool)
 
 	path := d.Id()
 	if path == "" {
