@@ -9,7 +9,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.13.2
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v0.3.1
 	github.com/Azure/go-autorest/autorest v0.11.29
-	github.com/aws/aws-sdk-go v1.44.106
+	github.com/aws/aws-sdk-go v1.45.24
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/coreos/pkg v0.0.0-20230601102743-20bbbf26f4d8
 	github.com/denisenkom/go-mssqldb v0.12.3
