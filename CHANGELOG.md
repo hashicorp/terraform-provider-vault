@@ -1,5 +1,8 @@
 ## Unreleased
 
+BUGS:
+* Fix panic when readnig client_secret from a public oidc client ([#2048](https://github.com/hashicorp/terraform-provider-vault/pull/2048))
+
 ## 3.21.0 (Oct 9, 2023)
 
 FEATURES:
