@@ -379,7 +379,7 @@ func TestAccKubernetesAuthBackendConfig_localCA(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					path := kubernetesAuthBackendConfigPath(backend)
 					if _, err := client.Logical().Write(path, map[string]interface{}{
@@ -598,7 +598,7 @@ func TestAccKubernetesAuthBackendConfig_fullInK8sCluster(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					path := kubernetesAuthBackendConfigPath(backend)
 					// mimic pre vault-1.9.3 behaviour, whereby the in-cluster K8s CA was stored in

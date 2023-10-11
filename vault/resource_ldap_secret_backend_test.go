@@ -118,7 +118,7 @@ func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 				Config: testLDAPSecretBackendConfig_ad(path, url, ""),
 				Check: resource.ComposeTestCheckFunc(
 					func(*terraform.State) error {
-						client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+						client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 						if _, err := client.Logical().Write(path+"/rotate-root", nil); err != nil {
 							return err
 						}
@@ -141,7 +141,7 @@ func TestLDAPSecretBackend_SchemaAD(t *testing.T) {
 				Config: testLDAPSecretBackendConfig_ad(path, url, `description = "new description"`),
 				Check: resource.ComposeTestCheckFunc(
 					func(*terraform.State) error {
-						client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+						client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 						if _, err := client.Logical().Write(path+"/rotate-root", nil); err != nil {
 							return err
 						}

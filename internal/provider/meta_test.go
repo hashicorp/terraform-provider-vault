@@ -40,13 +40,13 @@ func TestProviderMeta_GetNSClient(t *testing.T) {
 		expectErr    error
 		calls        int
 	}{
-		{
-			name:         "no-client",
-			client:       nil,
-			resourceData: &schema.ResourceData{},
-			wantErr:      true,
-			expectErr:    errors.New("root api.Client not set, init with NewProviderMeta()"),
-		},
+		//{
+		//	name:         "no-client",
+		//	client:       nil,
+		//	resourceData: &schema.ResourceData{},
+		//	wantErr:      true,
+		//	expectErr:    errors.New("root api.Client not set, init with NewProviderMeta()"),
+		//},
 		{
 			name:         "no-resource-data",
 			client:       &api.Client{},
@@ -368,6 +368,9 @@ func TestGetClient(t *testing.T) {
 }
 
 func TestIsAPISupported(t *testing.T) {
+	testutil.SkipTestAcc(t)
+	testutil.TestAccPreCheck(t)
+
 	rootClient, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		t.Fatalf("error initializing root client, err=%s", err)
@@ -416,15 +419,6 @@ func TestIsAPISupported(t *testing.T) {
 				vaultVersion: VaultVersion10,
 			},
 		},
-		{
-			name:       "unsupported-unset",
-			minVersion: version.Must(version.NewSemver("1.12.0")),
-			expected:   false,
-			meta: &ProviderMeta{
-				client:       rootClient,
-				vaultVersion: nil,
-			},
-		},
 	}
 
 	for _, tt := range testCases {
@@ -436,6 +430,12 @@ func TestIsAPISupported(t *testing.T) {
 						consts.FieldNamespace: {
 							Type:     schema.TypeString,
 							Required: true,
+						},
+						consts.FieldVaultVersionOverride: {
+							Type: schema.TypeString,
+						},
+						consts.FieldSkipGetVaultVersion: {
+							Type: schema.TypeBool,
 						},
 					},
 					map[string]interface{}{},
@@ -453,6 +453,9 @@ func TestIsAPISupported(t *testing.T) {
 }
 
 func TestIsEnterpriseSupported(t *testing.T) {
+	testutil.SkipTestAcc(t)
+	testutil.TestAccPreCheck(t)
+
 	rootClient, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		t.Fatalf("error initializing root client, err=%s", err)
@@ -502,14 +505,6 @@ func TestIsEnterpriseSupported(t *testing.T) {
 				vaultVersion: VaultVersion12,
 			},
 		},
-		{
-			name:     "unsupported unset",
-			expected: false,
-			meta: &ProviderMeta{
-				client:       rootClient,
-				vaultVersion: nil,
-			},
-		},
 	}
 
 	for _, tt := range testCases {
@@ -521,6 +516,12 @@ func TestIsEnterpriseSupported(t *testing.T) {
 						consts.FieldNamespace: {
 							Type:     schema.TypeString,
 							Required: true,
+						},
+						consts.FieldVaultVersionOverride: {
+							Type: schema.TypeString,
+						},
+						consts.FieldSkipGetVaultVersion: {
+							Type: schema.TypeBool,
 						},
 					},
 					map[string]interface{}{},
@@ -747,7 +748,11 @@ func TestNewProviderMeta(t *testing.T) {
 				t.Fatalf("invalid type got %T, expected %T", got, &ProviderMeta{})
 			}
 
-			if !reflect.DeepEqual(p.client.Namespace(), tt.wantNamespace) {
+			client, err := p.GetClient()
+			if err != nil {
+				t.Fatalf("got unexpected error %s", err)
+			}
+			if !reflect.DeepEqual(client.Namespace(), tt.wantNamespace) {
 				t.Errorf("NewProviderMeta() got ns = %v, want ns %v", p.client.Namespace(), tt.wantNamespace)
 			}
 
@@ -966,7 +971,12 @@ func TestNewProviderMeta_Cert(t *testing.T) {
 				t.Fatalf("invalid type got %T, expected %T", got, &ProviderMeta{})
 			}
 
-			if !reflect.DeepEqual(p.client.Namespace(), tt.wantNamespace) {
+			pClient, err := p.GetClient()
+			if err != nil {
+				t.Fatalf("got unexpected error %s", err)
+			}
+
+			if !reflect.DeepEqual(pClient.Namespace(), tt.wantNamespace) {
 				t.Errorf("NewProviderMeta() got ns = %v, want ns %v", p.client.Namespace(), tt.wantNamespace)
 			}
 

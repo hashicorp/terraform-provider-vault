@@ -51,7 +51,7 @@ func TestAuditRequestHeader(t *testing.T) {
 
 func testAuditRequestHeaderCheckDestroy(names ...string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 		for _, name := range names {
 			resp, err := client.Logical().Read(auditRequestHeaderPath(name))

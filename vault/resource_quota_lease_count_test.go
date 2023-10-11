@@ -100,7 +100,7 @@ func TestQuotaLeaseCountWithRole(t *testing.T) {
 
 func testQuotaLeaseCountCheckDestroy(leaseCounts []string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 		for _, name := range leaseCounts {
 			resp, err := client.Logical().Read(quotaLeaseCountPath(name))

@@ -115,7 +115,7 @@ func testNamespaceCheckAttrs() resource.TestCheckFunc {
 
 func testNamespaceDestroy(path string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 		namespaceRef, err := client.Logical().Read(fmt.Sprintf("%s/%s", consts.SysNamespaceRoot, path))
 		if err != nil {

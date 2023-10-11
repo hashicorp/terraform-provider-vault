@@ -73,7 +73,7 @@ func TestAccDatabaseSecretsMount_mssql(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					resp, err := client.Logical().Read(fmt.Sprintf("%s/creds/%s", backend, "dev"))
 					if err != nil {
@@ -175,7 +175,7 @@ func TestAccDatabaseSecretsMount_mssql_multi(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					for _, role := range []string{"dev1", "dev2"} {
 						resp, err := client.Logical().Read(fmt.Sprintf("%s/creds/%s", backend, role))

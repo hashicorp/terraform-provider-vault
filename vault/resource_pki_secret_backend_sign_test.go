@@ -199,7 +199,7 @@ func TestPkiSecretBackendSign_renew(t *testing.T) {
 			{
 				// test unmounted backend
 				PreConfig: func() {
-					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
 					if err := client.Sys().Unmount(path); err != nil {
 						t.Fatal(err)

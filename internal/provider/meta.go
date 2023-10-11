@@ -56,8 +56,21 @@ type ProviderMeta struct {
 }
 
 // GetClient returns the providers default Vault client.
-func (p *ProviderMeta) GetClient() *api.Client {
-	return p.client
+func (p *ProviderMeta) GetClient() (*api.Client, error) {
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	return p.getClient()
+}
+
+// MustGetClient returns the providers default Vault client. Panics on any error.
+func (p *ProviderMeta) MustGetClient() *api.Client {
+	client, err := p.GetClient()
+	if err != nil {
+		panic(err)
+	}
+
+	return client
 }
 
 // GetNSClient returns a namespaced Vault client.
@@ -66,6 +79,11 @@ func (p *ProviderMeta) GetClient() *api.Client {
 func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 	p.m.Lock()
 	defer p.m.Unlock()
+
+	client, err := p.getClient()
+	if err != nil {
+		return nil, err
+	}
 
 	if err := p.validate(); err != nil {
 		return nil, err
@@ -88,7 +106,7 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 		return v, nil
 	}
 
-	c, err := p.client.Clone()
+	c, err := client.Clone()
 	if err != nil {
 		return nil, err
 	}
@@ -122,13 +140,52 @@ func (p *ProviderMeta) IsEnterpriseSupported() bool {
 	if ver == nil {
 		return false
 	}
+
 	return strings.Contains(ver.Metadata(), enterpriseMetadata)
+}
+
+func (p *ProviderMeta) getVaultVersion() (*version.Version, error) {
+	if p.vaultVersion != nil {
+		return p.vaultVersion, nil
+	}
+
+	d := p.resourceData
+	var vaultVersion *version.Version
+	if v, ok := d.GetOk(consts.FieldVaultVersionOverride); ok {
+		ver, err := version.NewVersion(v.(string))
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for %q, err=%w",
+				consts.FieldVaultVersionOverride, err)
+		}
+		vaultVersion = ver
+	} else if !d.Get(consts.FieldSkipGetVaultVersion).(bool) {
+		// Set the Vault version to *ProviderMeta object
+		client, err := p.getClient()
+		if err != nil {
+			return nil, err
+		}
+
+		ver, err := getVaultVersion(client)
+		if err != nil {
+			return nil, err
+		}
+		vaultVersion = ver
+	}
+
+	p.vaultVersion = vaultVersion
+
+	return p.vaultVersion, nil
 }
 
 // GetVaultVersion returns the providerMeta
 // vaultVersion attribute.
 func (p *ProviderMeta) GetVaultVersion() *version.Version {
-	return p.vaultVersion
+	ver, err := p.getVaultVersion()
+	if err != nil {
+		return nil
+	}
+
+	return ver
 }
 
 func (p *ProviderMeta) validate() error {
@@ -143,12 +200,19 @@ func (p *ProviderMeta) validate() error {
 	return nil
 }
 
-// NewProviderMeta sets up the Provider to service Vault requests.
-// It is meant to be used as a schema.ConfigureFunc.
-func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
-	if d == nil {
-		return nil, fmt.Errorf("nil ResourceData provided")
+// setClient sets up an authenticated Vault client based on the
+// ProviderMeta.resourceData configuration. It should typically only need to be
+// called once per ProviderMeta instance. Must be called with a lock.
+func (p *ProviderMeta) setClient() error {
+	if p.client != nil {
+		return nil
 	}
+
+	if p.resourceData == nil {
+		return fmt.Errorf("nil ResourceData provided")
+	}
+
+	d := p.resourceData
 	clientConfig := api.DefaultConfig()
 	addr := d.Get(consts.FieldAddress).(string)
 	if addr != "" {
@@ -175,7 +239,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 
 	err := clientConfig.ConfigureTLS(tlsConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to configure TLS for Vault API: %s", err)
+		return fmt.Errorf("failed to configure TLS for Vault API: %s", err)
 	}
 
 	clientConfig.HttpClient.Transport = helper.NewTransport(
@@ -192,7 +256,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 
 	client, err := api.NewClient(clientConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to configure Vault API: %s", err)
+		return fmt.Errorf("failed to configure Vault API: %s", err)
 	}
 
 	// setting this is critical for proper namespace handling
@@ -226,7 +290,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 
 	authLogin, err := GetAuthLogin(d)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var token string
@@ -234,7 +298,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		// the clone is only used to auth to Vault
 		clone, err := client.Clone()
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if clone.Token() != "" {
@@ -254,7 +318,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 
 		secret, err := authLogin.Login(clone)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		token = secret.Auth.ClientToken
@@ -262,7 +326,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		// try and get the token from the config or token helper
 		token, err = GetToken(d)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
@@ -271,15 +335,15 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	if client.Token() == "" {
-		return nil, errors.New("no vault token set on Client")
+		return errors.New("no vault token set on Client")
 	}
 
 	tokenInfo, err := client.Auth().Token().LookupSelf()
 	if err != nil {
-		return nil, fmt.Errorf("failed to lookup token, err=%w", err)
+		return fmt.Errorf("failed to lookup token, err=%w", err)
 	}
 	if tokenInfo == nil {
-		return nil, fmt.Errorf("no token information returned from self lookup")
+		return fmt.Errorf("no token information returned from self lookup")
 	}
 
 	warnMinTokenTTL(tokenInfo)
@@ -293,7 +357,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		// a child token is always created in the namespace of the parent token.
 		token, err = createChildToken(d, client, tokenNamespace)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		client.SetToken(token)
@@ -313,7 +377,7 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		// set the namespace on the provider to ensure that all child
 		// namespace paths are properly honoured.
 		if err := d.Set(consts.FieldNamespace, namespace); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
@@ -322,27 +386,27 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 		client.SetNamespace(namespace)
 	}
 
-	var vaultVersion *version.Version
-	if v, ok := d.GetOk(consts.FieldVaultVersionOverride); ok {
-		ver, err := version.NewVersion(v.(string))
-		if err != nil {
-			return nil, fmt.Errorf("invalid value for %q, err=%w",
-				consts.FieldVaultVersionOverride, err)
-		}
-		vaultVersion = ver
-	} else if !d.Get(consts.FieldSkipGetVaultVersion).(bool) {
-		// Set the Vault version to *ProviderMeta object
-		ver, err := getVaultVersion(client)
-		if err != nil {
-			return nil, err
-		}
-		vaultVersion = ver
+	p.client = client
+	return nil
+}
+
+func (p *ProviderMeta) getClient() (*api.Client, error) {
+	if err := p.setClient(); err != nil {
+		return nil, err
+	}
+
+	return p.client, nil
+}
+
+// NewProviderMeta sets up the Provider to service Vault requests.
+// It is meant to be used as a schema.ConfigureFunc.
+func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
+	if d == nil {
+		return nil, fmt.Errorf("nil ResourceData provided")
 	}
 
 	return &ProviderMeta{
 		resourceData: d,
-		client:       client,
-		vaultVersion: vaultVersion,
 	}, nil
 }
 
@@ -412,7 +476,7 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 		return p.GetNSClient(ns)
 	}
 
-	return p.GetClient(), nil
+	return p.MustGetClient(), nil
 }
 
 func GetClientDiag(i interface{}, meta interface{}) (*api.Client, diag.Diagnostics) {
