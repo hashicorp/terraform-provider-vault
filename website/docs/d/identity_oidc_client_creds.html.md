@@ -56,3 +56,4 @@ In addition to the arguments above, the following attributes are exported:
 * `client_id` - The Client ID returned by Vault.
 
 * `client_secret` - The Client Secret Key returned by Vault.
+   For public OpenID Clients `client_secret` is set to an empty string `""`
