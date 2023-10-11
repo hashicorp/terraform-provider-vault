@@ -27,6 +27,13 @@ func TestDataSourceIdentityOIDCClientCreds(t *testing.T) {
 					resource.TestCheckResourceAttr("data.vault_identity_oidc_client_creds.creds", "name", name),
 				),
 			},
+			{
+				Config: testDataSourceIdentityOIDCPublicClientCreds_config(name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.vault_identity_oidc_client_creds.creds_public", "name", name),
+					resource.TestCheckResourceAttr("data.vault_identity_oidc_client_creds.creds_public", "client_secret", ""),
+				),
+			},
 		},
 	})
 }
@@ -57,26 +64,7 @@ data "vault_identity_oidc_client_creds" "creds" {
 }`, name)
 }
 
-func TestDataSourceIdentityOIDCClientCreds_PublicClient(t *testing.T) {
-	t.Parallel()
-	name := acctest.RandomWithPrefix("test-public-client")
-
-	resource.Test(t, resource.TestCase{
-		ProviderFactories: providerFactories,
-		PreCheck:          func() { testutil.TestAccPreCheck(t) },
-		Steps: []resource.TestStep{
-			{
-				Config: testDataSourceIdentityOIDCClientCreds_PublicClientConfig(name),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vault_identity_oidc_client_creds.creds", "name", name),
-					resource.TestCheckResourceAttr("data.vault_identity_oidc_client_creds.creds", "client_secret", ""),
-				),
-			},
-		},
-	})
-}
-
-func testDataSourceIdentityOIDCClientCreds_PublicClientConfig(name string) string {
+func testDataSourceIdentityOIDCPublicClientCreds_config(name string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_oidc_key" "key" {
   name               = "key"
@@ -85,7 +73,7 @@ resource "vault_identity_oidc_key" "key" {
   verification_ttl   = 3600
 }
 
-resource "vault_identity_oidc_client" "test" {
+resource "vault_identity_oidc_client" "test_public" {
   name             = "%s"
   client_type      = "public"
   key              = vault_identity_oidc_key.key.name
@@ -98,7 +86,7 @@ resource "vault_identity_oidc_client" "test" {
   access_token_ttl = 7200
 }
 
-data "vault_identity_oidc_client_creds" "creds" {
-  name = vault_identity_oidc_client.test.name
+data "vault_identity_oidc_client_creds" "creds_public" {
+  name = vault_identity_oidc_client.test_public.name
 }`, name)
 }
