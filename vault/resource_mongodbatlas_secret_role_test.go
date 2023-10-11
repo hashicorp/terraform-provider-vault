@@ -42,7 +42,7 @@ func TestAccMongoDBAtlasSecretRole_basic(t *testing.T) {
 		CheckDestroy:      testCheckMountDestroyed(resourceType, consts.MountTypeMongoDBAtlas, consts.FieldMount),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccMongoDBAtlasSecretBackendRole_basic(mount, name, false),
+				Config: testAccMongoDBAtlasSecretBackendRole_initial(mount, name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
@@ -62,7 +62,27 @@ func TestAccMongoDBAtlasSecretRole_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccMongoDBAtlasSecretBackendRole_basic(mount, name, true),
+				Config: testAccMongoDBAtlasSecretBackendRole_updatedExceptRoles(mount, name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOrganizationID, updatedOrganizationID),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, updatedProjectID),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoles+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoles+".0", roles),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIPAddresses+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIPAddresses+".0", "192.168.1.5"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIPAddresses+".1", "192.168.1.6"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCIDRBlocks+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCIDRBlocks+".0", updatedCidrBlocks),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectRoles+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectRoles+".0", updatedProjectRoles),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, updatedTtl),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, updatedMaxTtl),
+				),
+			},
+			{
+				Config: testAccMongoDBAtlasSecretBackendRole_updatedRoles(mount, name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
@@ -90,43 +110,74 @@ func TestAccMongoDBAtlasSecretRole_basic(t *testing.T) {
 	})
 }
 
-func testAccMongoDBAtlasSecretBackendRole_basic(path, name string, isUpdate bool) string {
+func testAccMongoDBAtlasSecretBackendRole_initial(path, name string) string {
 	ret := fmt.Sprintf(`
 resource "vault_mount" "mongo" {
 	path        = "%s"
 	type        = "mongodbatlas"
     description = "MongoDB Atlas secret engine mount"
 }
-`, path)
-	if !isUpdate {
-		ret += fmt.Sprintf(`
+
 resource "vault_mongodbatlas_secret_role" "role" {
-  mount           = vault_mount.mongo.path
-  name            = "%s"
-  organization_id = "7cf5a45a9ccf6400e60981b7"
-  project_id      = "5cf5a45a9ccf6400e60981b6"
-  roles           = ["ORG_MEMBER"]
-  ip_addresses    = ["192.168.1.3", "192.168.1.4"]
-  cidr_blocks     = ["192.168.1.3/32"]
-  project_roles   = ["GROUP_CLUSTER_MANAGER"]
-  ttl             = 30
-  max_ttl         = 60
-}`, name)
-	} else {
-		ret += fmt.Sprintf(`
+	mount           = vault_mount.mongo.path
+	name            = "%s"
+	organization_id = "7cf5a45a9ccf6400e60981b7"
+	project_id      = "5cf5a45a9ccf6400e60981b6"
+	roles           = ["ORG_MEMBER"]
+	ip_addresses    = ["192.168.1.3", "192.168.1.4"]
+	cidr_blocks     = ["192.168.1.3/32"]
+	project_roles   = ["GROUP_CLUSTER_MANAGER"]
+	ttl             = 30
+	max_ttl         = 60
+}`, path, name)
+
+	return ret
+}
+
+func testAccMongoDBAtlasSecretBackendRole_updatedExceptRoles(path, name string) string {
+	ret := fmt.Sprintf(`
+resource "vault_mount" "mongo" {
+	path        = "%s"
+	type        = "mongodbatlas"
+    description = "MongoDB Atlas secret engine mount"
+}
+
 resource "vault_mongodbatlas_secret_role" "role" {
-  mount           = vault_mount.mongo.path
-  name            = "%s"
-  organization_id = "7cf5a45a9ccf6400e60981a8"
-  project_id      = "5cf5a45a9ccf6400e60981a67"
-  roles           = ["ORG_READ_ONLY"]
-  ip_addresses    = ["192.168.1.5", "192.168.1.6"]
-  cidr_blocks     = ["192.168.1.3/35"]
-  project_roles   = ["GROUP_READ_ONLY"]
-  ttl             = 60
-  max_ttl         = 120
-}`, name)
-	}
+	mount           = vault_mount.mongo.path
+	name            = "%s"
+	organization_id = "7cf5a45a9ccf6400e60981a8"
+	project_id      = "5cf5a45a9ccf6400e60981a67"
+	roles           = ["ORG_MEMBER"]
+	ip_addresses    = ["192.168.1.5", "192.168.1.6"]
+	cidr_blocks     = ["192.168.1.3/35"]
+	project_roles   = ["GROUP_READ_ONLY"]
+	ttl             = 60
+	max_ttl         = 120
+  }`, path, name)
+
+	return ret
+}
+
+func testAccMongoDBAtlasSecretBackendRole_updatedRoles(path, name string) string {
+	ret := fmt.Sprintf(`
+resource "vault_mount" "mongo" {
+	path        = "%s"
+	type        = "mongodbatlas"
+    description = "MongoDB Atlas secret engine mount"
+}
+
+resource "vault_mongodbatlas_secret_role" "role" {
+	mount           = vault_mount.mongo.path
+	name            = "%s"
+	organization_id = "7cf5a45a9ccf6400e60981a8"
+	project_id      = "5cf5a45a9ccf6400e60981a67"
+	roles           = ["ORG_READ_ONLY"]
+	ip_addresses    = ["192.168.1.5", "192.168.1.6"]
+	cidr_blocks     = ["192.168.1.3/35"]
+	project_roles   = ["GROUP_READ_ONLY"]
+	ttl             = 60
+	max_ttl         = 120
+  }`, path, name)
 
 	return ret
 }
