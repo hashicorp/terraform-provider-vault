@@ -273,7 +273,7 @@ func azureAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface
 			nextResult, err := pager.NextPage(ctx)
 			if err != nil {
 				// don't fail the whole auth, but note that a page failed to load
-				log.Printf("[WARN] failed to load next page: %w", err)
+				log.Printf("[WARN] failed to load next page: %v", err)
 				if time.Now().After(endTime) {
 					return fmt.Errorf("validation failed, giving up err=%w", err)
 				}
