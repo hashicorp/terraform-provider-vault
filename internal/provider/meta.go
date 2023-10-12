@@ -480,7 +480,7 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 		return p.GetNSClient(ns)
 	}
 
-	return p.MustGetClient(), nil
+	return p.GetClient()
 }
 
 func GetClientDiag(i interface{}, meta interface{}) (*api.Client, diag.Diagnostics) {
